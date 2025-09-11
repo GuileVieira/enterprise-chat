@@ -29,7 +29,8 @@ export default defineConfig(({ command }) => ({
   envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_'],
   plugins: [
     react(),
-    nodePolyfills(),
+    // Node stdlib polyfills; can be disabled by env if needed
+    ...(process.env.VITE_DISABLE_NODE_POLYFILLS === 'true' ? [] : [nodePolyfills()]),
     VitePWA({
       injectRegister: 'auto', // 'auto' | 'manual' | 'disabled'
       registerType: 'autoUpdate', // 'prompt' | 'autoUpdate'
@@ -94,6 +95,19 @@ export default defineConfig(({ command }) => ({
     }),
   ],
   publicDir: command === 'serve' ? './public' : false,
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [
+        {
+          name: 'alias-unenv-empty',
+          setup(build) {
+            const emptyPath = path.resolve(__dirname, 'src/shims/empty.js');
+            build.onResolve({ filter: /^unenv\/mock\/empty$/ }, () => ({ path: emptyPath }));
+          },
+        },
+      ],
+    },
+  },
   build: {
     sourcemap: process.env.NODE_ENV === 'development',
     outDir: './dist',
@@ -251,6 +265,9 @@ export default defineConfig(({ command }) => ({
     alias: {
       '~': path.join(__dirname, 'src/'),
       $fonts: path.resolve(__dirname, 'public/fonts'),
+      // Workaround: some polyfill plugins alias to 'unenv/mock/empty'.
+      // Provide a local empty shim to satisfy resolution without installing extra deps.
+      'unenv/mock/empty': path.resolve(__dirname, 'src/shims/empty.js'),
       'micromark-extension-math': 'micromark-extension-llm-math',
     },
   },
