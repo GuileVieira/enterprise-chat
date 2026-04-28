@@ -1,72 +1,72 @@
 import { IThemeRGB } from '../types';
 
 /**
- * Dark theme
- * RGB values extracted from the existing dark mode CSS variables
+ * Dark theme — Raycast-inspired palette
+ * RGB values in space-separated format for CSS variable injection
  */
 export const darkTheme: IThemeRGB = {
   // Text colors
-  'rgb-text-primary': '236 236 236', // #ececec (gray-100)
-  'rgb-text-secondary': '205 205 205', // #cdcdcd (gray-300)
-  'rgb-text-secondary-alt': '153 150 150', // #999696 (gray-400)
-  'rgb-text-tertiary': '89 89 89', // #595959 (gray-500)
-  'rgb-text-warning': '245 158 11', // #f59e0b (amber-500)
+  'rgb-text-primary': '249 249 249', // #f9f9f9
+  'rgb-text-secondary': '206 206 206', // #cecece
+  'rgb-text-secondary-alt': '156 156 157', // #9c9c9d
+  'rgb-text-tertiary': '106 107 108', // #6a6b6c
+  'rgb-text-warning': '255 188 51', // #ffbc33
 
-  // Ring colors (not defined in dark mode, using default)
-  'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
+  // Ring colors
+  'rgb-ring-primary': '106 107 108', // #6a6b6c
 
   // Header colors
-  'rgb-header-primary': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-header-hover': '66 66 66', // #424242 (gray-600)
-  'rgb-header-button-hover': '47 47 47', // #2f2f2f (gray-700)
+  'rgb-header-primary': '16 17 17', // #101111
+  'rgb-header-hover': '27 28 30', // #1b1c1e
+  'rgb-header-button-hover': '16 17 17', // #101111
 
   // Surface colors
-  'rgb-surface-active': '89 89 89', // #595959 (gray-500)
-  'rgb-surface-active-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-hover': '66 66 66', // #424242 (gray-600)
-  'rgb-surface-hover-alt': '66 66 66', // #424242 (gray-600)
-  'rgb-surface-primary': '13 13 13', // #0d0d0d (gray-900)
-  'rgb-surface-primary-alt': '23 23 23', // #171717 (gray-850)
-  'rgb-surface-primary-contrast': '23 23 23', // #171717 (gray-850)
-  'rgb-surface-secondary': '33 33 33', // #212121 (gray-800)
-  'rgb-surface-secondary-alt': '33 33 33', // #212121 (gray-800)
-  'rgb-surface-tertiary': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-tertiary-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-dialog': '23 23 23', // #171717 (gray-850)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
-  'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
-  'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
-  'rgb-surface-chat': '47 47 47', // #2f2f2f (gray-700)
+  'rgb-surface-active': '27 28 30', // #1b1c1e
+  'rgb-surface-active-alt': '16 17 17', // #101111
+  'rgb-surface-hover': '27 28 30', // #1b1c1e
+  'rgb-surface-hover-alt': '27 28 30', // #1b1c1e
+  'rgb-surface-primary': '7 8 10', // #07080a
+  'rgb-surface-primary-alt': '16 17 17', // #101111
+  'rgb-surface-primary-contrast': '16 17 17', // #101111
+  'rgb-surface-secondary': '16 17 17', // #101111
+  'rgb-surface-secondary-alt': '16 17 17', // #101111
+  'rgb-surface-tertiary': '27 28 30', // #1b1c1e
+  'rgb-surface-tertiary-alt': '27 28 30', // #1b1c1e
+  'rgb-surface-dialog': '16 17 17', // #101111
+  'rgb-surface-submit': '95 201 146', // #5fc992
+  'rgb-surface-submit-hover': '77 166 122', // #4da67a
+  'rgb-surface-destructive': '255 99 99', // #FF6363
+  'rgb-surface-destructive-hover': '229 90 90', // #e55a5a
+  'rgb-surface-chat': '16 17 17', // #101111
 
   // Border colors
-  'rgb-border-light': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-border-medium': '66 66 66', // #424242 (gray-600)
-  'rgb-border-medium-alt': '66 66 66', // #424242 (gray-600)
-  'rgb-border-heavy': '89 89 89', // #595959 (gray-500)
-  'rgb-border-xheavy': '153 150 150', // #999696 (gray-400)
+  'rgb-border-light': '37 40 41', // #252829
+  'rgb-border-medium': '47 48 49', // #2f3031
+  'rgb-border-medium-alt': '47 48 49', // #2f3031
+  'rgb-border-heavy': '67 67 69', // #434345
+  'rgb-border-xheavy': '106 107 108', // #6a6b6c
 
-  // Brand colors
-  'rgb-brand-purple': '171 104 255', // #ab68ff
+  // Brand colors — Raycast Red replaces legacy purple
+  'rgb-brand-purple': '255 99 99', // #FF6363
 
   // Presentation
-  'rgb-presentation': '33 33 33', // #212121 (gray-800)
+  'rgb-presentation': '16 17 17', // #101111
 
-  // Utility colors (mapped to existing colors for backwards compatibility)
-  'rgb-background': '33 33 33', // Same as surface-primary
-  'rgb-foreground': '255 255 255', // Same as text-primary
-  'rgb-primary': '66 66 66', // Same as surface-active
-  'rgb-primary-foreground': '255 255 255', // Same as surface-primary-contrast
-  'rgb-secondary': '42 42 42', // Same as surface-secondary
-  'rgb-secondary-foreground': '193 193 193', // Same as text-secondary
-  'rgb-muted': '56 56 56', // Same as surface-tertiary
-  'rgb-muted-foreground': '140 140 140', // Same as text-tertiary
-  'rgb-accent': '82 82 82', // Same as surface-active-alt
-  'rgb-accent-foreground': '255 255 255', // Same as text-primary
-  'rgb-destructive-foreground': '255 255 255', // Same as text-primary
-  'rgb-border': '82 82 82', // Same as border-medium
-  'rgb-input': '66 66 66', // Same as border-light
-  'rgb-ring': '255 255 255', // Same as ring-primary
-  'rgb-card': '42 42 42', // Same as surface-secondary
-  'rgb-card-foreground': '255 255 255', // Same as text-primary
+  // Utility colors (mapped to Raycast palette)
+  'rgb-background': '7 8 10', // #07080a
+  'rgb-foreground': '249 249 249', // #f9f9f9
+  'rgb-primary': '85 179 255', // #55b3ff (Raycast Blue)
+  'rgb-primary-foreground': '7 8 10', // #07080a
+  'rgb-secondary': '16 17 17', // #101111
+  'rgb-secondary-foreground': '249 249 249', // #f9f9f9
+  'rgb-muted': '27 28 30', // #1b1c1e
+  'rgb-muted-foreground': '156 156 157', // #9c9c9d
+  'rgb-accent': '27 28 30', // #1b1c1e
+  'rgb-accent-foreground': '249 249 249', // #f9f9f9
+  'rgb-destructive-foreground': '7 8 10', // #07080a
+  'rgb-border': '37 40 41', // #252829
+  'rgb-input': '37 40 41', // #252829
+  'rgb-ring': '85 179 255', // #55b3ff
+  'rgb-card': '16 17 17', // #101111
+  'rgb-card-foreground': '249 249 249', // #f9f9f9
 };
