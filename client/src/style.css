@@ -130,65 +130,65 @@ html {
   --switch-unchecked: 0 0% 58%;
 }
 .dark {
-  --brand-purple: #ab68ff;
-  --presentation: var(--gray-800);
-  --text-primary: var(--gray-100);
-  --text-secondary: var(--gray-300);
-  --text-secondary-alt: var(--gray-400);
-  --text-tertiary: var(--gray-500);
-  --text-warning: var(--amber-500);
-  --text-destructive: var(--red-600);
-  --header-primary: var(--gray-700);
-  --header-hover: var(--gray-600);
-  --header-button-hover: var(--gray-700);
-  --surface-active: var(--gray-500);
-  --surface-active-alt: var(--gray-700);
-  --surface-hover: var(--gray-600);
-  --surface-hover-alt: var(--gray-600);
-  --surface-primary: var(--gray-900);
-  --surface-primary-alt: var(--gray-850);
-  --surface-primary-contrast: var(--gray-850);
-  --surface-secondary: var(--gray-800);
-  --surface-secondary-alt: var(--gray-800);
-  --surface-tertiary: var(--gray-700);
-  --surface-tertiary-alt: var(--gray-700);
-  --surface-dialog: var(--gray-850);
-  --surface-submit: var(--green-700);
-  --surface-submit-hover: var(--green-800);
-  --surface-destructive: var(--red-800);
-  --surface-destructive-hover: var(--red-900);
-  --surface-chat: var(--gray-700);
-  --border-light: var(--gray-700);
-  --border-medium-alt: var(--gray-600);
-  --border-medium: var(--gray-600);
-  --border-heavy: var(--gray-500);
-  --border-xheavy: var(--gray-400);
-  --border-destructive: var(--red-500);
+  --brand-purple: #FF6363;
+  --presentation: #101111;
+  --text-primary: #f9f9f9;
+  --text-secondary: #cecece;
+  --text-secondary-alt: #9c9c9d;
+  --text-tertiary: #6a6b6c;
+  --text-warning: #ffbc33;
+  --text-destructive: #FF6363;
+  --header-primary: #101111;
+  --header-hover: #1b1c1e;
+  --header-button-hover: #101111;
+  --surface-active: #1b1c1e;
+  --surface-active-alt: #101111;
+  --surface-hover: #1b1c1e;
+  --surface-hover-alt: #1b1c1e;
+  --surface-primary: #07080a;
+  --surface-primary-alt: #101111;
+  --surface-primary-contrast: #101111;
+  --surface-secondary: #101111;
+  --surface-secondary-alt: #101111;
+  --surface-tertiary: #1b1c1e;
+  --surface-tertiary-alt: #1b1c1e;
+  --surface-dialog: #101111;
+  --surface-submit: #5fc992;
+  --surface-submit-hover: #4caf82;
+  --surface-destructive: #FF6363;
+  --surface-destructive-hover: #e55a5a;
+  --surface-chat: #101111;
+  --border-light: #252829;
+  --border-medium-alt: #2f3031;
+  --border-medium: #2f3031;
+  --border-heavy: #434345;
+  --border-xheavy: #6a6b6c;
+  --border-destructive: #FF6363;
   /* These are test styles */
 
-  --background: 0 0% 7%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 0 0% 9%;
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 40.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 0 0% 83.1%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
-  --switch-unchecked: 0 0% 40%;
+  --background: 220 18% 3.3%;
+  --foreground: 0 0% 97.6%;
+  --card: 0 0% 6.5%;
+  --card-foreground: 0 0% 97.6%;
+  --primary: 202 100% 67%;
+  --primary-foreground: 220 18% 3.3%;
+  --secondary: 0 0% 6.5%;
+  --secondary-foreground: 0 0% 97.6%;
+  --muted: 220 5% 11.2%;
+  --muted-foreground: 240 1% 61.4%;
+  --accent: 220 5% 11.2%;
+  --accent-foreground: 0 0% 97.6%;
+  --destructive: 0 100% 69%;
+  --destructive-foreground: 220 18% 3.3%;
+  --border: 195 5% 15.3%;
+  --input: 195 5% 15.3%;
+  --ring: 202 100% 67%;
+  --chart-1: 202 100% 67%;
+  --chart-2: 151 59% 59%;
+  --chart-3: 43 100% 60%;
+  --chart-4: 0 100% 69%;
+  --chart-5: 220 5% 11.2%;
+  --switch-unchecked: 0 0% 15.3%;
 }
 .gizmo {
   --text-primary: var(--gizmo-gray-950);
@@ -203,16 +203,16 @@ html {
   --border-xheavy: rgba(0, 0, 0, 0.25);
 }
 .gizmo.dark {
-  --text-primary: var(--gray-100);
-  --text-secondary: var(--gray-300);
-  --text-tertiary: var(--gizmo-gray-500);
-  --surface-primary: var(--gray-900);
-  --surface-secondary: var(--gray-800);
-  --surface-tertiary: var(--gray-700);
-  --border-light: rgba(217, 217, 227, 0.1);
-  --border-medium: rgba(217, 217, 227, 0.15);
-  --border-heavy: rgba(217, 217, 227, 0.2);
-  --border-xheavy: rgba(217, 217, 227, 0.25);
+  --text-primary: #f9f9f9;
+  --text-secondary: #cecece;
+  --text-tertiary: #6a6b6c;
+  --surface-primary: #07080a;
+  --surface-secondary: #101111;
+  --surface-tertiary: #1b1c1e;
+  --border-light: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.08);
+  --border-heavy: rgba(255, 255, 255, 0.1);
+  --border-xheavy: rgba(255, 255, 255, 0.12);
 }
 
 .text-token-text-primary {
@@ -369,26 +369,26 @@ html {
 
 @font-face {
   font-display: swap;
-  font-family: Roboto Mono;
+  font-family: GeistMono;
   font-style: normal;
   font-weight: 400;
-  src: url('$fonts/roboto-mono-latin-400-normal.woff2') format('woff2');
+  src: url('$fonts/GeistMono-Regular.woff2') format('woff2');
 }
 
 @font-face {
   font-display: swap;
-  font-family: Roboto Mono;
+  font-family: GeistMono;
   font-style: normal;
   font-weight: 700;
-  src: url('$fonts/roboto-mono-latin-700-normal.woff2') format('woff2');
+  src: url('$fonts/GeistMono-Bold.woff2') format('woff2');
 }
 
 @font-face {
   font-display: swap;
-  font-family: Roboto Mono;
-  font-style: italic;
+  font-family: GeistMono;
+  font-style: oblique;
   font-weight: 400;
-  src: url('$fonts/roboto-mono-latin-400-italic.woff2') format('woff2');
+  src: url('$fonts/GeistMono-Regular.woff2') format('woff2');
 }
 
 /*
@@ -2935,4 +2935,132 @@ html {
 
 .sharepoint-picker-bg {
   background-color: #f5f5f5;
+}
+
+/* Raycast Design System Utilities */
+
+.dark {
+  font-feature-settings: 'calt', 'kern', 'liga', 'ss03';
+  letter-spacing: 0.2px;
+}
+
+/* Raycast macOS-native shadow system */
+.shadow-raycast-1 {
+  box-shadow: rgba(0, 0, 0, 0.28) 0px 1.189px 2.377px;
+}
+
+.shadow-raycast-2 {
+  box-shadow: rgb(27, 28, 30) 0px 0px 0px 1px, rgb(7, 8, 10) 0px 0px 0px 1px inset;
+}
+
+.shadow-raycast-3 {
+  box-shadow: rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset,
+    rgba(255, 255, 255, 0.25) 0px 0px 0px 1px, rgba(0, 0, 0, 0.2) 0px -1px 0px 0px inset;
+}
+
+.shadow-raycast-5 {
+  box-shadow: rgba(0, 0, 0, 0.5) 0px 0px 0px 2px, rgba(255, 255, 255, 0.19) 0px 0px 14px;
+}
+
+/* Raycast glows */
+.glow-blue {
+  box-shadow: 0 0 0 3px hsla(202, 100%, 67%, 0.15);
+}
+
+.glow-red {
+  box-shadow: 0 0 0 3px hsla(0, 100%, 69%, 0.15);
+}
+
+.glow-warm {
+  box-shadow: rgba(215, 201, 175, 0.05) 0px 0px 20px 5px;
+}
+
+/* Raycast buttons */
+.btn-raycast-primary {
+  background: transparent;
+  color: #f9f9f9;
+  border-radius: 86px;
+  box-shadow: rgba(255, 255, 255, 0.1) 0px 1px 0px 0px inset;
+  transition: opacity 150ms ease;
+}
+
+.btn-raycast-primary:hover {
+  opacity: 0.6;
+}
+
+.btn-raycast-secondary {
+  background: transparent;
+  color: #f9f9f9;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: rgba(0, 0, 0, 0.03) 0px 7px 3px;
+  transition: opacity 150ms ease;
+}
+
+.btn-raycast-secondary:hover {
+  opacity: 0.6;
+}
+
+.btn-raycast-cta {
+  background: hsla(0, 0%, 100%, 0.815);
+  color: #18191a;
+  border-radius: 86px;
+  transition: background-color 150ms ease;
+}
+
+.btn-raycast-cta:hover {
+  background: hsl(0, 0%, 100%);
+}
+
+/* Raycast card surface */
+.card-raycast {
+  background: #101111;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.card-raycast-elevated {
+  background: #101111;
+  border-radius: 16px;
+  box-shadow: rgb(27, 28, 30) 0px 0px 0px 1px, rgb(7, 8, 10) 0px 0px 0px 1px inset;
+}
+
+/* Raycast input */
+.input-raycast {
+  background: #07080a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #f9f9f9;
+}
+
+.input-raycast::placeholder {
+  color: #6a6b6c;
+}
+
+.input-raycast:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px hsla(202, 100%, 67%, 0.15);
+}
+
+/* Raycast keyboard key */
+.key-raycast {
+  background: linear-gradient(180deg, #121212 0%, #0d0d0d 100%);
+  border-radius: 4px;
+  box-shadow: rgba(0, 0, 0, 0.4) 0px 1.5px 0.5px 2.5px,
+    rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset;
+  color: #f9f9f9;
+  font-family: GeistMono, ui-monospace, SFMono-Regular, Roboto Mono, Menlo, Monaco, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+/* Sidebar separation shadow — macOS-style depth */
+.shadow-sidebar-raycast {
+  box-shadow: rgba(255, 255, 255, 0.06) 1px 0 0 0, rgba(0, 0, 0, 0.5) 4px 0 16px 0px;
+}
+
+.light .shadow-sidebar-raycast {
+  box-shadow: rgba(0, 0, 0, 0.06) 1px 0 0 0, rgba(0, 0, 0, 0.04) 2px 0 8px 0px;
 }
