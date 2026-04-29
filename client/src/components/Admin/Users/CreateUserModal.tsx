@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Building2, Check, Copy, Loader2, UserPlus, X } from 'lucide-react';
+import { Building2, Check, Copy, Eye, EyeOff, Loader2, UserPlus, X } from 'lucide-react';
 import { useLocalize } from '~/hooks';
 import { useCreateAdminUserMutation, useListAdminTenants } from '~/data-provider/admin';
 import { AdminActionButton, AdminBadge, AdminIconButton } from '../common';
@@ -29,6 +29,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [tenantId, setTenantId] = useState(preselectedTenantId ?? '');
   const [newTenantName, setNewTenantName] = useState('');
   const [role, setRole] = useState(DEFAULT_ROLE);
@@ -52,7 +53,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     if (effectiveTenantId) {
       return effectiveTenantId;
     }
-    return localize('com_admin_default_tenant');
+    return 'None (no tenant)';
   }, [effectiveTenantId, localize]);
 
   const resetForm = () => {
@@ -242,7 +243,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                       className={selectClassName}
                       disabled={preselectedTenantId != null}
                     >
-                      <option value="">{localize('com_admin_default_tenant')}</option>
+                      <option value="">None (no tenant)</option>
                       {tenants.map((tenant) => (
                         <option key={tenant.id} value={tenant.id}>
                           {tenant.id}
@@ -291,13 +292,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
               <label className="text-sm font-medium text-text-secondary">
                 {localize('com_admin_password')}
               </label>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={localize('com_admin_auto_generate_password_placeholder')}
-                className={inputClassName}
-              />
+              <div className="relative mt-1">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={localize('com_admin_auto_generate_password_placeholder')}
+                  className={inputClassName + ' pr-10'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               <p className="mt-2 text-xs leading-5 text-text-tertiary">
                 {localize('com_admin_password_hint')}
               </p>
