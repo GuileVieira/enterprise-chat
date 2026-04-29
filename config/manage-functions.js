@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const { tenantStorage } = require('@librechat/data-schemas');
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
 const { createMethods } = require('@librechat/data-schemas');
-const { askQuestion, silentExit } = require('./helpers');
+const { silentExit } = require('./helpers');
 const connect = require('./connect');
 
 const VALID_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -83,7 +83,6 @@ function validateFunctionPayload(payload) {
   }
   if (payload.postProcess) {
     try {
-      // eslint-disable-next-line no-new-func
       new Function(`return (${payload.postProcess})`)();
     } catch {
       throw new Error('Invalid "postProcess" code (must be a valid JavaScript function).');
@@ -109,7 +108,9 @@ async function runCommand(command, args, db) {
         console.green(`Found ${functions.length} tenant function(s):`);
         for (const fn of functions) {
           const status = fn.isActive ? '\x1b[32mactive\x1b[0m' : '\x1b[31minactive\x1b[0m';
-          console.white(`  [${status}] ${fn.id}: ${fn.name} (${fn.config.method} ${fn.config.path})`);
+          console.white(
+            `  [${status}] ${fn.id}: ${fn.name} (${fn.config.method} ${fn.config.path})`,
+          );
         }
         break;
       }
