@@ -33,153 +33,101 @@ Epic 1 (Foundation)
 
 ---
 
-## Epic 1: Foundation — Schema, Métodos e Rotas Base
+## Epic 1: Foundation — Schema, Métodos e Rotas Base ✅
 
 **Objetivo**: Project existe como entidade persistida. Conversas podem ter `projectId`. API expõe CRUD de projects e filtro de conversas por project.
 
+**Status**: Completo — 4 commits. Build passando. 1367 tests (`data-schemas`) + 985 tests (`data-provider`) + 13 route tests (`api`).
+
 ---
 
-### Story 1.1: Project Schema & Model
+### Story 1.1: Project Schema & Model ✅
 
 **Critérios de Aceitação**:
 - Schema `project` criado com todos os campos necessários.
 - Schema exportado e registrado nos índices de models.
 - `projectId` adicionado ao schema `conversation`.
 
-**PR 1.1.1 — Schema e Tipos**
+**Arquivos modificados**:
+- `packages/data-schemas/src/schema/project.ts` — Schema `IProject` com todos os campos
+- `packages/data-schemas/src/schema/convo.ts` — `projectId` adicionado
+- `packages/data-schemas/src/types/project.ts` — Interface `IProject`
+- `packages/data-schemas/src/schema/index.ts` — Export
+- `packages/data-schemas/src/models/index.ts` — Registro do model
+- `packages/data-schemas/src/types/convo.ts` — `projectId?: string` em `IConversation`
 
-| Arquivo | Ação |
-|---|---|
-| `packages/data-schemas/src/schema/project.ts` | Criar schema `IProject` com: `projectId`, `name`, `description`, `user`, `tenantId`, `endpoint`, `model`, `instructions`, `memories`, `memoryKeys`, `promptSnippets`, `promptGroupIds`, `fileIds`, `isArchived`, `iconURL`, `accessLevel`, timestamps |
-| `packages/data-schemas/src/schema/convo.ts` | Adicionar `projectId: { type: String, index: true, meiliIndex: true }` |
-| `packages/data-schemas/src/types/project.ts` | Criar interface `IProject` (novo arquivo) |
-| `packages/data-schemas/src/schema/index.ts` | Exportar `projectSchema` |
-| `packages/data-schemas/src/models/index.ts` | Registrar model `Project` via `createModels` |
-| `packages/data-schemas/src/types/convo.ts` | Adicionar `projectId?: string` em `IConversation` |
-
-**PR 1.1.2 — Métodos de DB**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/data-schemas/src/methods/project.ts` | Criar `createProjectMethods` com: `getProjects`, `getProjectById`, `createProject`, `updateProject`, `deleteProject`, `getProjectsByUser`, `archiveProject` |
-| `packages/data-schemas/src/methods/index.ts` | Importar e espalhar `createProjectMethods` no retorno de `createMethods` |
-| `packages/data-schemas/src/methods/conversation.ts` | Atualizar `getConvosByCursor` para aceitar `projectId?: string` no options e filtrar `{ projectId }` |
-| `packages/data-schemas/src/methods/conversation.ts` | Atualizar `saveConvo` para aceitar e persistir `projectId` |
+**Nota**: Bug pré-existente em `tenantFunctionSchema` (`default: undefined` em schema nested) foi corrigido — bloqueava todos os testes de DB methods.
 
 ---
 
-### Story 1.2: API Routes — Projects
+### Story 1.2: API Routes — Projects ✅
 
 **Critérios de Aceitação**:
 - Rotas REST para CRUD de projects.
 - Rota de conversas atualizada para aceitar `projectId` query param.
 
-**PR 1.2.1 — Rotas de Project**
-
-| Arquivo | Ação |
-|---|---|
-| `api/server/routes/projects.js` | Criar router Express: `GET /`, `POST /`, `GET /:projectId`, `PUT /:projectId`, `DELETE /:projectId`, `PUT /:projectId/archive`. Usar `requireJwtAuth`. Chamar métodos de `db` (expostos via `~/models`) |
-| `api/server/routes/index.js` (ou onde o app registra rotas) | Registrar `app.use('/api/projects', require('./routes/projects'))` |
-
-**PR 1.2.2 — Rotas de Conversa com Project Filter**
-
-| Arquivo | Ação |
-|---|---|
-| `api/server/routes/convos.js` | Em `router.get('/')`, extrair `req.query.projectId` e passar para `db.getConvosByCursor` |
-| `api/server/routes/convos.js` | Em `router.post('/update')` e `router.post('/archive')`, permitir atualização de `projectId` no payload |
+**Arquivos modificados**:
+- `api/server/routes/projects.js` — Router Express com 6 rotas (`GET /`, `POST /`, `GET /:projectId`, `PUT /:projectId`, `DELETE /:projectId`, `PUT /:projectId/archive`)
+- `api/server/routes/index.js` — Registro da rota
+- `api/server/routes/convos.js` — `projectId` query param e persistência em update/archive
 
 ---
 
-### Story 1.3: Data Provider — Types, Endpoints, Hooks
+### Story 1.3: Data Provider — Types, Endpoints, Hooks ✅
 
 **Critérios de Aceitação**:
 - Tipos Zod e TS para Project no `data-provider`.
 - Endpoints definidos.
 - Hooks de React Query para listar, criar, editar, deletar projects.
 
-**PR 1.3.1 — Types e Endpoints**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/data-provider/src/schemas.ts` | Adicionar `projectSchema`, `createProjectRequestSchema`, `updateProjectRequestSchema` |
-| `packages/data-provider/src/types/queries.ts` | Adicionar `projectId?: string` em `ConversationListParams`. Criar `ProjectListParams`, `ProjectListResponse` |
-| `packages/data-provider/src/types/index.ts` | Exportar tipos de project |
-| `packages/data-provider/src/api-endpoints.ts` | Adicionar `projectsRoot`, `projects()`, `projectById(id)`, `archiveProject(id)` |
-| `packages/data-provider/src/keys.ts` | Adicionar `projects = 'projects'`, `project = 'project'` em `QueryKeys` |
-| `packages/data-provider/src/data-service.ts` | Adicionar `getProjects()`, `getProjectById(id)`, `createProject(payload)`, `updateProject(id, payload)`, `deleteProject(id)`, `archiveProject(id)` |
-
-**PR 1.3.2 — React Query Hooks**
-
-| Arquivo | Ação |
-|---|---|
-| `client/src/data-provider/queries.ts` | Adicionar `useProjectsQuery()`, `useProjectByIdQuery(id)` |
-| `client/src/data-provider/mutations.ts` | Adicionar `useCreateProjectMutation()`, `useUpdateProjectMutation()`, `useDeleteProjectMutation()`, `useArchiveProjectMutation()` |
-| `client/src/data-provider/mutations.ts` | Atualizar `useUpdateConversationMutation` para invalidar `QueryKeys.projects` quando `projectId` muda |
+**Arquivos modificados**:
+- `packages/data-provider/src/schemas.ts` — `projectSchema`, `createProjectRequestSchema`, `updateProjectRequestSchema`, `TProject`
+- `packages/data-provider/src/types/queries.ts` — `ProjectListParams`, `ProjectListResponse`
+- `packages/data-provider/src/api-endpoints.ts` — `/api/projects` endpoints
+- `packages/data-provider/src/keys.ts` — `QueryKeys.projects`, `QueryKeys.project`
+- `packages/data-provider/src/data-service.ts` — Project service methods
+- `client/src/data-provider/queries.ts` — `useProjectsQuery`, `useProjectByIdQuery`, `useConversationsInfiniteQuery` com `projectId`
+- `client/src/data-provider/mutations.ts` — `useCreateProjectMutation`, `useUpdateProjectMutation`, `useDeleteProjectMutation`, `useArchiveProjectMutation`
 
 ---
 
-## Epic 2: System Prompt Injection
+## Epic 2: System Prompt Injection ✅
 
 **Objetivo**: Instruções do projeto (`project.instructions`) são injetadas como system prompt em toda conversa dentro do projeto. Merge com instruções existentes da conversa/preset.
 
 **Dependência**: Epic 1 concluído.
 
----
-
-### Story 2.1: Carregar Project no Início da Conversa
-
-**Critérios de Aceitação**:
-- Quando uma conversa tem `projectId`, o backend carrega o project e o disponibiliza no contexto da requisição.
-
-**PR 2.1.1 — Middleware de Project Context**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/api/src/utils/projectContext.ts` | Criar função `loadProjectContext(userId, projectId)` que busca project e retorna dados normalizados |
-| `api/server/middleware/projectContext.js` | Criar middleware `projectContext` que, se `req.body.projectId` ou `req.params.projectId` existir, carrega o project e anexa em `req.project` |
+**Status**: Completo — 1 commit. 3 caminhos de injeção implementados. Token counting ajustado. Build e lint passando.
 
 ---
 
-### Story 2.2: Regular Endpoints
+### Story 2.1: Shared Util — `loadProjectInstructions` ✅
 
-**Critérios de Aceitação**:
-- `project.instructions` é prependado ao `promptPrefix` da conversa para endpoints regulares (OpenAI, Anthropic, Google, etc.).
-
-**PR 2.2.1 — LLM Utils**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/api/src/utils/llm.ts` | Atualizar `extractLibreChatParams` ou função de build de mensagens para receber `projectInstructions` e prepend no `promptPrefix` |
-| `api/server/services/Endpoints/*/build.js` (ou equivalente) | Garantir que `project` está disponível no `req` e passado para utils |
+**Arquivos**:
+- `packages/api/src/utils/projectContext.ts` — `loadProjectInstructions(getProjectById, userId, projectId)` → `string | null`
+- `packages/api/src/utils/index.ts` — Export
 
 ---
 
-### Story 2.3: Assistants (OpenAI / Azure)
+### Story 2.2: Agents + Regular Endpoints ✅
 
-**Critérios de Aceitação**:
-- `project.instructions` é mergeado em `additional_instructions` do Run.
+**Implementação**: Regular endpoints convergem com Agents neste fork (ephemeral agents). Injeção feita diretamente em `primaryAgent.instructions` antes de `initializeAgent()`.
 
-**PR 2.3.1 — Assistant Controllers**
-
-| Arquivo | Ação |
-|---|---|
-| `api/server/services/createRunBody.js` | Aceitar `projectInstructions` no payload e concatenar com `additional_instructions` |
-| `api/server/controllers/assistants/chatV1.js` | Carregar project se `conversation.projectId` existir, passar `projectInstructions` para `createRunBody` |
-| `api/server/controllers/assistants/chatV2.js` | Mesmo que acima |
+**Arquivos**:
+- `api/server/services/Endpoints/agents/initialize.js` — Após resolver `conversationId`, busca `conversation.projectId` → `db.getProjectById()` → prepend em `primaryAgent.instructions`
 
 ---
 
-### Story 2.4: Agents
+### Story 2.3: Assistants v1 + v2 ✅
 
-**Critérios de Aceitação**:
-- `project.instructions` é mergeado nas instruções do agente.
+**Implementação**: `createRunBody.js` modificado para aceitar `projectInstructions`. Controllers carregam instructions antes de chamar `createRunBody`. Token counting ajustado para incluir `projectInstructions`.
 
-**PR 2.4.1 — Agent Loaders**
+**Arquivos**:
+- `api/server/services/createRunBody.js` — Aceita `projectInstructions?: string`; prepend em `systemInstructions` antes de `promptPrefix`
+- `api/server/controllers/assistants/chatV1.js` — Carrega `projectInstructions` via `getConvo` + `getProjectById`; passa para `createRunBody`; inclui em `countTokens()`
+- `api/server/controllers/assistants/chatV2.js` — Mesmo padrão de v1
 
-| Arquivo | Ação |
-|---|---|
-| `packages/api/src/agents/load.ts` | Se `req.body.projectId`, carregar project e merge `project.instructions` em `req.body.promptPrefix` |
-| `api/server/controllers/agents/client.js` | Garantir que `projectInstructions` é considerado no `buildMessages` |
+**Risco mitigado**: Token count em `checkBalanceBeforeRun` agora inclui `projectInstructions` para não subestimar custo.
 
 ---
 

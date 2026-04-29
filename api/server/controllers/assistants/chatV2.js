@@ -39,6 +39,7 @@ const {
   findBalanceByUser,
   upsertBalanceFields,
   createAutoRefillTransaction,
+  getProjectById,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -154,7 +155,7 @@ const chatV2 = async (req, res) => {
       // TODO: make promptBuffer a config option; buffer for titles, needs buffer for system instructions
       const promptBuffer = parentMessageId === Constants.NO_PARENT && !_thread_id ? 200 : 0;
       // 5 is added for labels
-      let promptTokens = (await countTokens(text + (promptPrefix ?? ''))) + 5;
+      let promptTokens = (await countTokens(text + (promptPrefix ?? '') + projectInstructions)) + 5;
       promptTokens += totalPreviousTokens + promptBuffer;
       // Count tokens up to the current context window
       promptTokens = Math.min(promptTokens, getModelMaxTokens(model));
@@ -190,6 +191,22 @@ const chatV2 = async (req, res) => {
     openai = _openai;
     await validateAuthor({ req, openai });
 
+    /** Load project instructions if conversation belongs to a project */
+    let projectInstructions = '';
+    if (convoId) {
+      try {
+        const convo = await getConvo(req.user.id, convoId);
+        if (convo?.projectId) {
+          const project = await getProjectById(req.user.id, convo.projectId);
+          if (project?.instructions) {
+            projectInstructions = project.instructions;
+          }
+        }
+      } catch (err) {
+        logger.error('[/assistants/chat/] Error loading project instructions', err);
+      }
+    }
+
     if (previousMessages.length) {
       parentMessageId = previousMessages[previousMessages.length - 1].messageId;
     }
@@ -215,6 +232,7 @@ const chatV2 = async (req, res) => {
       instructions,
       endpointOption,
       clientTimestamp,
+      projectInstructions,
     });
 
     const getRequestFileIds = async () => {
