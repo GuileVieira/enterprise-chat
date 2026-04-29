@@ -7,29 +7,29 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const faqs = [
   {
-    question: "Mas o resultado da IA nao tem a qualidade da minha equipe.",
+    question: "Mas o resultado da IA nÃ£o tem a qualidade da minha equipe.",
     answer:
-      "O agente nao substitui o julgamento criativo. Ele acelera a parte operacional: estrutura, formato, pesquisa, organizacao. O redator ainda edita. O planejador ainda aprova. So que comecam de um ponto 80% pronto, nao do zero.",
+      "O agente nÃ£o substitui o julgamento criativo. Ele acelera a parte operacional: estrutura, formato, pesquisa, organizaÃ§Ã£o. O redator ainda edita. O planejador ainda aprova. So que comecam de um ponto 80% pronto, nÃ£o do zero.",
   },
   {
     question: "Meus clientes vao perceber que usamos IA.",
     answer:
-      "Os agentes usam o tom, o formato e as referencias que voce define. O objetivo nao e enganar ninguem — e garantir que a entrega operacional nao dependa de qual pessoa da equipe esta disponivel no momento.",
+      "Os agentes usam o tom, o formato e as referencias que vocÃª define. O objetivo nÃ£o e enganar ninguem — e garantir que a entrega operacional nÃ£o dependa de qual pessoa da equipe esta disponivel no momento.",
   },
   {
     question: "E se eu ja tiver templates e processos?",
     answer:
-      "Melhor ainda. Transformamos seus templates em agentes inteligentes que preenchem, adaptam e entregam no contexto de cada cliente. Seu processo vira tecnologia, nao fica no papel.",
+      "Melhor ainda. Transformamos seus templates em agentes inteligentes que preenchem, adaptam e entregam no contexto de cada cliente. Seu processo vira tecnologia, nÃ£o fica no papel.",
   },
   {
     question: "Como eu sei se esta funcionando?",
     answer:
-      "Voce acompanha tudo em um dashboard: quantas entregas cada agente gerou, tempo medio de uso, avaliacao de qualidade pela equipe. E fazemos reunioes mensais de ajuste baseadas nos numeros.",
+      "VocÃª acompanha tudo em um dashboard: quantas entregas cada agente gerou, tempo medio de uso, avaliacao de qualidade pela equipe. E fazemos reunioes mensais de ajuste baseadas nos numeros.",
   },
   {
     question: "E se eu quiser cancelar?",
     answer:
-      "Nao temos fidelidade. Mas o cancelamento so faz sentido se a operacao estiver tao padronizada que voce nao precisa mais de nos — e nesse caso, parabens.",
+      "NÃ£o temos fidelidade. Mas o cancelamento so faz sentido se a operaÃ§Ã£o estiver tao padronizada que vocÃª nÃ£o precisa mais de nos — e nesse caso, parabens.",
   },
 ];
 

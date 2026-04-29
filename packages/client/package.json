@@ -1,10 +1,10 @@
 {
   "name": "@librechat/client",
   "version": "0.4.59",
-  "description": "React components for LibreChat",
+  "description": "React components for Orqest",
   "repository": {
     "type": "git",
-    "url": "https://github.com/danny-avila/LibreChat"
+    "url": "https://github.com/danny-avila/Orqest"
   },
   "main": "dist/index.js",
   "module": "dist/index.es.js",

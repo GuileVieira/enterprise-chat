@@ -1,4 +1,4 @@
-# LibreChat — Agent Guide
+# Orqest — Agent Guide
 
 > Compact, high-signal facts for OpenCode sessions. If a line isn’t likely to prevent a mistake, it’s not here.
 
@@ -53,7 +53,7 @@ Quirks:
 ## Environment & Services
 
 - **MongoDB is required.** Copy `.env.example` → `.env`. Minimal locals:
-  - `MONGO_URI=mongodb://127.0.0.1:27017/LibreChat`
+  - `MONGO_URI=mongodb://127.0.0.1:27017/Orqest` (kept for upstream compatibility)
   - `DOMAIN_CLIENT=http://localhost:3080`
   - `DOMAIN_SERVER=http://localhost:3080`
 - **Docker Compose** provides MongoDB, Meilisearch, RAG API, and pgvector. Run `docker compose up -d` if you need the full stack.

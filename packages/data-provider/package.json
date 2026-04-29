@@ -1,7 +1,7 @@
 {
   "name": "librechat-data-provider",
   "version": "0.8.502",
-  "description": "data services for librechat apps",
+  "description": "data services for Orqest apps",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "types": "./dist/types/index.d.ts",
@@ -34,12 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/danny-avila/LibreChat"
+    "url": "https://github.com/danny-avila/Orqest"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/danny-avila/LibreChat/issues"
+    "url": "https://github.com/danny-avila/Orqest/issues"
   },
   "homepage": "https://librechat.ai",
   "dependencies": {

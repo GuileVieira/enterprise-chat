@@ -38,7 +38,7 @@ async function getCodeOutputDownloadStream(fileIdentifier, identity, req) {
       url: `${baseURL}/download/${fileIdentifier}${query}`,
       responseType: 'stream',
       headers: {
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         ...authHeaders,
       },
       httpAgent: codeServerHttpAgent,
@@ -94,7 +94,7 @@ async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
       headers: {
         ...form.getHeaders(),
         'Content-Type': 'multipart/form-data',
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         'User-Id': req.user.id,
         ...authHeaders,
       },
@@ -166,7 +166,7 @@ async function batchUploadCodeEnvFiles({ req, files, kind, id, version, read_onl
     headers: {
       ...form.getHeaders(),
       'Content-Type': 'multipart/form-data',
-      'User-Agent': 'LibreChat/1.0',
+      'User-Agent': 'Orqest/1.0',
       'User-Id': req.user.id,
       ...authHeaders,
     },

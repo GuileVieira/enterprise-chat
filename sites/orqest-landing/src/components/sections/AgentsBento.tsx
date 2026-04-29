@@ -24,15 +24,15 @@ export function AgentsBento() {
           <AgentCard
             index={0}
             title="Agente de Briefing"
-            description="A account entra as informacoes do cliente. Em minutos, recebe um briefing completo: objetivo, publico-alvo, tom de voz, referencias, entregaveis e cronograma. No formato que sua agencia sempre usou."
+            description="A account entra as informacoes do cliente. Em minutos, recebe um briefing completo: objetivo, pÃºblico-alvo, tom de voz, referencias, entregÃ¡veis e cronograma. No formato que sua agÃªncia sempre usou."
             who="Account / Atendimento"
             simulation={<BriefingSimulation />}
           />
           <AgentCard
             index={1}
             title="Agente de Roteiro"
-            description="O produtor entrega o tema e o objetivo do video. O agente retorna com roteiro estruturado: gancho, desenvolvimento, CTA, sugestoes de imagem e duracao estimada. No tom do cliente."
-            who="Redator / Produtor de conteudo"
+            description="O produtor entrega o tema e o objetivo do video. O agente retorna com roteiro estruturado: gancho, desenvolvimento, CTA, sugestÃµes de imagem e duraÃ§Ã£o estimada. No tom do cliente."
+            who="Redator / Produtor de conteÃºdo"
             simulation={<RoteiroSimulation />}
           />
         </div>
@@ -41,14 +41,14 @@ export function AgentsBento() {
           <AgentCard
             index={2}
             title="Agente de Planejamento"
-            description="O diretor informa o objetivo da campanha e o budget. O agente entrega um plano com publico-alvo, canais, formatos de conteudo, cronograma e metricas de sucesso."
-            who="Planejador / Diretor de operacoes"
+            description="O diretor informa o objetivo da campanha e o budget. O agente entrega um plano com pÃºblico-alvo, canais, formatos de conteÃºdo, cronograma e mÃ©tricas de sucesso."
+            who="Planejador / Diretor de operaÃ§Ãµes"
             simulation={<PlanejamentoSimulation />}
           />
           <AgentCard
             index={3}
             title="Agente de Pauta"
-            description="O social media informa o calendario editorial e os temas do mes. O agente retorna com pautas completas: angulo, formato, referencias visuais e copy sugerido."
+            description="O social media informa o calendario editorial e os temas do mÃªs. O agente retorna com pautas completas: Ã¢ngulo, formato, referencias visuais e copy sugerido."
             who="Social Media / Redator"
             simulation={<PautaSimulation />}
           />
@@ -56,7 +56,7 @@ export function AgentsBento() {
             index={4}
             title="Agente de Dados"
             description="Qualquer pessoa da equipe faz uma pergunta sobre performance. O agente consulta os dados, extrai o insight e responde em linguagem clara."
-            who="Qualquer um da operacao"
+            who="Qualquer um da operaÃ§Ã£o"
             simulation={<DadosSimulation />}
           />
         </div>

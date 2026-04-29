@@ -88,8 +88,8 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'LibreChat',
-        short_name: 'LibreChat',
+        name: process.env.APP_TITLE || 'Orqest',
+        short_name: process.env.APP_TITLE || 'Orqest',
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',

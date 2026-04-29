@@ -8,19 +8,19 @@ const steps = [
     number: "01",
     title: "Mapeamento",
     description:
-      "Entrevistamos sua lideranca e equipe operacional. Documentamos como voces montam briefing, escrevem roteiro, planejam campanha, estruturam pauta e geram relatorios. Identificamos onde a IA pode assumir sem perder o padrao de qualidade.",
+      "Entrevistamos sua lideranÃ§a e equipe operacional. Documentamos como vocÃªs montam briefing, escrevem roteiro, planejam campanha, estruturam pauta e geram relatÃ³rios. Identificamos onde a IA pode assumir sem perder o padrÃ£o de qualidade.",
   },
   {
     number: "02",
     title: "Orquestracao",
     description:
-      "Criamos cada agente com o contexto da sua agencia: formatos aprovados, tom de voz por cliente, templates historicos, regras de negocio. Integramos com as ferramentas que voce ja usa, se necessario.",
+      "Criamos cada agente com o contexto da sua agÃªncia: formatos aprovados, tom de voz por cliente, templates histÃ³ricos, regras de negÃ³cio. Integramos com as ferramentas que vocÃª ja usa, se necessÃ¡rio.",
   },
   {
     number: "03",
     title: "Conducao",
     description:
-      "A equipe comeca a usar. Voce acompanha a adocao e a qualidade das entregas em um dashboard. Nos ajustamos os agentes conforme a agencia evolui — novos clientes, novos formatos, novos processos.",
+      "A equipe comeca a usar. VocÃª acompanha a adoÃ§Ã£o e a qualidade das entregas em um dashboard. Nos ajustamos os agentes conforme a agÃªncia evolui — novos clientes, novos formatos, novos processos.",
   },
 ];
 
@@ -30,7 +30,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal>
           <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
-            De operacao baguncada para processo orquestrado em 3 fases.
+            De operaÃ§Ã£o bagunÃ§ada para processo orquestrado em 3 fases.
           </h2>
         </ScrollReveal>
 

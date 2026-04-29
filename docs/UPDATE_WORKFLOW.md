@@ -1,4 +1,4 @@
-# LibreChat — Fluxo de Atualização e Ambiente
+# Orqest — Fluxo de Atualização e Ambiente
 
 > Documento de referência para rodar o projeto localmente e gerenciar atualizações do upstream de forma segura.
 
@@ -43,7 +43,7 @@ cp .env.example .env
 Edite o `.env` e garanta as variáveis mínimas:
 
 ```bash
-MONGO_URI=mongodb://127.0.0.1:27017/LibreChat
+MONGO_URI=mongodb://127.0.0.1:27017/Orqest (kept for upstream compatibility)
 MEILI_HOST=http://127.0.0.1:7700
 DOMAIN_CLIENT=http://localhost:3080
 DOMAIN_SERVER=http://localhost:3080
@@ -101,7 +101,7 @@ Esse modelo separa a base upstream, o produto estável e a validação de update
 
 | Branch | Papel |
 |---|---|
-| `main` | Base sincronizada com `LibreChat/upstream`. Recebe o código original do projeto. |
+| `main` | Base sincronizada com `Orqest/upstream`. Recebe o código original do projeto (upstream). |
 | `wl/main` | White label em produção ou estável. Sua versão customizada e confiável. |
 | `integration/upstream-<data>` | Branch temporária para testar e absorver uma nova atualização do upstream. |
 | `feature/...` | Mudanças novas do seu produto. |
@@ -109,7 +109,7 @@ Esse modelo separa a base upstream, o produto estável e a validação de update
 
 ### Fluxo de Atualização (Passo a Passo)
 
-Quando sair uma nova versão do LibreChat:
+Quando sair uma nova versão do upstream (Orqest):
 
 ```bash
 # 1. Atualize a main com o upstream
