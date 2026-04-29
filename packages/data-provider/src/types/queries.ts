@@ -324,6 +324,57 @@ export type TenantStatsResponse = {
   };
 };
 
+/* Admin Functions */
+export type TenantFunction = {
+  _id: string;
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string;
+  config: {
+    baseUrl: string;
+    method: string;
+    path: string;
+    headers?: Record<string, string>;
+    auth?: {
+      type: string;
+      secretName?: string;
+      headerName?: string;
+    };
+  };
+  inputSchema: Record<string, unknown>;
+  postProcess?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TenantFunctionListResponse = {
+  functions: TenantFunction[];
+};
+
+export type TenantFunctionResponse = {
+  function: TenantFunction;
+};
+
+/* Admin Secrets */
+export type TenantSecret = {
+  _id: string;
+  tenantId: string;
+  name: string;
+  type: 'bearer' | 'basic' | 'api_key' | 'custom';
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TenantSecretListResponse = {
+  secrets: TenantSecret[];
+};
+
+export type TenantSecretResponse = {
+  secret: TenantSecret;
+};
+
 export type AdminConfigResponse = {
   config: AdminConfig;
 };

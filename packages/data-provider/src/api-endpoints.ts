@@ -459,6 +459,15 @@ export const adminTenantUsers = (tenantId: string) =>
 export const adminTenantStats = (tenantId: string) =>
   `${adminTenants()}/${encodeURIComponent(tenantId)}/stats`;
 
+/* Admin Functions */
+export const adminFunctions = () => `${BASE_URL}/api/admin/functions`;
+export const adminFunctionById = (id: string) => `${adminFunctions()}/${encodeURIComponent(id)}`;
+export const adminFunctionToggle = (id: string) => `${adminFunctionById(id)}/toggle`;
+
+/* Admin Secrets */
+export const adminSecrets = () => `${BASE_URL}/api/admin/secrets`;
+export const adminSecretByName = (name: string) => `${adminSecrets()}/${encodeURIComponent(name)}`;
+
 /* Conversation Tags */
 export const conversationTags = (tag?: string) =>
   `${BASE_URL}/api/tags${tag != null && tag ? `/${encodeURIComponent(tag)}` : ''}`;

@@ -386,6 +386,197 @@ export const useCreateAdminUserMutation = (
   );
 };
 
+/* Admin Functions */
+export const useListAdminFunctions = (
+  tenantId: string,
+  config?: UseQueryOptions<q.TenantFunctionListResponse>,
+): QueryObserverResult<q.TenantFunctionListResponse> => {
+  return useQuery<q.TenantFunctionListResponse>(
+    [QueryKeys.adminFunctions, tenantId],
+    () => dataService.listAdminFunctions(tenantId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      enabled: !!tenantId,
+      ...config,
+    },
+  );
+};
+
+export const useCreateAdminFunctionMutation = (
+  options?: t.MutationOptions<q.TenantFunctionResponse, Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>>,
+): UseMutationResult<
+  q.TenantFunctionResponse,
+  t.TError | undefined,
+  Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (payload) => dataService.createAdminFunction(payload),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to create function:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+export const useToggleAdminFunctionMutation = (
+  options?: t.MutationOptions<q.TenantFunctionResponse, { id: string; tenantId: string; isActive: boolean }>,
+): UseMutationResult<
+  q.TenantFunctionResponse,
+  t.TError | undefined,
+  { id: string; tenantId: string; isActive: boolean },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) => dataService.toggleAdminFunction(variables.id, variables.tenantId, variables.isActive),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to toggle function:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+export const useDeleteAdminFunctionMutation = (
+  options?: t.MutationOptions<unknown, { id: string; tenantId: string }>,
+): UseMutationResult<unknown, t.TError | undefined, { id: string; tenantId: string }, unknown> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) => dataService.deleteAdminFunction(variables.id, variables.tenantId),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to delete function:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+/* Admin Secrets */
+export const useListAdminSecrets = (
+  tenantId: string,
+  config?: UseQueryOptions<q.TenantSecretListResponse>,
+): QueryObserverResult<q.TenantSecretListResponse> => {
+  return useQuery<q.TenantSecretListResponse>(
+    [QueryKeys.adminSecrets, tenantId],
+    () => dataService.listAdminSecrets(tenantId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      enabled: !!tenantId,
+      ...config,
+    },
+  );
+};
+
+export const useCreateAdminSecretMutation = (
+  options?: t.MutationOptions<q.TenantSecretResponse, { tenantId: string; name: string; value: string; type: string }>,
+): UseMutationResult<
+  q.TenantSecretResponse,
+  t.TError | undefined,
+  { tenantId: string; name: string; value: string; type: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (payload) => dataService.createAdminSecret(payload),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminSecrets, variables.tenantId]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to create secret:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+export const useDeleteAdminSecretMutation = (
+  options?: t.MutationOptions<unknown, { name: string; tenantId: string }>,
+): UseMutationResult<unknown, t.TError | undefined, { name: string; tenantId: string }, unknown> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) => dataService.deleteAdminSecret(variables.name, variables.tenantId),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminSecrets, variables.tenantId]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to delete secret:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
 /* Admin Tenants */
 export const useListAdminTenants = (
   config?: UseQueryOptions<t.ListTenantsResponse>,
