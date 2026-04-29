@@ -34,6 +34,7 @@ const SecretsPage: React.FC = () => {
   const [secretName, setSecretName] = useState('');
   const [secretValue, setSecretValue] = useState('');
   const [secretType, setSecretType] = useState<SecretType>('bearer');
+  const [isSecretFormEditable, setIsSecretFormEditable] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const { data, isLoading } = useListAdminSecrets(tenantId);
@@ -50,6 +51,7 @@ const SecretsPage: React.FC = () => {
     setSecretName('');
     setSecretValue('');
     setSecretType('bearer');
+    setIsSecretFormEditable(false);
   };
 
   const closeModal = () => {
@@ -251,6 +253,15 @@ const SecretsPage: React.FC = () => {
               </AdminIconButton>
             </div>
             <form autoComplete="off" onSubmit={handleCreate} className="mt-5 space-y-4">
+              <div aria-hidden="true" className="hidden">
+                <input tabIndex={-1} type="text" name="username" autoComplete="username" />
+                <input
+                  tabIndex={-1}
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary">
                   {localize('com_admin_name')}
@@ -263,8 +274,12 @@ const SecretsPage: React.FC = () => {
                   autoCapitalize="off"
                   autoCorrect="off"
                   autoComplete="off"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  readOnly={!isSecretFormEditable}
                   spellCheck={false}
                   value={secretName}
+                  onFocus={() => setIsSecretFormEditable(true)}
                   onChange={(e) => setSecretName(e.target.value)}
                   placeholder={localize('com_admin_secret_name_placeholder')}
                   className="focus:ring-ring-primary/20 mt-1 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
@@ -297,12 +312,16 @@ const SecretsPage: React.FC = () => {
                   required
                   id="tenant-secret-value"
                   name="tenant-secret-value"
-                  type="text"
+                  type="password"
                   autoCapitalize="off"
                   autoCorrect="off"
                   autoComplete="new-password"
+                  data-1p-ignore="true"
+                  data-lpignore="true"
+                  readOnly={!isSecretFormEditable}
                   spellCheck={false}
                   value={secretValue}
+                  onFocus={() => setIsSecretFormEditable(true)}
                   onChange={(e) => setSecretValue(e.target.value)}
                   placeholder={localize('com_admin_secret_value_placeholder')}
                   className="focus:ring-ring-primary/20 mt-1 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
