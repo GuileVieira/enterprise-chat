@@ -1,20 +1,31 @@
-import React from 'react';
-import { Building2, Users, ArrowRight, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, Users, ArrowRight, Loader2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useListAdminTenants } from '~/data-provider/admin';
+import CreateUserModal from '../Users/CreateUserModal';
 
 const TenantsPage: React.FC = () => {
   const { data, isLoading } = useListAdminTenants();
   const navigate = useNavigate();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const tenants = data?.tenants ?? [];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Tenants</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          View all tenants and their user counts. Click a tenant to see details.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Tenants</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            View all tenants and their user counts. Click a tenant to see details.
+          </p>
+        </div>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
+        >
+          <Plus className="h-4 w-4" />
+          Create Tenant
+        </button>
       </div>
 
       {isLoading && (
@@ -28,7 +39,7 @@ const TenantsPage: React.FC = () => {
           <Building2 className="mx-auto h-12 w-12 text-text-secondary" />
           <p className="mt-4 text-text-secondary">No tenants found.</p>
           <p className="mt-1 text-xs text-text-secondary">
-            Tenants are created implicitly when users are assigned a tenantId.
+            Create your first tenant by adding a user with a tenant assignment.
           </p>
         </div>
       )}
@@ -58,6 +69,11 @@ const TenantsPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 };
