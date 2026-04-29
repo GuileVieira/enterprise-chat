@@ -94,6 +94,10 @@ export default function useTextarea({
         return localize('com_endpoint_message_not_appendable');
       }
 
+      if (conversation?.spec) {
+        return localize('com_endpoint_message');
+      }
+
       const sender =
         isAssistant || isAgent
           ? getEntityName({ name: entityName, isAgent, localize })
