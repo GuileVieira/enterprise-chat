@@ -27,6 +27,7 @@ import {
   AdminConfirmDialog,
   AdminPageHeader,
 } from '../common';
+import CreateFunctionModal from './CreateFunctionModal';
 
 interface PendingDelete {
   id: string;
@@ -37,6 +38,7 @@ interface PendingDelete {
 const FunctionsPage: React.FC = () => {
   const localize = useLocalize();
   const [tenantId, setTenantId] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const { data, isLoading } = useListAdminFunctions(tenantId);
@@ -94,7 +96,7 @@ const FunctionsPage: React.FC = () => {
             <AdminActionButton
               icon={<Plus className="h-4 w-4" />}
               disabled={!tenantId}
-              title={localize('com_admin_function_create_coming_soon')}
+              onClick={() => setIsCreateModalOpen(true)}
             >
               {localize('com_admin_create_function')}
             </AdminActionButton>
@@ -259,6 +261,12 @@ const FunctionsPage: React.FC = () => {
           description={localize('com_admin_select_tenant_description')}
         />
       )}
+
+      <CreateFunctionModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        tenantId={tenantId}
+      />
 
       <AdminConfirmDialog
         isOpen={pendingDelete != null}
