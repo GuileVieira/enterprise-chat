@@ -25,23 +25,23 @@ export const navItems: NavItem[] = [
 export const agents: AgentItem[] = [
   {
     name: 'Briefing',
-    description: 'Organiza objetivo, público, tom, referências e entregáveis.',
+    description: 'Sai com objetivo, público, tom, referências, entregáveis e próximos passos.',
   },
   {
     name: 'Roteiro',
-    description: 'Cria estrutura com gancho, desenvolvimento, CTA e duração.',
+    description: 'Transforma tema solto em gancho, desenvolvimento, CTA e sugestão de cenas.',
   },
   {
     name: 'Pauta',
-    description: 'Gera ângulos, formatos e ideias para o calendário editorial.',
+    description: 'Abre caminhos de conteúdo sem começar a pesquisa toda vez do zero.',
   },
   {
     name: 'Planejamento',
-    description: 'Monta canais, cronograma, orçamento e métricas.',
+    description: 'Monta canais, cronograma, orçamento e métrica antes da reunião começar.',
   },
   {
     name: 'Dados',
-    description: 'Responde perguntas de performance sem abrir uma fila de relatório.',
+    description: 'Responde perguntas de performance sem travar alguém em planilha.',
   },
 ];
 
@@ -49,24 +49,24 @@ export const processSteps: ProcessStep[] = [
   {
     number: '01',
     title: 'Mapeamos',
-    description: 'Entendemos como a equipe trabalha hoje.',
+    description: 'Pegamos exemplos reais de briefing, roteiro, pauta, plano e relatório.',
   },
   {
     number: '02',
     title: 'Padronizamos',
-    description: 'Transformamos tarefas repetidas em formatos claros.',
+    description: 'Transformamos o jeito da sua agência em regras que o agente consegue seguir.',
   },
   {
     number: '03',
     title: 'Instalamos',
-    description: 'Criamos agentes para a equipe usar no dia a dia.',
+    description: 'A equipe usa quando precisa e revisa a entrega, em vez de começar do zero.',
   },
 ];
 
 export const operatingSignals = [
-  'briefings variam conforme a pessoa',
-  'roteiros começam do zero',
-  'pautas consomem pesquisa repetida',
-  'relatórios dependem de alguém parar tudo',
-  'processos existem, mas não são seguidos sempre',
+  'briefing muda dependendo de quem monta',
+  'roteiro começa do zero toda semana',
+  'pauta depende de pesquisa repetida',
+  'relatório para a operação',
+  'processo existe, mas ninguém segue igual',
 ];
