@@ -269,3 +269,26 @@ export type GroupMembersResponse = {
   members: AdminUser[];
   total: number;
 };
+
+/* Admin Config */
+export type AdminConfig = {
+  _id: string;
+  principalType: string;
+  principalId: string;
+  principalModel: string;
+  priority: number;
+  overrides: Record<string, unknown>;
+  isActive: boolean;
+  configVersion: number;
+  tenantId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminConfigListResponse = {
+  configs: AdminConfig[];
+};
+
+export type AdminConfigResponse = {
+  config: AdminConfig;
+};
