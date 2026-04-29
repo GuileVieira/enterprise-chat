@@ -137,6 +137,14 @@ export const router = createBrowserRouter(
               path: 'tenants/:id',
               lazy: () => import('~/components/Admin/Tenants/TenantDetailPage').then((m) => ({ Component: m.default })),
             },
+            {
+              path: 'functions',
+              lazy: () => import('~/components/Admin/Functions/FunctionsPage').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'secrets',
+              lazy: () => import('~/components/Admin/Secrets/SecretsPage').then((m) => ({ Component: m.default })),
+            },
           ],
         },
         {

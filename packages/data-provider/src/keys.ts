@@ -78,6 +78,8 @@ export enum QueryKeys {
   adminTenants = 'adminTenants',
   adminTenantUsers = 'adminTenantUsers',
   adminTenantStats = 'adminTenantStats',
+  adminFunctions = 'adminFunctions',
+  adminSecrets = 'adminSecrets',
 }
 
 // Dynamic query keys that require parameters

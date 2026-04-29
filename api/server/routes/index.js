@@ -8,6 +8,8 @@ const adminGroups = require('./admin/groups');
 const adminRoles = require('./admin/roles');
 const adminTenants = require('./admin/tenants');
 const adminUsers = require('./admin/users');
+const adminFunctions = require('./admin/functions');
+const adminSecrets = require('./admin/secrets');
 const endpoints = require('./endpoints');
 const staticRoute = require('./static');
 const messages = require('./messages');
@@ -44,6 +46,8 @@ module.exports = {
   adminRoles,
   adminTenants,
   adminUsers,
+  adminFunctions,
+  adminSecrets,
   keys,
   apiKeys,
   user,

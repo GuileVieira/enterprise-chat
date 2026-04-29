@@ -1008,6 +1008,55 @@ export function getAdminTenantStats(tenantId: string): Promise<q.TenantStatsResp
   return request.get(endpoints.adminTenantStats(tenantId));
 }
 
+/* Admin Functions */
+export function listAdminFunctions(tenantId: string): Promise<q.TenantFunctionListResponse> {
+  return request.get(`${endpoints.adminFunctions()}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+export function createAdminFunction(
+  payload: Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>,
+): Promise<q.TenantFunctionResponse> {
+  return request.post(endpoints.adminFunctions(), payload);
+}
+
+export function updateAdminFunction(
+  id: string,
+  tenantId: string,
+  payload: Partial<q.TenantFunction>,
+): Promise<q.TenantFunctionResponse> {
+  return request.patch(`${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`, payload);
+}
+
+export function toggleAdminFunction(
+  id: string,
+  tenantId: string,
+  isActive: boolean,
+): Promise<q.TenantFunctionResponse> {
+  return request.patch(`${endpoints.adminFunctionToggle(id)}?tenantId=${encodeURIComponent(tenantId)}`, { isActive });
+}
+
+export function deleteAdminFunction(id: string, tenantId: string): Promise<unknown> {
+  return request.delete(`${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+/* Admin Secrets */
+export function listAdminSecrets(tenantId: string): Promise<q.TenantSecretListResponse> {
+  return request.get(`${endpoints.adminSecrets()}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+export function createAdminSecret(payload: {
+  tenantId: string;
+  name: string;
+  value: string;
+  type: string;
+}): Promise<q.TenantSecretResponse> {
+  return request.post(endpoints.adminSecrets(), payload);
+}
+
+export function deleteAdminSecret(name: string, tenantId: string): Promise<unknown> {
+  return request.delete(`${endpoints.adminSecretByName(name)}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
 export function updatePromptPermissions(
   variables: m.UpdatePromptPermVars,
 ): Promise<m.UpdatePermResponse> {
