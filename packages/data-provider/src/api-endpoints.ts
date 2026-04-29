@@ -126,6 +126,13 @@ export const forkConversation = () => `${conversationsRoot}/fork`;
 
 export const duplicateConversation = () => `${conversationsRoot}/duplicate`;
 
+const projectsRoot = `${BASE_URL}/api/projects`;
+
+export const projects = () => projectsRoot;
+export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}`;
+export const archiveProject = (id: string) =>
+  `${projectsRoot}/${encodeURIComponent(id)}/archive`;
+
 export const search = (q: string, cursor?: string | null) =>
   `${BASE_URL}/api/search?q=${q}${cursor ? `&cursor=${cursor}` : ''}`;
 

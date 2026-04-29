@@ -86,12 +86,12 @@ export const useConversationsInfiniteQuery = (
   params: ConversationListParams,
   config?: UseInfiniteQueryOptions<ConversationListResponse, unknown>,
 ) => {
-  const { isArchived, sortBy, sortDirection, tags, search } = params;
+  const { isArchived, sortBy, sortDirection, tags, projectId, search } = params;
 
   return useInfiniteQuery<ConversationListResponse>({
     queryKey: [
       isArchived ? QueryKeys.archivedConversations : QueryKeys.allConversations,
-      { isArchived, sortBy, sortDirection, tags, search },
+      { isArchived, sortBy, sortDirection, tags, projectId, search },
     ],
     queryFn: ({ pageParam }) =>
       dataService.listConversations({
@@ -99,6 +99,7 @@ export const useConversationsInfiniteQuery = (
         sortBy,
         sortDirection,
         tags,
+        projectId,
         search,
         cursor: pageParam?.toString(),
       }),
@@ -174,6 +175,38 @@ export const useConversationTagsQuery = (
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+export const useProjectsQuery = (
+  config?: UseQueryOptions<t.TProject[]>,
+): QueryObserverResult<t.TProject[]> => {
+  return useQuery<t.TProject[]>(
+    [QueryKeys.projects],
+    () => dataService.getProjects(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+export const useProjectByIdQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.TProject>,
+): QueryObserverResult<t.TProject> => {
+  return useQuery<t.TProject>(
+    [QueryKeys.project, projectId],
+    () => dataService.getProjectById(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      enabled: !!projectId,
       ...config,
     },
   );

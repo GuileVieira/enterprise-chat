@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Shield, Users } from 'lucide-react';
+import { Search, Shield, Users, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLocalize } from '~/hooks';
 import { useListAdminUsers, useSearchAdminUsers } from '~/data-provider/admin';
@@ -11,9 +11,11 @@ import {
   AdminEmptyState,
   AdminPageHeader,
 } from '../common';
+import CreateUserModal from './CreateUserModal';
 
 const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const navigate = useNavigate();
   const localize = useLocalize();
 
@@ -37,10 +39,19 @@ const UsersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader
-        title={localize('com_admin_users')}
-        description={localize('com_admin_users_page_description')}
-      />
+      <div className="flex items-center justify-between">
+        <AdminPageHeader
+          title={localize('com_admin_users')}
+          description={localize('com_admin_users_page_description')}
+        />
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
+        >
+          <Plus className="h-4 w-4" />
+          Create User
+        </button>
+      </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
@@ -76,6 +87,9 @@ const UsersPage: React.FC = () => {
                     {localize('com_admin_username')}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
+                    {localize('com_admin_tenant')}
+                  </th>
+                  <th className="px-6 py-3 font-medium text-text-secondary">
                     {localize('com_admin_role')}
                   </th>
                   <th className="px-6 py-3 font-medium text-text-secondary">
@@ -94,6 +108,15 @@ const UsersPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-text-secondary">{user.email}</td>
                     <td className="px-6 py-4 text-text-secondary">{user.username}</td>
+                    <td className="px-6 py-4 text-text-secondary">
+                      {user.tenantId ? (
+                        <span className="inline-flex items-center rounded-full bg-surface-tertiary px-2 py-0.5 text-xs">
+                          {user.tenantId}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-text-tertiary">—</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <AdminBadge tone={user.role === 'ADMIN' ? 'success' : 'neutral'}>
                         {user.role === 'ADMIN' && <Shield className="h-3 w-3" />}
@@ -123,6 +146,8 @@ const UsersPage: React.FC = () => {
           description={localize('com_admin_no_users_found_description')}
         />
       )}
+
+      <CreateUserModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
     </div>
   );
 };

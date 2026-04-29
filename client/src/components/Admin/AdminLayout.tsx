@@ -6,6 +6,7 @@ import {
   Settings,
   ChevronLeft,
   LayoutDashboard,
+  Building2,
 } from 'lucide-react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
@@ -24,6 +25,7 @@ const navItems: Array<{
   { path: '/admin/users', labelKey: 'com_admin_users', icon: Users },
   { path: '/admin/roles', labelKey: 'com_admin_roles', icon: Shield },
   { path: '/admin/groups', labelKey: 'com_admin_groups', icon: UserCircle },
+  { path: '/admin/tenants', labelKey: 'com_admin_tenants', icon: Building2 },
   { path: '/admin/config', labelKey: 'com_admin_config', icon: Settings },
 ];
 

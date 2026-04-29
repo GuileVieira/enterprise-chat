@@ -826,6 +826,8 @@ export const tConversationSchema = z.object({
   greeting: z.string().optional(),
   spec: z.string().nullable().optional(),
   iconURL: z.string().nullable().optional(),
+  /* projects */
+  projectId: z.string().optional(),
   /* temporary chat */
   expiredAt: z.string().nullable().optional(),
   /* file token limits */
@@ -835,6 +837,37 @@ export const tConversationSchema = z.object({
   /** @deprecated Prefer `modelLabel` over `chatGptLabel` */
   chatGptLabel: z.string().nullable().optional(),
 });
+
+export const projectSchema = z.object({
+  projectId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  user: z.string().optional(),
+  endpoint: z.string().nullable().optional(),
+  model: z.string().optional(),
+  instructions: z.string().optional(),
+  memories: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+  memoryKeys: z.array(z.string()).optional(),
+  promptSnippets: z.array(z.object({ title: z.string(), content: z.string() })).optional(),
+  promptGroupIds: z.array(z.string()).optional(),
+  fileIds: z.array(z.string()).optional(),
+  isArchived: z.boolean().optional(),
+  iconURL: z.string().optional(),
+  accessLevel: z.number().optional(),
+  tenantId: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const createProjectSchema = projectSchema.omit({
+  projectId: true,
+  user: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateProjectSchema = createProjectSchema.partial();
 
 export const tPresetSchema = tConversationSchema
   .omit({
@@ -993,6 +1026,8 @@ export type TConversation = z.infer<typeof tConversationSchema> & {
   presetOverride?: Partial<TPreset>;
   disableParams?: boolean;
 };
+
+export type TProject = z.infer<typeof projectSchema>;
 
 export const tSharedLinkSchema = z.object({
   conversationId: z.string(),
