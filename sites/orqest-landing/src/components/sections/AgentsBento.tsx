@@ -24,14 +24,14 @@ export function AgentsBento() {
           <AgentCard
             index={0}
             title="Agente de Briefing"
-            description="A account entra as informacoes do cliente. Em minutos, recebe um briefing completo: objetivo, pÃºblico-alvo, tom de voz, referencias, entregÃ¡veis e cronograma. No formato que sua agÃªncia sempre usou."
+            description="A account entra as informaÃ§Ãµes do cliente. Em minutos, recebe um briefing completo: objetivo, pÃºblico-alvo, tom de voz, referÃªncias, entregÃ¡veis e cronograma. No formato que sua agÃªncia sempre usou."
             who="Account / Atendimento"
             simulation={<BriefingSimulation />}
           />
           <AgentCard
             index={1}
             title="Agente de Roteiro"
-            description="O produtor entrega o tema e o objetivo do video. O agente retorna com roteiro estruturado: gancho, desenvolvimento, CTA, sugestÃµes de imagem e duraÃ§Ã£o estimada. No tom do cliente."
+            description="O produtor entrega o tema e o objetivo do vÃ­deo. O agente retorna com roteiro estruturado: gancho, desenvolvimento, CTA, sugestÃµes de imagem e duraÃ§Ã£o estimada. No tom do cliente."
             who="Redator / Produtor de conteÃºdo"
             simulation={<RoteiroSimulation />}
           />
@@ -48,7 +48,7 @@ export function AgentsBento() {
           <AgentCard
             index={3}
             title="Agente de Pauta"
-            description="O social media informa o calendario editorial e os temas do mÃªs. O agente retorna com pautas completas: Ã¢ngulo, formato, referencias visuais e copy sugerido."
+            description="O social media informa o calendÃ¡rio editorial e os temas do mÃªs. O agente retorna com pautas completas: Ã¢ngulo, formato, referÃªncias visuais e copy sugerido."
             who="Social Media / Redator"
             simulation={<PautaSimulation />}
           />

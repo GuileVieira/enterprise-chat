@@ -48,7 +48,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             transition={{ delay: 0.6 }}
             className="mt-6 text-sm text-text-muted"
           >
-            Para agÃªncias de marketing que ja tem talento, mas perdem tempo em processos operacionais que deveriam ser instantÃ¢neos.
+            Para agÃªncias de marketing que jÃ¡ tem talento, mas perdem tempo em processos operacionais que deveriam ser instantÃ¢neos.
           </motion.p>
         </div>
 

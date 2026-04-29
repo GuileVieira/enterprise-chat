@@ -58,7 +58,7 @@ export const BriefingSimulation = memo(function BriefingSimulation() {
 export const RoteiroSimulation = memo(function RoteiroSimulation() {
   const [activeIndex, setActiveIndex] = useState(0);
   const sections = [
-    { label: "GANCHO", text: "VocÃª ja perdeu uma venda por falta de follow-up?" },
+    { label: "GANCHO", text: "VocÃª jÃ¡ perdeu uma venda por falta de follow-up?" },
     { label: "DESENVOLVIMENTO", text: "80% dos clientes compram apos o 5o contato..." },
     { label: "CTA", text: "Agende uma demonstracao gratuita hoje." },
   ];
@@ -167,7 +167,7 @@ export const PautaSimulation = memo(function PautaSimulation() {
     "Como reduzir o CAC em 30%",
     "5 erros no briefing que travam criativos",
     "Case: agÃªncia que dobrou a produtividade",
-    "Roteiro de video em 15 minutos: e possivel?",
+    "Roteiro de vÃ­deo em 15 minutos: e possÃ­vel?",
     "O que mudar no seu processo operacional",
   ];
 

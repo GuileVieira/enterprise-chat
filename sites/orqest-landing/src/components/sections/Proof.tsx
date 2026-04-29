@@ -4,7 +4,7 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const results = [
   "Briefing completo em 5 minutos, nÃ£o em 2 horas.",
-  "Roteiro de video estruturado no padrÃ£o da agÃªncia, entregue em minutos.",
+  "Roteiro de vÃ­deo estruturado no padrÃ£o da agÃªncia, entregue em minutos.",
   "Planejamento de campanha com esqueleto, publico e cronograma — pronto para revisÃ£o, nÃ£o para comeÃ§ar do zero.",
   "Pautas de conteÃºdo para o mÃªs inteiro geradas em uma manhÃ£.",
   "Relatorios e insights de dados respondidos instantaneamente, sem fila.",

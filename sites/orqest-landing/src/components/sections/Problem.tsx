@@ -18,7 +18,7 @@ export function Problem() {
     },
     {
       role: "Redator",
-      text: "escreve o roteiro do video do zero — pela centesima vez — porque nÃ£o existe um padrÃ£o que acelere o trabalho.",
+      text: "escreve o roteiro do vÃ­deo do zero — pela centÃ©sima vez — porque nÃ£o existe um padrÃ£o que acelere o trabalho.",
     },
     {
       role: "Operacao",

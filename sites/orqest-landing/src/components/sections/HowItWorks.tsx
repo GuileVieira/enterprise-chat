@@ -14,7 +14,7 @@ const steps = [
     number: "02",
     title: "Orquestracao",
     description:
-      "Criamos cada agente com o contexto da sua agÃªncia: formatos aprovados, tom de voz por cliente, templates histÃ³ricos, regras de negÃ³cio. Integramos com as ferramentas que vocÃª ja usa, se necessÃ¡rio.",
+      "Criamos cada agente com o contexto da sua agÃªncia: formatos aprovados, tom de voz por cliente, templates histÃ³ricos, regras de negÃ³cio. Integramos com as ferramentas que vocÃª jÃ¡ usa, se necessÃ¡rio.",
   },
   {
     number: "03",

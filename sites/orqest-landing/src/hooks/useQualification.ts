@@ -22,7 +22,7 @@ const QUESTIONS = [
   },
   {
     id: "uses-ai",
-    question: "VocÃª ja usa alguma ferramenta de IA hoje?",
+    question: "VocÃª jÃ¡ usa alguma ferramenta de IA hoje?",
     options: ["Sim", "NÃ£o"],
     scores: { Sim: 1, NÃ£o: 0 },
   },

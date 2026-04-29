@@ -5,8 +5,8 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 const forYou = [
   "Sua equipe gasta mais tempo operando do que criando.",
   "Seu briefing varia de qualidade dependendo de quem monta.",
-  "VocÃª ja tem processos, mas ninguem segue do mesmo jeito.",
-  "Roteiros, pautas e planejamentos comecam do zero a cada novo projeto.",
+  "VocÃª jÃ¡ tem processos, mas ninguÃ©m segue do mesmo jeito.",
+  "Roteiros, pautas e planejamentos comeÃ§am do zero a cada novo projeto.",
   "Sua equipe criativa esta sobrecarregada com tarefas que nÃ£o deveriam ser dela.",
 ];
 

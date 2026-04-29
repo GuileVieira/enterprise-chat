@@ -9,27 +9,27 @@ const faqs = [
   {
     question: "Mas o resultado da IA nÃ£o tem a qualidade da minha equipe.",
     answer:
-      "O agente nÃ£o substitui o julgamento criativo. Ele acelera a parte operacional: estrutura, formato, pesquisa, organizaÃ§Ã£o. O redator ainda edita. O planejador ainda aprova. So que comecam de um ponto 80% pronto, nÃ£o do zero.",
+      "O agente nÃ£o substitui o julgamento criativo. Ele acelera a parte operacional: estrutura, formato, pesquisa, organizaÃ§Ã£o. O redator ainda edita. O planejador ainda aprova. SÃ³ que comeÃ§am de um ponto 80% pronto, nÃ£o do zero.",
   },
   {
     question: "Meus clientes vao perceber que usamos IA.",
     answer:
-      "Os agentes usam o tom, o formato e as referencias que vocÃª define. O objetivo nÃ£o e enganar ninguem — e garantir que a entrega operacional nÃ£o dependa de qual pessoa da equipe esta disponivel no momento.",
+      "Os agentes usam o tom, o formato e as referÃªncias que vocÃª define. O objetivo nÃ£o e enganar ninguÃ©m — e garantir que a entrega operacional nÃ£o dependa de qual pessoa da equipe esta disponÃ­vel no momento.",
   },
   {
-    question: "E se eu ja tiver templates e processos?",
+    question: "E se eu jÃ¡ tiver templates e processos?",
     answer:
       "Melhor ainda. Transformamos seus templates em agentes inteligentes que preenchem, adaptam e entregam no contexto de cada cliente. Seu processo vira tecnologia, nÃ£o fica no papel.",
   },
   {
     question: "Como eu sei se esta funcionando?",
     answer:
-      "VocÃª acompanha tudo em um dashboard: quantas entregas cada agente gerou, tempo medio de uso, avaliacao de qualidade pela equipe. E fazemos reunioes mensais de ajuste baseadas nos numeros.",
+      "VocÃª acompanha tudo em um dashboard: quantas entregas cada agente gerou, tempo mÃ©dio de uso, avaliaÃ§Ã£o de qualidade pela equipe. E fazemos reuniÃµes mensais de ajuste baseadas nos nÃºmeros.",
   },
   {
     question: "E se eu quiser cancelar?",
     answer:
-      "NÃ£o temos fidelidade. Mas o cancelamento so faz sentido se a operaÃ§Ã£o estiver tao padronizada que vocÃª nÃ£o precisa mais de nos — e nesse caso, parabens.",
+      "NÃ£o temos fidelidade. Mas o cancelamento sÃ³ faz sentido se a operaÃ§Ã£o estiver tÃ£o padronizada que vocÃª nÃ£o precisa mais de nos — e nesse caso, parabÃ©ns.",
   },
 ];
 
