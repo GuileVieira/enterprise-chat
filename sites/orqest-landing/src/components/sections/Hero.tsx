@@ -91,9 +91,12 @@ export function Hero({ onCtaClick }: HeroProps) {
             <p className="border-moss/70 text-moss mb-5 max-w-max border-l pl-3 font-mono text-xs uppercase tracking-[0.22em]">
               Operação instalada para agências
             </p>
-            <h1 className="max-w-[18ch] text-5xl font-semibold leading-[0.98] tracking-tighter text-text-primary md:text-6xl lg:text-7xl">
-              Recupere metade do dia da sua equipe criativa com operação digital no seu processo.
+            <h1 className="max-w-[20ch] text-4xl font-semibold leading-[1.05] tracking-tighter text-text-primary md:text-5xl lg:text-6xl">
+              Recupere metade do dia da sua equipe criativa.
             </h1>
+            <p className="mt-4 max-w-[40ch] text-xl leading-relaxed text-text-secondary md:text-2xl">
+              Operação digital instalada no seu processo: briefing, roteiro, pauta e relatórios no padrão da sua agência.
+            </p>
           </motion.div>
 
           <motion.p
