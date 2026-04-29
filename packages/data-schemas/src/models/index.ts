@@ -29,6 +29,8 @@ import { createAclEntryModel } from './aclEntry';
 import { createSystemGrantModel } from './systemGrant';
 import { createGroupModel } from './group';
 import { createConfigModel } from './config';
+import { createTenantFunctionModel } from './tenantFunction';
+import { createTenantSecretModel } from './tenantSecret';
 
 /**
  * Creates all database models for all collections
@@ -66,5 +68,7 @@ export function createModels(mongoose: typeof import('mongoose')) {
     SystemGrant: createSystemGrantModel(mongoose),
     Group: createGroupModel(mongoose),
     Config: createConfigModel(mongoose),
+    TenantFunction: createTenantFunctionModel(mongoose),
+    TenantSecret: createTenantSecretModel(mongoose),
   };
 }

@@ -37,3 +37,6 @@ export * from './admin';
 export * from './web';
 /* MCP Servers */
 export * from './mcp';
+/* Tenant Functions */
+export * from './tenantFunction';
+export * from './tenantSecret';

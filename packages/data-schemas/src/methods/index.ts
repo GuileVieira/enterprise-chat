@@ -49,6 +49,9 @@ import { createPromptMethods, type PromptMethods, type PromptDeps } from './prom
 import { createAgentMethods, type AgentMethods, type AgentDeps } from './agent';
 /* Config */
 import { createConfigMethods, type ConfigMethods } from './config';
+/* Tenant Functions */
+import { createTenantFunctionMethods, type TenantFunctionMethods } from './tenantFunction';
+import { createTenantSecretMethods, type TenantSecretMethods } from './tenantSecret';
 
 export { RoleConflictError, DEFAULT_REFRESH_TOKEN_EXPIRY, DEFAULT_SESSION_EXPIRY };
 export { tokenValues, cacheTokenValues, premiumTokenValues, defaultRate };
@@ -84,7 +87,9 @@ export type AllMethods = UserMethods &
   SpendTokensMethods &
   PromptMethods &
   AgentMethods &
-  ConfigMethods;
+  ConfigMethods &
+  TenantFunctionMethods &
+  TenantSecretMethods;
 
 /** Dependencies injected from the api layer into createMethods */
 export interface CreateMethodsDeps {
@@ -207,6 +212,9 @@ export function createMethods(
     ...agentMethods,
     /* Config */
     ...createConfigMethods(mongoose),
+    /* Tenant Functions */
+    ...createTenantFunctionMethods(mongoose),
+    ...createTenantSecretMethods(mongoose),
   };
 }
 
@@ -242,4 +250,6 @@ export type {
   PromptMethods,
   AgentMethods,
   ConfigMethods,
+  TenantFunctionMethods,
+  TenantSecretMethods,
 };
