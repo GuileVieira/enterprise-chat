@@ -7,6 +7,9 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Orqest - Agentes de IA para Operacao Interna de Agencias",
   description: "Mapeamos seus processos operacionais e criamos agentes de IA especializados em briefing, roteiro, planejamento e relatórios. Sua equipe usa quando precisa.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
