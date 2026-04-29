@@ -1,0 +1,43 @@
+graph LR
+    subgraph Orqest["Orqest"]
+        UC_Auth["Autenticar"]
+        UC_Chat["Conversar com IA"]
+        UC_CreateAgent["Criar Agente"]
+        UC_MCP["Usar Ferramentas MCP"]
+        UC_Prompts["Gerenciar Prompts"]
+        UC_Presets["Gerenciar Presets"]
+        UC_Files["Upload de Arquivos"]
+        UC_Search["Buscar Conversas"]
+        UC_Share["Compartilhar Conversa"]
+        UC_Profile["Configurar Perfil"]
+        UC_ManageUsers["Gerenciar Usuarios"]
+        UC_ManageGroups["Gerenciar Grupos"]
+        UC_ManageRoles["Gerenciar Papeis"]
+        UC_SystemConfig["Configurar Sistema"]
+        UC_Monitor["Monitorar Custos"]
+        UC_Banners["Gerenciar Banners"]
+    end
+
+    User((Usuario))
+    Admin((Administrador))
+    Guest((Visitante))
+
+    User --> UC_Auth
+    User --> UC_Chat
+    User --> UC_CreateAgent
+    User --> UC_MCP
+    User --> UC_Prompts
+    User --> UC_Presets
+    User --> UC_Files
+    User --> UC_Search
+    User --> UC_Share
+    User --> UC_Profile
+
+    Admin --> UC_ManageUsers
+    Admin --> UC_ManageGroups
+    Admin --> UC_ManageRoles
+    Admin --> UC_SystemConfig
+    Admin --> UC_Monitor
+    Admin --> UC_Banners
+
+    Guest -.->|se autentica| UC_Auth

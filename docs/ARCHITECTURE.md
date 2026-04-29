@@ -332,13 +332,126 @@ erDiagram
 | `getRolePermissions()` | Lista permissoes do papel | `Permissions` |
 
 ### `GenerationJobManager`
-**Arquivo:** `@librechat/api` (`packages/api/src/`)
+**Arquivo:** `packages/api/src/stream/GenerationJobManager.ts` (~1305 linhas)
+
+**Responsabilidade:** Orquestra os jobs de geracao de respostas de IA com suporte a **Resumable Streams** (streams retomaveis). E o coracao do sistema de streaming do Orqest.
 
 | Metodo | Descricao | Retorno |
 |--------|-----------|---------|
-| `createJob()` | Cria job de geracao | `jobId` |
-| `getJob()` | Recupera estado do job | `Job` |
-| `completeJob()` | Marca job como completo | `void` |
+| `createJob(streamId, userId, conversationId)` | Cria job com estado serializavel (jobStore) + runtime (AbortController, earlyEventBuffer) | `GenerationJob` |
+| `subscribe(streamId, onChunk, onDone, onError, options?)` | Cliente SSE conecta; faz replay do earlyEventBuffer; retorna unsubscribe | `Subscription \| null` |
+| `subscribeWithResume(streamId, ...)` | Atomico: snapshot do estado + drena buffer + subscribe com skipBufferReplay | `{ subscription, resumeState, pendingEvents }` |
+| `emitChunk(streamId, event)` | Emite token/evento; buffer se sem subscriber; persiste no Redis se habilitado | `void` |
+| `getResumeState(streamId)` | Retorna estado completo para reconexao (aggregatedContent, runSteps, userMessage) | `ResumeState \| null` |
+| `abortJob(streamId)` | Aborta geracao local + cross-replica; retorna conteudo parcial e usage | `AbortResult` |
+| `completeJob(streamId, error?)` | Finaliza job; limpa recursos; mantem jobs com erro por ~60s para late subscribers | `void` |
+| `emitDone(streamId, event)` / `emitError(streamId, error)` | Emite evento final; persiste no Redis para cross-replica | `void` |
+| `markSyncSent(streamId)` / `wasSyncSent(streamId)` | Gerencia flag de sync para reconexoes | `void` / `boolean` |
+| `updateMetadata(streamId, metadata)` / `setContentParts()` / `setCollectedUsage()` / `setGraph()` | Atualiza metadados e referencias do job | `void` |
+| `getActiveJobIdsForUser(userId, tenantId?)` | Lista jobs ativos de um usuario (com self-healing) | `string[]` |
+| `getRuntimeStats()` / `getJobCount()` / `getJobCountByStatus()` / `getStreamInfo()` | Diagnosticos e monitoramento | `varios` |
+| `initialize()` / `configure(services)` / `destroy()` | Ciclo de vida do manager | `void` |
+
+#### Arquitetura Interna: Duas Camadas Plugaveis
+
+O `GenerationJobManager` e composto por dois servicos independentes via dependency injection:
+
+| Camada | Responsabilidade | Implementacoes |
+|--------|-----------------|---------------|
+| **`jobStore`** | Metadados do job + estado do conteudo (chunks, run steps, usage) | `InMemoryJobStore` (default) ou `RedisJobStore` |
+| **`eventTransport`** | Pub/sub de eventos em tempo real (SSE) | `InMemoryEventTransport` (default) ou `RedisEventTransport` |
+
+Isso permite operar em **single-instance** (in-memory) ou **horizontalmente escalado** (Redis). Em producao multi-replica, o Redis garante que um job criado na Replica A seja acessivel pela Replica B.
+
+#### Ciclo de Vida de um Job (Resumable Stream)
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant B as Backend API
+    participant G as GenerationJobManager
+    participant L as LLM Provider
+    participant R as Redis (opcional)
+
+    U->>F: Envia mensagem
+    F->>B: POST /agents/chat
+    B->>G: createJob(streamId, userId)
+    G-->>B: Job criado (running)
+    B->>L: Inicia geracao
+    L-->>B: Token 1, Token 2...
+    B->>G: emitChunk(streamId, token)
+    G->>G: Buffer (sem subscriber ainda)
+
+    F->>B: GET /chat/stream/:streamId (SSE)
+    B->>G: subscribe(streamId, onChunk, onDone)
+    G->>G: Replay earlyEventBuffer
+    G-->>F: Evento "created" (user message)
+    G-->>F: Token 1, Token 2... (SSE)
+    L-->>B: Token N...
+    B->>G: emitChunk(streamId, tokenN)
+    G-->>F: Token N...
+
+    Note over F,G: Conexao cai (wifi/4g/mudanca de aba)
+    F->>B: Reconecta SSE com ?resume=true
+    B->>G: subscribeWithResume(streamId, ...)
+    G->>G: Snapshot do estado + drena buffer
+    G-->>F: Evento "sync" (aggregatedContent + runSteps)
+    G-->>F: Continua com novos tokens...
+
+    L-->>B: Geracao completa
+    B->>G: completeJob(streamId)
+    G-->>F: Evento "done" (finalEvent)
+    G->>G: Cleanup de recursos
+```
+
+#### Mecanismos-Chave
+
+**1. `earlyEventBuffer`**
+- Array que guarda eventos emitidos antes do primeiro subscriber conectar
+- Evita race condition onde tokens sao gerados mas o cliente ainda nao abriu o SSE
+- Esvaziado automaticamente no primeiro `subscribe()` com replay para o cliente
+
+**2. `readyPromise` (Legacy / Instant-Resolve)**
+- Antigamente esperava pelo primeiro subscriber antes de iniciar a LLM
+- Agora resolve **imediatamente** para eliminar latencia de startup
+- O sync mechanism garante que clientes tardios recebam o estado completo
+
+**3. `syncSent` + Cross-Replica**
+- Quando todos os subscribers desconectam, `syncSent` e resetado para `false`
+- Proximo subscriber recebe evento `sync` com conteudo agregado completo
+- Em modo Redis, `syncSent` e persistido para consistencia entre replicas
+
+**4. `getOrCreateRuntimeState()` (Lazy Initialization)**
+- Suporta reconexao cross-replica: se o job existe no Redis mas nao localmente, cria runtime minimo
+- Eventos sao entregues via Redis Pub/Sub, nao in-memory EventEmitter
+
+**5. `subscribeWithResume()` (Atomico)**
+- Fecha a janela de timing entre `getResumeState()` e `subscribe()`
+- Captura eventos que chegam no gap ("pendingEvents")
+- Em modo in-memory: retorna pendingEvents para o caller entregar depois do sync
+- Em modo Redis: pendingEvents esta vazio — chunks sao persistidos via `appendChunk`
+
+**6. `abortJob()` (Cross-Replica)**
+- Emite sinal de abort via Redis Pub/Sub para todas as replicas
+- A replica que esta gerando recebe o sinal e aborta seu `AbortController`
+- Detecta "early abort" (abort antes de gerar qualquer token) — frontend nao navega para conversa
+
+**7. `completeJob()` (Preservacao de Erros)**
+- Jobs com sucesso sao limpos imediatamente (se `cleanupOnComplete: true`)
+- Jobs com erro **nao sao deletados imediatamente** — ficam por ~60s
+- Permite que clientes que conectam tarde recebam o erro (evita race condition)
+
+#### Por que Isso e Importante?
+
+| Problema sem GJM | Solucao com GJM |
+|------------------|-----------------|
+| Conexao cai → usuario perde resposta e reenvia | Reconecta e continua de onde parou |
+| Multiplas abas competem pela mesma conexao SSE | Cada aba se inscreve independentemente; sync garante consistencia |
+| Escalar horizontalmente = jobs presos em uma instancia | Redis permite acesso cross-replica |
+| Abort nao funciona → tokens desperdicados | AbortController + sinal cross-replica para geracao imediatamente |
+| Eventos emitidos antes do cliente conectar sao perdidos | earlyEventBuffer + replay garante zero event loss |
+| Multi-device nao sincroniza | Resume state permite comecar no mobile e continuar no desktop |
 
 ## Dependencias entre Services
 

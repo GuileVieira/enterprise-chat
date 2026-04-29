@@ -64,6 +64,7 @@ Interacao por voz com suporte a OpenAI, Azure OpenAI, e Elevenlabs.
 | Memorias | Armazenamento de preferencias e fatos sobre usuarios |
 | Presets e Prompts | Templates de configuracao e prompts compartilhaveis |
 | Admin Panel | Gerenciamento de usuarios, grupos, papeis, configuracoes |
+| Resumable Streams | Reconexao automatica de streams SSE sem perda de tokens |
 | Mobile-Ready | Interface responsiva com suporte a touch |
 | i18n | 20+ idiomas suportados |
 
@@ -72,7 +73,6 @@ Interacao por voz com suporte a OpenAI, Azure OpenAI, e Elevenlabs.
 |---------------|-----------|------------|
 | Marketplace de Agentes | Descoberta e deploy de agentes da comunidade | Media |
 | Remote Agents | Agentes executados em infraestrutura remota | Media |
-| Streaming Resumivel | Reconexao automatica de streams SSE | Alta |
 
 ### Planejado
 | Funcionalidade | Descricao |
@@ -115,6 +115,188 @@ Interacao por voz com suporte a OpenAI, Azure OpenAI, e Elevenlabs.
 4. Em conversas com Agentes, arquivos podem ser usados para file search ou citations
 5. Imagens sao processadas por modelos vision (Claude 3, GPT-4o, Gemini)
 
+### Multi-Device Sync (Resumable Streams)
+1. Usuario envia mensagem no celular e comeca a receber resposta streamada
+2. Conexao cai (mudanca de rede, app em background, tela bloqueada)
+3. Usuario abre o Orqest no desktop ou reconecta no celular
+4. Frontend detecta reconexao e chama `/chat/stream/:id?resume=true`
+5. Backend retorna estado completo (sync event) com todo o conteudo gerado ate o momento
+6. Frontend reconstrói a mensagem parcial na tela instantaneamente
+7. Stream continua de onde parou, recebendo novos tokens em tempo real
+8. Usuario pode alternar entre dispositivos sem perder contexto ou tokens
+
+## Diagramas de Caso de Uso
+
+### Visao Geral do Sistema
+
+```mermaid
+graph LR
+    subgraph Orqest["Orqest"]
+        UC_Auth["Autenticar"]
+        UC_Chat["Conversar com IA"]
+        UC_CreateAgent["Criar Agente"]
+        UC_MCP["Usar Ferramentas MCP"]
+        UC_Prompts["Gerenciar Prompts"]
+        UC_Presets["Gerenciar Presets"]
+        UC_Files["Upload de Arquivos"]
+        UC_Search["Buscar Conversas"]
+        UC_Share["Compartilhar Conversa"]
+        UC_Profile["Configurar Perfil"]
+        UC_ManageUsers["Gerenciar Usuarios"]
+        UC_ManageGroups["Gerenciar Grupos"]
+        UC_ManageRoles["Gerenciar Papeis"]
+        UC_SystemConfig["Configurar Sistema"]
+        UC_Monitor["Monitorar Custos"]
+        UC_Banners["Gerenciar Banners"]
+    end
+
+    User((Usuario))
+    Admin((Administrador))
+    Guest((Visitante))
+
+    User --> UC_Auth
+    User --> UC_Chat
+    User --> UC_CreateAgent
+    User --> UC_MCP
+    User --> UC_Prompts
+    User --> UC_Presets
+    User --> UC_Files
+    User --> UC_Search
+    User --> UC_Share
+    User --> UC_Profile
+
+    Admin --> UC_ManageUsers
+    Admin --> UC_ManageGroups
+    Admin --> UC_ManageRoles
+    Admin --> UC_SystemConfig
+    Admin --> UC_Monitor
+    Admin --> UC_Banners
+
+    Guest -.->|se autentica| UC_Auth
+```
+
+### Casos de Uso: Chat e Conversacao
+
+```mermaid
+graph LR
+    subgraph ModChat["Modulo de Chat"]
+        UC_SendMsg["Enviar Mensagem"]
+        UC_SelectModel["Selecionar Modelo"]
+        UC_Upload["Upload de Arquivo"]
+        UC_Branch["Criar Branch"]
+        UC_Fork["Fork de Conversa"]
+        UC_EditMsg["Editar Mensagem"]
+        UC_Resend["Reenviar Mensagem"]
+        UC_Feedback["Avaliar Resposta"]
+        UC_GenImage["Gerar Imagem"]
+        UC_STT["Speech-to-Text"]
+        UC_TTS["Text-to-Speech"]
+        UC_Export["Exportar Conversa"]
+        UC_Import["Importar Conversa"]
+        UC_Archive["Arquivar Conversa"]
+        UC_Tags["Adicionar Tags"]
+    end
+
+    User((Usuario))
+
+    User --> UC_SendMsg
+    User --> UC_SelectModel
+    User --> UC_Upload
+    User --> UC_Branch
+    User --> UC_Fork
+    User --> UC_EditMsg
+    User --> UC_Resend
+    User --> UC_Feedback
+    User --> UC_GenImage
+    User --> UC_STT
+    User --> UC_TTS
+    User --> UC_Export
+    User --> UC_Import
+    User --> UC_Archive
+    User --> UC_Tags
+
+    UC_SendMsg -.->|include| UC_SelectModel
+    UC_Upload -.->|extend| UC_SendMsg
+    UC_STT -.->|extend| UC_SendMsg
+    UC_TTS -.->|extend| UC_SendMsg
+    UC_Feedback -.->|extend| UC_SendMsg
+```
+
+### Casos de Uso: Agentes e Ferramentas
+
+```mermaid
+graph LR
+    subgraph ModAgents["Modulo de Agentes"]
+        UC_Create["Criar Agente"]
+        UC_Edit["Editar Agente"]
+        UC_Run["Executar Agente"]
+        UC_ShareAgent["Compartilhar Agente"]
+        UC_Marketplace["Usar Marketplace"]
+        UC_MCPConfig["Configurar MCP Server"]
+        UC_MCPTool["Usar Ferramenta MCP"]
+        UC_Code["Executar Codigo"]
+        UC_WebSearch["Buscar na Web"]
+        UC_Artifact["Gerar Artefato"]
+    end
+
+    User((Usuario))
+
+    User --> UC_Create
+    User --> UC_Edit
+    User --> UC_Run
+    User --> UC_ShareAgent
+    User --> UC_Marketplace
+    User --> UC_MCPConfig
+    User --> UC_MCPTool
+    User --> UC_Code
+    User --> UC_WebSearch
+    User --> UC_Artifact
+
+    UC_Run -.->|include| UC_MCPTool
+    UC_Run -.->|extend| UC_Code
+    UC_Run -.->|extend| UC_WebSearch
+    UC_Run -.->|extend| UC_Artifact
+    UC_Create -.->|extend| UC_MCPConfig
+```
+
+### Casos de Uso: Administracao
+
+```mermaid
+graph LR
+    subgraph PainelAdmin["Painel Administrativo"]
+        UC_CreateUser["Criar Usuario"]
+        UC_BanUser["Banir Usuario"]
+        UC_ResetPwd["Resetar Senha"]
+        UC_Groups["Gerenciar Grupos"]
+        UC_Roles["Gerenciar Papeis"]
+        UC_Endpoints["Configurar Endpoints IA"]
+        UC_BannerConfig["Definir Banners"]
+        UC_Balances["Monitorar Saldos"]
+        UC_Transactions["Ver Transacoes"]
+        UC_Terms["Configurar Termos"]
+        UC_Cache["Configurar Cache"]
+        UC_Migrate["Executar Migracoes"]
+    end
+
+    Admin((Administrador))
+
+    Admin --> UC_CreateUser
+    Admin --> UC_BanUser
+    Admin --> UC_ResetPwd
+    Admin --> UC_Groups
+    Admin --> UC_Roles
+    Admin --> UC_Endpoints
+    Admin --> UC_BannerConfig
+    Admin --> UC_Balances
+    Admin --> UC_Transactions
+    Admin --> UC_Terms
+    Admin --> UC_Cache
+    Admin --> UC_Migrate
+
+    UC_BanUser -.->|extend| UC_ResetPwd
+    UC_Balances -.->|include| UC_Transactions
+```
+
 ## Glossario
 
 | Termo | Definicao |
@@ -129,6 +311,7 @@ Interacao por voz com suporte a OpenAI, Azure OpenAI, e Elevenlabs.
 | **Artifact** | Componente visual gerado no chat (React, HTML, Mermaid) |
 | **RAG** | Retrieval-Augmented Generation - busca em documentos para enriquecer respostas |
 | **SSE** | Server-Sent Events - streaming de dados do servidor para o cliente |
+| **Resumable Stream** | Stream que pode ser reconectado e retomado de onde parou sem perda de dados |
 | **Branching** | Criar ramificacoes de conversas a partir de mensagens especificas |
 
 ## Metricas e KPIs
