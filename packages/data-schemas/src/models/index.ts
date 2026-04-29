@@ -7,6 +7,7 @@ import { createMessageModel } from './message';
 import { createAgentModel } from './agent';
 import { createAgentApiKeyModel } from './agentApiKey';
 import { createAgentCategoryModel } from './agentCategory';
+import { createCategoryModel } from './categories';
 import { createMCPServerModel } from './mcpServer';
 import { createRoleModel } from './role';
 import { createActionModel } from './action';
@@ -45,6 +46,7 @@ export function createModels(mongoose: typeof import('mongoose')) {
     Agent: createAgentModel(mongoose),
     AgentApiKey: createAgentApiKeyModel(mongoose),
     AgentCategory: createAgentCategoryModel(mongoose),
+    Category: createCategoryModel(mongoose),
     MCPServer: createMCPServerModel(mongoose),
     Role: createRoleModel(mongoose),
     Action: createActionModel(mongoose),

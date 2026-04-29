@@ -1,27 +1,44 @@
-import { Schema, Document } from 'mongoose';
+import { Schema } from 'mongoose';
+import type { ICategory } from '~/types';
 
-export interface ICategory extends Document {
-  label: string;
-  value: string;
-  tenantId?: string;
-}
-
-const categoriesSchema = new Schema<ICategory>({
-  label: {
-    type: String,
-    required: true,
+const categoriesSchema = new Schema<ICategory>(
+  {
+    label: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    value: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    icon: {
+      type: String,
+      trim: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+    isDefault: {
+      type: Boolean,
+      default: false,
+    },
+    tenantId: {
+      type: String,
+      index: true,
+    },
   },
-  value: {
-    type: String,
-    required: true,
+  {
+    timestamps: true,
   },
-  tenantId: {
-    type: String,
-    index: true,
-  },
-});
+);
 
 categoriesSchema.index({ label: 1, tenantId: 1 }, { unique: true });
 categoriesSchema.index({ value: 1, tenantId: 1 }, { unique: true });
+categoriesSchema.index({ order: 1, label: 1 });
 
 export default categoriesSchema;

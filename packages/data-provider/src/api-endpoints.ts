@@ -361,6 +361,9 @@ export const deletePrompt = ({ _id, groupId }: { _id: string; groupId: string })
 };
 
 export const getCategories = () => `${BASE_URL}/api/categories`;
+export const postCategory = getCategories;
+export const updateCategory = (_id: string) => `${getCategories()}/${encodeURIComponent(_id)}`;
+export const deleteCategory = (_id: string) => `${getCategories()}/${encodeURIComponent(_id)}`;
 
 export const getAllPromptGroups = () => `${prompts()}/all`;
 
