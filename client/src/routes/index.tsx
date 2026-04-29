@@ -125,6 +125,10 @@ export const router = createBrowserRouter(
               path: 'config',
               lazy: () => import('~/components/Admin/Config/ConfigPage').then((m) => ({ Component: m.default })),
             },
+            {
+              path: 'groups/:id',
+              lazy: () => import('~/components/Admin/Groups/GroupDetailPage').then((m) => ({ Component: m.default })),
+            },
           ],
         },
         {

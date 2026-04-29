@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import { UserCircle, Users, Loader2, Plus, Trash2 } from 'lucide-react';
+import { UserCircle, Users, Loader2, Plus, Trash2, Pencil, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   useListAdminGroups,
   useDeleteAdminGroupMutation,
 } from '~/data-provider/admin';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryKeys } from 'librechat-data-provider';
+import CreateGroupModal from './CreateGroupModal';
+import EditGroupModal from './EditGroupModal';
 
 const GroupsPage: React.FC = () => {
   const { data, isLoading } = useListAdminGroups(1, 50);
   const deleteGroup = useDeleteAdminGroupMutation();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<{ _id: string; name: string; description?: string } | null>(null);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this group?')) {
@@ -42,7 +48,7 @@ const GroupsPage: React.FC = () => {
         </div>
         <button
           className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
-          onClick={() => alert('Create group functionality coming soon')}
+          onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="h-4 w-4" />
           Create Group
@@ -76,18 +82,34 @@ const GroupsPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(group._id)}
-                  disabled={deletingId === group._id}
-                  className="ml-2 text-text-secondary transition-colors hover:text-red-500 disabled:opacity-50"
-                  title="Delete Group"
-                >
-                  {deletingId === group._id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </button>
+                <div className="ml-2 flex items-center gap-1">
+                  <button
+                    onClick={() => navigate(`/admin/groups/${group._id}`)}
+                    className="text-text-secondary transition-colors hover:text-text-primary"
+                    title="View Members"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setEditingGroup(group)}
+                    className="text-text-secondary transition-colors hover:text-text-primary"
+                    title="Edit Group"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(group._id)}
+                    disabled={deletingId === group._id}
+                    className="text-text-secondary transition-colors hover:text-red-500 disabled:opacity-50"
+                    title="Delete Group"
+                  >
+                    {deletingId === group._id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="mt-4 flex items-center gap-2 text-sm text-text-secondary">
@@ -105,6 +127,13 @@ const GroupsPage: React.FC = () => {
           <p className="mt-4 text-text-secondary">No groups found.</p>
         </div>
       )}
+
+      <CreateGroupModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      <EditGroupModal
+        isOpen={!!editingGroup}
+        onClose={() => setEditingGroup(null)}
+        group={editingGroup}
+      />
     </div>
   );
 };
