@@ -58,7 +58,7 @@ export const BriefingSimulation = memo(function BriefingSimulation() {
 export const RoteiroSimulation = memo(function RoteiroSimulation() {
   const [activeIndex, setActiveIndex] = useState(0);
   const sections = [
-    { label: "GANCHO", text: "VocÃª jÃ¡ perdeu uma venda por falta de follow-up?" },
+    { label: "GANCHO", text: "Você já perdeu uma venda por falta de follow-up?" },
     { label: "DESENVOLVIMENTO", text: "80% dos clientes compram apos o 5o contato..." },
     { label: "CTA", text: "Agende uma demonstracao gratuita hoje." },
   ];
@@ -153,7 +153,7 @@ export const PlanejamentoSimulation = memo(function PlanejamentoSimulation() {
           transition={{ type: "spring", stiffness: 300, damping: 15 }}
           className="rounded-lg bg-text-primary p-3 shadow-lg"
         >
-          <div className="text-xs font-medium text-white">Plano pronto para revisÃ£o</div>
+          <div className="text-xs font-medium text-white">Plano pronto para revisão</div>
           <div className="text-[10px] text-white/60">3 etapas verificadas automaticamente</div>
         </motion.div>
       </div>
@@ -166,8 +166,8 @@ export const PautaSimulation = memo(function PautaSimulation() {
   const pautas = [
     "Como reduzir o CAC em 30%",
     "5 erros no briefing que travam criativos",
-    "Case: agÃªncia que dobrou a produtividade",
-    "Roteiro de vÃ­deo em 15 minutos: e possÃ­vel?",
+    "Case: agência que dobrou a produtividade",
+    "Roteiro de vídeo em 15 minutos: e possível?",
     "O que mudar no seu processo operacional",
   ];
 
@@ -227,7 +227,7 @@ export const DadosSimulation = memo(function DadosSimulation() {
           transition={{ delay: 0.2, type: "spring" }}
           className="rounded-lg bg-white p-3 shadow-sm"
         >
-          <div className="text-[10px] font-mono uppercase text-text-muted">Leads (mÃªs)</div>
+          <div className="text-[10px] font-mono uppercase text-text-muted">Leads (mês)</div>
           <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-text-primary">
             {count1.toLocaleString()}
           </div>
