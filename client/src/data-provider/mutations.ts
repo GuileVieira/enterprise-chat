@@ -1050,3 +1050,74 @@ export const useAcceptTermsMutation = (
     onMutate: options?.onMutate,
   });
 };
+
+/* Projects */
+export const useCreateProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (payload) => dataService.createProject(payload),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+      },
+    },
+  );
+};
+
+export const useUpdateProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  { projectId: string; payload: Partial<Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>> },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, payload }) => dataService.updateProject(projectId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useDeleteProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  string,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (projectId: string) => dataService.deleteProject(projectId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+      },
+    },
+  );
+};
+
+export const useArchiveProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  { projectId: string; isArchived: boolean },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, isArchived }) => dataService.archiveProject(projectId, isArchived),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+      },
+    },
+  );
+};
