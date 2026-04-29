@@ -36,13 +36,18 @@ export async function runSafeFunction<T, R>(
     throw new Error('postProcess code did not evaluate to a function');
   }
 
+  let timeoutId: ReturnType<typeof setTimeout>;
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
+    timeoutId = setTimeout(() => {
       reject(new Error(`postProcess timed out after ${timeoutMs}ms`));
     }, timeoutMs);
   });
 
   const execPromise = Promise.resolve().then(() => userFn(data));
 
-  return Promise.race([execPromise, timeoutPromise]);
+  try {
+    return await Promise.race([execPromise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
