@@ -16,7 +16,7 @@ export function AgentsBento() {
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal>
           <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
-            Seu time de agentes, pronto para trabalhar.
+            Cada tarefa operacional vira uma entrega instantânea.
           </h2>
         </ScrollReveal>
 
