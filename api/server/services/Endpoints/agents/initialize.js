@@ -188,6 +188,21 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   /** @type {string | undefined} */
   const parentMessageId = req.body.parentMessageId;
 
+  /** Load project instructions if conversation belongs to a project */
+  if (conversationId) {
+    try {
+      const conversation = await db.getConvo(req.user.id, conversationId);
+      if (conversation?.projectId) {
+        const project = await db.getProjectById(req.user.id, conversation.projectId);
+        if (project?.instructions) {
+          primaryAgent.instructions = `${project.instructions}\n\n${primaryAgent.instructions ?? ''}`;
+        }
+      }
+    } catch (err) {
+      logger.error('[initializeClient] Error loading project instructions', err);
+    }
+  }
+
   const primaryConfig = await initializeAgent(
     {
       req,
