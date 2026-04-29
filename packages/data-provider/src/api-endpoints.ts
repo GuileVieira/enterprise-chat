@@ -445,6 +445,13 @@ export const adminConfigByPrincipal = (principalType: string, principalId: strin
 export const adminConfigActive = (principalType: string, principalId: string) =>
   `${adminConfigByPrincipal(principalType, principalId)}/active`;
 
+/* Admin Tenants */
+export const adminTenants = () => `${BASE_URL}/api/admin/tenants`;
+export const adminTenantUsers = (tenantId: string) =>
+  `${adminTenants()}/${encodeURIComponent(tenantId)}/users`;
+export const adminTenantStats = (tenantId: string) =>
+  `${adminTenants()}/${encodeURIComponent(tenantId)}/stats`;
+
 /* Conversation Tags */
 export const conversationTags = (tag?: string) =>
   `${BASE_URL}/api/tags${tag != null && tag ? `/${encodeURIComponent(tag)}` : ''}`;

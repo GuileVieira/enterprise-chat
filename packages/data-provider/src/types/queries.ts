@@ -289,6 +289,27 @@ export type AdminConfigListResponse = {
   configs: AdminConfig[];
 };
 
+/* Admin Tenants */
+export type TenantItem = {
+  id: string;
+  userCount: number;
+};
+
+export type ListTenantsResponse = {
+  tenants: TenantItem[];
+};
+
+export type TenantStatsResponse = {
+  tenantId: string;
+  stats: {
+    users: number;
+    conversations: number;
+    agents: number;
+    functions: number;
+    secrets: number;
+  };
+};
+
 export type AdminConfigResponse = {
   config: AdminConfig;
 };

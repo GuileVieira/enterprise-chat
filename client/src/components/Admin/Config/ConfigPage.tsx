@@ -1,23 +1,60 @@
 import React, { useState } from 'react';
-import { Settings, Loader2, ToggleLeft, ToggleRight, Trash2, AlertCircle } from 'lucide-react';
+import { AlertCircle, Settings, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { useLocalize } from '~/hooks';
 import {
   useListAdminConfigs,
   useGetAdminConfigBase,
   useToggleAdminConfigMutation,
   useDeleteAdminConfigMutation,
 } from '~/data-provider/admin';
+import {
+  AdminBadge,
+  AdminPanel,
+  AdminSkeleton,
+  AdminIconButton,
+  AdminEmptyState,
+  AdminConfirmDialog,
+  AdminPageHeader,
+} from '../common';
 
-const principalLabel = (type: string, id: string) => {
+interface PrincipalLabel {
+  type: string;
+  id: string;
+  userLabel: string;
+  roleLabel: string;
+  groupLabel: string;
+}
+
+interface PendingConfigDelete {
+  principalType: string;
+  principalId: string;
+}
+
+const principalLabel = ({ type, id, userLabel, roleLabel, groupLabel }: PrincipalLabel) => {
   const labels: Record<string, string> = {
-    user: 'User',
-    group: 'Group',
-    role: 'Role',
+    user: userLabel,
+    role: roleLabel,
+    group: groupLabel,
   };
   return `${labels[type] ?? type}: ${id}`;
 };
 
+const formatConfigValue = (value: unknown) => {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+};
+
 const ConfigPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'base' | 'overrides'>('overrides');
+  const [pendingDelete, setPendingDelete] = useState<PendingConfigDelete | null>(null);
+  const localize = useLocalize();
 
   const { data: configsData, isLoading: configsLoading } = useListAdminConfigs();
   const { data: baseData, isLoading: baseLoading } = useGetAdminConfigBase();
@@ -27,7 +64,11 @@ const ConfigPage: React.FC = () => {
   const configs = configsData?.configs ?? [];
   const baseConfig = baseData?.config ?? {};
 
-  const handleToggle = async (cfg: { principalType: string; principalId: string; isActive: boolean }) => {
+  const handleToggle = async (cfg: {
+    principalType: string;
+    principalId: string;
+    isActive: boolean;
+  }) => {
     await toggleConfig.mutateAsync({
       principalType: cfg.principalType,
       principalId: cfg.principalId,
@@ -35,11 +76,12 @@ const ConfigPage: React.FC = () => {
     });
   };
 
-  const handleDelete = async (principalType: string, principalId: string) => {
-    if (!window.confirm('Are you sure you want to delete this config override?')) {
+  const handleDelete = async () => {
+    if (pendingDelete == null) {
       return;
     }
-    await deleteConfig.mutateAsync({ principalType, principalId });
+    await deleteConfig.mutateAsync(pendingDelete);
+    setPendingDelete(null);
   };
 
   const baseConfigEntries = Object.entries(baseConfig).filter(
@@ -48,135 +90,152 @@ const ConfigPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Configuration</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          View base configuration and manage active overrides.
-        </p>
-      </div>
+      <AdminPageHeader
+        title={localize('com_admin_configuration')}
+        description={localize('com_admin_config_page_description')}
+      />
 
-      <div className="flex gap-4 border-b border-border-medium">
+      <div className="inline-flex rounded-lg border border-border-light bg-surface-secondary p-1">
         <button
           onClick={() => setActiveTab('overrides')}
-          className={`pb-2 text-sm font-medium transition-colors ${
+          className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary ${
             activeTab === 'overrides'
-              ? 'border-b-2 border-text-primary text-text-primary'
+              ? 'bg-surface-primary text-text-primary shadow-sm shadow-black/5'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Overrides ({configs.length})
+          {localize('com_admin_overrides_count', { count: configs.length })}
         </button>
         <button
           onClick={() => setActiveTab('base')}
-          className={`pb-2 text-sm font-medium transition-colors ${
+          className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary ${
             activeTab === 'base'
-              ? 'border-b-2 border-text-primary text-text-primary'
+              ? 'bg-surface-primary text-text-primary shadow-sm shadow-black/5'
               : 'text-text-secondary hover:text-text-primary'
           }`}
         >
-          Base Config
+          {localize('com_admin_base_config')}
         </button>
       </div>
 
       {activeTab === 'overrides' && (
         <div className="space-y-4">
           {configsLoading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-text-secondary" />
-            </div>
+            <AdminPanel className="p-4">
+              <AdminSkeleton rows={6} />
+            </AdminPanel>
           )}
 
           {!configsLoading && configs.length === 0 && (
-            <div className="rounded-xl border border-border-medium bg-surface-secondary py-12 text-center">
-              <Settings className="mx-auto h-12 w-12 text-text-secondary" />
-              <p className="mt-4 text-text-secondary">No config overrides found.</p>
-              <p className="mt-1 text-xs text-text-secondary">
-                Overrides are managed via the API or CLI.
-              </p>
-            </div>
+            <AdminEmptyState
+              icon={<Settings className="h-6 w-6" />}
+              title={localize('com_admin_no_config_overrides_found')}
+              description={localize('com_admin_no_config_overrides_description')}
+            />
           )}
 
           {!configsLoading && configs.length > 0 && (
-            <div className="rounded-xl border border-border-medium bg-surface-secondary">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-medium">
-                    <th className="px-6 py-3 font-medium text-text-secondary">Principal</th>
-                    <th className="px-6 py-3 font-medium text-text-secondary">Type</th>
-                    <th className="px-6 py-3 font-medium text-text-secondary">Priority</th>
-                    <th className="px-6 py-3 font-medium text-text-secondary">Overrides</th>
-                    <th className="px-6 py-3 font-medium text-text-secondary">Active</th>
-                    <th className="px-6 py-3 font-medium text-text-secondary">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {configs.map((cfg) => {
-                    const overrideKeys = Object.keys(cfg.overrides ?? {});
-                    return (
-                      <tr
-                        key={cfg._id}
-                        className="border-b border-border-medium transition-colors hover:bg-surface-tertiary"
-                      >
-                        <td className="px-6 py-4 font-medium text-text-primary">
-                          {principalLabel(cfg.principalType, cfg.principalId)}
-                        </td>
-                        <td className="px-6 py-4 text-text-secondary">
-                          <span className="inline-flex items-center rounded-full bg-surface-tertiary px-2.5 py-0.5 text-xs font-medium capitalize">
-                            {cfg.principalType}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-text-secondary">{cfg.priority}</td>
-                        <td className="px-6 py-4 text-text-secondary">
-                          {overrideKeys.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {overrideKeys.slice(0, 3).map((k) => (
-                                <span
-                                  key={k}
-                                  className="rounded bg-surface-tertiary px-1.5 py-0.5 text-xs"
-                                >
-                                  {k}
-                                </span>
-                              ))}
-                              {overrideKeys.length > 3 && (
-                                <span className="text-xs text-text-secondary">
-                                  +{overrideKeys.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-text-secondary">None</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggle(cfg)}
-                            disabled={toggleConfig.isLoading}
-                            className="text-text-secondary transition-colors hover:text-text-primary disabled:opacity-50"
-                            title={cfg.isActive ? 'Deactivate' : 'Activate'}
-                          >
-                            {cfg.isActive ? (
-                              <ToggleRight className="h-6 w-6 text-green-500" />
+            <AdminPanel>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[860px] text-left text-sm">
+                  <thead>
+                    <tr className="bg-surface-primary/40 border-b border-border-light">
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_principal')}
+                      </th>
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_type')}
+                      </th>
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_priority')}
+                      </th>
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_overrides')}
+                      </th>
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_active')}
+                      </th>
+                      <th className="px-6 py-3 font-medium text-text-secondary">
+                        {localize('com_admin_actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {configs.map((cfg) => {
+                      const overrideKeys = Object.keys(cfg.overrides ?? {});
+                      return (
+                        <tr
+                          key={cfg._id}
+                          className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
+                        >
+                          <td className="max-w-xs truncate px-6 py-4 font-medium text-text-primary">
+                            {principalLabel({
+                              type: cfg.principalType,
+                              id: cfg.principalId,
+                              userLabel: localize('com_admin_user'),
+                              roleLabel: localize('com_admin_role'),
+                              groupLabel: localize('com_admin_group'),
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-text-secondary">
+                            <AdminBadge>{cfg.principalType}</AdminBadge>
+                          </td>
+                          <td className="px-6 py-4 text-text-secondary">{cfg.priority}</td>
+                          <td className="px-6 py-4 text-text-secondary">
+                            {overrideKeys.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {overrideKeys.slice(0, 3).map((key) => (
+                                  <AdminBadge key={key}>{key}</AdminBadge>
+                                ))}
+                                {overrideKeys.length > 3 && (
+                                  <AdminBadge>+{overrideKeys.length - 3}</AdminBadge>
+                                )}
+                              </div>
                             ) : (
-                              <ToggleLeft className="h-6 w-6 text-text-secondary" />
+                              <span className="text-xs text-text-secondary">
+                                {localize('com_admin_none')}
+                              </span>
                             )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleDelete(cfg.principalType, cfg.principalId)}
-                            disabled={deleteConfig.isLoading}
-                            className="text-text-secondary transition-colors hover:text-red-500 disabled:opacity-50"
-                            title="Delete Override"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <AdminIconButton
+                              onClick={() => handleToggle(cfg)}
+                              disabled={toggleConfig.isLoading}
+                              label={
+                                cfg.isActive
+                                  ? localize('com_admin_deactivate')
+                                  : localize('com_admin_activate')
+                              }
+                            >
+                              {cfg.isActive ? (
+                                <ToggleRight className="h-6 w-6 text-green-500" />
+                              ) : (
+                                <ToggleLeft className="h-6 w-6 text-text-secondary" />
+                              )}
+                            </AdminIconButton>
+                          </td>
+                          <td className="px-6 py-4">
+                            <AdminIconButton
+                              onClick={() =>
+                                setPendingDelete({
+                                  principalType: cfg.principalType,
+                                  principalId: cfg.principalId,
+                                })
+                              }
+                              disabled={deleteConfig.isLoading}
+                              label={localize('com_admin_delete_override')}
+                              tone="danger"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </AdminIconButton>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </AdminPanel>
           )}
         </div>
       )}
@@ -184,52 +243,60 @@ const ConfigPage: React.FC = () => {
       {activeTab === 'base' && (
         <div className="space-y-4">
           {baseLoading && (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-text-secondary" />
-            </div>
+            <AdminPanel className="p-4">
+              <AdminSkeleton rows={6} />
+            </AdminPanel>
           )}
 
           {!baseLoading && (
-            <div className="rounded-xl border border-border-medium bg-surface-secondary p-6">
-              <div className="mb-4 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-text-secondary" />
-                <p className="text-sm text-text-secondary">
-                  Base config is read-only. Edit <code className="rounded bg-surface-tertiary px-1 text-xs">librechat.yaml</code> to change values.
+            <AdminPanel className="p-5">
+              <div className="mb-5 flex items-start gap-2 rounded-lg bg-surface-tertiary p-3">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-text-secondary" />
+                <p className="text-sm leading-6 text-text-secondary">
+                  {localize('com_admin_base_config_readonly')}{' '}
+                  <code className="rounded bg-surface-primary px-1.5 py-0.5 text-xs">
+                    {localize('com_admin_config_file_name')}
+                  </code>
                 </p>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {baseConfigEntries.map(([key, value]) => (
                   <div
                     key={key}
-                    className="rounded-lg border border-border-light bg-surface-primary p-4"
+                    className="rounded-lg border border-border-light bg-surface-primary p-4 shadow-sm shadow-black/5"
                   >
-                    <h4 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+                    <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-text-tertiary">
                       {key}
                     </h4>
-                    <div className="mt-1 text-sm text-text-primary">
-                      {value === null || value === undefined ? (
-                        <span className="italic text-text-secondary">null</span>
-                      ) : typeof value === 'boolean' ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            value ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}
-                        >
-                          {value ? 'Enabled' : 'Disabled'}
-                        </span>
-                      ) : typeof value === 'object' ? (
-                        <span className="text-xs text-text-secondary">{JSON.stringify(value).slice(0, 40)}...</span>
+                    <div className="mt-2 text-sm text-text-primary">
+                      {typeof value === 'boolean' ? (
+                        <AdminBadge tone={value ? 'success' : 'danger'}>
+                          {value ? localize('com_admin_enabled') : localize('com_admin_disabled')}
+                        </AdminBadge>
                       ) : (
-                        <span>{String(value)}</span>
+                        <span className="line-clamp-3 break-all leading-6 text-text-secondary">
+                          {formatConfigValue(value)}
+                        </span>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </AdminPanel>
           )}
         </div>
       )}
+
+      <AdminConfirmDialog
+        isOpen={pendingDelete != null}
+        title={localize('com_admin_delete_override')}
+        description={localize('com_admin_delete_override_confirm')}
+        confirmLabel={localize('com_ui_delete')}
+        cancelLabel={localize('com_ui_cancel')}
+        isLoading={deleteConfig.isLoading}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

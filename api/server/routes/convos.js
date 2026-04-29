@@ -42,12 +42,15 @@ router.get('/', async (req, res) => {
     tags = Array.isArray(req.query.tags) ? req.query.tags : [req.query.tags];
   }
 
+  const projectId = req.query.projectId ? String(req.query.projectId) : undefined;
+
   try {
     const result = await db.getConvosByCursor(req.user.id, {
       cursor,
       limit,
       isArchived,
       tags,
+      projectId,
       search,
       sortBy,
       sortDirection,
