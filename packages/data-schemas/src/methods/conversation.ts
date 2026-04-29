@@ -31,6 +31,7 @@ export interface ConversationMethods {
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -275,6 +276,7 @@ export function createConversationMethods(
       limit = 25,
       isArchived = false,
       tags,
+      projectId,
       search,
       sortBy = 'updatedAt',
       sortDirection = 'desc',
@@ -283,6 +285,7 @@ export function createConversationMethods(
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -300,6 +303,10 @@ export function createConversationMethods(
 
     if (Array.isArray(tags) && tags.length > 0) {
       filters.push({ tags: { $in: tags } } as FilterQuery<IConversation>);
+    }
+
+    if (projectId) {
+      filters.push({ projectId } as FilterQuery<IConversation>);
     }
 
     filters.push({

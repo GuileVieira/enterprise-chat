@@ -41,7 +41,6 @@ const tenantFunctionSchema = new Schema<ITenantFunction>(
           secretName: { type: String, required: true },
           headerName: { type: String },
         },
-        default: undefined,
         _id: false,
       },
       _id: false,
