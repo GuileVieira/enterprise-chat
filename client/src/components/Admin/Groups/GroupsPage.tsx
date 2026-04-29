@@ -1,33 +1,50 @@
 import React, { useState } from 'react';
-import { UserCircle, Users, Loader2, Plus, Trash2, Pencil, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import {
-  useListAdminGroups,
-  useDeleteAdminGroupMutation,
-} from '~/data-provider/admin';
-import { useQueryClient } from '@tanstack/react-query';
+import { Eye, Plus, Pencil, Trash2, UserCircle, Users, Loader2 } from 'lucide-react';
 import { QueryKeys } from 'librechat-data-provider';
+import { useListAdminGroups, useDeleteAdminGroupMutation } from '~/data-provider/admin';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLocalize } from '~/hooks';
+import {
+  AdminBadge,
+  AdminPanel,
+  AdminSkeleton,
+  AdminIconButton,
+  AdminEmptyState,
+  AdminActionButton,
+  AdminConfirmDialog,
+  AdminPageHeader,
+} from '../common';
 import CreateGroupModal from './CreateGroupModal';
 import EditGroupModal from './EditGroupModal';
+
+interface EditableGroup {
+  _id: string;
+  name: string;
+  description?: string;
+}
 
 const GroupsPage: React.FC = () => {
   const { data, isLoading } = useListAdminGroups(1, 50);
   const deleteGroup = useDeleteAdminGroupMutation();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const localize = useLocalize();
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<{ _id: string; name: string; description?: string } | null>(null);
+  const [editingGroup, setEditingGroup] = useState<EditableGroup | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<EditableGroup | null>(null);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this group?')) {
+  const handleDelete = async () => {
+    if (pendingDelete == null) {
       return;
     }
-    setDeletingId(id);
+    setDeletingId(pendingDelete._id);
     try {
-      await deleteGroup.mutateAsync(id);
+      await deleteGroup.mutateAsync(pendingDelete._id);
       queryClient.invalidateQueries([QueryKeys.adminGroups]);
+      setPendingDelete(null);
     } catch {
       // error handled by mutation
     } finally {
@@ -39,37 +56,34 @@ const GroupsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Groups</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Manage user groups for easier permission management.
-          </p>
-        </div>
-        <button
-          className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Create Group
-        </button>
-      </div>
+      <AdminPageHeader
+        title={localize('com_admin_groups')}
+        description={localize('com_admin_groups_page_description')}
+        action={
+          <AdminActionButton
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            {localize('com_admin_create_group')}
+          </AdminActionButton>
+        }
+      />
 
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-text-secondary" />
-        </div>
+        <AdminPanel className="p-4">
+          <AdminSkeleton rows={6} />
+        </AdminPanel>
       )}
 
-      {!isLoading && (
+      {!isLoading && groups.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {groups.map((group) => (
-            <div
+            <AdminPanel
               key={group._id}
-              className="rounded-xl border border-border-medium bg-surface-secondary p-6 transition-colors hover:bg-surface-tertiary"
+              className="p-5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-surface-tertiary"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-surface-tertiary">
                     <UserCircle className="h-5 w-5 text-text-primary" />
                   </div>
@@ -78,54 +92,63 @@ const GroupsPage: React.FC = () => {
                       {group.name}
                     </h3>
                     <p className="truncate text-sm text-text-secondary">
-                      {group.description ?? 'No description'}
+                      {group.description ?? localize('com_admin_no_description')}
                     </p>
                   </div>
                 </div>
                 <div className="ml-2 flex items-center gap-1">
-                  <button
+                  <AdminIconButton
                     onClick={() => navigate(`/admin/groups/${group._id}`)}
-                    className="text-text-secondary transition-colors hover:text-text-primary"
-                    title="View Members"
+                    label={localize('com_admin_view_members')}
                   >
                     <Eye className="h-4 w-4" />
-                  </button>
-                  <button
+                  </AdminIconButton>
+                  <AdminIconButton
                     onClick={() => setEditingGroup(group)}
-                    className="text-text-secondary transition-colors hover:text-text-primary"
-                    title="Edit Group"
+                    label={localize('com_admin_edit_group')}
                   >
                     <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(group._id)}
+                  </AdminIconButton>
+                  <AdminIconButton
+                    onClick={() => setPendingDelete(group)}
                     disabled={deletingId === group._id}
-                    className="text-text-secondary transition-colors hover:text-red-500 disabled:opacity-50"
-                    title="Delete Group"
+                    label={localize('com_admin_delete_group')}
+                    tone="danger"
                   >
                     {deletingId === group._id ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Trash2 className="h-4 w-4" />
                     )}
-                  </button>
+                  </AdminIconButton>
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center gap-2 text-sm text-text-secondary">
-                <Users className="h-4 w-4" />
-                <span>{(group.memberIds ?? []).length} members</span>
+              <div className="mt-5">
+                <AdminBadge>
+                  <Users className="h-4 w-4" />
+                  {localize('com_admin_members_count', { count: (group.memberIds ?? []).length })}
+                </AdminBadge>
               </div>
-            </div>
+            </AdminPanel>
           ))}
         </div>
       )}
 
       {!isLoading && groups.length === 0 && (
-        <div className="rounded-xl border border-border-medium bg-surface-secondary py-12 text-center">
-          <UserCircle className="mx-auto h-12 w-12 text-text-secondary" />
-          <p className="mt-4 text-text-secondary">No groups found.</p>
-        </div>
+        <AdminEmptyState
+          icon={<UserCircle className="h-6 w-6" />}
+          title={localize('com_admin_no_groups_found')}
+          description={localize('com_admin_no_groups_found_description')}
+          action={
+            <AdminActionButton
+              icon={<Plus className="h-4 w-4" />}
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              {localize('com_admin_create_group')}
+            </AdminActionButton>
+          }
+        />
       )}
 
       <CreateGroupModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
@@ -133,6 +156,18 @@ const GroupsPage: React.FC = () => {
         isOpen={!!editingGroup}
         onClose={() => setEditingGroup(null)}
         group={editingGroup}
+      />
+      <AdminConfirmDialog
+        isOpen={pendingDelete != null}
+        title={localize('com_admin_delete_group')}
+        description={localize('com_admin_delete_group_confirm', {
+          0: pendingDelete?.name ?? '',
+        })}
+        confirmLabel={localize('com_ui_delete')}
+        cancelLabel={localize('com_ui_cancel')}
+        isLoading={deleteGroup.isLoading}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
       />
     </div>
   );

@@ -948,6 +948,25 @@ export function deleteAdminConfig(principalType: string, principalId: string): P
   return request.delete(endpoints.adminConfigByPrincipal(principalType, principalId));
 }
 
+/* Admin Tenants */
+export function listAdminTenants(): Promise<q.ListTenantsResponse> {
+  return request.get(endpoints.adminTenants());
+}
+
+export function getAdminTenantUsers(
+  tenantId: string,
+  page: number = 1,
+  limit: number = 50,
+): Promise<q.ListUsersResponse> {
+  return request.get(
+    `${endpoints.adminTenantUsers(tenantId)}?page=${page}&limit=${limit}`,
+  );
+}
+
+export function getAdminTenantStats(tenantId: string): Promise<q.TenantStatsResponse> {
+  return request.get(endpoints.adminTenantStats(tenantId));
+}
+
 export function updatePromptPermissions(
   variables: m.UpdatePromptPermVars,
 ): Promise<m.UpdatePermResponse> {

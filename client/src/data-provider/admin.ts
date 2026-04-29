@@ -337,3 +337,55 @@ export const useDeleteAdminConfigMutation = (
     },
   );
 };
+
+/* Admin Tenants */
+export const useListAdminTenants = (
+  config?: UseQueryOptions<t.ListTenantsResponse>,
+): QueryObserverResult<t.ListTenantsResponse> => {
+  return useQuery<t.ListTenantsResponse>(
+    [QueryKeys.adminTenants],
+    () => dataService.listAdminTenants(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      ...config,
+    },
+  );
+};
+
+export const useGetAdminTenantUsers = (
+  tenantId: string,
+  page: number = 1,
+  limit: number = 50,
+  config?: UseQueryOptions<t.ListUsersResponse>,
+): QueryObserverResult<t.ListUsersResponse> => {
+  return useQuery<t.ListUsersResponse>(
+    [QueryKeys.adminTenantUsers, tenantId, page, limit],
+    () => dataService.getAdminTenantUsers(tenantId, page, limit),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      enabled: !!tenantId,
+      ...config,
+    },
+  );
+};
+
+export const useGetAdminTenantStats = (
+  tenantId: string,
+  config?: UseQueryOptions<t.TenantStatsResponse>,
+): QueryObserverResult<t.TenantStatsResponse> => {
+  return useQuery<t.TenantStatsResponse>(
+    [QueryKeys.adminTenantStats, tenantId],
+    () => dataService.getAdminTenantStats(tenantId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      enabled: !!tenantId,
+      ...config,
+    },
+  );
+};

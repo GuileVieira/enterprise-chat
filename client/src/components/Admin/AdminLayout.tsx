@@ -1,47 +1,60 @@
 import React from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import {
-  Users,
   Shield,
+  Users,
   UserCircle,
   Settings,
-  LayoutDashboard,
   ChevronLeft,
+  LayoutDashboard,
+  Building2,
 } from 'lucide-react';
-import { useAuthContext } from '~/hooks/AuthContext';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
-import { Navigate } from 'react-router-dom';
+import { useAuthContext } from '~/hooks/AuthContext';
+import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
+import type { TranslationKeys } from '~/hooks';
 
-const navItems = [
-  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { path: '/admin/users', label: 'Users', icon: Users },
-  { path: '/admin/roles', label: 'Roles', icon: Shield },
-  { path: '/admin/groups', label: 'Groups', icon: UserCircle },
-  { path: '/admin/config', label: 'Config', icon: Settings },
+const navItems: Array<{
+  path: string;
+  labelKey: TranslationKeys;
+  icon: React.ElementType;
+  end?: boolean;
+}> = [
+  { path: '/admin', labelKey: 'com_admin_dashboard', icon: LayoutDashboard, end: true },
+  { path: '/admin/users', labelKey: 'com_admin_users', icon: Users },
+  { path: '/admin/roles', labelKey: 'com_admin_roles', icon: Shield },
+  { path: '/admin/groups', labelKey: 'com_admin_groups', icon: UserCircle },
+  { path: '/admin/tenants', labelKey: 'com_admin_tenants', icon: Building2 },
+  { path: '/admin/config', labelKey: 'com_admin_config', icon: Settings },
 ];
 
 const AdminNav: React.FC = () => {
   const location = useLocation();
+  const localize = useLocalize();
 
   return (
-    <nav className="flex h-full w-64 flex-col border-r border-border-medium bg-surface-primary">
-      <div className="flex items-center gap-3 px-4 py-5">
+    <nav className="flex border-border-medium bg-surface-primary md:h-full md:w-72 md:flex-col md:border-r">
+      <div className="hidden px-5 py-6 md:block">
         <NavLink
           to="/c/new"
-          className="flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
+          className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to Chat
+          {localize('com_admin_back_to_chat')}
         </NavLink>
       </div>
 
-      <div className="px-3 py-2">
-        <h2 className="px-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Administration
+      <div className="hidden px-5 pb-3 md:block">
+        <h2 className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">
+          {localize('com_admin_administration')}
         </h2>
+        <p className="mt-2 px-2 text-sm leading-5 text-text-secondary">
+          {localize('com_admin_nav_description')}
+        </p>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 px-3">
+      <div className="flex w-full gap-2 overflow-x-auto border-b border-border-light px-3 py-3 md:flex-1 md:flex-col md:border-b-0 md:px-4 md:py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.end
@@ -53,14 +66,15 @@ const AdminNav: React.FC = () => {
               key={item.path}
               to={item.path}
               end={item.end}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={cn(
+                'group flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary md:w-full',
                 isActive
-                  ? 'bg-surface-tertiary text-text-primary'
-                  : 'text-text-secondary hover:bg-surface-secondary hover:text-text-primary'
-              }`}
+                  ? 'bg-surface-tertiary text-text-primary shadow-sm shadow-black/5'
+                  : 'text-text-secondary hover:bg-surface-secondary hover:text-text-primary',
+              )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <Icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-105" />
+              {localize(item.labelKey)}
             </NavLink>
           );
         })}
@@ -81,11 +95,13 @@ const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-surface-primary text-text-primary">
+    <div className="flex min-h-dvh w-screen flex-col bg-surface-primary text-text-primary md:flex-row">
       <AdminNav />
       <main className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto p-8">
-          <Outlet />
+        <div className="flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>
