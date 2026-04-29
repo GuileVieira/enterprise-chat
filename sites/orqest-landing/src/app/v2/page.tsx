@@ -3,14 +3,14 @@ import { AgentsSection, CtaSection, Header, Hero, ProcessSection } from './compo
 import { agents, diagnosisUrl, navItems, operatingSignals, processSteps } from './data';
 
 export const metadata: Metadata = {
-  title: 'Orqest V2 - Agentes de IA para rotinas de agência',
+  title: 'Orqest - Agentes de IA para operação de agência',
   description:
-    'Uma versão mais direta da landing Orqest, focada em leitura rápida e clareza operacional.',
+    'Mapeamos rotinas repetidas da agência e instalamos agentes de IA para briefing, roteiro, pauta, planejamento e dados.',
 };
 
 export default function LandingV2() {
   return (
-    <main className="min-h-[100dvh] bg-[#f4f2ee] text-[#1b1a17]">
+    <main className="min-h-[100dvh] bg-background text-text-primary">
       <Header navItems={navItems} />
       <Hero checks={operatingSignals} diagnosisUrl={diagnosisUrl} />
       <AgentsSection agents={agents} />
