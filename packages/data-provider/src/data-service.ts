@@ -853,6 +853,23 @@ export function getCategories(): Promise<t.TGetCategoriesResponse> {
   return request.get(endpoints.getCategories());
 }
 
+export function createCategory(
+  variables: t.TCreateCategoryRequest,
+): Promise<t.TCategory> {
+  return request.post(endpoints.postCategory(), variables);
+}
+
+export function updateCategory(
+  id: string,
+  variables: t.TUpdateCategoryRequest,
+): Promise<t.TCategory> {
+  return request.patch(endpoints.updateCategory(id), variables);
+}
+
+export function deleteCategory(id: string): Promise<t.TDeleteCategoryResponse> {
+  return request.delete(endpoints.deleteCategory(id));
+}
+
 export function getRandomPrompts(
   variables: t.TGetRandomPromptsRequest,
 ): Promise<t.TGetRandomPromptsResponse> {

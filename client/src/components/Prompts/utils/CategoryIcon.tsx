@@ -54,11 +54,21 @@ const categoryColorMap: Record<string, string> = {
 
 export default function CategoryIcon({
   category,
+  icon,
   className = '',
 }: {
   category: string;
+  icon?: string;
   className?: string;
 }) {
+  if (icon) {
+    return (
+      <span className={cn('text-base leading-none', className)} aria-hidden="true">
+        {icon}
+      </span>
+    );
+  }
+
   const IconComponent = categoryIconMap[category] ?? FileText;
   const colorClass = categoryColorMap[category] ?? 'text-text-secondary';
   return <IconComponent className={cn('size-4', colorClass, className)} aria-hidden="true" />;

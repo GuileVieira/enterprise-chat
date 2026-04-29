@@ -30,7 +30,7 @@ const useCategories = ({
         label: localize(category.label as TranslationKeys),
         value: category.value,
         icon: category.value ? (
-          <CategoryIcon category={category.value} className={className} />
+          <CategoryIcon category={category.value} icon={category.icon} className={className} />
         ) : null,
       })),
   });

@@ -171,6 +171,27 @@ export type TCategory = {
   label: string;
   description?: string;
   custom?: boolean;
+  icon?: string;
+  order?: number;
+  isDefault?: boolean;
+};
+
+export type TCreateCategoryRequest = {
+  label: string;
+  value: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TUpdateCategoryRequest = {
+  label?: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TDeleteCategoryResponse = {
+  message: string;
+  usageCount?: number;
 };
 
 export type TMarketplaceCategory = TCategory & {
