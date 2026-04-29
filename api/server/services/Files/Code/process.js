@@ -107,7 +107,7 @@ const processCodeOutput = async ({
       url: `${baseURL}/download/${session_id}/${id}`,
       responseType: 'arraybuffer',
       headers: {
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         'X-API-Key': apiKey,
       },
       httpAgent: codeServerHttpAgent,
@@ -307,7 +307,7 @@ async function getSessionInfo(fileIdentifier, apiKey) {
         ...queryParams,
       },
       headers: {
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         'X-API-Key': apiKey,
       },
       httpAgent: codeServerHttpAgent,

@@ -1,0 +1,15 @@
+export const BRAND = {
+  name: 'Orqest',
+  nameLower: 'orqest',
+  nameUpper: 'ORQEST',
+  defaultTitle: 'Orqest',
+  pwaName: 'Orqest',
+  pwaShortName: 'Orqest',
+  url: '',
+  email: 'noreply@orqest.io',
+  emailFromName: 'Orqest',
+  helpAndFaqURL: '',
+  userAgent: 'Orqest/1.0',
+  redisKeyPrefix: 'orqest',
+  mongoDbName: 'LibreChat',
+} as const;

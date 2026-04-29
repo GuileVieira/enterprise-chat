@@ -55,7 +55,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-mono text-text-muted">
-                {state.isComplete ? "Concluido" : `Passo ${state.step + 1} de ${totalQuestions}`}
+                {state.isComplete ? "ConcluÃ­do" : `Passo ${state.step + 1} de ${totalQuestions}`}
               </span>
               <span className="text-xs font-mono text-text-muted">{Math.round(progress)}%</span>
             </div>
@@ -121,10 +121,10 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-2">
-                  Voce e um otimo fit para o Orqest
+                  VocÃª e um Ã³timo fit para o Orqest
                 </h3>
                 <p className="text-sm text-text-secondary mb-8">
-                  Baseado nas suas respostas, sua agencia tem o perfil ideal para beneficiar dos agentes de IA.
+                  Baseado nas suas respostas, sua agÃªncia tem o perfil ideal para beneficiar dos agentes de IA.
                 </p>
                 <a
                   href="https://cal.com/orqest/diagnostico"
@@ -132,7 +132,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98]"
                 >
-                  Agendar minha reuniao
+                  Agendar minha reuniÃ£o
                 </a>
               </motion.div>
             ) : (
@@ -149,13 +149,13 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-2">
-                  Ainda nao e o momento ideal
+                  Ainda nÃ£o e o momento ideal
                 </h3>
                 <p className="text-sm text-text-secondary mb-4">
-                  Parece que sua operacao ainda nao esta no estagio ideal para o Orqest. Mas podemos ajudar.
+                  Parece que sua operaÃ§Ã£o ainda nÃ£o esta no estÃ¡gio ideal para o Orqest. Mas podemos ajudar.
                 </p>
                 <p className="text-sm text-text-secondary mb-8">
-                  Baixe nosso guia de processos operacionais para agencias e comece a organizar sua operacao hoje.
+                  Baixe nosso guia de processos operacionais para agÃªncias e comece a organizar sua operaÃ§Ã£o hoje.
                 </p>
                 <div className="flex flex-col gap-3">
                   <a

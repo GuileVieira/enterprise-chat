@@ -1,3 +1,5 @@
+/* brand */
+export * from './brand';
 /* config */
 export * from './azure';
 export * from './bedrock';

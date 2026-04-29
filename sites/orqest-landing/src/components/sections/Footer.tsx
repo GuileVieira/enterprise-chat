@@ -7,7 +7,7 @@ export function Footer() {
             <span className="text-lg font-semibold tracking-tight text-text-primary">Orqest</span>
           </div>
           <p className="text-sm text-text-muted">
-            Orqest — Agentes de IA para operacao interna de agencias.
+            Orqest — Agentes de IA para operaÃ§Ã£o interna de agÃªncias.
           </p>
           <p className="text-sm text-text-muted">
             {new Date().getFullYear()} Todos os direitos reservados.

@@ -1,8 +1,8 @@
-# LibreChat
+# Orqest
 
 ## Project Overview
 
-LibreChat is a monorepo with the following key workspaces:
+Orqest is a B2B SaaS platform forked from LibreChat, orchestrating AI agents for marketing agencies. It is a monorepo with the following key workspaces:
 
 | Workspace | Language | Side | Dependency | Purpose |
 |---|---|---|---|---|

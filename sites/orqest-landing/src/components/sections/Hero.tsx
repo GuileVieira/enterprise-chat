@@ -18,7 +18,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
           >
             <h1 className="max-w-[16ch] text-4xl font-semibold tracking-tighter text-text-primary md:text-5xl lg:text-6xl leading-[1.1]">
-              Sua equipe criativa gasta metade do dia em tarefas que nao deveria fazer.
+              Sua equipe criativa gasta metade do dia em tarefas que nÃ£o deveria fazer.
             </h1>
           </motion.div>
 
@@ -28,7 +28,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
             className="mt-6 max-w-[50ch] text-lg leading-relaxed text-text-secondary"
           >
-            O Orqest mapeia como sua agencia trabalha e entrega um time de agentes de IA especializados no dia a dia da sua operacao: briefing, roteiro, planejamento, relatorios. Sua equipe usa quando precisa. E volta a focar no que importa.
+            O Orqest mapeia como sua agÃªncia trabalha e entrega um time de agentes de IA especializados no dia a dia da sua operaÃ§Ã£o: briefing, roteiro, planejamento, relatÃ³rios. Sua equipe usa quando precisa. E volta a focar no que importa.
           </motion.p>
 
           <motion.div
@@ -38,7 +38,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             className="mt-10"
           >
             <MagneticButton onClick={onCtaClick}>
-              Ver como funciona na minha agencia
+              Ver como funciona na minha agÃªncia
             </MagneticButton>
           </motion.div>
 
@@ -48,7 +48,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             transition={{ delay: 0.6 }}
             className="mt-6 text-sm text-text-muted"
           >
-            Para agencias de marketing que ja tem talento, mas perdem tempo em processos operacionais que deveriam ser instantaneos.
+            Para agÃªncias de marketing que ja tem talento, mas perdem tempo em processos operacionais que deveriam ser instantÃ¢neos.
           </motion.p>
         </div>
 

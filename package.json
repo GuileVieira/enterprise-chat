@@ -1,5 +1,5 @@
 {
-  "name": "LibreChat",
+  "name": "orqest",
   "version": "v0.8.5",
   "description": "",
   "packageManager": "npm@11.10.0",
@@ -107,7 +107,7 @@
   "bugs": {
     "url": "https://github.com/danny-avila/LibreChat/issues"
   },
-  "homepage": "https://librechat.ai/",
+  "homepage": "",
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
     "@eslint/compat": "^1.2.6",

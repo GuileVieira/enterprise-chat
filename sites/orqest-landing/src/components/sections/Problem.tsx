@@ -6,19 +6,19 @@ export function Problem() {
   const pains = [
     {
       role: "Account",
-      text: "passa 40 minutos montando um briefing que o redator nao consegue entender.",
+      text: "passa 40 minutos montando um briefing que o redator nÃ£o consegue entender.",
     },
     {
       role: "Planejador",
-      text: "gasta uma manha inteira estruturando um plano de campanha que poderia ter um esqueleto pronto em minutos.",
+      text: "gasta uma manhÃ£ inteira estruturando um plano de campanha que poderia ter um esqueleto pronto em minutos.",
     },
     {
       role: "Social media",
-      text: "perde duas horas pesquisando angulos de pauta que um agente treinado no tom da agencia entregaria de primeira.",
+      text: "perde duas horas pesquisando angulos de pauta que um agente treinado no tom da agÃªncia entregaria de primeira.",
     },
     {
       role: "Redator",
-      text: "escreve o roteiro do video do zero — pela centesima vez — porque nao existe um padrao que acelere o trabalho.",
+      text: "escreve o roteiro do video do zero — pela centesima vez — porque nÃ£o existe um padrÃ£o que acelere o trabalho.",
     },
     {
       role: "Operacao",
@@ -39,7 +39,7 @@ export function Problem() {
 
         <ScrollReveal delay={0.1}>
           <p className="mt-8 text-lg leading-relaxed text-text-secondary">
-            Sua agencia tem bons profissionais. O problema nao e falta de talento. E que o talento esta preso em tarefas operacionais.
+            Sua agÃªncia tem bons profissionais. O problema nÃ£o e falta de talento. E que o talento esta preso em tarefas operacionais.
           </p>
         </ScrollReveal>
 
@@ -58,7 +58,7 @@ export function Problem() {
 
         <ScrollReveal delay={0.8}>
           <p className="mt-8 text-base leading-relaxed text-text-secondary">
-            E no final do dia, a equipe esta exausta. E a parte criativa — a que realmente diferencia sua agencia — ficou para depois. Sempre para depois.
+            E no final do dia, a equipe esta exausta. E a parte criativa — a que realmente diferencia sua agÃªncia — ficou para depois. Sempre para depois.
           </p>
         </ScrollReveal>
 
@@ -66,7 +66,7 @@ export function Problem() {
           <div className="mt-8 rounded-2xl border border-slate-200/50 bg-white p-6 shadow-diffusion">
             <p className="text-sm leading-relaxed text-text-secondary">
               Dados do setor mostram que equipes de marketing gastam{" "}
-              <span className="font-semibold text-text-primary">ate 60% do tempo em tarefas operacionais</span>: relatorios, organizacao de dados, formatacao, configuracao de campanhas, comunicacoes repetitivas. O que sobra para criatividade e estrategia e menos da metade da jornada.
+              <span className="font-semibold text-text-primary">atÃ© 60% do tempo em tarefas operacionais</span>: relatÃ³rios, organizaÃ§Ã£o de dados, formataÃ§Ã£o, configuraÃ§Ã£o de campanhas, comunicaÃ§Ãµes repetitivas. O que sobra para criatividade e estratÃ©gia e menos da metade da jornada.
             </p>
           </div>
         </ScrollReveal>

@@ -18,7 +18,7 @@ export function Closing({ onCtaClick }: ClosingProps) {
           transition={{ type: "spring", stiffness: 100, damping: 20 }}
           className="text-3xl font-semibold tracking-tighter text-white md:text-5xl leading-tight"
         >
-          Sua equipe nao tem tempo para criar porque esta ocupada operando.
+          Sua equipe nÃ£o tem tempo para criar porque esta ocupada operando.
         </motion.h2>
 
         <motion.p
@@ -28,7 +28,7 @@ export function Closing({ onCtaClick }: ClosingProps) {
           transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
           className="mt-8 text-lg leading-relaxed text-white/60"
         >
-          Agende um diagnostico gratuito de 30 minutos. Vamos mapear seus processos operacionais e mostrar exatamente quais tarefas podem ser executadas por agentes de IA antes que voce gaste 1 real.
+          Agende um diagnostico gratuito de 30 minutos. Vamos mapear seus processos operacionais e mostrar exatamente quais tarefas podem ser executadas por agentes de IA antes que vocÃª gaste 1 real.
         </motion.p>
 
         <motion.div
@@ -53,7 +53,7 @@ export function Closing({ onCtaClick }: ClosingProps) {
           transition={{ delay: 0.4 }}
           className="mt-6 text-sm text-white/40"
         >
-          Sem apresentacao generica. Voce vai sair da call com um mapa dos gargalos da sua operacao e pelo menos 3 tarefas que um agente pode assumir imediatamente.
+          Sem apresentaÃ§Ã£o generica. VocÃª vai sair da call com um mapa dos gargalos da sua operaÃ§Ã£o e pelo menos 3 tarefas que um agente pode assumir imediatamente.
         </motion.p>
       </div>
     </section>

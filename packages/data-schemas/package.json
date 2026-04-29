@@ -1,7 +1,7 @@
 {
   "name": "@librechat/data-schemas",
   "version": "0.0.50",
-  "description": "Mongoose schemas and models for LibreChat",
+  "description": "Mongoose schemas and models for Orqest",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.es.js",
@@ -41,7 +41,7 @@
   "bugs": {
     "url": "https://github.com/danny-avila/LibreChat/issues"
   },
-  "homepage": "https://librechat.ai",
+  "homepage": "",
   "devDependencies": {
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^29.0.0",
@@ -82,6 +82,6 @@
     "mongoose",
     "schema",
     "typescript",
-    "librechat"
+    "orqest"
   ]
 }
