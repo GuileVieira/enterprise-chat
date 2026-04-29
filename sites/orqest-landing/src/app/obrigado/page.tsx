@@ -10,18 +10,18 @@ export default function ObrigadoPage() {
   return (
     <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6">
       <div className="mx-auto max-w-xl text-center">
-        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+        <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12L10 17L19 8" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 12L10 17L19 8" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
-          Obrigado por se interessar no Orqest
+          Obrigado por se interessar na Orqest
         </h1>
 
         <p className="mt-6 text-lg leading-relaxed text-text-secondary">
-          Baseado nas suas respostas, você e um bom fit para o Orqest. Agende agora sua reunião de 30 minutos para mapearmos sua operação.
+          Baseado nas suas respostas, você é um bom fit para a Orqest. Agende agora sua reunião de 30 minutos para mapearmos sua operação.
         </p>
 
         <div className="mt-10">
@@ -37,7 +37,7 @@ export default function ObrigadoPage() {
         <div className="mt-4">
           <a
             href="#"
-            className="inline-flex items-center justify-center rounded-full border border-slate-200/50 px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-slate-50"
+            className="inline-flex items-center justify-center rounded-full border border-white/10 px-6 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Baixar guia gratuito
           </a>

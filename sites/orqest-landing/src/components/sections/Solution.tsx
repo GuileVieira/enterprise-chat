@@ -16,7 +16,7 @@ export function Solution() {
 
         <ScrollReveal delay={0.1}>
           <p className="mt-8 text-lg leading-relaxed text-text-secondary">
-            A Orqest não e uma plataforma para você configurar. E um servico de mapeamento + operação instalada.
+            A Orqest não é uma plataforma para você configurar. É um serviço de mapeamento + operação instalada.
           </p>
         </ScrollReveal>
 
@@ -28,7 +28,7 @@ export function Solution() {
 
         <ScrollReveal delay={0.3}>
           <p className="mt-6 text-base leading-relaxed text-text-secondary">
-            Cada operação sabe o formato da sua agência, o tom dos seus clientes e a lógica do seu processo. Não entrega textos genéricos. Entrega no padrão que você definiu — só que instantâneo.
+            Cada agente sabe o formato da sua agência, o tom dos seus clientes e a lógica do seu processo. Não entrega textos genéricos. Entrega no padrão que você definiu — só que instantâneo.
           </p>
         </ScrollReveal>
 
