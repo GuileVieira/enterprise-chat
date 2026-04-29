@@ -5,7 +5,7 @@ import { getMessageAriaLabel, getHeaderPrefixForScreenReader } from '../messages
 const translations: Record<string, string> = {
   com_endpoint_message: 'Message',
   com_endpoint_message_new: 'Message {{0}}',
-  com_ui_prompt: 'Prompt',
+  com_ui_prompt: 'Skill',
   com_ui_response: 'Response',
 };
 
@@ -50,9 +50,9 @@ describe('getMessageAriaLabel', () => {
 });
 
 describe('getHeaderPrefixForScreenReader', () => {
-  it('returns "Prompt N: " for user messages with valid depth', () => {
+  it('returns "Skill N: " for user messages with valid depth', () => {
     const msg = makeMessage({ isCreatedByUser: true, depth: 2 });
-    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Prompt 3: ');
+    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Skill 3: ');
   });
 
   it('returns "Response N: " for AI messages with valid depth', () => {
@@ -60,9 +60,9 @@ describe('getHeaderPrefixForScreenReader', () => {
     expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Response 1: ');
   });
 
-  it('returns "Prompt: " for user messages without depth', () => {
+  it('returns "Skill: " for user messages without depth', () => {
     const msg = makeMessage({ isCreatedByUser: true, depth: undefined });
-    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Prompt: ');
+    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Skill: ');
   });
 
   it('returns "Response: " for AI messages without depth', () => {
@@ -70,9 +70,9 @@ describe('getHeaderPrefixForScreenReader', () => {
     expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Response: ');
   });
 
-  it('omits number when depth is -1 (no "Prompt 0:" regression)', () => {
+  it('omits number when depth is -1 (no "Skill 0:" regression)', () => {
     const msg = makeMessage({ isCreatedByUser: true, depth: -1 });
-    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Prompt: ');
+    expect(getHeaderPrefixForScreenReader(msg, localize)).toBe('Skill: ');
   });
 
   it('omits number when depth is negative', () => {
