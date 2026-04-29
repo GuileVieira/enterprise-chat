@@ -794,6 +794,36 @@ export function genTitle(payload: m.TGenTitleRequest): Promise<m.TGenTitleRespon
   return request.get(endpoints.genTitle(payload.conversationId));
 }
 
+/* Projects */
+export const getProjects = (): Promise<s.TProject[]> => {
+  return request.get(endpoints.projects());
+};
+
+export const getProjectById = (id: string): Promise<s.TProject> => {
+  return request.get(endpoints.projectById(id));
+};
+
+export const createProject = (
+  payload: Omit<s.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>,
+): Promise<s.TProject> => {
+  return request.post(endpoints.projects(), payload);
+};
+
+export const updateProject = (
+  id: string,
+  payload: Partial<Omit<s.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>>,
+): Promise<s.TProject> => {
+  return request.put(endpoints.projectById(id), payload);
+};
+
+export const deleteProject = (id: string): Promise<s.TProject> => {
+  return request.delete(endpoints.projectById(id));
+};
+
+export const archiveProject = (id: string, isArchived: boolean): Promise<s.TProject> => {
+  return request.put(endpoints.archiveProject(id), { isArchived });
+};
+
 export const listMessages = (params?: q.MessagesListParams): Promise<q.MessagesListResponse> => {
   return request.get(endpoints.messages(params ?? {}));
 };
@@ -1080,6 +1110,17 @@ export function listAdminUsers(page: number = 1, limit: number = 50): Promise<q.
 
 export function searchAdminUsers(query: string): Promise<q.ListUsersResponse> {
   return request.get(endpoints.adminUsersSearch(query));
+}
+
+export function createAdminUser(payload: {
+  email: string;
+  name: string;
+  username: string;
+  password?: string;
+  tenantId?: string;
+  role?: string;
+}): Promise<{ message: string; password?: string }> {
+  return request.post(endpoints.adminUsers(), payload);
 }
 
 /* Admin Groups */

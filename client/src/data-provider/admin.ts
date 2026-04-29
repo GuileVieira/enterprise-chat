@@ -338,6 +338,54 @@ export const useDeleteAdminConfigMutation = (
   );
 };
 
+/* Admin Users - Create */
+export const useCreateAdminUserMutation = (
+  options?: t.MutationOptions<{ message: string; password?: string }, {
+    email: string;
+    name: string;
+    username: string;
+    password?: string;
+    tenantId?: string;
+    role?: string;
+  }>,
+): UseMutationResult<
+  { message: string; password?: string },
+  t.TError | undefined,
+  {
+    email: string;
+    name: string;
+    username: string;
+    password?: string;
+    tenantId?: string;
+    role?: string;
+  },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (payload) => dataService.createAdminUser(payload),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminUsers]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to create user:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
 /* Admin Tenants */
 export const useListAdminTenants = (
   config?: UseQueryOptions<t.ListTenantsResponse>,

@@ -18,7 +18,21 @@ export type ConversationListParams = {
   sortBy?: 'title' | 'createdAt' | 'updatedAt';
   sortDirection?: 'asc' | 'desc';
   tags?: string[];
+  projectId?: string;
   search?: string;
+};
+
+export type ProjectListParams = {
+  cursor?: string;
+  isArchived?: boolean;
+  sortBy?: 'name' | 'createdAt' | 'updatedAt';
+  sortDirection?: 'asc' | 'desc';
+  search?: string;
+};
+
+export type ProjectListResponse = {
+  projects: s.TProject[];
+  nextCursor: string | null;
 };
 
 export type MinimalConversation = Pick<
