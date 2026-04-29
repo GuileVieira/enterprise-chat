@@ -20,6 +20,8 @@ const {
   buildImageToolContext,
   buildToolClassification,
   buildOAuthToolCallName,
+  getTenantFunctionDefinitions,
+  executeTenantFunction,
 } = require('@librechat/api');
 const {
   Time,
@@ -65,8 +67,9 @@ const { resolveConfigServers } = require('~/server/services/MCP');
 const { recordUsage } = require('~/server/services/Threads');
 const { loadTools } = require('~/app/clients/tools/util');
 const { redactMessage } = require('~/config/parsers');
-const { findPluginAuthsByKeys } = require('~/models');
+const { findPluginAuthsByKeys, getTenantFunctions, getTenantSecret } = require('~/models');
 const { getFlowStateManager } = require('~/config');
+const { z } = require('zod');
 const { getLogStores } = require('~/cache');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
@@ -95,6 +98,48 @@ const normalizeActionToolName = (toolName) => {
   const prefixEnd = delimiterIndex + actionDelimiter.length;
   const encodedDomain = toolName.slice(prefixEnd);
   return toolName.slice(0, prefixEnd) + encodedDomain.replace(domainSeparatorRegex, '_');
+};
+
+/**
+ * Builds a Zod schema from a simple tenant function input schema.
+ * @param {Object} simpleSchema
+ * @returns {import('zod').ZodObject}
+ */
+const buildTenantFunctionZodSchema = (simpleSchema) => {
+  const shape = {};
+  for (const [key, def] of Object.entries(simpleSchema)) {
+    let validator = z.any();
+    switch (def.type) {
+      case 'string':
+        validator = z.string();
+        break;
+      case 'number':
+        validator = z.number();
+        break;
+      case 'integer':
+        validator = z.number().int();
+        break;
+      case 'boolean':
+        validator = z.boolean();
+        break;
+      case 'array':
+        validator = z.array(z.any());
+        break;
+      case 'object':
+        validator = z.record(z.any());
+        break;
+      default:
+        validator = z.string();
+    }
+    if (def.description) {
+      validator = validator.describe(def.description);
+    }
+    if (def.required !== true) {
+      validator = validator.optional();
+    }
+    shape[key] = validator;
+  }
+  return z.object(shape);
 };
 
 /**
@@ -704,6 +749,10 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
     return definitions;
   };
 
+  const getTenantFunctionDefinitionsWrapped = async (tenantId, toolNames) => {
+    return getTenantFunctionDefinitions({ getTenantFunctions }, tenantId, toolNames);
+  };
+
   let { toolDefinitions, toolRegistry, hasDeferredTools } = await loadToolDefinitions(
     {
       userId: req.user.id,
@@ -711,12 +760,14 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       tools: filteredTools,
       toolOptions: agent.tool_options,
       deferredToolsEnabled,
+      tenantId: req.user.tenantId,
     },
     {
       isBuiltInTool,
       loadAuthValues,
       getOrFetchMCPServerTools,
       getActionToolDefinitions,
+      getTenantFunctionDefinitions: getTenantFunctionDefinitionsWrapped,
     },
   );
 
@@ -766,12 +817,14 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
           tools: filteredTools,
           toolOptions: agent.tool_options,
           deferredToolsEnabled,
+          tenantId: req.user.tenantId,
         },
         {
           isBuiltInTool,
           loadAuthValues,
           getOrFetchMCPServerTools,
           getActionToolDefinitions,
+          getTenantFunctionDefinitions: getTenantFunctionDefinitionsWrapped,
         },
       );
       toolDefinitions = reloadResult.toolDefinitions;
@@ -1288,8 +1341,16 @@ async function loadToolsForExecution({
 
   const actionToolNames = [];
   const regularToolNames = [];
+  const tenantFunctionToolNames = [];
+
   for (const name of allToolNamesToLoad) {
-    (isActionTool(name) ? actionToolNames : regularToolNames).push(name);
+    if (isActionTool(name)) {
+      actionToolNames.push(name);
+    } else if (!isBuiltInTool(name) && !name.includes(Constants.mcp_delimiter)) {
+      tenantFunctionToolNames.push(name);
+    } else {
+      regularToolNames.push(name);
+    }
   }
 
   if (regularToolNames.length > 0) {
@@ -1337,6 +1398,37 @@ async function loadToolsForExecution({
       `[loadToolsForExecution] Capability "${AgentCapabilities.actions}" disabled. ` +
         `Skipping action tool execution. User: ${req.user.id} | Agent: ${agent.id} | Tools: ${actionToolNames.join(', ')}`,
     );
+  }
+
+  if (tenantFunctionToolNames.length > 0 && req.user.tenantId) {
+    const tenantFunctions = await getTenantFunctions({
+      tenantId: req.user.tenantId,
+      isActive: true,
+    });
+    const tenantFunctionMap = new Map(tenantFunctions.map((f) => [f.id, f]));
+
+    for (const toolName of tenantFunctionToolNames) {
+      const fn = tenantFunctionMap.get(toolName);
+      if (!fn) {
+        logger.warn(`[TenantFunctions] Function not found or inactive: ${toolName}`);
+        continue;
+      }
+
+      try {
+        const schema = buildTenantFunctionZodSchema(fn.inputSchema);
+        const tenantTool = new DynamicStructuredTool({
+          name: fn.id,
+          description: fn.description,
+          schema,
+          func: async (args) => {
+            return executeTenantFunction(fn, args, { getTenantSecret });
+          },
+        });
+        allLoadedTools.push(tenantTool);
+      } catch (error) {
+        logger.error(`[TenantFunctions] Failed to create tool ${toolName}:`, error);
+      }
+    }
   }
 
   if (isPTC && allLoadedTools.length > 0) {
