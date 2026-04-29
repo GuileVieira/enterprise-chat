@@ -1073,6 +1073,48 @@ export function getRole(roleName: string): Promise<r.TRole> {
   return request.get(endpoints.getRole(roleName));
 }
 
+/* Admin Users */
+export function listAdminUsers(page: number = 1, limit: number = 50): Promise<q.ListUsersResponse> {
+  return request.get(`${endpoints.adminUsers()}?page=${page}&limit=${limit}`);
+}
+
+export function searchAdminUsers(query: string): Promise<q.ListUsersResponse> {
+  return request.get(endpoints.adminUsersSearch(query));
+}
+
+/* Admin Groups */
+export function listAdminGroups(page: number = 1, limit: number = 50): Promise<q.ListGroupsResponse> {
+  return request.get(`${endpoints.adminGroups()}?page=${page}&limit=${limit}`);
+}
+
+export function getAdminGroup(id: string): Promise<q.GroupResponse> {
+  return request.get(endpoints.adminGroupById(id));
+}
+
+export function createAdminGroup(payload: q.CreateGroupPayload): Promise<q.GroupResponse> {
+  return request.post(endpoints.adminGroups(), payload);
+}
+
+export function updateAdminGroup(id: string, payload: q.UpdateGroupPayload): Promise<q.GroupResponse> {
+  return request.patch(endpoints.adminGroupById(id), payload);
+}
+
+export function deleteAdminGroup(id: string): Promise<unknown> {
+  return request.delete(endpoints.adminGroupById(id));
+}
+
+export function getAdminGroupMembers(id: string): Promise<q.GroupMembersResponse> {
+  return request.get(endpoints.adminGroupMembers(id));
+}
+
+export function addAdminGroupMember(id: string, userId: string): Promise<unknown> {
+  return request.post(endpoints.adminGroupMembers(id), { userId });
+}
+
+export function removeAdminGroupMember(id: string, userId: string): Promise<unknown> {
+  return request.delete(`${endpoints.adminGroupMembers(id)}/${userId}`);
+}
+
 export function updatePromptPermissions(
   variables: m.UpdatePromptPermVars,
 ): Promise<m.UpdatePermResponse> {

@@ -428,6 +428,15 @@ export const updateMarketplacePermissions = (roleName: string) =>
   `${getRole(roleName)}/marketplace`;
 export const updateSkillPermissions = (roleName: string) => `${getRole(roleName)}/skills`;
 
+/* Admin Users */
+export const adminUsers = () => `${BASE_URL}/api/admin/users`;
+export const adminUsersSearch = (q: string) => `${adminUsers()}/search?q=${encodeURIComponent(q)}`;
+
+/* Admin Groups */
+export const adminGroups = () => `${BASE_URL}/api/admin/groups`;
+export const adminGroupById = (id: string) => `${adminGroups()}/${encodeURIComponent(id)}`;
+export const adminGroupMembers = (id: string) => `${adminGroupById(id)}/members`;
+
 /* Conversation Tags */
 export const conversationTags = (tag?: string) =>
   `${BASE_URL}/api/tags${tag != null && tag ? `/${encodeURIComponent(tag)}` : ''}`;

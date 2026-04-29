@@ -227,3 +227,45 @@ export type GraphTokenResponse = {
   expires_in: number;
   scope: string;
 };
+
+/* Admin Users */
+export type AdminUser = {
+  _id: string;
+  name?: string;
+  username: string;
+  email: string;
+  role: string;
+  emailVerified?: boolean;
+  createdAt?: string;
+};
+
+export type ListUsersResponse = {
+  users: AdminUser[];
+  total: number;
+  limit: number;
+  page: number;
+};
+
+/* Admin Groups */
+export type AdminGroup = {
+  _id: string;
+  name: string;
+  description?: string;
+  memberIds?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ListGroupsResponse = {
+  groups: AdminGroup[];
+  total: number;
+  limit: number;
+  page: number;
+};
+
+export type GroupResponse = AdminGroup;
+
+export type GroupMembersResponse = {
+  members: AdminUser[];
+  total: number;
+};

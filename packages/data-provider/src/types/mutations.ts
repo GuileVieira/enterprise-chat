@@ -505,3 +505,35 @@ export interface CancelMCPOAuthResponse {
   success: boolean;
   message: string;
 }
+
+/* Admin Groups */
+export type CreateGroupPayload = {
+  name: string;
+  description?: string;
+};
+
+export type UpdateGroupPayload = {
+  name?: string;
+  description?: string;
+};
+
+export type UpdateGroupVars = {
+  id: string;
+  payload: UpdateGroupPayload;
+};
+
+export type AddGroupMemberVars = {
+  id: string;
+  userId: string;
+};
+
+export type RemoveGroupMemberVars = {
+  id: string;
+  userId: string;
+};
+
+export type CreateGroupOptions = MutationOptions<import('./queries').GroupResponse, CreateGroupPayload>;
+export type UpdateGroupOptions = MutationOptions<import('./queries').GroupResponse, UpdateGroupVars>;
+export type DeleteGroupOptions = MutationOptions<unknown, string>;
+export type AddGroupMemberOptions = MutationOptions<unknown, AddGroupMemberVars>;
+export type RemoveGroupMemberOptions = MutationOptions<unknown, RemoveGroupMemberVars>;
