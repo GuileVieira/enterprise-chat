@@ -25,12 +25,12 @@ export const BriefingSimulation = memo(function BriefingSimulation() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col justify-center bg-background/55 p-4">
-      <div className="text-text-muted mb-3 font-mono text-sm">BRIEFING_CAMPANHA_Q3.md</div>
-      <div className="space-y-2">
-        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3">
-          <div className="text-text-muted mb-1 font-mono text-xs uppercase">Objetivo</div>
-          <div className="text-base text-text-primary">
+    <div className="flex h-full flex-col justify-center bg-background/55 p-3">
+      <div className="text-text-muted mb-2 font-mono text-xs">BRIEFING_CAMPANHA_Q3.md</div>
+      <div className="space-y-1.5">
+        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5">
+          <div className="text-text-muted mb-1 font-mono text-[10px] uppercase">Objetivo</div>
+          <div className="text-sm text-text-primary">
             {text}
             <motion.span
               animate={{ opacity: [1, 0] }}
@@ -41,13 +41,13 @@ export const BriefingSimulation = memo(function BriefingSimulation() {
             </motion.span>
           </div>
         </div>
-        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3 opacity-70">
-          <div className="text-text-muted mb-1 font-mono text-xs uppercase">Público-alvo</div>
-          <div className="h-4 w-3/4 rounded bg-black/15" />
+        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5 opacity-70">
+          <div className="text-text-muted mb-1 font-mono text-[10px] uppercase">Público-alvo</div>
+          <div className="h-3 w-3/4 rounded bg-black/15" />
         </div>
-        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3 opacity-55">
-          <div className="text-text-muted mb-1 font-mono text-xs uppercase">Tom de voz</div>
-          <div className="h-4 w-1/2 rounded bg-black/15" />
+        <div className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5 opacity-55">
+          <div className="text-text-muted mb-1 font-mono text-[10px] uppercase">Tom de voz</div>
+          <div className="h-3 w-1/2 rounded bg-black/15" />
         </div>
       </div>
     </div>
@@ -71,9 +71,9 @@ export const RoteiroSimulation = memo(function RoteiroSimulation() {
   }, [sections.length]);
 
   return (
-    <div className="flex h-full flex-col justify-center bg-background/55 p-4">
-      <div className="text-text-muted mb-3 font-mono text-sm">ROTEIRO_VIDEO_V1.md</div>
-      <div className="space-y-3">
+    <div className="flex h-full flex-col justify-center bg-background/55 p-3">
+      <div className="text-text-muted mb-2 font-mono text-xs">ROTEIRO_VIDEO_V1.md</div>
+      <div className="space-y-2">
         {sections.map((section, i) => (
           <motion.div
             key={section.label}
@@ -82,10 +82,10 @@ export const RoteiroSimulation = memo(function RoteiroSimulation() {
               scale: activeIndex === i ? 1.02 : 1,
             }}
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-            className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3"
+            className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
           >
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-text-muted font-mono text-xs uppercase">{section.label}</span>
+              <span className="text-text-muted font-mono text-[10px] uppercase">{section.label}</span>
               {activeIndex === i && (
                 <motion.div
                   layoutId="active-indicator"
@@ -93,7 +93,7 @@ export const RoteiroSimulation = memo(function RoteiroSimulation() {
                 />
               )}
             </div>
-            <div className="text-base text-text-primary">{section.text}</div>
+            <div className="text-sm text-text-primary">{section.text}</div>
           </motion.div>
         ))}
       </div>
@@ -120,27 +120,27 @@ export const PlanejamentoSimulation = memo(function PlanejamentoSimulation() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col justify-center bg-background/55 p-4">
-      <div className="text-text-muted mb-3 font-mono text-sm">PLANO_CAMPANHA_Q3.json</div>
-      <div className="space-y-3">
-        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-3">
-          <span className="text-base text-text-primary">Segmentação de público</span>
+    <div className="flex h-full flex-col justify-center bg-background/55 p-3">
+      <div className="text-text-muted mb-2 font-mono text-xs">PLANO_CAMPANHA_Q3.json</div>
+      <div className="space-y-2">
+        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-2.5">
+          <span className="text-sm text-text-primary">Segmentação de público</span>
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
             className="h-2 w-2 rounded-full bg-emerald-400"
           />
         </div>
-        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-3">
-          <span className="text-base text-text-primary">Cronograma de lançamento</span>
+        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-2.5">
+          <span className="text-sm text-text-primary">Cronograma de lançamento</span>
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2.5, delay: 0.3 }}
             className="h-2 w-2 rounded-full bg-emerald-400"
           />
         </div>
-        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-3">
-          <span className="text-base text-text-primary">Orçamento estimado</span>
+        <div className="bg-surface-raised/70 flex items-center justify-between rounded-lg border border-black/[0.12] p-2.5">
+          <span className="text-sm text-text-primary">Orçamento estimado</span>
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ repeat: Infinity, duration: 2.2, delay: 0.6 }}
@@ -153,7 +153,7 @@ export const PlanejamentoSimulation = memo(function PlanejamentoSimulation() {
             notifVisible ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 10, scale: 0.9 }
           }
           transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-          className="rounded-lg bg-text-primary p-3 shadow-[0_14px_30px_-18px_rgba(27,26,23,0.45)]"
+          className="rounded-lg bg-text-primary p-2.5 shadow-[0_14px_30px_-18px_rgba(27,26,23,0.45)]"
         >
           <div className="text-sm font-medium text-background">Plano pronto para revisão</div>
           <div className="text-xs text-background/60">3 etapas verificadas automaticamente</div>
@@ -176,8 +176,8 @@ export const PautaSimulation = memo(function PautaSimulation() {
   const doubledPautas = [...pautas, ...pautas];
 
   return (
-    <div className="flex h-full flex-col justify-center overflow-hidden bg-background/55 p-4">
-      <div className="text-text-muted mb-3 font-mono text-sm">PAUTAS_MAIO_2025.md</div>
+    <div className="flex h-full flex-col justify-center overflow-hidden bg-background/55 p-3">
+      <div className="text-text-muted mb-2 font-mono text-xs">PAUTAS_MAIO_2025.md</div>
       <motion.div
         animate={{ x: ['0%', '-50%'] }}
         transition={{ repeat: Infinity, ease: 'linear', duration: 20 }}
@@ -186,12 +186,12 @@ export const PautaSimulation = memo(function PautaSimulation() {
         {doubledPautas.map((pauta, i) => (
           <div
             key={i}
-            className="bg-surface-raised/70 w-40 flex-shrink-0 rounded-lg border border-black/[0.12] p-3"
+            className="bg-surface-raised/70 w-36 flex-shrink-0 rounded-lg border border-black/[0.12] p-2.5"
           >
-            <div className="text-text-muted mb-2 font-mono text-xs uppercase">
+            <div className="text-text-muted mb-1 font-mono text-[10px] uppercase">
               DIA {String((i % 5) + 1).padStart(2, '0')}
             </div>
-            <div className="text-sm leading-snug text-text-primary">{pauta}</div>
+            <div className="text-xs leading-snug text-text-primary">{pauta}</div>
           </div>
         ))}
       </motion.div>
@@ -220,17 +220,17 @@ export const DadosSimulation = memo(function DadosSimulation() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col justify-center bg-background/55 p-4">
-      <div className="text-text-muted mb-3 font-mono text-sm">DASHBOARD_PERFORMANCE.json</div>
-      <div className="grid grid-cols-2 gap-3">
+    <div className="flex h-full flex-col justify-center bg-background/55 p-3">
+      <div className="text-text-muted mb-2 font-mono text-xs">DASHBOARD_PERFORMANCE.json</div>
+      <div className="grid grid-cols-2 gap-2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, type: 'spring' }}
-          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3"
+          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
         >
-          <div className="text-text-muted font-mono text-xs uppercase">Leads (mês)</div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-text-primary">
+          <div className="text-text-muted font-mono text-[10px] uppercase">Leads (mês)</div>
+          <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-text-primary">
             {count1.toLocaleString()}
           </div>
         </motion.div>
@@ -238,10 +238,10 @@ export const DadosSimulation = memo(function DadosSimulation() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, type: 'spring' }}
-          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3"
+          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
         >
-          <div className="text-text-muted font-mono text-xs uppercase">Taxa conversão</div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-text-primary">
+          <div className="text-text-muted font-mono text-[10px] uppercase">Taxa conversão</div>
+          <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-text-primary">
             {count2}%
           </div>
         </motion.div>
@@ -249,19 +249,19 @@ export const DadosSimulation = memo(function DadosSimulation() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, type: 'spring' }}
-          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3"
+          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
         >
-          <div className="text-text-muted font-mono text-xs uppercase">CAC</div>
-          <div className="mt-1 text-lg font-semibold tabular-nums text-text-primary">R$ 127,40</div>
+          <div className="text-text-muted font-mono text-[10px] uppercase">CAC</div>
+          <div className="mt-1 text-base font-semibold tabular-nums text-text-primary">R$ 127,40</div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, type: 'spring' }}
-          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-3"
+          className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
         >
-          <div className="text-text-muted font-mono text-xs uppercase">ROI</div>
-          <div className="mt-1 text-lg font-semibold tabular-nums text-emerald-400">3.2x</div>
+          <div className="text-text-muted font-mono text-[10px] uppercase">ROI</div>
+          <div className="mt-1 text-base font-semibold tabular-nums text-emerald-400">3.2x</div>
         </motion.div>
       </div>
     </div>
