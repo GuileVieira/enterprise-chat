@@ -3,12 +3,12 @@
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const results = [
-  "Briefing completo em 5 minutos, nÃ£o em 2 horas.",
-  "Roteiro de vÃ­deo estruturado no padrÃ£o da agÃªncia, entregue em minutos.",
-  "Planejamento de campanha com esqueleto, publico e cronograma — pronto para revisÃ£o, nÃ£o para comeÃ§ar do zero.",
-  "Pautas de conteÃºdo para o mÃªs inteiro geradas em uma manhÃ£.",
+  "Briefing completo em 5 minutos, não em 2 horas.",
+  "Roteiro de vídeo estruturado no padrão da agência, entregue em minutos.",
+  "Planejamento de campanha com esqueleto, publico e cronograma - pronto para revisão, não para começar do zero.",
+  "Pautas de conteúdo para o mês inteiro geradas em uma manhã.",
   "Relatorios e insights de dados respondidos instantaneamente, sem fila.",
-  "Padronizacao de qualidade: nÃ£o importa quem esta usando o agente, a entrega sai no mesmo formato.",
+  "Padronizacao de qualidade: não importa quem esta usando o agente, a entrega sai no mesmo formato.",
 ];
 
 export function Proof() {
@@ -17,7 +17,7 @@ export function Proof() {
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal>
           <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
-            O que muda quando a operaÃ§Ã£o para de depender da memÃ³ria da equipe.
+            O que muda quando a operação para de depender da memória da equipe.
           </h2>
         </ScrollReveal>
 
@@ -40,7 +40,7 @@ export function Proof() {
 
         <ScrollReveal delay={0.6}>
           <p className="mt-12 text-sm text-text-muted">
-            Baseado em processos de agÃªncias validados em mapeamentos operacionais. A lÃ³gica e a mesma usada por consultorias de processos — so que executada por IA no dia a dia da sua equipe.
+            Baseado em processos de agências validados em mapeamentos operacionais. A lógica e a mesma usada por consultorias de processos - so que executada por IA no dia a dia da sua equipe.
           </p>
         </ScrollReveal>
       </div>

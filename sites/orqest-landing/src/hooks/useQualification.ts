@@ -22,9 +22,9 @@ const QUESTIONS = [
   },
   {
     id: "uses-ai",
-    question: "VocÃª jÃ¡ usa alguma ferramenta de IA hoje?",
-    options: ["Sim", "NÃ£o"],
-    scores: { Sim: 1, NÃ£o: 0 },
+    question: "Você já usa alguma ferramenta de IA hoje?",
+    options: ["Sim", "Não"],
+    scores: { Sim: 1, Não: 0 },
   },
   {
     id: "pain",
@@ -34,7 +34,7 @@ const QUESTIONS = [
   },
   {
     id: "timeline",
-    question: "Quando vocÃª precisa comeÃ§ar a ver resultados?",
+    question: "Quando você precisa começar a ver resultados?",
     options: ["Urgente", "1-3 meses", "Ainda pesquisando"],
     scores: { Urgente: 2, "1-3 meses": 2, "Ainda pesquisando": 0 },
   },

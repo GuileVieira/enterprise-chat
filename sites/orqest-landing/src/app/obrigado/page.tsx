@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
 export const metadata: Metadata = {
-  title: "Obrigado — Orqest",
-  description: "Obrigado por se interessar no Orqest. Agende sua reuniÃ£o de diagnÃ³stico gratuito.",
+  title: "Obrigado - Orqest",
+  description: "Obrigado por se interessar no Orqest. Agende sua reunião de diagnóstico gratuito.",
 };
 
 export default function ObrigadoPage() {
@@ -21,17 +21,17 @@ export default function ObrigadoPage() {
         </h1>
 
         <p className="mt-6 text-lg leading-relaxed text-text-secondary">
-          Baseado nas suas respostas, vocÃª e um bom fit para o Orqest. Agende agora sua reuniÃ£o de 30 minutos para mapearmos sua operaÃ§Ã£o.
+          Baseado nas suas respostas, você e um bom fit para o Orqest. Agende agora sua reunião de 30 minutos para mapearmos sua operação.
         </p>
 
         <div className="mt-10">
           <MagneticButton href="https://cal.com/orqest/diagnostico">
-            Agendar minha reuniÃ£o de 30 minutos
+            Agendar minha reunião de 30 minutos
           </MagneticButton>
         </div>
 
         <p className="mt-6 text-sm text-text-muted">
-          Ou, se preferir, baixe nosso guia de processos operacionais para agÃªncias.
+          Ou, se preferir, baixe nosso guia de processos operacionais para agências.
         </p>
 
         <div className="mt-4">
