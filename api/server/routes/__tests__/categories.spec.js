@@ -99,9 +99,7 @@ describe('Categories Routes', () => {
     });
 
     it('should return 400 when label or value is missing', async () => {
-      const response = await request(app)
-        .post('/api/categories')
-        .send({ label: 'Sem Value' });
+      const response = await request(app).post('/api/categories').send({ label: 'Sem Value' });
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('Label and value are required');

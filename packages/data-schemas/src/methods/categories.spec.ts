@@ -17,9 +17,15 @@ beforeAll(async () => {
   /** Apply tenant isolation and register models */
   applyTenantIsolation(categoriesSchema);
   applyTenantIsolation(promptGroupSchema);
-  mongoose.models.Category || mongoose.model('Category', categoriesSchema);
-  mongoose.models.PromptGroup || mongoose.model('PromptGroup', promptGroupSchema);
-  mongoose.models.Prompt || mongoose.model('Prompt', promptSchema);
+  if (!mongoose.models.Category) {
+    mongoose.model('Category', categoriesSchema);
+  }
+  if (!mongoose.models.PromptGroup) {
+    mongoose.model('PromptGroup', promptGroupSchema);
+  }
+  if (!mongoose.models.Prompt) {
+    mongoose.model('Prompt', promptSchema);
+  }
 
   methods = createCategoriesMethods(mongoose);
 
@@ -176,7 +182,7 @@ describe('Categories Methods - Database Tests', () => {
       );
 
       const updated = await tenantStorage.run({ tenantId: 'tenant-a' }, () =>
-        methods.updatePromptCategory(created._id.toString(), {
+        methods.updatePromptCategory((created._id as mongoose.Types.ObjectId).toString(), {
           label: 'New Name',
           icon: '🟢',
         }),
@@ -209,7 +215,7 @@ describe('Categories Methods - Database Tests', () => {
       );
 
       const deleted = await tenantStorage.run({ tenantId: 'tenant-a' }, () =>
-        methods.deletePromptCategory(created._id.toString()),
+        methods.deletePromptCategory((created._id as mongoose.Types.ObjectId).toString()),
       );
 
       expect(deleted).toBe(true);

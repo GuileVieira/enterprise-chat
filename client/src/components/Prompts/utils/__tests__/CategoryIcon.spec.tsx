@@ -22,7 +22,9 @@ describe('CategoryIcon', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(<CategoryIcon category="briefing" icon="📋" className="text-xl" />);
+    const { container } = render(
+      <CategoryIcon category="briefing" icon="📋" className="text-xl" />,
+    );
     const span = container.querySelector('span');
     expect(span).toHaveClass('text-xl');
   });

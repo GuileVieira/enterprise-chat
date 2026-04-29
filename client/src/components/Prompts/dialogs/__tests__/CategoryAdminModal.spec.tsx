@@ -27,11 +27,13 @@ jest.mock('~/data-provider', () => ({
   }),
 }));
 
+const pickerLabel = 'Pick Emoji';
+
 jest.mock('emoji-picker-react', () => ({
   __esModule: true,
   default: ({ onEmojiClick }: { onEmojiClick: (data: { emoji: string }) => void }) => (
     <button data-testid="emoji-picker" onClick={() => onEmojiClick({ emoji: '🎯' })}>
-      Pick Emoji
+      {pickerLabel}
     </button>
   ),
 }));
