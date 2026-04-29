@@ -65,6 +65,12 @@ export enum QueryKeys {
   activeJobs = 'activeJobs',
   /* Agent API Keys */
   agentApiKeys = 'agentApiKeys',
+  /* Admin */
+  adminUsers = 'adminUsers',
+  adminUsersSearch = 'adminUsersSearch',
+  adminGroups = 'adminGroups',
+  adminGroup = 'adminGroup',
+  adminGroupMembers = 'adminGroupMembers',
 }
 
 // Dynamic query keys that require parameters
