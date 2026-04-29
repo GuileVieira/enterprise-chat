@@ -909,6 +909,72 @@ describe('Conversation Operations', () => {
     });
   });
 
+  describe('projectId support', () => {
+    it('saveConvo should persist projectId', async () => {
+      const conversationId = uuidv4();
+      const result = await saveConvo(
+        { userId: 'user123' },
+        { conversationId, projectId: 'proj-123', title: 'Project Test', endpoint: EModelEndpoint.openAI },
+      );
+
+      expect(result).not.toBeNull();
+      const doc = await Conversation.findOne({ conversationId }).lean();
+      expect(doc).not.toBeNull();
+      expect((doc as Record<string, unknown>).projectId).toBe('proj-123');
+    });
+
+    it('getConvosByCursor should filter by projectId', async () => {
+      await Conversation.create([
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'In Project',
+          endpoint: EModelEndpoint.openAI,
+          projectId: 'proj-abc',
+          updatedAt: new Date(),
+        },
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'No Project',
+          endpoint: EModelEndpoint.openAI,
+          updatedAt: new Date(),
+        },
+      ]);
+
+      Object.assign(Conversation, { meiliSearch: jest.fn().mockResolvedValue({ hits: [] }) });
+
+      const result = await getConvosByCursor('user123', { projectId: 'proj-abc' });
+      expect(result?.conversations).toHaveLength(1);
+      expect(result?.conversations[0]?.title).toBe('In Project');
+    });
+
+    it('getConvosByCursor without projectId returns all user conversations', async () => {
+      await Conversation.create([
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'In Project',
+          endpoint: EModelEndpoint.openAI,
+          projectId: 'proj-abc',
+          updatedAt: new Date(),
+        },
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'No Project',
+          endpoint: EModelEndpoint.openAI,
+          updatedAt: new Date(),
+        },
+      ]);
+
+      Object.assign(Conversation, { meiliSearch: jest.fn().mockResolvedValue({ hits: [] }) });
+
+      const result = await getConvosByCursor('user123');
+      expect(result?.conversations).toHaveLength(2);
+    });
+  });
+
   describe('tenantId stripping', () => {
     it('saveConvo should not write caller-supplied tenantId to the document', async () => {
       const conversationId = uuidv4();

@@ -28,6 +28,7 @@ import { createBannerMethods, type BannerMethods } from './banner';
 import { createToolCallMethods, type ToolCallMethods } from './toolCall';
 import { createCategoriesMethods, type CategoriesMethods } from './categories';
 import { createPresetMethods, type PresetMethods } from './preset';
+import { createProjectMethods, type ProjectMethods } from './project';
 /* Tier 2 — Moderate (service deps injected) */
 import { createConversationTagMethods, type ConversationTagMethods } from './conversationTag';
 import { createMessageMethods, type MessageMethods } from './message';
@@ -79,6 +80,7 @@ export type AllMethods = UserMethods &
   ToolCallMethods &
   CategoriesMethods &
   PresetMethods &
+  ProjectMethods &
   ConversationTagMethods &
   MessageMethods &
   ConversationMethods &
@@ -199,6 +201,7 @@ export function createMethods(
     ...createToolCallMethods(mongoose),
     ...createCategoriesMethods(mongoose),
     ...createPresetMethods(mongoose),
+    ...createProjectMethods(mongoose),
     /* Tier 2 */
     ...createConversationTagMethods(mongoose),
     ...messageMethods,
@@ -241,6 +244,7 @@ export type {
   ToolCallMethods,
   CategoriesMethods,
   PresetMethods,
+  ProjectMethods,
   ConversationTagMethods,
   MessageMethods,
   ConversationMethods,
