@@ -387,6 +387,14 @@ export const adminGroups = () => `${BASE_URL}/api/admin/groups`;
 export const adminGroupById = (id: string) => `${adminGroups()}/${encodeURIComponent(id)}`;
 export const adminGroupMembers = (id: string) => `${adminGroupById(id)}/members`;
 
+/* Admin Config */
+export const adminConfigs = () => `${BASE_URL}/api/admin/config`;
+export const adminConfigBase = () => `${adminConfigs()}/base`;
+export const adminConfigByPrincipal = (principalType: string, principalId: string) =>
+  `${adminConfigs()}/${encodeURIComponent(principalType)}/${encodeURIComponent(principalId)}`;
+export const adminConfigActive = (principalType: string, principalId: string) =>
+  `${adminConfigByPrincipal(principalType, principalId)}/active`;
+
 /* Conversation Tags */
 export const conversationTags = (tag?: string) =>
   `${BASE_URL}/api/tags${tag != null && tag ? `/${encodeURIComponent(tag)}` : ''}`;

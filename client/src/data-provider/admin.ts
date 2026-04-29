@@ -237,3 +237,103 @@ export const useRemoveAdminGroupMemberMutation = (
     },
   );
 };
+
+/* Admin Config */
+export const useListAdminConfigs = (
+  config?: UseQueryOptions<t.AdminConfigListResponse>,
+): QueryObserverResult<t.AdminConfigListResponse> => {
+  return useQuery<t.AdminConfigListResponse>(
+    [QueryKeys.adminConfigs],
+    () => dataService.listAdminConfigs(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      ...config,
+    },
+  );
+};
+
+export const useGetAdminConfigBase = (
+  config?: UseQueryOptions<{ config: Record<string, unknown> }>,
+): QueryObserverResult<{ config: Record<string, unknown> }> => {
+  return useQuery<{ config: Record<string, unknown> }>(
+    [QueryKeys.adminConfigBase],
+    () => dataService.getAdminConfigBase(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      ...config,
+    },
+  );
+};
+
+export const useToggleAdminConfigMutation = (
+  options?: t.MutationOptions<t.AdminConfigResponse, { principalType: string; principalId: string; isActive: boolean }>,
+): UseMutationResult<
+  t.AdminConfigResponse,
+  t.TError | undefined,
+  { principalType: string; principalId: string; isActive: boolean },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) =>
+      dataService.toggleAdminConfig(variables.principalType, variables.principalId, {
+        isActive: variables.isActive,
+      }),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminConfigs]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to toggle config:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+export const useDeleteAdminConfigMutation = (
+  options?: t.MutationOptions<unknown, { principalType: string; principalId: string }>,
+): UseMutationResult<
+  unknown,
+  t.TError | undefined,
+  { principalType: string; principalId: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) => dataService.deleteAdminConfig(variables.principalType, variables.principalId),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.adminConfigs]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to delete config:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};

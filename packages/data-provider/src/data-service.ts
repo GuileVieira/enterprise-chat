@@ -903,11 +903,11 @@ export function getAdminGroup(id: string): Promise<q.GroupResponse> {
   return request.get(endpoints.adminGroupById(id));
 }
 
-export function createAdminGroup(payload: q.CreateGroupPayload): Promise<q.GroupResponse> {
+export function createAdminGroup(payload: m.CreateGroupPayload): Promise<q.GroupResponse> {
   return request.post(endpoints.adminGroups(), payload);
 }
 
-export function updateAdminGroup(id: string, payload: q.UpdateGroupPayload): Promise<q.GroupResponse> {
+export function updateAdminGroup(id: string, payload: m.UpdateGroupPayload): Promise<q.GroupResponse> {
   return request.patch(endpoints.adminGroupById(id), payload);
 }
 
@@ -925,6 +925,27 @@ export function addAdminGroupMember(id: string, userId: string): Promise<unknown
 
 export function removeAdminGroupMember(id: string, userId: string): Promise<unknown> {
   return request.delete(`${endpoints.adminGroupMembers(id)}/${userId}`);
+}
+
+/* Admin Config */
+export function listAdminConfigs(): Promise<q.AdminConfigListResponse> {
+  return request.get(endpoints.adminConfigs());
+}
+
+export function getAdminConfigBase(): Promise<{ config: Record<string, unknown> }> {
+  return request.get(endpoints.adminConfigBase());
+}
+
+export function toggleAdminConfig(
+  principalType: string,
+  principalId: string,
+  payload: { isActive: boolean },
+): Promise<q.AdminConfigResponse> {
+  return request.patch(endpoints.adminConfigActive(principalType, principalId), payload);
+}
+
+export function deleteAdminConfig(principalType: string, principalId: string): Promise<unknown> {
+  return request.delete(endpoints.adminConfigByPrincipal(principalType, principalId));
 }
 
 export function updatePromptPermissions(
