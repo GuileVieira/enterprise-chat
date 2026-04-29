@@ -20,6 +20,7 @@ import ShareRoute from './ShareRoute';
 import ChatRoute from './ChatRoute';
 import Search from './Search';
 import Root from './Root';
+import AdminLayout from '~/components/Admin';
 
 const AuthLayout = () => (
   <AuthContextProvider>
@@ -105,6 +106,32 @@ export const router = createBrowserRouter(
           ],
         },
         dashboardRoutes,
+        {
+          path: 'admin',
+          element: <AdminLayout />,
+          children: [
+            {
+              index: true,
+              lazy: () => import('~/components/Admin/Dashboard').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'users',
+              lazy: () => import('~/components/Admin/Users/UsersPage').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'roles',
+              lazy: () => import('~/components/Admin/Roles/RolesPage').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'groups',
+              lazy: () => import('~/components/Admin/Groups/GroupsPage').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'config',
+              lazy: () => import('~/components/Admin/Config/ConfigPage').then((m) => ({ Component: m.default })),
+            },
+          ],
+        },
         {
           path: '/',
           element: <Root />,
