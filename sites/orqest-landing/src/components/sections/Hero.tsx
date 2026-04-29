@@ -41,7 +41,10 @@ export function Hero({ onCtaClick }: HeroProps) {
             transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.3 }}
             className="mt-12 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
           >
-            <MagneticButton onClick={onCtaClick}>
+            <MagneticButton
+              onClick={onCtaClick}
+              className="border border-white/20 bg-white/[0.06] text-text-primary backdrop-blur-sm hover:border-white/30 hover:bg-white/10"
+            >
               Mapear meus processos gratuitamente
             </MagneticButton>
           </motion.div>
