@@ -3,10 +3,11 @@ import {
   KeyRound,
   Plus,
   Power,
+  Wrench,
+  Trash2,
+  ChevronDown,
   ToggleLeft,
   ToggleRight,
-  Trash2,
-  Wrench,
 } from 'lucide-react';
 import { useLocalize } from '~/hooks';
 import {
@@ -74,19 +75,22 @@ const FunctionsPage: React.FC = () => {
         description={localize('com_admin_functions_description')}
         action={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              aria-label={localize('com_admin_select_tenant')}
-              className="focus:ring-ring-primary/20 min-w-60 rounded-lg border border-border-light bg-surface-secondary px-3 py-2.5 text-sm text-text-primary shadow-sm shadow-black/5 focus:border-border-xheavy focus:outline-none focus:ring-2"
-            >
-              <option value="">{localize('com_admin_select_tenant')}</option>
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.id}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-full sm:w-72">
+              <select
+                value={tenantId}
+                onChange={(e) => setTenantId(e.target.value)}
+                aria-label={localize('com_admin_select_tenant')}
+                className="focus:ring-ring-primary/20 h-10 w-full appearance-none rounded-lg border border-border-light bg-surface-secondary py-0 pl-3 pr-10 text-sm font-medium text-text-primary shadow-sm shadow-black/5 outline-none transition-colors hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2"
+              >
+                <option value="">{localize('com_admin_select_tenant')}</option>
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.id}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            </div>
             <AdminActionButton
               icon={<Plus className="h-4 w-4" />}
               disabled={!tenantId}
@@ -118,7 +122,7 @@ const FunctionsPage: React.FC = () => {
               </span>
               <Power className="h-4 w-4 text-text-tertiary" />
             </div>
-            <p className="mt-2 text-2xl font-semibold text-text-primary tabular-nums">
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-text-primary">
               {activeCount}/{functions.length}
             </p>
           </AdminPanel>
@@ -129,7 +133,7 @@ const FunctionsPage: React.FC = () => {
               </span>
               <KeyRound className="h-4 w-4 text-text-tertiary" />
             </div>
-            <p className="mt-2 text-2xl font-semibold text-text-primary tabular-nums">
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-text-primary">
               {authCount}
             </p>
           </AdminPanel>
@@ -155,7 +159,7 @@ const FunctionsPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
-                <tr className="border-b border-border-light bg-surface-primary/40">
+                <tr className="bg-surface-primary/40 border-b border-border-light">
                   <th className="px-6 py-3 font-medium text-text-secondary">
                     {localize('com_admin_function_id')}
                   </th>
