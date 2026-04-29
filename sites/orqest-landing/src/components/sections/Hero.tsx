@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 
@@ -28,13 +27,50 @@ export function Hero({ onCtaClick }: HeroProps) {
         className="pointer-events-none absolute right-[8%] top-[12%] hidden lg:block"
       >
         <svg width="180" height="180" viewBox="0 0 100 100" fill="none" className="opacity-[0.18]">
-          <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="0.5" className="text-text-primary" />
-          <circle cx="50" cy="50" r="38" stroke="currentColor" strokeWidth="0.5" className="text-text-primary" />
-          <circle cx="50" cy="50" r="28" stroke="currentColor" strokeWidth="0.5" className="text-text-primary" />
-          <circle cx="50" cy="50" r="18" stroke="currentColor" strokeWidth="0.5" className="text-text-primary" />
-          <circle cx="50" cy="50" r="8" stroke="currentColor" strokeWidth="0.5" className="text-text-primary" />
+          <circle
+            cx="50"
+            cy="50"
+            r="48"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            className="text-text-primary"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="38"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            className="text-text-primary"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="28"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            className="text-text-primary"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="18"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            className="text-text-primary"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="8"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            className="text-text-primary"
+          />
           <motion.circle
-            cx="50" cy="50" r="48"
+            cx="50"
+            cy="50"
+            r="48"
             stroke="currentColor"
             strokeWidth="0.5"
             className="text-moss"
@@ -121,56 +157,71 @@ export function Hero({ onCtaClick }: HeroProps) {
           className="relative hidden items-center justify-center md:flex"
         >
           <div className="relative w-full max-w-[520px]">
-            <div className="bg-moss/10 absolute -left-8 top-16 h-44 w-36 rounded-[2rem] border border-white/10" />
-            <div className="bg-surface relative overflow-hidden rounded-[2.5rem] border border-white/10 shadow-[0_32px_70px_-30px_rgba(0,0,0,0.72)]">
-              <Image
-                src="https://picsum.photos/seed/orqest-agency-operations/900/1040"
-                alt="Mesa de trabalho de uma equipe de agência revisando peças e documentos"
-                width={900}
-                height={1040}
-                className="h-[520px] w-full object-cover opacity-70 mix-blend-luminosity"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
-              <div className="bg-background/72 absolute inset-x-5 bottom-5 rounded-[2rem] border border-white/10 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="bg-[#b8abd8]/8 absolute -left-7 top-12 h-44 w-36 rounded-[2rem] border border-[#b8abd8]/20" />
+            <div className="relative overflow-hidden rounded-[2.25rem] border border-white/[0.12] bg-[#15141c] p-6 shadow-[0_32px_70px_-34px_rgba(0,0,0,0.72)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(184,171,216,0.22),transparent_34%)]" />
+              <div className="relative">
+                <div className="flex items-center justify-between border-b border-white/10 pb-5">
                   <div>
-                    <p className="text-text-muted font-mono text-[11px] uppercase tracking-[0.18em]">
-                      Sprint operacional
+                    <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#b8abd8]">
+                      Operação instalada
                     </p>
-                    <p className="mt-1 text-lg font-semibold tracking-tight text-text-primary">
-                      Cliente Eixo Verde
+                    <p className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
+                      Fluxo de entrega
                     </p>
                   </div>
                   <motion.div
-                    animate={{ scale: [1, 1.12, 1], opacity: [0.72, 1, 0.72] }}
-                    transition={{ repeat: Infinity, duration: 2.4 }}
-                    className="bg-moss h-3 w-3 rounded-full"
+                    animate={{ opacity: [0.55, 1, 0.55] }}
+                    transition={{ repeat: Infinity, duration: 2.6 }}
+                    className="h-2.5 w-2.5 rounded-full bg-[#b8abd8]"
                   />
                 </div>
-                <div className="mt-4 space-y-3">
-                  {[
-                    'Briefing padronizado',
-                    'Roteiro em revisão',
-                    'Relatório lido pelo atendimento',
-                  ].map((label, index) => (
-                    <motion.div
-                      key={label}
-                      initial={{ opacity: 0, x: 18 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 100,
-                        damping: 20,
-                        delay: 0.65 + index * 0.12,
-                      }}
-                      className="flex items-center justify-between rounded-2xl bg-white/[0.045] px-4 py-3"
-                    >
-                      <span className="text-sm text-text-secondary">{label}</span>
-                      <span className="text-moss font-mono text-[11px] uppercase tracking-[0.14em]">
-                        pronto
-                      </span>
-                    </motion.div>
-                  ))}
+
+                <div className="mt-6 grid grid-cols-[0.82fr_1.18fr] gap-4">
+                  <div className="space-y-3">
+                    {['Briefing', 'Roteiro', 'Pauta'].map((item, index) => (
+                      <motion.div
+                        key={item}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 100,
+                          damping: 20,
+                          delay: 0.55 + index * 0.1,
+                        }}
+                        className="rounded-2xl border border-white/[0.12] bg-white/[0.045] p-4"
+                      >
+                        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#b8abd8]">
+                          agente
+                        </p>
+                        <p className="mt-2 text-lg font-semibold tracking-tight text-text-primary">
+                          {item}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <div className="bg-background/58 rounded-[1.6rem] border border-white/[0.12] p-5">
+                    <p className="text-text-muted font-mono text-xs uppercase tracking-[0.18em]">
+                      Saída padrão
+                    </p>
+                    <div className="mt-5 space-y-4">
+                      {[
+                        'Objetivo e contexto',
+                        'Formato da agência',
+                        'Critérios de revisão',
+                        'Entrega pronta',
+                      ].map((item, index) => (
+                        <div key={item} className="flex items-center gap-3">
+                          <span className="bg-[#b8abd8]/14 grid h-7 w-7 place-items-center rounded-lg font-mono text-xs text-[#b8abd8]">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="text-sm text-text-secondary">{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0a;
+  --background: #09090d;
   --foreground: #fafaf9;
 }
 
@@ -17,6 +17,36 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  content: '';
+  opacity: 0.018;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1px),
+    radial-gradient(circle at 80% 40%, rgba(255, 255, 255, 0.7) 0 1px, transparent 1px);
+  background-size:
+    44px 44px,
+    68px 68px;
+}
+
+@supports (text-wrap: balance) {
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+@supports (text-wrap: pretty) {
+  p,
+  li {
+    text-wrap: pretty;
+  }
 }
 
 ::selection {
