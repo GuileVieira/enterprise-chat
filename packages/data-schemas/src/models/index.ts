@@ -18,6 +18,7 @@ import { createKeyModel } from './key';
 import { createPluginAuthModel } from './pluginAuth';
 import { createTransactionModel } from './transaction';
 import { createPresetModel } from './preset';
+import { createProjectModel } from './project';
 import { createPromptModel } from './prompt';
 import { createPromptGroupModel } from './promptGroup';
 import { createSkillModel } from './skill';
@@ -59,6 +60,7 @@ export function createModels(mongoose: typeof import('mongoose')) {
     PluginAuth: createPluginAuthModel(mongoose),
     Transaction: createTransactionModel(mongoose),
     Preset: createPresetModel(mongoose),
+    Project: createProjectModel(mongoose),
     Prompt: createPromptModel(mongoose),
     PromptGroup: createPromptGroupModel(mongoose),
     Skill: createSkillModel(mongoose),

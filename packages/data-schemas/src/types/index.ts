@@ -23,6 +23,7 @@ export * from './pluginAuth';
 /* Memories */
 export * from './memory';
 /* Prompts */
+export * from './project';
 export * from './prompts';
 /* Skills */
 export * from './skill';
