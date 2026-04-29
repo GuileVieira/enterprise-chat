@@ -61,6 +61,15 @@ const { initializeClient } = require('./initialize');
 const { User, AclEntry } = require('~/db/models');
 const { createAgent } = require('~/models');
 
+const mockGetConvo = jest.fn();
+const mockGetProjectById = jest.fn();
+
+jest.mock('~/models', () => ({
+  ...jest.requireActual('~/models'),
+  getConvo: (...args) => mockGetConvo(...args),
+  getProjectById: (...args) => mockGetProjectById(...args),
+}));
+
 const PRIMARY_ID = 'agent_primary';
 const TARGET_ID = 'agent_target';
 const AUTHORIZED_ID = 'agent_authorized';
@@ -197,5 +206,94 @@ describe('initializeClient — processAgent ACL gate', () => {
     expect(mockInitializeAgent).toHaveBeenCalledTimes(2);
     expect(agentClientArgs.agent.edges).toHaveLength(1);
     expect(agentClientArgs.agent.edges[0].to).toBe(AUTHORIZED_ID);
+  });
+
+  it('should prepend project instructions to primaryAgent.instructions when conversation has projectId', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({ instructions: 'Project context: be concise.' });
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    expect(mockGetConvo).toHaveBeenCalledWith(testUser._id.toString(), 'conv_1');
+    expect(mockGetProjectById).toHaveBeenCalledWith(testUser._id.toString(), 'proj-123');
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe(
+      'Project context: be concise.\n\nAgent instructions.',
+    );
+  });
+
+  it('should not modify instructions when conversation has no projectId', async () => {
+    mockGetConvo.mockResolvedValue({});
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    expect(mockGetProjectById).not.toHaveBeenCalled();
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
+  });
+
+  it('should not modify instructions when project has no instructions', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({ instructions: '' });
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
+  });
+
+  it('should handle getConvo error gracefully without breaking', async () => {
+    mockGetConvo.mockRejectedValue(new Error('DB error'));
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
   });
 });
