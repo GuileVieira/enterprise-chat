@@ -250,14 +250,20 @@ const SecretsPage: React.FC = () => {
                 <X className="h-4 w-4" />
               </AdminIconButton>
             </div>
-            <form onSubmit={handleCreate} className="mt-5 space-y-4">
+            <form autoComplete="off" onSubmit={handleCreate} className="mt-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-text-secondary">
                   {localize('com_admin_name')}
                 </label>
                 <input
                   required
+                  id="tenant-secret-name"
+                  name="tenant-secret-name"
                   type="text"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={secretName}
                   onChange={(e) => setSecretName(e.target.value)}
                   placeholder={localize('com_admin_secret_name_placeholder')}
@@ -289,7 +295,13 @@ const SecretsPage: React.FC = () => {
                 </label>
                 <input
                   required
-                  type="password"
+                  id="tenant-secret-value"
+                  name="tenant-secret-value"
+                  type="text"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  autoComplete="new-password"
+                  spellCheck={false}
                   value={secretValue}
                   onChange={(e) => setSecretValue(e.target.value)}
                   placeholder={localize('com_admin_secret_value_placeholder')}
