@@ -35,9 +35,17 @@ export interface LoadToolDefinitionsParams {
   toolOptions?: AgentToolOptions;
   /** Whether deferred tools feature is enabled */
   deferredToolsEnabled?: boolean;
+  /** Tenant ID for tenant-scoped function lookup */
+  tenantId?: string;
 }
 
 export interface ActionToolDefinition {
+  name: string;
+  description?: string;
+  parameters?: JsonSchemaType;
+}
+
+export interface TenantFunctionToolDefinition {
   name: string;
   description?: string;
   parameters?: JsonSchemaType;
@@ -58,6 +66,11 @@ export interface LoadToolDefinitionsDeps {
     agentId: string,
     actionToolNames: string[],
   ) => Promise<ActionToolDefinition[]>;
+  /** Loads tenant function definitions (schemas) from the database */
+  getTenantFunctionDefinitions?: (
+    tenantId: string,
+    toolNames: string[],
+  ) => Promise<TenantFunctionToolDefinition[]>;
 }
 
 export interface LoadToolDefinitionsResult {
@@ -76,9 +89,21 @@ export async function loadToolDefinitions(
   params: LoadToolDefinitionsParams,
   deps: LoadToolDefinitionsDeps,
 ): Promise<LoadToolDefinitionsResult> {
-  const { userId, agentId, tools, toolOptions = {}, deferredToolsEnabled = false } = params;
-  const { getOrFetchMCPServerTools, isBuiltInTool, loadAuthValues, getActionToolDefinitions } =
-    deps;
+  const {
+    userId,
+    agentId,
+    tools,
+    toolOptions = {},
+    deferredToolsEnabled = false,
+    tenantId,
+  } = params;
+  const {
+    getOrFetchMCPServerTools,
+    isBuiltInTool,
+    loadAuthValues,
+    getActionToolDefinitions,
+    getTenantFunctionDefinitions,
+  } = deps;
 
   const emptyResult: LoadToolDefinitionsResult = {
     toolDefinitions: [],
@@ -95,6 +120,7 @@ export async function loadToolDefinitions(
   const builtInToolDefs: ToolDefinition[] = [];
   let actionToolDefs: ToolDefinition[] = [];
   const actionToolNames: string[] = [];
+  const potentialTenantFunctionNames: string[] = [];
 
   const mcpAllPattern = `${Constants.mcp_all}${Constants.mcp_delimiter}`;
 
@@ -105,31 +131,32 @@ export async function loadToolDefinitions(
     }
 
     if (!mcpToolPattern.test(toolName)) {
-      if (!isBuiltInTool(toolName)) {
-        continue;
-      }
-      const registryDef = getToolDefinition(toolName);
-      if (!registryDef) {
-        continue;
-      }
-      builtInToolDefs.push({
-        name: toolName,
-        description: registryDef.description,
-        parameters: registryDef.schema as JsonSchemaType | undefined,
-      });
+      if (isBuiltInTool(toolName)) {
+        const registryDef = getToolDefinition(toolName);
+        if (!registryDef) {
+          continue;
+        }
+        builtInToolDefs.push({
+          name: toolName,
+          description: registryDef.description,
+          parameters: registryDef.schema as JsonSchemaType | undefined,
+        });
 
-      const extraTools = toolkitExpansion[toolName as keyof typeof toolkitExpansion];
-      if (extraTools) {
-        for (const extra of extraTools) {
-          const extraDef = getToolDefinition(extra);
-          if (extraDef) {
-            builtInToolDefs.push({
-              name: extra,
-              description: extraDef.description,
-              parameters: extraDef.schema as JsonSchemaType | undefined,
-            });
+        const extraTools = toolkitExpansion[toolName as keyof typeof toolkitExpansion];
+        if (extraTools) {
+          for (const extra of extraTools) {
+            const extraDef = getToolDefinition(extra);
+            if (extraDef) {
+              builtInToolDefs.push({
+                name: extra,
+                description: extraDef.description,
+                parameters: extraDef.schema as JsonSchemaType | undefined,
+              });
+            }
           }
         }
+      } else {
+        potentialTenantFunctionNames.push(toolName);
       }
       continue;
     }
@@ -185,6 +212,23 @@ export async function loadToolDefinitions(
     }));
   }
 
+  let tenantFunctionDefs: ToolDefinition[] = [];
+  if (
+    potentialTenantFunctionNames.length > 0 &&
+    getTenantFunctionDefinitions &&
+    tenantId
+  ) {
+    const fetchedTenantDefs = await getTenantFunctionDefinitions(
+      tenantId,
+      potentialTenantFunctionNames,
+    );
+    tenantFunctionDefs = fetchedTenantDefs.map((def) => ({
+      name: def.name,
+      description: def.description,
+      parameters: def.parameters,
+    }));
+  }
+
   const loadedTools = mcpToolDefs.map((def) => ({
     name: def.name,
     description: def.description,
@@ -227,10 +271,22 @@ export async function loadToolDefinitions(
     }
   }
 
+  for (const tenantDef of tenantFunctionDefs) {
+    if (!toolRegistry.has(tenantDef.name)) {
+      toolRegistry.set(tenantDef.name, {
+        name: tenantDef.name,
+        description: tenantDef.description,
+        parameters: tenantDef.parameters,
+        allowed_callers: ['direct'],
+      });
+    }
+  }
+
   const allDefinitions: (ToolDefinition | LCTool)[] = [
     ...toolDefinitions,
     ...actionToolDefs.filter((d) => !toolDefinitions.some((td) => td.name === d.name)),
     ...builtInToolDefs.filter((d) => !toolDefinitions.some((td) => td.name === d.name)),
+    ...tenantFunctionDefs.filter((d) => !toolDefinitions.some((td) => td.name === d.name)),
   ];
 
   return {
