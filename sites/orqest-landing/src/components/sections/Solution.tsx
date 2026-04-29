@@ -38,7 +38,7 @@ export function Solution() {
             <span className="font-medium text-text-primary">
               Eles usam quando precisam
             </span>
-            , como chamariam um estagiÃ¡rio experiente. So que sem erro, sem demora e sem precisar explicar como funciona.
+            , como chamariam um estagiÃ¡rio experiente. SÃ³ que sem erro, sem demora e sem precisar explicar como funciona.
           </p>
         </ScrollReveal>
       </div>

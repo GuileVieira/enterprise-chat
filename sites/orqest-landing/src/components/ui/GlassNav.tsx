@@ -48,7 +48,7 @@ export function GlassNav({ onCtaClick }: GlassNavProps) {
           onClick={onCtaClick}
           className="rounded-full bg-text-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98]"
         >
-          Agendar diagnostico
+          Agendar diagnÃ³stico
         </button>
       </div>
     </motion.header>

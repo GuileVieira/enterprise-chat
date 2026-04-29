@@ -26,7 +26,7 @@ export function FalseHope() {
 
             <ScrollReveal delay={0.2}>
               <p className="text-base leading-relaxed text-text-secondary">
-                JÃ¡ as ferramentas de IA prontas — ChatGPT, Notion AI, templates de internet — nÃ£o entendem como sua agÃªncia funciona. Elas entregam textos genÃ©ricos, briefings incompletos e roteiros sem o tom do seu cliente. Depois alguem da equipe precisa refazer tudo do zero.
+                JÃ¡ as ferramentas de IA prontas — ChatGPT, Notion AI, templates de internet — nÃ£o entendem como sua agÃªncia funciona. Elas entregam textos genÃ©ricos, briefings incompletos e roteiros sem o tom do seu cliente. Depois alguÃ©m da equipe precisa refazer tudo do zero.
               </p>
             </ScrollReveal>
 

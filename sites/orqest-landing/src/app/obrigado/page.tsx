@@ -3,7 +3,7 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 
 export const metadata: Metadata = {
   title: "Obrigado — Orqest",
-  description: "Obrigado por se interessar no Orqest. Agende sua reuniÃ£o de diagnostico gratuito.",
+  description: "Obrigado por se interessar no Orqest. Agende sua reuniÃ£o de diagnÃ³stico gratuito.",
 };
 
 export default function ObrigadoPage() {
