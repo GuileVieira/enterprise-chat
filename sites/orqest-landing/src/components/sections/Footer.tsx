@@ -3,7 +3,7 @@ import { OrqestLogo } from '@/components/icons/OrqestLogo';
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-background py-16">
+    <footer className="border-t border-black/5 bg-background py-16">
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col items-center justify-between gap-10 md:flex-row">
           <div className="flex items-center gap-2">

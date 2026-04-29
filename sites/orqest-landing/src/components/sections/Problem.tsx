@@ -46,7 +46,7 @@ export function Problem() {
         <div className="mt-12 space-y-0">
           {pains.map((pain, i) => (
             <ScrollReveal key={pain.role} delay={0.1 * (i + 2)}>
-              <div className="border-t border-white/10 py-6">
+              <div className="border-t border-black/10 py-6">
                 <p className="text-base leading-relaxed text-text-secondary">
                   <span className="font-medium text-text-primary">{pain.role}</span>{" "}
                   {pain.text}
@@ -63,7 +63,7 @@ export function Problem() {
         </ScrollReveal>
 
         <ScrollReveal delay={0.9}>
-          <div className="mt-8 rounded-2xl border border-white/10 bg-surface p-6">
+          <div className="mt-8 rounded-2xl border border-black/10 bg-surface p-6">
             <p className="text-sm leading-relaxed text-text-secondary">
               Dados do setor mostram que equipes de marketing gastam{" "}
               <span className="font-semibold text-text-primary">até 60% do tempo em tarefas operacionais</span>: relatórios, organização de dados, formatação, configuração de campanhas, comunicações repetitivas. O que sobra para criatividade e estratégia e menos da metade da jornada.

@@ -57,8 +57,8 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="bg-surface/95 fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-white/10 p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[#1b1a17]/35 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="bg-surface-raised/95 fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-black/10 p-8 shadow-[0_25px_70px_-28px_rgba(67,61,52,0.45)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
           {/* Progress */}
           <div className="mb-8">
             <div className="mb-2 flex items-center justify-between">
@@ -92,9 +92,9 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                       {currentQuestion.question}
                     </h3>
                     {isSubmitting && (
-                      <div className="bg-surface-raised mb-4 space-y-2 rounded-xl border border-white/10 p-4">
-                        <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
-                        <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
+                      <div className="bg-surface-raised mb-4 space-y-2 rounded-xl border border-black/10 p-4">
+                        <div className="h-3 w-2/3 animate-pulse rounded bg-black/10" />
+                        <div className="h-3 w-1/2 animate-pulse rounded bg-black/10" />
                       </div>
                     )}
                     <div className="space-y-3">
@@ -105,7 +105,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                           whileTap={{ scale: 0.99 }}
                           onClick={() => handleAnswer(option)}
                           disabled={isSubmitting}
-                          className="bg-surface-raised w-full rounded-xl border border-white/10 p-4 text-left text-sm font-medium text-text-primary transition-colors hover:bg-[#24251f] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
+                          className="bg-surface hover:bg-surface-raised w-full rounded-xl border border-black/10 p-4 text-left text-sm font-medium text-text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {option}
                         </motion.button>
@@ -114,7 +114,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                     {state.step > 0 && (
                       <button
                         onClick={goBack}
-                        className="text-text-muted mt-4 rounded-lg px-2 py-1 text-xs transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="text-text-muted mt-4 rounded-lg px-2 py-1 text-xs transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         Voltar
                       </button>
@@ -152,7 +152,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                   href="https://cal.com/orqest/diagnostico"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:bg-accent-hover inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-background transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
+                  className="hover:bg-accent-hover inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-background transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98]"
                 >
                   Agendar minha reunião
                 </a>
@@ -198,7 +198,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                     href="https://cal.com/orqest/diagnostico"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:bg-surface-raised inline-flex items-center justify-center rounded-full border border-white/10 px-8 py-4 text-sm font-medium text-text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="hover:bg-surface-raised inline-flex items-center justify-center rounded-full border border-black/10 px-8 py-4 text-sm font-medium text-text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     Falar mesmo assim
                   </a>

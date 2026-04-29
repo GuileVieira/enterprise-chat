@@ -48,10 +48,10 @@ export function FAQ() {
         <div className="mt-12 space-y-0">
           {faqs.map((faq, i) => (
             <ScrollReveal key={i} delay={0.05 * (i + 1)}>
-              <div className="border-t border-white/10">
+              <div className="border-t border-black/10">
                 <button
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                  className="flex w-full items-center justify-between py-6 text-left transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
+                  className="flex w-full items-center justify-between py-6 text-left transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
                 >
                   <span className="pr-8 text-base font-medium text-text-primary">{faq.question}</span>
                   <motion.div

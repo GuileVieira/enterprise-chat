@@ -115,9 +115,9 @@ export function Hero({ onCtaClick }: HeroProps) {
           >
             <MagneticButton
               onClick={onCtaClick}
-              className="border border-black/20 bg-black/[0.06] text-text-primary backdrop-blur-sm hover:border-black/30 hover:bg-black/10"
+              className="hover:bg-accent-hover bg-text-primary px-7 py-4 text-background shadow-[0_18px_40px_-26px_rgba(27,26,23,0.7)]"
             >
-              Mapear meus processos gratuitamente
+              Agendar diagnóstico
             </MagneticButton>
           </motion.div>
 
