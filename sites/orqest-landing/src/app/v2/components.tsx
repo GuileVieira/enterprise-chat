@@ -110,16 +110,16 @@ export function Hero({ checks, diagnosisUrl }: HeroProps) {
             Operação para agências
           </p>
           <h1 className="max-w-[13ch] text-5xl font-semibold leading-[0.96] tracking-tighter text-text-primary md:text-7xl">
-            Pare de começar do zero.
+            Sua agência operando com agentes treinados no seu processo.
           </h1>
           <p className="mt-8 max-w-[56ch] text-xl leading-relaxed text-text-secondary">
-            A Orqest mapeia como sua agência trabalha e instala agentes de IA para briefing,
-            roteiro, pauta, planejamento e dados.
+            A Orqest mapeia briefing, roteiro, pauta, planejamento e dados, transforma em
+            fluxos reutilizáveis e instala agentes que seguem o jeito da sua equipe trabalhar.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href={diagnosisUrl}>Mapear minha operação</ButtonLink>
+            <ButtonLink href={diagnosisUrl}>Mapear meus processos</ButtonLink>
             <ButtonLink href="#agentes" variant="secondary">
-              Ver rotinas
+              Ver agentes
             </ButtonLink>
           </div>
         </div>
@@ -217,10 +217,10 @@ export function CtaSection({ diagnosisUrl }: CtaSectionProps) {
       <Container className="flex flex-col items-start justify-between gap-8 py-16 md:flex-row md:items-end">
         <SectionIntro
           eyebrow="Diagnóstico gratuito"
-          title="Saia com o mapa das tarefas que podem virar agente."
+          title="Saia com o mapa dos processos que podem virar agente."
           className="max-w-xl"
         />
-        <ButtonLink href={diagnosisUrl}>Mapear minha operação</ButtonLink>
+        <ButtonLink href={diagnosisUrl}>Mapear meus processos</ButtonLink>
       </Container>
     </section>
   );

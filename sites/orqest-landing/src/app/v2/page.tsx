@@ -5,7 +5,7 @@ import { agents, diagnosisUrl, navItems, operatingSignals, processSteps } from '
 export const metadata: Metadata = {
   title: 'Orqest - Agentes de IA para operação de agência',
   description:
-    'Mapeamos rotinas repetidas da agência e instalamos agentes de IA para briefing, roteiro, pauta, planejamento e dados.',
+    'Mapeamos processos da agência e instalamos agentes de IA treinados para briefing, roteiro, pauta, planejamento e dados.',
 };
 
 export default function LandingV2() {
