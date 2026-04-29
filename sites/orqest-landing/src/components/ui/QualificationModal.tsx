@@ -49,8 +49,8 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
   return (
     <Dialog.Root open={open} onOpenChange={handleClose}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-white/10 bg-white/95 p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-[2rem] border border-white/10 bg-surface/95 p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]">
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
@@ -59,7 +59,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
               </span>
               <span className="text-xs font-mono text-text-muted">{Math.round(progress)}%</span>
             </div>
-            <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+            <div className="h-1 rounded-full bg-surface-raised overflow-hidden">
               <motion.div
                 className="h-full rounded-full bg-text-primary"
                 initial={{ width: 0 }}
@@ -90,7 +90,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.99 }}
                           onClick={() => handleAnswer(option)}
-                          className="w-full rounded-xl border border-slate-200/50 bg-slate-50 p-4 text-left text-sm font-medium text-text-primary transition-colors hover:bg-slate-100"
+                          className="w-full rounded-xl border border-white/10 bg-surface-raised p-4 text-left text-sm font-medium text-text-primary transition-colors hover:bg-[#222] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
                           {option}
                         </motion.button>
@@ -99,7 +99,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                     {state.step > 0 && (
                       <button
                         onClick={goBack}
-                        className="mt-4 text-xs text-text-muted hover:text-text-secondary transition-colors"
+                        className="mt-4 text-xs text-text-muted hover:text-text-secondary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg px-2 py-1"
                       >
                         Voltar
                       </button>
@@ -115,13 +115,13 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 className="text-center"
               >
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12L10 17L19 8" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5 12L10 17L19 8" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-2">
-                  Você e um ótimo fit para o Orqest
+                  Você é um ótimo fit para a Orqest
                 </h3>
                 <p className="text-sm text-text-secondary mb-8">
                   Baseado nas suas respostas, sua agência tem o perfil ideal para beneficiar dos agentes de IA.
@@ -130,7 +130,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                   href="https://cal.com/orqest/diagnostico"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98]"
+                  className="inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-background transition-colors hover:bg-accent-hover active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Agendar minha reunião
                 </a>
@@ -143,16 +143,16 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 className="text-center"
               >
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 8V12M12 16H12.01" stroke="#d97706" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M12 8V12M12 16H12.01" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold tracking-tight text-text-primary mb-2">
-                  Ainda não e o momento ideal
+                  Ainda não é o momento ideal
                 </h3>
                 <p className="text-sm text-text-secondary mb-4">
-                  Parece que sua operação ainda não esta no estágio ideal para o Orqest. Mas podemos ajudar.
+                  Parece que sua operação ainda não está no estágio ideal para a Orqest. Mas podemos ajudar.
                 </p>
                 <p className="text-sm text-text-secondary mb-8">
                   Baixe nosso guia de processos operacionais para agências e comece a organizar sua operação hoje.
@@ -160,7 +160,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                 <div className="flex flex-col gap-3">
                   <a
                     href="#"
-                    className="inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98]"
+                    className="inline-flex items-center justify-center rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-background transition-colors hover:bg-accent-hover active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     Baixar guia gratuito
                   </a>
@@ -168,7 +168,7 @@ export function QualificationModal({ open, onOpenChange }: QualificationModalPro
                     href="https://cal.com/orqest/diagnostico"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-full border border-slate-200/50 px-8 py-4 text-sm font-medium text-text-primary transition-colors hover:bg-slate-50"
+                    className="inline-flex items-center justify-center rounded-full border border-white/10 px-8 py-4 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     Falar mesmo assim
                   </a>

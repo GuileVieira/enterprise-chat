@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 const steps = [
@@ -34,15 +35,22 @@ export function HowItWorks() {
           </h2>
         </ScrollReveal>
 
-        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2 md:grid-rows-2">
           {steps.map((step, i) => (
-            <ScrollReveal key={step.number} delay={0.1 * (i + 1)}>
+            <ScrollReveal
+              key={step.number}
+              delay={0.1 * (i + 1)}
+              className={i === 0 ? "md:row-span-2" : ""}
+            >
               <motion.div
                 whileHover={{ y: -4 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                className="rounded-[2rem] border border-slate-200/50 bg-white p-8 shadow-diffusion"
+                className={cn(
+                  "h-full rounded-[2rem] border border-white/10 bg-surface p-8",
+                  i === 0 ? "md:p-10" : ""
+                )}
               >
-                <div className="mb-6 font-mono text-5xl font-semibold tracking-tighter text-slate-200">
+                <div className="mb-6 font-mono text-5xl font-semibold tracking-tighter text-text-muted/30">
                   {step.number}
                 </div>
                 <h3 className="mb-4 text-xl font-semibold tracking-tight text-text-primary">

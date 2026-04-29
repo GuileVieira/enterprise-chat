@@ -10,9 +10,9 @@ interface HeroProps {
 export function Hero({ onCtaClick }: HeroProps) {
   return (
     <section className="relative flex min-h-[100dvh] items-center overflow-hidden bg-background">
-      {/* Background Glows */}
-      <div className="absolute top-0 left-1/4 -z-10 h-[500px] w-[500px] rounded-full bg-white/5 blur-[120px]" />
-      <div className="absolute bottom-0 right-1/4 -z-10 h-[400px] w-[400px] rounded-full bg-white/5 blur-[100px]" />
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 right-0 -z-10 h-[600px] w-[600px] rounded-full bg-white/[0.03] blur-[120px]" />
+      <div className="absolute bottom-0 left-0 -z-10 h-[500px] w-[500px] rounded-full bg-white/[0.02] blur-[100px]" />
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-6 py-32 md:grid-cols-[55fr_45fr] md:gap-8">
         <div className="flex flex-col justify-center">
@@ -53,13 +53,16 @@ export function Hero({ onCtaClick }: HeroProps) {
             className="mt-8 flex items-center gap-3"
           >
             <div className="flex -space-x-2">
-              {['A', 'B', 'C', 'D'].map((l) => (
+              {[
+                'from-amber-200/30 to-orange-300/20',
+                'from-emerald-200/30 to-teal-300/20',
+                'from-sky-200/30 to-indigo-300/20',
+                'from-rose-200/30 to-pink-300/20',
+              ].map((grad, i) => (
                 <div
-                  key={l}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-white/10 text-xs font-medium text-white"
-                >
-                  {l}
-                </div>
+                  key={i}
+                  className={`h-8 w-8 rounded-full border-2 border-background bg-gradient-to-br ${grad}`}
+                />
               ))}
             </div>
             <p className="text-sm text-text-muted">
@@ -71,7 +74,7 @@ export function Hero({ onCtaClick }: HeroProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
-            className="mt-8 text-sm font-medium uppercase tracking-widest text-text-muted"
+            className="mt-8 text-sm font-bold uppercase tracking-widest text-text-muted"
           >
             Para agências que já têm talento, mas perdem tempo no operacional.
           </motion.p>
@@ -101,12 +104,12 @@ export function Hero({ onCtaClick }: HeroProps) {
                     damping: 20,
                     delay: 0.5 + item.delay,
                   }}
-                  className="group rounded-3xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/[0.05]"
+                  className="group rounded-3xl border border-white/10 bg-surface p-6 transition-all hover:border-white/20"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-lg font-bold text-white transition-colors group-hover:bg-white/10">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-lg font-bold text-text-primary transition-colors group-hover:bg-white/10">
                     {item.icon}
                   </div>
-                  <div className="text-base font-semibold text-text-primary">{item.label}</div>
+                  <div className="text-base font-bold text-text-primary">{item.label}</div>
                   <div className="mt-2 h-1.5 w-12 rounded-full bg-white/10 transition-all group-hover:w-20 group-hover:bg-white/20" />
                 </motion.div>
               ))}

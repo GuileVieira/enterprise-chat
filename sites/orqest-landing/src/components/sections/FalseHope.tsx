@@ -4,7 +4,7 @@ import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 export function FalseHope() {
   return (
-    <section className="bg-slate-50 py-32">
+    <section className="bg-surface py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid grid-cols-1 items-start gap-16 md:grid-cols-2">
           <div>
@@ -12,7 +12,7 @@ export function FalseHope() {
               <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
                 Contratar mais gente não resolve.
                 <br />
-                E ferramentas genéricas so acrescentam mais trabalho.
+                E ferramentas genéricas só acrescentam mais trabalho.
               </h2>
             </ScrollReveal>
           </div>

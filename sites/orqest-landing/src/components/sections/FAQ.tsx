@@ -37,7 +37,7 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="bg-slate-50 py-32">
+    <section id="faq" className="bg-surface py-32">
       <div className="mx-auto max-w-3xl px-6">
         <ScrollReveal>
           <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
@@ -48,10 +48,10 @@ export function FAQ() {
         <div className="mt-12 space-y-0">
           {faqs.map((faq, i) => (
             <ScrollReveal key={i} delay={0.05 * (i + 1)}>
-              <div className="border-t border-slate-200/50">
+              <div className="border-t border-white/10">
                 <button
                   onClick={() => setOpenIndex(openIndex === i ? null : i)}
-                  className="flex w-full items-center justify-between py-6 text-left transition-colors"
+                  className="flex w-full items-center justify-between py-6 text-left transition-colors hover:text-text-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-lg"
                 >
                   <span className="pr-8 text-base font-medium text-text-primary">{faq.question}</span>
                   <motion.div
