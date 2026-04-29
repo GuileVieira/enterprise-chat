@@ -47,6 +47,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
     !email.trim() ||
     !name.trim() ||
     !username.trim() ||
+    !effectiveTenantId ||
     (isNewTenant && !newTenantName.trim());
 
   const selectedTenantLabel = useMemo(() => {
@@ -242,8 +243,11 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                       }}
                       className={selectClassName}
                       disabled={preselectedTenantId != null}
+                      required
                     >
-                      <option value="">None (no tenant)</option>
+                      <option value="" disabled>
+                        {localize('com_admin_select_tenant')}
+                      </option>
                       {tenants.map((tenant) => (
                         <option key={tenant.id} value={tenant.id}>
                           {tenant.id}
