@@ -9,16 +9,19 @@ import {
   Bot,
   Wrench,
   Key,
+  Plus,
 } from 'lucide-react';
 import {
   useGetAdminTenantUsers,
   useGetAdminTenantStats,
 } from '~/data-provider/admin';
+import CreateUserModal from '../Users/CreateUserModal';
 
 const TenantDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'users' | 'stats'>('users');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: usersData, isLoading: usersLoading } = useGetAdminTenantUsers(id ?? '', 1, 50);
   const { data: statsData, isLoading: statsLoading } = useGetAdminTenantStats(id ?? '');
@@ -39,17 +42,26 @@ const TenantDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/admin/tenants')}
-          className="text-text-secondary transition-colors hover:text-text-primary"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">{tenantId}</h1>
-          <p className="mt-1 text-sm text-text-secondary">Tenant Overview</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/admin/tenants')}
+            className="text-text-secondary transition-colors hover:text-text-primary"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">{tenantId}</h1>
+            <p className="mt-1 text-sm text-text-secondary">Tenant Overview</p>
+          </div>
         </div>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
+        >
+          <Plus className="h-4 w-4" />
+          Add User
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -161,6 +173,12 @@ const TenantDetailPage: React.FC = () => {
           </p>
         </div>
       )}
+
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        preselectedTenantId={tenantId}
+      />
     </div>
   );
 };
