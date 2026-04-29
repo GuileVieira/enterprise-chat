@@ -46,7 +46,7 @@ export function HowItWorks() {
                 whileHover={{ y: -4 }}
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 className={cn(
-                  "h-full rounded-[2rem] border border-white/10 bg-surface p-8",
+                  "h-full rounded-[2rem] border border-black/10 bg-surface p-8",
                   i === 0 ? "md:p-10" : ""
                 )}
               >

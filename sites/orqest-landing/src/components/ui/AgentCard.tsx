@@ -33,20 +33,20 @@ export function AgentCard({
         delay: index * 0.1,
       }}
       className={cn(
-        'bg-surface hover:border-moss/35 hover:bg-surface-raised group relative overflow-hidden rounded-[2rem] border border-white/[0.14] p-6 shadow-[0_26px_70px_-45px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.08)] transition-all hover:-translate-y-1 md:p-8',
+        'group grid grid-cols-1 gap-6 py-8 transition-colors md:grid-cols-[minmax(280px,0.82fr)_minmax(0,1fr)] md:items-center md:gap-10',
         className,
       )}
     >
-      <div className="mb-7 h-64 overflow-hidden rounded-[1.5rem] border border-white/[0.14] bg-background/70">
+      <div className="order-2 md:order-1">
+        <h3 className="mb-3 text-2xl font-semibold tracking-tight text-text-primary">{title}</h3>
+        <p className="max-w-[58ch] text-base leading-relaxed text-text-secondary">{description}</p>
+        <div className="mt-5 flex items-center gap-2">
+          <div className="bg-moss h-1.5 w-1.5 flex-shrink-0 rounded-full" />
+          <p className="text-text-muted font-mono text-xs uppercase tracking-[0.18em]">{who}</p>
+        </div>
+      </div>
+      <div className="bg-surface-raised order-1 h-48 overflow-hidden rounded-[1.35rem] border border-black/[0.12] shadow-[0_18px_45px_-34px_rgba(67,61,52,0.42)] transition-transform group-hover:-translate-y-1 md:order-2 md:h-52">
         {simulation}
-      </div>
-      <div>
-        <h3 className="mb-4 text-2xl font-semibold tracking-tight text-text-primary">{title}</h3>
-        <p className="text-base leading-relaxed text-text-secondary">{description}</p>
-      </div>
-      <div className="mt-7 flex items-center gap-2">
-        <div className="bg-moss h-1.5 w-1.5 flex-shrink-0 rounded-full" />
-        <p className="text-text-muted font-mono text-xs uppercase tracking-[0.18em]">{who}</p>
       </div>
     </motion.div>
   );

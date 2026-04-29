@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function LandingV2() {
   return (
-    <main className="min-h-[100dvh] bg-[#f3f0f8] text-[#171620]">
+    <main className="min-h-[100dvh] bg-[#f4f2ee] text-[#1b1a17]">
       <Header navItems={navItems} />
       <Hero checks={operatingSignals} diagnosisUrl={diagnosisUrl} />
       <AgentsSection agents={agents} />

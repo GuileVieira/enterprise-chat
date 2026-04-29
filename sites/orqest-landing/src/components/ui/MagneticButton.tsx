@@ -1,8 +1,8 @@
 'use client';
 
-import { motion, useMotionValue, useSpring } from "framer-motion";
-import { ReactNode, useRef } from "react";
-import { cn } from "@/lib/utils";
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { ReactNode, useRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MagneticButtonProps {
   children: ReactNode;
@@ -45,8 +45,8 @@ export function MagneticButton({ children, className, onClick, href }: MagneticB
       onMouseLeave={handleMouseLeave}
       style={{ x: springX, y: springY }}
       className={cn(
-        "relative inline-flex items-center justify-center gap-2 rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98]",
-        className
+        'hover:bg-accent-hover relative inline-flex items-center justify-center gap-2 rounded-full bg-text-primary px-8 py-4 text-sm font-medium text-background transition-colors active:scale-[0.98]',
+        className,
       )}
       whileTap={{ scale: 0.98 }}
     >

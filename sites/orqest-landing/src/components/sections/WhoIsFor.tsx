@@ -28,7 +28,7 @@ export function WhoIsFor() {
 
         <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2">
           <ScrollReveal delay={0.1}>
-            <div className="rounded-[2rem] border border-white/10 bg-surface p-8">
+            <div className="rounded-[2rem] border border-black/10 bg-surface p-8">
               <h3 className="mb-6 text-lg font-semibold tracking-tight text-text-primary">
                 Orqest é para você se:
               </h3>
@@ -44,7 +44,7 @@ export function WhoIsFor() {
           </ScrollReveal>
 
           <ScrollReveal delay={0.2}>
-            <div className="rounded-[2rem] border border-white/10 bg-surface p-8">
+            <div className="rounded-[2rem] border border-black/10 bg-surface p-8">
               <h3 className="mb-6 text-lg font-semibold tracking-tight text-text-primary">
                 Não é para você se:
               </h3>

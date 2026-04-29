@@ -27,7 +27,7 @@ export function Proof() {
         <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
           {results.map((result, i) => (
             <ScrollReveal key={i} delay={0.08 * (i + 1)}>
-              <div className="rounded-[2rem] border border-white/10 bg-surface p-8">
+              <div className="rounded-[2rem] border border-black/10 bg-surface p-8">
                 <div className="flex items-start gap-4">
                   <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
