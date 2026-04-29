@@ -16,7 +16,10 @@ export function Proof() {
     <section className="bg-slate-50 py-32">
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal>
-          <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
+          <p className="text-sm font-medium uppercase tracking-widest text-text-muted">
+            Resultados de agências em implantação
+          </p>
+          <h2 className="mt-4 text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
             O que muda quando a operação para de depender da memória da equipe.
           </h2>
         </ScrollReveal>

@@ -12,15 +12,15 @@ const steps = [
   },
   {
     number: "02",
-    title: "Orquestracao",
+    title: "Instalação",
     description:
-      "Criamos cada agente com o contexto da sua agência: formatos aprovados, tom de voz por cliente, templates históricos, regras de negócio. Integramos com as ferramentas que você já usa, se necessário.",
+      "Criamos cada operação com o contexto da sua agência: formatos aprovados, tom de voz por cliente, templates históricos, regras de negócio. Integramos com as ferramentas que você já usa, se necessário.",
   },
   {
     number: "03",
-    title: "Conducao",
+    title: "Acompanhamento",
     description:
-      "A equipe comeca a usar. Você acompanha a adoção e a qualidade das entregas em um dashboard. Nos ajustamos os agentes conforme a agência evolui - novos clientes, novos formatos, novos processos.",
+      "A equipe começa a usar. Você acompanha a adoção e a qualidade das entregas em um dashboard. Ajustamos as operações conforme a agência evolui — novos clientes, novos formatos, novos processos.",
   },
 ];
 
@@ -30,7 +30,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-7xl px-6">
         <ScrollReveal>
           <h2 className="text-3xl font-semibold tracking-tighter text-text-primary md:text-4xl leading-tight">
-            De operação bagunçada para processo orquestrado em 3 fases.
+            De operação bagunçada para entregas automáticas em 3 fases.
           </h2>
         </ScrollReveal>
 
