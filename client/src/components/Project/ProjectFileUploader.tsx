@@ -214,19 +214,19 @@ export default function ProjectFileUploader({
       )}
 
       <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <AlertDialogContent className="max-w-[400px]">
+        <AlertDialogContent className="max-w-[400px] overflow-hidden border-none bg-background text-foreground">
           <AlertDialogHeader>
-            <AlertDialogTitle className="break-all text-foreground">
+            <AlertDialogTitle className="break-words text-xl font-semibold text-foreground">
               {localize('com_ui_project_file_delete_confirm')}
             </AlertDialogTitle>
-            <AlertDialogDescription className="break-words text-muted-foreground">
+            <AlertDialogDescription className="break-words text-sm text-muted-foreground">
               {localize('com_ui_delete_confirm_file_description', {
                 filename: fileToDelete?.filename ?? '',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-none bg-secondary text-foreground hover:bg-secondary/80">
+          <AlertDialogFooter className="mt-4 gap-2">
+            <AlertDialogCancel className="bg-secondary text-foreground hover:bg-secondary/80">
               {localize('com_ui_cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
