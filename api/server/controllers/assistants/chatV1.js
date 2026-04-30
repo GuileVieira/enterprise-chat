@@ -7,6 +7,7 @@ const {
   checkBalance,
   getBalanceConfig,
   getModelMaxTokens,
+  loadProjectMemories,
 } = require('@librechat/api');
 const {
   Time,
@@ -45,6 +46,7 @@ const {
   getMultiplier,
   getConvo,
   getProjectById,
+  getAllUserMemories,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -282,7 +284,9 @@ const chatV1 = async (req, res) => {
       // TODO: make promptBuffer a config option; buffer for titles, needs buffer for system instructions
       const promptBuffer = parentMessageId === Constants.NO_PARENT && !_thread_id ? 200 : 0;
       // 5 is added for labels
-      let promptTokens = (await countTokens(text + (promptPrefix ?? '') + projectInstructions)) + 5;
+      let promptTokens =
+        (await countTokens(text + (promptPrefix ?? '') + projectInstructions + projectMemories)) +
+        5;
       promptTokens += totalPreviousTokens + promptBuffer;
       // Count tokens up to the current context window
       promptTokens = Math.min(promptTokens, getModelMaxTokens(model));
@@ -318,8 +322,9 @@ const chatV1 = async (req, res) => {
     openai = _openai;
     await validateAuthor({ req, openai });
 
-    /** Load project instructions if conversation belongs to a project */
+    /** Load project context if conversation belongs to a project */
     let projectInstructions = '';
+    let projectMemories = '';
     if (convoId) {
       try {
         const convo = await getConvo(req.user.id, convoId);
@@ -328,9 +333,20 @@ const chatV1 = async (req, res) => {
           if (project?.instructions) {
             projectInstructions = project.instructions;
           }
+          const memoriesText = await loadProjectMemories(
+            project,
+            async (uid) => {
+              const memories = await getAllUserMemories(uid);
+              return memories.map((m) => ({ key: m.key, value: m.value }));
+            },
+            req.user.id,
+          );
+          if (memoriesText) {
+            projectMemories = memoriesText;
+          }
         }
       } catch (err) {
-        logger.error('[/assistants/chat/] Error loading project instructions', err);
+        logger.error('[/assistants/chat/] Error loading project context', err);
       }
     }
 
@@ -355,6 +371,7 @@ const chatV1 = async (req, res) => {
       endpointOption,
       clientTimestamp,
       projectInstructions,
+      projectMemories,
     });
 
     const getRequestFileIds = async () => {

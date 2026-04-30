@@ -63,11 +63,13 @@ const { createAgent } = require('~/models');
 
 const mockGetConvo = jest.fn();
 const mockGetProjectById = jest.fn();
+const mockGetAllUserMemories = jest.fn();
 
 jest.mock('~/models', () => ({
   ...jest.requireActual('~/models'),
   getConvo: (...args) => mockGetConvo(...args),
   getProjectById: (...args) => mockGetProjectById(...args),
+  getAllUserMemories: (...args) => mockGetAllUserMemories(...args),
 }));
 
 const PRIMARY_ID = 'agent_primary';
@@ -295,5 +297,91 @@ describe('initializeClient — processAgent ACL gate', () => {
 
     const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
     expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
+  });
+
+  it('should prepend project memories to primaryAgent.instructions', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({
+      instructions: '',
+      memories: [{ key: 'tone', value: 'friendly' }],
+    });
+    mockGetAllUserMemories.mockResolvedValue([]);
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe(
+      '## Project Memories\n\n- tone: friendly\n\nAgent instructions.',
+    );
+  });
+
+  it('should merge project instructions and memories in correct order', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({
+      instructions: 'Project context.',
+      memories: [{ key: 'lang', value: 'pt' }],
+    });
+    mockGetAllUserMemories.mockResolvedValue([]);
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe(
+      'Project context.\n\n## Project Memories\n\n- lang: pt\n\nAgent instructions.',
+    );
+  });
+
+  it('should include user memories referenced by memoryKeys', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({
+      instructions: '',
+      memories: [],
+      memoryKeys: ['pref_1', 'pref_2'],
+    });
+    mockGetAllUserMemories.mockResolvedValue([
+      { key: 'pref_1', value: 'Value A' },
+      { key: 'pref_2', value: 'Value B' },
+      { key: 'other', value: 'Other' },
+    ]);
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe(
+      '## Project Memories\n\n- pref_1: Value A\n- pref_2: Value B\n\nAgent instructions.',
+    );
   });
 });

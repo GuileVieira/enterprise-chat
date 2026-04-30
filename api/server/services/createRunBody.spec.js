@@ -97,4 +97,39 @@ describe('createRunBody', () => {
       'Current date and time: 2024-01-15 10:30:00\nProject context.Prefix.',
     );
   });
+
+  it('should include projectMemories after projectInstructions and before promptPrefix', () => {
+    const body = createRunBody({
+      ...baseOptions,
+      projectInstructions: 'Instructions.',
+      projectMemories: 'Memories.',
+      promptPrefix: 'Prefix.',
+    });
+    expect(body.additional_instructions).toBe('Instructions.\nMemories.Prefix.');
+  });
+
+  it('should include only projectMemories when no projectInstructions', () => {
+    const body = createRunBody({
+      ...baseOptions,
+      projectMemories: 'Memories.',
+    });
+    expect(body.additional_instructions).toBe('Memories.');
+  });
+
+  it('should include datetime + instructions + memories + prefix + artifacts in correct order', () => {
+    const body = createRunBody({
+      ...baseOptions,
+      projectInstructions: 'Instructions.',
+      projectMemories: 'Memories.',
+      promptPrefix: 'Prefix.',
+      endpointOption: {
+        assistant: { append_current_datetime: true },
+        artifactsPrompt: 'Artifacts.',
+      },
+      clientTimestamp: '2024-01-15T10:30:00.000Z',
+    });
+    expect(body.additional_instructions).toBe(
+      'Current date and time: 2024-01-15 10:30:00\nInstructions.\nMemories.Prefix.\nArtifacts.',
+    );
+  });
 });
