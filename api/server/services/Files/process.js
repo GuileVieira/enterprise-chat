@@ -574,7 +574,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
         projectId: req.body.projectId,
       });
 
-      if (!messageAttachment && tool_resource) {
+      if (!messageAttachment && tool_resource && agent_id) {
         await db.addAgentResourceFile({
           file_id,
           agent_id,
@@ -715,7 +715,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
   let filepath = _filepath;
 
-  if (!messageAttachment && tool_resource) {
+  if (!messageAttachment && tool_resource && agent_id) {
     await db.addAgentResourceFile({
       file_id,
       agent_id,
