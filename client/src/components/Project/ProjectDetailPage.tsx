@@ -17,6 +17,7 @@ export default function ProjectDetailPage() {
   const localize = useLocalize();
   const [activeTab, setActiveTab] = useState<Tab>('conversations');
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
   const projectQuery = useProjectByIdQuery(projectId ?? '');
   const filesQuery = useGetProjectFiles(projectId ?? '');
   const { permissions } = useProjectPermissions(projectId ?? '');
@@ -151,22 +152,38 @@ export default function ProjectDetailPage() {
           </div>
         )}
         {activeTab === 'settings' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-text-secondary">
-                {localize('com_ui_project_instructions')}
-              </label>
-              <div className="mt-1 rounded-lg border border-border-light bg-surface-secondary p-3 text-sm text-text-primary">
-                {project.instructions || localize('com_ui_project_no_instructions')}
+          <>
+            {isEditingSettings ? (
+              <ProjectForm project={project} onSuccess={() => setIsEditingSettings(false)} />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    {localize('com_ui_project_instructions')}
+                  </label>
+                  {permissions.canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingSettings(true)}
+                      className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      {localize('com_ui_edit')}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-1 rounded-lg border border-border-light bg-surface-secondary p-3 text-sm text-text-primary">
+                  {project.instructions || localize('com_ui_project_no_instructions')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary">
+                    {localize('com_ui_project_model')}
+                  </label>
+                  <div className="mt-1 text-sm text-text-primary">{project.model || '-'}</div>
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-secondary">
-                {localize('com_ui_project_model')}
-              </label>
-              <div className="mt-1 text-sm text-text-primary">{project.model || '-'}</div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
