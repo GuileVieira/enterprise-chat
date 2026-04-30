@@ -634,7 +634,7 @@ router.post('/', async (req, res) => {
       logger.warn(`[/files] capability check failed, denying bypass: ${err.message}`);
     }
 
-    if (!skipUploadAuth) {
+    if (!skipUploadAuth && !metadata.projectId) {
       const denied = await verifyAgentUploadPermission({
         req,
         res,
