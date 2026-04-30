@@ -1,11 +1,12 @@
 const express = require('express');
 const { logger } = require('@librechat/data-schemas');
+const { preAuthTenantMiddleware } = require('@librechat/api');
 const optionalJwtAuth = require('~/server/middleware/optionalJwtAuth');
 const { getBanner } = require('~/models');
 
 const router = express.Router();
 
-router.get('/', optionalJwtAuth, async (req, res) => {
+router.get('/', preAuthTenantMiddleware, optionalJwtAuth, async (req, res) => {
   try {
     res.status(200).send(await getBanner(req.user));
   } catch (error) {
