@@ -192,14 +192,14 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
 
   /** Load project context (instructions + memories) if conversation belongs to a project */
   let projectId = req.body.projectId;
-  if (!projectId && conversationId && conversationId !== 'new') {
-    const conversation = await db.getConvo(req.user.id, conversationId);
-    projectId = conversation?.projectId;
-  }
+  try {
+    if (!projectId && conversationId && conversationId !== 'new') {
+      const conversation = await db.getConvo(req.user.id, conversationId);
+      projectId = conversation?.projectId;
+    }
 
-  if (projectId) {
-    try {
-      const project = await db.getProjectById(req.user.id, projectId);
+    if (projectId) {
+      const project = await db.getProjectById(projectId);
       const contextParts = [];
       if (project?.instructions) {
         contextParts.push(project.instructions);
@@ -222,20 +222,20 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
         const files = await db.getFilesByProjectId(projectId);
         return files?.map((f) => f.file_id) ?? [];
       });
-        if (projectFileIds && projectFileIds.length > 0) {
-          const existingIds = new Set(requestFiles.map((f) => f.file_id));
-          const newProjectFiles = await db.getFiles({ file_id: { $in: projectFileIds } }, null, {
-            text: 0,
-          });
-          for (const file of newProjectFiles ?? []) {
-            if (!existingIds.has(file.file_id)) {
-              requestFiles.push(file);
-            }
+      if (projectFileIds && projectFileIds.length > 0) {
+        const existingIds = new Set(requestFiles.map((f) => f.file_id));
+        const newProjectFiles = await db.getFiles({ file_id: { $in: projectFileIds } }, null, {
+          text: 0,
+        });
+        for (const file of newProjectFiles ?? []) {
+          if (!existingIds.has(file.file_id)) {
+            requestFiles.push(file);
           }
+        }
       }
-    } catch (err) {
-      logger.error('[initializeClient] Error loading project context', err);
     }
+  } catch (err) {
+    logger.error('[initializeClient] Error loading project context', err);
   }
 
   const primaryConfig = await initializeAgent(
@@ -419,6 +419,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     agent: primaryConfig,
     spec: endpointOption.spec,
     iconURL: endpointOption.iconURL,
+    projectId,
     attachments: primaryConfig.attachments,
     endpointType: endpointOption.endpointType,
     resendFiles: primaryConfig.resendFiles ?? true,

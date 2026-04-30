@@ -58,17 +58,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:conversationId', async (req, res) => {
-  const { conversationId } = req.params;
-  const convo = await db.getConvo(req.user.id, conversationId);
-
-  if (convo) {
-    res.status(200).json(convo);
-  } else {
-    res.status(404).end();
-  }
-});
-
 router.get('/gen_title/:conversationId', async (req, res) => {
   const { conversationId } = req.params;
   const titleCache = getLogStores(CacheKeys.GEN_TITLE);
@@ -94,6 +83,17 @@ router.get('/gen_title/:conversationId', async (req, res) => {
     res.status(404).json({
       message: "Title not found or method not implemented for the conversation's endpoint",
     });
+  }
+});
+
+router.get('/:conversationId', async (req, res) => {
+  const { conversationId } = req.params;
+  const convo = await db.getConvo(req.user.id, conversationId);
+
+  if (convo) {
+    res.status(200).json(convo);
+  } else {
+    res.status(404).end();
   }
 });
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Pencil } from 'lucide-react';
-import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
+import { useProjectByIdQuery, useGetProjectFiles, useTitleGeneration } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
@@ -21,6 +21,7 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('conversations');
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingSettings, setIsEditingSettings] = useState(false);
+  useTitleGeneration(true);
   const projectQuery = useProjectByIdQuery(projectId ?? '');
   const filesQuery = useGetProjectFiles(projectId ?? '');
   const { permissions } = useProjectPermissions(projectId ?? '');

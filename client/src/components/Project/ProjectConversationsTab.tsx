@@ -1,7 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Plus } from 'lucide-react';
-import type { TProject } from 'librechat-data-provider';
+import type { TConversation, TProject } from 'librechat-data-provider';
 import { useConversationsInfiniteQuery } from '~/data-provider';
 import { useLocalize, useNewConvo } from '~/hooks';
 import { cn } from '~/utils';

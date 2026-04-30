@@ -333,7 +333,7 @@ const chatV1 = async (req, res) => {
       try {
         const convo = await getConvo(req.user.id, convoId);
         if (convo?.projectId) {
-          const project = await getProjectById(req.user.id, convo.projectId);
+          const project = await getProjectById(convo.projectId);
           if (project?.instructions) {
             projectInstructions = project.instructions;
           }
