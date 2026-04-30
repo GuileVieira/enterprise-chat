@@ -1,8 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  QueryKeys,
-  dataService,
-} from 'librechat-data-provider';
+import { QueryKeys, dataService } from 'librechat-data-provider';
 import type {
   QueryObserverResult,
   UseMutationResult,
@@ -85,27 +82,24 @@ export const useCreateAdminGroupMutation = (
 ): UseMutationResult<t.GroupResponse, t.TError | undefined, t.CreateGroupPayload, unknown> => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (payload) => dataService.createAdminGroup(payload),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminGroups]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to create group:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((payload) => dataService.createAdminGroup(payload), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminGroups]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to create group:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 export const useUpdateAdminGroupMutation = (
@@ -113,28 +107,25 @@ export const useUpdateAdminGroupMutation = (
 ): UseMutationResult<t.GroupResponse, t.TError | undefined, t.UpdateGroupVars, unknown> => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (variables) => dataService.updateAdminGroup(variables.id, variables.payload),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminGroup, variables.id]);
-        queryClient.invalidateQueries([QueryKeys.adminGroups]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to update group:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((variables) => dataService.updateAdminGroup(variables.id, variables.payload), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminGroup, variables.id]);
+      queryClient.invalidateQueries([QueryKeys.adminGroups]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to update group:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 export const useDeleteAdminGroupMutation = (
@@ -142,27 +133,24 @@ export const useDeleteAdminGroupMutation = (
 ): UseMutationResult<unknown, t.TError | undefined, string, unknown> => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (id) => dataService.deleteAdminGroup(id),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminGroups]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to delete group:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((id) => dataService.deleteAdminGroup(id), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminGroups]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to delete group:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 export const useGetAdminGroupMembers = (
@@ -270,7 +258,10 @@ export const useGetAdminConfigBase = (
 };
 
 export const useToggleAdminConfigMutation = (
-  options?: t.MutationOptions<t.AdminConfigResponse, { principalType: string; principalId: string; isActive: boolean }>,
+  options?: t.MutationOptions<
+    t.AdminConfigResponse,
+    { principalType: string; principalId: string; isActive: boolean }
+  >,
 ): UseMutationResult<
   t.AdminConfigResponse,
   t.TError | undefined,
@@ -340,14 +331,17 @@ export const useDeleteAdminConfigMutation = (
 
 /* Admin Users - Create */
 export const useCreateAdminUserMutation = (
-  options?: t.MutationOptions<{ message: string; password?: string }, {
-    email: string;
-    name: string;
-    username: string;
-    password?: string;
-    tenantId?: string;
-    role?: string;
-  }>,
+  options?: t.MutationOptions<
+    { message: string; password?: string },
+    {
+      email: string;
+      name: string;
+      username: string;
+      password?: string;
+      tenantId?: string;
+      role?: string;
+    }
+  >,
 ): UseMutationResult<
   { message: string; password?: string },
   t.TError | undefined,
@@ -363,27 +357,24 @@ export const useCreateAdminUserMutation = (
 > => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (payload) => dataService.createAdminUser(payload),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminUsers]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to create user:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((payload) => dataService.createAdminUser(payload), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminUsers]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to create user:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 /* Admin Functions */
@@ -405,7 +396,10 @@ export const useListAdminFunctions = (
 };
 
 export const useCreateAdminFunctionMutation = (
-  options?: t.MutationOptions<q.TenantFunctionResponse, Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>>,
+  options?: t.MutationOptions<
+    q.TenantFunctionResponse,
+    Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>
+  >,
 ): UseMutationResult<
   q.TenantFunctionResponse,
   t.TError | undefined,
@@ -414,31 +408,31 @@ export const useCreateAdminFunctionMutation = (
 > => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (payload) => dataService.createAdminFunction(payload),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to create function:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((payload) => dataService.createAdminFunction(payload), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to create function:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 export const useToggleAdminFunctionMutation = (
-  options?: t.MutationOptions<q.TenantFunctionResponse, { id: string; tenantId: string; isActive: boolean }>,
+  options?: t.MutationOptions<
+    q.TenantFunctionResponse,
+    { id: string; tenantId: string; isActive: boolean }
+  >,
 ): UseMutationResult<
   q.TenantFunctionResponse,
   t.TError | undefined,
@@ -448,7 +442,8 @@ export const useToggleAdminFunctionMutation = (
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
   return useMutation(
-    (variables) => dataService.toggleAdminFunction(variables.id, variables.tenantId, variables.isActive),
+    (variables) =>
+      dataService.toggleAdminFunction(variables.id, variables.tenantId, variables.isActive),
     {
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries([QueryKeys.adminFunctions, variables.tenantId]);
@@ -517,7 +512,10 @@ export const useListAdminSecrets = (
 };
 
 export const useCreateAdminSecretMutation = (
-  options?: t.MutationOptions<q.TenantSecretResponse, { tenantId: string; name: string; value: string; type: string }>,
+  options?: t.MutationOptions<
+    q.TenantSecretResponse,
+    { tenantId: string; name: string; value: string; type: string }
+  >,
 ): UseMutationResult<
   q.TenantSecretResponse,
   t.TError | undefined,
@@ -526,32 +524,34 @@ export const useCreateAdminSecretMutation = (
 > => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
-  return useMutation(
-    (payload) => dataService.createAdminSecret(payload),
-    {
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries([QueryKeys.adminSecrets, variables.tenantId]);
-        if (onSuccess) {
-          onSuccess(data, variables, context);
-        }
-      },
-      onError: (...args) => {
-        const error = args[0];
-        if (error != null) {
-          console.error('Failed to create secret:', error);
-        }
-        if (onError) {
-          onError(...args);
-        }
-      },
-      onMutate,
+  return useMutation((payload) => dataService.createAdminSecret(payload), {
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.adminSecrets, variables.tenantId]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
     },
-  );
+    onError: (...args) => {
+      const error = args[0];
+      if (error != null) {
+        console.error('Failed to create secret:', error);
+      }
+      if (onError) {
+        onError(...args);
+      }
+    },
+    onMutate,
+  });
 };
 
 export const useDeleteAdminSecretMutation = (
   options?: t.MutationOptions<unknown, { name: string; tenantId: string }>,
-): UseMutationResult<unknown, t.TError | undefined, { name: string; tenantId: string }, unknown> => {
+): UseMutationResult<
+  unknown,
+  t.TError | undefined,
+  { name: string; tenantId: string },
+  unknown
+> => {
   const queryClient = useQueryClient();
   const { onMutate, onSuccess, onError } = options ?? {};
   return useMutation(

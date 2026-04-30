@@ -45,10 +45,7 @@ function buildUrl(baseUrl: string, path: string, args: Record<string, unknown>):
 /**
  * Builds query parameters from args, excluding path params.
  */
-function buildQueryParams(
-  path: string,
-  args: Record<string, unknown>,
-): Record<string, unknown> {
+function buildQueryParams(path: string, args: Record<string, unknown>): Record<string, unknown> {
   const pathParams = new Set(extractPathParams(path));
   const query: Record<string, unknown> = {};
 

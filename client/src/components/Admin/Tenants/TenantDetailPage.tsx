@@ -11,10 +11,7 @@ import {
   Key,
   Plus,
 } from 'lucide-react';
-import {
-  useGetAdminTenantUsers,
-  useGetAdminTenantStats,
-} from '~/data-provider/admin';
+import { useGetAdminTenantUsers, useGetAdminTenantStats } from '~/data-provider/admin';
 import CreateUserModal from '../Users/CreateUserModal';
 
 const TenantDetailPage: React.FC = () => {

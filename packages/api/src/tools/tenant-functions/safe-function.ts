@@ -12,11 +12,7 @@
  * @param timeoutMs - Maximum execution time in milliseconds
  * @returns The result of the function execution
  */
-export async function runSafeFunction<T, R>(
-  code: string,
-  data: T,
-  timeoutMs = 5000,
-): Promise<R> {
+export async function runSafeFunction<T, R>(code: string, data: T, timeoutMs = 5000): Promise<R> {
   const trimmed = code.trim();
   if (!trimmed) {
     return data as unknown as R;

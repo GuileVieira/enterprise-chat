@@ -5,7 +5,9 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
   /**
    * Creates a new tenant function.
    */
-  async function createTenantFunction(data: Omit<ITenantFunction, 'createdAt' | 'updatedAt'>): Promise<ITenantFunction> {
+  async function createTenantFunction(
+    data: Omit<ITenantFunction, 'createdAt' | 'updatedAt'>,
+  ): Promise<ITenantFunction> {
     const TenantFunction = mongoose.models.TenantFunction as Model<ITenantFunction>;
     const doc = new TenantFunction(data);
     return (await doc.save()).toObject() as ITenantFunction;
@@ -41,11 +43,9 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
     updates: Partial<ITenantFunction>,
   ): Promise<ITenantFunction | null> {
     const TenantFunction = mongoose.models.TenantFunction as Model<ITenantFunction>;
-    return (await TenantFunction.findOneAndUpdate(
-      { tenantId, id },
-      updates,
-      { new: true },
-    ).lean()) as ITenantFunction | null;
+    return (await TenantFunction.findOneAndUpdate({ tenantId, id }, updates, {
+      new: true,
+    }).lean()) as ITenantFunction | null;
   }
 
   /**
@@ -62,9 +62,15 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
   /**
    * Deletes a tenant function by tenantId and id.
    */
-  async function deleteTenantFunction(tenantId: string, id: string): Promise<ITenantFunction | null> {
+  async function deleteTenantFunction(
+    tenantId: string,
+    id: string,
+  ): Promise<ITenantFunction | null> {
     const TenantFunction = mongoose.models.TenantFunction as Model<ITenantFunction>;
-    return (await TenantFunction.findOneAndDelete({ tenantId, id }).lean()) as ITenantFunction | null;
+    return (await TenantFunction.findOneAndDelete({
+      tenantId,
+      id,
+    }).lean()) as ITenantFunction | null;
   }
 
   return {

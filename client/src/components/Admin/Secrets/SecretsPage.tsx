@@ -338,11 +338,7 @@ const SecretsPage: React.FC = () => {
                       showSecretValue ? 'com_ui_hide_password' : 'com_ui_show_password',
                     )}
                   >
-                    {showSecretValue ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
+                    {showSecretValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
               </div>

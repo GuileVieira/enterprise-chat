@@ -54,9 +54,11 @@ function convertField(key: string, def: Record<string, unknown>): Record<string,
 /**
  * Converts a simple schema object to JSON Schema.
  */
-export function convertSchema(
-  simpleSchema: Record<string, Record<string, unknown>>,
-): { type: 'object'; properties: Record<string, unknown>; required: string[] } {
+export function convertSchema(simpleSchema: Record<string, Record<string, unknown>>): {
+  type: 'object';
+  properties: Record<string, unknown>;
+  required: string[];
+} {
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
 
@@ -73,8 +75,6 @@ export function convertSchema(
 /**
  * Converts a simple input schema to the JsonSchemaType expected by the agent runtime.
  */
-export function convertToJsonSchema(
-  simpleSchema: Record<string, unknown>,
-): JsonSchemaType {
+export function convertToJsonSchema(simpleSchema: Record<string, unknown>): JsonSchemaType {
   return convertSchema(simpleSchema as Record<string, Record<string, unknown>>) as JsonSchemaType;
 }
