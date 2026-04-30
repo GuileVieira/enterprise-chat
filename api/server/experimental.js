@@ -10,7 +10,7 @@ const express = require('express');
 const passport = require('passport');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const mongoSanitize = require('express-mongo-sanitize');
 const {
   isEnabled,
@@ -210,7 +210,7 @@ if (cluster.isMaster) {
     logger.info(`Worker ${process.pid}: Connected to MongoDB`);
 
     /** Background index sync (non-blocking) */
-    indexSync().catch((err) => {
+    runAsSystem(indexSync).catch((err) => {
       logger.error(`[Worker ${process.pid}][indexSync] Background sync failed:`, err);
     });
 
@@ -373,7 +373,7 @@ if (cluster.isMaster) {
         /** Initialize MCP servers and OAuth reconnection for this worker */
         await initializeMCPs();
         await initializeOAuthReconnectManager();
-        await checkMigrations();
+        await runAsSystem(checkMigrations);
       } catch (initErr) {
         logger.error(`Worker ${process.pid} post-listen initialization failed:`, initErr);
         process.exit(1);

@@ -54,7 +54,7 @@ const startServer = async () => {
   await connectDb();
 
   logger.info('Connected to MongoDB');
-  indexSync().catch((err) => {
+  runAsSystem(indexSync).catch((err) => {
     logger.error('[indexSync] Background sync failed:', err);
   });
 
@@ -239,7 +239,7 @@ const startServer = async () => {
         await initializeMCPs();
         await initializeOAuthReconnectManager();
       });
-      await checkMigrations();
+      await runAsSystem(checkMigrations);
 
       // Configure stream services (auto-detects Redis from USE_REDIS env var)
       const streamServices = createStreamServices();
