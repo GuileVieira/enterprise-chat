@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { Pencil } from 'lucide-react';
 import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
 import ProjectConversationsTab from './ProjectConversationsTab';
+import ProjectForm from './ProjectForm';
 
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
 type Tab = (typeof tabs)[number];
@@ -13,6 +15,7 @@ export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const localize = useLocalize();
   const [activeTab, setActiveTab] = useState<Tab>('conversations');
+  const [isEditing, setIsEditing] = useState(false);
   const projectQuery = useProjectByIdQuery(projectId ?? '');
   const filesQuery = useGetProjectFiles(projectId ?? '');
   const { permissions } = useProjectPermissions(projectId ?? '');
@@ -35,12 +38,31 @@ export default function ProjectDetailPage() {
     );
   }
 
+  if (isEditing) {
+    return (
+      <div className="flex h-full flex-col overflow-auto">
+        <ProjectForm project={project} onSuccess={() => setIsEditing(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border-light px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-text-primary">{project.name}</h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {permissions.canEdit && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                title={localize('com_ui_edit')}
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                {localize('com_ui_edit')}
+              </button>
+            )}
             {permissions.canEdit && (
               <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-text-secondary">
                 {localize('com_ui_role_editor')}
