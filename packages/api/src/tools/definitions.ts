@@ -213,11 +213,7 @@ export async function loadToolDefinitions(
   }
 
   let tenantFunctionDefs: ToolDefinition[] = [];
-  if (
-    potentialTenantFunctionNames.length > 0 &&
-    getTenantFunctionDefinitions &&
-    tenantId
-  ) {
+  if (potentialTenantFunctionNames.length > 0 && getTenantFunctionDefinitions && tenantId) {
     const fetchedTenantDefs = await getTenantFunctionDefinitions(
       tenantId,
       potentialTenantFunctionNames,

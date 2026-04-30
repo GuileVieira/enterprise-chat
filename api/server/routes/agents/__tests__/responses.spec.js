@@ -79,7 +79,12 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const { hashToken, getRandomValues, createModels, tenantStorage } = require('@librechat/data-schemas');
+const {
+  hashToken,
+  getRandomValues,
+  createModels,
+  tenantStorage,
+} = require('@librechat/data-schemas');
 const {
   SystemRoles,
   ResourceType,
@@ -467,23 +472,23 @@ describeWithApiKey('Open Responses API Integration Tests', () => {
         ]);
       }
 
-    // Generate and create an API key for the test user
-    const rawKey = `sk-${await getRandomValues(32)}`;
-    const keyHash = await hashToken(rawKey);
-    const keyPrefix = rawKey.substring(0, 8);
+      // Generate and create an API key for the test user
+      const rawKey = `sk-${await getRandomValues(32)}`;
+      const keyHash = await hashToken(rawKey);
+      const keyPrefix = rawKey.substring(0, 8);
 
-    await AgentApiKey.create({
-      userId: testUser._id,
-      name: 'Test API Key',
-      keyHash,
-      keyPrefix,
-    });
+      await AgentApiKey.create({
+        userId: testUser._id,
+        name: 'Test API Key',
+        keyHash,
+        keyPrefix,
+      });
 
-    testApiKey = rawKey;
+      testApiKey = rawKey;
 
-    // Create test agents with the test user as author
-    testAgent = await createTestAgent({ author: testUser._id });
-    thinkingAgent = await createThinkingAgent({ author: testUser._id });
+      // Create test agents with the test user as author
+      testAgent = await createTestAgent({ author: testUser._id });
+      thinkingAgent = await createThinkingAgent({ author: testUser._id });
 
       // Grant REMOTE_AGENT permissions for the test agents
       await AclEntry.create([
@@ -495,7 +500,10 @@ describeWithApiKey('Open Responses API Integration Tests', () => {
           resourceId: testAgent._id,
           accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
           permBits:
-            PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+            PermissionBits.VIEW |
+            PermissionBits.EDIT |
+            PermissionBits.DELETE |
+            PermissionBits.SHARE,
         },
         {
           principalType: PrincipalType.USER,
@@ -505,7 +513,10 @@ describeWithApiKey('Open Responses API Integration Tests', () => {
           resourceId: thinkingAgent._id,
           accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
           permBits:
-            PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+            PermissionBits.VIEW |
+            PermissionBits.EDIT |
+            PermissionBits.DELETE |
+            PermissionBits.SHARE,
         },
       ]);
     });

@@ -221,7 +221,10 @@ export function createMethods(
     ...createToolCallMethods(mongoose),
     ...createCategoriesMethods(mongoose),
     ...createPresetMethods(mongoose),
-    ...createProjectMethods(mongoose),
+    ...createProjectMethods(mongoose, {
+      removeAllPermissions,
+      grantPermission: aclEntryMethods.grantPermission,
+    }),
     /* Tier 2 */
     ...createConversationTagMethods(mongoose),
     ...messageMethods,

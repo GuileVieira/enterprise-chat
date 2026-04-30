@@ -932,7 +932,12 @@ describe('Conversation Operations', () => {
       const conversationId = uuidv4();
       const result = await saveConvo(
         { userId: 'user123' },
-        { conversationId, projectId: 'proj-123', title: 'Project Test', endpoint: EModelEndpoint.openAI },
+        {
+          conversationId,
+          projectId: 'proj-123',
+          title: 'Project Test',
+          endpoint: EModelEndpoint.openAI,
+        },
       );
 
       expect(result).not.toBeNull();
