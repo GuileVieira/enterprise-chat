@@ -5,6 +5,7 @@ import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
+import ProjectPromptManager from './ProjectPromptManager';
 import ProjectConversationsTab from './ProjectConversationsTab';
 import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectForm from './ProjectForm';
@@ -101,7 +102,13 @@ export default function ProjectDetailPage() {
       <div className="flex-1 overflow-auto p-6">
         {activeTab === 'conversations' && <ProjectConversationsTab project={project} />}
         {activeTab === 'prompts' && (
-          <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
+          <>
+            {permissions.canEdit ? (
+              <ProjectPromptManager project={project} />
+            ) : (
+              <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
+            )}
+          </>
         )}
         {activeTab === 'memories' && (
           <>
