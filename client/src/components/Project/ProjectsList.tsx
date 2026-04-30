@@ -37,7 +37,9 @@ function ProjectCard({ project }: { project: TProject }) {
           <div>
             <h3 className="text-sm font-semibold text-text-primary">{project.name}</h3>
             {project.description ? (
-              <p className="mt-0.5 line-clamp-1 text-xs text-text-secondary">{project.description}</p>
+              <p className="mt-0.5 line-clamp-1 text-xs text-text-secondary">
+                {project.description}
+              </p>
             ) : null}
           </div>
         </div>

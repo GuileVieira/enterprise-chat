@@ -53,10 +53,7 @@ export default function ProjectsPanel() {
       >
         <span>{localize('com_ui_projects')}</span>
         <ChevronDown
-          className={cn(
-            'h-4 w-4 transition-transform',
-            expanded ? 'rotate-0' : '-rotate-90',
-          )}
+          className={cn('h-4 w-4 transition-transform', expanded ? 'rotate-0' : '-rotate-90')}
           aria-hidden="true"
         />
       </button>

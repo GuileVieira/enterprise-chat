@@ -14,7 +14,5 @@ export function createProjectModel(mongoose: typeof import('mongoose')) {
       primaryKey: 'projectId',
     });
   }
-  return (
-    mongoose.models.Project || mongoose.model<t.IProject>('Project', projectSchema)
-  );
+  return mongoose.models.Project || mongoose.model<t.IProject>('Project', projectSchema);
 }
