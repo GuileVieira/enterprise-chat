@@ -100,7 +100,7 @@ describe('performSync() - syncThreshold logic', () => {
     // Mock MeiliSearch client responses
     mockMeiliHealth.mockResolvedValue({ status: 'available' });
     mockMeiliIndex.mockReturnValue({
-      getSettings: jest.fn().mockResolvedValue({ filterableAttributes: ['user'] }),
+      getSettings: jest.fn().mockResolvedValue({ filterableAttributes: ['user', 'projectId'] }),
       updateSettings: jest.fn().mockResolvedValue({}),
       search: jest.fn().mockResolvedValue({ hits: [] }),
     });
