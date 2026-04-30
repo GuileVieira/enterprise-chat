@@ -96,7 +96,7 @@ describe('ProjectForm', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/projects/new-proj');
     });
 
-    it('submits with optional fields', async () => {
+    it('submits with optional creation fields', async () => {
       mockCreateMutateAsync.mockResolvedValue({ projectId: 'new-proj' });
       renderForm();
 
@@ -110,13 +110,6 @@ describe('ProjectForm', () => {
         target: { value: 'Be helpful' },
       });
 
-      const selects = screen.getAllByRole('combobox');
-      fireEvent.change(selects[0], { target: { value: 'openAI' } });
-
-      fireEvent.change(screen.getByPlaceholderText('com_ui_project_model_placeholder'), {
-        target: { value: 'gpt-4' },
-      });
-
       fireEvent.click(screen.getByText('com_ui_create'));
 
       await waitFor(() => {
@@ -124,8 +117,8 @@ describe('ProjectForm', () => {
           name: 'My Project',
           description: 'A description',
           instructions: 'Be helpful',
-          endpoint: 'openAI',
-          model: 'gpt-4',
+          endpoint: undefined,
+          model: undefined,
         });
       });
     });
@@ -219,6 +212,15 @@ describe('ProjectForm', () => {
           model: undefined,
         });
       });
+    });
+
+    it('does not render endpoint and model fields', () => {
+      renderForm();
+
+      expect(screen.queryByText('com_ui_project_endpoint')).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('com_ui_project_model_placeholder'),
+      ).not.toBeInTheDocument();
     });
   });
 });
