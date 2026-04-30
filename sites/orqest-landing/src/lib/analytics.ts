@@ -5,7 +5,12 @@ export const WEBHOOK_URL = process.env.WEBHOOK_URL || '';
 
 export function trackEvent(eventName: string, params?: Record<string, unknown>) {
   if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).gtag) {
-    (window as unknown as Record<string, (name: string, action: string, params?: Record<string, unknown>) => void>).gtag('event', eventName, params);
+    (
+      window as unknown as Record<
+        string,
+        (name: string, action: string, params?: Record<string, unknown>) => void
+      >
+    ).gtag('event', eventName, params);
   }
 }
 

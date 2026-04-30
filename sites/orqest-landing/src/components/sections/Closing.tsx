@@ -1,7 +1,7 @@
 'use client';
 
-import { motion } from "framer-motion";
-import { MagneticButton } from "@/components/ui/MagneticButton";
+import { motion } from 'framer-motion';
+import { MagneticButton } from '@/components/ui/MagneticButton';
 
 interface ClosingProps {
   onCtaClick: () => void;
@@ -9,17 +9,17 @@ interface ClosingProps {
 
 export function Closing({ onCtaClick }: ClosingProps) {
   return (
-    <section className="relative flex min-h-[80dvh] items-center overflow-hidden bg-surface">
+    <section className="bg-surface relative flex min-h-[80dvh] items-center overflow-hidden">
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/[0.02] blur-[120px]" />
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/[0.02] blur-[120px]" />
       </div>
       <div className="mx-auto max-w-4xl px-6 py-32 text-center">
         <motion.h2
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 100, damping: 20 }}
-          className="text-3xl font-semibold tracking-tighter text-text-primary md:text-5xl leading-tight"
+          transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+          className="text-3xl font-semibold leading-tight tracking-tighter text-text-primary md:text-5xl"
         >
           Sua equipe não tem tempo para criar porque está ocupada operando.
         </motion.h2>
@@ -28,22 +28,24 @@ export function Closing({ onCtaClick }: ClosingProps) {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.1 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.1 }}
           className="mt-8 text-lg leading-relaxed text-text-secondary"
         >
-          Agende um diagnóstico gratuito de 30 minutos. Vamos mapear seus processos operacionais e mostrar exatamente quais tarefas podem ser executadas por agentes de IA antes que você gaste 1 real.
+          Agende um diagnóstico gratuito de 30 minutos. Vamos mapear seus processos operacionais e
+          mostrar exatamente quais tarefas podem ser executadas por agentes de IA antes que você
+          gaste 1 real.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ type: "spring", stiffness: 100, damping: 20, delay: 0.2 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.2 }}
           className="mt-12"
         >
           <MagneticButton
             onClick={onCtaClick}
-            className="bg-text-primary text-background hover:bg-accent-hover"
+            className="hover:bg-accent-hover bg-text-primary text-background"
           >
             Agendar meu diagnóstico gratuito
           </MagneticButton>
@@ -54,9 +56,10 @@ export function Closing({ onCtaClick }: ClosingProps) {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.4 }}
-          className="mt-6 text-sm text-text-muted"
+          className="text-text-muted mt-6 text-sm"
         >
-          Sem apresentação genérica. Você vai sair da call com um mapa dos gargalos da sua operação e pelo menos 3 tarefas que um agente pode assumir imediatamente.
+          Sem apresentação genérica. Você vai sair da call com um mapa dos gargalos da sua operação
+          e pelo menos 3 tarefas que um agente pode assumir imediatamente.
         </motion.p>
       </div>
     </section>

@@ -85,7 +85,9 @@ export const RoteiroSimulation = memo(function RoteiroSimulation() {
             className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
           >
             <div className="mb-1 flex items-center gap-2">
-              <span className="text-text-muted font-mono text-[10px] uppercase">{section.label}</span>
+              <span className="text-text-muted font-mono text-[10px] uppercase">
+                {section.label}
+              </span>
               {activeIndex === i && (
                 <motion.div
                   layoutId="active-indicator"
@@ -252,7 +254,9 @@ export const DadosSimulation = memo(function DadosSimulation() {
           className="bg-surface-raised/70 rounded-lg border border-black/[0.12] p-2.5"
         >
           <div className="text-text-muted font-mono text-[10px] uppercase">CAC</div>
-          <div className="mt-1 text-base font-semibold tabular-nums text-text-primary">R$ 127,40</div>
+          <div className="mt-1 text-base font-semibold tabular-nums text-text-primary">
+            R$ 127,40
+          </div>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}

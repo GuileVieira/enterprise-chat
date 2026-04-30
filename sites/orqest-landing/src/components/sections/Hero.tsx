@@ -95,7 +95,8 @@ export function Hero({ onCtaClick }: HeroProps) {
               Recupere metade do dia da sua equipe criativa.
             </h1>
             <p className="mt-4 max-w-[40ch] text-xl leading-relaxed text-text-secondary md:text-2xl">
-              Operação digital instalada no seu processo: briefing, roteiro, pauta e relatórios no padrão da sua agência.
+              Operação digital instalada no seu processo: briefing, roteiro, pauta e relatórios no
+              padrão da sua agência.
             </p>
           </motion.div>
 
