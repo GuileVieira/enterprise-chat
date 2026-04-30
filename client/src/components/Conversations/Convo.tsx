@@ -173,6 +173,7 @@ export default function Conversation({
     renameHandler: handleRename,
     isActiveConvo,
     conversationId,
+    projectId: conversation.projectId,
     isPopoverActive,
     setIsPopoverActive: handlePopoverOpenChange,
     isShiftHeld: isActiveConvo ? isShiftHeld : false,

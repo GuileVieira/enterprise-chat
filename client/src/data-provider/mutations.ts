@@ -39,6 +39,30 @@ export const useUpdateConversationMutation = (
   );
 };
 
+export const useMoveConversationToProjectMutation = (): UseMutationResult<
+  t.TUpdateConversationResponse,
+  unknown,
+  { conversationId: string; projectId: string | null },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ conversationId, projectId }) =>
+      dataService.updateConversation({ conversationId, projectId: projectId ?? undefined }),
+    {
+      onSuccess: (updatedConvo) => {
+        queryClient.setQueryData(
+          [QueryKeys.conversation, updatedConvo.conversationId],
+          updatedConvo,
+        );
+        updateConvoInAllQueries(queryClient, updatedConvo.conversationId, () => updatedConvo);
+        // Invalidate conversation lists since project association changed
+        queryClient.invalidateQueries([QueryKeys.allConversations]);
+      },
+    },
+  );
+};
+
 export const useTagConversationMutation = (
   conversationId: string,
   options?: t.updateTagsInConvoOptions,
@@ -1059,32 +1083,31 @@ export const useCreateProjectMutation = (): UseMutationResult<
   unknown
 > => {
   const queryClient = useQueryClient();
-  return useMutation(
-    (payload) => dataService.createProject(payload),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([QueryKeys.projects]);
-      },
+  return useMutation((payload) => dataService.createProject(payload), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
     },
-  );
+  });
 };
 
 export const useUpdateProjectMutation = (): UseMutationResult<
   t.TProject,
   unknown,
-  { projectId: string; payload: Partial<Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>> },
+  {
+    projectId: string;
+    payload: Partial<
+      Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>
+    >;
+  },
   unknown
 > => {
   const queryClient = useQueryClient();
-  return useMutation(
-    ({ projectId, payload }) => dataService.updateProject(projectId, payload),
-    {
-      onSuccess: (_, vars) => {
-        queryClient.invalidateQueries([QueryKeys.projects]);
-        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
-      },
+  return useMutation(({ projectId, payload }) => dataService.updateProject(projectId, payload), {
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
+      queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
     },
-  );
+  });
 };
 
 export const useDeleteProjectMutation = (): UseMutationResult<
@@ -1094,14 +1117,11 @@ export const useDeleteProjectMutation = (): UseMutationResult<
   unknown
 > => {
   const queryClient = useQueryClient();
-  return useMutation(
-    (projectId: string) => dataService.deleteProject(projectId),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([QueryKeys.projects]);
-      },
+  return useMutation((projectId: string) => dataService.deleteProject(projectId), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
     },
-  );
+  });
 };
 
 export const useArchiveProjectMutation = (): UseMutationResult<

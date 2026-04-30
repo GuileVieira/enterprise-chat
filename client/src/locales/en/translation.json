@@ -1913,5 +1913,11 @@
   "com_ui_all_projects": "All projects",
   "com_ui_filter_by_project": "Filter by project",
   "com_ui_clear_project_filter": "Clear project filter",
-  "com_ui_project_badge": "Project conversation"
+  "com_ui_project_badge": "Project conversation",
+  "com_ui_move_to_project": "Move to Project",
+  "com_ui_move": "Move",
+  "com_ui_move_success": "Conversation moved successfully",
+  "com_ui_move_error": "Failed to move conversation",
+  "com_ui_no_other_projects": "No other projects available",
+  "com_ui_remove_from_project": "Remove from Project"
 }
