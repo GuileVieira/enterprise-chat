@@ -31,7 +31,7 @@ const aclEntrySchema = new Schema<IAclEntry>(
       required: true,
     },
     resourceId: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed,
       required: true,
       index: true,
     },
