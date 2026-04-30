@@ -1,5 +1,6 @@
 const express = require('express');
 const { logger } = require('@librechat/data-schemas');
+const { generateCheckAccess } = require('@librechat/api');
 const {
   PermissionBits,
   PermissionTypes,
@@ -20,7 +21,7 @@ const {
   deleteAclEntries,
   getRoleByName,
 } = require('~/models');
-const { requireJwtAuth, generateCheckAccess } = require('~/server/middleware');
+const { requireJwtAuth } = require('~/server/middleware');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
