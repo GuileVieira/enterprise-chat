@@ -64,6 +64,7 @@ const addTitle = async (req, { text, response, client }) => {
       return;
     }
 
+    logger.debug(`[${key}] Generated title: ${title}`);
     await titleCache.set(key, title, 120000);
     await saveConvo(
       {
