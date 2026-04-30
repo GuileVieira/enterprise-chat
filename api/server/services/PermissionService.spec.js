@@ -664,7 +664,9 @@ describe('PermissionService', () => {
         getAvailableRoles({
           resourceType: 'non_existent_type',
         }),
-      ).rejects.toThrow('Invalid resourceType: non_existent_type. Valid types: agent, project, promptGroup, mcpServer, remoteAgent');
+      ).rejects.toThrow(
+        'Invalid resourceType: non_existent_type. Valid types: agent, project, promptGroup, mcpServer, remoteAgent',
+      );
     });
   });
 

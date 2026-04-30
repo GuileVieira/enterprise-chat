@@ -27,6 +27,11 @@ router.post('/terms/accept', requireJwtAuth, acceptTermsController);
 router.post('/plugins', requireJwtAuth, updateUserPluginsController);
 router.delete('/delete', requireJwtAuth, canDeleteAccount, configMiddleware, deleteUserController);
 router.post('/verify', preAuthTenantMiddleware, verifyEmailController);
-router.post('/verify/resend', preAuthTenantMiddleware, verifyEmailLimiter, resendVerificationController);
+router.post(
+  '/verify/resend',
+  preAuthTenantMiddleware,
+  verifyEmailLimiter,
+  resendVerificationController,
+);
 
 module.exports = router;

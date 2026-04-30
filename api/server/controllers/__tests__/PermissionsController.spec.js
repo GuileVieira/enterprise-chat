@@ -27,6 +27,7 @@ jest.mock('~/server/services/PermissionService', () => ({
   getAvailableRoles: jest.fn(),
   findAccessibleResources: jest.fn(),
   getResourcePermissionsMap: jest.fn(),
+  getEffectivePermissions: jest.fn(),
 }));
 
 const mockRemoveAgentFromUserFavorites = jest.fn();
@@ -36,6 +37,7 @@ jest.mock('~/models', () => ({
   sortPrincipalsByRelevance: jest.fn(),
   calculateRelevanceScore: jest.fn(),
   removeAgentFromUserFavorites: (...args) => mockRemoveAgentFromUserFavorites(...args),
+  findProjectById: jest.fn(),
 }));
 
 jest.mock('~/server/services/GraphApiService', () => ({
@@ -43,7 +45,12 @@ jest.mock('~/server/services/GraphApiService', () => ({
   searchEntraIdPrincipals: jest.fn(),
 }));
 
-const { updateResourcePermissions } = require('../PermissionsController');
+const {
+  updateResourcePermissions,
+  getUserEffectivePermissions,
+} = require('../PermissionsController');
+const PermissionService = require('~/server/services/PermissionService');
+const db = require('~/models');
 
 const createMockReq = (overrides = {}) => ({
   params: { resourceType: ResourceType.AGENT, resourceId: '507f1f77bcf86cd799439011' },
@@ -237,6 +244,77 @@ describe('PermissionsController', () => {
         '[removeRevokedAgentFromFavorites] Error cleaning up favorites',
         expect.any(Error),
       );
+    });
+  });
+
+  describe('getUserEffectivePermissions', () => {
+    const userId = 'user-1';
+    const role = 'USER';
+    const projectUuid = 'project-uuid-123';
+    const projectObjectId = new mongoose.Types.ObjectId();
+
+    beforeEach(() => {
+      PermissionService.getEffectivePermissions.mockResolvedValue(7); // VIEW | EDIT | DELETE
+    });
+
+    it('resolves project UUID to MongoDB _id', async () => {
+      db.findProjectById.mockResolvedValue({ _id: projectObjectId, projectId: projectUuid });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
+        user: { id: userId, role },
+      });
+      const res = createMockRes();
+
+      await getUserEffectivePermissions(req, res);
+
+      expect(db.findProjectById).toHaveBeenCalledWith(projectUuid);
+      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
+        userId,
+        role,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectObjectId.toString(),
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ permissionBits: 7 });
+    });
+
+    it('uses original resourceId if project is not found', async () => {
+      db.findProjectById.mockResolvedValue(null);
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
+        user: { id: userId, role },
+      });
+      const res = createMockRes();
+
+      await getUserEffectivePermissions(req, res);
+
+      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
+        userId,
+        role,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectUuid,
+      });
+    });
+
+    it('uses original resourceId for non-project resource types', async () => {
+      const agentId = new mongoose.Types.ObjectId().toString();
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentId },
+        user: { id: userId, role },
+      });
+      const res = createMockRes();
+
+      await getUserEffectivePermissions(req, res);
+
+      expect(db.findProjectById).not.toHaveBeenCalled();
+      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
+        userId,
+        role,
+        resourceType: ResourceType.AGENT,
+        resourceId: agentId,
+      });
     });
   });
 });

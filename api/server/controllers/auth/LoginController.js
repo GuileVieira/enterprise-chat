@@ -19,9 +19,8 @@ const loginController = async (req, res) => {
     // The auth route doesn't chain tenantContextMiddleware, so session/token
     // creation runs without ALS context. Scope DB writes to the user's tenant
     // (or SYSTEM for legacy users without one).
-    const token = await tenantStorage.run(
-      { tenantId: req.user.tenantId || SYSTEM_TENANT_ID },
-      () => setAuthTokens(req.user._id, res),
+    const token = await tenantStorage.run({ tenantId: req.user.tenantId || SYSTEM_TENANT_ID }, () =>
+      setAuthTokens(req.user._id, res),
     );
 
     return res.status(200).send({ token, user });
