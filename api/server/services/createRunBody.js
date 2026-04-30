@@ -43,6 +43,7 @@ const createRunBody = ({
   endpointOption = {},
   clientTimestamp,
   projectInstructions,
+  projectMemories,
 }) => {
   const body = {
     assistant_id,
@@ -59,6 +60,10 @@ const createRunBody = ({
 
   if (projectInstructions) {
     systemInstructions += projectInstructions;
+  }
+
+  if (projectMemories) {
+    systemInstructions += `\n${projectMemories}`;
   }
 
   if (promptPrefix) {

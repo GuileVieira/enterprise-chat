@@ -11,6 +11,7 @@ const {
   discoverConnectedAgents,
   resolveAgentScopedSkillIds,
   buildAgentContextAttachmentsByAgentId,
+  loadProjectMemories,
 } = require('@librechat/api');
 const {
   ResourceType,
@@ -286,18 +287,33 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     ephemeralSkillsToggle,
   });
 
-  /** Load project instructions if conversation belongs to a project */
+  /** Load project context (instructions + memories) if conversation belongs to a project */
   if (conversationId) {
     try {
       const conversation = await db.getConvo(req.user.id, conversationId);
       if (conversation?.projectId) {
         const project = await db.getProjectById(req.user.id, conversation.projectId);
+        const contextParts = [];
         if (project?.instructions) {
-          primaryAgent.instructions = `${project.instructions}\n\n${primaryAgent.instructions ?? ''}`;
+          contextParts.push(project.instructions);
+        }
+        const projectMemories = await loadProjectMemories(
+          project,
+          async (uid) => {
+            const memories = await db.getAllUserMemories(uid);
+            return memories.map((m) => ({ key: m.key, value: m.value }));
+          },
+          req.user.id,
+        );
+        if (projectMemories) {
+          contextParts.push(projectMemories);
+        }
+        if (contextParts.length > 0) {
+          primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
         }
       }
     } catch (err) {
-      logger.error('[initializeClient] Error loading project instructions', err);
+      logger.error('[initializeClient] Error loading project context', err);
     }
   }
 
