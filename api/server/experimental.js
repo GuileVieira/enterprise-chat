@@ -223,7 +223,7 @@ if (cluster.isMaster) {
     app.set('trust proxy', trusted_proxy);
 
     /** Seed database (idempotent) */
-    await seedDatabase();
+    await runAsSystem(seedDatabase);
 
     /* Mirrors `server/index.js`; `runAsSystem` for tenant-isolated File. */
     runAsSystem(sweepOrphanedPreviews).catch((err) => {
@@ -231,10 +231,12 @@ if (cluster.isMaster) {
     });
 
     /** Initialize app configuration */
-    const appConfig = await getAppConfig();
+    const appConfig = await getAppConfig({ baseOnly: true });
     initializeFileStorage(appConfig);
-    await performStartupChecks(appConfig);
-    await updateInterfacePerms({ appConfig, getRoleByName, updateAccessPermissions });
+    await runAsSystem(async () => {
+      await performStartupChecks(appConfig);
+      await updateInterfacePerms({ appConfig, getRoleByName, updateAccessPermissions });
+    });
 
     /** Load index.html for SPA serving */
     const indexPath = path.join(appConfig.paths.dist, 'index.html');
