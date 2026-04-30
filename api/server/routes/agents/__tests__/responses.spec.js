@@ -79,7 +79,7 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const { hashToken, getRandomValues, createModels } = require('@librechat/data-schemas');
+const { hashToken, getRandomValues, createModels, tenantStorage } = require('@librechat/data-schemas');
 const {
   SystemRoles,
   ResourceType,
@@ -413,56 +413,59 @@ describeWithApiKey('Open Responses API Integration Tests', () => {
     const responsesRoutes = require('~/server/routes/agents/responses');
     app.use('/api/agents/v1/responses', responsesRoutes);
 
-    // Create test user
-    testUser = await User.create({
-      name: 'Test API User',
-      username: 'testapiuser',
-      email: 'testapiuser@test.com',
-      emailVerified: true,
-      provider: 'local',
-      role: SystemRoles.ADMIN,
-    });
+    // Run all DB setup inside a tenant context for strict mode
+    await tenantStorage.run({ tenantId: 'test-tenant' }, async () => {
+      // Create test user
+      testUser = await User.create({
+        name: 'Test API User',
+        username: 'testapiuser',
+        email: 'testapiuser@test.com',
+        emailVerified: true,
+        provider: 'local',
+        role: SystemRoles.ADMIN,
+        tenantId: 'test-tenant',
+      });
 
-    // Create REMOTE_AGENT access roles (if they don't exist)
-    const existingRoles = await AccessRole.find({
-      accessRoleId: {
-        $in: [
-          AccessRoleIds.REMOTE_AGENT_VIEWER,
-          AccessRoleIds.REMOTE_AGENT_EDITOR,
-          AccessRoleIds.REMOTE_AGENT_OWNER,
-        ],
-      },
-    });
+      // Create REMOTE_AGENT access roles (if they don't exist)
+      const existingRoles = await AccessRole.find({
+        accessRoleId: {
+          $in: [
+            AccessRoleIds.REMOTE_AGENT_VIEWER,
+            AccessRoleIds.REMOTE_AGENT_EDITOR,
+            AccessRoleIds.REMOTE_AGENT_OWNER,
+          ],
+        },
+      });
 
-    if (existingRoles.length === 0) {
-      await AccessRole.create([
-        {
-          accessRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER,
-          name: 'API Viewer',
-          description: 'Can query the agent via API',
-          resourceType: ResourceType.REMOTE_AGENT,
-          permBits: PermissionBits.VIEW,
-        },
-        {
-          accessRoleId: AccessRoleIds.REMOTE_AGENT_EDITOR,
-          name: 'API Editor',
-          description: 'Can view and modify the agent via API',
-          resourceType: ResourceType.REMOTE_AGENT,
-          permBits: PermissionBits.VIEW | PermissionBits.EDIT,
-        },
-        {
-          accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
-          name: 'API Owner',
-          description: 'Full API access + can grant remote access to others',
-          resourceType: ResourceType.REMOTE_AGENT,
-          permBits:
-            PermissionBits.VIEW |
-            PermissionBits.EDIT |
-            PermissionBits.DELETE |
-            PermissionBits.SHARE,
-        },
-      ]);
-    }
+      if (existingRoles.length === 0) {
+        await AccessRole.create([
+          {
+            accessRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER,
+            name: 'API Viewer',
+            description: 'Can query the agent via API',
+            resourceType: ResourceType.REMOTE_AGENT,
+            permBits: PermissionBits.VIEW,
+          },
+          {
+            accessRoleId: AccessRoleIds.REMOTE_AGENT_EDITOR,
+            name: 'API Editor',
+            description: 'Can view and modify the agent via API',
+            resourceType: ResourceType.REMOTE_AGENT,
+            permBits: PermissionBits.VIEW | PermissionBits.EDIT,
+          },
+          {
+            accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
+            name: 'API Owner',
+            description: 'Full API access + can grant remote access to others',
+            resourceType: ResourceType.REMOTE_AGENT,
+            permBits:
+              PermissionBits.VIEW |
+              PermissionBits.EDIT |
+              PermissionBits.DELETE |
+              PermissionBits.SHARE,
+          },
+        ]);
+      }
 
     // Generate and create an API key for the test user
     const rawKey = `sk-${await getRandomValues(32)}`;
@@ -482,29 +485,30 @@ describeWithApiKey('Open Responses API Integration Tests', () => {
     testAgent = await createTestAgent({ author: testUser._id });
     thinkingAgent = await createThinkingAgent({ author: testUser._id });
 
-    // Grant REMOTE_AGENT permissions for the test agents
-    await AclEntry.create([
-      {
-        principalType: PrincipalType.USER,
-        principalModel: PrincipalModel.USER,
-        principalId: testUser._id,
-        resourceType: ResourceType.REMOTE_AGENT,
-        resourceId: testAgent._id,
-        accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
-        permBits:
-          PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
-      },
-      {
-        principalType: PrincipalType.USER,
-        principalModel: PrincipalModel.USER,
-        principalId: testUser._id,
-        resourceType: ResourceType.REMOTE_AGENT,
-        resourceId: thinkingAgent._id,
-        accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
-        permBits:
-          PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
-      },
-    ]);
+      // Grant REMOTE_AGENT permissions for the test agents
+      await AclEntry.create([
+        {
+          principalType: PrincipalType.USER,
+          principalModel: PrincipalModel.USER,
+          principalId: testUser._id,
+          resourceType: ResourceType.REMOTE_AGENT,
+          resourceId: testAgent._id,
+          accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
+          permBits:
+            PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+        },
+        {
+          principalType: PrincipalType.USER,
+          principalModel: PrincipalModel.USER,
+          principalId: testUser._id,
+          resourceType: ResourceType.REMOTE_AGENT,
+          resourceId: thinkingAgent._id,
+          accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
+          permBits:
+            PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+        },
+      ]);
+    });
   }, 60000);
 
   afterAll(async () => {

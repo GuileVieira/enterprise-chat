@@ -7,6 +7,7 @@ import type {
 } from '~/types';
 import { hashToken, getRandomValues } from '~/crypto';
 import logger from '~/config/winston';
+import { runAsSystem } from '~/config/tenantContext';
 
 const API_KEY_PREFIX = 'sk-';
 const API_KEY_LENGTH = 32;
@@ -51,25 +52,27 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
     apiKey: string,
   ): Promise<{ userId: Types.ObjectId; keyId: Types.ObjectId } | null> {
     try {
-      const AgentApiKey = mongoose.models.AgentApiKey;
-      const keyHash = await hashToken(apiKey);
+      return await runAsSystem(async () => {
+        const AgentApiKey = mongoose.models.AgentApiKey;
+        const keyHash = await hashToken(apiKey);
 
-      const keyDoc = (await AgentApiKey.findOne({ keyHash }).lean()) as IAgentApiKey | null;
+        const keyDoc = (await AgentApiKey.findOne({ keyHash }).lean()) as IAgentApiKey | null;
 
-      if (!keyDoc) {
-        return null;
-      }
+        if (!keyDoc) {
+          return null;
+        }
 
-      if (keyDoc.expiresAt && new Date(keyDoc.expiresAt) < new Date()) {
-        return null;
-      }
+        if (keyDoc.expiresAt && new Date(keyDoc.expiresAt) < new Date()) {
+          return null;
+        }
 
-      await AgentApiKey.updateOne({ _id: keyDoc._id }, { $set: { lastUsedAt: new Date() } });
+        await AgentApiKey.updateOne({ _id: keyDoc._id }, { $set: { lastUsedAt: new Date() } });
 
-      return {
-        userId: keyDoc.userId,
-        keyId: keyDoc._id as Types.ObjectId,
-      };
+        return {
+          userId: keyDoc.userId,
+          keyId: keyDoc._id as Types.ObjectId,
+        };
+      });
     } catch (error) {
       logger.error('[validateAgentApiKey] Error validating API key:', error);
       return null;
