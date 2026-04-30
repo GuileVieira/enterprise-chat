@@ -23,7 +23,7 @@ const HANDLED_RESOURCE_TYPES = {
  * a justification to prevent silent omissions.
  */
 const NO_USER_CLEANUP_NEEDED = new Set([
-  // Example: ResourceType.SYSTEM_TEMPLATE — public/system; not user-owned
+  ResourceType.PROJECT, // projects are team-managed; not deleted on user deletion
 ]);
 
 describe('deleteUserController - resource type coverage guard', () => {
