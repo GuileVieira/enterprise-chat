@@ -35,7 +35,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
       return [];
     }
     return Object.entries(endpointsConfig)
-      .filter(([, config]) => config)
+      .filter(([key, config]) => config && key !== 'agents')
       .map(([key]) => key);
   }, [endpointsConfig]);
 
@@ -145,10 +145,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
           </label>
           <select
             value={endpoint}
-            onChange={(e) => {
-              setEndpoint(e.target.value);
-              setModel('');
-            }}
+            onChange={(e) => setEndpoint(e.target.value)}
             className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
           >
             <option value="">{localize('com_ui_project_endpoint_placeholder')}</option>

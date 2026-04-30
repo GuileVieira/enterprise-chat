@@ -315,6 +315,10 @@ export function createConversationMethods(
 
     if (search) {
       try {
+        const meiliFilters = [`user = "${user}"`];
+        if (projectId) {
+          meiliFilters.push(`projectId = "${projectId}"`);
+        }
         const meiliResults = await (
           Conversation as unknown as {
             meiliSearch: (
@@ -324,7 +328,7 @@ export function createConversationMethods(
               hits: Array<{ conversationId: string }>;
             }>;
           }
-        ).meiliSearch(search, { filter: `user = "${user}"` });
+        ).meiliSearch(search, { filter: meiliFilters.join(' AND ') });
         const matchingIds = Array.isArray(meiliResults.hits)
           ? meiliResults.hits.map((result) => result.conversationId)
           : [];
