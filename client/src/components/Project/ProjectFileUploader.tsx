@@ -210,6 +210,7 @@ export default function ProjectFileUploader({
       <OGDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
         <OGDialogTemplate
           showCloseButton={false}
+          className="max-w-[450px]"
           title={localize('com_ui_project_file_delete_confirm')}
           description={localize('com_ui_delete_confirm_file_description', {
             filename: fileToDelete?.filename ?? '',
