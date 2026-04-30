@@ -95,13 +95,17 @@ export default function ProjectPromptSnippetsManager({ project }: ProjectPromptS
             key={idx}
             className="group flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary p-3 transition-colors hover:bg-surface-hover"
           >
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium text-text-primary truncate">{snippet.title}</div>
-              <div className="text-xs text-text-secondary truncate">{snippet.content}</div>
+            <div className="min-w-0 flex-1 px-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-text-primary uppercase tracking-wider opacity-50">/</span>
+                <div className="text-sm font-semibold text-text-primary truncate">{snippet.title}</div>
+              </div>
+              <div className="mt-0.5 text-xs text-text-secondary line-clamp-1">{snippet.content}</div>
             </div>
             <button
               onClick={() => handleDelete(idx)}
-              className="ml-2 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-surface-tertiary hover:text-red-500 group-hover:opacity-100"
+              className="ml-2 rounded-md p-1.5 text-text-secondary opacity-0 transition-all hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+              title={localize('com_ui_delete')}
             >
               <Trash2 className="h-4 w-4" />
             </button>
