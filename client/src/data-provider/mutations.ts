@@ -48,7 +48,7 @@ export const useMoveConversationToProjectMutation = (): UseMutationResult<
   const queryClient = useQueryClient();
   return useMutation(
     ({ conversationId, projectId }) =>
-      dataService.updateConversation({ conversationId, projectId: projectId ?? undefined }),
+      dataService.updateConversation({ conversationId, projectId }),
     {
       onSuccess: (updatedConvo) => {
         queryClient.setQueryData(
