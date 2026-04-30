@@ -139,7 +139,16 @@ export default function useMessageActions(props: TMessageActions) {
       }
     }
     return message?.sender;
-  }, [message, agent, assistant, UsernameDisplay, user, localize, conversation?.spec, startupConfig?.modelSpecs?.list]);
+  }, [
+    message,
+    agent,
+    assistant,
+    UsernameDisplay,
+    user,
+    localize,
+    conversation?.spec,
+    startupConfig?.modelSpecs?.list,
+  ]);
 
   const feedbackMutation = useUpdateFeedbackMutation(
     conversation?.conversationId || '',
