@@ -1,12 +1,13 @@
 import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Plus } from 'lucide-react';
+import type { TProject } from 'librechat-data-provider';
 import { useConversationsInfiniteQuery } from '~/data-provider';
-import { useLocalize } from '~/hooks';
+import { useLocalize, useNewConvo } from '~/hooks';
 import { cn } from '~/utils';
 
 function ConversationItem({
-  conversationId,
+  conversationId: _conversationId,
   title,
   updatedAt,
   onClick,
@@ -35,12 +36,13 @@ function ConversationItem({
   );
 }
 
-export default function ProjectConversationsTab({ projectId }: { projectId: string }) {
+export default function ProjectConversationsTab({ project }: { project: TProject }) {
   const localize = useLocalize();
   const navigate = useNavigate();
+  const { newConversation } = useNewConvo();
 
   const { data, fetchNextPage, isFetchingNextPage, isLoading } = useConversationsInfiniteQuery(
-    { projectId },
+    { projectId: project.projectId },
     { staleTime: 30000 },
   );
 
@@ -62,12 +64,25 @@ export default function ProjectConversationsTab({ projectId }: { projectId: stri
     }
   }, [isFetchingNextPage, hasNextPage, fetchNextPage]);
 
+  const handleNewChat = useCallback(() => {
+    const template: Partial<TConversation> = {
+      projectId: project.projectId,
+    };
+    if (project.endpoint) {
+      template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+    }
+    if (project.model) {
+      template.model = project.model;
+    }
+    newConversation({ template });
+  }, [newConversation, project]);
+
   return (
     <div className="flex h-full flex-col gap-3">
       {/* New Chat Button */}
       <button
         type="button"
-        onClick={() => navigate(`/c/new?projectId=${projectId}`)}
+        onClick={handleNewChat}
         className="flex w-full items-center gap-2.5 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-hover"
       >
         <Plus className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
