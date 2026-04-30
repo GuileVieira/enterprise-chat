@@ -6,6 +6,7 @@ import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
 import ProjectConversationsTab from './ProjectConversationsTab';
+import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectForm from './ProjectForm';
 
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
@@ -102,21 +103,27 @@ export default function ProjectDetailPage() {
           <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
         )}
         {activeTab === 'memories' && (
-          <div className="space-y-3">
-            {project.memories && project.memories.length > 0 ? (
-              project.memories.map((mem, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-border-light bg-surface-secondary p-3"
-                >
-                  <div className="text-sm font-medium text-text-primary">{mem.key}</div>
-                  <div className="mt-1 text-sm text-text-secondary">{mem.value}</div>
-                </div>
-              ))
+          <>
+            {permissions.canEdit ? (
+              <ProjectMemoryEditor project={project} />
             ) : (
-              <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
+              <div className="space-y-3">
+                {project.memories && project.memories.length > 0 ? (
+                  project.memories.map((mem, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg border border-border-light bg-surface-secondary p-3"
+                    >
+                      <div className="text-sm font-medium text-text-primary">{mem.key}</div>
+                      <div className="mt-1 text-sm text-text-secondary">{mem.value}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
         {activeTab === 'files' && (
           <div className="space-y-3">
