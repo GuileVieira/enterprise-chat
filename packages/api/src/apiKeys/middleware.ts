@@ -3,6 +3,7 @@ import { ResourceType, PermissionBits, hasPermissions } from 'librechat-data-pro
 import type { Request, Response, NextFunction } from 'express';
 import type { IUser } from '@librechat/data-schemas';
 import type { Types } from 'mongoose';
+import { tenantContextMiddleware } from '../middleware';
 import { getRemoteAgentPermissions } from './service';
 
 export interface ApiKeyAuthDependencies {
@@ -90,7 +91,7 @@ export function createRequireApiKeyAuth(deps: ApiKeyAuthDependencies) {
       req.user = user as IUser & { id: string };
       req.apiKeyId = keyValidation.keyId;
 
-      next();
+      tenantContextMiddleware(req, res, next);
     } catch (error) {
       logger.error('[requireApiKeyAuth] Error validating API key:', error);
       return res.status(500).json({
