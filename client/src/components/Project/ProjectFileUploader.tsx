@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import {
+  OGDialog,
+  OGDialogTemplate,
+} from '@librechat/client';
+import {
   useUploadFileMutation,
   useDeleteFilesMutation,
   useUpdateProjectMutation,
@@ -98,10 +102,19 @@ export default function ProjectFileUploader({
     }
   };
 
+  const [fileToDelete, setFileToDelete] = useState<TFile | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   const handleDelete = (file: TFile) => {
-    if (!confirm(localize('com_ui_project_file_delete_confirm'))) {
+    setFileToDelete(file);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (!fileToDelete) {
       return;
     }
+    const file = fileToDelete;
     const updatedFileIds = files.map((f) => f.file_id).filter((id) => id !== file.file_id);
     updateProject.mutate(
       {
@@ -113,6 +126,8 @@ export default function ProjectFileUploader({
           deleteFiles.mutate({
             files: [{ file_id: file.file_id, filepath: file.filepath }],
           });
+          setFileToDelete(null);
+          setShowDeleteModal(false);
         },
       },
     );
@@ -162,27 +177,24 @@ export default function ProjectFileUploader({
           {files.map((file) => (
             <div
               key={file.file_id}
-              className="flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary p-3"
+              className="flex items-center justify-between rounded-lg border border-border-light bg-surface-primary p-3 transition-all hover:border-border-medium"
             >
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-text-secondary" aria-hidden="true" />
-                <div>
-                  <div className="text-sm font-medium text-text-primary">{file.filename}</div>
-                  <div className="text-xs text-text-secondary">
-                    {file.type} &middot; {formatFileSize(file.bytes)}
-                  </div>
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-tertiary">
+                  <FileText className="h-5 w-5 text-text-secondary" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="truncate text-sm font-medium text-text-primary">{file.filename}</p>
+                  <p className="text-xs text-text-secondary">{(file.bytes / 1024).toFixed(1)} KB</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDelete(file);
-                }}
-                className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                onClick={() => handleDelete(file)}
+                className="rounded-md p-2 text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-red-500"
                 title={localize('com_ui_delete')}
               >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           ))}
@@ -194,6 +206,22 @@ export default function ProjectFileUploader({
           {localize('com_ui_project_no_files')}
         </div>
       )}
+
+      <OGDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <OGDialogTemplate
+          showCloseButton={false}
+          title={localize('com_ui_project_file_delete_confirm')}
+          description={localize('com_ui_delete_confirm_file_description', {
+            filename: fileToDelete?.filename ?? '',
+          })}
+          selection={{
+            selectHandler: confirmDelete,
+            selectText: localize('com_ui_delete'),
+            selectClasses:
+              'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700',
+          }}
+        />
+      </OGDialog>
     </div>
   );
 }
