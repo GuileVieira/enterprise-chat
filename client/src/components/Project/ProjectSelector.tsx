@@ -1,6 +1,7 @@
 import { useState, useId, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as Ariakit from '@ariakit/react';
-import { FolderOpen, X } from 'lucide-react';
+import { FolderOpen, FolderPlus, X } from 'lucide-react';
 import { DropdownPopup } from '@librechat/client';
 import { useProjectsQuery } from '~/data-provider';
 import { useLocalize } from '~/hooks';
@@ -16,6 +17,7 @@ export default function ProjectSelector({
   onSelectProject,
 }: ProjectSelectorProps) {
   const localize = useLocalize();
+  const navigate = useNavigate();
   const menuId = useId();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: projects, isLoading } = useProjectsQuery();
@@ -77,8 +79,25 @@ export default function ProjectSelector({
       });
     }
 
+    items.push({
+      id: 'separator-bottom',
+      label: '',
+      separator: true,
+    } as unknown as (typeof items)[0]);
+
+    items.push({
+      id: 'new-project',
+      label: localize('com_ui_new_project'),
+      icon: <FolderPlus className="icon-sm mr-2 text-text-secondary" aria-hidden="true" />,
+      onClick: () => {
+        navigate('/projects/new');
+        setIsMenuOpen(false);
+      },
+      className: '',
+    });
+
     return items;
-  }, [projects, selectedProjectId, localize, handleSelect]);
+  }, [projects, selectedProjectId, localize, handleSelect, navigate]);
 
   return (
     <div className="flex items-center gap-1">
