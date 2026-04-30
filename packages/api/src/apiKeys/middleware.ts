@@ -1,4 +1,4 @@
-import { logger } from '@librechat/data-schemas';
+import { logger, runAsSystem } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { Request, Response, NextFunction } from 'express';
 import type { IUser } from '@librechat/data-schemas';
@@ -75,7 +75,7 @@ export function createRequireApiKeyAuth(deps: ApiKeyAuthDependencies) {
         });
       }
 
-      const user = await deps.findUser({ _id: keyValidation.userId });
+      const user = await runAsSystem(() => deps.findUser({ _id: keyValidation.userId }));
 
       if (!user) {
         return res.status(401).json({
