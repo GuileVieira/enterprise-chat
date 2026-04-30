@@ -222,50 +222,36 @@ Epic 1 (Foundation)
 
 ---
 
-## Epic 5: Sharing & Permissions
+## Epic 5: Sharing & Permissions ✅
 
 **Objetivo**: Projetos podem ser privados, públicos (dentro do tenant) ou compartilhados com usuários/grupos específicos via ACL (mesmo padrão de Agents).
 
 **Dependência**: Epic 1 concluído.
 
----
-
-### Story 5.1: ACL Resource Type
-
-**Critérios de Aceitação**:
-- `PROJECT` adicionado a `ResourceType`.
-- Roles de acesso para project criados.
-
-**PR 5.1.1 — Permission Types**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/data-provider/src/accessPermissions.ts` | Adicionar `PROJECT = 'project'` em `ResourceType` |
-| `packages/data-provider/src/accessPermissions.ts` | Adicionar `PROJECT_VIEWER`, `PROJECT_EDITOR`, `PROJECT_OWNER` em `AccessRoleIds` |
-| `packages/data-provider/src/accessPermissions.ts` | Atualizar `accessRoleToPermBits` para projects |
-| `packages/data-schemas/src/schema/accessRole.ts` | Adicionar `'project'` ao enum de resourceType |
+**Status**: 100% completo — 2 stories, 2 commits.
 
 ---
 
-### Story 5.2: Permission Middleware & Frontend
+### Story 5.1: ACL Resource Type ✅
 
-**Critérios de Aceitação**:
-- Rotas de project verificam permissões.
-- Frontend esconde/mostra UI baseado em permissões.
+**Arquivos**:
+- `packages/data-provider/src/accessPermissions.ts` — `PROJECT` em `ResourceType`; `PROJECT_VIEWER/EDITOR/OWNER` em `AccessRoleIds`; cases em `accessRoleToPermBits`
+- `packages/data-provider/src/permissions.ts` — `PermissionTypes.PROJECTS`; `projectPermissionsSchema` (USE, CREATE, SHARE, SHARE_PUBLIC)
+- `packages/data-schemas/src/methods/accessRole.ts` — `PROJECT_*` roles em `seedDefaultRoles()`
+- `packages/data-provider/src/roles.ts` — `projects` permissions em ADMIN e USER role defaults
+- `client/src/hooks/Sharing/useCanSharePublic.ts` — Map `ResourceType.PROJECT` → `PermissionTypes.PROJECTS`
 
-**PR 5.2.1 — Backend Middleware**
+---
 
-| Arquivo | Ação |
-|---|---|
-| `api/server/routes/projects.js` | Adicionar `generateCheckAccess` middleware nas rotas de mutação (`POST`, `PUT`, `DELETE`) |
-| `api/server/routes/projects.js` | Em `GET /`, retornar apenas projects que o usuário tem acesso (próprios + compartilhados via ACL) |
+### Story 5.2: Permission Middleware & Frontend ✅
 
-**PR 5.2.2 — Frontend Permissions**
-
-| Arquivo | Ação |
-|---|---|
-| `client/src/hooks/useProjectPermissions.ts` | Criar hook que retorna `{ canEdit, canDelete, canShare }` baseado no project e ACL |
-| `client/src/components/Project/ProjectDetail.tsx` | Usar hook para condicionalmente renderizar botões de editar/deletar/compartilhar |
+**Arquivos**:
+- `packages/data-schemas/src/methods/project.ts` — `findProjectById()` para ACL idResolver
+- `api/server/middleware/accessResources/canAccessProject.js` — Wrapper `canAccessProjectResource` (pattern: `canAccessAgentResource`)
+- `api/server/routes/projects.js` — ACL middlewares em todas as rotas; `GET /` retorna own + shared via `findAccessibleResources`; `POST /` cria ACL owner; `DELETE /` limpa ACL entries
+- `api/server/routes/accessPermissions.js` — Branch `PROJECT` em `checkResourcePermissionAccess`
+- `client/src/hooks/useProjectPermissions.ts` — Hook `useProjectPermissions(projectId)` retorna `{ canView, canEdit, canDelete, canShare }`
+- `client/src/components/Project/ProjectDetailPage.tsx` — Badges de editor/owner baseados em permissões
 
 ---
 
