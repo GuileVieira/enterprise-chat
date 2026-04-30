@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
-import { useUploadFileMutation, useDeleteFilesMutation, useUpdateProjectMutation } from '~/data-provider';
+import {
+  useUploadFileMutation,
+  useDeleteFilesMutation,
+  useUpdateProjectMutation,
+} from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import type { TFile } from 'librechat-data-provider';
 
@@ -58,6 +62,8 @@ export default function ProjectFileUploader({
     const formData = new FormData();
     formData.append('file', file);
     formData.append('file_id', crypto.randomUUID());
+    formData.append('endpoint', 'agents');
+    formData.append('endpointType', 'agents');
     uploadFile.mutate(formData);
   };
 
@@ -94,9 +100,7 @@ export default function ProjectFileUploader({
     if (!confirm(localize('com_ui_project_file_delete_confirm'))) {
       return;
     }
-    const updatedFileIds = files
-      .map((f) => f.file_id)
-      .filter((id) => id !== file.file_id);
+    const updatedFileIds = files.map((f) => f.file_id).filter((id) => id !== file.file_id);
     updateProject.mutate(
       {
         projectId,
@@ -135,15 +139,8 @@ export default function ProjectFileUploader({
         <p className="text-sm font-medium text-text-primary">
           {localize('com_ui_project_upload_file')}
         </p>
-        <p className="mt-1 text-xs text-text-secondary">
-          {localize('com_ui_drag_drop')}
-        </p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={handleInputChange}
-        />
+        <p className="mt-1 text-xs text-text-secondary">{localize('com_ui_drag_drop')}</p>
+        <input ref={fileInputRef} type="file" className="hidden" onChange={handleInputChange} />
       </div>
 
       {uploadError && (
