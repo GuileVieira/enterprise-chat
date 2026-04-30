@@ -94,7 +94,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
 
   return (
     <div className="flex w-fit max-w-[min(80vw,48rem)] items-center gap-2">
-      <div className="relative h-9 w-72 max-w-[65vw] sm:w-80">
+      <div className="relative h-9 w-56 max-w-[52vw] sm:w-64">
         <Folder
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-primary"
           aria-hidden="true"
