@@ -203,21 +203,27 @@ const MAX_CONVO_TITLE_LENGTH = 1024;
  * @returns {object} 201 - The updated conversation object.
  */
 router.post('/update', validateConvoAccess, async (req, res) => {
-  const { conversationId, title } = req.body?.arg ?? {};
+  const { conversationId, title, projectId } = req.body?.arg ?? {};
 
   if (!conversationId) {
     return res.status(400).json({ error: 'conversationId is required' });
   }
 
-  if (title === undefined) {
-    return res.status(400).json({ error: 'title is required' });
+  if (title === undefined && projectId === undefined) {
+    return res.status(400).json({ error: 'title or projectId is required' });
   }
 
-  if (typeof title !== 'string') {
+  if (title !== undefined && typeof title !== 'string') {
     return res.status(400).json({ error: 'title must be a string' });
   }
 
-  const sanitizedTitle = title.trim().slice(0, MAX_CONVO_TITLE_LENGTH);
+  const updatePayload = { conversationId };
+  if (title !== undefined) {
+    updatePayload.title = title.trim().slice(0, MAX_CONVO_TITLE_LENGTH);
+  }
+  if (projectId !== undefined) {
+    updatePayload.projectId = projectId;
+  }
 
   try {
     const dbResponse = await db.saveConvo(
@@ -226,7 +232,7 @@ router.post('/update', validateConvoAccess, async (req, res) => {
         isTemporary: req?.body?.isTemporary,
         interfaceConfig: req?.config?.interfaceConfig,
       },
-      { conversationId, title: sanitizedTitle },
+      updatePayload,
       { context: `POST /api/convos/update ${conversationId}` },
     );
     res.status(201).json(dbResponse);
