@@ -27,10 +27,7 @@ function Footer({ className }: { className?: string }) {
   const mainContentParts = (
     typeof config?.customFooter === 'string'
       ? config.customFooter
-      :       '[Orqest ' +
-        Constants.VERSION +
-        ']() - ' +
-        localize('com_ui_latest_footer')
+      : '[Orqest ' + Constants.VERSION + ']() - ' + localize('com_ui_latest_footer')
   ).split('|');
 
   useEffect(() => {

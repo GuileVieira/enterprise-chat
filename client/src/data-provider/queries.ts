@@ -183,16 +183,12 @@ export const useConversationTagsQuery = (
 export const useProjectsQuery = (
   config?: UseQueryOptions<t.TProject[]>,
 ): QueryObserverResult<t.TProject[]> => {
-  return useQuery<t.TProject[]>(
-    [QueryKeys.projects],
-    () => dataService.getProjects(),
-    {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-      ...config,
-    },
-  );
+  return useQuery<t.TProject[]>([QueryKeys.projects], () => dataService.getProjects(), {
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    ...config,
+  });
 };
 
 export const useProjectByIdQuery = (

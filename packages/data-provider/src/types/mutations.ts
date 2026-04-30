@@ -447,8 +447,14 @@ export type RemoveGroupMemberVars = {
   userId: string;
 };
 
-export type CreateGroupOptions = MutationOptions<import('./queries').GroupResponse, CreateGroupPayload>;
-export type UpdateGroupOptions = MutationOptions<import('./queries').GroupResponse, UpdateGroupVars>;
+export type CreateGroupOptions = MutationOptions<
+  import('./queries').GroupResponse,
+  CreateGroupPayload
+>;
+export type UpdateGroupOptions = MutationOptions<
+  import('./queries').GroupResponse,
+  UpdateGroupVars
+>;
 export type DeleteGroupOptions = MutationOptions<unknown, string>;
 export type AddGroupMemberOptions = MutationOptions<unknown, AddGroupMemberVars>;
 export type RemoveGroupMemberOptions = MutationOptions<unknown, RemoveGroupMemberVars>;
