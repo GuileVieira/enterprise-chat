@@ -38,6 +38,21 @@ const { STTService } = require('./Audio/STTService');
 const db = require('~/models');
 
 /**
+ * Links a newly uploaded file to a project by adding its file_id to the project's fileIds array.
+ * Silently fails if the project doesn't exist or the user lacks access.
+ */
+const maybeLinkFileToProject = async (req, file_id) => {
+  if (!req.body.projectId) {
+    return;
+  }
+  try {
+    await db.addProjectFileId(req.user.id, req.body.projectId, file_id);
+  } catch (error) {
+    logger.error('[maybeLinkFileToProject] Error linking file to project:', error);
+  }
+};
+
+/**
  * Creates a modular file upload wrapper that ensures filename sanitization
  * across all storage strategies. This prevents storage-specific implementations
  * from having to handle sanitization individually.
@@ -317,9 +332,12 @@ const processImageFile = async ({ req, res, metadata, returnFile = false }) => {
       type: `image/${appConfig.imageOutputType}`,
       width,
       height,
+      projectId: req.body.projectId,
     },
     true,
   );
+
+  await maybeLinkFileToProject(req, result.file_id);
 
   if (returnFile) {
     return result;
@@ -457,9 +475,11 @@ const processFileUpload = async ({ req, res, metadata }) => {
       source,
       height,
       width,
+      projectId: req.body.projectId,
     },
     true,
   );
+  await maybeLinkFileToProject(req, result.file_id);
   res.status(200).json({ message: 'File uploaded and processed successfully', ...result });
 };
 
@@ -549,6 +569,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
         filename: file.originalname,
         model: messageAttachment ? undefined : req.body.model,
         context: messageAttachment ? FileContext.message_attachment : FileContext.agents,
+        projectId: req.body.projectId,
       });
 
       if (!messageAttachment && tool_resource) {
@@ -560,6 +581,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
         });
       }
       const result = await db.createFile(fileInfo, true);
+      await maybeLinkFileToProject(req, result.file_id);
       return res
         .status(200)
         .json({ message: 'Agent file uploaded and processed successfully', ...result });
@@ -725,9 +747,11 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
     source,
     height,
     width,
+    projectId: req.body.projectId,
   });
 
   const result = await db.createFile(fileInfo, true);
+  await maybeLinkFileToProject(req, result.file_id);
 
   res.status(200).json({ message: 'Agent file uploaded and processed successfully', ...result });
 };

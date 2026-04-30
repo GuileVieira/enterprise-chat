@@ -20,6 +20,24 @@ export const useGetFiles = <TData = t.TFile[] | boolean>(
   });
 };
 
+export const useGetProjectFiles = <TData = t.TFile[]>(
+  projectId: string | undefined,
+  config?: UseQueryOptions<t.TFile[], unknown, TData>,
+): QueryObserverResult<TData, unknown> => {
+  const queriesEnabled = useRecoilValue<boolean>(store.queriesEnabled);
+  return useQuery<t.TFile[], unknown, TData>(
+    DynamicQueryKeys.projectFiles(projectId ?? ''),
+    () => (projectId ? dataService.getProjectFiles(projectId) : Promise.resolve([])),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+      enabled: (config?.enabled ?? true) === true && queriesEnabled,
+    },
+  );
+};
+
 export const useGetAgentFiles = <TData = t.TFile[]>(
   agentId: string | undefined,
   config?: UseQueryOptions<t.TFile[], unknown, TData>,

@@ -41,7 +41,11 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const appConfig = req.config;
-    const files = await db.getFiles({ user: req.user.id });
+    const filter = { user: req.user.id };
+    if (req.query.projectId) {
+      filter.projectId = req.query.projectId;
+    }
+    const files = await db.getFiles(filter);
     if (appConfig.fileStrategy === FileSources.s3) {
       try {
         const cache = getLogStores(CacheKeys.S3_EXPIRY_INTERVAL);

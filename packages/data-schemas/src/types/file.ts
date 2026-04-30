@@ -22,6 +22,7 @@ export interface IMongoFile extends Omit<Document, 'model'> {
   metadata?: {
     fileIdentifier?: string;
   };
+  projectId?: string;
   expiresAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;

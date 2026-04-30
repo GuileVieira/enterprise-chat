@@ -368,9 +368,22 @@ export function createFileMethods(mongoose: typeof import('mongoose')) {
     return results.filter((result): result is IMongoFile => result != null);
   }
 
+  /**
+   * Retrieves files associated with a specific project.
+   * @param projectId - The project ID to filter by
+   * @returns A promise that resolves to an array of file documents or null
+   */
+  async function getFilesByProjectId(projectId: string): Promise<IMongoFile[] | null> {
+    if (!projectId) {
+      return [];
+    }
+    return getFiles({ projectId }, null, { text: 0 });
+  }
+
   return {
     findFileById,
     getFiles,
+    getFilesByProjectId,
     getToolFilesByIds,
     getCodeGeneratedFiles,
     getUserCodeFiles,
