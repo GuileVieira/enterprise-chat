@@ -289,10 +289,12 @@ const useNewConvo = (index = 0) => {
           ? { endpoint: _template.endpoint }
           : _template;
 
+      const projectId = searchParams.get('projectId') || undefined;
       const conversation = {
         conversationId: Constants.NEW_CONVO as string,
         title: 'New Chat',
         endpoint: null,
+        ...(projectId ? { projectId } : {}),
         ...template,
         createdAt: '',
         updatedAt: '',
