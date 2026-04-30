@@ -113,8 +113,8 @@ export function Hero({ checks, diagnosisUrl }: HeroProps) {
             Sua agência operando com agentes treinados no seu processo.
           </h1>
           <p className="mt-8 max-w-[56ch] text-xl leading-relaxed text-text-secondary">
-            A Orqest mapeia briefing, roteiro, pauta, planejamento e dados, transforma em
-            fluxos reutilizáveis e instala agentes que seguem o jeito da sua equipe trabalhar.
+            A Orqest mapeia briefing, roteiro, pauta, planejamento e dados, transforma em fluxos
+            reutilizáveis e instala agentes que seguem o jeito da sua equipe trabalhar.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href={diagnosisUrl}>Mapear meus processos</ButtonLink>
