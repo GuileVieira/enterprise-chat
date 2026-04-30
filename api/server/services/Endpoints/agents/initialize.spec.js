@@ -802,7 +802,8 @@ describe('initializeClient — subagent loading', () => {
     });
 
     expect(mockGetConvo).toHaveBeenCalledWith(testUser._id.toString(), 'conv_1');
-    expect(mockGetProjectById).toHaveBeenCalledWith(testUser._id.toString(), 'proj-123');
+    expect(mockGetProjectById).toHaveBeenCalledWith('proj-123');
+    expect(agentClientArgs.projectId).toBe('proj-123');
 
     const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
     expect(agentPassedToInitializeAgent.instructions).toBe(

@@ -1,21 +1,37 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Folder, FolderPlus, ChevronDown, MoreHorizontal, MessageSquare, ChevronRight, Plus } from 'lucide-react';
-import { useProjectsQuery, useConversationsInfiniteQuery } from '~/data-provider';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSetRecoilState } from 'recoil';
+import {
+  Folder,
+  FolderPlus,
+  ChevronDown,
+  MoreHorizontal,
+  MessageSquare,
+  ChevronRight,
+  Plus,
+} from 'lucide-react';
+import { QueryKeys } from 'librechat-data-provider';
+import type { TConversation } from 'librechat-data-provider';
+import {
+  useProjectsQuery,
+  useProjectByIdQuery,
+  useConversationsInfiniteQuery,
+} from '~/data-provider';
 import { useLocalize, useNewConvo } from '~/hooks';
-import { cn } from '~/utils';
+import { clearMessagesCache, cn } from '~/utils';
+import store from '~/store';
 
-function ProjectListItem({
-  projectId,
-  name,
-}: {
-  projectId: string;
-  name: string;
-}) {
+function ProjectListItem({ projectId, name }: { projectId: string; name: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { conversationId } = useParams();
   const [isExpanded, setIsExpanded] = useState(false);
   const { newConversation } = useNewConvo();
+  const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
+  const { data: project } = useProjectByIdQuery(projectId, {
+    enabled: isExpanded,
+  });
 
   const { data, isLoading } = useConversationsInfiniteQuery(
     { projectId },
@@ -29,13 +45,25 @@ function ProjectListItem({
   const handleNewChat = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
+      setSelectedProjectId(projectId);
+      clearMessagesCache(queryClient, conversationId);
+      queryClient.invalidateQueries([QueryKeys.messages]);
+
+      const template: Partial<TConversation> = {
+        projectId,
+      };
+      if (project?.endpoint) {
+        template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+      }
+      if (project?.model) {
+        template.model = project.model;
+      }
+
       newConversation({
-        template: {
-          projectId,
-        },
+        template,
       });
     },
-    [newConversation, projectId],
+    [conversationId, newConversation, project, projectId, queryClient, setSelectedProjectId],
   );
 
   return (
@@ -56,11 +84,11 @@ function ProjectListItem({
           )}
         </div>
         <Folder className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-        <span className="truncate text-left flex-1">{name}</span>
+        <span className="flex-1 truncate text-left">{name}</span>
       </button>
 
       {isExpanded && (
-        <div className="ml-6 flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto border-l border-border-light pl-2 custom-scrollbar">
+        <div className="custom-scrollbar ml-6 flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto border-l border-border-light pl-2">
           {/* New Chat in Project */}
           <button
             type="button"
@@ -71,11 +99,9 @@ function ProjectListItem({
             <span className="font-medium">New Chat</span>
           </button>
 
-          {isLoading && (
-            <div className="px-2 py-1 text-xs text-text-tertiary">Loading...</div>
-          )}
+          {isLoading && <div className="px-2 py-1 text-xs text-text-tertiary">Loading...</div>}
           {!isLoading && conversations.length === 0 && (
-            <div className="px-2 py-1 text-xs text-text-tertiary italic">No conversations</div>
+            <div className="px-2 py-1 text-xs italic text-text-tertiary">No conversations</div>
           )}
           {conversations.map((convo) => (
             <button
@@ -85,7 +111,7 @@ function ProjectListItem({
               className={cn(
                 'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
                 conversationId === convo.conversationId
-                  ? 'bg-surface-active-alt text-text-primary font-medium'
+                  ? 'bg-surface-active-alt font-medium text-text-primary'
                   : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary',
               )}
             >
@@ -139,7 +165,7 @@ export default function ProjectsPanel() {
             onClick={() => navigate('/projects/new')}
             className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
           >
-            <div className="w-4 h-4" /> {/* Spacer for alignment */}
+            <div className="h-4 w-4" /> {/* Spacer for alignment */}
             <FolderPlus className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
             <span>{localize('com_ui_new_project')}</span>
           </button>
@@ -165,7 +191,7 @@ export default function ProjectsPanel() {
               onClick={() => setShowAll(true)}
               className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
             >
-              <div className="w-4 h-4" /> {/* Spacer for alignment */}
+              <div className="h-4 w-4" /> {/* Spacer for alignment */}
               <MoreHorizontal className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
               <span>{localize('com_ui_more_projects')}</span>
             </button>
