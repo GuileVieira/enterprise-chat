@@ -1,22 +1,35 @@
 import type { Model } from 'mongoose';
 import logger from '~/config/winston';
+import { getTenantId } from '~/config/tenantContext';
 import type { IProject } from '~/types';
 
-export function createProjectMethods(mongoose: typeof import('mongoose')) {
-  async function getProjects(user: string) {
+export interface ProjectDeps {
+  removeAllPermissions: (params: { resourceType: string; resourceId: unknown }) => Promise<void>;
+  grantPermission: (
+    principalType: string,
+    principalId: string | any,
+    resourceType: string,
+    resourceId: string | any,
+    permBits: number,
+    grantedBy: string | any,
+  ) => Promise<any>;
+}
+
+export function createProjectMethods(mongoose: typeof import('mongoose'), deps?: ProjectDeps) {
+  async function getProjects() {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
-      return await Project.find({ user }).sort({ updatedAt: -1 }).lean();
+      return await Project.find({}).sort({ updatedAt: -1 }).lean();
     } catch (error) {
       logger.error('[getProjects] Error getting projects', error);
       throw new Error('Error getting projects');
     }
   }
 
-  async function getProjectById(user: string, projectId: string) {
+  async function getProjectById(projectId: string) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
-      return await Project.findOne({ user, projectId }).lean();
+      return await Project.findOne({ projectId }).lean();
     } catch (error) {
       logger.error('[getProjectById] Error getting project', error);
       throw new Error('Error getting project');
@@ -52,12 +65,27 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       const projectId = crypto.randomUUID();
+      const tenantId = getTenantId();
       const project = new Project({
         projectId,
         user,
+        ...(tenantId && { tenantId }),
         ...data,
       });
       await project.save();
+
+      if (deps?.grantPermission) {
+        const { ResourceType, PermissionBits } = require('librechat-data-provider');
+        await deps.grantPermission(
+          'user',
+          user,
+          ResourceType.PROJECT,
+          project._id,
+          PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+          user,
+        );
+      }
+
       return project.toObject();
     } catch (error) {
       logger.error('[createProject] Error creating project', error);
@@ -66,14 +94,13 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
   }
 
   async function updateProject(
-    user: string,
     projectId: string,
     data: Partial<Omit<IProject, 'projectId' | 'user' | 'tenantId'>>,
   ) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
-        { user, projectId },
+        { projectId },
         { $set: data },
         { new: true, lean: true },
       );
@@ -83,17 +110,25 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
-  async function deleteProject(user: string, projectId: string) {
+  async function deleteProject(projectId: string) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       const Conversation = mongoose.models.Conversation;
 
-      const deleted = await Project.findOneAndDelete({ user, projectId }).lean();
+      const deleted = await Project.findOneAndDelete({ projectId }).lean();
       if (!deleted) {
         return null;
       }
 
-      await Conversation.updateMany({ user, projectId }, { $unset: { projectId: 1 } });
+      await Conversation.updateMany({ projectId }, { $unset: { projectId: 1 } });
+
+      if (deps?.removeAllPermissions) {
+        const { ResourceType } = require('librechat-data-provider');
+        await deps.removeAllPermissions({
+          resourceType: ResourceType.PROJECT,
+          resourceId: deleted._id,
+        });
+      }
 
       return deleted;
     } catch (error) {
@@ -102,11 +137,11 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
-  async function archiveProject(user: string, projectId: string, isArchived: boolean) {
+  async function archiveProject(projectId: string, isArchived: boolean) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
-        { user, projectId },
+        { projectId },
         { isArchived },
         { new: true, lean: true },
       );
@@ -116,11 +151,11 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
-  async function addProjectFileId(user: string, projectId: string, fileId: string) {
+  async function addProjectFileId(projectId: string, fileId: string) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
-        { user, projectId },
+        { projectId },
         { $addToSet: { fileIds: fileId } },
         { new: true, lean: true },
       );
@@ -130,11 +165,11 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
-  async function removeProjectFileId(user: string, projectId: string, fileId: string) {
+  async function removeProjectFileId(projectId: string, fileId: string) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
-        { user, projectId },
+        { projectId },
         { $pull: { fileIds: fileId } },
         { new: true, lean: true },
       );

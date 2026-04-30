@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const { isEnabled } = require('@librechat/api');
-const { getTransactionSupport, logger } = require('@librechat/data-schemas');
+const {
+  getTransactionSupport,
+  logger,
+  ResourceCapabilityMap,
+  MAX_PERM_BITS,
+} = require('@librechat/data-schemas');
 const { ResourceType, PrincipalType, PrincipalModel } = require('librechat-data-provider');
 const {
   entraIdPrincipalFeatureEnabled,
@@ -128,9 +133,16 @@ const checkPermission = async ({ userId, role, resourceType, resourceId, require
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
-
     if (principals.length === 0) {
       return false;
+    }
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        return true;
+      }
     }
 
     return await db.hasPermission(principals, resourceType, resourceId, requiredPermission);
@@ -157,9 +169,16 @@ const getEffectivePermissions = async ({ userId, role, resourceType, resourceId 
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
-
     if (principals.length === 0) {
       return 0;
+    }
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        return MAX_PERM_BITS;
+      }
     }
 
     return await db.getEffectivePermissions(principals, resourceType, resourceId);
@@ -193,6 +212,18 @@ const getResourcePermissionsMap = async ({ userId, role, resourceType, resourceI
   try {
     // Get user principals (user + groups + public)
     const principals = await db.getUserPrincipals({ userId, role });
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        const fullMap = new Map();
+        for (const id of resourceIds) {
+          fullMap.set(id.toString(), MAX_PERM_BITS);
+        }
+        return fullMap;
+      }
+    }
 
     // Use batch method from aclEntry
     const permissionsMap = await db.getEffectivePermissionsForResources(

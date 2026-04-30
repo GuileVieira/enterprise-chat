@@ -359,11 +359,19 @@ const getUserEffectivePermissions = async (req, res) => {
 
     const { id: userId } = req.user;
 
+    let effectiveResourceId = resourceId;
+    if (resourceType === ResourceType.PROJECT) {
+      const project = await db.findProjectById(resourceId);
+      if (project) {
+        effectiveResourceId = project._id.toString();
+      }
+    }
+
     const permissionBits = await getEffectivePermissions({
       userId,
       role: req.user.role,
       resourceType,
-      resourceId,
+      resourceId: effectiveResourceId,
     });
 
     res.status(200).json({
