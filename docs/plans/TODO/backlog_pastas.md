@@ -131,52 +131,52 @@ Epic 1 (Foundation)
 
 ---
 
-## Epic 3: Project Memories & Prompts
+## Epic 3: Project Memories & Prompts ✅ (parcial)
 
 **Objetivo**: Projetos têm memórias próprias + referenciam memórias do usuário. Projetos têm prompt snippets rápidos + referenciam Prompt Groups existentes.
 
 **Dependência**: Epic 1 concluído.
 
----
-
-### Story 3.1: Project Memories
-
-**Critérios de Aceitação**:
-- Campo `memories` no project (array de key/value).
-- Campo `memoryKeys` referencia memórias globais do usuário.
-- Ambos são injetados no contexto da conversa como texto adicional nas instruções.
-
-**PR 3.1.1 — Backend Memory Merge**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/api/src/utils/projectContext.ts` | Expandir para buscar memórias do usuário por `memoryKeys` e concatenar com `project.memories`. Retornar `fullContext: string` |
-| `packages/api/src/utils/llm.ts` | Usar `fullContext` do project ao invés de apenas `project.instructions` |
-
-**PR 3.1.2 — Frontend Memory Editor**
-
-| Arquivo | Ação |
-|---|---|
-| `client/src/components/Project/ProjectMemoryEditor.tsx` | Criar componente para editar `memories` e selecionar `memoryKeys` do usuário |
+**Status**: Stories 3.1–3.4 completas. Story 3.5 (Prompt Groups tab) depende da Epic 6 (Frontend UI) e será feita junto com ela.
 
 ---
 
-### Story 3.2: Project Prompts
+### Story 3.1: Project Memories — Backend ✅
 
-**Critérios de Aceitação**:
-- `promptSnippets` (título + conteúdo) no project.
-- `promptGroupIds` referencia Prompt Groups existentes.
-- Snippets aparecem como quick-actions no chat input quando dentro de um project.
+**Arquivos**:
+- `packages/api/src/utils/projectContext.ts` — `loadProjectMemories()` formata `project.memories` + resolve `memoryKeys` via getter
+- `packages/api/src/utils/projectContext.spec.ts` — 8 unit tests
 
-**PR 3.2.1 — Backend**
+---
 
-| Arquivo | Ação |
-|---|---|
-| `packages/data-schemas/src/methods/project.ts` | Garantir que `promptSnippets` e `promptGroupIds` são persistidos e retornados |
+### Story 3.2: Inject Project Memories nos 3 caminhos ✅
 
-**PR 3.2.2 — Frontend Prompt Snippets**
+**Arquivos**:
+- `api/server/services/Endpoints/agents/initialize.js` — Prepend instructions + memories em ordem correta
+- `api/server/services/createRunBody.js` — Aceita `projectMemories`; posiciona após instructions e antes de prefix
+- `api/server/controllers/assistants/chatV1.js` / `chatV2.js` — Carregam memories, passam para `createRunBody`, incluem em `countTokens`
+- `api/server/services/Endpoints/agents/initialize.spec.js` — 3 novos tests (embedded, merged, user refs)
+- `api/server/services/createRunBody.spec.js` — 3 novos tests (ordering)
 
-| Arquivo | Ação |
+---
+
+### Story 3.3: Persistência de promptSnippets ✅
+
+**Verificação**: Schema Zod (`packages/data-provider/src/schemas.ts`) e métodos DB (`packages/data-schemas/src/methods/project.ts`) já suportam `promptSnippets` e `promptGroupIds`. Nenhuma alteração necessária.
+
+---
+
+### Story 3.4: Prompt Snippets — Frontend Chips ✅
+
+**Arquivos**:
+- `client/src/components/Chat/Input/ProjectPromptSnippets.tsx` — Chips horizontais acima do textarea
+- `client/src/components/Chat/Input/ChatForm.tsx` — Integração condicional via `useProjectByIdQuery`
+
+---
+
+### Story 3.5: Prompt Groups Tab no Project Detail 🚧
+
+**Bloqueado**: Depende da Epic 6 (Project Detail page com tabs). Será implementado junto com a UI de Projects.
 |---|---|
 | `client/src/components/Project/ProjectPromptEditor.tsx` | Criar editor de snippets e selector de Prompt Groups |
 | `client/src/components/Chat/Input/ChatForm.tsx` | Se conversa tem `projectId`, renderizar botões de quick-prompt com snippets do project |
