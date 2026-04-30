@@ -214,24 +214,24 @@ export default function ProjectFileUploader({
       )}
 
       <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <AlertDialogContent className="max-w-[400px] overflow-hidden border-none bg-background text-foreground">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="break-words text-xl font-semibold text-foreground">
+        <AlertDialogContent className="flex w-[95vw] max-w-md flex-col gap-0 border-none bg-background p-6 shadow-2xl text-foreground">
+          <AlertDialogHeader className="flex flex-col gap-2 text-left">
+            <AlertDialogTitle className="whitespace-normal break-words text-xl font-semibold">
               {localize('com_ui_project_file_delete_confirm')}
             </AlertDialogTitle>
-            <AlertDialogDescription className="break-words text-sm text-muted-foreground">
+            <AlertDialogDescription className="whitespace-normal break-words text-sm text-muted-foreground">
               {localize('com_ui_delete_confirm_file_description', {
                 filename: fileToDelete?.filename ?? '',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-4 gap-2">
-            <AlertDialogCancel className="bg-secondary text-foreground hover:bg-secondary/80">
+          <AlertDialogFooter className="mt-6 flex flex-row items-center justify-end gap-3">
+            <AlertDialogCancel className="m-0 bg-secondary text-foreground hover:bg-secondary/80">
               {localize('com_ui_cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+              className="m-0 bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
             >
               {localize('com_ui_delete')}
             </AlertDialogAction>
