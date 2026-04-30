@@ -23,7 +23,7 @@ import {
 } from '~/hooks';
 import PendingManualSkillsChips from './PendingManualSkillsChips';
 import { cn, getModelSpec, removeFocusRings } from '~/utils';
-import { useGetStartupConfig } from '~/data-provider';
+import { useGetStartupConfig, useProjectByIdQuery } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
 import AttachFileChat from './Files/AttachFileChat';
 import FileFormChat from './Files/FileFormChat';
@@ -38,6 +38,7 @@ import SendButton from './SendButton';
 import EditBadges from './EditBadges';
 import BadgeRow from './BadgeRow';
 import Mention from './Mention';
+import ProjectPromptSnippets from './ProjectPromptSnippets';
 import store from '~/store';
 
 interface ChatFormProps {
@@ -128,6 +129,8 @@ const ChatForm = memo(function ChatForm({
     () => requiresKey || invalidAssistant,
     [requiresKey, invalidAssistant],
   );
+
+  const projectQuery = useProjectByIdQuery(conversation?.projectId ?? '');
 
   const handleContainerClick = useCallback(() => {
     /** Check if the device is a touchscreen */
@@ -281,6 +284,12 @@ const ChatForm = memo(function ChatForm({
           >
             <TextareaHeader addedConvo={addedConvo} setAddedConvo={setAddedConvo} />
             <PendingManualSkillsChips conversationId={conversationId} />
+            {conversation?.projectId && projectQuery.data?.promptSnippets ? (
+              <ProjectPromptSnippets
+                snippets={projectQuery.data.promptSnippets}
+                textAreaRef={textAreaRef}
+              />
+            ) : null}
             {/* WIP */}
             <EditBadges
               isEditingChatBadges={isEditingBadges}

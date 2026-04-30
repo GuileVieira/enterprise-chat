@@ -3,6 +3,7 @@ export interface ITenantFunction {
   tenantId: string;
   name: string;
   description: string;
+  details?: string;
   type: 'http';
   config: {
     baseUrl: string;

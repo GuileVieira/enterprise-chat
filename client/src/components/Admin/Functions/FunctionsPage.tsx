@@ -6,6 +6,7 @@ import {
   Wrench,
   Trash2,
   ChevronDown,
+  ChevronRight,
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
@@ -39,6 +40,7 @@ const FunctionsPage: React.FC = () => {
   const localize = useLocalize();
   const [tenantId, setTenantId] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const { data, isLoading } = useListAdminFunctions(tenantId);
@@ -183,71 +185,99 @@ const FunctionsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {functions.map((fn) => (
-                  <tr
-                    key={fn.id}
-                    className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
-                  >
-                    <td className="max-w-[14rem] truncate px-6 py-4 font-mono text-xs font-medium text-text-primary">
-                      {fn.id}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-text-primary">{fn.name}</div>
-                      <div className="mt-1 max-w-md text-xs leading-5 text-text-tertiary">
-                        {fn.description || localize('com_admin_no_description')}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-2">
-                        <AdminBadge tone="accent">{fn.config.method}</AdminBadge>
-                        <span className="max-w-xs truncate font-mono text-xs text-text-secondary">
-                          {fn.config.path}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary">
-                      {fn.config.auth?.type ? (
-                        <AdminBadge>{fn.config.auth.type}</AdminBadge>
-                      ) : (
-                        <span className="text-xs text-text-tertiary">
-                          {localize('com_admin_none')}
-                        </span>
+                {functions.map((fn) => {
+                  const isExpanded = expandedId === fn.id;
+                  return (
+                    <React.Fragment key={fn.id}>
+                      <tr
+                        className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
+                      >
+                        <td className="max-w-[14rem] truncate px-6 py-4 font-mono text-xs font-medium text-text-primary">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedId(isExpanded ? null : fn.id)}
+                            className="mr-2 text-text-tertiary transition-colors hover:text-text-primary"
+                            title={localize('com_admin_toggle_details')}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="inline h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="inline h-4 w-4" />
+                            )}
+                          </button>
+                          {fn.id}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-text-primary">{fn.name}</div>
+                          <div className="mt-1 max-w-md text-xs leading-5 text-text-tertiary">
+                            {fn.description || localize('com_admin_no_description')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                            <AdminBadge tone="accent">{fn.config.method}</AdminBadge>
+                            <span className="max-w-xs truncate font-mono text-xs text-text-secondary">
+                              {fn.config.path}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-text-secondary">
+                          {fn.config.auth?.type ? (
+                            <AdminBadge>{fn.config.auth.type}</AdminBadge>
+                          ) : (
+                            <span className="text-xs text-text-tertiary">
+                              {localize('com_admin_none')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <AdminIconButton
+                            onClick={() => handleToggle(fn)}
+                            disabled={toggleFn.isLoading}
+                            label={
+                              fn.isActive
+                                ? localize('com_admin_deactivate_function')
+                                : localize('com_admin_activate_function')
+                            }
+                          >
+                            {fn.isActive ? (
+                              <ToggleRight className="h-6 w-6 text-green-500" />
+                            ) : (
+                              <ToggleLeft className="h-6 w-6 text-text-secondary" />
+                            )}
+                          </AdminIconButton>
+                        </td>
+                        <td className="px-6 py-4">
+                          <AdminIconButton
+                            label={localize('com_admin_delete_function')}
+                            tone="danger"
+                            onClick={() =>
+                              setPendingDelete({
+                                id: fn.id,
+                                name: fn.name,
+                                tenantId: fn.tenantId,
+                              })
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </AdminIconButton>
+                        </td>
+                      </tr>
+                      {isExpanded && fn.details && (
+                        <tr className="border-b border-border-light bg-surface-primary/30">
+                          <td colSpan={6} className="px-6 py-4">
+                            <div className="text-xs font-semibold text-text-secondary mb-1">
+                              {localize('com_admin_function_details')}
+                            </div>
+                            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-text-tertiary font-mono">
+                              {fn.details}
+                            </pre>
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <AdminIconButton
-                        onClick={() => handleToggle(fn)}
-                        disabled={toggleFn.isLoading}
-                        label={
-                          fn.isActive
-                            ? localize('com_admin_deactivate_function')
-                            : localize('com_admin_activate_function')
-                        }
-                      >
-                        {fn.isActive ? (
-                          <ToggleRight className="h-6 w-6 text-green-500" />
-                        ) : (
-                          <ToggleLeft className="h-6 w-6 text-text-secondary" />
-                        )}
-                      </AdminIconButton>
-                    </td>
-                    <td className="px-6 py-4">
-                      <AdminIconButton
-                        label={localize('com_admin_delete_function')}
-                        tone="danger"
-                        onClick={() =>
-                          setPendingDelete({
-                            id: fn.id,
-                            name: fn.name,
-                            tenantId: fn.tenantId,
-                          })
-                        }
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </AdminIconButton>
-                    </td>
-                  </tr>
-                ))}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

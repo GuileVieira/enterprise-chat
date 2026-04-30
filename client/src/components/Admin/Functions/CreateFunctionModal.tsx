@@ -22,6 +22,7 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
   const [id, setId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [details, setDetails] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [method, setMethod] = useState('GET');
   const [path, setPath] = useState('');
@@ -51,6 +52,7 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
       tenantId,
       name: name.trim(),
       description: description.trim(),
+      ...(details.trim() ? { details: details.trim() } : {}),
       config: {
         baseUrl: baseUrl.trim(),
         method,
@@ -85,6 +87,7 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
     setId('');
     setName('');
     setDescription('');
+    setDetails('');
     setBaseUrl('');
     setMethod('GET');
     setPath('');
@@ -163,6 +166,18 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
               placeholder="What does this tool do? Be specific so the LLM knows when to use it."
               className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-secondary">Details</label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              rows={4}
+              placeholder="Describe what the tool sends and receives, dynamic body behavior, edge cases, etc. This text is appended to the description shown to the LLM."
+              className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-text-tertiary">Shown to the LLM alongside the description</p>
           </div>
 
           <div className="rounded-xl border border-border-light bg-surface-secondary p-4">

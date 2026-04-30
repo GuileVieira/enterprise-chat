@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Key, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, Key, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useLocalize } from '~/hooks';
 import {
   useListAdminSecrets,
@@ -35,6 +35,7 @@ const SecretsPage: React.FC = () => {
   const [secretValue, setSecretValue] = useState('');
   const [secretType, setSecretType] = useState<SecretType>('bearer');
   const [isSecretFormEditable, setIsSecretFormEditable] = useState(false);
+  const [showSecretValue, setShowSecretValue] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   const { data, isLoading } = useListAdminSecrets(tenantId);
@@ -52,6 +53,7 @@ const SecretsPage: React.FC = () => {
     setSecretValue('');
     setSecretType('bearer');
     setIsSecretFormEditable(false);
+    setShowSecretValue(false);
   };
 
   const closeModal = () => {
@@ -308,24 +310,41 @@ const SecretsPage: React.FC = () => {
                 <label className="block text-sm font-medium text-text-secondary">
                   {localize('com_admin_secret_value')}
                 </label>
-                <input
-                  required
-                  id="tenant-secret-value"
-                  name="tenant-secret-value"
-                  type="password"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  autoComplete="new-password"
-                  data-1p-ignore="true"
-                  data-lpignore="true"
-                  readOnly={!isSecretFormEditable}
-                  spellCheck={false}
-                  value={secretValue}
-                  onFocus={() => setIsSecretFormEditable(true)}
-                  onChange={(e) => setSecretValue(e.target.value)}
-                  placeholder={localize('com_admin_secret_value_placeholder')}
-                  className="focus:ring-ring-primary/20 mt-1 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
-                />
+                <div className="relative mt-1">
+                  <input
+                    required
+                    id="tenant-secret-value"
+                    name="tenant-secret-value"
+                    type={showSecretValue ? 'text' : 'password'}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    autoComplete="new-password"
+                    data-1p-ignore="true"
+                    data-lpignore="true"
+                    readOnly={!isSecretFormEditable}
+                    spellCheck={false}
+                    value={secretValue}
+                    onFocus={() => setIsSecretFormEditable(true)}
+                    onChange={(e) => setSecretValue(e.target.value)}
+                    placeholder={localize('com_admin_secret_value_placeholder')}
+                    className="focus:ring-ring-primary/20 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 pr-10 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecretValue((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                    tabIndex={-1}
+                    aria-label={localize(
+                      showSecretValue ? 'com_ui_hide_password' : 'com_ui_show_password',
+                    )}
+                  >
+                    {showSecretValue ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
+                </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <AdminActionButton variant="ghost" onClick={closeModal}>

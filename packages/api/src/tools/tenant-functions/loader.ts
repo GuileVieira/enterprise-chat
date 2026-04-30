@@ -31,9 +31,13 @@ export async function getTenantFunctionDefinitions(
 
     const parameters = convertToJsonSchema(fn.inputSchema);
 
+    const fullDescription = fn.details
+      ? `${fn.description}\n\nDetails:\n${fn.details}`
+      : fn.description;
+
     definitions.push({
       name: fn.id,
-      description: fn.description,
+      description: fullDescription,
       parameters,
     });
   }
