@@ -4,6 +4,7 @@ import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
+import ProjectConversationsTab from './ProjectConversationsTab';
 
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
 type Tab = (typeof tabs)[number];
@@ -75,9 +76,7 @@ export default function ProjectDetailPage() {
 
       <div className="flex-1 overflow-auto p-6">
         {activeTab === 'conversations' && (
-          <div className="text-text-secondary">
-            {localize('com_ui_project_conversations_placeholder')}
-          </div>
+          <ProjectConversationsTab projectId={project.projectId} />
         )}
         {activeTab === 'prompts' && (
           <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
