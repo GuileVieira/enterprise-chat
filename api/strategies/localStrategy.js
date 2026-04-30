@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { errorsToString } = require('librechat-data-provider');
 const { Strategy: PassportLocalStrategy } = require('passport-local');
 const { isEnabled, checkEmailConfig, comparePassword } = require('@librechat/api');
@@ -23,51 +23,65 @@ async function passportLogin(req, email, password, done) {
       return done(null, false, { message: validationError });
     }
 
-    const user = await findUser({ email: email.trim() }, '+password');
-    if (!user) {
-      logError('Passport Local Strategy - User Not Found', { email });
+    // Login runs before tenantContextMiddleware can set ALS context, so we look
+    // up users across all tenants under SYSTEM context. Downstream auth steps
+    // re-establish the proper tenantId from req.user.
+    const result = await runAsSystem(async () => {
+      const user = await findUser({ email: email.trim() }, '+password');
+      if (!user) {
+        return { user: null, info: { message: 'Email does not exist.' }, reason: 'not-found' };
+      }
+      if (!user.password) {
+        return { user: null, info: { message: 'Email does not exist.' }, reason: 'no-password' };
+      }
+
+      const isMatch = await comparePassword(user, password, { compare: bcrypt.compare });
+      if (!isMatch) {
+        return { user: null, info: { message: 'Incorrect password.' }, reason: 'wrong-password' };
+      }
+
+      const emailEnabled = checkEmailConfig();
+      const userCreatedAtTimestamp = Math.floor(new Date(user.createdAt).getTime() / 1000);
+
+      if (
+        !emailEnabled &&
+        !user.emailVerified &&
+        userCreatedAtTimestamp < verificationEnabledTimestamp
+      ) {
+        await updateUser(user._id, { emailVerified: true });
+        user.emailVerified = true;
+      }
+
+      const unverifiedAllowed = isEnabled(process.env.ALLOW_UNVERIFIED_EMAIL_LOGIN);
+      if (user.expiresAt && unverifiedAllowed) {
+        await updateUser(user._id, {});
+      }
+
+      if (!user.emailVerified && !unverifiedAllowed) {
+        return { user, info: { message: 'Email not verified.' }, reason: 'unverified' };
+      }
+
+      return { user, info: null, reason: 'ok' };
+    });
+
+    if (result.reason === 'not-found' || result.reason === 'no-password') {
+      logError(`Passport Local Strategy - ${result.reason}`, { email });
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
-      return done(null, false, { message: 'Email does not exist.' });
+      return done(null, false, result.info);
     }
-
-    if (!user.password) {
-      logError('Passport Local Strategy - User has no password', { email });
+    if (result.reason === 'wrong-password') {
+      logError('Passport Local Strategy - Password does not match', { isMatch: false });
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
-      return done(null, false, { message: 'Email does not exist.' });
+      return done(null, false, result.info);
     }
-
-    const isMatch = await comparePassword(user, password, { compare: bcrypt.compare });
-    if (!isMatch) {
-      logError('Passport Local Strategy - Password does not match', { isMatch });
-      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
-      return done(null, false, { message: 'Incorrect password.' });
-    }
-
-    const emailEnabled = checkEmailConfig();
-    const userCreatedAtTimestamp = Math.floor(new Date(user.createdAt).getTime() / 1000);
-
-    if (
-      !emailEnabled &&
-      !user.emailVerified &&
-      userCreatedAtTimestamp < verificationEnabledTimestamp
-    ) {
-      await updateUser(user._id, { emailVerified: true });
-      user.emailVerified = true;
-    }
-
-    const unverifiedAllowed = isEnabled(process.env.ALLOW_UNVERIFIED_EMAIL_LOGIN);
-    if (user.expiresAt && unverifiedAllowed) {
-      await updateUser(user._id, {});
-    }
-
-    if (!user.emailVerified && !unverifiedAllowed) {
+    if (result.reason === 'unverified') {
       logError('Passport Local Strategy - Email not verified', { email });
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
-      return done(null, user, { message: 'Email not verified.' });
+      return done(null, result.user, result.info);
     }
 
     logger.info(`[Login] [Login successful] [Username: ${email}] [Request-IP: ${req.ip}]`);
-    return done(null, user);
+    return done(null, result.user);
   } catch (err) {
     return done(err);
   }
