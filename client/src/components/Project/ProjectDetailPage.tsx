@@ -111,14 +111,58 @@ export default function ProjectDetailPage() {
             )}
           </>
         )}
-        {activeTab === 'memories' && <ProjectMemoryEditor project={project} />}
+        {activeTab === 'memories' && (
+          <>
+            {permissions.canEdit ? (
+              <ProjectMemoryEditor project={project} />
+            ) : (
+              <div className="space-y-3">
+                {project.memories && project.memories.length > 0 ? (
+                  project.memories.map((mem, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg border border-border-light bg-surface-secondary p-3"
+                    >
+                      <div className="text-sm font-medium text-text-primary">{mem.key}</div>
+                      <div className="mt-1 text-sm text-text-secondary">{mem.value}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
+                )}
+              </div>
+            )}
+          </>
+        )}
         {activeTab === 'files' && (
-          <ProjectFileUploader
-            projectId={project.projectId}
-            files={filesQuery.data ?? []}
-            isLoading={filesQuery.isLoading}
-            onFilesChange={() => filesQuery.refetch()}
-          />
+          <>
+            {permissions.canEdit ? (
+              <ProjectFileUploader
+                projectId={project.projectId}
+                files={filesQuery.data ?? []}
+                isLoading={filesQuery.isLoading}
+                onFilesChange={() => filesQuery.refetch()}
+              />
+            ) : (
+              <div className="space-y-3">
+                {filesQuery.isLoading ? (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+                ) : filesQuery.data && filesQuery.data.length > 0 ? (
+                  filesQuery.data.map((file) => (
+                    <div
+                      key={file.file_id}
+                      className="flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary p-3"
+                    >
+                      <div className="text-sm text-text-primary">{file.filename}</div>
+                      <div className="text-xs text-text-secondary">{file.type}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-text-secondary">{localize('com_ui_project_no_files')}</div>
+                )}
+              </div>
+            )}
+          </>
         )}
         {activeTab === 'settings' && (
           <>
@@ -130,14 +174,16 @@ export default function ProjectDetailPage() {
                   <label className="block text-sm font-medium text-text-secondary">
                     {localize('com_ui_project_instructions')}
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingSettings(true)}
-                    className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    {localize('com_ui_edit')}
-                  </button>
+                  {permissions.canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingSettings(true)}
+                      className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      {localize('com_ui_edit')}
+                    </button>
+                  )}
                 </div>
                 <div className="mt-1 rounded-lg border border-border-light bg-surface-secondary p-3 text-sm text-text-primary">
                   {project.instructions || localize('com_ui_project_no_instructions')}
