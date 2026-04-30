@@ -205,6 +205,7 @@ class AgentClient extends BaseClient {
           modelLabel: this.options.modelLabel,
           resendFiles: this.options.resendFiles,
           imageDetail: this.options.imageDetail,
+          projectId: this.options.projectId,
           maxContextTokens: this.maxContextTokens,
         },
         // TODO: PARSE OPTIONS BY PROVIDER, MAY CONTAIN SENSITIVE DATA
@@ -1167,6 +1168,15 @@ class AgentClient extends BaseClient {
    * @param {string} params.conversationId
    */
   async titleConvo({ text, abortController }) {
+    logger.debug('[AgentClient #titleConvo] Called', {
+      hasRun: !!this.run,
+      hasOptions: !!this.options,
+      hasAgent: !!this.options?.agent,
+      agentEndpoint: this.options?.agent?.endpoint,
+      agentModel: this.options?.agent?.model || this.options?.agent?.model_parameters?.model,
+      conversationId: this.conversationId,
+      textLength: text?.length,
+    });
     if (!this.run) {
       throw new Error('Run not initialized');
     }
@@ -1188,13 +1198,28 @@ class AgentClient extends BaseClient {
       model: agent.model || agent.model_parameters.model,
     };
 
-    let titleProviderConfig = getProviderConfig({ provider: endpoint, appConfig });
+    let titleProviderConfig;
+    try {
+      titleProviderConfig = getProviderConfig({ provider: endpoint, appConfig });
+    } catch (err) {
+      logger.error(`[AgentClient #titleConvo] getProviderConfig failed for endpoint "${endpoint}"`, err);
+      return;
+    }
 
     /** @type {TEndpoint | undefined} */
     const endpointConfig =
       appConfig.endpoints?.all ??
       appConfig.endpoints?.[endpoint] ??
       titleProviderConfig.customEndpointConfig;
+
+    logger.debug('[AgentClient #titleConvo] Config resolved', {
+      endpoint,
+      hasEndpointConfig: !!endpointConfig,
+      titleConvo: endpointConfig?.titleConvo,
+      titleModel: endpointConfig?.titleModel,
+      titleEndpoint: endpointConfig?.titleEndpoint,
+    });
+
     if (!endpointConfig) {
       logger.debug(
         `[api/server/controllers/agents/client.js #titleConvo] No endpoint config for "${endpoint}"`,
@@ -1364,6 +1389,16 @@ class AgentClient extends BaseClient {
           err,
         );
       });
+      logger.debug('[AgentClient #titleConvo] generateTitle result', {
+        titleResult,
+        title: titleResult?.title,
+        conversationId: this.conversationId,
+      });
+
+      if (!titleResult?.title) {
+        logger.debug('[AgentClient #titleConvo] generateTitle returned no title');
+        return;
+      }
 
       return sanitizeTitle(titleResult.title);
     } catch (err) {
