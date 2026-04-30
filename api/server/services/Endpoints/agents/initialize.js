@@ -12,6 +12,7 @@ const {
   resolveAgentScopedSkillIds,
   buildAgentContextAttachmentsByAgentId,
   loadProjectMemories,
+  loadProjectFileIds,
 } = require('@librechat/api');
 const {
   ResourceType,
@@ -310,6 +311,21 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
         }
         if (contextParts.length > 0) {
           primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
+        }
+        const projectFileIds = await loadProjectFileIds(project, async (_ids) => {
+          const files = await db.getFilesByProjectId(conversation.projectId);
+          return files?.map((f) => f.file_id) ?? [];
+        });
+        if (projectFileIds && projectFileIds.length > 0) {
+          const existingIds = new Set(requestFiles.map((f) => f.file_id));
+          const newProjectFiles = await db.getFiles({ file_id: { $in: projectFileIds } }, null, {
+            text: 0,
+          });
+          for (const file of newProjectFiles ?? []) {
+            if (!existingIds.has(file.file_id)) {
+              requestFiles.push(file);
+            }
+          }
         }
       }
     } catch (err) {

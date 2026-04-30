@@ -68,3 +68,21 @@ export async function loadProjectMemories(
 
   return `## Project Memories\n\n${lines.join('\n')}`;
 }
+
+/**
+ * Loads project file IDs for injection into conversation context.
+ * Optionally validates file IDs against the database to filter out orphaned references.
+ */
+export async function loadProjectFileIds(
+  project: { fileIds?: string[] } | null | undefined,
+  validateFileIds?: (fileIds: string[]) => Promise<string[]>,
+): Promise<string[] | null> {
+  if (!project?.fileIds || project.fileIds.length === 0) {
+    return null;
+  }
+  if (validateFileIds) {
+    const validIds = await validateFileIds(project.fileIds);
+    return validIds.length > 0 ? validIds : null;
+  }
+  return project.fileIds;
+}

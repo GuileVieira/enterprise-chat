@@ -8,6 +8,7 @@ const {
   getBalanceConfig,
   getModelMaxTokens,
   loadProjectMemories,
+  loadProjectFileIds,
 } = require('@librechat/api');
 const {
   Time,
@@ -47,6 +48,7 @@ const {
   getConvo,
   getProjectById,
   getAllUserMemories,
+  getFilesByProjectId,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -325,6 +327,8 @@ const chatV1 = async (req, res) => {
     /** Load project context if conversation belongs to a project */
     let projectInstructions = '';
     let projectMemories = '';
+    /** @type {string[]} */
+    let projectFileIds = [];
     if (convoId) {
       try {
         const convo = await getConvo(req.user.id, convoId);
@@ -343,6 +347,13 @@ const chatV1 = async (req, res) => {
           );
           if (memoriesText) {
             projectMemories = memoriesText;
+          }
+          const fileIds = await loadProjectFileIds(project, async (_ids) => {
+            const files = await getFilesByProjectId(convo.projectId);
+            return files?.map((f) => f.file_id) ?? [];
+          });
+          if (fileIds) {
+            projectFileIds = fileIds;
           }
         }
       } catch (err) {
@@ -384,8 +395,8 @@ const chatV1 = async (req, res) => {
       }
 
       file_ids = files.map(({ file_id }) => file_id);
-      if (file_ids.length || thread_file_ids.length) {
-        attachedFileIds = new Set([...file_ids, ...thread_file_ids]);
+      if (file_ids.length || thread_file_ids.length || projectFileIds.length) {
+        attachedFileIds = new Set([...file_ids, ...thread_file_ids, ...projectFileIds]);
         if (endpoint === EModelEndpoint.azureAssistants) {
           userMessage.attachments = Array.from(attachedFileIds).map((file_id) => ({
             file_id,
