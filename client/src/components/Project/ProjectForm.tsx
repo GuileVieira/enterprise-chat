@@ -138,38 +138,42 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
           </p>
         </div>
 
-        {/* Endpoint */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary">
-            {localize('com_ui_project_endpoint')}
-          </label>
-          <select
-            value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-          >
-            <option value="">{localize('com_ui_project_endpoint_placeholder')}</option>
-            {availableEndpoints.map((ep) => (
-              <option key={ep} value={ep}>
-                {ep}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isEditing && (
+          <>
+            {/* Endpoint */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary">
+                {localize('com_ui_project_endpoint')}
+              </label>
+              <select
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
+              >
+                <option value="">{localize('com_ui_project_endpoint_placeholder')}</option>
+                {availableEndpoints.map((ep) => (
+                  <option key={ep} value={ep}>
+                    {ep}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Model */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary">
-            {localize('com_ui_project_model')}
-          </label>
-          <input
-            type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder={localize('com_ui_project_model_placeholder')}
-            className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-          />
-        </div>
+            {/* Model */}
+            <div>
+              <label className="block text-sm font-medium text-text-secondary">
+                {localize('com_ui_project_model')}
+              </label>
+              <input
+                type="text"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={localize('com_ui_project_model_placeholder')}
+                className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
+              />
+            </div>
+          </>
+        )}
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
