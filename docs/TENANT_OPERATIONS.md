@@ -190,6 +190,77 @@ npm run create-function -- --tenant=<tenantId> --file=<path>
 
 ---
 
+## Strict Mode (`TENANT_ISOLATION_STRICT=true`)
+
+When strict mode is enabled, **every database query must have a tenant context**. This prevents accidental cross-tenant data leaks but requires proper infrastructure configuration.
+
+### Reverse Proxy Configuration
+
+Your reverse proxy (nginx, Traefik, Cloudflare, etc.) **must** inject the `X-Tenant-Id` header on every incoming request. Without it, unauthenticated routes (login, registration, password reset, OAuth callbacks, banners) will fail with:
+
+```
+[TenantIsolation] Query attempted without tenant context in strict mode
+```
+
+### nginx Example
+
+```nginx
+server {
+  listen 80;
+  server_name acme.yourapp.com;
+
+  location / {
+    proxy_set_header X-Tenant-Id "acme";
+    proxy_pass http://librechat:3080;
+  }
+}
+```
+
+### Traefik Example
+
+```yaml
+http:
+  routers:
+    acme:
+      rule: "Host(`acme.yourapp.com`)"
+      middlewares:
+        - "add-tenant-header"
+      service: "librechat"
+
+  middlewares:
+    add-tenant-header:
+      headers:
+        customRequestHeaders:
+          X-Tenant-Id: "acme"
+```
+
+### Subdomain-to-Tenant Mapping
+
+If you use one subdomain per tenant, map the subdomain to the header:
+
+```nginx
+map $host $tenant_id {
+  default "default";
+  "acme.yourapp.com" "acme";
+  "beta.yourapp.com" "beta";
+}
+
+server {
+  location / {
+    proxy_set_header X-Tenant-Id $tenant_id;
+    proxy_pass http://librechat:3080;
+  }
+}
+```
+
+### Important Notes
+
+- The header name is case-insensitive but must be exactly `X-Tenant-Id`
+- Never allow end users to set this header directly — always inject it at the proxy level
+- System-level background tasks (index sync, migrations) run with `runAsSystem()` and bypass tenant isolation
+
+---
+
 ## Files Added/Modified
 
 | File | Purpose |
