@@ -215,7 +215,7 @@ if (cluster.isMaster) {
     logger.info(`Worker ${process.pid}: Connected to MongoDB`);
 
     /** Background index sync (non-blocking) */
-    indexSync().catch((err) => {
+    runAsSystem(indexSync).catch((err) => {
       logger.error(`[Worker ${process.pid}][indexSync] Background sync failed:`, err);
     });
 
@@ -384,7 +384,7 @@ if (cluster.isMaster) {
         /** Initialize MCP servers and OAuth reconnection for this worker */
         await initializeMCPs();
         await initializeOAuthReconnectManager();
-        await checkMigrations();
+        await runAsSystem(checkMigrations);
       } catch (initErr) {
         logger.error(`Worker ${process.pid} post-listen initialization failed:`, initErr);
         process.exit(1);
