@@ -20,30 +20,24 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
 
   const [hasChanges, setHasChanges] = useState(false);
 
-  const handleChange = useCallback(
-    (index: number, field: 'key' | 'value', value: string) => {
-      setMemories((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], [field]: value };
-        return next;
-      });
-      setHasChanges(true);
-    },
-    [],
-  );
+  const handleChange = useCallback((index: number, field: 'key' | 'value', value: string) => {
+    setMemories((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+    setHasChanges(true);
+  }, []);
 
   const handleAdd = useCallback(() => {
     setMemories((prev) => [...prev, { key: '', value: '' }]);
     setHasChanges(true);
   }, []);
 
-  const handleRemove = useCallback(
-    (index: number) => {
-      setMemories((prev) => prev.filter((_, i) => i !== index));
-      setHasChanges(true);
-    },
-    [],
-  );
+  const handleRemove = useCallback((index: number) => {
+    setMemories((prev) => prev.filter((_, i) => i !== index));
+    setHasChanges(true);
+  }, []);
 
   const handleSave = useCallback(() => {
     const validMemories = memories.filter((m) => m.key.trim() !== '');

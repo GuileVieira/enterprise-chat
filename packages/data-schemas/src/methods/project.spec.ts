@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import { tenantStorage } from '~/config/tenantContext';
 import { createProjectMethods } from './project';
 import { createModels } from '~/models';
 import { IProject } from '~/types';
@@ -55,39 +56,32 @@ afterEach(async () => {
 
 describe('ProjectMethods', () => {
   const userId = new mongoose.Types.ObjectId().toString();
-  const otherUserId = new mongoose.Types.ObjectId().toString();
+  const tenantA = 'tenant-a';
+  const tenantB = 'tenant-b';
 
   describe('createProject', () => {
-    it('creates a project with all fields', async () => {
-      const result = await createProject(userId, {
-        name: 'My Project',
-        description: 'A test project',
-        endpoint: 'openAI',
-        model: 'gpt-4',
-        instructions: 'Be helpful',
-        memories: [{ key: 'topic', value: 'AI' }],
-        memoryKeys: ['user_pref_1'],
-        promptSnippets: [{ title: 'Greeting', content: 'Hello!' }],
-        promptGroupIds: ['group1'],
-        fileIds: ['file1'],
-        iconURL: 'https://example.com/icon.png',
-      });
+    it('creates a project with all fields and tenantId', async () => {
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        const result = await createProject(userId, {
+          name: 'My Project',
+          description: 'A test project',
+          endpoint: 'openAI',
+          model: 'gpt-4',
+          instructions: 'Be helpful',
+          memories: [{ key: 'topic', value: 'AI' }],
+          memoryKeys: ['user_pref_1'],
+          promptSnippets: [{ title: 'Greeting', content: 'Hello!' }],
+          promptGroupIds: ['group1'],
+          fileIds: ['file1'],
+          iconURL: 'https://example.com/icon.png',
+        });
 
-      expect(result).toBeDefined();
-      expect(result.name).toBe('My Project');
-      expect(result.projectId).toBeDefined();
-      expect(result.user).toBe(userId);
-      expect(result.description).toBe('A test project');
-      expect(result.endpoint).toBe('openAI');
-      expect(result.model).toBe('gpt-4');
-      expect(result.instructions).toBe('Be helpful');
-      expect(result.memories).toEqual([{ key: 'topic', value: 'AI' }]);
-      expect(result.memoryKeys).toEqual(['user_pref_1']);
-      expect(result.promptSnippets).toEqual([{ title: 'Greeting', content: 'Hello!' }]);
-      expect(result.promptGroupIds).toEqual(['group1']);
-      expect(result.fileIds).toEqual(['file1']);
-      expect(result.iconURL).toBe('https://example.com/icon.png');
-      expect(result.isArchived).toBe(false);
+        expect(result).toBeDefined();
+        expect(result.name).toBe('My Project');
+        expect(result.projectId).toBeDefined();
+        expect(result.user).toBe(userId);
+        expect(result.tenantId).toBe(tenantA);
+      });
     });
 
     it('creates a project with minimal fields', async () => {
@@ -98,62 +92,80 @@ describe('ProjectMethods', () => {
   });
 
   describe('getProjects', () => {
-    it('returns projects sorted by updatedAt desc', async () => {
-      await createProject(userId, { name: 'Alpha' });
-      await new Promise((r) => setTimeout(r, 10));
-      await createProject(userId, { name: 'Beta' });
+    it('returns projects for the current tenant', async () => {
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        await createProject(userId, { name: 'Project A' });
+      });
+      await tenantStorage.run({ tenantId: tenantB }, async () => {
+        await createProject(userId, { name: 'Project B' });
+      });
 
-      const results = await getProjects(userId);
-      expect(results).toHaveLength(2);
-      expect(results[0].name).toBe('Beta');
-      expect(results[1].name).toBe('Alpha');
-    });
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        const results = await getProjects();
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Project A');
+      });
 
-    it('does not return other users projects', async () => {
-      await createProject(userId, { name: 'Mine' });
-      await createProject(otherUserId, { name: 'Yours' });
-
-      const results = await getProjects(userId);
-      expect(results).toHaveLength(1);
-      expect(results[0].name).toBe('Mine');
+      await tenantStorage.run({ tenantId: tenantB }, async () => {
+        const results = await getProjects();
+        expect(results).toHaveLength(1);
+        expect(results[0].name).toBe('Project B');
+      });
     });
   });
 
   describe('getProjectById', () => {
     it('returns the project by id', async () => {
       const created = await createProject(userId, { name: 'Target' });
-      const result = await getProjectById(userId, created.projectId);
+      const result = await getProjectById(created.projectId);
       expect(result).toBeDefined();
       expect(result!.name).toBe('Target');
     });
 
     it('returns null for non-existent project', async () => {
-      const result = await getProjectById(userId, 'non-existent');
+      const result = await getProjectById('non-existent');
       expect(result).toBeNull();
     });
 
-    it('prevents cross-user access', async () => {
-      const created = await createProject(userId, { name: 'Secret' });
-      const result = await getProjectById(otherUserId, created.projectId);
-      expect(result).toBeNull();
+    it('prevents cross-tenant access', async () => {
+      let projectId = '';
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        const created = await createProject(userId, { name: 'Secret' });
+        projectId = created.projectId;
+      });
+
+      await tenantStorage.run({ tenantId: tenantB }, async () => {
+        const result = await getProjectById(projectId);
+        expect(result).toBeNull();
+      });
     });
   });
 
   describe('updateProject', () => {
-    it('updates project fields', async () => {
-      const created = await createProject(userId, { name: 'Old' });
-      const result = await updateProject(userId, created.projectId, {
-        name: 'New',
-        instructions: 'New instructions',
+    it('updates project fields within same tenant', async () => {
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        const created = await createProject(userId, { name: 'Old' });
+        const result = await updateProject(created.projectId, {
+          name: 'New',
+          instructions: 'New instructions',
+        });
+        expect(result).toBeDefined();
+        expect(result!.name).toBe('New');
+        expect(result!.instructions).toBe('New instructions');
       });
-      expect(result).toBeDefined();
-      expect(result!.name).toBe('New');
-      expect(result!.instructions).toBe('New instructions');
     });
 
-    it('returns null for non-existent project', async () => {
-      const result = await updateProject(userId, 'non-existent', { name: 'X' });
-      expect(result).toBeNull();
+    it('prevents cross-tenant update', async () => {
+      let projectId = '';
+      await tenantStorage.run({ tenantId: tenantA }, async () => {
+        const created = await createProject(userId, { name: 'Untouchable' });
+        projectId = created.projectId;
+      });
+
+      await tenantStorage.run({ tenantId: tenantB }, async () => {
+        const result = await updateProject(projectId, { name: 'Hacked' });
+        expect(result).toBeNull();
+      });
     });
   });
 
@@ -167,21 +179,16 @@ describe('ProjectMethods', () => {
         projectId: created.projectId,
       });
 
-      const result = await deleteProject(userId, created.projectId);
+      const result = await deleteProject(created.projectId);
       expect(result).toBeDefined();
       expect(result!.name).toBe('ToDelete');
 
-      const remaining = await Project.find({ user: userId }).lean();
+      const remaining = await Project.find({}).lean();
       expect(remaining).toHaveLength(0);
 
       const convo = await Conversation.findOne({ conversationId: 'conv1' }).lean();
       expect(convo).toBeDefined();
       expect((convo as Record<string, unknown>).projectId).toBeUndefined();
-    });
-
-    it('returns null for non-existent project', async () => {
-      const result = await deleteProject(userId, 'non-existent');
-      expect(result).toBeNull();
     });
   });
 
@@ -189,16 +196,11 @@ describe('ProjectMethods', () => {
     it('archives and unarchives a project', async () => {
       const created = await createProject(userId, { name: 'ArchiveMe' });
 
-      let result = await archiveProject(userId, created.projectId, true);
+      let result = await archiveProject(created.projectId, true);
       expect(result!.isArchived).toBe(true);
 
-      result = await archiveProject(userId, created.projectId, false);
+      result = await archiveProject(created.projectId, false);
       expect(result!.isArchived).toBe(false);
-    });
-
-    it('returns null for non-existent project', async () => {
-      const result = await archiveProject(userId, 'non-existent', true);
-      expect(result).toBeNull();
     });
   });
 });

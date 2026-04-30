@@ -48,28 +48,36 @@ router.use(requireJwtAuth);
  */
 router.get('/', async (req, res) => {
   try {
-    const ownProjects = await getProjects(req.user.id);
+    const { hasCapability } = require('~/server/middleware/roles/capabilities');
+    const { ResourceCapabilityMap } = require('@librechat/data-schemas');
+    const cap = ResourceCapabilityMap[ResourceType.PROJECT];
+    const hasCap = await hasCapability(req.user, cap);
 
-    const principals = await getUserPrincipals({ userId: req.user.id, role: req.user.role });
-    const accessibleIds = await findAccessibleResources(
-      principals,
-      ResourceType.PROJECT,
-      PermissionBits.VIEW,
-    );
+    const Project = require('~/models').Project || require('mongoose').models.Project;
+    let projects;
 
-    let sharedProjects = [];
-    if (accessibleIds.length > 0) {
-      const Project = require('~/models').Project || require('mongoose').models.Project;
-      sharedProjects = await Project.find({
+    if (hasCap) {
+      projects = await Project.find({}).sort({ updatedAt: -1 }).lean();
+    } else {
+      const principals = await getUserPrincipals({ userId: req.user.id, role: req.user.role });
+      const accessibleIds = await findAccessibleResources(
+        principals,
+        ResourceType.PROJECT,
+        PermissionBits.VIEW,
+      );
+
+      if (accessibleIds.length === 0) {
+        return res.status(200).json([]);
+      }
+
+      projects = await Project.find({
         _id: { $in: accessibleIds },
-        user: { $ne: req.user.id },
       })
         .sort({ updatedAt: -1 })
         .lean();
     }
 
-    const allProjects = [...ownProjects, ...sharedProjects];
-    res.status(200).json(allProjects);
+    res.status(200).json(projects);
   } catch (error) {
     logger.error('Error getting projects:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -83,20 +91,6 @@ router.get('/', async (req, res) => {
 router.post('/', checkProjectCreate, async (req, res) => {
   try {
     const project = await createProject(req.user.id, req.body);
-    if (project?._id) {
-      try {
-        await grantPermission(
-          'user',
-          req.user.id,
-          ResourceType.PROJECT,
-          project._id,
-          PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
-          req.user.id,
-        );
-      } catch (aclError) {
-        logger.error('Error granting owner permission for project:', aclError);
-      }
-    }
     res.status(201).json(project);
   } catch (error) {
     logger.error('Error creating project:', error);
@@ -115,8 +109,7 @@ router.get(
   async (req, res) => {
     try {
       const project =
-        (await getProjectById(req.user.id, req.params.projectId)) ||
-        (await findProjectById(req.params.projectId));
+        req.resourceAccess?.resourceInfo || (await getProjectById(req.params.projectId));
       if (project) {
         res.status(200).json(project);
       } else {
@@ -139,7 +132,7 @@ router.put(
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
-      const project = await updateProject(req.user.id, req.params.projectId, req.body);
+      const project = await updateProject(req.params.projectId, req.body);
       if (project) {
         res.status(200).json(project);
       } else {
@@ -162,7 +155,7 @@ router.delete(
   canAccessProjectResource({ requiredPermission: PermissionBits.DELETE }),
   async (req, res) => {
     try {
-      const project = await deleteProject(req.user.id, req.params.projectId);
+      const project = await deleteProject(req.params.projectId);
       if (project) {
         try {
           await deleteAclEntries({ resourceType: ResourceType.PROJECT, resourceId: project._id });
@@ -194,7 +187,7 @@ router.put(
       if (typeof isArchived !== 'boolean') {
         return res.status(400).json({ error: 'isArchived must be a boolean' });
       }
-      const project = await archiveProject(req.user.id, req.params.projectId, isArchived);
+      const project = await archiveProject(req.params.projectId, isArchived);
       if (project) {
         res.status(200).json(project);
       } else {
