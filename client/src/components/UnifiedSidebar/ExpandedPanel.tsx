@@ -8,6 +8,7 @@ import type { NavLink } from '~/common';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import { useLocalize, useNewConvo } from '~/hooks';
+import { useProjectByIdQuery } from '~/data-provider';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
@@ -23,6 +24,10 @@ const NewChatButton = memo(function NewChatButton({
   const { newConversation } = useNewConvo();
   const conversation = useRecoilValue(store.conversationByIndex(0));
   const switchToHistory = useRecoilValue(store.newChatSwitchToHistory);
+  const selectedProjectId = useRecoilValue(store.selectedProjectId);
+  const { data: project } = useProjectByIdQuery(selectedProjectId ?? '', {
+    enabled: !!selectedProjectId,
+  });
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -30,13 +35,32 @@ const NewChatButton = memo(function NewChatButton({
         e.preventDefault();
         clearMessagesCache(queryClient, conversation?.conversationId);
         queryClient.invalidateQueries([QueryKeys.messages]);
-        newConversation();
+
+        const template: Partial<Parameters<typeof newConversation>[0]['template']> = {};
+        if (project) {
+          template.projectId = project.projectId;
+          if (project.endpoint) {
+            template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+          }
+          if (project.model) {
+            template.model = project.model;
+          }
+        }
+
+        newConversation(Object.keys(template).length > 0 ? { template } : undefined);
         if (switchToHistory) {
           setActive(DEFAULT_PANEL);
         }
       }
     },
-    [queryClient, conversation?.conversationId, newConversation, switchToHistory, setActive],
+    [
+      queryClient,
+      conversation?.conversationId,
+      newConversation,
+      switchToHistory,
+      setActive,
+      project,
+    ],
   );
 
   return (

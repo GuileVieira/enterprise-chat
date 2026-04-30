@@ -97,9 +97,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {activeTab === 'conversations' && (
-          <ProjectConversationsTab projectId={project.projectId} />
-        )}
+        {activeTab === 'conversations' && <ProjectConversationsTab project={project} />}
         {activeTab === 'prompts' && (
           <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
         )}
