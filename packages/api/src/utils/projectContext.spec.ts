@@ -1,4 +1,4 @@
-import { loadProjectInstructions, loadProjectMemories } from './projectContext';
+import { loadProjectInstructions, loadProjectMemories, loadProjectFileIds } from './projectContext';
 
 describe('loadProjectInstructions', () => {
   it('should return null when projectId is not provided', async () => {
@@ -108,5 +108,47 @@ describe('loadProjectMemories', () => {
       memoryKeys: ['pref'],
     });
     expect(result).toBe('## Project Memories\n\n- tone: friendly');
+  });
+});
+
+describe('loadProjectFileIds', () => {
+  it('should return null when project is null', async () => {
+    const result = await loadProjectFileIds(null);
+    expect(result).toBeNull();
+  });
+
+  it('should return null when project is undefined', async () => {
+    const result = await loadProjectFileIds(undefined);
+    expect(result).toBeNull();
+  });
+
+  it('should return null when fileIds is empty', async () => {
+    const result = await loadProjectFileIds({ fileIds: [] });
+    expect(result).toBeNull();
+  });
+
+  it('should return fileIds directly when no validator is provided', async () => {
+    const result = await loadProjectFileIds({ fileIds: ['f1', 'f2', 'f3'] });
+    expect(result).toEqual(['f1', 'f2', 'f3']);
+  });
+
+  it('should filter fileIds through validator', async () => {
+    const validateFileIds = jest.fn().mockResolvedValue(['f1', 'f3']);
+    const result = await loadProjectFileIds({ fileIds: ['f1', 'f2', 'f3'] }, validateFileIds);
+    expect(result).toEqual(['f1', 'f3']);
+    expect(validateFileIds).toHaveBeenCalledWith(['f1', 'f2', 'f3']);
+  });
+
+  it('should return null when all fileIds are invalid', async () => {
+    const validateFileIds = jest.fn().mockResolvedValue([]);
+    const result = await loadProjectFileIds({ fileIds: ['f1', 'f2'] }, validateFileIds);
+    expect(result).toBeNull();
+  });
+
+  it('should propagate error when validator throws', async () => {
+    const validateFileIds = jest.fn().mockRejectedValue(new Error('DB error'));
+    await expect(loadProjectFileIds({ fileIds: ['f1'] }, validateFileIds)).rejects.toThrow(
+      'DB error',
+    );
   });
 });

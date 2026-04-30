@@ -1,6 +1,8 @@
 const express = require('express');
 const request = require('supertest');
 
+const mockProjectFind = jest.fn();
+
 jest.mock('~/models', () => ({
   getProjects: jest.fn(),
   getProjectById: jest.fn(),
@@ -14,6 +16,7 @@ jest.mock('~/models', () => ({
   grantPermission: jest.fn(),
   deleteAclEntries: jest.fn(),
   getRoleByName: jest.fn(),
+  Project: { find: () => ({ sort: () => ({ lean: mockProjectFind }) }) },
 }));
 
 jest.mock('~/server/middleware', () => ({
@@ -24,19 +27,15 @@ jest.mock('~/server/middleware', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
-  generateCheckAccess:
-    () =>
-    (req, res, next) => {
-      next();
-    },
+  generateCheckAccess: () => (req, res, next) => {
+    next();
+  },
 }));
 
 jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
-  canAccessProjectResource:
-    () =>
-    (req, res, next) => {
-      next();
-    },
+  canAccessProjectResource: () => (req, res, next) => {
+    next();
+  },
 }));
 
 describe('Projects Routes', () => {
@@ -51,6 +50,8 @@ describe('Projects Routes', () => {
     archiveProject,
     getUserPrincipals,
     findAccessibleResources,
+    grantPermission,
+    deleteAclEntries,
   } = require('~/models');
 
   beforeAll(() => {
@@ -90,6 +91,24 @@ describe('Projects Routes', () => {
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Internal server error');
     });
+
+    it('should include shared projects from accessible resources', async () => {
+      const ownProjects = [{ projectId: 'proj-1', name: 'Own Project', user: 'test-user-123' }];
+      const sharedProjects = [
+        { _id: 'shared-id', projectId: 'proj-2', name: 'Shared Project', user: 'other-user' },
+      ];
+      getProjects.mockResolvedValue(ownProjects);
+      getUserPrincipals.mockResolvedValue([{ id: 'group-1', type: 'group' }]);
+      findAccessibleResources.mockResolvedValue(['shared-id']);
+      mockProjectFind.mockResolvedValue(sharedProjects);
+
+      const response = await request(app).get('/api/projects');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0]).toEqual(ownProjects[0]);
+      expect(response.body[1]).toEqual(sharedProjects[0]);
+    });
   });
 
   describe('POST /', () => {
@@ -117,6 +136,29 @@ describe('Projects Routes', () => {
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Internal server error');
     });
+
+    it('should grant owner permission after creation', async () => {
+      const mockProject = {
+        projectId: 'proj-1',
+        name: 'New Project',
+        user: 'test-user-123',
+        _id: 'mock-object-id',
+      };
+      createProject.mockResolvedValue(mockProject);
+      grantPermission.mockResolvedValue(undefined);
+
+      const response = await request(app).post('/api/projects').send({ name: 'New Project' });
+
+      expect(response.status).toBe(201);
+      expect(grantPermission).toHaveBeenCalledWith(
+        'user',
+        'test-user-123',
+        'project',
+        'mock-object-id',
+        expect.any(Number),
+        'test-user-123',
+      );
+    });
   });
 
   describe('GET /:projectId', () => {
@@ -139,6 +181,17 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Project not found');
+    });
+
+    it('should fallback to findProjectById for shared projects', async () => {
+      const mockProject = { projectId: 'proj-1', name: 'Shared Project', user: 'other-user' };
+      getProjectById.mockResolvedValue(null);
+      findProjectById.mockResolvedValue(mockProject);
+
+      const response = await request(app).get('/api/projects/proj-1');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockProject);
     });
   });
 
@@ -183,6 +236,25 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Project not found');
+    });
+
+    it('should delete ACL entries after project deletion', async () => {
+      const mockProject = {
+        projectId: 'proj-1',
+        name: 'Deleted',
+        user: 'test-user-123',
+        _id: 'mock-object-id',
+      };
+      deleteProject.mockResolvedValue(mockProject);
+      deleteAclEntries.mockResolvedValue(undefined);
+
+      const response = await request(app).delete('/api/projects/proj-1');
+
+      expect(response.status).toBe(200);
+      expect(deleteAclEntries).toHaveBeenCalledWith({
+        resourceType: 'project',
+        resourceId: 'mock-object-id',
+      });
     });
   });
 
