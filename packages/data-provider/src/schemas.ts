@@ -1100,6 +1100,7 @@ export const googleBaseSchema = tConversationSchema.pick({
   greeting: true,
   spec: true,
   maxContextTokens: true,
+  projectId: true,
 });
 
 export const googleSchema = googleBaseSchema
@@ -1196,6 +1197,7 @@ const compactAssistantBaseSchema = tConversationSchema.pick({
   iconURL: true,
   greeting: true,
   spec: true,
+  projectId: true,
 });
 
 export const compactAssistantSchema = compactAssistantBaseSchema
@@ -1280,6 +1282,7 @@ export const openAIBaseSchema = tConversationSchema.pick({
   web_search: true,
   disableStreaming: true,
   fileTokenLimit: true,
+  projectId: true,
 });
 
 export const openAISchema = openAIBaseSchema
@@ -1334,6 +1337,7 @@ export const anthropicBaseSchema = tConversationSchema.pick({
   fileTokenLimit: true,
   stop: true,
   stream: true,
+  projectId: true,
 });
 
 export const anthropicSchema = anthropicBaseSchema
@@ -1360,6 +1364,7 @@ export const compactAgentsBaseSchema = tConversationSchema.pick({
   agent_id: true,
   instructions: true,
   additional_instructions: true,
+  projectId: true,
 });
 
 export const compactAgentsSchema = compactAgentsBaseSchema

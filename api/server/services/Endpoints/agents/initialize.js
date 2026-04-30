@@ -289,33 +289,37 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   });
 
   /** Load project context (instructions + memories) if conversation belongs to a project */
-  if (conversationId) {
+  let projectId = req.body.projectId;
+  if (!projectId && conversationId && conversationId !== 'new') {
+    const conversation = await db.getConvo(req.user.id, conversationId);
+    projectId = conversation?.projectId;
+  }
+
+  if (projectId) {
     try {
-      const conversation = await db.getConvo(req.user.id, conversationId);
-      if (conversation?.projectId) {
-        const project = await db.getProjectById(req.user.id, conversation.projectId);
-        const contextParts = [];
-        if (project?.instructions) {
-          contextParts.push(project.instructions);
-        }
-        const projectMemories = await loadProjectMemories(
-          project,
-          async (uid) => {
-            const memories = await db.getAllUserMemories(uid);
-            return memories.map((m) => ({ key: m.key, value: m.value }));
-          },
-          req.user.id,
-        );
-        if (projectMemories) {
-          contextParts.push(projectMemories);
-        }
-        if (contextParts.length > 0) {
-          primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
-        }
-        const projectFileIds = await loadProjectFileIds(project, async (_ids) => {
-          const files = await db.getFilesByProjectId(conversation.projectId);
-          return files?.map((f) => f.file_id) ?? [];
-        });
+      const project = await db.getProjectById(req.user.id, projectId);
+      const contextParts = [];
+      if (project?.instructions) {
+        contextParts.push(project.instructions);
+      }
+      const projectMemories = await loadProjectMemories(
+        project,
+        async (uid) => {
+          const memories = await db.getAllUserMemories(uid);
+          return memories.map((m) => ({ key: m.key, value: m.value }));
+        },
+        req.user.id,
+      );
+      if (projectMemories) {
+        contextParts.push(projectMemories);
+      }
+      if (contextParts.length > 0) {
+        primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
+      }
+      const projectFileIds = await loadProjectFileIds(project, async () => {
+        const files = await db.getFilesByProjectId(projectId);
+        return files?.map((f) => f.file_id) ?? [];
+      });
         if (projectFileIds && projectFileIds.length > 0) {
           const existingIds = new Set(requestFiles.map((f) => f.file_id));
           const newProjectFiles = await db.getFiles({ file_id: { $in: projectFileIds } }, null, {
@@ -326,7 +330,6 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
               requestFiles.push(file);
             }
           }
-        }
       }
     } catch (err) {
       logger.error('[initializeClient] Error loading project context', err);
