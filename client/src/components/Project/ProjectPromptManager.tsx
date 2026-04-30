@@ -1,9 +1,26 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Plus, X, Save } from 'lucide-react';
-import { usePromptGroupsInfiniteQuery, useUpdateProjectMutation } from '~/data-provider';
+import { usePromptGroupsInfiniteQuery, useUpdateProjectMutation, useGetPromptGroup } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 import type { TProject } from 'librechat-data-provider';
+
+function PromptGroupBadge({ groupId }: { groupId: string }) {
+  const groupQuery = useGetPromptGroup(groupId);
+  const group = groupQuery.data;
+
+  if (groupQuery.isLoading) {
+    return (
+      <span className="h-6 w-24 animate-pulse rounded-full bg-surface-tertiary" />
+    );
+  }
+
+  return (
+    <span className="rounded-full bg-surface-tertiary px-3 py-1 text-xs text-text-primary">
+      {group?.name ?? groupId}
+    </span>
+  );
+}
 
 interface ProjectPromptManagerProps {
   project: TProject;
@@ -69,7 +86,9 @@ export default function ProjectPromptManager({ project }: ProjectPromptManagerPr
           </h3>
           <div className="flex items-center gap-2">
             {hasChanges && (
-              <span className="text-xs text-text-tertiary">{localize('com_ui_unsaved_changes')}</span>
+              <span className="text-xs text-text-tertiary">
+                {localize('com_ui_unsaved_changes')}
+              </span>
             )}
             <button
               type="button"
@@ -160,12 +179,7 @@ export default function ProjectPromptManager({ project }: ProjectPromptManagerPr
       {project.promptGroupIds && project.promptGroupIds.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {project.promptGroupIds.map((id) => (
-            <span
-              key={id}
-              className="rounded-full bg-surface-tertiary px-3 py-1 text-xs text-text-primary"
-            >
-              {id}
-            </span>
+            <PromptGroupBadge key={id} groupId={id} />
           ))}
         </div>
       ) : (

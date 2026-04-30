@@ -10,6 +10,7 @@ import ProjectConversationsTab from './ProjectConversationsTab';
 import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectFileUploader from './ProjectFileUploader';
 import ProjectForm from './ProjectForm';
+import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
 type Tab = (typeof tabs)[number];
@@ -103,13 +104,19 @@ export default function ProjectDetailPage() {
       <div className="flex-1 overflow-auto p-6">
         {activeTab === 'conversations' && <ProjectConversationsTab project={project} />}
         {activeTab === 'prompts' && (
-          <>
-            {permissions.canEdit || permissions.canDelete ? (
-              <ProjectPromptManager project={project} />
-            ) : (
-              <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
-            )}
-          </>
+          <div className="flex flex-col gap-8">
+            <ProjectPromptSnippetsManager project={project} />
+            <div className="border-t border-border-light pt-8">
+              <h3 className="mb-4 text-sm font-medium text-text-primary">
+                {localize('com_ui_project_prompt_groups')}
+              </h3>
+              {permissions.canEdit || permissions.canDelete ? (
+                <ProjectPromptManager project={project} />
+              ) : (
+                <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
+              )}
+            </div>
+          </div>
         )}
         {activeTab === 'memories' && (
           <>
@@ -128,7 +135,9 @@ export default function ProjectDetailPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
+                  <div className="text-text-secondary">
+                    {localize('com_ui_project_no_memories')}
+                  </div>
                 )}
               </div>
             )}
