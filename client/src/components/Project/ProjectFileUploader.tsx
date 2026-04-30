@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import {
-  OGDialog,
-  OGDialogTemplate,
+  Dialog,
+  DialogTemplate,
 } from '@librechat/client';
 import {
   useUploadFileMutation,
@@ -207,15 +207,15 @@ export default function ProjectFileUploader({
         </div>
       )}
 
-      <OGDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <OGDialogTemplate
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogTemplate
           showCloseButton={false}
           className="max-w-[400px]"
           title={localize('com_ui_project_file_delete_confirm')}
+          headerClassName="[&>h2]:break-all [&>p]:break-words"
           description={localize('com_ui_delete_confirm_file_description', {
             filename: fileToDelete?.filename ?? '',
           })}
-          headerClassName="[&>p]:break-words"
           selection={{
             selectHandler: confirmDelete,
             selectText: localize('com_ui_delete'),
@@ -223,7 +223,7 @@ export default function ProjectFileUploader({
               'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700',
           }}
         />
-      </OGDialog>
+      </Dialog>
     </div>
   );
 }
