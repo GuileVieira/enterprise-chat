@@ -50,7 +50,7 @@ const maybeLinkFileToProject = async (req, file_id) => {
     return;
   }
   try {
-    await db.addProjectFileId(req.user.id, req.body.projectId, file_id);
+    await db.addProjectFileId(req.body.projectId, file_id);
   } catch (error) {
     logger.error('[maybeLinkFileToProject] Error linking file to project:', error);
   }
@@ -574,7 +574,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
     throw new Error('Image uploads are not supported for file search tool resources');
   }
 
-  if (!messageAttachment && !agent_id) {
+  if (!messageAttachment && !agent_id && !req.body.projectId) {
     throw new Error('No agent ID provided for agent file upload');
   }
 
