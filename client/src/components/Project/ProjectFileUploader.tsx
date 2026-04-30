@@ -1,8 +1,14 @@
 import { useRef, useState } from 'react';
 import { Upload, Trash2, FileText } from 'lucide-react';
 import {
-  Dialog,
-  DialogTemplate,
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
 } from '@librechat/client';
 import {
   useUploadFileMutation,
@@ -207,23 +213,31 @@ export default function ProjectFileUploader({
         </div>
       )}
 
-      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <DialogTemplate
-          showCloseButton={false}
-          className="max-w-[400px]"
-          title={localize('com_ui_project_file_delete_confirm')}
-          headerClassName="[&>h2]:break-all [&>p]:break-words"
-          description={localize('com_ui_delete_confirm_file_description', {
-            filename: fileToDelete?.filename ?? '',
-          })}
-          selection={{
-            selectHandler: confirmDelete,
-            selectText: localize('com_ui_delete'),
-            selectClasses:
-              'bg-red-600 hover:bg-red-700 text-white dark:bg-red-600 dark:hover:bg-red-700',
-          }}
-        />
-      </Dialog>
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="break-all text-foreground">
+              {localize('com_ui_project_file_delete_confirm')}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="break-words text-muted-foreground">
+              {localize('com_ui_delete_confirm_file_description', {
+                filename: fileToDelete?.filename ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-none bg-secondary text-foreground hover:bg-secondary/80">
+              {localize('com_ui_cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+            >
+              {localize('com_ui_delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
