@@ -112,43 +112,71 @@ export const router = createBrowserRouter(
           children: [
             {
               index: true,
-              lazy: () => import('~/components/Admin/Dashboard').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Dashboard').then((m) => ({ Component: m.default })),
             },
             {
               path: 'users',
-              lazy: () => import('~/components/Admin/Users/UsersPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Users/UsersPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'roles',
-              lazy: () => import('~/components/Admin/Roles/RolesPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Roles/RolesPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'groups',
-              lazy: () => import('~/components/Admin/Groups/GroupsPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Groups/GroupsPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'config',
-              lazy: () => import('~/components/Admin/Config/ConfigPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Config/ConfigPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'groups/:id',
-              lazy: () => import('~/components/Admin/Groups/GroupDetailPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Groups/GroupDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'tenants',
-              lazy: () => import('~/components/Admin/Tenants/TenantsPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Tenants/TenantsPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'tenants/:id',
-              lazy: () => import('~/components/Admin/Tenants/TenantDetailPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Tenants/TenantDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'functions',
-              lazy: () => import('~/components/Admin/Functions/FunctionsPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Functions/FunctionsPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
             {
               path: 'secrets',
-              lazy: () => import('~/components/Admin/Secrets/SecretsPage').then((m) => ({ Component: m.default })),
+              lazy: () =>
+                import('~/components/Admin/Secrets/SecretsPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
           ],
         },
@@ -207,6 +235,13 @@ export const router = createBrowserRouter(
                   <AgentMarketplace />
                 </MarketplaceProvider>
               ),
+            },
+            {
+              path: 'projects/:projectId',
+              lazy: () =>
+                import('~/components/Project/ProjectDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
           ],
         },

@@ -1873,5 +1873,17 @@
   "com_admin_users": "Users",
   "com_admin_users_description": "Audit accounts, roles, and permission paths.",
   "com_admin_users_page_description": "Manage user accounts and permissions.",
-  "com_admin_view_members": "View Members"
+  "com_admin_view_members": "View Members",
+  "com_ui_project_not_found": "Project not found",
+  "com_ui_project_tab_conversations": "Conversations",
+  "com_ui_project_tab_prompts": "Prompts",
+  "com_ui_project_tab_memories": "Memories",
+  "com_ui_project_tab_settings": "Settings",
+  "com_ui_project_conversations_placeholder": "Conversations will appear here",
+  "com_ui_project_no_memories": "No memories configured",
+  "com_ui_project_no_instructions": "No instructions configured",
+  "com_ui_project_instructions": "Instructions",
+  "com_ui_project_model": "Model",
+  "com_ui_project_no_prompt_groups": "No prompt groups associated",
+  "com_ui_project_prompt_group_not_found": "Prompt group not found"
 }
