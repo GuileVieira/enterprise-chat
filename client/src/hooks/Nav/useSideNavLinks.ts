@@ -4,6 +4,7 @@ import {
   Bot,
   Brain,
   Bookmark,
+  Folder,
   NotebookPen,
   ArrowRightToLine,
   SlidersHorizontal,
@@ -25,6 +26,7 @@ import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
+import ProjectsPanel from '~/components/SidePanel/Projects/ProjectsPanel';
 import { useHasAccess, useMCPServerManager } from '~/hooks';
 import { PromptsAccordion } from '~/components/Prompts';
 
@@ -76,6 +78,10 @@ export default function useSideNavLinks({
   const hasAccessToCreateMCP = useHasAccess({
     permissionType: PermissionTypes.MCP_SERVERS,
     permission: Permissions.CREATE,
+  });
+  const hasAccessToProjects = useHasAccess({
+    permissionType: PermissionTypes.PROJECTS,
+    permission: Permissions.USE,
   });
   const { availableMCPServers } = useMCPServerManager();
 
@@ -182,6 +188,16 @@ export default function useSideNavLinks({
       });
     }
 
+    if (hasAccessToProjects) {
+      links.push({
+        title: 'com_ui_projects',
+        label: '',
+        icon: Folder,
+        id: 'projects',
+        Component: ProjectsPanel,
+      });
+    }
+
     if (includeHidePanel && hidePanel) {
       links.push({
         title: 'com_sidepanel_hide_panel',
@@ -208,6 +224,7 @@ export default function useSideNavLinks({
     availableMCPServers,
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
+    hasAccessToProjects,
     includeHidePanel,
     hidePanel,
   ]);

@@ -21,6 +21,9 @@ jest.mock('~/server/middleware', () => ({
     req.user = req.user || { id: 'test-user-123', role: 'USER' };
     next();
   },
+}));
+
+jest.mock('@librechat/api', () => ({
   generateCheckAccess:
     () =>
     (req, res, next) => {

@@ -220,6 +220,13 @@ export const router = createBrowserRouter(
               ),
             },
             {
+              path: 'projects/new',
+              lazy: () =>
+                import('~/components/Project/ProjectCreatePage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
               path: 'projects/:projectId',
               lazy: () =>
                 import('~/components/Project/ProjectDetailPage').then((m) => ({
