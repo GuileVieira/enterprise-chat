@@ -421,6 +421,10 @@ export const getFilePreview = (fileId: string): Promise<f.TFilePreview> => {
   return request.get(endpoints.filePreview(fileId));
 };
 
+export const getProjectFiles = (projectId: string): Promise<f.TFile[]> => {
+  return request.get(endpoints.projectFiles(projectId));
+};
+
 export const getAgentFiles = (agentId: string): Promise<f.TFile[]> => {
   return request.get(endpoints.agentFiles(agentId));
 };
@@ -942,9 +946,7 @@ export function getCategories(): Promise<t.TGetCategoriesResponse> {
   return request.get(endpoints.getCategories());
 }
 
-export function createCategory(
-  variables: t.TCreateCategoryRequest,
-): Promise<t.TCategory> {
+export function createCategory(variables: t.TCreateCategoryRequest): Promise<t.TCategory> {
   return request.post(endpoints.postCategory(), variables);
 }
 
@@ -1132,7 +1134,10 @@ export function createAdminUser(payload: {
 }
 
 /* Admin Groups */
-export function listAdminGroups(page: number = 1, limit: number = 50): Promise<q.ListGroupsResponse> {
+export function listAdminGroups(
+  page: number = 1,
+  limit: number = 50,
+): Promise<q.ListGroupsResponse> {
   return request.get(`${endpoints.adminGroups()}?page=${page}&limit=${limit}`);
 }
 
@@ -1144,7 +1149,10 @@ export function createAdminGroup(payload: m.CreateGroupPayload): Promise<q.Group
   return request.post(endpoints.adminGroups(), payload);
 }
 
-export function updateAdminGroup(id: string, payload: m.UpdateGroupPayload): Promise<q.GroupResponse> {
+export function updateAdminGroup(
+  id: string,
+  payload: m.UpdateGroupPayload,
+): Promise<q.GroupResponse> {
   return request.patch(endpoints.adminGroupById(id), payload);
 }
 
@@ -1195,9 +1203,7 @@ export function getAdminTenantUsers(
   page: number = 1,
   limit: number = 50,
 ): Promise<q.ListUsersResponse> {
-  return request.get(
-    `${endpoints.adminTenantUsers(tenantId)}?page=${page}&limit=${limit}`,
-  );
+  return request.get(`${endpoints.adminTenantUsers(tenantId)}?page=${page}&limit=${limit}`);
 }
 
 export function getAdminTenantStats(tenantId: string): Promise<q.TenantStatsResponse> {
@@ -1220,7 +1226,10 @@ export function updateAdminFunction(
   tenantId: string,
   payload: Partial<q.TenantFunction>,
 ): Promise<q.TenantFunctionResponse> {
-  return request.patch(`${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`, payload);
+  return request.patch(
+    `${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+    payload,
+  );
 }
 
 export function toggleAdminFunction(
@@ -1228,11 +1237,16 @@ export function toggleAdminFunction(
   tenantId: string,
   isActive: boolean,
 ): Promise<q.TenantFunctionResponse> {
-  return request.patch(`${endpoints.adminFunctionToggle(id)}?tenantId=${encodeURIComponent(tenantId)}`, { isActive });
+  return request.patch(
+    `${endpoints.adminFunctionToggle(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+    { isActive },
+  );
 }
 
 export function deleteAdminFunction(id: string, tenantId: string): Promise<unknown> {
-  return request.delete(`${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`);
+  return request.delete(
+    `${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
 }
 
 /* Admin Secrets */
@@ -1250,7 +1264,9 @@ export function createAdminSecret(payload: {
 }
 
 export function deleteAdminSecret(name: string, tenantId: string): Promise<unknown> {
-  return request.delete(`${endpoints.adminSecretByName(name)}?tenantId=${encodeURIComponent(tenantId)}`);
+  return request.delete(
+    `${endpoints.adminSecretByName(name)}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
 }
 
 export function updatePromptPermissions(

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useProjectByIdQuery } from '~/data-provider';
+import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import ProjectPromptGroups from './ProjectPromptGroups';
 
-const tabs = ['conversations', 'prompts', 'memories', 'settings'] as const;
+const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
 type Tab = (typeof tabs)[number];
 
 export default function ProjectDetailPage() {
@@ -12,6 +12,7 @@ export default function ProjectDetailPage() {
   const localize = useLocalize();
   const [activeTab, setActiveTab] = useState<Tab>('conversations');
   const projectQuery = useProjectByIdQuery(projectId ?? '');
+  const filesQuery = useGetProjectFiles(projectId ?? '');
 
   const project = projectQuery.data;
 
@@ -80,6 +81,31 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
             )}
+          </div>
+        )}
+        {activeTab === 'files' && (
+          <div className="space-y-3">
+            {(() => {
+              if (filesQuery.isLoading) {
+                return (
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+                );
+              }
+              if (filesQuery.data && filesQuery.data.length > 0) {
+                return filesQuery.data.map((file) => (
+                  <div
+                    key={file.file_id}
+                    className="flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary p-3"
+                  >
+                    <div className="text-sm text-text-primary">{file.filename}</div>
+                    <div className="text-xs text-text-secondary">{file.type}</div>
+                  </div>
+                ));
+              }
+              return (
+                <div className="text-text-secondary">{localize('com_ui_project_no_files')}</div>
+              );
+            })()}
           </div>
         )}
         {activeTab === 'settings' && (

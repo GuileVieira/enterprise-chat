@@ -140,6 +140,10 @@ const file: Schema<IMongoFile> = new Schema(
       type: Date,
       expires: 3600, // 1 hour in seconds
     },
+    projectId: {
+      type: String,
+      index: true,
+    },
     tenantId: {
       type: String,
       index: true,

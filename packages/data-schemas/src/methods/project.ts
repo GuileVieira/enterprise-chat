@@ -1,5 +1,4 @@
 import type { Model } from 'mongoose';
-import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 import logger from '~/config/winston';
 import type { IProject } from '~/types';
 
@@ -84,10 +83,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
         return null;
       }
 
-      await Conversation.updateMany(
-        { user, projectId },
-        { $unset: { projectId: 1 } },
-      );
+      await Conversation.updateMany({ user, projectId }, { $unset: { projectId: 1 } });
 
       return deleted;
     } catch (error) {
@@ -110,6 +106,34 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
+  async function addProjectFileId(user: string, projectId: string, fileId: string) {
+    try {
+      const Project = mongoose.models.Project as Model<IProject>;
+      return await Project.findOneAndUpdate(
+        { user, projectId },
+        { $addToSet: { fileIds: fileId } },
+        { new: true, lean: true },
+      );
+    } catch (error) {
+      logger.error('[addProjectFileId] Error adding file to project', error);
+      throw new Error('Error adding file to project');
+    }
+  }
+
+  async function removeProjectFileId(user: string, projectId: string, fileId: string) {
+    try {
+      const Project = mongoose.models.Project as Model<IProject>;
+      return await Project.findOneAndUpdate(
+        { user, projectId },
+        { $pull: { fileIds: fileId } },
+        { new: true, lean: true },
+      );
+    } catch (error) {
+      logger.error('[removeProjectFileId] Error removing file from project', error);
+      throw new Error('Error removing file from project');
+    }
+  }
+
   return {
     getProjects,
     getProjectById,
@@ -117,6 +141,8 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     updateProject,
     deleteProject,
     archiveProject,
+    addProjectFileId,
+    removeProjectFileId,
   };
 }
 
