@@ -21,6 +21,7 @@ import {
   useSubmitMessage,
   useFocusChatEffect,
 } from '~/hooks';
+import { useProjectByIdQuery } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
 import AttachFileChat from './Files/AttachFileChat';
 import FileFormChat from './Files/FileFormChat';
@@ -35,6 +36,7 @@ import SendButton from './SendButton';
 import EditBadges from './EditBadges';
 import BadgeRow from './BadgeRow';
 import Mention from './Mention';
+import ProjectPromptSnippets from './ProjectPromptSnippets';
 import store from '~/store';
 
 interface ChatFormProps {
@@ -119,6 +121,8 @@ const ChatForm = memo(function ChatForm({
     () => requiresKey || invalidAssistant,
     [requiresKey, invalidAssistant],
   );
+
+  const projectQuery = useProjectByIdQuery(conversation?.projectId ?? '');
 
   const handleContainerClick = useCallback(() => {
     /** Check if the device is a touchscreen */
@@ -265,6 +269,12 @@ const ChatForm = memo(function ChatForm({
             )}
           >
             <TextareaHeader addedConvo={addedConvo} setAddedConvo={setAddedConvo} />
+            {conversation?.projectId && projectQuery.data?.promptSnippets ? (
+              <ProjectPromptSnippets
+                snippets={projectQuery.data.promptSnippets}
+                textAreaRef={textAreaRef}
+              />
+            ) : null}
             {/* WIP */}
             <EditBadges
               isEditingChatBadges={isEditingBadges}

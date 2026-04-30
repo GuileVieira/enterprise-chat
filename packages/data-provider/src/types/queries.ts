@@ -329,6 +329,7 @@ export type TenantFunction = {
   tenantId: string;
   name: string;
   description: string;
+  details?: string;
   config: {
     baseUrl: string;
     method: string;

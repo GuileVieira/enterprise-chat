@@ -20,6 +20,9 @@ const tenantFunctionSchema = new Schema<ITenantFunction>(
       type: String,
       required: true,
     },
+    details: {
+      type: String,
+    },
     type: {
       type: String,
       enum: ['http'],
