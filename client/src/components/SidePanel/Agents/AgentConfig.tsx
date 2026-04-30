@@ -18,7 +18,7 @@ import AgentCategorySelector from './AgentCategorySelector';
 import Action from '~/components/SidePanel/Builder/Action';
 import { useLocalize, useVisibleTools } from '~/hooks';
 import { Panel, isEphemeralAgent } from '~/common';
-import { useGetAgentFiles } from '~/data-provider';
+import { useGetAgentFiles, useTenantFunctionsQuery } from '~/data-provider';
 import { icons } from '~/hooks/Endpoint/Icons';
 import Instructions from './Instructions';
 import AgentAvatar from './AgentAvatar';
@@ -29,6 +29,7 @@ import Artifacts from './Artifacts';
 import AgentTool from './AgentTool';
 import CodeForm from './Code/Form';
 import MCPTools from './MCPTools';
+import TenantFunctionsSection from './TenantFunctionsSection';
 
 const labelClass = 'mb-2 text-token-text-primary block text-sm font-medium';
 const inputClass = cn(
@@ -305,6 +306,9 @@ export default function AgentConfig() {
             {fileSearchEnabled && <FileSearch agent_id={agent_id} files={knowledge_files} />}
           </div>
         )}
+        {/* Tenant Functions */}
+        <TenantFunctionsSection agentId={agent_id} tools={tools} control={control} />
+
         {/* MCP Section */}
         {availableMCPServers != null && availableMCPServers.length > 0 && (
           <MCPTools

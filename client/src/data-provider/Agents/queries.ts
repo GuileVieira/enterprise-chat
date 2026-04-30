@@ -18,6 +18,26 @@ export const defaultAgentParams: t.AgentListParams = {
 /**
  * Hook for getting all available tools for A
  */
+/**
+ * Hook for getting active tenant functions for the current user's tenant.
+ */
+export const useTenantFunctionsQuery = (): QueryObserverResult<t.TenantFunctionListResponse> => {
+  const queryClient = useQueryClient();
+  const endpointsConfig = queryClient.getQueryData<t.TEndpointsConfig>([QueryKeys.endpoints]);
+
+  const enabled = !!endpointsConfig?.[EModelEndpoint.agents];
+  return useQuery<t.TenantFunctionListResponse>(
+    [QueryKeys.tenantFunctions],
+    () => dataService.getTenantFunctions(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      enabled,
+    },
+  );
+};
+
 export const useAvailableAgentToolsQuery = (): QueryObserverResult<t.TPlugin[]> => {
   const queryClient = useQueryClient();
   const endpointsConfig = queryClient.getQueryData<t.TEndpointsConfig>([QueryKeys.endpoints]);
