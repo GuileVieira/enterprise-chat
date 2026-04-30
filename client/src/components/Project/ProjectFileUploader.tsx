@@ -64,6 +64,7 @@ export default function ProjectFileUploader({
     formData.append('file_id', crypto.randomUUID());
     formData.append('endpoint', 'agents');
     formData.append('endpointType', 'agents');
+    formData.append('projectId', projectId);
     uploadFile.mutate(formData);
   };
 
