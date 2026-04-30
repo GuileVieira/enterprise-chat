@@ -83,6 +83,12 @@ describe('Telemetry wiring', () => {
   });
 });
 
+jest.mock('~/server/routes/projects', () => {
+  const express = require('express');
+  const router = express.Router();
+  return router;
+});
+
 describe('Server Configuration', () => {
   // Increase the default timeout to allow for Mongo cleanup
   jest.setTimeout(30_000);
