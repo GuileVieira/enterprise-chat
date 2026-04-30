@@ -589,6 +589,14 @@ export const getAvailableAgentTools = (): Promise<s.TPlugin[]> => {
   );
 };
 
+export const getTenantFunctions = (): Promise<q.TenantFunctionListResponse> => {
+  return request.get(
+    endpoints.agents({
+      path: 'tenant-functions',
+    }),
+  );
+};
+
 /* Actions */
 
 export const updateAgentAction = (
