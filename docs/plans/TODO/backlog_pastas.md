@@ -131,13 +131,13 @@ Epic 1 (Foundation)
 
 ---
 
-## Epic 3: Project Memories & Prompts ✅ (parcial)
+## Epic 3: Project Memories & Prompts ✅
 
 **Objetivo**: Projetos têm memórias próprias + referenciam memórias do usuário. Projetos têm prompt snippets rápidos + referenciam Prompt Groups existentes.
 
 **Dependência**: Epic 1 concluído.
 
-**Status**: Stories 3.1–3.4 completas. Story 3.5 (Prompt Groups tab) depende da Epic 6 (Frontend UI) e será feita junto com ela.
+**Status**: 100% completo — 5 stories, 5 commits.
 
 ---
 
@@ -174,52 +174,51 @@ Epic 1 (Foundation)
 
 ---
 
-### Story 3.5: Prompt Groups Tab no Project Detail 🚧
+### Story 3.5: Prompt Groups Tab no Project Detail ✅
 
-**Bloqueado**: Depende da Epic 6 (Project Detail page com tabs). Será implementado junto com a UI de Projects.
+**Arquivos**:
+- `client/src/routes/index.tsx` — Rota `/projects/:projectId`
+- `client/src/components/Project/ProjectDetailPage.tsx` — Página com tabs (Conversations, Prompts, Memories, Settings)
+- `client/src/components/Project/ProjectPromptGroups.tsx` — Lista de Prompt Groups associados com cards
+- `client/src/locales/en/translation.json` — Strings i18n
 |---|---|
 | `client/src/components/Project/ProjectPromptEditor.tsx` | Criar editor de snippets e selector de Prompt Groups |
 | `client/src/components/Chat/Input/ChatForm.tsx` | Se conversa tem `projectId`, renderizar botões de quick-prompt com snippets do project |
 
 ---
 
-## Epic 4: Project Files
+## Epic 4: Project Files ✅
 
 **Objetivo**: Arquivos podem ser anexados ao projeto e são implicitamente disponíveis em todas as conversas do projeto.
 
 **Dependência**: Epic 1 concluído.
 
----
-
-### Story 4.1: File Schema & Upload
-
-**Critérios de Aceitação**:
-- Files aceitam `projectId` no schema/métodos.
-- Upload de arquivo pode ser feito no contexto de um projeto.
-
-**PR 4.1.1 — DB & Upload**
-
-| Arquivo | Ação |
-|---|---|
-| `packages/data-schemas/src/schema/file.ts` | Adicionar `projectId?: string` (se schema separado existir; se não, verificar onde File é definido) |
-| `packages/data-schemas/src/methods/file.ts` | Atualizar `createFile`, `getFiles`, `deleteFile` para suportar `projectId` |
-| `api/server/routes/files/files.js` | Aceitar `projectId` no body de upload. Retornar files por projeto |
+**Status**: 100% completo — 2 stories, 2 commits.
 
 ---
 
-### Story 4.2: Inject Project Files into Conversation
+### Story 4.1: File Schema & Upload ✅
 
-**Critérios de Aceitação**:
-- Ao iniciar uma conversa em um projeto, os `fileIds` do projeto são incluídos no contexto.
+**Arquivos**:
+- `packages/data-schemas/src/schema/file.ts` — `projectId` field (indexed)
+- `packages/data-schemas/src/types/file.ts` — `projectId?: string`
+- `packages/data-schemas/src/methods/file.ts` — `getFilesByProjectId()`
+- `packages/data-schemas/src/methods/project.ts` — `addProjectFileId()` / `removeProjectFileId()` (atomic $addToSet/$pull)
+- `api/server/routes/files/files.js` — `GET /files?projectId=` + `POST /files` accepts `projectId`
+- `api/server/services/Files/process.js` — `maybeLinkFileToProject()` helper; passes `projectId` to `db.createFile()` in all upload flows
+- Data Provider — `projectFiles` endpoint, `QueryKeys.projectFiles`, `getProjectFiles()`, `useGetProjectFiles()`
+- `client/src/components/Project/ProjectDetailPage.tsx` — Files tab
+- `client/src/locales/en/translation.json` — i18n strings
 
-**PR 4.2.1 — Endpoint Initializers**
+---
 
-| Arquivo | Ação |
-|---|---|
-| `packages/api/src/utils/projectContext.ts` | Incluir `project.fileIds` no retorno |
-| `api/server/controllers/agents/client.js` | Merge `project.fileIds` com `req.body.files` |
-| `api/server/controllers/assistants/chatV1.js` | Anexar `project.fileIds` ao thread |
-| `packages/api/src/utils/llm.ts` | Incluir files do project como message parts para endpoints regulares |
+### Story 4.2: Inject Project Files into Conversation ✅
+
+**Arquivos**:
+- `packages/api/src/utils/projectContext.ts` — `loadProjectFileIds()` with optional DB validation callback
+- `api/server/services/Endpoints/agents/initialize.js` — Merges project files into `requestFiles` before `initializeAgent`
+- `api/server/controllers/assistants/chatV1.js` — Loads `projectFileIds` in project context block, merges into `attachedFileIds`
+- `api/server/controllers/assistants/chatV2.js` — Same pattern as v1
 
 ---
 

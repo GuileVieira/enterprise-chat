@@ -23,6 +23,16 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
+  async function findProjectById(projectId: string) {
+    try {
+      const Project = mongoose.models.Project as Model<IProject>;
+      return await Project.findOne({ projectId }).lean();
+    } catch (error) {
+      logger.error('[findProjectById] Error finding project', error);
+      throw new Error('Error finding project');
+    }
+  }
+
   async function createProject(
     user: string,
     data: {
@@ -137,6 +147,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose')) {
   return {
     getProjects,
     getProjectById,
+    findProjectById,
     createProject,
     updateProject,
     deleteProject,

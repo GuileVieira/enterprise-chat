@@ -82,6 +82,16 @@ const checkResourcePermissionAccess = (requiredPermission) => (req, res, next) =
       resourceIdParam: 'resourceId',
       idResolver: getSkillById,
     });
+  } else if (resourceType === ResourceType.PROJECT) {
+    middleware = canAccessResource({
+      resourceType: ResourceType.PROJECT,
+      requiredPermission,
+      resourceIdParam: 'resourceId',
+      idResolver: async (projectCustomId) => {
+        const { findProjectById } = require('~/models');
+        return await findProjectById(projectCustomId);
+      },
+    });
   } else {
     return res.status(400).json({
       error: 'Bad Request',
