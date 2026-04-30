@@ -1,0 +1,106 @@
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useProjectByIdQuery } from '~/data-provider';
+import { useLocalize } from '~/hooks';
+import ProjectPromptGroups from './ProjectPromptGroups';
+
+const tabs = ['conversations', 'prompts', 'memories', 'settings'] as const;
+type Tab = (typeof tabs)[number];
+
+export default function ProjectDetailPage() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const localize = useLocalize();
+  const [activeTab, setActiveTab] = useState<Tab>('conversations');
+  const projectQuery = useProjectByIdQuery(projectId ?? '');
+
+  const project = projectQuery.data;
+
+  if (projectQuery.isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="flex h-full items-center justify-center text-text-secondary">
+        {localize('com_ui_project_not_found')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="border-b border-border-light px-6 py-4">
+        <h1 className="text-xl font-semibold text-text-primary">{project.name}</h1>
+        {project.description ? (
+          <p className="mt-1 text-sm text-text-secondary">{project.description}</p>
+        ) : null}
+      </div>
+
+      <div className="flex border-b border-border-light">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? 'border-b-2 border-text-primary text-text-primary'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {localize(`com_ui_project_tab_${tab}`)}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-auto p-6">
+        {activeTab === 'conversations' && (
+          <div className="text-text-secondary">
+            {localize('com_ui_project_conversations_placeholder')}
+          </div>
+        )}
+        {activeTab === 'prompts' && (
+          <ProjectPromptGroups promptGroupIds={project.promptGroupIds ?? []} />
+        )}
+        {activeTab === 'memories' && (
+          <div className="space-y-3">
+            {project.memories && project.memories.length > 0 ? (
+              project.memories.map((mem, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-border-light bg-surface-secondary p-3"
+                >
+                  <div className="text-sm font-medium text-text-primary">{mem.key}</div>
+                  <div className="mt-1 text-sm text-text-secondary">{mem.value}</div>
+                </div>
+              ))
+            ) : (
+              <div className="text-text-secondary">{localize('com_ui_project_no_memories')}</div>
+            )}
+          </div>
+        )}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary">
+                {localize('com_ui_project_instructions')}
+              </label>
+              <div className="mt-1 rounded-lg border border-border-light bg-surface-secondary p-3 text-sm text-text-primary">
+                {project.instructions || localize('com_ui_project_no_instructions')}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary">
+                {localize('com_ui_project_model')}
+              </label>
+              <div className="mt-1 text-sm text-text-primary">{project.model || '-'}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
