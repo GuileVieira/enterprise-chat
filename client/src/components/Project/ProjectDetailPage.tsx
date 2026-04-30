@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import ProjectPromptGroups from './ProjectPromptGroups';
 
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
@@ -13,6 +14,7 @@ export default function ProjectDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>('conversations');
   const projectQuery = useProjectByIdQuery(projectId ?? '');
   const filesQuery = useGetProjectFiles(projectId ?? '');
+  const { permissions } = useProjectPermissions(projectId ?? '');
 
   const project = projectQuery.data;
 
@@ -35,7 +37,21 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border-light px-6 py-4">
-        <h1 className="text-xl font-semibold text-text-primary">{project.name}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-text-primary">{project.name}</h1>
+          <div className="flex gap-2">
+            {permissions.canEdit && (
+              <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-text-secondary">
+                {localize('com_ui_role_editor')}
+              </span>
+            )}
+            {permissions.canDelete && (
+              <span className="rounded-full bg-surface-tertiary px-2 py-0.5 text-xs text-text-secondary">
+                {localize('com_ui_role_owner')}
+              </span>
+            )}
+          </div>
+        </div>
         {project.description ? (
           <p className="mt-1 text-sm text-text-secondary">{project.description}</p>
         ) : null}

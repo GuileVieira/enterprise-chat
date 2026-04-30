@@ -4,17 +4,36 @@ const request = require('supertest');
 jest.mock('~/models', () => ({
   getProjects: jest.fn(),
   getProjectById: jest.fn(),
+  findProjectById: jest.fn(),
   createProject: jest.fn(),
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
   archiveProject: jest.fn(),
+  getUserPrincipals: jest.fn(),
+  findAccessibleResources: jest.fn(),
+  grantPermission: jest.fn(),
+  deleteAclEntries: jest.fn(),
+  getRoleByName: jest.fn(),
 }));
 
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, res, next) => {
-    req.user = req.user || { id: 'test-user-123' };
+    req.user = req.user || { id: 'test-user-123', role: 'USER' };
     next();
   },
+  generateCheckAccess:
+    () =>
+    (req, res, next) => {
+      next();
+    },
+}));
+
+jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
+  canAccessProjectResource:
+    () =>
+    (req, res, next) => {
+      next();
+    },
 }));
 
 describe('Projects Routes', () => {
@@ -22,10 +41,13 @@ describe('Projects Routes', () => {
   const {
     getProjects,
     getProjectById,
+    findProjectById,
     createProject,
     updateProject,
     deleteProject,
     archiveProject,
+    getUserPrincipals,
+    findAccessibleResources,
   } = require('~/models');
 
   beforeAll(() => {
@@ -38,6 +60,8 @@ describe('Projects Routes', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    getUserPrincipals.mockResolvedValue([]);
+    findAccessibleResources.mockResolvedValue([]);
   });
 
   describe('GET /', () => {
@@ -67,7 +91,12 @@ describe('Projects Routes', () => {
 
   describe('POST /', () => {
     it('should create a new project', async () => {
-      const mockProject = { projectId: 'proj-1', name: 'New Project', user: 'test-user-123' };
+      const mockProject = {
+        projectId: 'proj-1',
+        name: 'New Project',
+        user: 'test-user-123',
+        _id: 'mock-object-id',
+      };
       createProject.mockResolvedValue(mockProject);
 
       const response = await request(app).post('/api/projects').send({ name: 'New Project' });
@@ -101,6 +130,7 @@ describe('Projects Routes', () => {
 
     it('should return 404 when project not found', async () => {
       getProjectById.mockResolvedValue(null);
+      findProjectById.mockResolvedValue(null);
 
       const response = await request(app).get('/api/projects/non-existent');
 
@@ -158,7 +188,9 @@ describe('Projects Routes', () => {
       const mockProject = { projectId: 'proj-1', name: 'Project', isArchived: true };
       archiveProject.mockResolvedValue(mockProject);
 
-      const response = await request(app).put('/api/projects/proj-1/archive').send({ isArchived: true });
+      const response = await request(app)
+        .put('/api/projects/proj-1/archive')
+        .send({ isArchived: true });
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
@@ -166,7 +198,9 @@ describe('Projects Routes', () => {
     });
 
     it('should return 400 when isArchived is not a boolean', async () => {
-      const response = await request(app).put('/api/projects/proj-1/archive').send({ isArchived: 'yes' });
+      const response = await request(app)
+        .put('/api/projects/proj-1/archive')
+        .send({ isArchived: 'yes' });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('isArchived must be a boolean');
@@ -175,7 +209,9 @@ describe('Projects Routes', () => {
     it('should return 404 when project not found', async () => {
       archiveProject.mockResolvedValue(null);
 
-      const response = await request(app).put('/api/projects/non-existent/archive').send({ isArchived: true });
+      const response = await request(app)
+        .put('/api/projects/non-existent/archive')
+        .send({ isArchived: true });
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Project not found');
