@@ -143,6 +143,7 @@ Quirks:
 ## Important Constraints
 
 - Do not use `pnpm` or `yarn`.
-- Do not add “Generated with Claude Code” or “Co-Authored-By” to commits.
+- Do not add "Generated with Claude Code" or "Co-Authored-By" to commits.
 - When implementing stories (bmad-dev-story), commit progress after each finished task.
 - Verify build artifacts exist (`dist/`) before running tests that consume built packages.
+- **New permission types** must be added to **both** the Zod schema (`packages/data-provider/src/permissions.ts`) **and** the Mongoose schema (`packages/data-schemas/src/schema/role.ts`). The `initializeRoles()` startup routine merges Zod defaults into MongoDB, but fields not declared in the Mongoose schema are silently dropped. Always rebuild `packages/data-schemas` after modifying `role.ts` and restart the backend so `initializeRoles` can patch existing roles.
