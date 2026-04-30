@@ -130,7 +130,7 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
+        <form onSubmit={handleSubmit} className="max-h-[75vh] space-y-5 overflow-y-auto px-6 py-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-text-secondary">ID *</label>
