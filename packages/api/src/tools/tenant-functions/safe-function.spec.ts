@@ -7,10 +7,7 @@ describe('safe-function', () => {
   });
 
   it('executes a simple transform function', async () => {
-    const result = await runSafeFunction(
-      '(data) => data.map((x) => x * 2)',
-      [1, 2, 3],
-    );
+    const result = await runSafeFunction('(data) => data.map((x) => x * 2)', [1, 2, 3]);
     expect(result).toEqual([2, 4, 6]);
   });
 

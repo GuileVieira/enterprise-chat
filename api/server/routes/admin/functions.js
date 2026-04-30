@@ -31,7 +31,9 @@ router.post('/', requireManageFunctions, async (req, res) => {
     }
     const existing = await db.getTenantFunctionById(payload.tenantId, payload.id);
     if (existing) {
-      return res.status(409).json({ message: `Function ${payload.id} already exists for tenant ${payload.tenantId}` });
+      return res
+        .status(409)
+        .json({ message: `Function ${payload.id} already exists for tenant ${payload.tenantId}` });
     }
     const fn = await db.createTenantFunction(payload);
     return res.status(201).json({ function: fn });

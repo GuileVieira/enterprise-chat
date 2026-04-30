@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2, Wrench } from 'lucide-react';
-import {
-  useCreateAdminFunctionMutation,
-  useListAdminSecrets,
-} from '~/data-provider/admin';
+import { useCreateAdminFunctionMutation, useListAdminSecrets } from '~/data-provider/admin';
 
 interface CreateFunctionModalProps {
   isOpen: boolean;
@@ -14,11 +11,7 @@ interface CreateFunctionModalProps {
 const METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 const AUTH_TYPES = ['none', 'bearer', 'basic', 'api_key', 'custom'];
 
-const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
-  isOpen,
-  onClose,
-  tenantId,
-}) => {
+const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({ isOpen, onClose, tenantId }) => {
   const [id, setId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -177,7 +170,9 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
               placeholder="Describe what the tool sends and receives, dynamic body behavior, edge cases, etc. This text is appended to the description shown to the LLM."
               className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none"
             />
-            <p className="mt-1 text-xs text-text-tertiary">Shown to the LLM alongside the description</p>
+            <p className="mt-1 text-xs text-text-tertiary">
+              Shown to the LLM alongside the description
+            </p>
           </div>
 
           <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
@@ -191,7 +186,9 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
                   className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary focus:border-border-xheavy focus:outline-none"
                 >
                   {METHODS.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -217,7 +214,9 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
                 className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none"
                 required
               />
-              <p className="mt-1 text-xs text-text-tertiary">Use {'{paramName}'} for path parameters</p>
+              <p className="mt-1 text-xs text-text-tertiary">
+                Use {'{paramName}'} for path parameters
+              </p>
             </div>
           </div>
 
@@ -232,7 +231,9 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
                   className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary focus:border-border-xheavy focus:outline-none"
                 >
                   {AUTH_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -247,17 +248,25 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
                     >
                       <option value="">Select a secret…</option>
                       {secretsData?.secrets.map((s) => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
+                        <option key={s.name} value={s.name}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-text-secondary">Header Name</label>
+                    <label className="block text-sm font-medium text-text-secondary">
+                      Header Name
+                    </label>
                     <input
                       type="text"
                       value={headerName}
                       onChange={(e) => setHeaderName(e.target.value)}
-                      placeholder={authType === 'bearer' || authType === 'basic' ? 'Authorization' : 'X-Api-Key'}
+                      placeholder={
+                        authType === 'bearer' || authType === 'basic'
+                          ? 'Authorization'
+                          : 'X-Api-Key'
+                      }
                       className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none"
                     />
                   </div>
@@ -268,23 +277,27 @@ const CreateFunctionModal: React.FC<CreateFunctionModalProps> = ({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-text-secondary">Input Schema (JSON)</label>
+              <label className="block text-sm font-medium text-text-secondary">
+                Input Schema (JSON)
+              </label>
               <textarea
                 value={inputSchema}
                 onChange={(e) => setInputSchema(e.target.value)}
                 rows={4}
-                className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary font-mono focus:border-border-xheavy focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 font-mono text-sm text-text-primary focus:border-border-xheavy focus:outline-none"
               />
               <p className="mt-1 text-xs text-text-tertiary">JSON schema for LLM parameters</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary">Post Process (JS)</label>
+              <label className="block text-sm font-medium text-text-secondary">
+                Post Process (JS)
+              </label>
               <textarea
                 value={postProcess}
                 onChange={(e) => setPostProcess(e.target.value)}
                 placeholder="(data) => data.campaigns"
                 rows={4}
-                className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary font-mono focus:border-border-xheavy focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 font-mono text-sm text-text-primary focus:border-border-xheavy focus:outline-none"
               />
               <p className="mt-1 text-xs text-text-tertiary">Optional JS function body</p>
             </div>

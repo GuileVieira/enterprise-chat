@@ -11,16 +11,11 @@ interface TenantFunctionsSectionProps {
   control: Control<AgentForm>;
 }
 
-const TenantFunctionsSection: React.FC<TenantFunctionsSectionProps> = ({
-  tools,
-  control,
-}) => {
+const TenantFunctionsSection: React.FC<TenantFunctionsSectionProps> = ({ tools, control }) => {
   const { data, isLoading } = useTenantFunctionsQuery();
   const functions = data?.functions ?? [];
 
-  const toolSet = new Set(
-    (tools ?? []).map((t) => (typeof t === 'string' ? t : '')),
-  );
+  const toolSet = new Set((tools ?? []).map((t) => (typeof t === 'string' ? t : '')));
 
   if (isLoading || functions.length === 0) {
     return null;
@@ -28,7 +23,7 @@ const TenantFunctionsSection: React.FC<TenantFunctionsSectionProps> = ({
 
   return (
     <div className="mb-4">
-      <label className="mb-2 text-token-text-primary block text-sm font-medium">
+      <label className="text-token-text-primary mb-2 block text-sm font-medium">
         Tenant Functions
       </label>
       <div className="space-y-2">
@@ -56,12 +51,8 @@ const TenantFunctionsSection: React.FC<TenantFunctionsSectionProps> = ({
                       className="mt-0.5 h-4 w-4 rounded border-border-medium text-green-500 focus:ring-green-500"
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-text-primary">
-                        {fn.name}
-                      </div>
-                      <div className="text-xs text-text-tertiary">
-                        {fn.description}
-                      </div>
+                      <div className="text-sm font-medium text-text-primary">{fn.name}</div>
+                      <div className="text-xs text-text-tertiary">{fn.description}</div>
                     </div>
                     <Wrench className="h-4 w-4 text-text-tertiary" />
                   </label>

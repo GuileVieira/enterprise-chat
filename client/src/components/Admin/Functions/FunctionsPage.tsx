@@ -189,9 +189,7 @@ const FunctionsPage: React.FC = () => {
                   const isExpanded = expandedId === fn.id;
                   return (
                     <React.Fragment key={fn.id}>
-                      <tr
-                        className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
-                      >
+                      <tr className="border-b border-border-light transition-colors hover:bg-surface-tertiary">
                         <td className="max-w-[14rem] truncate px-6 py-4 font-mono text-xs font-medium text-text-primary">
                           <button
                             type="button"
@@ -264,12 +262,12 @@ const FunctionsPage: React.FC = () => {
                         </td>
                       </tr>
                       {isExpanded && fn.details && (
-                        <tr className="border-b border-border-light bg-surface-primary/30">
+                        <tr className="bg-surface-primary/30 border-b border-border-light">
                           <td colSpan={6} className="px-6 py-4">
-                            <div className="text-xs font-semibold text-text-secondary mb-1">
+                            <div className="mb-1 text-xs font-semibold text-text-secondary">
                               {localize('com_admin_function_details')}
                             </div>
-                            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap text-xs text-text-tertiary font-mono">
+                            <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap font-mono text-xs text-text-tertiary">
                               {fn.details}
                             </pre>
                           </td>

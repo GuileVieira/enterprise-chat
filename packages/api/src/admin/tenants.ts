@@ -5,7 +5,8 @@ import type { Response } from 'express';
 import type { ServerRequest } from '~/types/http';
 import { parsePagination } from './pagination';
 
-const USER_LIST_FIELDS = '_id name username email avatar role provider tenantId createdAt updatedAt';
+const USER_LIST_FIELDS =
+  '_id name username email avatar role provider tenantId createdAt updatedAt';
 
 export interface AdminTenantsDeps {
   findUsers: (
