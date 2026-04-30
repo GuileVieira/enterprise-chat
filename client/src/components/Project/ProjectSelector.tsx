@@ -1,11 +1,16 @@
 import { useState, useId, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as Ariakit from '@ariakit/react';
-import { FolderOpen, FolderPlus, X } from 'lucide-react';
+import { FolderOpen, FolderPlus, X, Plus } from 'lucide-react';
 import { DropdownPopup } from '@librechat/client';
-import { useProjectsQuery } from '~/data-provider';
-import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
+import { QueryKeys } from 'librechat-data-provider';
+import type { TConversation } from 'librechat-data-provider';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRecoilValue } from 'recoil';
+import { useProjectsQuery, useProjectByIdQuery } from '~/data-provider';
+import { useLocalize, useNewConvo } from '~/hooks';
+import { clearMessagesCache, cn } from '~/utils';
+import store from '~/store';
 
 interface ProjectSelectorProps {
   selectedProjectId: string | null;
@@ -20,7 +25,13 @@ export default function ProjectSelector({
   const navigate = useNavigate();
   const menuId = useId();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { newConversation } = useNewConvo();
+  const conversation = useRecoilValue(store.conversationByIndex(0));
   const { data: projects, isLoading } = useProjectsQuery();
+  const { data: project } = useProjectByIdQuery(selectedProjectId ?? '', {
+    enabled: !!selectedProjectId,
+  });
 
   const selectedProject = useMemo(
     () => projects?.find((p) => p.projectId === selectedProjectId) ?? null,
@@ -39,6 +50,23 @@ export default function ProjectSelector({
     },
     [onSelectProject],
   );
+  const handleNewChat = useCallback(() => {
+    clearMessagesCache(queryClient, conversation?.conversationId);
+    queryClient.invalidateQueries([QueryKeys.messages]);
+
+    const template: Partial<TConversation> = {};
+    if (project) {
+      template.projectId = project.projectId;
+      if (project.endpoint) {
+        template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+      }
+      if (project.model) {
+        template.model = project.model;
+      }
+    }
+
+    newConversation(Object.keys(template).length > 0 ? { template } : undefined);
+  }, [queryClient, conversation?.conversationId, project, newConversation]);
 
   const dropdownItems = useMemo(() => {
     const items = [
@@ -127,14 +155,24 @@ export default function ProjectSelector({
         items={dropdownItems}
       />
       {selectedProjectId && (
-        <button
-          type="button"
-          aria-label={localize('com_ui_clear_project_filter')}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-          onClick={() => handleSelect(null)}
-        >
-          <X className="h-3.5 w-3.5" aria-hidden="true" />
-        </button>
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label={localize('com_ui_new_chat')}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            onClick={handleNewChat}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={localize('com_ui_clear_project_filter')}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            onClick={() => handleSelect(null)}
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
       )}
     </div>
   );

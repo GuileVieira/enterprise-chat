@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, Trash2, FileText } from 'lucide-react';
+import { Upload, Trash2, FileText, Check } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -191,7 +191,15 @@ export default function ProjectFileUploader({
                 </div>
                 <div className="overflow-hidden">
                   <p className="truncate text-sm font-medium text-text-primary">{file.filename}</p>
-                  <p className="text-xs text-text-secondary">{(file.bytes / 1024).toFixed(1)} KB</p>
+                  <div className="flex items-center gap-2 text-xs text-text-secondary">
+                    <span>{(file.bytes / 1024).toFixed(1)} KB</span>
+                    {file.embedded && (
+                      <span className="flex items-center gap-0.5 text-green-600 dark:text-green-500">
+                        <Check className="h-3 w-3" />
+                        {localize('com_ui_indexed')}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button
