@@ -580,12 +580,13 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
   const isImage = file.mimetype.startsWith('image');
   let fileInfoMetadata;
-  const entity_id = messageAttachment === true ? undefined : agent_id;
+  const entity_id = messageAttachment === true ? undefined : (agent_id || req.body.projectId);
   const basePath = mime.getType(file.originalname)?.startsWith('image') ? 'images' : 'uploads';
   if (tool_resource === EToolResources.execute_code) {
-    const isCodeEnabled = await checkCapability(req, AgentCapabilities.execute_code);
+    const isCodeEnabled =
+      (await checkCapability(req, AgentCapabilities.execute_code)) || !!req.body.projectId;
     if (!isCodeEnabled) {
-      throw new Error('Code execution is not enabled for Agents');
+      throw new Error('Code execution is not enabled');
     }
     const { handleFileUpload: uploadCodeEnvFile } = getStrategyFunctions(FileSources.execute_code);
     const stream = fs.createReadStream(file.path);
@@ -628,9 +629,10 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
       },
     };
   } else if (tool_resource === EToolResources.file_search) {
-    const isFileSearchEnabled = await checkCapability(req, AgentCapabilities.file_search);
+    const isFileSearchEnabled =
+      (await checkCapability(req, AgentCapabilities.file_search)) || !!req.body.projectId;
     if (!isFileSearchEnabled) {
-      throw new Error('File search is not enabled for Agents');
+      throw new Error('File search is not enabled');
     }
     // Note: File search processing continues to dual storage logic below
   } else if (tool_resource === EToolResources.context) {

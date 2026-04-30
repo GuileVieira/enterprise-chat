@@ -65,6 +65,7 @@ export default function ProjectFileUploader({
     formData.append('endpoint', 'agents');
     formData.append('endpointType', 'agents');
     formData.append('projectId', projectId);
+    formData.append('tool_resource', 'file_search');
     uploadFile.mutate(formData);
   };
 
