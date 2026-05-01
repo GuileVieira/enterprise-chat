@@ -152,13 +152,15 @@ export default function ProjectFileUploader({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-10 transition-colors focus-within:ring-2 focus-within:ring-ring-primary active:scale-[0.99] ${
           isDragOver
             ? 'border-text-primary bg-surface-hover'
-            : 'border-border-light hover:border-text-primary hover:bg-surface-hover'
+            : 'border-border-light bg-surface-secondary hover:border-border-medium hover:bg-surface-hover'
         }`}
       >
-        <Upload className="mb-2 h-8 w-8 text-text-secondary" aria-hidden="true" />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border-light bg-surface-primary">
+          <Upload className="h-6 w-6 text-text-secondary" aria-hidden="true" />
+        </div>
         <p className="text-sm font-medium text-text-primary">
           {localize('com_ui_project_upload_file')}
         </p>
@@ -173,20 +175,22 @@ export default function ProjectFileUploader({
       )}
 
       {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+        <div className="space-y-2 rounded-2xl border border-border-light bg-surface-secondary p-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-16 animate-pulse rounded-xl bg-surface-primary" />
+          ))}
         </div>
       )}
 
       {files.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 rounded-2xl border border-border-light bg-surface-secondary p-2">
           {files.map((file) => (
             <div
               key={file.file_id}
-              className="flex items-center justify-between rounded-lg border border-border-light bg-surface-primary p-3 transition-all hover:border-border-medium"
+              className="flex items-center justify-between rounded-xl border border-transparent bg-surface-secondary p-3 transition-colors hover:border-border-light hover:bg-surface-hover"
             >
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-tertiary">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-light bg-surface-primary">
                   <FileText className="h-5 w-5 text-text-secondary" />
                 </div>
                 <div className="overflow-hidden">
@@ -205,7 +209,7 @@ export default function ProjectFileUploader({
               <button
                 type="button"
                 onClick={() => handleDelete(file)}
-                className="rounded-md p-2 text-text-secondary transition-colors hover:bg-surface-tertiary hover:text-red-500"
+                className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
                 title={localize('com_ui_delete')}
               >
                 <Trash2 className="h-4 w-4" />
@@ -216,13 +220,13 @@ export default function ProjectFileUploader({
       )}
 
       {files.length === 0 && !isLoading && (
-        <div className="py-8 text-center text-sm text-text-secondary">
+        <div className="rounded-2xl border border-dashed border-border-light bg-surface-secondary py-10 text-center text-sm text-text-secondary">
           {localize('com_ui_project_no_files')}
         </div>
       )}
 
       <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <AlertDialogContent className="flex w-[95vw] max-w-md flex-col gap-0 border-none bg-background p-6 shadow-2xl text-foreground">
+        <AlertDialogContent className="flex w-[95vw] max-w-md flex-col gap-0 border-none bg-background p-6 text-foreground shadow-2xl">
           <AlertDialogHeader className="flex flex-col gap-2 text-left">
             <AlertDialogTitle className="whitespace-normal break-words text-xl font-semibold">
               {localize('com_ui_project_file_delete_confirm')}

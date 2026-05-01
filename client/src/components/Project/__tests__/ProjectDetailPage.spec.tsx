@@ -12,6 +12,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('~/data-provider', () => ({
   useProjectByIdQuery: jest.fn(),
   useGetProjectFiles: jest.fn(),
+  useTitleGeneration: jest.fn(),
 }));
 
 jest.mock('~/hooks', () => ({
@@ -25,6 +26,11 @@ jest.mock('~/hooks/useProjectPermissions', () => ({
 jest.mock('../ProjectPromptGroups', () => ({
   __esModule: true,
   default: () => <div data-testid="project-prompt-groups" />,
+}));
+
+jest.mock('../ProjectPromptSnippetsManager', () => ({
+  __esModule: true,
+  default: () => <div data-testid="project-prompt-snippets" />,
 }));
 
 jest.mock('../ProjectConversationsTab', () => ({
@@ -81,7 +87,7 @@ describe('ProjectDetailPage', () => {
       isLoading: true,
     });
     renderPage();
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('renders not found when project is missing', () => {
@@ -131,6 +137,10 @@ describe('ProjectDetailPage', () => {
   });
 
   it('switches to prompts tab', () => {
+    (useProjectPermissions as jest.Mock).mockReturnValue({
+      permissions: { canView: true, canEdit: false, canDelete: false, canShare: false },
+      isLoading: false,
+    });
     (useProjectByIdQuery as jest.Mock).mockReturnValue({
       data: {
         projectId: 'p1',
@@ -148,6 +158,10 @@ describe('ProjectDetailPage', () => {
   });
 
   it('shows memories tab with memories', () => {
+    (useProjectPermissions as jest.Mock).mockReturnValue({
+      permissions: { canView: true, canEdit: false, canDelete: false, canShare: false },
+      isLoading: false,
+    });
     (useProjectByIdQuery as jest.Mock).mockReturnValue({
       data: {
         projectId: 'p1',
@@ -160,12 +174,16 @@ describe('ProjectDetailPage', () => {
       isLoading: false,
     });
     renderPage();
-    fireEvent.click(screen.getByText('com_ui_project_tab_memories'));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_project_tab_memories' }));
     expect(screen.getByText('tone')).toBeInTheDocument();
     expect(screen.getByText('friendly')).toBeInTheDocument();
   });
 
   it('shows memories tab empty state', () => {
+    (useProjectPermissions as jest.Mock).mockReturnValue({
+      permissions: { canView: true, canEdit: false, canDelete: false, canShare: false },
+      isLoading: false,
+    });
     (useProjectByIdQuery as jest.Mock).mockReturnValue({
       data: {
         projectId: 'p1',
@@ -178,7 +196,7 @@ describe('ProjectDetailPage', () => {
       isLoading: false,
     });
     renderPage();
-    fireEvent.click(screen.getByText('com_ui_project_tab_memories'));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_project_tab_memories' }));
     expect(screen.getByText('com_ui_project_no_memories')).toBeInTheDocument();
   });
 
