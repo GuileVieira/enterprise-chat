@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Folder, Save } from 'lucide-react';
 import {
   useGetEndpointsQuery,
   useCreateProjectMutation,
@@ -40,6 +40,9 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   }, [endpointsConfig]);
 
   const isLoading = createMutation.isLoading || updateMutation.isLoading;
+  const inputClassName =
+    'mt-1.5 w-full rounded-xl border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2 focus:ring-ring-primary/20';
+  const labelClassName = 'block text-sm font-medium text-text-secondary';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,122 +75,123 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
   };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-5 py-8">
       <button
         type="button"
         onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
+        className="mb-5 flex h-9 items-center gap-2 rounded-lg px-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary active:scale-[0.99]"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         {localize('com_ui_back')}
       </button>
 
-      <h1 className="mb-6 text-2xl font-semibold text-text-primary">
-        {isEditing ? localize('com_ui_edit_project') : localize('com_ui_new_project')}
-      </h1>
+      <div className="mb-6 rounded-2xl border border-border-light bg-surface-secondary p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border-light bg-surface-primary text-text-secondary">
+            <Folder className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold leading-tight text-text-primary">
+              {isEditing ? localize('com_ui_edit_project') : localize('com_ui_new_project')}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-text-secondary">
+              {localize('com_ui_project_instructions_hint')}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-2xl border border-border-light bg-surface-secondary p-5"
+      >
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
             {error}
           </div>
         )}
 
-        {/* Name */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary">
-            {localize('com_ui_project_name')} *
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={localize('com_ui_project_name_placeholder')}
-            className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-          />
+        <div className="grid gap-5">
+          <div>
+            <label className={labelClassName}>{localize('com_ui_project_name')} *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={localize('com_ui_project_name_placeholder')}
+              className={inputClassName}
+            />
+          </div>
+
+          <div>
+            <label className={labelClassName}>{localize('com_ui_project_description')}</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={localize('com_ui_project_description_placeholder')}
+              rows={3}
+              className={`${inputClassName} resize-none leading-6`}
+            />
+          </div>
+
+          <div>
+            <label className={labelClassName}>{localize('com_ui_project_instructions')}</label>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder={localize('com_ui_project_instructions_placeholder')}
+              rows={5}
+              className={`${inputClassName} resize-none font-mono leading-6`}
+            />
+            <p className="mt-1 text-xs text-text-tertiary">
+              {localize('com_ui_project_instructions_hint')}
+            </p>
+          </div>
+
+          {isEditing && (
+            <>
+              <div>
+                <label className={labelClassName}>{localize('com_ui_project_endpoint')}</label>
+                <select
+                  value={endpoint}
+                  onChange={(e) => setEndpoint(e.target.value)}
+                  className={inputClassName}
+                >
+                  <option value="">{localize('com_ui_project_endpoint_placeholder')}</option>
+                  {availableEndpoints.map((ep) => (
+                    <option key={ep} value={ep}>
+                      {ep}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={labelClassName}>{localize('com_ui_project_model')}</label>
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={localize('com_ui_project_model_placeholder')}
+                  className={inputClassName}
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary">
-            {localize('com_ui_project_description')}
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={localize('com_ui_project_description_placeholder')}
-            rows={3}
-            className="mt-1 w-full resize-none rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-          />
-        </div>
-
-        {/* Instructions */}
-        <div>
-          <label className="block text-sm font-medium text-text-secondary">
-            {localize('com_ui_project_instructions')}
-          </label>
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder={localize('com_ui_project_instructions_placeholder')}
-            rows={5}
-            className="mt-1 w-full resize-none rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-          />
-          <p className="mt-1 text-xs text-text-tertiary">
-            {localize('com_ui_project_instructions_hint')}
-          </p>
-        </div>
-
-        {isEditing && (
-          <>
-            {/* Endpoint */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary">
-                {localize('com_ui_project_endpoint')}
-              </label>
-              <select
-                value={endpoint}
-                onChange={(e) => setEndpoint(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-              >
-                <option value="">{localize('com_ui_project_endpoint_placeholder')}</option>
-                {availableEndpoints.map((ep) => (
-                  <option key={ep} value={ep}>
-                    {ep}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Model */}
-            <div>
-              <label className="block text-sm font-medium text-text-secondary">
-                {localize('com_ui_project_model')}
-              </label>
-              <input
-                type="text"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder={localize('com_ui_project_model_placeholder')}
-                className="mt-1 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-text-primary"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="mt-6 flex items-center justify-end gap-3 border-t border-border-light pt-5">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            className="rounded-xl px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary active:scale-[0.99]"
           >
             {localize('com_ui_cancel')}
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="flex items-center gap-2 rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-surface-primary transition-colors hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl bg-text-primary px-4 py-2 text-sm font-medium text-surface-primary transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary active:scale-[0.99] disabled:opacity-50"
           >
             {isLoading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-primary border-t-transparent" />

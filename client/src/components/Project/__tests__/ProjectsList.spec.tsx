@@ -57,7 +57,7 @@ describe('ProjectsList', () => {
       isLoading: true,
     });
     renderList();
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('renders empty state when no projects exist', () => {
