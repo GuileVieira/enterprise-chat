@@ -1,8 +1,10 @@
 import { memo, useMemo } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMediaQuery } from '@librechat/client';
 import {
   Constants,
+  QueryKeys,
   getConfigDefaults,
   PermissionTypes,
   Permissions,
@@ -13,7 +15,6 @@ import ModelSelector from './Menus/Endpoints/ModelSelector';
 import {
   useGetProjectFiles,
   useGetStartupConfig,
-  useMoveConversationToProjectMutation,
   useProjectByIdQuery,
   useProjectsQuery,
 } from '~/data-provider';
@@ -22,17 +23,18 @@ import { OpenSidebar, PresetsMenu } from './Menus';
 import BookmarkMenu from './Menus/BookmarkMenu';
 import { TemporaryChat } from './TemporaryChat';
 import AddMultiConvo from './AddMultiConvo';
-import { useHasAccess, useLocalize } from '~/hooks';
-import { cn } from '~/utils';
+import { useHasAccess, useLocalize, useNewConvo } from '~/hooks';
+import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
 function ProjectSelectorBadges({ conversation }: { conversation?: TConversation | null }) {
   const localize = useLocalize();
+  const queryClient = useQueryClient();
+  const { newConversation } = useNewConvo();
   const setConversation = useSetRecoilState(store.conversationByIndex(0));
   const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
-  const moveConversation = useMoveConversationToProjectMutation();
   const projectId = conversation?.projectId ?? '';
   const { data: projects = [], isLoading } = useProjectsQuery();
   const selectedProject = useMemo(
@@ -51,7 +53,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
   const memoryCount = project
     ? (project.memories?.length ?? 0) + (project.memoryKeys?.length ?? 0)
     : 0;
-  const canPersist =
+  const isExistingConversation =
     !!conversation?.conversationId &&
     conversation.conversationId !== Constants.NEW_CONVO &&
     conversation.conversationId !== 'search';
@@ -60,7 +62,38 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
     const nextProjectId = event.target.value || null;
     const nextProject = projects.find((candidate) => candidate.projectId === nextProjectId);
 
+    if ((nextProjectId ?? '') === projectId) {
+      return;
+    }
+
     setSelectedProjectId(nextProjectId);
+
+    if (isExistingConversation) {
+      clearMessagesCache(queryClient, conversation?.conversationId);
+      queryClient.invalidateQueries([QueryKeys.messages]);
+
+      const template: Partial<TConversation> = {
+        endpoint: conversation?.endpoint,
+        endpointType: conversation?.endpointType,
+        model: conversation?.model,
+        spec: conversation?.spec,
+        agent_id: conversation?.agent_id,
+        assistant_id: conversation?.assistant_id,
+      };
+      if (nextProjectId) {
+        template.projectId = nextProjectId;
+      }
+      if (!template.endpoint && nextProject?.endpoint) {
+        template.endpoint = nextProject.endpoint as unknown as typeof template.endpoint;
+      }
+      if (!template.model && nextProject?.model) {
+        template.model = nextProject.model;
+      }
+
+      newConversation(Object.keys(template).length > 0 ? { template } : undefined);
+      return;
+    }
+
     setConversation((currentConversation) => {
       if (!currentConversation) {
         return currentConversation;
@@ -83,13 +116,6 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
 
       return nextConversation;
     });
-
-    if (canPersist && conversation?.conversationId) {
-      moveConversation.mutate({
-        conversationId: conversation.conversationId,
-        projectId: nextProjectId,
-      });
-    }
   };
 
   return (
@@ -105,7 +131,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
             'h-9 w-full appearance-none rounded-xl border border-border-light bg-surface-primary-alt pl-9 pr-8 text-xs font-medium text-text-primary',
             'outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring-primary',
           )}
-          disabled={isLoading || moveConversation.isLoading}
+          disabled={isLoading}
           onChange={handleProjectChange}
           title={project?.name ?? '(nenhum projeto selecionado)'}
           value={projectId}
