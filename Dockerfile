@@ -3,9 +3,8 @@
 # Base node image
 FROM node:20-alpine AS node
 
-RUN apk upgrade --no-cache
-RUN apk add --no-cache jemalloc
-RUN apk add --no-cache python3 py3-pip uv
+RUN apk upgrade --no-cache && \
+    apk add --no-cache jemalloc python3 py3-pip uv git build-base
 
 # Set environment variable to use jemalloc
 ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2
@@ -21,8 +20,6 @@ ARG NPM_CI_ATTEMPTS=2
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
-
-USER node
 
 COPY --chown=node:node package.json package-lock.json ./
 COPY --chown=node:node api/package.json ./api/package.json
@@ -55,9 +52,13 @@ COPY --chown=node:node . .
 
 RUN \
     # React client build with configurable memory
-    NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend && \
+    export NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" && \
+    npm run frontend && \
     npm prune --production && \
     npm cache clean --force
+
+# Node API setup
+USER node
 
 # Node API setup
 EXPOSE 3080
