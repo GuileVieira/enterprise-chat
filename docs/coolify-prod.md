@@ -28,6 +28,7 @@ Production service URLs must stay internal:
 - `MONGO_URI=mongodb://mongodb:27017/LibreChat`
 - `MEILI_HOST=http://meilisearch:7700`
 - `RAG_API_URL=http://rag_api:8000`
+- `CONFIG_PATH=/app/config/librechat.prod.yaml`
 
 Do not copy local-only values such as `localhost`, local Meili URLs, or local API keys into production.
 

@@ -1,0 +1,3 @@
+# Minimal production config loaded by Docker Compose deployments.
+version: 1.3.9
+cache: true
