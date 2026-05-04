@@ -10,7 +10,7 @@ nixPkgs = ["nodejs_20", "python3", "uv"]
 cmds = ["npm install -g npm@11.10.0", "npm ci --no-audit"]
 
 [phases.build]
-cmds = ["npm run frontend", "npm prune --omit=dev", "npm cache clean --force"]
+cmds = ["npm run frontend && npm prune --omit=dev && npm cache clean --force"]
 
 [start]
 cmd = "npm run backend"
