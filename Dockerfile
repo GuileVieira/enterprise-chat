@@ -35,7 +35,7 @@ RUN touch .env && \
     npm config set fetch-retry-maxtimeout 600000 && \
     npm config set fetch-retries 5 && \
     npm config set fetch-retry-mintimeout 15000 && \
-    npm ci --no-audit
+    npm ci --include=dev --no-audit
 
 COPY --chown=node:node . .
 
