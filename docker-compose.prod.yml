@@ -23,6 +23,7 @@ services:
       NODE_OPTIONS: ${NODE_OPTIONS:-"--max-old-space-size=6144"}
       DOMAIN_CLIENT: ${DOMAIN_CLIENT}
       DOMAIN_SERVER: ${DOMAIN_SERVER}
+      CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
       TRUST_PROXY: ${TRUST_PROXY:-1}
       NO_INDEX: ${NO_INDEX:-true}
       CONSOLE_JSON: ${CONSOLE_JSON:-true}
