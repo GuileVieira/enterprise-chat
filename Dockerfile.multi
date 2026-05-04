@@ -32,12 +32,12 @@ ARG NPM_CI_TIMEOUT_SECONDS=1500
 ARG NPM_CI_ATTEMPTS=2
 WORKDIR /app
 RUN attempt=1; \
-    until timeout "$NPM_CI_TIMEOUT_SECONDS" npm ci; do \
+    until timeout "$NPM_CI_TIMEOUT_SECONDS" npm ci --include=dev; do \
       status=$?; \
       if [ "$attempt" -ge "$NPM_CI_ATTEMPTS" ]; then \
         exit "$status"; \
       fi; \
-      echo "npm ci failed with exit code $status; retrying attempt $((attempt + 1))/$NPM_CI_ATTEMPTS"; \
+      echo "npm ci --include=dev failed with exit code $status; retrying attempt $((attempt + 1))/$NPM_CI_ATTEMPTS"; \
       attempt=$((attempt + 1)); \
       npm cache clean --force || true; \
       sleep 10; \
