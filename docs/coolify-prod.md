@@ -6,7 +6,7 @@ Use this for `https://orquest.redbytesolutions.com.br`.
 
 - Coolify resource type: Docker Compose.
 - Compose file: `docker-compose.prod.yml`.
-- Build pack for `api`: Nixpacks.
+- `api` builds with `Dockerfile.multi`, target `api-build`.
 - App domain target: service `api`, port `3080`.
 
 ## Environment
@@ -30,6 +30,8 @@ Production service URLs must stay internal:
 - `RAG_API_URL=http://rag_api:8000`
 
 Do not copy local-only values such as `localhost`, local Meili URLs, or local API keys into production.
+
+`nixpacks.toml` is kept for single-app fallback builds. The full production deploy should use Docker Compose so MongoDB, Meilisearch, pgvector, and RAG API start together.
 
 ## Validate
 
