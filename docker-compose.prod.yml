@@ -1,0 +1,118 @@
+services:
+  api:
+    build:
+      context: .
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      rag_api:
+        condition: service_started
+    ports:
+      - "3080:3080"
+    environment:
+      HOST: ${HOST:-0.0.0.0}
+      PORT: ${PORT:-3080}
+      NODE_ENV: production
+      NODE_OPTIONS: ${NODE_OPTIONS:-"--max-old-space-size=6144"}
+      DOMAIN_CLIENT: ${DOMAIN_CLIENT}
+      DOMAIN_SERVER: ${DOMAIN_SERVER}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      NO_INDEX: ${NO_INDEX:-true}
+      CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
+      DEBUG_CONSOLE: ${DEBUG_CONSOLE:-false}
+      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
+      MONGO_AUTO_CREATE: ${MONGO_AUTO_CREATE:-true}
+      SEARCH: ${SEARCH:-true}
+      MEILI_NO_ANALYTICS: ${MEILI_NO_ANALYTICS:-true}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      RAG_PORT: ${RAG_PORT:-8000}
+      RAG_API_URL: http://rag_api:${RAG_PORT:-8000}
+      RAG_OPENAI_BASEURL: ${RAG_OPENAI_BASEURL}
+      RAG_OPENAI_API_KEY: ${RAG_OPENAI_API_KEY}
+      RAG_USE_FULL_CONTEXT: ${RAG_USE_FULL_CONTEXT:-false}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL}
+      ALLOW_EMAIL_LOGIN: ${ALLOW_EMAIL_LOGIN:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      ALLOW_SOCIAL_LOGIN: ${ALLOW_SOCIAL_LOGIN:-false}
+      ALLOW_SOCIAL_REGISTRATION: ${ALLOW_SOCIAL_REGISTRATION:-false}
+      ALLOW_PASSWORD_RESET: ${ALLOW_PASSWORD_RESET:-false}
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: ${ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}
+      SESSION_EXPIRY: ${SESSION_EXPIRY}
+      REFRESH_TOKEN_EXPIRY: ${REFRESH_TOKEN_EXPIRY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CREDS_KEY: ${CREDS_KEY}
+      CREDS_IV: ${CREDS_IV}
+      APP_TITLE: ${APP_TITLE:-Orqest}
+      ENDPOINTS: ${ENDPOINTS:-agents,custom}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_KEY: ${GOOGLE_KEY:-}
+      ASSISTANTS_API_KEY: ${ASSISTANTS_API_KEY:-}
+      OPENROUTER_KEY: ${OPENROUTER_KEY:-}
+      FLUX_API_BASE_URL: ${FLUX_API_BASE_URL:-https://api.us1.bfl.ai}
+    volumes:
+      - orqest_images:/app/client/public/images
+      - orqest_uploads:/app/uploads
+      - orqest_logs:/app/api/logs
+
+  mongodb:
+    image: mongo:8.0.20
+    restart: always
+    command: mongod --noauth
+    volumes:
+      - orqest_mongodb:/data/db
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.35.1
+    restart: always
+    environment:
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+    volumes:
+      - orqest_meilisearch:/meili_data
+
+  vectordb:
+    image: pgvector/pgvector:0.8.0-pg15-trixie
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orqest_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-orqest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - orqest_pgvector:/var/lib/postgresql/data
+
+  rag_api:
+    image: registry.librechat.ai/danny-avila/librechat-rag-api-dev-lite:latest
+    restart: always
+    depends_on:
+      vectordb:
+        condition: service_started
+    environment:
+      DB_HOST: vectordb
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-orqest_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-orqest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      RAG_PORT: ${RAG_PORT:-8000}
+      OPENAI_API_KEY: ${RAG_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${RAG_OPENAI_BASEURL}
+      OPENAI_BASE_URL: ${RAG_OPENAI_BASEURL}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
+
+volumes:
+  orqest_images:
+  orqest_uploads:
+  orqest_logs:
+  orqest_mongodb:
+  orqest_meilisearch:
+  orqest_pgvector:
