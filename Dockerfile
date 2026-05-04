@@ -4,7 +4,7 @@
 FROM node:22-alpine AS node
 
 RUN apk upgrade --no-cache && \
-    apk add --no-cache jemalloc python3 py3-pip uv git build-base
+    apk add --no-cache jemalloc python3 py3-pip uv git build-base bash
 
 # Update npm to match packageManager field
 RUN npm install -g npm@11.10.0
@@ -31,10 +31,8 @@ COPY --chown=node:node packages/data-provider/package.json ./packages/data-provi
 COPY --chown=node:node packages/data-schemas/package.json ./packages/data-schemas/package.json
 COPY --chown=node:node packages/api/package.json ./packages/api/package.json
 
-RUN \
-    # Allow mounting of these files, which have no default
-    touch .env && \
-    # Create directories for the volumes to inherit the correct permissions
+# Build phase: Consolidate to ensure command availability
+RUN touch .env && \
     mkdir -p /app/client/public/images /app/logs /app/uploads && \
     npm config set fetch-retry-maxtimeout 600000 && \
     npm config set fetch-retries 5 && \
@@ -53,10 +51,7 @@ RUN \
 
 COPY --chown=node:node . .
 
-RUN \
-    # React client build with configurable memory
-    export NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" && \
-    npm run frontend && \
+RUN NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend && \
     npm prune --production && \
     npm cache clean --force
 
