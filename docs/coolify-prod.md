@@ -1,6 +1,6 @@
 # Coolify production deploy
 
-Use this for `https://orquest.redbytesolutions.com.br`.
+Use this for `https://orqest.redbytesolutions.com.br`.
 
 ## Resource
 
