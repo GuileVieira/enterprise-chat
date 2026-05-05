@@ -6,16 +6,18 @@ interface:
   modelSelect: true
   parameters: false
   presets: false
+  runCode: false
+  webSearch: false
   prompts:
     use: true
     create: true
     share: false
     public: false
-  bookmarks: true
+  bookmarks: false
   multiConvo: false
   agents:
     use: true
-    create: true
+    create: false
     share: false
     public: false
   peoplePicker:
