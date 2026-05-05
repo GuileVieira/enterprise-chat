@@ -11,6 +11,23 @@ export interface TenantFunctionExecutorDeps {
   getTenantSecret: TenantSecretMethods['getTenantSecret'];
 }
 
+interface TenantFunctionSuccessResponse {
+  ok: true;
+  status: number;
+  data: unknown;
+}
+
+interface TenantFunctionErrorResponse {
+  ok: false;
+  status?: number;
+  error: {
+    message: string;
+    data?: unknown;
+  };
+}
+
+type TenantFunctionResponse = TenantFunctionSuccessResponse | TenantFunctionErrorResponse;
+
 /**
  * Extracts path parameters from a URL template.
  */
@@ -43,19 +60,19 @@ function buildUrl(baseUrl: string, path: string, args: Record<string, unknown>):
 }
 
 /**
- * Builds query parameters from args, excluding path params.
+ * Builds request parameters from args, excluding path params.
  */
-function buildQueryParams(path: string, args: Record<string, unknown>): Record<string, unknown> {
+function buildRequestParams(path: string, args: Record<string, unknown>): Record<string, unknown> {
   const pathParams = new Set(extractPathParams(path));
-  const query: Record<string, unknown> = {};
+  const params: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(args)) {
     if (!pathParams.has(key) && value !== undefined && value !== null) {
-      query[key] = value;
+      params[key] = value;
     }
   }
 
-  return query;
+  return params;
 }
 
 /**
@@ -75,7 +92,7 @@ async function buildHeaders(
   if (config.auth) {
     const secret = await deps.getTenantSecret(tenantId, config.auth.secretName);
     if (!secret) {
-      throw new Error(`Secret not found: ${config.auth.secretName}`);
+      throw new Error('Configured secret not found');
     }
 
     switch (config.auth.type) {
@@ -99,6 +116,14 @@ async function buildHeaders(
   return headers;
 }
 
+function isBodyMethod(method: TenantFunctionInput['config']['method']): boolean {
+  return method === 'POST' || method === 'PUT' || method === 'PATCH';
+}
+
+function stringifyResponse(response: TenantFunctionResponse): string {
+  return JSON.stringify(response);
+}
+
 /**
  * Executes a tenant function.
  */
@@ -107,25 +132,67 @@ export async function executeTenantFunction(
   args: Record<string, unknown>,
   deps: TenantFunctionExecutorDeps,
 ): Promise<string> {
-  const url = buildUrl(fn.config.baseUrl, fn.config.path, args);
-  const query = buildQueryParams(fn.config.path, args);
-  const headers = await buildHeaders(fn.config, deps, fn.tenantId);
+  try {
+    const url = buildUrl(fn.config.baseUrl, fn.config.path, args);
+    const requestParams = buildRequestParams(fn.config.path, args);
+    const headers = await buildHeaders(fn.config, deps, fn.tenantId);
 
-  const response = await axios({
-    method: fn.config.method,
-    url,
-    headers,
-    params: query,
-    timeout: 30000,
-    maxRedirects: 0,
-    validateStatus: () => true,
-  });
+    const response = await axios({
+      method: fn.config.method,
+      url,
+      headers,
+      params: isBodyMethod(fn.config.method) ? undefined : requestParams,
+      data: isBodyMethod(fn.config.method) ? requestParams : undefined,
+      timeout: 30000,
+      maxRedirects: 0,
+      validateStatus: () => true,
+    });
 
-  let result: unknown = response.data;
+    if (response.status >= 400) {
+      return stringifyResponse({
+        ok: false,
+        status: response.status,
+        error: {
+          message: `HTTP ${response.status}`,
+          data: response.data,
+        },
+      });
+    }
 
-  if (fn.postProcess) {
-    result = await runSafeFunction<unknown, unknown>(fn.postProcess, result);
+    let result: unknown = response.data;
+
+    if (fn.postProcess) {
+      try {
+        result = await runSafeFunction<unknown, unknown>(fn.postProcess, result);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'postProcess failed';
+        return stringifyResponse({
+          ok: false,
+          status: response.status,
+          error: {
+            message,
+          },
+        });
+      }
+    }
+
+    return stringifyResponse({
+      ok: true,
+      status: response.status,
+      data: result,
+    });
+  } catch (error) {
+    const message = axios.isAxiosError(error)
+      ? (error.message ?? 'HTTP request failed')
+      : error instanceof Error
+        ? error.message
+        : 'HTTP request failed';
+
+    return stringifyResponse({
+      ok: false,
+      error: {
+        message,
+      },
+    });
   }
-
-  return JSON.stringify(result);
 }

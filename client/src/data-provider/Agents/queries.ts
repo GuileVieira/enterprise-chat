@@ -21,12 +21,13 @@ export const defaultAgentParams: t.AgentListParams = {
 /**
  * Hook for getting active tenant functions for the current user's tenant.
  */
-export const useTenantFunctionsQuery = (): QueryObserverResult<t.TenantFunctionListResponse> => {
+export const useTenantFunctionsQuery =
+  (): QueryObserverResult<t.PublicTenantFunctionListResponse> => {
   const queryClient = useQueryClient();
   const endpointsConfig = queryClient.getQueryData<t.TEndpointsConfig>([QueryKeys.endpoints]);
 
   const enabled = !!endpointsConfig?.[EModelEndpoint.agents];
-  return useQuery<t.TenantFunctionListResponse>(
+  return useQuery<t.PublicTenantFunctionListResponse>(
     [QueryKeys.tenantFunctions],
     () => dataService.getTenantFunctions(),
     {

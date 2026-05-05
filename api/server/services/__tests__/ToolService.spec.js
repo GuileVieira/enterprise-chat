@@ -19,6 +19,8 @@ jest.mock('~/server/services/Config', () => ({
 
 const mockLoadToolDefinitions = jest.fn();
 const mockGetUserMCPAuthMap = jest.fn();
+const mockGetTenantFunctions = jest.fn();
+const mockGetTenantSecret = jest.fn();
 jest.mock('@librechat/api', () => ({
   ...jest.requireActual('@librechat/api'),
   loadToolDefinitions: (...args) => mockLoadToolDefinitions(...args),
@@ -66,6 +68,8 @@ jest.mock('~/server/services/Threads', () => ({
 }));
 jest.mock('~/models', () => ({
   findPluginAuthsByKeys: jest.fn(),
+  getTenantFunctions: (...args) => mockGetTenantFunctions(...args),
+  getTenantSecret: (...args) => mockGetTenantSecret(...args),
 }));
 jest.mock('~/config', () => ({
   getFlowStateManager: jest.fn(() => ({})),
@@ -86,7 +90,7 @@ const {
 
 function createMockReq(capabilities) {
   return {
-    user: { id: 'user_123' },
+    user: { id: 'user_123', tenantId: 'tenant-x' },
     config: {
       endpoints: {
         [EModelEndpoint.agents]: {
@@ -113,6 +117,8 @@ describe('ToolService - Action Capability Gating', () => {
     });
     mockLoadToolsUtil.mockResolvedValue({ loadedTools: [], toolContextMap: {} });
     mockLoadActionSets.mockResolvedValue([]);
+    mockGetTenantFunctions.mockResolvedValue([]);
+    mockGetTenantSecret.mockResolvedValue({ value: 'secret' });
   });
 
   describe('resolveAgentCapabilities', () => {
@@ -430,6 +436,60 @@ describe('ToolService - Action Capability Gating', () => {
       });
 
       expect(mockLoadActionSets).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('loadToolsForExecution — tenant function schema', () => {
+    it('builds tenant function tools with enum and nested validation', async () => {
+      mockGetTenantFunctions.mockResolvedValue([
+        {
+          tenantId: 'tenant-x',
+          id: 'tenant_report',
+          name: 'Tenant report',
+          description: 'Build a tenant report',
+          type: 'http',
+          config: {
+            baseUrl: 'https://api.example.com',
+            method: 'POST',
+            path: '/reports',
+          },
+          inputSchema: {
+            filters: {
+              type: 'object',
+              required: true,
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['active', 'paused'],
+                  required: true,
+                },
+                tags: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+            },
+          },
+          isActive: true,
+        },
+      ]);
+
+      const req = createMockReq([AgentCapabilities.tools]);
+      req.config = {};
+
+      const result = await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: ['tenant_report'],
+      });
+
+      expect(result.loadedTools).toHaveLength(1);
+      await expect(
+        result.loadedTools[0].invoke({
+          filters: { status: 'invalid', tags: [123] },
+        }),
+      ).rejects.toThrow();
     });
   });
 

@@ -107,14 +107,14 @@ const normalizeActionToolName = (toolName) => {
  * @returns {import('zod').ZodObject}
  */
 const buildTenantFunctionZodSchema = (simpleSchema) => {
-  const shape = {};
-  for (const [key, def] of Object.entries(simpleSchema)) {
+  const buildValidator = (def) => {
     let validator = z.any();
     switch (def.type) {
       case 'string':
         validator = z.string();
         break;
       case 'number':
+      case 'float':
         validator = z.number();
         break;
       case 'integer':
@@ -124,13 +124,20 @@ const buildTenantFunctionZodSchema = (simpleSchema) => {
         validator = z.boolean();
         break;
       case 'array':
-        validator = z.array(z.any());
+        validator = z.array(def.items ? buildValidator(def.items) : z.any());
         break;
       case 'object':
-        validator = z.record(z.any());
+        validator = def.properties
+          ? buildTenantFunctionZodSchema(def.properties)
+          : z.record(z.any());
         break;
       default:
         validator = z.string();
+    }
+    if (Array.isArray(def.enum) && def.enum.length > 0) {
+      validator = validator.refine((value) => def.enum.includes(value), {
+        message: `Must be one of: ${def.enum.join(', ')}`,
+      });
     }
     if (def.description) {
       validator = validator.describe(def.description);
@@ -138,7 +145,12 @@ const buildTenantFunctionZodSchema = (simpleSchema) => {
     if (def.required !== true) {
       validator = validator.optional();
     }
-    shape[key] = validator;
+    return validator;
+  };
+
+  const shape = {};
+  for (const [key, def] of Object.entries(simpleSchema)) {
+    shape[key] = buildValidator(def);
   }
   return z.object(shape);
 };

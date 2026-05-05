@@ -13,6 +13,7 @@ import type { JsonSchemaType } from '@librechat/agents';
 const typeMapping: Record<string, string> = {
   string: 'string',
   number: 'number',
+  float: 'number',
   integer: 'integer',
   boolean: 'boolean',
   array: 'array',
@@ -45,7 +46,11 @@ function convertField(key: string, def: Record<string, unknown>): Record<string,
   }
 
   if (jsonType === 'object' && def.properties) {
-    property.properties = convertSchema(def.properties as Record<string, Record<string, unknown>>);
+    const nestedSchema = convertSchema(def.properties as Record<string, Record<string, unknown>>);
+    property.properties = nestedSchema.properties;
+    if (nestedSchema.required.length > 0) {
+      property.required = nestedSchema.required;
+    }
   }
 
   return property;

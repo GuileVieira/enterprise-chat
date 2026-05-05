@@ -352,8 +352,17 @@ export type TenantFunction = {
   updatedAt?: string;
 };
 
+export type PublicTenantFunction = Pick<
+  TenantFunction,
+  'id' | 'name' | 'description' | 'details' | 'inputSchema' | 'isActive'
+>;
+
 export type TenantFunctionListResponse = {
   functions: TenantFunction[];
+};
+
+export type PublicTenantFunctionListResponse = {
+  functions: PublicTenantFunction[];
 };
 
 export type TenantFunctionResponse = {
