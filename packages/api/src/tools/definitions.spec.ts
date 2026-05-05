@@ -7,6 +7,15 @@ import type {
   ActionToolDefinition,
 } from './definitions';
 
+jest.mock('@librechat/data-schemas', () => ({
+  logger: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+
 describe('definitions.ts', () => {
   const mockLoadAuthValues = jest.fn().mockResolvedValue({});
   const mockGetOrFetchMCPServerTools = jest.fn().mockResolvedValue(null);
@@ -246,6 +255,31 @@ describe('definitions.ts', () => {
         expect(webSearchDef?.parameters).toBeDefined();
         expect(webSearchDef?.parameters?.properties).toHaveProperty('query');
         expect(webSearchDef?.parameters?.required).toContain('query');
+      });
+
+      it('should include parameters for duckduckgo_search built-in tool', async () => {
+        mockIsBuiltInTool.mockImplementation((name) => name === 'duckduckgo_search');
+
+        const params: LoadToolDefinitionsParams = {
+          userId: 'user-123',
+          agentId: 'agent-123',
+          tools: ['duckduckgo_search'],
+        };
+
+        const deps: LoadToolDefinitionsDeps = {
+          getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+          isBuiltInTool: mockIsBuiltInTool,
+          loadAuthValues: mockLoadAuthValues,
+        };
+
+        const result = await loadToolDefinitions(params, deps);
+
+        const duckDef = result.toolDefinitions.find((d) => d.name === 'duckduckgo_search');
+        expect(duckDef).toBeDefined();
+        expect(duckDef?.parameters).toBeDefined();
+        expect(duckDef?.parameters?.properties).toHaveProperty('query');
+        expect(duckDef?.parameters?.properties).toHaveProperty('fetch_results');
+        expect(duckDef?.parameters?.required).toContain('query');
       });
 
       it('should include parameters for file_search native tool', async () => {

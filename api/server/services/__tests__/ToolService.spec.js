@@ -8,6 +8,15 @@ const {
   defaultAgentCapabilities,
 } = require('librechat-data-provider');
 
+jest.mock('@librechat/data-schemas', () => ({
+  logger: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+
 const mockGetEndpointsConfig = jest.fn();
 const mockGetMCPServerTools = jest.fn();
 const mockGetCachedTools = jest.fn();
@@ -265,6 +274,40 @@ describe('ToolService - Action Capability Gating', () => {
 
       expect(result.actionsEnabled).toBe(false);
     });
+
+    it('should gate duckduckgo_search definitions behind web_search capability', async () => {
+      const req = createMockReq([AgentCapabilities.tools]);
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        definitionsOnly: true,
+      });
+
+      expect(mockLoadToolDefinitions).not.toHaveBeenCalled();
+
+      jest.clearAllMocks();
+      mockLoadToolDefinitions.mockResolvedValue({
+        toolDefinitions: [],
+        toolRegistry: new Map(),
+        hasDeferredTools: false,
+      });
+      mockGetEndpointsConfig.mockResolvedValue(
+        createEndpointsConfig([AgentCapabilities.tools, AgentCapabilities.web_search]),
+      );
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        definitionsOnly: true,
+      });
+
+      const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
+      expect(callArgs.tools).toContain(Tools.duckduckgo_search);
+    });
   });
 
   describe('loadAgentTools (definitionsOnly=false) — action tool filtering', () => {
@@ -366,6 +409,39 @@ describe('ToolService - Action Capability Gating', () => {
       });
 
       expect(mockLoadActionSets).not.toHaveBeenCalled();
+    });
+
+    it('should load duckduckgo_search only when web_search capability is enabled', async () => {
+      const req = createMockReq([AgentCapabilities.tools]);
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
+
+      await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: [Tools.duckduckgo_search],
+        actionsEnabled: true,
+      });
+
+      expect(mockLoadToolsUtil).not.toHaveBeenCalled();
+
+      mockGetEndpointsConfig.mockResolvedValue(
+        createEndpointsConfig([AgentCapabilities.tools, AgentCapabilities.web_search]),
+      );
+
+      await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: [Tools.duckduckgo_search],
+        actionsEnabled: true,
+      });
+
+      expect(mockLoadToolsUtil).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: [Tools.duckduckgo_search],
+        }),
+      );
     });
   });
 

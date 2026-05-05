@@ -84,6 +84,13 @@
     ]
   },
   {
+    "name": "DuckDuckGo Search",
+    "pluginKey": "duckduckgo_search",
+    "description": "Search DuckDuckGo and optionally fetch readable text from open web results.",
+    "icon": "assets/google-search.svg",
+    "authConfig": []
+  },
+  {
     "name": "Calculator",
     "pluginKey": "calculator",
     "description": "Perform simple and complex mathematical calculations.",

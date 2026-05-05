@@ -26,6 +26,7 @@ const {
   manifestToolMap,
   // Basic Tools
   GoogleSearchAPI,
+  DuckDuckGoSearch,
   // Structured Tools
   DALLE3,
   FluxAPI,
@@ -176,6 +177,7 @@ const loadTools = async ({
     flux: FluxAPI,
     calculator: Calculator,
     google: GoogleSearchAPI,
+    duckduckgo_search: DuckDuckGoSearch,
     open_weather: OpenWeather,
     wolfram: StructuredWolfram,
     'stable-diffusion': StructuredSD,

@@ -609,6 +609,9 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
     if (tool === Tools.web_search) {
       return checkCapability(AgentCapabilities.web_search);
     }
+    if (tool === Tools.duckduckgo_search) {
+      return checkCapability(AgentCapabilities.web_search);
+    }
     if (isActionTool(tool)) {
       return actionsEnabled;
     }
@@ -998,6 +1001,8 @@ async function loadAgentTools({
     } else if (tool === Tools.web_search) {
       includesWebSearch = checkCapability(AgentCapabilities.web_search);
       return includesWebSearch;
+    } else if (tool === Tools.duckduckgo_search) {
+      return checkCapability(AgentCapabilities.web_search);
     } else if (isActionTool(tool)) {
       return actionsEnabled;
     } else if (!areToolsEnabled) {
@@ -1297,6 +1302,8 @@ async function loadToolsForExecution({
     const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
     actionsEnabled = enabledCapabilities.has(AgentCapabilities.actions);
   }
+  const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
+  const webSearchEnabled = enabledCapabilities.has(AgentCapabilities.web_search);
 
   const isToolSearch = toolNames.includes(AgentConstants.TOOL_SEARCH);
   const isPTC = toolNames.includes(AgentConstants.PROGRAMMATIC_TOOL_CALLING);
@@ -1356,6 +1363,13 @@ async function loadToolsForExecution({
   const tenantFunctionToolNames = [];
 
   for (const name of allToolNamesToLoad) {
+    if (name === Tools.duckduckgo_search && !webSearchEnabled) {
+      logger.warn(
+        `[loadToolsForExecution] Capability "${AgentCapabilities.web_search}" disabled. ` +
+          `Skipping DuckDuckGo search. User: ${req.user.id} | Agent: ${agent?.id}`,
+      );
+      continue;
+    }
     if (isActionTool(name)) {
       actionToolNames.push(name);
     } else if (!isBuiltInTool(name) && !name.includes(Constants.mcp_delimiter)) {
