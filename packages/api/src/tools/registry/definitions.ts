@@ -337,6 +337,35 @@ export const tavilySearchSchema: ExtendedJsonSchema = {
   required: ['query'],
 };
 
+/** DuckDuckGo Search tool JSON schema */
+export const duckDuckGoSearchSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    query: {
+      type: 'string',
+      minLength: 1,
+      description: 'The web search query.',
+    },
+    max_results: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 10,
+      description: 'Maximum search results to return. Defaults to 5.',
+    },
+    fetch_results: {
+      type: 'boolean',
+      description: 'Whether to fetch and extract readable text from each result. Defaults to true.',
+    },
+    max_content_chars: {
+      type: 'integer',
+      minimum: 500,
+      maximum: 12000,
+      description: 'Maximum extracted content characters per fetched result. Defaults to 4000.',
+    },
+  },
+  required: ['query'],
+};
+
 /** File Search tool JSON schema */
 export const fileSearchSchema: ExtendedJsonSchema = {
   type: 'object',
@@ -414,6 +443,13 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     description:
       'A search engine optimized for comprehensive, accurate, and trusted results. Useful for when you need to answer questions about current events.',
     schema: tavilySearchSchema,
+    toolType: 'builtin',
+  },
+  duckduckgo_search: {
+    name: 'duckduckgo_search',
+    description:
+      'Search DuckDuckGo and optionally fetch readable text from each result. Useful for open web research without API keys.',
+    schema: duckDuckGoSearchSchema,
     toolType: 'builtin',
   },
   file_search: {
