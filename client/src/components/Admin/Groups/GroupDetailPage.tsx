@@ -126,7 +126,7 @@ const GroupDetailPage: React.FC = () => {
           >
             <option value="">{localize('com_admin_select_user')}</option>
             {searchResults.map((user) => (
-              <option key={user._id} value={user._id}>
+              <option key={user._id ?? user.id} value={user._id ?? user.id}>
                 {user.name ?? user.username} ({user.email})
               </option>
             ))}

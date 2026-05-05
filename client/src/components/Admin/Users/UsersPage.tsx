@@ -100,7 +100,7 @@ const UsersPage: React.FC = () => {
               <tbody>
                 {filteredUsers.map((user) => (
                   <tr
-                    key={user._id}
+                    key={user._id ?? user.id}
                     className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
                   >
                     <td className="px-6 py-4 font-medium text-text-primary">
