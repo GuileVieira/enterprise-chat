@@ -31,7 +31,7 @@ services:
       CONSOLE_JSON: ${CONSOLE_JSON:-true}
       DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
       DEBUG_CONSOLE: ${DEBUG_CONSOLE:-false}
-      MONGO_URI: mongodb://mongodb:27017/LibreChat
+      MONGO_URI: mongodb://mongodb:27017/Orqest
       MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
       MONGO_AUTO_CREATE: ${MONGO_AUTO_CREATE:-true}
       SEARCH: ${SEARCH:-true}
