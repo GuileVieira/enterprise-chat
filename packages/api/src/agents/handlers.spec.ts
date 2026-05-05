@@ -1,4 +1,6 @@
 import { Constants } from '@librechat/agents';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
 import type {
   ToolExecuteBatchRequest,
   ToolExecuteResult,
@@ -174,5 +176,37 @@ describe('createToolExecuteHandler', () => {
       expect(capturedConfigs[0].session_id).toBeUndefined();
       expect(capturedConfigs[0]._injected_files).toBeUndefined();
     });
+  });
+});
+
+describe('createToolExecuteHandler tenant function compatibility', () => {
+  it('uses DynamicStructuredTool ToolMessage content as event-driven result content', async () => {
+    const tenantTool = new DynamicStructuredTool({
+      name: 'tenant_report',
+      description: 'Tenant report',
+      schema: z.object({ accountId: z.string() }),
+      func: async (args) => JSON.stringify({ ok: true, status: 200, data: args }),
+    });
+    const loadTools: ToolExecuteOptions['loadTools'] = jest.fn(async () => ({
+      loadedTools: [tenantTool],
+    }));
+    const handler = createToolExecuteHandler({ loadTools });
+
+    const results = await invokeHandler(handler, [
+      {
+        id: 'call_tenant',
+        name: 'tenant_report',
+        args: { accountId: 'act_1' },
+      },
+    ]);
+
+    expect(results).toEqual([
+      {
+        toolCallId: 'call_tenant',
+        content: JSON.stringify({ ok: true, status: 200, data: { accountId: 'act_1' } }),
+        artifact: undefined,
+        status: 'success',
+      },
+    ]);
   });
 });

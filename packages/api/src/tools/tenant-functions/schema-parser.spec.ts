@@ -53,6 +53,35 @@ describe('schema-parser', () => {
         default: 10,
       });
     });
+
+    it('handles nested array and object schemas', () => {
+      const result = convertSchema({
+        filters: {
+          type: 'object',
+          required: true,
+          properties: {
+            status: { type: 'string', enum: ['active', 'paused'], required: true },
+            tags: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+          },
+        },
+      });
+
+      expect(result.properties.filters).toEqual({
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['active', 'paused'] },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: ['status'],
+      });
+      expect(result.required).toEqual(['filters']);
+    });
   });
 
   describe('convertToJsonSchema', () => {
@@ -61,7 +90,7 @@ describe('schema-parser', () => {
         query: { type: 'string', description: 'Search query', required: true },
       });
       expect(result.type).toBe('object');
-      expect(result.properties.query).toBeDefined();
+      expect(result.properties?.query).toBeDefined();
       expect(result.required).toContain('query');
     });
   });
