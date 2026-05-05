@@ -1,4 +1,4 @@
-import { logger } from '@librechat/data-schemas';
+import { logger, runAsSystem } from '@librechat/data-schemas';
 import type { IUser } from '@librechat/data-schemas';
 import type { FilterQuery } from 'mongoose';
 import type { Response } from 'express';
@@ -23,7 +23,9 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
 
   async function listTenantsHandler(_req: ServerRequest, res: Response) {
     try {
-      const users = await findUsers({}, 'tenantId', { limit: 10000, sort: { createdAt: -1 } });
+      const users = await runAsSystem(() =>
+        findUsers({}, 'tenantId', { limit: 10000, sort: { createdAt: -1 } }),
+      );
       const tenantMap = new Map<string, number>();
 
       for (const user of users) {
@@ -45,14 +47,16 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
 
   async function listTenantUsersHandler(req: ServerRequest, res: Response) {
     try {
-      const { tenantId } = req.params;
+      const { tenantId } = req.params as { tenantId: string };
       const { limit, offset } = parsePagination(req.query);
       const filter = tenantId === 'default' ? { tenantId: { $exists: false } } : { tenantId };
 
-      const [users, total] = await Promise.all([
-        findUsers(filter, USER_LIST_FIELDS, { limit, offset, sort: { createdAt: -1 } }),
-        countUsers(filter),
-      ]);
+      const [users, total] = await runAsSystem(() =>
+        Promise.all([
+          findUsers(filter, USER_LIST_FIELDS, { limit, offset, sort: { createdAt: -1 } }),
+          countUsers(filter),
+        ]),
+      );
 
       const mapped = users.map((u) => ({
         _id: u._id?.toString() ?? '',
@@ -76,9 +80,9 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
 
   async function getTenantStatsHandler(req: ServerRequest, res: Response) {
     try {
-      const { tenantId } = req.params;
+      const { tenantId } = req.params as { tenantId: string };
       const filter = tenantId === 'default' ? { tenantId: { $exists: false } } : { tenantId };
-      const userCount = await countUsers(filter);
+      const userCount = await runAsSystem(() => countUsers(filter));
 
       return res.status(200).json({
         tenantId,
