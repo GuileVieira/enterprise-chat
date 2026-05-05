@@ -25,7 +25,7 @@ openssl rand -hex 32 # MEILI_MASTER_KEY
 
 Production service URLs must stay internal:
 
-- `MONGO_URI=mongodb://mongodb:27017/LibreChat`
+- `MONGO_URI=mongodb://mongodb:27017/Orqest`
 - `MEILI_HOST=http://meilisearch:7700`
 - `RAG_API_URL=http://rag_api:8000`
 - `CONFIG_PATH=/app/config/librechat.prod.yaml`
