@@ -67,6 +67,7 @@ const chatV2 = async (req, res) => {
     endpoint,
     files = [],
     promptPrefix,
+    hiddenPromptContext,
     assistant_id,
     instructions,
     endpointOption,
@@ -95,6 +96,10 @@ const chatV2 = async (req, res) => {
   let attachedFileIds = new Set();
   /** @type {TMessage | null} */
   let requestMessage = null;
+  const hiddenPromptContent =
+    typeof hiddenPromptContext?.content === 'string' ? hiddenPromptContext.content.trim() : '';
+  const runPromptPrefix =
+    [hiddenPromptContent, promptPrefix].filter(Boolean).join('\n\n') || undefined;
 
   const userMessageId = v4();
   const responseMessageId = v4();
@@ -160,8 +165,9 @@ const chatV2 = async (req, res) => {
       const promptBuffer = parentMessageId === Constants.NO_PARENT && !_thread_id ? 200 : 0;
       // 5 is added for labels
       let promptTokens =
-        (await countTokens(text + (promptPrefix ?? '') + projectInstructions + projectMemories)) +
-        5;
+        (await countTokens(
+          text + (runPromptPrefix ?? '') + projectInstructions + projectMemories,
+        )) + 5;
       promptTokens += totalPreviousTokens + promptBuffer;
       // Count tokens up to the current context window
       promptTokens = Math.min(promptTokens, getModelMaxTokens(model));
@@ -255,7 +261,7 @@ const chatV2 = async (req, res) => {
     const body = createRunBody({
       assistant_id,
       model,
-      promptPrefix,
+      promptPrefix: runPromptPrefix,
       instructions,
       endpointOption,
       clientTimestamp,

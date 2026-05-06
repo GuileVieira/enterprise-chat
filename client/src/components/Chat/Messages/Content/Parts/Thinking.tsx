@@ -13,6 +13,7 @@ import { useLocalize, useExpandCollapse } from '~/hooks';
 import { showThinkingAtom } from '~/store/showThinking';
 import { fontSizeAtom } from '~/store/fontSize';
 import { cn } from '~/utils';
+import MarkdownLite from '../MarkdownLite';
 
 /**
  * ThinkingContent - Displays the actual thinking/reasoning content
@@ -22,10 +23,13 @@ export const ThinkingContent: FC<{
   children: React.ReactNode;
 }> = memo(({ children }) => {
   const fontSize = useAtomValue(fontSizeAtom);
+  const content = typeof children === 'string' ? children : '';
 
   return (
     <div className="relative rounded-lg border border-border-light bg-surface-secondary p-3 pb-8 text-text-secondary">
-      <p className={cn('whitespace-pre-wrap leading-[26px]', fontSize)}>{children}</p>
+      <div className={cn('markdown prose dark:prose-invert light leading-[26px]', fontSize)}>
+        {content ? <MarkdownLite content={content} /> : children}
+      </div>
     </div>
   );
 });

@@ -334,6 +334,7 @@ export type TAskProps = {
   conversationId?: string | null;
   messageId?: string | null;
   clientTimestamp?: string;
+  hiddenPromptContext?: t.THiddenPromptContext | null;
 };
 
 export type TOptions = {

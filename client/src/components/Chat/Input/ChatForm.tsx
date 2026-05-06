@@ -2,6 +2,7 @@ import { memo, useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { TextareaAutosize } from '@librechat/client';
 import { useRecoilState, useRecoilValue } from 'recoil';
+import { Sparkle, X } from '@phosphor-icons/react';
 import { Constants, isAssistantsEndpoint, isAgentsEndpoint } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter, ConvoGenerator } from '~/common';
@@ -84,6 +85,9 @@ const ChatForm = memo(function ChatForm({
 
   const [badges, setBadges] = useRecoilState(store.chatBadges);
   const [isEditingBadges, setIsEditingBadges] = useRecoilState(store.isEditingBadges);
+  const [activeHiddenPrompt, setActiveHiddenPrompt] = useRecoilState(
+    store.activeHiddenPromptByIndex(index),
+  );
   const [showStopButton, setShowStopButton] = useRecoilState(store.showStopButtonByIndex(index));
   const plusPopoverAtom = useMemo(() => store.showPlusPopoverFamily(index), [index]);
   const mentionPopoverAtom = useMemo(() => store.showMentionPopoverFamily(index), [index]);
@@ -177,7 +181,7 @@ const ChatForm = memo(function ChatForm({
   useQueryParams({ textAreaRef });
 
   const { ref, ...registerProps } = methods.register('text', {
-    required: true,
+    required: false,
     onChange: useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) =>
         methods.setValue('text', e.target.value, { shouldValidate: true }),
@@ -213,6 +217,10 @@ const ChatForm = memo(function ChatForm({
     setIsEditingBadges(false);
     setBackupBadges([]);
   }, [backupBadges, setBadges, setIsEditingBadges]);
+
+  const handleRemoveHiddenPrompt = useCallback(() => {
+    setActiveHiddenPrompt(null);
+  }, [setActiveHiddenPrompt]);
 
   const isMoreThanThreeRows = visualRowCount > 3;
 
@@ -267,9 +275,25 @@ const ChatForm = memo(function ChatForm({
                 : 'shadow-md shadow-black/[0.04] dark:shadow-black/20',
               isTemporary
                 ? 'border-violet-800/50 bg-violet-950/10'
-                : 'border-border-light bg-surface-chat/95 backdrop-blur',
+                : 'bg-surface-chat/95 border-border-light backdrop-blur',
             )}
           >
+            {activeHiddenPrompt && (
+              <div className="flex items-center gap-2 px-4 pt-3 text-sm">
+                <Sparkle className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+                <div className="min-w-0 flex-1 truncate rounded-full border border-border-light bg-surface-secondary px-3 py-1.5">
+                  {localize('com_ui_active_hidden_prompt', { name: activeHiddenPrompt.name })}
+                </div>
+                <button
+                  type="button"
+                  aria-label={localize('com_ui_remove_hidden_prompt')}
+                  className="rounded-lg p-1 text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                  onClick={handleRemoveHiddenPrompt}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <TextareaHeader addedConvo={addedConvo} setAddedConvo={setAddedConvo} />
             {conversation?.projectId && projectQuery.data?.promptSnippets ? (
               <ProjectPromptSnippets
@@ -386,6 +410,7 @@ const ChatForm = memo(function ChatForm({
                     <SendButton
                       ref={submitButtonRef}
                       control={methods.control}
+                      index={index}
                       disabled={filesLoading || isSubmitting || disableInputs || isNotAppendable}
                     />
                   )

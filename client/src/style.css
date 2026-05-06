@@ -2596,6 +2596,91 @@ html {
   line-height: 1.4;
 }
 
+.agent-turn .message-content {
+  max-width: min(68ch, 100%);
+  font-size: min(var(--markdown-font-size, var(--font-size-base)), 1rem);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--text-primary) 88%, transparent);
+  text-wrap: pretty;
+}
+
+.agent-turn .message-content :where(p):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+
+.agent-turn .message-content :where(h1):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.45em;
+  margin-bottom: 0.6em;
+  font-size: 1.45rem;
+  line-height: 1.25;
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+.agent-turn .message-content :where(h2):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.35em;
+  margin-bottom: 0.55em;
+  font-size: 1.28rem;
+  line-height: 1.28;
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+.agent-turn .message-content :where(h3):not(:where([class~='not-prose'] *)) {
+  margin-top: 1.15em;
+  margin-bottom: 0.45em;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.agent-turn .message-content :where(h4):not(:where([class~='not-prose'] *)) {
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.agent-turn .message-content :where(ul, ol):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.65em;
+  margin-bottom: 0.9em;
+  padding-left: 1.15em;
+}
+
+.agent-turn .message-content :where(li):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.28em;
+  margin-bottom: 0.28em;
+  padding-left: 0.25em;
+}
+
+.agent-turn .message-content :where(li > p):not(:where([class~='not-prose'] *)) {
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
+}
+
+.agent-turn .message-content :where(li::marker) {
+  color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+  font-size: 0.72em;
+}
+
+.agent-turn .message-content :where(strong):not(:where([class~='not-prose'] *)) {
+  color: var(--text-primary);
+  font-weight: 620;
+}
+
+.agent-turn .message-content :where(blockquote):not(:where([class~='not-prose'] *)) {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border-left-color: color-mix(in srgb, var(--text-secondary) 26%, transparent);
+  color: color-mix(in srgb, var(--text-primary) 78%, transparent);
+}
+
+.agent-turn .message-content :where(pre, table):not(:where([class~='not-prose'] *)) {
+  max-width: 100%;
+}
+
 .message-content pre code {
   font-size: calc(0.9 * var(--markdown-font-size, var(--font-size-base)));
 }
