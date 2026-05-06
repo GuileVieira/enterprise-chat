@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { FileUpload, TooltipAnchor, AttachmentIcon } from '@librechat/client';
+import { Paperclip } from '@phosphor-icons/react';
+import { FileUpload, TooltipAnchor } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import { useFileHandlingNoChatContext, useLocalize } from '~/hooks';
@@ -61,7 +62,7 @@ const AttachFile = ({
             }}
           >
             <div className="flex w-full items-center justify-center gap-2">
-              <AttachmentIcon />
+              <Paperclip size={26} aria-hidden="true" />
             </div>
           </button>
         }

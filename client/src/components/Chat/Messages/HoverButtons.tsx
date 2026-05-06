@@ -1,7 +1,7 @@
 import React, { useState, useMemo, memo } from 'react';
 import { useRecoilState } from 'recoil';
+import { Check, Copy, PencilSimple, ArrowClockwise, ArrowBendUpLeft } from '@phosphor-icons/react';
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
-import { EditIcon, Clipboard, CheckMark, ContinueIcon, RegenerateIcon } from '@librechat/client';
 import { useGenerationsByLatest, useLocalize } from '~/hooks';
 import { Fork } from '~/components/Conversations';
 import MessageAudio from './MessageAudio';
@@ -167,7 +167,7 @@ const HoverButtons = ({
           <HoverButton
             onClick={regenerate}
             title={localize('com_ui_regenerate')}
-            icon={<RegenerateIcon size="19" />}
+            icon={<ArrowClockwise size={20} aria-hidden="true" />}
             isLast={isLast}
           />
         )}
@@ -211,7 +211,13 @@ const HoverButtons = ({
         title={
           isCopied ? localize('com_ui_copied_to_clipboard') : localize('com_ui_copy_to_clipboard')
         }
-        icon={isCopied ? <CheckMark className="h-[18px] w-[18px]" /> : <Clipboard size="19" />}
+        icon={
+          isCopied ? (
+            <Check size={20} weight="bold" aria-hidden="true" />
+          ) : (
+            <Copy size={20} aria-hidden="true" />
+          )
+        }
         isLast={isLast}
         className={cn(
           'ml-0 flex items-center gap-1.5 text-xs',
@@ -225,7 +231,7 @@ const HoverButtons = ({
           id={`edit-${message.messageId}`}
           onClick={onEdit}
           title={localize('com_ui_edit')}
-          icon={<EditIcon size="19" />}
+          icon={<PencilSimple size={20} aria-hidden="true" />}
           isActive={isEditing}
           isVisible={!hideEditButton}
           isDisabled={hideEditButton}
@@ -253,7 +259,7 @@ const HoverButtons = ({
         <HoverButton
           onClick={regenerate}
           title={localize('com_ui_regenerate')}
-          icon={<RegenerateIcon size="19" />}
+          icon={<ArrowClockwise size={20} aria-hidden="true" />}
           isLast={isLast}
           className="active"
         />
@@ -264,7 +270,7 @@ const HoverButtons = ({
         <HoverButton
           onClick={(e) => e && handleContinue(e)}
           title={localize('com_ui_continue')}
-          icon={<ContinueIcon className="w-19 h-19 -rotate-180" />}
+          icon={<ArrowBendUpLeft size={20} aria-hidden="true" />}
           isLast={isLast}
           className="active"
         />

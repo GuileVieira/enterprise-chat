@@ -64,7 +64,6 @@ jest.mock('@librechat/client', () => {
             ),
           ),
       ),
-    AttachmentIcon: () => R.createElement('span', { 'data-testid': 'attachment-icon' }),
     SharePointIcon: () => R.createElement('span', { 'data-testid': 'sharepoint-icon' }),
     useToastContext: () => ({ showToast: jest.fn() }),
   };

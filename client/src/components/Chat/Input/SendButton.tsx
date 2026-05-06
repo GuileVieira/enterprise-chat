@@ -1,7 +1,8 @@
 import React, { forwardRef } from 'react';
 import { useWatch } from 'react-hook-form';
+import { ArrowUp } from '@phosphor-icons/react';
 import type { Control } from 'react-hook-form';
-import { SendIcon, TooltipAnchor } from '@librechat/client';
+import { TooltipAnchor } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -29,7 +30,7 @@ const SubmitButton = React.memo(
             type="submit"
           >
             <span className="" data-state="closed">
-              <SendIcon size={24} />
+              <ArrowUp size={24} weight="bold" className="text-surface-primary" />
             </span>
           </button>
         }
