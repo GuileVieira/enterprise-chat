@@ -1,13 +1,14 @@
 import { memo, useCallback, lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilValue } from 'recoil';
-import { PencilSimpleLine, SidebarSimple } from '@phosphor-icons/react';
+import { PencilSimpleLine, SidebarSimple, SquaresFour as LayoutGrid } from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
 import { Skeleton, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
-import { useLocalize, useNewConvo } from '~/hooks';
+import { useLocalize, useNewConvo, useShowMarketplace } from '~/hooks';
 import { useProjectByIdQuery } from '~/data-provider';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
@@ -77,6 +78,36 @@ const NewChatButton = memo(function NewChatButton({
         >
           <PencilSimpleLine className="h-5 w-5" />
         </a>
+      }
+    />
+  );
+});
+
+const AgentMarketplaceButton = memo(function AgentMarketplaceButton() {
+  const navigate = useNavigate();
+  const localize = useLocalize();
+  const showAgentMarketplace = useShowMarketplace();
+
+  const handleClick = useCallback(() => navigate('/agents'), [navigate]);
+
+  if (!showAgentMarketplace) {
+    return null;
+  }
+
+  return (
+    <TooltipAnchor
+      side="right"
+      description={localize('com_agents_marketplace')}
+      render={
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={localize('com_agents_marketplace')}
+          className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary [&_svg]:stroke-[1.75]"
+          onClick={handleClick}
+        >
+          <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+        </Button>
       }
     />
   );
@@ -183,6 +214,7 @@ function ExpandedPanel({
         }
       />
       <NewChatButton setActive={setActive} />
+      <AgentMarketplaceButton />
       <div className="mx-2 border-b border-border-light" />
       <div className="flex flex-col gap-1 overflow-y-auto">
         {links.map((link) => (
