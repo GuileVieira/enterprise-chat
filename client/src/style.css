@@ -2630,7 +2630,8 @@ html {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--surface-submit) 22%, transparent);
+  background: color-mix(in srgb, var(--ring-primary) 38%, var(--surface-primary));
+  color: var(--text-primary);
 }
 
 .admin-ambient-bg {
