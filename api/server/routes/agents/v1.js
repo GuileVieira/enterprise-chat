@@ -4,6 +4,7 @@ const { PermissionTypes, Permissions, PermissionBits } = require('librechat-data
 const { requireJwtAuth, configMiddleware, canAccessAgentResource } = require('~/server/middleware');
 const v1 = require('~/server/controllers/agents/v1');
 const { getRoleByName } = require('~/models');
+const { getTenantFunctions } = require('~/models');
 const actions = require('./actions');
 const tools = require('./tools');
 
@@ -22,6 +23,33 @@ const checkAgentCreate = generateCheckAccess({
 });
 
 router.use(requireJwtAuth);
+
+/**
+ * Get active tenant functions for the current user's tenant.
+ * @route GET /agents/tenant-functions
+ * @returns {TenantFunction[]} 200 - application/json
+ */
+router.get('/tenant-functions', async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ message: 'User has no tenant' });
+    }
+    const functions = await getTenantFunctions({ tenantId, isActive: true });
+    const toPublicTenantFunction = (fn) => ({
+      id: fn.id,
+      name: fn.name,
+      description: fn.description,
+      details: fn.details,
+      inputSchema: fn.inputSchema,
+      isActive: fn.isActive,
+      hasAuth: !!fn.config?.auth,
+    });
+    return res.json({ functions: functions.map(toPublicTenantFunction) });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
 
 /**
  * Agent actions route.
@@ -47,6 +75,7 @@ router.get('/categories', v1.getAgentCategories);
  * @returns {Agent} 201 - Success response - application/json
  */
 router.post('/', checkAgentCreate, v1.createAgent);
+
 
 /**
  * Retrieves basic agent information (VIEW permission required).
@@ -112,6 +141,16 @@ router.post(
     resourceIdParam: 'id',
   }),
   v1.duplicateAgent,
+);
+
+router.post(
+  '/:id/clone-to-tenant',
+  checkAgentCreate,
+  canAccessAgentResource({
+    requiredPermission: PermissionBits.EDIT,
+    resourceIdParam: 'id',
+  }),
+  v1.cloneAgentToTenant,
 );
 
 /**

@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const fs = require('fs').promises;
 const { nanoid } = require('nanoid');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   refreshS3Url,
   agentCreateSchema,
@@ -200,11 +200,15 @@ const filterAuthorizedTools = async ({
   availableTools,
   existingTools,
   configServers,
+  tenantId,
 }) => {
   const filteredTools = [];
   let mcpServerConfigs;
   let registryUnavailable = false;
   const existingToolSet = existingTools?.length ? new Set(existingTools) : null;
+  const tenantFunctions = tenantId
+    ? await db.getTenantFunctions({ tenantId, isActive: true })
+    : [];
 
   for (const tool of tools) {
     if (availableTools[tool] || systemTools[tool]) {
@@ -213,6 +217,10 @@ const filterAuthorizedTools = async ({
     }
 
     if (!tool?.includes(Constants.mcp_delimiter)) {
+      if (tenantFunctions.some((f) => f.id === tool)) {
+        filteredTools.push(tool);
+        continue;
+      }
       continue;
     }
 
@@ -389,9 +397,12 @@ const createAgentHandler = async (req, res) => {
       userId,
       availableTools,
       configServers,
+      tenantId: req.user.tenantId,
     });
 
-    const agent = await db.createAgent(agentData);
+    const createAgent = () => db.createAgent(agentData);
+    const agent =
+      req.user.role === 'ADMIN' ? await runAsSystem(createAgent) : await createAgent();
 
     try {
       await Promise.all([
@@ -608,22 +619,21 @@ const updateAgentHandler = async (req, res) => {
 
     if (updateData.tools) {
       const existingToolSet = new Set(existingAgent.tools ?? []);
-      const newMCPTools = updateData.tools.filter(
-        (t) => !existingToolSet.has(t) && t?.includes(Constants.mcp_delimiter),
-      );
+      const newTools = updateData.tools.filter((t) => !existingToolSet.has(t));
 
-      if (newMCPTools.length > 0) {
+      if (newTools.length > 0) {
         const [availableTools, configServers] = await Promise.all([
           getCachedTools().then((t) => t ?? {}),
           resolveConfigServers(req),
         ]);
         const approvedNew = await filterAuthorizedTools({
-          tools: newMCPTools,
+          tools: newTools,
           userId: req.user.id,
           availableTools,
           configServers,
+          tenantId: req.user.tenantId,
         });
-        const rejectedSet = new Set(newMCPTools.filter((t) => !approvedNew.includes(t)));
+        const rejectedSet = new Set(newTools.filter((t) => !approvedNew.includes(t)));
         if (rejectedSet.size > 0) {
           updateData.tools = updateData.tools.filter((t) => !rejectedSet.has(t));
         }
@@ -784,6 +794,7 @@ const duplicateAgentHandler = async (req, res) => {
         availableTools,
         existingTools: newAgentData.tools,
         configServers,
+        tenantId: req.user.tenantId,
       });
     }
 
@@ -795,7 +806,11 @@ const duplicateAgentHandler = async (req, res) => {
       });
     }
 
-    const newAgent = await db.createAgent(newAgentData);
+    const createDuplicatedAgent = () => db.createAgent(newAgentData);
+    const newAgent =
+      req.user.role === 'ADMIN'
+        ? await runAsSystem(createDuplicatedAgent)
+        : await createDuplicatedAgent();
 
     try {
       await Promise.all([
@@ -857,6 +872,72 @@ const deleteAgentHandler = async (req, res) => {
   } catch (error) {
     logger.error('[/Agents/:id] Error deleting Agent', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Creates a tenant-specific clone of an existing agent and grants viewer access
+ * to every user in the target tenant.
+ */
+const cloneAgentToTenantHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.body || {};
+    const { id: userId } = req.user;
+
+    if (!tenantId || typeof tenantId !== 'string' || !tenantId.trim()) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const sourceAgent = await db.getAgent({ id });
+    if (!sourceAgent) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    const {
+      id: _id,
+      _id: __id,
+      author: _author,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      versions: _versions,
+      __v: _v,
+      tenantId: _tenantId,
+      ...cloneData
+    } = sourceAgent;
+
+    const clonedAgent = await runAsSystem(() =>
+      db.createAgent({
+        ...cloneData,
+        id: `agent_${nanoid()}`,
+        name: `${sourceAgent.name || 'Agent'} (${tenantId})`,
+        author: userId,
+      }),
+    );
+
+    await Promise.all([
+      grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: userId,
+        resourceType: ResourceType.AGENT,
+        resourceId: clonedAgent._id,
+        accessRoleId: AccessRoleIds.AGENT_OWNER,
+        grantedBy: userId,
+      }),
+      grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: tenantId,
+        resourceType: ResourceType.AGENT,
+        resourceId: clonedAgent._id,
+        accessRoleId: AccessRoleIds.AGENT_VIEWER,
+        grantedBy: userId,
+      }),
+    ]);
+
+    return res.status(201).json(clonedAgent);
+  } catch (error) {
+    logger.error('[/Agents/:id/clone-to-tenant] Error cloning Agent to tenant', error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -1158,6 +1239,7 @@ const revertAgentVersionHandler = async (req, res) => {
         availableTools,
         existingTools: updatedAgent.tools,
         configServers,
+        tenantId: req.user.tenantId,
       });
       if (filteredTools.length !== updatedAgent.tools.length) {
         revertUpdates.tools = filteredTools;
@@ -1240,6 +1322,7 @@ module.exports = {
   getAgent: getAgentHandler,
   updateAgent: updateAgentHandler,
   duplicateAgent: duplicateAgentHandler,
+  cloneAgentToTenant: cloneAgentToTenantHandler,
   deleteAgent: deleteAgentHandler,
   getListAgents: getListAgentsHandler,
   uploadAgentAvatar: uploadAgentAvatarHandler,

@@ -504,7 +504,7 @@ describe('AclEntry Model Tests', () => {
       expect(updated?.permBits).toBe(PermissionBits.VIEW | PermissionBits.EDIT);
     });
 
-    test('should handle mixed string and ObjectId in hasPermission', async () => {
+    test('should normalize mixed string and ObjectId principals in hasPermission', async () => {
       // Grant permission with string ID
       await methods.grantPermission(
         PrincipalType.USER,
@@ -531,7 +531,7 @@ describe('AclEntry Model Tests', () => {
         resourceId,
         PermissionBits.VIEW,
       );
-      expect(hasPermWithString).toBe(false); // This should fail because hasPermission doesn't convert
+      expect(hasPermWithString).toBe(true);
 
       // Check with converted ObjectId
       const hasPermWithConvertedId = await methods.hasPermission(

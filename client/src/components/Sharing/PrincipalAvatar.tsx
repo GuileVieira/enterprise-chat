@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, User, Shield } from 'lucide-react';
+import { Building2, Users, User, Shield } from 'lucide-react';
 import { PrincipalType } from 'librechat-data-provider';
 import type { TPrincipal } from 'librechat-data-provider';
 import { cn } from '~/utils';
@@ -16,7 +16,7 @@ export default function PrincipalAvatar({
   className,
 }: PrincipalAvatarProps) {
   const { avatar, type, name } = principal;
-  const displayName = name || 'Unknown';
+  const displayName = name || principal.email || principal.idOnTheSource || principal.id || 'Unknown';
 
   const sizeClasses = {
     sm: 'h-6 w-6',
@@ -47,6 +47,12 @@ export default function PrincipalAvatar({
           Icon: Users,
           containerClass: 'bg-green-100 dark:bg-green-900',
           iconClass: 'text-green-600 dark:text-green-400',
+        };
+      case PrincipalType.TENANT:
+        return {
+          Icon: Building2,
+          containerClass: 'bg-amber-100 dark:bg-amber-900',
+          iconClass: 'text-amber-700 dark:text-amber-300',
         };
       case PrincipalType.ROLE:
         return {

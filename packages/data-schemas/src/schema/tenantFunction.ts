@@ -39,11 +39,9 @@ const tenantFunctionSchema = new Schema<ITenantFunction>(
       path: { type: String, required: true },
       headers: { type: Schema.Types.Mixed, default: undefined },
       auth: {
-        type: {
-          type: { type: String, enum: ['bearer', 'basic', 'api_key', 'custom'], required: true },
-          secretName: { type: String, required: true },
-          headerName: { type: String },
-        },
+        type: { type: String, enum: ['bearer', 'basic', 'api_key', 'custom'], required: true },
+        secretName: { type: String, required: true },
+        headerName: { type: String },
         _id: false,
       },
       _id: false,

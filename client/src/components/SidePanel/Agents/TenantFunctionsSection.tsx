@@ -51,7 +51,14 @@ const TenantFunctionsSection: React.FC<TenantFunctionsSectionProps> = ({ tools, 
                       className="mt-0.5 h-4 w-4 rounded border-border-medium text-green-500 focus:ring-green-500"
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-text-primary">{fn.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-medium text-text-primary">{fn.name}</div>
+                        {fn.hasAuth && (
+                          <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                            Secure
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-text-tertiary">{fn.description}</div>
                     </div>
                     <Wrench className="h-4 w-4 text-text-tertiary" />

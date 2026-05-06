@@ -531,6 +531,16 @@ export const duplicateAgent = ({
   );
 };
 
+export const cloneAgentToTenant = ({
+  agent_id,
+  tenantId,
+}: {
+  agent_id: string;
+  tenantId: string;
+}): Promise<a.Agent> => {
+  return request.post(endpoints.cloneAgentToTenant(agent_id), { tenantId });
+};
+
 export const deleteAgent = ({ agent_id }: m.DeleteAgentBody): Promise<void> => {
   return request.delete(
     endpoints.agents({

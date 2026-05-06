@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button, useMediaQuery } from '@librechat/client';
 import { Users, X, ExternalLink } from 'lucide-react';
-import { ResourceType } from 'librechat-data-provider';
+import { PrincipalType, ResourceType } from 'librechat-data-provider';
 import type { TPrincipal, AccessRoleIds } from 'librechat-data-provider';
 import AccessRolesPicker from '~/components/Sharing/AccessRolesPicker';
 import PrincipalAvatar from '~/components/Sharing/PrincipalAvatar';
@@ -26,7 +26,12 @@ export default function SelectedPrincipalsList({
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   const getPrincipalDisplayInfo = (principal: TPrincipal) => {
-    const displayName = principal.name || localize('com_ui_unknown');
+    const displayName =
+      principal.name ||
+      principal.email ||
+      principal.idOnTheSource ||
+      principal.id ||
+      localize('com_ui_unknown');
     const subtitle = isMobile
       ? `${principal.type} (${principal.source || 'local'})`
       : principal.email || `${principal.type} (${principal.source || 'local'})`;
@@ -73,7 +78,7 @@ export default function SelectedPrincipalsList({
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-2">
-                {!!share.accessRoleId && !!onRoleChange && (
+                {!!share.accessRoleId && !!onRoleChange && share.type !== PrincipalType.TENANT && (
                   <AccessRolesPicker
                     resourceType={resourceType}
                     selectedRoleId={share.accessRoleId}

@@ -17,7 +17,8 @@ const PeoplePickerSearchItem = forwardRef<HTMLDivElement, PeoplePickerSearchItem
     const localize = useLocalize();
     const { name, email, type } = principal;
 
-    const displayName = name || localize('com_ui_unknown');
+    const displayName =
+      name || email || principal.idOnTheSource || principal.id || localize('com_ui_unknown');
     const subtitle = email || `${type} (${principal.source || 'local'})`;
 
     /** Get badge styling based on type */
@@ -37,6 +38,11 @@ const PeoplePickerSearchItem = forwardRef<HTMLDivElement, PeoplePickerSearchItem
           return {
             className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
             label: localize('com_ui_role'),
+          };
+        case PrincipalType.TENANT:
+          return {
+            className: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300',
+            label: localize('com_ui_tenant'),
           };
         default:
           return {

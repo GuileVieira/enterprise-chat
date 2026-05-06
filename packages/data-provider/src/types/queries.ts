@@ -371,7 +371,7 @@ export type TenantFunction = {
 export type PublicTenantFunction = Pick<
   TenantFunction,
   'id' | 'name' | 'description' | 'details' | 'inputSchema' | 'isActive'
->;
+> & { hasAuth?: boolean };
 
 export type TenantFunctionListResponse = {
   functions: TenantFunction[];

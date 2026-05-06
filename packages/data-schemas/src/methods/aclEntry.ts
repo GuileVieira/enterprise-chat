@@ -290,7 +290,9 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
       if (principalType === PrincipalType.USER) {
@@ -345,7 +347,9 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
     }
@@ -384,7 +388,9 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
     }
