@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Eye, Plus, Pencil, Trash2, UserCircle, Users, Loader2 } from 'lucide-react';
+import {
+  Eye,
+  SpinnerGap as Loader2,
+  PencilSimple as Pencil,
+  Plus,
+  Trash as Trash2,
+  UserCircle,
+  Users,
+} from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
 import { useListAdminGroups, useDeleteAdminGroupMutation } from '~/data-provider/admin';
 import { useNavigate } from 'react-router-dom';

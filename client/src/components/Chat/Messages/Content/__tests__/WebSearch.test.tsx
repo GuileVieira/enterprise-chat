@@ -53,9 +53,9 @@ jest.mock('~/components/Web/Sources', () => ({
   ),
 }));
 
-jest.mock('lucide-react', () => ({
+jest.mock('@phosphor-icons/react', () => ({
   Globe: () => <span data-testid="globe-icon" />,
-  ChevronDown: () => <span data-testid="chevron-icon" />,
+  CaretDown: () => <span data-testid="chevron-icon" />,
 }));
 
 function makeSource(link: string, title: string): ValidSource {

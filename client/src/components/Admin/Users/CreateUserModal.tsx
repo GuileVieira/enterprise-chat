@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Building2, Check, Copy, Eye, EyeOff, Loader2, UserPlus, X } from 'lucide-react';
+import {
+  Buildings as Building2,
+  Check,
+  Copy,
+  Eye,
+  EyeSlash as EyeOff,
+  SpinnerGap as Loader2,
+  UserPlus,
+  X,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { useCreateAdminUserMutation, useListAdminTenants } from '~/data-provider/admin';
 import { AdminActionButton, AdminBadge, AdminIconButton } from '../common';

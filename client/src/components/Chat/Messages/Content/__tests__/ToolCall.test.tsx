@@ -85,10 +85,10 @@ jest.mock('@librechat/client', () => ({
   ),
 }));
 
-jest.mock('lucide-react', () => ({
-  ChevronDown: () => <span>{'ChevronDown'}</span>,
-  ChevronUp: () => <span>{'ChevronUp'}</span>,
-  TriangleAlert: () => <span>{'TriangleAlert'}</span>,
+jest.mock('@phosphor-icons/react', () => ({
+  CaretDown: () => <span>{'CaretDown'}</span>,
+  CaretUp: () => <span>{'CaretUp'}</span>,
+  WarningDiamond: () => <span>{'WarningDiamond'}</span>,
 }));
 
 jest.mock('~/utils', () => ({

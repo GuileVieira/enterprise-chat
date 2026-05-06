@@ -1,6 +1,6 @@
 import React from 'react';
 import { TooltipAnchor } from '@librechat/client';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { CaretDown as ChevronDown, CaretUp as ChevronUp } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 

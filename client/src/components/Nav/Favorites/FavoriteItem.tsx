@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as Menu from '@ariakit/react/menu';
-import { Ellipsis, PinOff } from 'lucide-react';
+import { DotsThree as Ellipsis, PushPinSlash as PinOff } from '@phosphor-icons/react';
 import { DropdownPopup } from '@librechat/client';
 import { EModelEndpoint } from 'librechat-data-provider';
 import type { Agent, TModelSpec, TEndpointsConfig } from 'librechat-data-provider';

@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode, createRef } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { ArrowClockwise as RefreshCw } from '@phosphor-icons/react';
 import { Button } from '../Button';
 import { logger } from '~/utils';
 import { useLocalize } from '~/hooks';

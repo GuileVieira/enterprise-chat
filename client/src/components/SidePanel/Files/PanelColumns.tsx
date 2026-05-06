@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowsDownUp as ArrowUpDown } from '@phosphor-icons/react';
 import { Button } from '@librechat/client';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { TFile } from 'librechat-data-provider';

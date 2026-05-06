@@ -2,6 +2,7 @@ import { memo, useId, useMemo, useState, useCallback } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import { useQueryClient } from '@tanstack/react-query';
+import { CaretDown, Check, Folder } from '@phosphor-icons/react';
 import { DropdownPopup, useMediaQuery } from '@librechat/client';
 import {
   Constants,
@@ -11,7 +12,6 @@ import {
   Permissions,
 } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
-import { Check, ChevronDown, Folder } from 'lucide-react';
 import ModelSelector from './Menus/Endpoints/ModelSelector';
 import {
   useGetProjectFiles,
@@ -207,7 +207,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
           >
             <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
             <span className="min-w-0 flex-1 truncate text-left">{projectLabel}</span>
-            <ChevronDown
+            <CaretDown
               className={cn(
                 'h-4 w-4 shrink-0 text-text-tertiary transition-transform duration-200',
                 isMenuOpen && 'rotate-180',

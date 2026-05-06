@@ -1,5 +1,5 @@
 import { useContext, useCallback, useEffect, useState } from 'react';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Monitor, Moon, Sun } from '@phosphor-icons/react';
 import { ThemeContext, isDark } from '../theme';
 import { useLocalize } from '../hooks';
 

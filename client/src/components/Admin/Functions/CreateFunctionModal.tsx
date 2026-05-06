@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Loader2, Wrench } from 'lucide-react';
+import { SpinnerGap as Loader2, Wrench, X } from '@phosphor-icons/react';
 import { useCreateAdminFunctionMutation, useListAdminSecrets } from '~/data-provider/admin';
 
 interface CreateFunctionModalProps {

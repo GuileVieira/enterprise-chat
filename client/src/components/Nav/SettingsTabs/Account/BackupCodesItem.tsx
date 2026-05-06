@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshCcw } from 'lucide-react';
+import { ClockCounterClockwise as RefreshCcw } from '@phosphor-icons/react';
 import { useSetRecoilState } from 'recoil';
 import { motion, AnimatePresence } from 'framer-motion';
 import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Shield } from 'lucide-react';
+import { Check, Shield } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { useListRoles } from '~/data-provider/roles';
 import type { TranslationKeys } from '~/hooks';

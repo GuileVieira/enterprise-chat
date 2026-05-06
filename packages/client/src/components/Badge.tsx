@@ -1,8 +1,8 @@
 import type React from 'react';
-import { X, Plus } from 'lucide-react';
+import type { Icon as LucideIcon } from '@phosphor-icons/react';
+import { Plus, X } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import type { ButtonHTMLAttributes } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '~/utils';
 
 interface BadgeProps

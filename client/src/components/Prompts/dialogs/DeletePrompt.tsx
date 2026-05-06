@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash as Trash2 } from '@phosphor-icons/react';
 import {
   Button,
   OGDialog,

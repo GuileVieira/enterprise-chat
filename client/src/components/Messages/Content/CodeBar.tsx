@@ -1,5 +1,5 @@
 import React from 'react';
-import { InfoIcon } from 'lucide-react';
+import { Info as InfoIcon } from '@phosphor-icons/react';
 import type { CodeBarProps } from '~/common';
 import useCopyCode from '~/components/Messages/Content/useCopyCode';
 import CopyButton from '~/components/Messages/Content/CopyButton';

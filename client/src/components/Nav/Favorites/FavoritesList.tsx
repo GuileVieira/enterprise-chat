@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useMemo, useEffect } from 'react';
-import { LayoutGrid } from 'lucide-react';
+import { SquaresFour as LayoutGrid } from '@phosphor-icons/react';
 import { useRecoilValue } from 'recoil';
 import { useDrag, useDrop } from 'react-dnd';
 import { Skeleton } from '@librechat/client';

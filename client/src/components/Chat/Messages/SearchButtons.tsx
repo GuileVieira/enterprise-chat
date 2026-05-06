@@ -1,4 +1,4 @@
-import { Link } from 'lucide-react';
+import { Link } from '@phosphor-icons/react';
 import { useRecoilValue } from 'recoil';
 import { QueryKeys } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';

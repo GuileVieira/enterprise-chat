@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ShieldEllipsis } from 'lucide-react';
+import { ShieldStar as ShieldEllipsis } from '@phosphor-icons/react';
 import { useForm, Controller } from 'react-hook-form';
 import { Permissions, SystemRoles } from 'librechat-data-provider';
 import {

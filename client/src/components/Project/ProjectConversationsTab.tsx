@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Plus } from 'lucide-react';
+import { ChatCircle as MessageSquare, Plus } from '@phosphor-icons/react';
 import type { TConversation, TProject } from 'librechat-data-provider';
 import { useConversationsInfiniteQuery } from '~/data-provider';
 import { useLocalize, useNewConvo } from '~/hooks';

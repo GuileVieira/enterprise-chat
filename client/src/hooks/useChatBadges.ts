@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useRecoilCallback } from 'recoil';
 import { useRecoilValue } from 'recoil';
-import { MessageCircleDashed, Box } from 'lucide-react';
+import { Cube as Box, ChatCircleDots as MessageCircleDashed } from '@phosphor-icons/react';
 import type { BadgeItem } from '~/common';
 import { useLocalize, TranslationKeys } from '~/hooks';
 import store from '~/store';

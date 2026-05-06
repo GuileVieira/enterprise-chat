@@ -11,9 +11,9 @@ jest.mock('~/utils', () => ({
   },
 }));
 
-// Mock lucide-react
-jest.mock('lucide-react', () => ({
-  RefreshCw: ({ className }: { className?: string }) => (
+// Mock Phosphor icons
+jest.mock('@phosphor-icons/react', () => ({
+  ArrowClockwise: ({ className }: { className?: string }) => (
     <svg data-testid="refresh-icon" className={className} />
   ),
 }));

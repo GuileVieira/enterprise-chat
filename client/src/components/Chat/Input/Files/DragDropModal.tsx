@@ -2,12 +2,12 @@ import React, { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { OGDialog, OGDialogTemplate } from '@librechat/client';
 import {
-  ImageUpIcon,
-  FileSearch,
-  FileType2Icon,
-  FileImageIcon,
-  TerminalSquareIcon,
-} from 'lucide-react';
+  FileImage as FileImageIcon,
+  FileMagnifyingGlass as FileSearch,
+  FileText as FileType2Icon,
+  ImageSquare as ImageUpIcon,
+  TerminalWindow as TerminalSquareIcon,
+} from '@phosphor-icons/react';
 import {
   Providers,
   inferMimeType,

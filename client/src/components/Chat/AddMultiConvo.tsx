@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useSetRecoilState, useRecoilValue } from 'recoil';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle } from '@phosphor-icons/react';
 import { TooltipAnchor } from '@librechat/client';
 import { isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';

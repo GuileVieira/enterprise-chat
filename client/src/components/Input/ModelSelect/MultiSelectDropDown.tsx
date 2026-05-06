@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Wrench, ArrowRight } from 'lucide-react';
+import { ArrowRight, Wrench } from '@phosphor-icons/react';
 import { CheckMark, useOnClickOutside, useMultiSearch } from '@librechat/client';
 import {
   Listbox,

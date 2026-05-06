@@ -1,15 +1,15 @@
 import React from 'react';
 import {
+  WarningCircle as AlertCircle,
+  Buildings as Building2,
   Key,
+  Layout as LayoutDashboard,
+  GearSix as Settings,
   Shield,
+  UserCircle,
   Users,
   Wrench,
-  Settings,
-  Building2,
-  UserCircle,
-  AlertCircle,
-  LayoutDashboard,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useGetAdminOverview } from '~/data-provider/admin';
 import { useLocalize } from '~/hooks';
@@ -126,7 +126,9 @@ const AdminDashboard: React.FC = () => {
                 key={metric.key}
                 title={metric.title}
                 value={
-                  typeof metric.value === 'number' ? numberFormat.format(metric.value) : metric.value
+                  typeof metric.value === 'number'
+                    ? numberFormat.format(metric.value)
+                    : metric.value
                 }
                 icon={metric.icon}
                 description={metric.description}

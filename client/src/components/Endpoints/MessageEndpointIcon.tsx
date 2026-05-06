@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Bot } from 'lucide-react';
+import { Robot as Bot } from '@phosphor-icons/react';
 import { EModelEndpoint, isAssistantsEndpoint, alternateName } from 'librechat-data-provider';
 import {
   Plugin,

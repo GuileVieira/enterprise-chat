@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import {
-  KeyRound,
+  CaretDown as ChevronDown,
+  CaretRight as ChevronRight,
+  Keyhole as KeyRound,
   Plus,
   Power,
-  Wrench,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
   ToggleLeft,
   ToggleRight,
-} from 'lucide-react';
+  Trash as Trash2,
+  Wrench,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import {
   useListAdminFunctions,

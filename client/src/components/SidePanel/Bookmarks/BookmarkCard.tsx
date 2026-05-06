@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
-import { GripVertical } from 'lucide-react';
+import { DotsSixVertical as GripVertical } from '@phosphor-icons/react';
 import type { TConversationTag } from 'librechat-data-provider';
 import { TooltipAnchor, useToastContext } from '@librechat/client';
 import { useConversationTagMutation } from '~/data-provider';

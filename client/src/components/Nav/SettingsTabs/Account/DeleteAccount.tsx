@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { LockIcon, Trash } from 'lucide-react';
+import { Lock as LockIcon, Trash } from '@phosphor-icons/react';
 import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
 import {
   InputOTPSeparator,

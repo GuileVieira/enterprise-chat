@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, FloppyDisk as Save, Trash as Trash2 } from '@phosphor-icons/react';
 import { useUpdateProjectMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import type { TProject } from 'librechat-data-provider';

@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Tools } from 'librechat-data-provider';
-import { Globe, ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown, Globe } from '@phosphor-icons/react';
 import type { TAttachment, ValidSource, SearchResultData } from 'librechat-data-provider';
 import { FaviconImage, getCleanDomain } from '~/components/Web/SourceHovercard';
 import { StackedFavicons } from '~/components/Web/Sources';

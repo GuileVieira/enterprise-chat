@@ -1,18 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Buildings,
+  CaretLeft,
+  GearSix,
   Key,
-  Menu,
-  Search,
+  List,
+  MagnifyingGlass,
   Shield,
+  SquaresFour,
+  UserCircle,
   Users,
   Wrench,
   X,
-  Settings,
-  Building2,
-  UserCircle,
-  ChevronLeft,
-  LayoutDashboard,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { SystemRoles } from 'librechat-data-provider';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -27,14 +27,14 @@ const navItems: Array<{
   icon: React.ElementType;
   end?: boolean;
 }> = [
-  { path: '/admin', labelKey: 'com_admin_dashboard', icon: LayoutDashboard, end: true },
+  { path: '/admin', labelKey: 'com_admin_dashboard', icon: SquaresFour, end: true },
   { path: '/admin/users', labelKey: 'com_admin_users', icon: Users },
-  { path: '/admin/tenants', labelKey: 'com_admin_tenants', icon: Building2 },
+  { path: '/admin/tenants', labelKey: 'com_admin_tenants', icon: Buildings },
   { path: '/admin/roles', labelKey: 'com_admin_roles', icon: Shield },
   { path: '/admin/groups', labelKey: 'com_admin_groups', icon: UserCircle },
   { path: '/admin/functions', labelKey: 'com_admin_functions', icon: Wrench },
   { path: '/admin/secrets', labelKey: 'com_admin_secrets', icon: Key },
-  { path: '/admin/config', labelKey: 'com_admin_config', icon: Settings },
+  { path: '/admin/config', labelKey: 'com_admin_config', icon: GearSix },
 ];
 
 interface AdminNavProps {
@@ -52,7 +52,7 @@ const AdminNav: React.FC<AdminNavProps> = ({ onNavigate }) => {
           to="/c/new"
           className="inline-flex items-center gap-2 rounded-xl px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
         >
-          <ChevronLeft className="size-4" />
+          <CaretLeft className="size-4" />
           {localize('com_admin_back_to_chat')}
         </NavLink>
       </div>
@@ -148,7 +148,7 @@ const AdminLayout: React.FC = () => {
       )}
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-border-light bg-surface-primary/90 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="bg-surface-primary/90 sticky top-0 z-20 border-b border-border-light px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
@@ -157,7 +157,7 @@ const AdminLayout: React.FC = () => {
                 className="inline-flex size-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary md:hidden"
                 onClick={() => setIsMobileNavOpen(true)}
               >
-                <Menu className="size-5" />
+                <List className="size-5" />
               </button>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">
@@ -173,7 +173,7 @@ const AdminLayout: React.FC = () => {
                 onClick={() => navigate('/admin/users')}
                 className="flex h-10 w-full max-w-md items-center gap-2 rounded-xl border border-border-light bg-surface-secondary px-3 text-left text-sm text-text-secondary shadow-sm shadow-black/[0.03] transition-all duration-200 hover:border-border-medium hover:bg-surface-tertiary dark:shadow-black/20"
               >
-                <Search className="size-4" />
+                <MagnifyingGlass className="size-4" />
                 {localize('com_admin_search_shortcut')}
               </button>
             </div>

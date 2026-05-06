@@ -1,4 +1,4 @@
-import { EarthIcon } from 'lucide-react';
+import { GlobeHemisphereWest as EarthIcon } from '@phosphor-icons/react';
 import { ControlCombobox } from '@librechat/client';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useFormContext, Controller } from 'react-hook-form';

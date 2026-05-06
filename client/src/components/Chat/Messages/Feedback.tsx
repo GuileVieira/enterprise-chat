@@ -10,15 +10,15 @@ import {
   ThumbDownIcon,
 } from '@librechat/client';
 import {
-  AlertCircle,
-  PenTool,
-  ImageOff,
-  Ban,
-  HelpCircle,
+  WarningCircle as AlertCircle,
+  Prohibit as Ban,
   CheckCircle,
+  Question as HelpCircle,
+  ImageBroken as ImageOff,
   Lightbulb,
-  Search,
-} from 'lucide-react';
+  PenNib as PenTool,
+  MagnifyingGlass as Search,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 

@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { ChevronDown, Eye, EyeOff, Key, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  Eye,
+  EyeSlash as EyeOff,
+  Key,
+  Keyhole as KeyRound,
+  SpinnerGap as Loader2,
+  Plus,
+  Trash as Trash2,
+  X,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import {
   useListAdminSecrets,

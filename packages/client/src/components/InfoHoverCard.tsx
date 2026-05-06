@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CircleHelpIcon } from 'lucide-react';
+import { Question as CircleHelpIcon } from '@phosphor-icons/react';
 import { HoverCard, HoverCardTrigger, HoverCardPortal, HoverCardContent } from './HoverCard';
 import { ESide } from '~/common';
 

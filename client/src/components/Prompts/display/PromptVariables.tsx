@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Variable, ChevronRight } from 'lucide-react';
+import { CaretRight as ChevronRight, BracketsCurly as Variable } from '@phosphor-icons/react';
 import { specialVariables } from 'librechat-data-provider';
 import type { TSpecialVarLabel } from 'librechat-data-provider';
 import { getSpecialVariableIcon } from '~/components/Prompts/utils';

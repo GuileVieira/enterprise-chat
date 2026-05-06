@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
 import CancelledIcon from './CancelledIcon';
 import { cn } from '~/utils';

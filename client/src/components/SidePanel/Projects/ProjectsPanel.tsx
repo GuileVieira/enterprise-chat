@@ -3,14 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSetRecoilState } from 'recoil';
 import {
+  CaretDown,
+  CaretRight,
+  ChatCircle,
+  DotsThree,
   Folder,
   FolderPlus,
-  ChevronDown,
-  MoreHorizontal,
-  MessageSquare,
-  ChevronRight,
   Plus,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
 import {
@@ -78,9 +78,9 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
       >
         <div className="flex h-4 w-4 items-center justify-center">
           {isExpanded ? (
-            <ChevronDown className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+            <CaretDown className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
           ) : (
-            <ChevronRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+            <CaretRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
           )}
         </div>
         <Folder className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
@@ -96,12 +96,14 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
             className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-text-primary transition-colors hover:bg-surface-hover"
           >
             <Plus className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-            <span className="font-medium">New Chat</span>
+            <span className="font-medium">{localize('com_ui_new_chat_in_project')}</span>
           </button>
 
           {isLoading && <div className="px-2 py-1 text-xs text-text-tertiary">Loading...</div>}
           {!isLoading && conversations.length === 0 && (
-            <div className="px-2 py-1 text-xs italic text-text-tertiary">No conversations</div>
+            <div className="px-2 py-1 text-xs italic text-text-tertiary">
+              {localize('com_ui_no_conversations_in_project')}
+            </div>
           )}
           {conversations.map((convo) => (
             <button
@@ -115,7 +117,7 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
                   : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary',
               )}
             >
-              <MessageSquare className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+              <ChatCircle className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
               <span className="truncate text-left">{convo.title || 'Untitled'}</span>
             </button>
           ))}
@@ -124,7 +126,7 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
             onClick={() => navigate(`/projects/${projectId}`)}
             className="mt-1 px-2 py-1 text-left text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-primary"
           >
-            View Project Details
+            {localize('com_ui_details')}
           </button>
         </div>
       )}
@@ -151,7 +153,7 @@ export default function ProjectsPanel() {
         className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover"
       >
         <span>{localize('com_ui_projects')}</span>
-        <ChevronDown
+        <CaretDown
           className={cn('h-4 w-4 transition-transform', expanded ? 'rotate-0' : '-rotate-90')}
           aria-hidden="true"
         />
@@ -192,7 +194,7 @@ export default function ProjectsPanel() {
               className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
             >
               <div className="h-4 w-4" /> {/* Spacer for alignment */}
-              <MoreHorizontal className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
+              <DotsThree className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
               <span>{localize('com_ui_more_projects')}</span>
             </button>
           )}

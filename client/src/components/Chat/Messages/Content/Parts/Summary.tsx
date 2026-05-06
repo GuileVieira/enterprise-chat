@@ -1,7 +1,11 @@
 import { memo, useMemo, useState, useCallback, useRef, useId, useEffect } from 'react';
 import { useAtomValue } from 'jotai';
 import { Clipboard, CheckMark, TooltipAnchor } from '@librechat/client';
-import { ScrollText, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  Scroll as ScrollText,
+} from '@phosphor-icons/react';
 import type { MouseEvent, FocusEvent } from 'react';
 import type { SummaryContentPart } from 'librechat-data-provider';
 import { fontSizeAtom } from '~/store/fontSize';

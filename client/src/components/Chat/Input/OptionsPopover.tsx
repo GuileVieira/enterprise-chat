@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Save } from 'lucide-react';
+import { FloppyDisk as Save } from '@phosphor-icons/react';
 import { Portal, Content } from '@radix-ui/react-popover';
 import { Button, CrossIcon, useOnClickOutside } from '@librechat/client';
 import type { ReactNode } from 'react';

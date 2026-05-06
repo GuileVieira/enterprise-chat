@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextareaAutosize, Input } from '@librechat/client';
 import { useForm, Controller, FormProvider } from 'react-hook-form';

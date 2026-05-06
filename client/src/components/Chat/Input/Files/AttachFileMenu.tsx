@@ -2,12 +2,12 @@ import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { useRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import {
-  FileSearch,
-  ImageUpIcon,
-  FileType2Icon,
-  FileImageIcon,
-  TerminalSquareIcon,
-} from 'lucide-react';
+  FileImage as FileImageIcon,
+  FileMagnifyingGlass as FileSearch,
+  FileText as FileType2Icon,
+  ImageSquare as ImageUpIcon,
+  TerminalWindow as TerminalSquareIcon,
+} from '@phosphor-icons/react';
 import {
   FileUpload,
   TooltipAnchor,

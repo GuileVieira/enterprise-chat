@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MenuButton } from '@ariakit/react';
-import { History, Check } from 'lucide-react';
+import { Check, ClockCounterClockwise as History } from '@phosphor-icons/react';
 import { DropdownPopup, TooltipAnchor, Button, useMediaQuery } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 

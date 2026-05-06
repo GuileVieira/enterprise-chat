@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Button } from '@librechat/client';
-import { TriangleAlert } from 'lucide-react';
+import { WarningDiamond as TriangleAlert } from '@phosphor-icons/react';
 import {
   Constants,
   dataService,

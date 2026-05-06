@@ -1,7 +1,7 @@
 import { useState, memo, useRef } from 'react';
 import * as Menu from '@ariakit/react/menu';
-import { FileText, LogOut, Shield } from 'lucide-react';
-import { GearIcon, DropdownMenuSeparator, Avatar } from '@librechat/client';
+import { FileText, GearSix, Shield, SignOut } from '@phosphor-icons/react';
+import { DropdownMenuSeparator, Avatar } from '@librechat/client';
 import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
@@ -77,18 +77,18 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {localize('com_nav_my_files')}
         </Menu.MenuItem>
         <Menu.MenuItem onClick={() => setShowSettings(true)} className="select-item text-sm">
-          <GearIcon className="icon-md" aria-hidden="true" />
+          <GearSix className="icon-md" aria-hidden="true" />
           {localize('com_nav_settings')}
         </Menu.MenuItem>
         {user?.role === SystemRoles.ADMIN && (
           <Menu.MenuItem onClick={() => navigate('/admin')} className="select-item text-sm">
             <Shield className="icon-md" aria-hidden="true" />
-            Admin
+            {localize('com_admin_console')}
           </Menu.MenuItem>
         )}
         <DropdownMenuSeparator />
         <Menu.MenuItem onClick={() => logout()} className="select-item text-sm">
-          <LogOut className="icon-md" aria-hidden="true" />
+          <SignOut className="icon-md" aria-hidden="true" />
           {localize('com_nav_log_out')}
         </Menu.MenuItem>
       </Menu.Menu>

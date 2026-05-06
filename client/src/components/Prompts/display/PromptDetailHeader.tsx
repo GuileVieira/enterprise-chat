@@ -1,6 +1,11 @@
 import { format } from 'date-fns';
 import { TooltipAnchor } from '@librechat/client';
-import { User, Calendar, EarthIcon, BarChart3 } from 'lucide-react';
+import {
+  ChartBar as BarChart3,
+  Calendar,
+  GlobeHemisphereWest as EarthIcon,
+  User,
+} from '@phosphor-icons/react';
 import type { TPromptGroup } from 'librechat-data-provider';
 import { useLocalize, useAuthContext } from '~/hooks';
 import CategoryIcon from '../utils/CategoryIcon';

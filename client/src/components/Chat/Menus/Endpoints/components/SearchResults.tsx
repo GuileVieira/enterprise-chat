@@ -1,6 +1,9 @@
 import React, { Fragment } from 'react';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, EarthIcon } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  GlobeHemisphereWest as EarthIcon,
+} from '@phosphor-icons/react';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';

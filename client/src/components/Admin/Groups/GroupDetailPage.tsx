@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Search, Trash2, Loader2, UserPlus, ArrowLeft, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  SpinnerGap as Loader2,
+  MagnifyingGlass as Search,
+  Trash as Trash2,
+  UserPlus,
+  Users,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import {
   useGetAdminGroup,

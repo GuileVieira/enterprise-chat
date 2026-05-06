@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { LayoutGrid } from 'lucide-react';
+import { SquaresFour as LayoutGrid } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipAnchor, Button } from '@librechat/client';
 import { useLocalize, useShowMarketplace } from '~/hooks';

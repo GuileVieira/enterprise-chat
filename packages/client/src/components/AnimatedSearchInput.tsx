@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { TranslationKeys, useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 

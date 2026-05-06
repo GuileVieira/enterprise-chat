@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot } from 'lucide-react';
+import { Robot as Bot } from '@phosphor-icons/react';
 import { Skeleton } from '@librechat/client';
 import type t from 'librechat-data-provider';
 

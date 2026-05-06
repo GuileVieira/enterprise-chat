@@ -1,6 +1,10 @@
 import React from 'react';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, Pin, PinOff } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+} from '@phosphor-icons/react';
 import type { TModelSpec } from 'librechat-data-provider';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';

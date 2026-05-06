@@ -6,7 +6,7 @@ import { LocalStorageKeys, SystemRoles } from 'librechat-data-provider';
 import { useFormContext, Controller } from 'react-hook-form';
 import type { MenuItemProps } from '@librechat/client';
 import type { ReactNode } from 'react';
-import { Settings2 } from 'lucide-react';
+import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
 import { usePromptGroupsContext } from '~/Providers';
 import { useCategories, useAuthContext } from '~/hooks';
 import { CategoryAdminModal } from '~/components/Prompts';

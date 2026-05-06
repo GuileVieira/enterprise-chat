@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Trans } from 'react-i18next';
-import { QrCode, RotateCw, Trash2 } from 'lucide-react';
+import { QrCode, ArrowClockwise as RotateCw, Trash as Trash2 } from '@phosphor-icons/react';
 import {
   Label,
   Button,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, CopyCheck } from 'lucide-react';
+import { Copy, ClipboardText as CopyCheck } from '@phosphor-icons/react';
 import { useFormContext } from 'react-hook-form';
 import { AuthTypeEnum } from 'librechat-data-provider';
 import { Button, useToastContext } from '@librechat/client';

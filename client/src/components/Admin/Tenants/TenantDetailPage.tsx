@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Bot, Key, MessageSquare, Plus, Users, Wrench } from 'lucide-react';
+import {
+  ArrowLeft,
+  Robot as Bot,
+  Key,
+  ChatCircle as MessageSquare,
+  Plus,
+  Users,
+  Wrench,
+} from '@phosphor-icons/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGetAdminTenantStats, useGetAdminTenantUsers } from '~/data-provider/admin';
 import { useLocalize } from '~/hooks';
@@ -24,10 +32,16 @@ const TenantDetailPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const tenantId = id ?? '';
-  const { data: usersData, isLoading: usersLoading, isError: usersError } =
-    useGetAdminTenantUsers(tenantId, 1, 50);
-  const { data: statsData, isLoading: statsLoading, isError: statsError } =
-    useGetAdminTenantStats(tenantId);
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    isError: usersError,
+  } = useGetAdminTenantUsers(tenantId, 1, 50);
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    isError: statsError,
+  } = useGetAdminTenantStats(tenantId);
 
   const users = usersData?.users ?? [];
   const stats = statsData?.stats;
@@ -86,7 +100,11 @@ const TenantDetailPage: React.FC = () => {
               value={stats?.conversations ?? 0}
               icon={MessageSquare}
             />
-            <AdminMetricCard title={localize('com_admin_agents')} value={stats?.agents ?? 0} icon={Bot} />
+            <AdminMetricCard
+              title={localize('com_admin_agents')}
+              value={stats?.agents ?? 0}
+              icon={Bot}
+            />
             <AdminMetricCard
               title={localize('com_admin_functions')}
               value={stats?.functions ?? 0}

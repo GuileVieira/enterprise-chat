@@ -1,4 +1,4 @@
-import { ShieldEllipsis } from 'lucide-react';
+import { ShieldStar as ShieldEllipsis } from '@phosphor-icons/react';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import { Button, useToastContext } from '@librechat/client';
 import { AdminSettingsDialog } from '~/components/ui';

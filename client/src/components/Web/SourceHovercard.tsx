@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ChevronDown, FileText } from 'lucide-react';
+import { CaretDown as ChevronDown, FileText } from '@phosphor-icons/react';
 import { VisuallyHidden } from '@ariakit/react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';

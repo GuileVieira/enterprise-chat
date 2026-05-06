@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Import } from 'lucide-react';
+import { UploadSimple as Import } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TStartupConfig } from 'librechat-data-provider';
 import { Spinner, useToastContext, Label, Button } from '@librechat/client';
