@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowClockwise as RefreshCw, Trash as Trash2 } from '@phosphor-icons/react';
 import { Button, Spinner } from '@librechat/client';
 import { useLocalize, useMCPServerManager, useMCPConnectionStatus } from '~/hooks';
 

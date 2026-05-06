@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { Globe, Settings, Settings2, TerminalSquareIcon } from 'lucide-react';
+import {
+  Globe,
+  GearSix as Settings,
+  SlidersHorizontal as Settings2,
+  TerminalWindow as TerminalSquareIcon,
+} from '@phosphor-icons/react';
 import { TooltipAnchor, DropdownPopup, PinIcon, VectorIcon } from '@librechat/client';
 import type { MenuItemProps } from '~/common';
 import {

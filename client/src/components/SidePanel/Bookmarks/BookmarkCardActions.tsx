@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { PencilSimple as Pencil, Trash as Trash2 } from '@phosphor-icons/react';
 import type { TConversationTag } from 'librechat-data-provider';
 import {
   Button,

@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef } from 'react';
 import { useSetRecoilState } from 'recoil';
-import { SmartphoneIcon } from 'lucide-react';
+import { DeviceMobile as SmartphoneIcon } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   OGDialog,

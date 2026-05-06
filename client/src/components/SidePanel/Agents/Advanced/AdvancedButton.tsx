@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings2 } from 'lucide-react';
+import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
 import { Button } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 import { Panel } from '~/common';

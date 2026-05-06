@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, Building2, Plus, Users } from 'lucide-react';
+import { ArrowRight, Buildings as Building2, Plus, Users } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useListAdminTenants } from '~/data-provider/admin';
 import { useLocalize } from '~/hooks';

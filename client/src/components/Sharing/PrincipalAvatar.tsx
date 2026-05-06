@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Users, User, Shield } from 'lucide-react';
+import { Buildings as Building2, Shield, User, Users } from '@phosphor-icons/react';
 import { PrincipalType } from 'librechat-data-provider';
 import type { TPrincipal } from 'librechat-data-provider';
 import { cn } from '~/utils';
@@ -16,7 +16,8 @@ export default function PrincipalAvatar({
   className,
 }: PrincipalAvatarProps) {
   const { avatar, type, name } = principal;
-  const displayName = name || principal.email || principal.idOnTheSource || principal.id || 'Unknown';
+  const displayName =
+    name || principal.email || principal.idOnTheSource || principal.id || 'Unknown';
 
   const sizeClasses = {
     sm: 'h-6 w-6',

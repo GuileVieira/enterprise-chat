@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useEffect, useRef } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@phosphor-icons/react';
 import { SelectDropDown } from '@librechat/client';
 import {
   Tools,

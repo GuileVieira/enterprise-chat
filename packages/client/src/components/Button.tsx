@@ -20,7 +20,7 @@ const buttonVariants = cva(
         link: 'text-primary underline-offset-4 hover:underline',
         // hardcoded text color because of WCAG contrast issues (text-white)
         submit:
-          'bg-surface-submit text-white shadow-sm shadow-emerald-950/20 hover:bg-surface-submit-hover hover:shadow-md hover:shadow-emerald-950/20',
+          'bg-surface-submit text-white shadow-sm shadow-black/10 hover:bg-surface-submit-hover hover:shadow-md hover:shadow-black/15 dark:shadow-black/30',
       },
       size: {
         default: 'h-10 px-4 py-2',

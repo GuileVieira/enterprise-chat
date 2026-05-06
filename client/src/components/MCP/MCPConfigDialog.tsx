@@ -1,5 +1,9 @@
 import React, { useMemo } from 'react';
-import { KeyRound, PlugZap, AlertTriangle } from 'lucide-react';
+import {
+  Warning as AlertTriangle,
+  Keyhole as KeyRound,
+  Plug as PlugZap,
+} from '@phosphor-icons/react';
 import {
   Spinner,
   OGDialog,

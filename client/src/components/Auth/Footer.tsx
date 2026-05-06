@@ -15,7 +15,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
   const privacyPolicyRender = privacyPolicy?.externalUrl &&
     !isLibreChatUrl(privacyPolicy.externalUrl) && (
       <a
-        className="text-sm text-green-600 underline decoration-transparent transition-all duration-200 hover:text-green-700 hover:decoration-green-700 focus:text-green-700 focus:decoration-green-700 dark:text-green-500 dark:hover:text-green-400 dark:hover:decoration-green-400 dark:focus:text-green-400 dark:focus:decoration-green-400"
+        className="text-sm font-medium text-surface-submit underline decoration-transparent transition-all duration-200 hover:text-surface-submit-hover hover:decoration-surface-submit-hover focus:text-surface-submit-hover focus:decoration-surface-submit-hover"
         href={privacyPolicy.externalUrl}
         // Removed for WCAG compliance
         // target={privacyPolicy.openNewTab ? '_blank' : undefined}
@@ -28,7 +28,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
   const termsOfServiceRender = termsOfService?.externalUrl &&
     !isLibreChatUrl(termsOfService.externalUrl) && (
       <a
-        className="text-sm text-green-600 underline decoration-transparent transition-all duration-200 hover:text-green-700 hover:decoration-green-700 focus:text-green-700 focus:decoration-green-700 dark:text-green-500 dark:hover:text-green-400 dark:hover:decoration-green-400 dark:focus:text-green-400 dark:focus:decoration-green-400"
+        className="text-sm font-medium text-surface-submit underline decoration-transparent transition-all duration-200 hover:text-surface-submit-hover hover:decoration-surface-submit-hover focus:text-surface-submit-hover focus:decoration-surface-submit-hover"
         href={termsOfService.externalUrl}
         // Removed for WCAG compliance
         // target={termsOfService.openNewTab ? '_blank' : undefined}

@@ -1,4 +1,4 @@
-import { X, Link2, PlusCircle } from 'lucide-react';
+import { LinkSimple as Link2, PlusCircle, X } from '@phosphor-icons/react';
 import { EModelEndpoint } from 'librechat-data-provider';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {

@@ -3,7 +3,15 @@ import { useRecoilValue } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import { VisuallyHidden } from '@ariakit/react';
 import { Tools } from 'librechat-data-provider';
-import { X, Globe, Newspaper, Image, ChevronDown, File, Download } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  Download,
+  File,
+  Globe,
+  Image,
+  Newspaper,
+  X,
+} from '@phosphor-icons/react';
 import {
   OGDialog,
   AnimatedTabs,

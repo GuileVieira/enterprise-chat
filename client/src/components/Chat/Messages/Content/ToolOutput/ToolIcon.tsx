@@ -1,5 +1,13 @@
 import { Constants, isActionTool } from 'librechat-data-provider';
-import { Terminal, Globe, ImageIcon, ArrowRightLeft, FileSearch, Zap, Wrench } from 'lucide-react';
+import {
+  ArrowsLeftRight as ArrowRightLeft,
+  FileMagnifyingGlass as FileSearch,
+  Globe,
+  Image as ImageIcon,
+  Terminal,
+  Wrench,
+  Lightning as Zap,
+} from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 export type ToolIconType =

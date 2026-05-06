@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, CircleCheckBig } from 'lucide-react';
+import { CheckCircle as CircleCheckBig, Download } from '@phosphor-icons/react';
 import type { Artifact } from '~/common';
 import { Button } from '@librechat/client';
 import useArtifactProps from '~/hooks/Artifacts/useArtifactProps';

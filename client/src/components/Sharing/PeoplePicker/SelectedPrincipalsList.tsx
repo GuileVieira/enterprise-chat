@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, useMediaQuery } from '@librechat/client';
-import { Users, X, ExternalLink } from 'lucide-react';
+import { ArrowSquareOut as ExternalLink, Users, X } from '@phosphor-icons/react';
 import { PrincipalType, ResourceType } from 'librechat-data-provider';
 import type { TPrincipal, AccessRoleIds } from 'librechat-data-provider';
 import AccessRolesPicker from '~/components/Sharing/AccessRolesPicker';

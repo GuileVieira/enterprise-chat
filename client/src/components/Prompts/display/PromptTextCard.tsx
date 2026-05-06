@@ -5,7 +5,7 @@ import rehypeKatex from 'rehype-katex';
 import supersub from 'remark-supersub';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
-import { Copy, Check, FileText } from 'lucide-react';
+import { Check, Copy, FileText } from '@phosphor-icons/react';
 import { Button, TooltipAnchor, useToastContext } from '@librechat/client';
 import { codeNoExecution } from '~/components/Chat/Messages/Content/MarkdownComponents';
 import { PromptVariableGfm } from '../editor/Markdown';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Shield, Users, Plus } from 'lucide-react';
+import { Plus, MagnifyingGlass as Search, Shield, Users } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useLocalize } from '~/hooks';
 import { useListAdminUsers, useSearchAdminUsers } from '~/data-provider/admin';

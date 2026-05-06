@@ -4,7 +4,14 @@ import { TrashIcon, Button } from '@librechat/client';
 import { TFile } from 'librechat-data-provider/dist/types';
 import UploadFileButton from '../FileList/UploadFileButton';
 import UploadFileModal from '../FileList/UploadFileModal';
-import { BarChart4Icon, Clock3, FileClock, FileIcon, InfoIcon, PlusIcon } from 'lucide-react';
+import {
+  ChartBar as BarChart4Icon,
+  Clock as Clock3,
+  File as FileClock,
+  File as FileIcon,
+  Info as InfoIcon,
+  Plus as PlusIcon,
+} from '@phosphor-icons/react';
 import { useParams } from 'react-router-dom';
 
 const tempVectorStore = {

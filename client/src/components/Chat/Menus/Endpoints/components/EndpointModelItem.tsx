@@ -1,6 +1,11 @@
 import React from 'react';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, EarthIcon, Pin, PinOff } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  GlobeHemisphereWest as EarthIcon,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+} from '@phosphor-icons/react';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';

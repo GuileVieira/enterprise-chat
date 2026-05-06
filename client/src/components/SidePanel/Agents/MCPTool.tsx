@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Constants } from 'librechat-data-provider';
-import { ChevronDown, Clock, Code2 } from 'lucide-react';
+import { CaretDown as ChevronDown, Clock, Code as Code2 } from '@phosphor-icons/react';
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import {
   Label,

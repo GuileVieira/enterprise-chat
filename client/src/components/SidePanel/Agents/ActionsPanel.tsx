@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { CaretLeft as ChevronLeft } from '@phosphor-icons/react';
 import { useForm, FormProvider } from 'react-hook-form';
 import {
   AuthTypeEnum,

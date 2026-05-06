@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useRecoilValue } from 'recoil';
-import { SquareTerminal } from 'lucide-react';
+import { TerminalWindow as SquareTerminal } from '@phosphor-icons/react';
 import type { TAttachment } from 'librechat-data-provider';
 import ProgressText from '~/components/Chat/Messages/Content/ProgressText';
 import { useProgress, useLocalize, useExpandCollapse } from '~/hooks';

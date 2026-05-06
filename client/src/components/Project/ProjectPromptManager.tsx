@@ -1,6 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, X, Save } from 'lucide-react';
-import { usePromptGroupsInfiniteQuery, useUpdateProjectMutation, useGetPromptGroup } from '~/data-provider';
+import { Plus, FloppyDisk as Save, X } from '@phosphor-icons/react';
+import {
+  usePromptGroupsInfiniteQuery,
+  useUpdateProjectMutation,
+  useGetPromptGroup,
+} from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 import type { TProject } from 'librechat-data-provider';
@@ -10,9 +14,7 @@ function PromptGroupBadge({ groupId }: { groupId: string }) {
   const group = groupQuery.data;
 
   if (groupQuery.isLoading) {
-    return (
-      <span className="h-6 w-24 animate-pulse rounded-full bg-surface-tertiary" />
-    );
+    return <span className="h-6 w-24 animate-pulse rounded-full bg-surface-tertiary" />;
   }
 
   return (

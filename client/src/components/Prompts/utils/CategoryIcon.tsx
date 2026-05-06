@@ -1,19 +1,19 @@
 import React from 'react';
 import {
-  Dices,
-  BoxIcon,
+  Flask as BeakerIcon,
+  Cube as BoxIcon,
+  DiceFive as Dices,
   FileText,
-  PenLineIcon,
-  LightbulbIcon,
-  LineChartIcon,
-  ShoppingBagIcon,
-  PlaneTakeoffIcon,
-  GraduationCapIcon,
-  TerminalSquareIcon,
+  GraduationCap as GraduationCapIcon,
+  Lightbulb as LightbulbIcon,
+  ChartLine as LineChartIcon,
+  PencilLine as PenLineIcon,
+  AirplaneTakeoff as PlaneTakeoffIcon,
+  GearSix as SettingsIcon,
+  ShoppingBag as ShoppingBagIcon,
+  TerminalWindow as TerminalSquareIcon,
   Users as UsersIcon,
-  Beaker as BeakerIcon,
-  Settings as SettingsIcon,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 const categoryIconMap: Record<string, React.ElementType> = {

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FolderPlus, Folder, Trash2, Pencil } from 'lucide-react';
+import { Folder, FolderPlus, PencilSimple, Trash } from '@phosphor-icons/react';
 import { useProjectsQuery, useDeleteProjectMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -65,7 +65,7 @@ function ProjectCard({ project }: { project: TProject }) {
             className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-surface-primary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
             title={localize('com_ui_edit')}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <PencilSimple className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -73,7 +73,7 @@ function ProjectCard({ project }: { project: TProject }) {
             className="rounded-lg p-1.5 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
             title={localize('com_ui_delete')}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

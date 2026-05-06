@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
-import { Edit3, Check, X } from 'lucide-react';
+import type { Icon as LucideIcon } from '@phosphor-icons/react';
+import { Check, PencilSimple as Edit3, X } from '@phosphor-icons/react';
 import { Button, Badge } from '@librechat/client';
-import type { LucideIcon } from 'lucide-react';
 import type { BadgeItem } from '~/common';
 import { useChatBadges, useLocalize } from '~/hooks';
 

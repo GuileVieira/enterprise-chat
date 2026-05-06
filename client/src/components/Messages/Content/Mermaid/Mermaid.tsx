@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, memo } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { ArrowClockwise as RefreshCw } from '@phosphor-icons/react';
 import { Spinner } from '@librechat/client';
 import useSvgProcessing from './useSvgProcessing';
 import useMermaidZoom from './useMermaidZoom';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Controller } from 'react-hook-form';
-import { Wrench } from 'lucide-react';
+import { Wrench } from '@phosphor-icons/react';
 import { useTenantFunctionsQuery } from '~/data-provider';
 import type { Control } from 'react-hook-form';
 import type { AgentForm } from '~/common';

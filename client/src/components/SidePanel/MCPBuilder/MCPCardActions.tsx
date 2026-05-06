@@ -1,5 +1,12 @@
 import React from 'react';
-import { Pencil, PlugZap, SlidersHorizontal, RefreshCw, X, Trash2 } from 'lucide-react';
+import {
+  PencilSimple as Pencil,
+  Plug as PlugZap,
+  ArrowClockwise as RefreshCw,
+  SlidersHorizontal,
+  Trash as Trash2,
+  X,
+} from '@phosphor-icons/react';
 import { Spinner, TooltipAnchor } from '@librechat/client';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';

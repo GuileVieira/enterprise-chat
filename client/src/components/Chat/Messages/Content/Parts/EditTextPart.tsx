@@ -3,7 +3,7 @@ import { useRecoilValue } from 'recoil';
 import { useForm } from 'react-hook-form';
 import { TextareaAutosize } from '@librechat/client';
 import { ContentTypes } from 'librechat-data-provider';
-import { Lightbulb, MessageSquare } from 'lucide-react';
+import { Lightbulb, ChatCircle as MessageSquare } from '@phosphor-icons/react';
 import { useUpdateMessageContentMutation } from 'librechat-data-provider/react-query';
 import type { Agents } from 'librechat-data-provider';
 import type { TEditProps } from '~/common';

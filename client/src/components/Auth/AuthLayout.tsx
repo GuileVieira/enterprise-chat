@@ -39,7 +39,10 @@ function AuthLayout({
         <div className="mx-auto sm:max-w-sm">
           <ErrorMessage>
             {localize('com_auth_error_invalid_reset_token')}{' '}
-            <a className="font-semibold text-green-600 hover:underline" href="/forgot-password">
+            <a
+              className="font-semibold text-surface-submit transition-colors hover:text-surface-submit-hover hover:underline"
+              href="/forgot-password"
+            >
               {localize('com_auth_click_here')}
             </a>{' '}
             {localize('com_auth_to_try_again')}
@@ -57,40 +60,74 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-white dark:bg-gray-900">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-surface-primary text-text-primary">
       <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
-          <img
-            src="assets/logo.svg"
-            className="h-full w-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Orqest' })}
-          />
-        </div>
-      </BlinkAnimation>
-      <DisplayError />
-      <div className="absolute bottom-0 left-0 md:m-4">
-        <ThemeSelector />
+      <div className="pointer-events-none absolute inset-0">
+        <div className="bg-surface-submit/10 absolute left-[-10%] top-[-20%] h-[34rem] w-[34rem] rounded-full blur-3xl" />
+        <div className="absolute bottom-[-18%] right-[-12%] h-[30rem] w-[30rem] rounded-full bg-surface-tertiary blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.06),transparent_34%)]" />
       </div>
 
-      <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-white px-6 py-4 dark:bg-gray-900 sm:max-w-md sm:rounded-lg">
-          {!hasStartupConfigError && !isFetching && header && (
-            <h1
-              className="mb-4 text-center text-3xl font-semibold text-black dark:text-white"
-              style={{ userSelect: 'none' }}
-            >
-              {header}
-            </h1>
-          )}
-          {children}
-          {!pathname.includes('2fa') &&
-            (pathname.includes('login') || pathname.includes('register')) && (
-              <SocialLoginRender startupConfig={startupConfig} />
+      <div className="relative z-10 grid min-h-dvh w-full lg:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
+        <section className="hidden min-h-dvh flex-col justify-between border-r border-border-light px-10 py-10 lg:flex">
+          <BlinkAnimation active={isFetching}>
+            <div className="h-11 w-44">
+              <img
+                src="assets/logo.svg"
+                className="h-full w-full object-contain object-left"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Orqest' })}
+              />
+            </div>
+          </BlinkAnimation>
+          <div className="max-w-xl">
+            <div className="mb-8 grid h-64 grid-cols-5 gap-3">
+              <div className="col-span-2 rounded-2xl border border-border-light bg-surface-secondary shadow-sm" />
+              <div className="col-span-3 rounded-2xl border border-border-light bg-surface-primary-alt shadow-sm" />
+              <div className="col-span-3 rounded-2xl border border-border-light bg-surface-tertiary shadow-sm" />
+              <div className="bg-surface-submit/15 col-span-2 rounded-2xl border border-border-light shadow-sm" />
+            </div>
+            <p className="max-w-md text-sm leading-6 text-text-secondary">
+              {startupConfig?.appTitle ?? 'Orqest'}
+            </p>
+          </div>
+          <Footer startupConfig={startupConfig} />
+        </section>
+
+        <main className="flex min-h-dvh flex-col justify-center px-5 py-8 sm:px-8">
+          <BlinkAnimation active={isFetching}>
+            <div className="mx-auto mb-8 h-10 w-40 lg:hidden">
+              <img
+                src="assets/logo.svg"
+                className="h-full w-full object-contain"
+                alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Orqest' })}
+              />
+            </div>
+          </BlinkAnimation>
+          <DisplayError />
+          <div className="bg-surface-dialog/90 mx-auto w-full max-w-[25rem] rounded-3xl border border-border-light p-6 shadow-2xl shadow-black/[0.08] backdrop-blur-xl dark:shadow-black/30 sm:p-7">
+            {!hasStartupConfigError && !isFetching && header && (
+              <h1
+                className="mb-5 text-center text-3xl font-semibold leading-tight text-text-primary"
+                style={{ userSelect: 'none' }}
+              >
+                {header}
+              </h1>
             )}
+            {children}
+            {!pathname.includes('2fa') &&
+              (pathname.includes('login') || pathname.includes('register')) && (
+                <SocialLoginRender startupConfig={startupConfig} />
+              )}
+          </div>
+          <div className="mt-8 lg:hidden">
+            <Footer startupConfig={startupConfig} />
+          </div>
+        </main>
+
+        <div className="absolute bottom-4 left-4">
+          <ThemeSelector />
         </div>
-      </main>
-      <Footer startupConfig={startupConfig} />
+      </div>
     </div>
   );
 }

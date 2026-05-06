@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { OGDialog, OGDialogTitle, OGDialogContent } from '@librechat/client';
-import { Pencil, Trash2 } from 'lucide-react';
+import { PencilSimple as Pencil, Trash as Trash2 } from '@phosphor-icons/react';
 import EmojiPicker from 'emoji-picker-react';
 import type { TCategory } from 'librechat-data-provider';
 import {

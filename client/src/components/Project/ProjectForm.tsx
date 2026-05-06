@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Folder, Save } from 'lucide-react';
+import { ArrowLeft, FloppyDisk, Folder } from '@phosphor-icons/react';
 import {
   useGetEndpointsQuery,
   useCreateProjectMutation,
@@ -196,7 +196,7 @@ export default function ProjectForm({ project, onSuccess }: ProjectFormProps) {
             {isLoading ? (
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-surface-primary border-t-transparent" />
             ) : (
-              <Save className="h-4 w-4" aria-hidden="true" />
+              <FloppyDisk className="h-4 w-4" aria-hidden="true" />
             )}
             {isEditing ? localize('com_ui_save') : localize('com_ui_create')}
           </button>

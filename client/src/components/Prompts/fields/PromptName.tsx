@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Pencil, Check, Loader2, X } from 'lucide-react';
+import { Check, SpinnerGap as Loader2, PencilSimple as Pencil, X } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 
 type Props = {

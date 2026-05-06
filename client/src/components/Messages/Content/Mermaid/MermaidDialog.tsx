@@ -1,6 +1,6 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
-import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown, CaretUp as ChevronUp, X } from '@phosphor-icons/react';
 import {
   Button,
   OGDialog,

@@ -3,7 +3,7 @@ import Cookies from 'js-cookie';
 import { useRecoilState } from 'recoil';
 import { useParams } from 'react-router-dom';
 import { buildTree } from 'librechat-data-provider';
-import { CalendarDays, Settings } from 'lucide-react';
+import { CalendarDots as CalendarDays, GearSix as Settings } from '@phosphor-icons/react';
 import { useGetSharedMessages } from 'librechat-data-provider/react-query';
 import {
   Spinner,

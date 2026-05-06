@@ -10,7 +10,7 @@ import React, {
 } from 'react';
 import { Badge } from '@librechat/client';
 import { useRecoilValue, useRecoilCallback } from 'recoil';
-import type { LucideIcon } from 'lucide-react';
+import type { Icon as LucideIcon } from '@phosphor-icons/react';
 import CodeInterpreter from './CodeInterpreter';
 import { BadgeRowProvider } from '~/Providers';
 import ToolsDropdown from './ToolsDropdown';

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { XIcon } from 'lucide-react';
+import { X as XIcon } from '@phosphor-icons/react';
 import { useRecoilState } from 'recoil';
 import { Button, cn } from '@librechat/client';
 import { useGetBannerQuery } from '~/data-provider';

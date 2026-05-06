@@ -1,6 +1,6 @@
 import * as Ariakit from '@ariakit/react';
 import { matchSorter } from 'match-sorter';
-import { Search, ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { useMemo, useState, useRef, memo, useEffect } from 'react';
 import { SelectRenderer } from '@ariakit/react-core/select/select-renderer';
 import type { OptionWithIcon } from '~/common';

@@ -1,7 +1,7 @@
 import { useState, useId, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as Ariakit from '@ariakit/react';
-import { FolderOpen, FolderPlus, X, Plus } from 'lucide-react';
+import { FolderOpen, FolderPlus, Plus, X } from '@phosphor-icons/react';
 import { DropdownPopup } from '@librechat/client';
 import { QueryKeys } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';

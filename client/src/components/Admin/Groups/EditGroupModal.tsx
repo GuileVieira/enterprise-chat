@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { SpinnerGap as Loader2, X } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { useUpdateAdminGroupMutation } from '~/data-provider/admin';
 import { AdminActionButton, AdminIconButton } from '../common';

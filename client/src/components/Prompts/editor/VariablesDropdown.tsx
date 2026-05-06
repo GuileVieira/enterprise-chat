@@ -3,7 +3,7 @@ import * as Menu from '@ariakit/react/menu';
 import { useFormContext } from 'react-hook-form';
 import { DropdownPopup } from '@librechat/client';
 import { specialVariables } from 'librechat-data-provider';
-import { ChevronDown, Check, Sparkles } from 'lucide-react';
+import { Check, CaretDown as ChevronDown, Sparkle as Sparkles } from '@phosphor-icons/react';
 import type { TSpecialVarLabel } from 'librechat-data-provider';
 import { getSpecialVariableIcon } from '~/components/Prompts/utils';
 import { extractUniqueVariables } from '~/utils';

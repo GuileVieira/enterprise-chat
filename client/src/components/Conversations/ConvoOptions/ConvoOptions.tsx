@@ -4,7 +4,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { QueryKeys } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownPopup, Spinner, useToastContext } from '@librechat/client';
-import { Ellipsis, Share2, CopyPlus, Archive, Pen, Trash, FolderInput } from 'lucide-react';
+import {
+  Archive,
+  CopySimple as CopyPlus,
+  DotsThree as Ellipsis,
+  FolderSimplePlus as FolderInput,
+  PencilSimple as Pen,
+  ShareNetwork as Share2,
+  Trash,
+} from '@phosphor-icons/react';
 import type { MouseEvent } from 'react';
 import type { TMessage } from 'librechat-data-provider';
 import {

@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { AlertCircle, Settings, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import {
+  WarningCircle as AlertCircle,
+  GearSix as Settings,
+  ToggleLeft,
+  ToggleRight,
+  Trash as Trash2,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import {
   useListAdminConfigs,

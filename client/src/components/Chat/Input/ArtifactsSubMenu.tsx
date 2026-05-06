@@ -1,7 +1,7 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
 import { PinIcon } from '@librechat/client';
-import { ChevronRight, WandSparkles } from 'lucide-react';
+import { CaretRight as ChevronRight, MagicWand as WandSparkles } from '@phosphor-icons/react';
 import { ArtifactModes } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';

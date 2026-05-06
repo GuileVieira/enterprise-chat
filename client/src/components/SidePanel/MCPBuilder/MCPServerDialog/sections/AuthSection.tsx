@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Copy, CopyCheck } from 'lucide-react';
+import { Copy, ClipboardText as CopyCheck } from '@phosphor-icons/react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Label, Input, Checkbox, SecretInput, Radio, useToastContext } from '@librechat/client';
 import { AuthTypeEnum, AuthorizationTypeEnum } from '../hooks/useMCPServerForm';

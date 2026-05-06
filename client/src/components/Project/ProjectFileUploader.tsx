@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, Trash2, FileText, Check } from 'lucide-react';
+import { Check, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import {
   AlertDialog,
   AlertDialogContent,

@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import {
-  Brain,
-  Robot,
-  Folder,
   BookmarkSimple,
+  Brain,
+  Folder,
   NotePencil,
   Paperclip,
+  Robot,
   SidebarSimple,
   SlidersHorizontal,
 } from '@phosphor-icons/react';

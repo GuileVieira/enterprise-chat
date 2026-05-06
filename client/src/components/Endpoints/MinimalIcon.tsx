@@ -1,4 +1,4 @@
-import { Bot } from 'lucide-react';
+import { Robot as Bot } from '@phosphor-icons/react';
 import { EModelEndpoint, alternateName } from 'librechat-data-provider';
 import {
   Sparkles,

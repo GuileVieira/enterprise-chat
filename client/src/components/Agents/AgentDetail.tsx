@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Link, Pin, PinOff } from 'lucide-react';
+import { Link, PushPin as Pin, PushPinSlash as PinOff } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { OGDialog, OGDialogContent, Button, useToastContext } from '@librechat/client';
 import {

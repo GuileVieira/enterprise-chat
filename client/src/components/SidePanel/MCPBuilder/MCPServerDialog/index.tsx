@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, CopyCheck } from 'lucide-react';
+import { Copy, ClipboardText as CopyCheck } from '@phosphor-icons/react';
 import {
   Label,
   Input,

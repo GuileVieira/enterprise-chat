@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { TerminalSquareIcon } from 'lucide-react';
+import { TerminalWindow as TerminalSquareIcon } from '@phosphor-icons/react';
 import { CheckboxButton } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import { useLocalize, useHasAccess } from '~/hooks';

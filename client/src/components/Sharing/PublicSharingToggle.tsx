@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Shield } from 'lucide-react';
+import { Globe, Shield } from '@phosphor-icons/react';
 import { ResourceType } from 'librechat-data-provider';
 import { Switch, InfoHoverCard, ESide, Label } from '@librechat/client';
 import type { AccessRoleIds } from 'librechat-data-provider';

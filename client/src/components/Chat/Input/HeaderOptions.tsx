@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings2 } from 'lucide-react';
+import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
 import { TooltipAnchor } from '@librechat/client';
 import { Root, Anchor } from '@radix-ui/react-popover';
 import { isParamEndpoint, getEndpointField, tConvoUpdateSchema } from 'librechat-data-provider';

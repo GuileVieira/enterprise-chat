@@ -5,7 +5,7 @@ import { Constants } from 'librechat-data-provider';
 import { useToastContext, useMediaQuery } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
 import { useUpdateConversationMutation } from '~/data-provider';
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen } from '@phosphor-icons/react';
 import { useNavigateToConvo, useLocalize, useShiftKey } from '~/hooks';
 import { NotificationSeverity } from '~/common';
 import { ConvoOptions } from './ConvoOptions';

@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { AccessRoleIds, PrincipalType, ResourceType } from 'librechat-data-provider';
-import { Building2, Share2Icon, Users, Link, CopyCheck, UserX, UserCheck } from 'lucide-react';
+import {
+  Buildings as Building2,
+  ClipboardText as CopyCheck,
+  Link,
+  ShareNetwork as Share2Icon,
+  UserCheck,
+  Users,
+  UserCircleMinus as UserX,
+} from '@phosphor-icons/react';
 import {
   Label,
   Button,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@librechat/client';
-import { Maximize2, X } from 'lucide-react';
+import { ArrowsOut as Maximize2, X } from '@phosphor-icons/react';
 import { FileSources } from 'librechat-data-provider';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import ProgressCircle from './ProgressCircle';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, FloppyDisk as Save, Trash as Trash2 } from '@phosphor-icons/react';
 import { useUpdateProjectMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import type { TProject } from 'librechat-data-provider';
@@ -8,7 +8,9 @@ interface ProjectPromptSnippetsManagerProps {
   project: TProject;
 }
 
-export default function ProjectPromptSnippetsManager({ project }: ProjectPromptSnippetsManagerProps) {
+export default function ProjectPromptSnippetsManager({
+  project,
+}: ProjectPromptSnippetsManagerProps) {
   const localize = useLocalize();
   const updateProject = useUpdateProjectMutation();
   const [snippets, setSnippets] = useState(project.promptSnippets ?? []);
@@ -47,7 +49,7 @@ export default function ProjectPromptSnippetsManager({ project }: ProjectPromptS
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary transition-colors"
+            className="flex items-center gap-1 text-xs text-text-secondary transition-colors hover:text-text-primary"
           >
             <Plus className="h-3.5 w-3.5" />
             {localize('com_ui_add')}
@@ -74,13 +76,13 @@ export default function ProjectPromptSnippetsManager({ project }: ProjectPromptS
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setIsAdding(false)}
-              className="rounded-md px-3 py-1 text-xs text-text-secondary hover:bg-surface-hover transition-colors"
+              className="rounded-md px-3 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-hover"
             >
               {localize('com_ui_cancel')}
             </button>
             <button
               onClick={handleAdd}
-              className="flex items-center gap-1 rounded-md bg-text-primary px-3 py-1 text-xs text-surface-primary hover:bg-opacity-90 transition-colors"
+              className="flex items-center gap-1 rounded-md bg-text-primary px-3 py-1 text-xs text-surface-primary transition-colors hover:bg-opacity-90"
             >
               <Save className="h-3.5 w-3.5" />
               {localize('com_ui_save')}
@@ -97,10 +99,16 @@ export default function ProjectPromptSnippetsManager({ project }: ProjectPromptS
           >
             <div className="min-w-0 flex-1 px-1">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-text-primary uppercase tracking-wider opacity-50">/</span>
-                <div className="text-sm font-semibold text-text-primary truncate">{snippet.title}</div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-primary opacity-50">
+                  /
+                </span>
+                <div className="truncate text-sm font-semibold text-text-primary">
+                  {snippet.title}
+                </div>
               </div>
-              <div className="mt-0.5 text-xs text-text-secondary line-clamp-1">{snippet.content}</div>
+              <div className="mt-0.5 line-clamp-1 text-xs text-text-secondary">
+                {snippet.content}
+              </div>
             </div>
             <button
               onClick={() => handleDelete(idx)}
@@ -112,7 +120,7 @@ export default function ProjectPromptSnippetsManager({ project }: ProjectPromptS
           </div>
         ))}
         {snippets.length === 0 && !isAdding && (
-          <div className="text-center py-6 text-sm text-text-secondary border-2 border-dashed border-border-light rounded-lg">
+          <div className="rounded-lg border-2 border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
             {localize('com_ui_project_no_prompt_snippets')}
           </div>
         )}

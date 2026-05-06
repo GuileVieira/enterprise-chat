@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { FolderOpen, X } from 'lucide-react';
+import { FolderOpen, X } from '@phosphor-icons/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, Button } from '@librechat/client';
 import { useProjectsQuery } from '~/data-provider';
 import { useLocalize } from '~/hooks';

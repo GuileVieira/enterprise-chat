@@ -1,7 +1,11 @@
 import { useMemo } from 'react';
 import { VisuallyHidden } from '@ariakit/react';
 import { Spinner, TooltipAnchor } from '@librechat/client';
-import { CheckCircle2, MousePointerClick, SettingsIcon } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  CursorClick as MousePointerClick,
+  GearSix as SettingsIcon,
+} from '@phosphor-icons/react';
 import { EModelEndpoint, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';

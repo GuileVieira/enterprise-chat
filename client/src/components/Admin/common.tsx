@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { cn } from '~/utils';
 
@@ -78,7 +78,7 @@ interface AdminToolbarProps {
 export const AdminToolbar: React.FC<AdminToolbarProps> = ({ children, className }) => (
   <div
     className={cn(
-      'flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-3 shadow-sm shadow-black/[0.03] sm:flex-row sm:items-center sm:justify-between dark:shadow-black/20',
+      'flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-3 shadow-sm shadow-black/[0.03] dark:shadow-black/20 sm:flex-row sm:items-center sm:justify-between',
       className,
     )}
   >
@@ -182,7 +182,11 @@ export const AdminStatusBadge: React.FC<AdminStatusBadgeProps> = ({
   active,
   activeLabel,
   inactiveLabel,
-}) => <AdminBadge tone={active ? 'success' : 'neutral'}>{active ? activeLabel : inactiveLabel}</AdminBadge>;
+}) => (
+  <AdminBadge tone={active ? 'success' : 'neutral'}>
+    {active ? activeLabel : inactiveLabel}
+  </AdminBadge>
+);
 
 interface AdminDataTableColumn<T> {
   key: string;
@@ -203,7 +207,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border-light bg-surface-primary/55">
+            <tr className="bg-surface-primary/55 border-b border-border-light">
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -218,7 +222,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
             {items.map((item) => (
               <tr
                 key={getRowKey(item)}
-                className="border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-tertiary/80"
+                className="hover:bg-surface-tertiary/80 border-b border-border-light transition-colors last:border-b-0"
               >
                 {columns.map((column) => (
                   <td key={column.key} className={cn('px-6 py-4', column.className)}>
@@ -240,11 +244,7 @@ interface AdminDangerZoneProps {
   action: React.ReactNode;
 }
 
-export const AdminDangerZone: React.FC<AdminDangerZoneProps> = ({
-  title,
-  action,
-  description,
-}) => (
+export const AdminDangerZone: React.FC<AdminDangerZoneProps> = ({ title, action, description }) => (
   <section className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -269,7 +269,7 @@ export const AdminActionButton = React.forwardRef<HTMLButtonElement, AdminAction
       className={cn(
         'inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary active:translate-y-px disabled:pointer-events-none disabled:opacity-50',
         variant === 'primary' &&
-          'bg-surface-submit text-white shadow-sm shadow-green-900/10 hover:bg-surface-submit-hover',
+          'bg-surface-submit text-white shadow-sm shadow-black/10 hover:bg-surface-submit-hover dark:shadow-black/30',
         variant === 'ghost' && 'bg-surface-tertiary text-text-primary hover:bg-surface-active-alt',
         variant === 'danger' &&
           'bg-surface-destructive text-white hover:bg-surface-destructive-hover',

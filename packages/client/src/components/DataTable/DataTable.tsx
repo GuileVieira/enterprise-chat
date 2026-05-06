@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowUp, ArrowDown, ArrowDownUp } from 'lucide-react';
+import { ArrowDown, ArrowsDownUp as ArrowDownUp, ArrowUp } from '@phosphor-icons/react';
 import {
   useReactTable,
   getCoreRowModel,

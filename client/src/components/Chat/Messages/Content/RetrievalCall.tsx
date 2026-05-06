@@ -2,7 +2,13 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Tools } from 'librechat-data-provider';
 import { TooltipAnchor } from '@librechat/client';
-import { FileText, FileSpreadsheet, FileCode, FileImage, File } from 'lucide-react';
+import {
+  File,
+  FileCode,
+  FileImage,
+  FileCsv as FileSpreadsheet,
+  FileText,
+} from '@phosphor-icons/react';
 import type { TAttachment, TFile } from 'librechat-data-provider';
 import { useLocalize, useProgress, useExpandCollapse } from '~/hooks';
 import { ToolIcon, OutputRenderer, isError } from './ToolOutput';

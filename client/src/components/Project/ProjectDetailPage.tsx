@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FileText, Folder, MessageSquare, Pencil, Settings, Sparkles } from 'lucide-react';
+import {
+  ChatCircle,
+  FileText,
+  Folder,
+  GearSix,
+  PencilSimple,
+  Sparkle,
+} from '@phosphor-icons/react';
 import { useProjectByIdQuery, useGetProjectFiles, useTitleGeneration } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
@@ -16,12 +23,12 @@ import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
 type Tab = (typeof tabs)[number];
 
-const tabIcons: Record<Tab, typeof MessageSquare> = {
-  conversations: MessageSquare,
-  prompts: Sparkles,
+const tabIcons: Record<Tab, typeof ChatCircle> = {
+  conversations: ChatCircle,
+  prompts: Sparkle,
   memories: FileText,
   files: Folder,
-  settings: Settings,
+  settings: GearSix,
 };
 
 export default function ProjectDetailPage() {
@@ -109,7 +116,7 @@ export default function ProjectDetailPage() {
                   className="flex h-9 items-center gap-2 rounded-xl border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary active:scale-[0.99]"
                   title={localize('com_ui_edit')}
                 >
-                  <Pencil className="h-4 w-4" aria-hidden="true" />
+                  <PencilSimple className="h-4 w-4" aria-hidden="true" />
                   {localize('com_ui_edit')}
                 </button>
               )}
@@ -263,7 +270,7 @@ export default function ProjectDetailPage() {
                         onClick={() => setIsEditingSettings(true)}
                         className="flex h-8 items-center gap-1.5 rounded-lg border border-border-light bg-surface-secondary px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                       >
-                        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        <PencilSimple className="h-3.5 w-3.5" aria-hidden="true" />
                         {localize('com_ui_edit')}
                       </button>
                     )}

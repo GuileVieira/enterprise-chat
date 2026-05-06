@@ -1,5 +1,5 @@
 import React, { useState, useId } from 'react';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle } from '@phosphor-icons/react';
 import * as Menu from '@ariakit/react/menu';
 import { DropdownPopup } from '@librechat/client';
 import { specialVariables } from 'librechat-data-provider';
