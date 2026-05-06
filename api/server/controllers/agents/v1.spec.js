@@ -1,3 +1,6 @@
+jest.unmock('winston');
+jest.unmock('winston-daily-rotate-file');
+
 const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 const { v4: uuidv4 } = require('uuid');

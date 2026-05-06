@@ -284,6 +284,8 @@ export const mcp = {
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
+export const cloneAgentToTenant = (agent_id: string) =>
+  `${agents({ path: `${agent_id}/clone-to-tenant` })}`;
 
 export const files = () => `${BASE_URL}/api/files`;
 export const fileUpload = () => `${BASE_URL}/api/files`;

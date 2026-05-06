@@ -314,6 +314,16 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
       principals.push({ principalType: PrincipalType.ROLE, principalId: userRole });
     }
 
+    const User = mongoose.models.User as Model<IUser>;
+    const userQuery = User.findById(userId).select('tenantId');
+    if (session) {
+      userQuery.session(session);
+    }
+    const userTenant = await userQuery.lean();
+    if (userTenant?.tenantId) {
+      principals.push({ principalType: PrincipalType.TENANT, principalId: userTenant.tenantId });
+    }
+
     const userGroups = await getUserGroups(userId, session);
     if (userGroups && userGroups.length > 0) {
       userGroups.forEach((group) => {

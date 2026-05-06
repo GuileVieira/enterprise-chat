@@ -213,7 +213,7 @@ export const roleDefaults = defaultRolesSchema.parse({
       [PermissionTypes.MEMORIES]: {},
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },

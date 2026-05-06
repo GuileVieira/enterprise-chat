@@ -3,7 +3,7 @@
  */
 
 const mongoose = require('mongoose');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { ResourceType, PrincipalType, PermissionBits } = require('librechat-data-provider');
 const { enrichRemoteAgentPrincipals, backfillRemoteAgentPermissions } = require('@librechat/api');
 const {
@@ -104,6 +104,8 @@ const updateResourcePermissions = async (req, res) => {
         } else if (principal.type === PrincipalType.GROUP) {
           // Pass authContext to enable member fetching for Entra ID groups when available
           principalId = await ensureGroupPrincipalExists(principal, authContext);
+        } else if (principal.type === PrincipalType.TENANT) {
+          principalId = principal.id;
         } else {
           logger.error(`Unsupported principal type: ${principal.type}`);
           continue; // Skip invalid principal types
@@ -140,6 +142,17 @@ const updateResourcePermissions = async (req, res) => {
         type: PrincipalType.PUBLIC,
         id: null,
       });
+    }
+
+    const hasTenantGrant = validatedPrincipals.some((principal) => principal.type === PrincipalType.TENANT);
+    if (resourceType === ResourceType.AGENT && hasTenantGrant) {
+      await runAsSystem(() =>
+        db.updateAgent(
+          { _id: resourceId },
+          { $unset: { tenantId: '' } },
+          { updatingUserId: userId, skipVersioning: true },
+        ),
+      );
     }
 
     const results = await bulkUpdateResourcePermissions({
@@ -192,7 +205,7 @@ const getResourcePermissions = async (req, res) => {
     const { resourceType, resourceId } = req.params;
     validateResourceType(resourceType);
 
-    const results = await db.aggregateAclEntries([
+    const results = await runAsSystem(() => db.aggregateAclEntries([
       // Match ACL entries for this resource
       {
         $match: {
@@ -239,7 +252,7 @@ const getResourcePermissions = async (req, res) => {
           groupInfo: { $arrayElemAt: ['$groupInfo', 0] },
         },
       },
-    ]);
+    ]));
 
     let principals = [];
     let publicPermission = null;
@@ -272,6 +285,16 @@ const getResourcePermissions = async (req, res) => {
           avatar: result.groupInfo.avatar,
           source: result.groupInfo.source || 'local',
           idOnTheSource: result.groupInfo.idOnTheSource || result.groupInfo._id.toString(),
+          accessRoleId: result.accessRoleId,
+        });
+      } else if (result.principalType === PrincipalType.TENANT) {
+        principals.push({
+          type: PrincipalType.TENANT,
+          id: result.principalId,
+          name: `Tenant: ${result.principalId}`,
+          description: 'Tenant-wide access',
+          source: 'local',
+          idOnTheSource: result.principalId,
           accessRoleId: result.accessRoleId,
         });
       } else if (result.principalType === PrincipalType.ROLE) {

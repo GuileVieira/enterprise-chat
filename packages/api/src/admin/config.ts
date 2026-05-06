@@ -133,6 +133,8 @@ function principalModel(type: PrincipalType): PrincipalModel {
       return PrincipalModel.GROUP;
     case PrincipalType.ROLE:
       return PrincipalModel.ROLE;
+    case PrincipalType.TENANT:
+      return PrincipalModel.ROLE;
     case PrincipalType.PUBLIC:
       return PrincipalModel.ROLE;
     default: {

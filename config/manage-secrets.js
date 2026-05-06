@@ -2,7 +2,7 @@ const path = require('path');
 const mongoose = require('mongoose');
 const { tenantStorage } = require('@librechat/data-schemas');
 require('module-alias')({ base: path.resolve(__dirname, '..', 'api') });
-const { createMethods } = require('@librechat/data-schemas');
+const { createMethods, createModels } = require('@librechat/data-schemas');
 const { askQuestion, silentExit } = require('./helpers');
 const connect = require('./connect');
 
@@ -139,6 +139,7 @@ async function runCommand(command, args, db) {
 
 (async () => {
   await connect();
+  createModels(mongoose);
   const db = createMethods(mongoose);
   const args = parseArgs(process.argv);
 

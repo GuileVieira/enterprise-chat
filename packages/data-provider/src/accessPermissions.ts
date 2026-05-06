@@ -16,6 +16,7 @@ import { z } from 'zod';
 export enum PrincipalType {
   USER = 'user',
   GROUP = 'group',
+  TENANT = 'tenant',
   PUBLIC = 'public',
   ROLE = 'role',
 }
@@ -92,7 +93,7 @@ export enum AccessRoleIds {
  */
 export const principalSchema = z.object({
   type: z.nativeEnum(PrincipalType),
-  id: z.string().optional(), // undefined for 'public' type, role name for 'role' type
+  id: z.string().optional(), // undefined for 'public' type, role name for 'role' type, tenantId for 'tenant'
   name: z.string().optional(),
   email: z.string().optional(), // for user and group types
   source: z.enum(['local', 'entra']).optional(),

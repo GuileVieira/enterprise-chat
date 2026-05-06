@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { AccessRoleIds, ResourceType } from 'librechat-data-provider';
-import { Share2Icon, Users, Link, CopyCheck, UserX, UserCheck } from 'lucide-react';
+import { AccessRoleIds, PrincipalType, ResourceType } from 'librechat-data-provider';
+import { Building2, Share2Icon, Users, Link, CopyCheck, UserX, UserCheck } from 'lucide-react';
 import {
   Label,
   Button,
@@ -25,6 +25,7 @@ import UnifiedPeopleSearch from './PeoplePicker/UnifiedPeopleSearch';
 import PeoplePickerAdminSettings from './PeoplePickerAdminSettings';
 import PublicSharingToggle from './PublicSharingToggle';
 import { SelectedPrincipalsList } from './PeoplePicker';
+import { useListAdminTenants } from '~/data-provider/admin';
 import { cn } from '~/utils';
 
 export default function GenericGrantAccessDialog({
@@ -52,6 +53,9 @@ export default function GenericGrantAccessDialog({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const canSharePublic = useCanSharePublic(resourceType);
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
+  const { data: tenantsData } = useListAdminTenants({
+    enabled: resourceType === ResourceType.AGENT && isModalOpen,
+  });
 
   /** User can use the share dialog if they have people picker access OR can share publicly */
   const canUseShareDialog = hasPeoplePickerAccess || canSharePublic;
@@ -74,6 +78,7 @@ export default function GenericGrantAccessDialog({
   /** State for unified list of all shares (existing + newly added) */
   const [allShares, setAllShares] = useState<TPrincipal[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
   const [defaultPermissionId, setDefaultPermissionId] = useState<AccessRoleIds | undefined>(
     config?.defaultViewerRoleId,
   );
@@ -118,6 +123,38 @@ export default function GenericGrantAccessDialog({
     }));
 
     setAllShares((prev) => [...prev, ...sharesWithDefaults]);
+    setHasChanges(true);
+  };
+
+  const handleAddTenant = () => {
+    if (!selectedTenantId) {
+      return;
+    }
+
+    if (
+      allShares.some(
+        (existing) =>
+          existing.type === PrincipalType.TENANT && existing.idOnTheSource === selectedTenantId,
+      )
+    ) {
+      setSelectedTenantId('');
+      return;
+    }
+
+    setAllShares((prev) => [
+      ...prev,
+      {
+        type: PrincipalType.TENANT,
+        id: selectedTenantId,
+        name: `Tenant: ${selectedTenantId}`,
+        source: 'local',
+        idOnTheSource: selectedTenantId,
+        description: localize('com_ui_tenant_wide_access'),
+        accessRoleId: defaultPermissionId || config?.defaultViewerRoleId,
+        isExisting: false,
+      },
+    ]);
+    setSelectedTenantId('');
     setHasChanges(true);
   };
 
@@ -294,6 +331,33 @@ export default function GenericGrantAccessDialog({
                   typeFilter={peoplePickerTypeFilter}
                   excludeIds={allShares.map((s) => s.idOnTheSource)}
                 />
+
+                {resourceType === ResourceType.AGENT && (tenantsData?.tenants?.length ?? 0) > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-text-secondary" aria-hidden="true" />
+                    <select
+                      className="h-10 min-w-0 flex-1 rounded-md border border-border-medium bg-surface-primary px-3 text-sm text-text-primary"
+                      value={selectedTenantId}
+                      onChange={(event) => setSelectedTenantId(event.target.value)}
+                      aria-label={localize('com_ui_select_tenant')}
+                    >
+                      <option value="">{localize('com_ui_select_tenant')}</option>
+                      {tenantsData?.tenants.map((tenant) => (
+                        <option key={tenant.id} value={tenant.id}>
+                          {tenant.id}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={handleAddTenant}
+                      disabled={!selectedTenantId}
+                    >
+                      {localize('com_ui_add')}
+                    </Button>
+                  </div>
+                )}
 
                 {/* Unified User/Group List */}
                 {(() => {

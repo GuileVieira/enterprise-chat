@@ -1,3 +1,6 @@
+jest.unmock('winston');
+jest.unmock('winston-daily-rotate-file');
+
 const mongoose = require('mongoose');
 const { RoleBits, createModels } = require('@librechat/data-schemas');
 const { MongoMemoryServer } = require('mongodb-memory-server');
