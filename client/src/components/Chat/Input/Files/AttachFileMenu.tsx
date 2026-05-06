@@ -6,15 +6,10 @@ import {
   FileMagnifyingGlass as FileSearch,
   FileText as FileType2Icon,
   ImageSquare as ImageUpIcon,
+  Paperclip,
   TerminalWindow as TerminalSquareIcon,
 } from '@phosphor-icons/react';
-import {
-  FileUpload,
-  TooltipAnchor,
-  DropdownPopup,
-  AttachmentIcon,
-  SharePointIcon,
-} from '@librechat/client';
+import { FileUpload, TooltipAnchor, DropdownPopup, SharePointIcon } from '@librechat/client';
 import {
   Providers,
   EToolResources,
@@ -278,7 +273,7 @@ const AttachFileMenu = ({
           )}
         >
           <div className="flex w-full items-center justify-center gap-2">
-            <AttachmentIcon />
+            <Paperclip size={26} aria-hidden="true" />
           </div>
         </Ariakit.MenuButton>
       }

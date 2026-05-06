@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clipboard, CheckMark } from '@librechat/client';
+import { Check, Copy } from '@phosphor-icons/react';
 import type { TMessage, TAttachment, SearchResultData } from 'librechat-data-provider';
 import { useLocalize, useCopyToClipboard } from '~/hooks';
 
@@ -28,9 +28,9 @@ export default function MinimalHoverButtons({ message, searchResults }: THoverBu
         }
       >
         {isCopied ? (
-          <CheckMark className="h-[19px] w-[19px]" />
+          <Check size={20} weight="bold" aria-hidden="true" />
         ) : (
-          <Clipboard className="h-[19px] w-[19px]" />
+          <Copy size={20} aria-hidden="true" />
         )}
       </button>
     </div>

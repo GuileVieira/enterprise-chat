@@ -1,7 +1,13 @@
 import { useState, useMemo, memo, useCallback, useRef, useId, type MouseEvent } from 'react';
 import { useAtomValue } from 'jotai';
-import { CaretDown as ChevronDown, CaretUp as ChevronUp, Lightbulb } from '@phosphor-icons/react';
-import { Clipboard, CheckMark, TooltipAnchor } from '@librechat/client';
+import {
+  Check,
+  Copy,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  Lightbulb,
+} from '@phosphor-icons/react';
+import { TooltipAnchor } from '@librechat/client';
 import type { FocusEvent, FC } from 'react';
 import { useLocalize, useExpandCollapse } from '~/hooks';
 import { showThinkingAtom } from '~/store/showThinking';
@@ -113,9 +119,9 @@ export const ThinkingButton = memo(
                 : localize('com_ui_copy_thoughts_to_clipboard')}
             </span>
             {isCopied ? (
-              <CheckMark className="h-[18px] w-[18px]" aria-hidden="true" />
+              <Check size={20} weight="bold" aria-hidden="true" />
             ) : (
-              <Clipboard size="19" aria-hidden="true" />
+              <Copy size={20} aria-hidden="true" />
             )}
           </button>
         )}
@@ -213,9 +219,9 @@ export const FloatingThinkingBar = memo(
                 )}
               >
                 {isCopied ? (
-                  <CheckMark className="h-[18px] w-[18px]" aria-hidden="true" />
+                  <Check size={20} weight="bold" aria-hidden="true" />
                 ) : (
-                  <Clipboard size="18" aria-hidden="true" />
+                  <Copy size={20} aria-hidden="true" />
                 )}
               </button>
             }

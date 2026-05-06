@@ -1,15 +1,13 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
-import { CaretDown as ChevronDown, CaretUp as ChevronUp, X } from '@phosphor-icons/react';
 import {
-  Button,
-  OGDialog,
-  Clipboard,
-  CheckMark,
-  OGDialogClose,
-  OGDialogTitle,
-  OGDialogContent,
-} from '@librechat/client';
+  Check,
+  Copy,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  X,
+} from '@phosphor-icons/react';
+import { Button, OGDialog, OGDialogClose, OGDialogTitle, OGDialogContent } from '@librechat/client';
 import useMermaidZoom from './useMermaidZoom';
 import ZoomControls from './ZoomControls';
 import { useLocalize } from '~/hooks';
@@ -92,7 +90,11 @@ const MermaidDialog: React.FC<MermaidDialogProps> = memo(
                 className="h-auto gap-1 rounded-sm px-1 py-0 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:ring-border-heavy focus-visible:ring-offset-0"
                 onClick={handleCopy}
               >
-                {isCopied ? <CheckMark className="h-[18px] w-[18px]" /> : <Clipboard />}
+                {isCopied ? (
+                  <Check size={20} weight="bold" aria-hidden="true" />
+                ) : (
+                  <Copy size={20} aria-hidden="true" />
+                )}
                 {localize('com_ui_copy_code')}
               </Button>
               <OGDialogClose className="rounded-sm p-1 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-heavy">
