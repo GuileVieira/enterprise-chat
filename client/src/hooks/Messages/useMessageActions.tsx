@@ -132,6 +132,13 @@ export default function useMessageActions(props: TMessageActions) {
       return agent.name ?? 'Assistant';
     } else if (assistant) {
       return assistant.name ?? 'Assistant';
+    } else if (message?.model) {
+      const spec = startupConfig?.modelSpecs?.list?.find((s) => s.preset.model === message.model);
+      if (spec?.label) {
+        return `Agente ${spec.label}`;
+      }
+    } else if (message?.sender) {
+      return message.sender;
     } else if (conversation?.spec) {
       const spec = startupConfig?.modelSpecs?.list?.find((s) => s.name === conversation.spec);
       if (spec?.label) {
@@ -146,6 +153,7 @@ export default function useMessageActions(props: TMessageActions) {
     UsernameDisplay,
     user,
     localize,
+    message?.sender,
     conversation?.spec,
     startupConfig?.modelSpecs?.list,
   ]);

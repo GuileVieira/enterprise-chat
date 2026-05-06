@@ -10,6 +10,7 @@ import type {
 import type { useLocalize } from '~/hooks';
 import SpecIcon from '~/components/Chat/Menus/Endpoints/components/SpecIcon';
 import { Endpoint, SelectedValues } from '~/common';
+import { AgentModelAvatar } from './components/EndpointModelItem';
 
 export function filterItems<
   T extends {
@@ -132,6 +133,13 @@ export function getSelectedIcon({
       return null;
     }
 
+    const selectedSpec = modelSpecs.find(
+      (spec) => spec.preset.endpoint === endpoint && spec.preset.model === model,
+    );
+    if (selectedSpec) {
+      return React.createElement(AgentModelAvatar, { name: selectedSpec.label });
+    }
+
     if (selectedEndpoint.modelIcons?.[model]) {
       const iconUrl = selectedEndpoint.modelIcons[model];
       return React.createElement(
@@ -143,6 +151,11 @@ export function getSelectedIcon({
           className: 'h-full w-full object-cover',
         }),
       );
+    }
+
+    if (isAgentsEndpoint(endpoint)) {
+      const agentName = selectedEndpoint.agentNames?.[model] ?? model;
+      return React.createElement(AgentModelAvatar, { name: agentName });
     }
 
     return (

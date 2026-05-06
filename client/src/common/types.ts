@@ -398,10 +398,11 @@ export type TMessageProps = {
   setSiblingIdx?: ((value: number) => void | React.Dispatch<React.SetStateAction<number>>) | null;
 };
 
-export type TMessageIcon = { endpoint?: string | null; isCreatedByUser?: boolean } & Pick<
-  t.TConversation,
-  'modelLabel'
-> &
+export type TMessageIcon = {
+  endpoint?: string | null;
+  isCreatedByUser?: boolean;
+  avatarLabel?: string;
+} & Pick<t.TConversation, 'modelLabel'> &
   Pick<t.TMessage, 'model' | 'iconURL'>;
 
 export type TInitialProps = {
