@@ -115,6 +115,7 @@ export type TPayload = Partial<TMessage> &
     isTemporary: boolean;
     ephemeralAgent?: TEphemeralAgent | null;
     editedContent?: TEditedContent | null;
+    hiddenPromptContext?: THiddenPromptContext | null;
     /** Added conversation for multi-convo feature */
     addedConvo?: TConversation;
     /**
@@ -151,6 +152,7 @@ export type TSubmission = {
   clientTimestamp?: string;
   ephemeralAgent?: TEphemeralAgent | null;
   editedContent?: TEditedContent | null;
+  hiddenPromptContext?: THiddenPromptContext | null;
   /** Added conversation for multi-convo feature */
   addedConvo?: TConversation;
   /** Skills the user invoked via the `$` popover for this submission. */
@@ -158,6 +160,14 @@ export type TSubmission = {
 };
 
 export type EventSubmission = Omit<TSubmission, 'initialResponse'> & { initialResponse: TMessage };
+
+export type THiddenPromptContext = {
+  promptGroupId?: string;
+  promptId?: string;
+  name: string;
+  description?: string;
+  content: string;
+};
 
 export type TPluginAction = {
   pluginKey: string;

@@ -336,6 +336,23 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     logger.error('[initializeClient] Error loading project context', err);
   }
 
+  const hiddenPromptContext = req.body.hiddenPromptContext;
+  const hiddenPromptContent =
+    typeof hiddenPromptContext?.content === 'string' ? hiddenPromptContext.content.trim() : '';
+  let canUseHiddenPrompt = true;
+  if (hiddenPromptContent && hiddenPromptContext?.promptGroupId) {
+    canUseHiddenPrompt = await checkPermission({
+      userId: req.user.id,
+      role: req.user.role,
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: hiddenPromptContext.promptGroupId,
+      requiredPermission: PermissionBits.VIEW,
+    });
+  }
+  if (hiddenPromptContent && canUseHiddenPrompt) {
+    primaryAgent.instructions = `${hiddenPromptContent}\n\n${primaryAgent.instructions ?? ''}`;
+  }
+
   const primaryConfig = await initializeAgent(
     {
       req,

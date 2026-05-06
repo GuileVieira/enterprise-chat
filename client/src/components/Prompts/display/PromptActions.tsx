@@ -29,7 +29,7 @@ const PromptActions = ({ group, mainText, onUsePrompt }: PromptActionsProps) => 
     if (hasVariables) {
       setShowVariableDialog(true);
     } else {
-      submitPrompt(mainText);
+      submitPrompt(mainText, group);
       if (group._id) {
         recordUsage(group._id);
       }

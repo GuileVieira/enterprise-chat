@@ -611,6 +611,8 @@
   "com_ui_chat": "Chat",
   "com_ui_chat_history": "Histórico de Chat",
   "com_ui_clear": "Limpar",
+  "com_ui_active_hidden_prompt": "Ativo: ✦ {{name}}",
+  "com_ui_remove_hidden_prompt": "Remover prompt ativo",
   "com_ui_clear_all": "Limpar tudo",
   "com_ui_client_id": "ID do cliente",
   "com_ui_client_secret": "Segredo do cliente",

@@ -849,6 +849,8 @@
   "com_ui_chats": "Chats",
   "com_ui_check_internet": "Check your internet connection",
   "com_ui_clear": "Clear",
+  "com_ui_active_hidden_prompt": "Active: ✦ {{name}}",
+  "com_ui_remove_hidden_prompt": "Remove active prompt",
   "com_ui_clear_all": "Clear all",
   "com_ui_clear_browser_cache": "Clear your browser cache",
   "com_ui_clear_presets": "Clear Presets",

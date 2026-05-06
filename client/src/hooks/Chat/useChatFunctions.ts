@@ -108,6 +108,7 @@ export default function useChatFunctions({
       parentMessageId = null,
       conversationId = null,
       messageId = null,
+      hiddenPromptContext = null,
     },
     {
       editedContent = null,
@@ -246,6 +247,15 @@ export default function useChatFunctions({
       endpointOption.key = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     }
     const responseSender = getSender({ model: conversation?.model, ...endpointOption });
+    const hiddenPromptMetadata = hiddenPromptContext
+      ? {
+          hiddenPrompt: {
+            name: hiddenPromptContext.name,
+            promptGroupId: hiddenPromptContext.promptGroupId,
+            description: hiddenPromptContext.description,
+          },
+        }
+      : undefined;
 
     const currentMsg: TMessage = {
       text,
@@ -264,6 +274,7 @@ export default function useChatFunctions({
        * skill resolution reads the top-level `manualSkills` payload field.
        */
       manualSkills: manualSkills.length > 0 ? manualSkills : undefined,
+      metadata: hiddenPromptMetadata,
     };
 
     const submissionFiles = overrideFiles ?? targetParentMessage?.files;
@@ -392,6 +403,7 @@ export default function useChatFunctions({
       editedContent,
       addedConvo,
       manualSkills: manualSkills.length > 0 ? manualSkills : undefined,
+      hiddenPromptContext,
     };
 
     if (isRegenerate) {
