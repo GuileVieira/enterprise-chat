@@ -205,6 +205,12 @@ export default function useChatFunctions({
       endpointOption.key = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     }
     const responseSender = getSender({ model: conversation?.model, ...endpointOption });
+    const responseAvatarLabel =
+      (conversation?.spec ? responseSender : null) ||
+      conversation?.modelLabel ||
+      conversation?.agent_id ||
+      conversation?.assistant_id ||
+      responseSender;
     const hiddenPromptMetadata = hiddenPromptContext
       ? {
           hiddenPrompt: {
@@ -272,6 +278,9 @@ export default function useChatFunctions({
       model: convo?.model,
       error: false,
       iconURL,
+      metadata: {
+        responseAvatarLabel,
+      },
     };
 
     if (isAssistantsEndpoint(endpoint)) {

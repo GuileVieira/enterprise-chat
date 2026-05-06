@@ -70,6 +70,7 @@ function areMessageRenderPropsEqual(prev: MessageRenderProps, next: MessageRende
   return (
     prevMsg.messageId === nextMsg.messageId &&
     prevMsg.text === nextMsg.text &&
+    prevMsg.sender === nextMsg.sender &&
     prevMsg.error === nextMsg.error &&
     prevMsg.unfinished === nextMsg.unfinished &&
     prevMsg.depth === nextMsg.depth &&
@@ -134,10 +135,18 @@ const MessageRender = memo(function MessageRender({
       model: msg?.model ?? conversation?.model,
       iconURL: msg?.iconURL,
       modelLabel: messageLabel,
+      avatarLabel:
+        typeof msg?.metadata?.responseAvatarLabel === 'string'
+          ? msg.metadata.responseAvatarLabel
+          : msg?.isCreatedByUser === false
+            ? messageLabel
+            : undefined,
       isCreatedByUser: msg?.isCreatedByUser,
     }),
     [
       messageLabel,
+      msg?.metadata,
+      msg?.sender,
       conversation?.endpoint,
       conversation?.model,
       msg?.model,
