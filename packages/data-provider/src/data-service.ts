@@ -1005,6 +1005,11 @@ export function deleteAdminConfig(principalType: string, principalId: string): P
   return request.delete(endpoints.adminConfigByPrincipal(principalType, principalId));
 }
 
+/* Admin Overview */
+export function getAdminOverview(): Promise<q.AdminOverviewResponse> {
+  return request.get(endpoints.adminOverview());
+}
+
 /* Admin Tenants */
 export function listAdminTenants(): Promise<q.ListTenantsResponse> {
   return request.get(endpoints.adminTenants());

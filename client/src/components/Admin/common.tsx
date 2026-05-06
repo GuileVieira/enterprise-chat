@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '~/utils';
 
 interface AdminPageHeaderProps {
@@ -44,6 +45,213 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ children, className, ...
     {...props}
   >
     {children}
+  </section>
+);
+
+interface AdminSectionHeaderProps {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+}
+
+export const AdminSectionHeader: React.FC<AdminSectionHeaderProps> = ({
+  title,
+  action,
+  description,
+}) => (
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h2 className="text-base font-semibold text-text-primary">{title}</h2>
+      {description != null && (
+        <p className="mt-1 text-sm leading-6 text-text-secondary">{description}</p>
+      )}
+    </div>
+    {action != null && <div className="shrink-0">{action}</div>}
+  </div>
+);
+
+interface AdminToolbarProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const AdminToolbar: React.FC<AdminToolbarProps> = ({ children, className }) => (
+  <div
+    className={cn(
+      'flex flex-col gap-3 rounded-xl border border-border-light bg-surface-secondary p-3 sm:flex-row sm:items-center sm:justify-between',
+      className,
+    )}
+  >
+    {children}
+  </div>
+);
+
+interface AdminTenantSelectorProps {
+  label: string;
+  value: string;
+  tenants: Array<{ id: string }>;
+  placeholder: string;
+  onChange: (tenantId: string) => void;
+}
+
+export const AdminTenantSelector: React.FC<AdminTenantSelectorProps> = ({
+  label,
+  value,
+  tenants,
+  onChange,
+  placeholder,
+}) => (
+  <label className="block w-full sm:w-72">
+    <span className="sr-only">{label}</span>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={label}
+      className="focus:ring-ring-primary/20 h-10 w-full rounded-lg border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-primary shadow-sm shadow-black/5 outline-none transition-colors hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2"
+    >
+      <option value="">{placeholder}</option>
+      {tenants.map((tenant) => (
+        <option key={tenant.id} value={tenant.id}>
+          {tenant.id}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+interface AdminMetricCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  description?: string;
+  onClick?: () => void;
+}
+
+export const AdminMetricCard: React.FC<AdminMetricCardProps> = ({
+  title,
+  value,
+  icon: Icon,
+  onClick,
+  description,
+}) => {
+  const Component = onClick != null ? motion.button : motion.div;
+
+  return (
+    <Component
+      type={onClick != null ? 'button' : undefined}
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={onClick != null ? { scale: 0.99 } : undefined}
+      className={cn(
+        'min-h-32 rounded-xl border border-border-light bg-surface-secondary p-4 text-left shadow-sm shadow-black/5',
+        onClick != null && 'transition-colors hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-text-secondary">{title}</p>
+          <p className="mt-3 text-3xl font-semibold tabular-nums text-text-primary">{value}</p>
+        </div>
+        <div className="flex size-10 items-center justify-center rounded-lg bg-surface-tertiary text-text-primary">
+          <Icon className="size-5" />
+        </div>
+      </div>
+      {description != null && (
+        <p className="mt-3 line-clamp-2 text-xs leading-5 text-text-tertiary">{description}</p>
+      )}
+    </Component>
+  );
+};
+
+interface AdminStatGridProps {
+  children: React.ReactNode;
+}
+
+export const AdminStatGrid: React.FC<AdminStatGridProps> = ({ children }) => (
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>
+);
+
+interface AdminStatusBadgeProps {
+  active: boolean;
+  activeLabel: string;
+  inactiveLabel: string;
+}
+
+export const AdminStatusBadge: React.FC<AdminStatusBadgeProps> = ({
+  active,
+  activeLabel,
+  inactiveLabel,
+}) => <AdminBadge tone={active ? 'success' : 'neutral'}>{active ? activeLabel : inactiveLabel}</AdminBadge>;
+
+interface AdminDataTableColumn<T> {
+  key: string;
+  header: string;
+  render: (item: T) => React.ReactNode;
+  className?: string;
+}
+
+interface AdminDataTableProps<T> {
+  items: T[];
+  columns: Array<AdminDataTableColumn<T>>;
+  getRowKey: (item: T) => string;
+}
+
+export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableProps<T>) {
+  return (
+    <AdminPanel>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-border-light bg-surface-primary/40">
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className={cn('px-6 py-3 font-medium text-text-secondary', column.className)}
+                >
+                  {column.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr
+                key={getRowKey(item)}
+                className="border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-tertiary"
+              >
+                {columns.map((column) => (
+                  <td key={column.key} className={cn('px-6 py-4', column.className)}>
+                    {column.render(item)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </AdminPanel>
+  );
+}
+
+interface AdminDangerZoneProps {
+  title: string;
+  description: string;
+  action: React.ReactNode;
+}
+
+export const AdminDangerZone: React.FC<AdminDangerZoneProps> = ({
+  title,
+  action,
+  description,
+}) => (
+  <section className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 className="text-sm font-semibold text-red-700 dark:text-red-300">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-text-secondary">{description}</p>
+      </div>
+      {action}
+    </div>
   </section>
 );
 

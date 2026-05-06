@@ -1,5 +1,5 @@
 const express = require('express');
-const { createAdminTenantsHandlers } = require('@librechat/api');
+const { createAdminOverviewHandlers } = require('@librechat/api');
 const { SystemCapabilities } = require('@librechat/data-schemas');
 const { requireCapability } = require('~/server/middleware/roles/capabilities');
 const { requireJwtAuth } = require('~/server/middleware');
@@ -8,19 +8,19 @@ const db = require('~/models');
 const router = express.Router();
 
 const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
-const requireReadUsers = requireCapability(SystemCapabilities.READ_USERS);
 
-const handlers = createAdminTenantsHandlers({
+const handlers = createAdminOverviewHandlers({
   findUsers: db.findUsers,
   countUsers: db.countUsers,
+  countRoles: db.countRoles,
+  countGroups: db.countGroups,
+  listAllConfigs: db.listAllConfigs,
   countTenantFunctions: db.countTenantFunctions,
   countTenantSecrets: db.countTenantSecrets,
 });
 
 router.use(requireJwtAuth, requireAdminAccess);
 
-router.get('/', requireReadUsers, handlers.listTenants);
-router.get('/:tenantId/users', requireReadUsers, handlers.listTenantUsers);
-router.get('/:tenantId/stats', requireReadUsers, handlers.getTenantStats);
+router.get('/', handlers.getOverview);
 
 module.exports = router;

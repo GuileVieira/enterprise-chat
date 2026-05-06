@@ -303,6 +303,22 @@ export type AdminConfigListResponse = {
   configs: AdminConfig[];
 };
 
+/* Admin Overview */
+export type AdminOverviewResponse = {
+  usersTotal: number;
+  adminsTotal: number;
+  tenantsTotal: number;
+  rolesTotal: number;
+  groupsTotal: number;
+  configOverridesTotal: number;
+  activeConfigOverridesTotal: number;
+  functionsTotal: number;
+  activeFunctionsTotal: number;
+  secretsTotal: number;
+  topTenants: TenantItem[];
+  recentUsers: AdminUser[];
+};
+
 /* Admin Tenants */
 export type TenantItem = {
   id: string;

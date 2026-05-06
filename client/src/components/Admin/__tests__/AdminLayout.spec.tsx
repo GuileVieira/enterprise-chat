@@ -11,10 +11,19 @@ jest.mock('~/hooks', () => ({
       com_admin_config: 'Config',
       com_admin_roles: 'Roles',
       com_admin_users: 'Users',
+      com_admin_tenants: 'Tenants',
       com_admin_groups: 'Groups',
+      com_admin_secrets: 'Secrets',
+      com_admin_functions: 'Functions',
       com_admin_dashboard: 'Dashboard',
+      com_admin_console: 'Console',
+      com_admin_super_admin: 'Super Admin',
+      com_admin_admin_user: 'Admin user',
       com_admin_back_to_chat: 'Back to Chat',
-      com_admin_administration: 'Administration',
+      com_admin_role_super_admin: 'Super Admin',
+      com_admin_search_shortcut: 'Search users and audit access',
+      com_admin_open_navigation: 'Open navigation',
+      com_admin_close_navigation: 'Close navigation',
       com_admin_nav_description: 'Control access, groups, and configuration.',
     };
     return labels[key] ?? key;
@@ -29,6 +38,7 @@ jest.mock('react-router-dom', () => {
       return ReactActual.createElement('a', { href: to }, children);
     },
     useLocation: () => ({ pathname: '/admin' }),
+    useNavigate: () => jest.fn(),
     Navigate: function Navigate() {
       return null;
     },
@@ -100,11 +110,15 @@ describe('AdminLayout', () => {
 
     render(<AdminLayout />);
 
-    expect(screen.getByText('Administration')).toBeInTheDocument();
+    expect(screen.getAllByText('Super Admin').length).toBeGreaterThan(0);
+    expect(screen.getByText('Console')).toBeInTheDocument();
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
     expect(screen.getByText('Users')).toBeInTheDocument();
+    expect(screen.getByText('Tenants')).toBeInTheDocument();
     expect(screen.getByText('Roles')).toBeInTheDocument();
     expect(screen.getByText('Groups')).toBeInTheDocument();
+    expect(screen.getByText('Functions')).toBeInTheDocument();
+    expect(screen.getByText('Secrets')).toBeInTheDocument();
     expect(screen.getByText('Config')).toBeInTheDocument();
     expect(screen.getByText('Back to Chat')).toBeInTheDocument();
     expect(screen.getByTestId('outlet')).toBeInTheDocument();

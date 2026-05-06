@@ -1,6 +1,7 @@
 import { logger, runAsSystem } from '@librechat/data-schemas';
 import type { IUser } from '@librechat/data-schemas';
 import type { FilterQuery } from 'mongoose';
+import type { ITenantFunction, ITenantSecret } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { ServerRequest } from '~/types/http';
 import { parsePagination } from './pagination';
@@ -15,11 +16,12 @@ export interface AdminTenantsDeps {
     options?: { limit?: number; offset?: number; sort?: Record<string, 1 | -1> },
   ) => Promise<IUser[]>;
   countUsers: (filter?: FilterQuery<IUser>) => Promise<number>;
-  countTenantEntities?: (tenantId: string, entity: string) => Promise<number>;
+  countTenantFunctions?: (filter?: FilterQuery<ITenantFunction>) => Promise<number>;
+  countTenantSecrets?: (filter?: FilterQuery<ITenantSecret>) => Promise<number>;
 }
 
 export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
-  const { findUsers, countUsers } = deps;
+  const { findUsers, countUsers, countTenantFunctions, countTenantSecrets } = deps;
 
   async function listTenantsHandler(_req: ServerRequest, res: Response) {
     try {
@@ -58,7 +60,7 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
         ]),
       );
 
-      const mapped = users.map((u) => ({
+      const mapped = users.map((u: IUser) => ({
         _id: u._id?.toString() ?? '',
         name: u.name ?? '',
         username: u.username ?? '',
@@ -82,7 +84,13 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
     try {
       const { tenantId } = req.params as { tenantId: string };
       const filter = tenantId === 'default' ? { tenantId: { $exists: false } } : { tenantId };
-      const userCount = await runAsSystem(() => countUsers(filter));
+      const [userCount, functionsCount, secretsCount] = await runAsSystem(() =>
+        Promise.all([
+          countUsers(filter),
+          countTenantFunctions?.({ tenantId }) ?? Promise.resolve(0),
+          countTenantSecrets?.({ tenantId }) ?? Promise.resolve(0),
+        ]),
+      );
 
       return res.status(200).json({
         tenantId,
@@ -90,8 +98,8 @@ export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
           users: userCount,
           conversations: 0,
           agents: 0,
-          functions: 0,
-          secrets: 0,
+          functions: functionsCount,
+          secrets: secretsCount,
         },
       });
     } catch (error) {

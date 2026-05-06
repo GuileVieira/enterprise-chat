@@ -24,6 +24,16 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
   }
 
   /**
+   * Counts tenant functions matching the search parameters.
+   */
+  async function countTenantFunctions(
+    searchParams: FilterQuery<ITenantFunction> = {},
+  ): Promise<number> {
+    const TenantFunction = mongoose.models.TenantFunction as Model<ITenantFunction>;
+    return await TenantFunction.countDocuments(searchParams);
+  }
+
+  /**
    * Retrieves a single tenant function by tenantId and id.
    */
   async function getTenantFunctionById(
@@ -76,6 +86,7 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
   return {
     createTenantFunction,
     getTenantFunctions,
+    countTenantFunctions,
     getTenantFunctionById,
     updateTenantFunction,
     toggleTenantFunction,

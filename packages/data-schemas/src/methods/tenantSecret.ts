@@ -51,6 +51,16 @@ export function createTenantSecretMethods(mongoose: typeof import('mongoose')) {
   }
 
   /**
+   * Counts tenant secrets matching the search parameters.
+   */
+  async function countTenantSecrets(
+    searchParams: FilterQuery<ITenantSecret> = {},
+  ): Promise<number> {
+    const TenantSecret = mongoose.models.TenantSecret as Model<ITenantSecret>;
+    return await TenantSecret.countDocuments(searchParams);
+  }
+
+  /**
    * Deletes a tenant secret by tenantId and name.
    */
   async function deleteTenantSecret(tenantId: string, name: string): Promise<ITenantSecret | null> {
@@ -74,6 +84,7 @@ export function createTenantSecretMethods(mongoose: typeof import('mongoose')) {
     upsertTenantSecret,
     getTenantSecret,
     listTenantSecrets,
+    countTenantSecrets,
     deleteTenantSecret,
     isSecretInUse,
   };

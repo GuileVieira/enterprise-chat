@@ -1,12 +1,14 @@
 export { createAdminConfigHandlers } from './config';
 export { createAdminGrantsHandlers } from './grants';
 export { createAdminGroupsHandlers } from './groups';
+export { createAdminOverviewHandlers } from './overview';
 export { createAdminRolesHandlers } from './roles';
 export { createAdminTenantsHandlers } from './tenants';
 export { createAdminUsersHandlers } from './users';
 export type { AdminConfigDeps } from './config';
 export type { AdminGrantsDeps, GrantPrincipalType } from './grants';
 export type { AdminGroupsDeps } from './groups';
+export type { AdminOverviewDeps } from './overview';
 export type { AdminRolesDeps } from './roles';
 export type { AdminTenantsDeps } from './tenants';
 export type { AdminUsersDeps } from './users';

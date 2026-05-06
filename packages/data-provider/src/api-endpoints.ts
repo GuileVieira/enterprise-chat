@@ -403,6 +403,9 @@ export const adminConfigByPrincipal = (principalType: string, principalId: strin
 export const adminConfigActive = (principalType: string, principalId: string) =>
   `${adminConfigByPrincipal(principalType, principalId)}/active`;
 
+/* Admin Overview */
+export const adminOverview = () => `${BASE_URL}/api/admin/overview`;
+
 /* Admin Tenants */
 export const adminTenants = () => `${BASE_URL}/api/admin/tenants`;
 export const adminTenantUsers = (tenantId: string) =>
