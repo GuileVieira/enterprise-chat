@@ -16,14 +16,14 @@ export const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
   eyebrow,
   description,
 }) => (
-  <div className="flex flex-col gap-4 border-b border-border-light pb-6 sm:flex-row sm:items-end sm:justify-between">
+  <div className="flex flex-col gap-4 border-b border-border-light pb-7 sm:flex-row sm:items-end sm:justify-between">
     <div className="max-w-2xl">
       {eyebrow != null && (
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-tertiary">
           {eyebrow}
         </p>
       )}
-      <h1 className="text-balance text-3xl font-semibold leading-tight text-text-primary">
+      <h1 className="text-balance text-3xl font-semibold leading-tight text-text-primary sm:text-4xl">
         {title}
       </h1>
       <p className="mt-2 max-w-[65ch] text-sm leading-6 text-text-secondary">{description}</p>
@@ -39,7 +39,7 @@ interface AdminPanelProps extends React.HTMLAttributes<HTMLDivElement> {
 export const AdminPanel: React.FC<AdminPanelProps> = ({ children, className, ...props }) => (
   <section
     className={cn(
-      'overflow-hidden rounded-xl border border-border-light bg-surface-secondary shadow-sm shadow-black/5',
+      'overflow-hidden rounded-2xl border border-border-light bg-surface-secondary shadow-sm shadow-black/[0.04] dark:shadow-black/20',
       className,
     )}
     {...props}
@@ -78,7 +78,7 @@ interface AdminToolbarProps {
 export const AdminToolbar: React.FC<AdminToolbarProps> = ({ children, className }) => (
   <div
     className={cn(
-      'flex flex-col gap-3 rounded-xl border border-border-light bg-surface-secondary p-3 sm:flex-row sm:items-center sm:justify-between',
+      'flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-3 shadow-sm shadow-black/[0.03] sm:flex-row sm:items-center sm:justify-between dark:shadow-black/20',
       className,
     )}
   >
@@ -107,7 +107,7 @@ export const AdminTenantSelector: React.FC<AdminTenantSelectorProps> = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       aria-label={label}
-      className="focus:ring-ring-primary/20 h-10 w-full rounded-lg border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-primary shadow-sm shadow-black/5 outline-none transition-colors hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2"
+      className="focus:ring-ring-primary/20 h-10 w-full rounded-xl border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-primary shadow-sm shadow-black/[0.03] outline-none transition-all duration-200 hover:border-border-medium hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2 dark:shadow-black/20"
     >
       <option value="">{placeholder}</option>
       {tenants.map((tenant) => (
@@ -140,11 +140,12 @@ export const AdminMetricCard: React.FC<AdminMetricCardProps> = ({
     <Component
       type={onClick != null ? 'button' : undefined}
       onClick={onClick}
-      whileHover={{ y: -2 }}
+      whileHover={{ y: -3 }}
       whileTap={onClick != null ? { scale: 0.99 } : undefined}
       className={cn(
-        'min-h-32 rounded-xl border border-border-light bg-surface-secondary p-4 text-left shadow-sm shadow-black/5',
-        onClick != null && 'transition-colors hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+        'min-h-32 rounded-2xl border border-border-light bg-surface-secondary p-4 text-left shadow-sm shadow-black/[0.04] dark:shadow-black/20',
+        onClick != null &&
+          'transition-colors hover:border-border-medium hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -152,7 +153,7 @@ export const AdminMetricCard: React.FC<AdminMetricCardProps> = ({
           <p className="text-sm font-medium text-text-secondary">{title}</p>
           <p className="mt-3 text-3xl font-semibold tabular-nums text-text-primary">{value}</p>
         </div>
-        <div className="flex size-10 items-center justify-center rounded-lg bg-surface-tertiary text-text-primary">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-surface-tertiary text-text-primary shadow-inner shadow-white/30 dark:shadow-black/20">
           <Icon className="size-5" />
         </div>
       </div>
@@ -202,7 +203,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="border-b border-border-light bg-surface-primary/40">
+            <tr className="border-b border-border-light bg-surface-primary/55">
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -217,7 +218,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
             {items.map((item) => (
               <tr
                 key={getRowKey(item)}
-                className="border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-tertiary"
+                className="border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-tertiary/80"
               >
                 {columns.map((column) => (
                   <td key={column.key} className={cn('px-6 py-4', column.className)}>

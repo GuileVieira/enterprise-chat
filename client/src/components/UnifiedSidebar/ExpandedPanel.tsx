@@ -1,9 +1,9 @@
 import { memo, useCallback, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilValue } from 'recoil';
-import { SquarePen } from 'lucide-react';
+import { PencilSimpleLine, SidebarSimple } from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
-import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
+import { Skeleton, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
@@ -72,10 +72,10 @@ const NewChatButton = memo(function NewChatButton({
           href="/c/new"
           data-testid="new-chat-button"
           aria-label={localize('com_ui_new_chat')}
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-hover"
+          className="group flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-text-secondary transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary active:translate-y-px"
           onClick={handleClick}
         >
-          <SquarePen className="h-5 w-5 text-text-primary" />
+          <PencilSimpleLine className="h-5 w-5" />
         </a>
       }
     />
@@ -130,8 +130,10 @@ const NavIconButton = memo(function NavIconButton({
           aria-label={localize(link.title)}
           aria-pressed={isActive}
           className={cn(
-            'h-9 w-9 rounded-lg',
-            isActive ? 'bg-surface-active-alt text-text-primary' : 'text-text-secondary',
+            'h-9 w-9 rounded-xl border border-transparent transition-all duration-200 [&_svg]:stroke-[1.75]',
+            isActive
+              ? 'border-border-light bg-surface-active-alt text-text-primary shadow-sm shadow-black/10'
+              : 'text-text-secondary-alt hover:border-border-light hover:bg-surface-hover hover:text-text-primary',
           )}
           onClick={handleClick}
         >
@@ -173,10 +175,10 @@ function ExpandedPanel({
             variant="ghost"
             aria-label={localize(toggleLabel)}
             aria-expanded={expanded}
-            className="h-9 w-9 rounded-lg"
+            className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt hover:border-border-light hover:text-text-primary [&_svg]:stroke-[1.75]"
             onClick={toggleClick}
           >
-            <Sidebar aria-hidden="true" className="h-5 w-5 text-text-primary" />
+            <SidebarSimple aria-hidden="true" className="h-5 w-5" />
           </Button>
         }
       />
@@ -197,7 +199,7 @@ function ExpandedPanel({
       </div>
 
       <div className="mt-auto">
-        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
+        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-xl" />}>
           <AccountSettings collapsed />
         </Suspense>
       </div>

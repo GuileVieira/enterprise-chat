@@ -1,7 +1,8 @@
-import { memo, useMemo } from 'react';
+import { memo, useId, useMemo, useState, useCallback } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
+import * as Ariakit from '@ariakit/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMediaQuery } from '@librechat/client';
+import { DropdownPopup, useMediaQuery } from '@librechat/client';
 import {
   Constants,
   QueryKeys,
@@ -10,7 +11,7 @@ import {
   Permissions,
 } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
-import { ChevronDown, Folder } from 'lucide-react';
+import { Check, ChevronDown, Folder } from 'lucide-react';
 import ModelSelector from './Menus/Endpoints/ModelSelector';
 import {
   useGetProjectFiles,
@@ -31,8 +32,10 @@ const defaultInterface = getConfigDefaults().interface;
 
 function ProjectSelectorBadges({ conversation }: { conversation?: TConversation | null }) {
   const localize = useLocalize();
+  const menuId = useId();
   const queryClient = useQueryClient();
   const { newConversation } = useNewConvo();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const setConversation = useSetRecoilState(store.conversationByIndex(0));
   const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
   const projectId = conversation?.projectId ?? '';
@@ -58,96 +61,162 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
     conversation.conversationId !== Constants.NEW_CONVO &&
     conversation.conversationId !== 'search';
 
-  const handleProjectChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextProjectId = event.target.value || null;
-    const nextProject = projects.find((candidate) => candidate.projectId === nextProjectId);
+  const handleProjectChange = useCallback(
+    (nextProjectId: string | null) => {
+      const nextProject = projects.find((candidate) => candidate.projectId === nextProjectId);
 
-    if ((nextProjectId ?? '') === projectId) {
-      return;
+      setIsMenuOpen(false);
+
+      if ((nextProjectId ?? '') === projectId) {
+        return;
+      }
+
+      setSelectedProjectId(nextProjectId);
+
+      if (isExistingConversation) {
+        clearMessagesCache(queryClient, conversation?.conversationId);
+        queryClient.invalidateQueries([QueryKeys.messages]);
+
+        const template: Partial<TConversation> = {
+          endpoint: conversation?.endpoint,
+          endpointType: conversation?.endpointType,
+          model: conversation?.model,
+          spec: conversation?.spec,
+          agent_id: conversation?.agent_id,
+          assistant_id: conversation?.assistant_id,
+        };
+        if (nextProjectId) {
+          template.projectId = nextProjectId;
+        }
+        if (!template.endpoint && nextProject?.endpoint) {
+          template.endpoint = nextProject.endpoint as unknown as typeof template.endpoint;
+        }
+        if (!template.model && nextProject?.model) {
+          template.model = nextProject.model;
+        }
+
+        newConversation(Object.keys(template).length > 0 ? { template } : undefined);
+        return;
+      }
+
+      setConversation((currentConversation) => {
+        if (!currentConversation) {
+          return currentConversation;
+        }
+
+        const nextConversation: TConversation = {
+          ...currentConversation,
+          projectId: nextProjectId ?? undefined,
+        };
+
+        if (currentConversation.conversationId === Constants.NEW_CONVO && nextProject) {
+          if (nextProject.endpoint) {
+            nextConversation.endpoint =
+              nextProject.endpoint as unknown as typeof nextConversation.endpoint;
+          }
+          if (nextProject.model) {
+            nextConversation.model = nextProject.model;
+          }
+        }
+
+        return nextConversation;
+      });
+    },
+    [
+      projects,
+      projectId,
+      queryClient,
+      conversation,
+      newConversation,
+      setConversation,
+      setSelectedProjectId,
+      isExistingConversation,
+    ],
+  );
+
+  const projectLabel = project?.name ?? '(nenhum projeto selecionado)';
+  const projectItems = useMemo(() => {
+    const items = [
+      {
+        id: 'no-project',
+        label: '(nenhum projeto selecionado)',
+        icon: (
+          <Check
+            className={cn('icon-sm mr-2', !projectId ? 'opacity-100' : 'opacity-0')}
+            aria-hidden="true"
+          />
+        ),
+        onClick: () => handleProjectChange(null),
+        className: cn(!projectId && 'bg-surface-active-alt'),
+      },
+    ];
+
+    if (projects.length > 0) {
+      items.push({
+        id: 'separator',
+        label: '',
+        separator: true,
+      } as unknown as (typeof items)[0]);
+
+      projects.forEach((candidate) => {
+        items.push({
+          id: candidate.projectId,
+          label: candidate.name,
+          icon: (
+            <Check
+              className={cn(
+                'icon-sm mr-2',
+                projectId === candidate.projectId ? 'opacity-100' : 'opacity-0',
+              )}
+              aria-hidden="true"
+            />
+          ),
+          onClick: () => handleProjectChange(candidate.projectId),
+          className: cn(projectId === candidate.projectId && 'bg-surface-active-alt'),
+        });
+      });
     }
 
-    setSelectedProjectId(nextProjectId);
-
-    if (isExistingConversation) {
-      clearMessagesCache(queryClient, conversation?.conversationId);
-      queryClient.invalidateQueries([QueryKeys.messages]);
-
-      const template: Partial<TConversation> = {
-        endpoint: conversation?.endpoint,
-        endpointType: conversation?.endpointType,
-        model: conversation?.model,
-        spec: conversation?.spec,
-        agent_id: conversation?.agent_id,
-        assistant_id: conversation?.assistant_id,
-      };
-      if (nextProjectId) {
-        template.projectId = nextProjectId;
-      }
-      if (!template.endpoint && nextProject?.endpoint) {
-        template.endpoint = nextProject.endpoint as unknown as typeof template.endpoint;
-      }
-      if (!template.model && nextProject?.model) {
-        template.model = nextProject.model;
-      }
-
-      newConversation(Object.keys(template).length > 0 ? { template } : undefined);
-      return;
-    }
-
-    setConversation((currentConversation) => {
-      if (!currentConversation) {
-        return currentConversation;
-      }
-
-      const nextConversation: TConversation = {
-        ...currentConversation,
-        projectId: nextProjectId ?? undefined,
-      };
-
-      if (currentConversation.conversationId === Constants.NEW_CONVO && nextProject) {
-        if (nextProject.endpoint) {
-          nextConversation.endpoint =
-            nextProject.endpoint as unknown as typeof nextConversation.endpoint;
-        }
-        if (nextProject.model) {
-          nextConversation.model = nextProject.model;
-        }
-      }
-
-      return nextConversation;
-    });
-  };
+    return items;
+  }, [projects, projectId, handleProjectChange]);
 
   return (
     <div className="flex w-fit max-w-[min(80vw,48rem)] items-center gap-2">
-      <div className="relative h-9 w-56 max-w-[52vw] sm:w-64">
-        <Folder
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-primary"
-          aria-hidden="true"
-        />
-        <select
-          aria-label={localize('com_ui_project_badge')}
-          className={cn(
-            'h-9 w-full appearance-none rounded-xl border border-border-light bg-surface-primary-alt pl-9 pr-8 text-xs font-medium text-text-primary',
-            'outline-none transition-colors hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-ring-primary',
-          )}
-          disabled={isLoading}
-          onChange={handleProjectChange}
-          title={project?.name ?? '(nenhum projeto selecionado)'}
-          value={projectId}
-        >
-          <option value="">(nenhum projeto selecionado)</option>
-          {projects.map((candidate) => (
-            <option key={candidate.projectId} value={candidate.projectId}>
-              {candidate.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDown
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary"
-          aria-hidden="true"
-        />
-      </div>
+      <DropdownPopup
+        portal={true}
+        menuId={menuId}
+        focusLoop={true}
+        className="z-[125]"
+        unmountOnHide={true}
+        isOpen={isMenuOpen}
+        setIsOpen={setIsMenuOpen}
+        items={projectItems}
+        trigger={
+          <Ariakit.MenuButton
+            title={projectLabel}
+            disabled={isLoading}
+            aria-expanded={isMenuOpen}
+            aria-label={localize('com_ui_project_badge')}
+            className={cn(
+              'group flex h-9 w-56 max-w-[52vw] items-center gap-2 rounded-2xl border px-3 text-xs font-semibold sm:w-64',
+              'border-border-light bg-surface-primary-alt text-text-primary shadow-sm transition-all duration-200',
+              'hover:border-border-medium hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary',
+              isMenuOpen &&
+                'border-ring-primary bg-surface-hover shadow-[0_0_0_3px_hsl(var(--ring-primary)/0.18)]',
+            )}
+          >
+            <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate text-left">{projectLabel}</span>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 shrink-0 text-text-tertiary transition-transform duration-200',
+                isMenuOpen && 'rotate-180',
+              )}
+              aria-hidden="true"
+            />
+          </Ariakit.MenuButton>
+        }
+      />
       {projectId && project && (
         <>
           <span className="flex h-9 shrink-0 items-center rounded-xl border border-border-light bg-surface-primary-alt px-3 text-xs font-medium text-text-tertiary">

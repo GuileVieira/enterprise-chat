@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
-import { MCPIcon, AttachmentIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
-  Bot,
   Brain,
-  Bookmark,
+  Robot,
   Folder,
-  NotebookPen,
   ScrollText,
-  ArrowRightToLine,
+  BookmarkSimple,
+  NotePencil,
+  Paperclip,
+  SidebarSimple,
   SlidersHorizontal,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
+import { MCPIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
   Permissions,
   EModelEndpoint,
@@ -111,7 +112,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_sidepanel_agent_builder',
         label: '',
-        icon: Bot,
+        icon: Robot,
         id: EModelEndpoint.agents,
         Component: AgentPanelSwitch,
       });
@@ -150,7 +151,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_ui_prompts',
         label: '',
-        icon: NotebookPen,
+        icon: NotePencil,
         id: 'prompts',
         Component: PromptsAccordion,
       });
@@ -170,7 +171,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_sidepanel_conversation_tags',
         label: '',
-        icon: Bookmark,
+        icon: BookmarkSimple,
         id: 'bookmarks',
         Component: BookmarkPanel,
       });
@@ -179,7 +180,7 @@ export default function useSideNavLinks({
     links.push({
       title: 'com_sidepanel_attach_files',
       label: '',
-      icon: AttachmentIcon,
+      icon: Paperclip,
       id: 'files',
       Component: FilesPanel,
     });
@@ -226,7 +227,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_sidepanel_hide_panel',
         label: '',
-        icon: ArrowRightToLine,
+        icon: SidebarSimple,
         onClick: hidePanel,
         id: 'hide-panel',
       });

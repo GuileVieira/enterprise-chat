@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
-import { MessagesSquare } from 'lucide-react';
+import { ChatsTeardrop } from '@phosphor-icons/react';
 import { useUserKeyQuery } from 'librechat-data-provider/react-query';
 import { getConfigDefaults, getEndpointField } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
@@ -53,12 +53,17 @@ export default function useUnifiedSidebarLinks() {
     const conversationLink: NavLink = {
       title: 'com_ui_chat_history',
       label: '',
-      icon: MessagesSquare,
+      icon: ChatsTeardrop,
       id: 'conversations',
       Component: ConversationsSection,
     };
 
-    return [conversationLink, ...sideNavLinks];
+    const projectLink = sideNavLinks.find((link) => link.id === 'projects');
+    const remainingSideNavLinks = sideNavLinks.filter((link) => link.id !== 'projects');
+
+    return projectLink
+      ? [projectLink, conversationLink, ...remainingSideNavLinks]
+      : [conversationLink, ...remainingSideNavLinks];
   }, [sideNavLinks]);
 
   return links;
