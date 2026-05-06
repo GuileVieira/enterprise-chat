@@ -3,6 +3,7 @@
 
 # Set configurable max-old-space-size with default
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
+ARG VITE_TERSER_MAX_WORKERS=1
 
 # Base for all builds
 FROM node:20-alpine AS base-min
@@ -64,7 +65,9 @@ COPY --from=data-provider-build /app/packages/data-provider/dist /app/packages/d
 COPY --from=client-package-build /app/packages/client/dist /app/packages/client/dist
 COPY --from=client-package-build /app/packages/client/src /app/packages/client/src
 ARG NODE_MAX_OLD_SPACE_SIZE
+ARG VITE_TERSER_MAX_WORKERS
 ENV NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}"
+ENV VITE_TERSER_MAX_WORKERS="${VITE_TERSER_MAX_WORKERS}"
 RUN npm run build
 
 # API setup (including client dist)

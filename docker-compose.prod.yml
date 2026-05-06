@@ -6,6 +6,7 @@ services:
       target: api-build
       args:
         NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
+        VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
     restart: always
     depends_on:
       mongodb:

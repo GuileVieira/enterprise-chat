@@ -34,6 +34,24 @@ const backendURL = process.env.HOST
   ? `http://${process.env.HOST}:${backendPort}`
   : `http://localhost:${backendPort}`;
 
+const DEFAULT_TERSER_MAX_WORKERS = 1;
+
+function getTerserMaxWorkers(): number {
+  const rawMaxWorkers = process.env.VITE_TERSER_MAX_WORKERS;
+
+  if (!rawMaxWorkers) {
+    return DEFAULT_TERSER_MAX_WORKERS;
+  }
+
+  const maxWorkers = Number(rawMaxWorkers);
+
+  if (!Number.isInteger(maxWorkers) || maxWorkers < 1) {
+    return DEFAULT_TERSER_MAX_WORKERS;
+  }
+
+  return maxWorkers;
+}
+
 export default defineConfig(({ command }) => ({
   base: '',
   server: {
@@ -64,7 +82,15 @@ export default defineConfig(({ command }) => ({
         return NODE_POLYFILL_SHIMS[id] ?? null;
       },
     },
-    nodePolyfills(),
+    nodePolyfills({
+      exclude: ['vm'],
+      globals: {
+        Buffer: true,
+        global: true,
+        process: true,
+      },
+      protocolImports: true,
+    }),
     VitePWA({
       injectRegister: 'auto', // 'auto' | 'manual' | 'disabled'
       registerType: 'autoUpdate', // 'prompt' | 'autoUpdate'
@@ -133,6 +159,9 @@ export default defineConfig(({ command }) => ({
     sourcemap: process.env.NODE_ENV === 'development',
     outDir: './dist',
     minify: 'terser',
+    terserOptions: {
+      maxWorkers: getTerserMaxWorkers(),
+    },
     rollupOptions: {
       preserveEntrySignatures: 'strict',
       output: {
