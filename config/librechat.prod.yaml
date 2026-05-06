@@ -4,7 +4,7 @@ cache: true
 
 interface:
   modelSelect: true
-  parameters: false
+  parameters: true
   presets: false
   runCode: false
   webSearch: false
@@ -25,7 +25,7 @@ interface:
     groups: true
     roles: true
   marketplace:
-    use: false
+    use: true
   fileCitations: true
 
 endpoints:
