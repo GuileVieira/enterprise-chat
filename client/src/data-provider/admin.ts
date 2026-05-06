@@ -329,6 +329,22 @@ export const useDeleteAdminConfigMutation = (
   );
 };
 
+/* Admin Overview */
+export const useGetAdminOverview = (
+  config?: UseQueryOptions<t.AdminOverviewResponse>,
+): QueryObserverResult<t.AdminOverviewResponse> => {
+  return useQuery<t.AdminOverviewResponse>(
+    [QueryKeys.adminOverview],
+    () => dataService.getAdminOverview(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+      ...config,
+    },
+  );
+};
+
 /* Admin Users - Create */
 export const useCreateAdminUserMutation = (
   options?: t.MutationOptions<
@@ -380,9 +396,9 @@ export const useCreateAdminUserMutation = (
 /* Admin Functions */
 export const useListAdminFunctions = (
   tenantId: string,
-  config?: UseQueryOptions<q.TenantFunctionListResponse>,
-): QueryObserverResult<q.TenantFunctionListResponse> => {
-  return useQuery<q.TenantFunctionListResponse>(
+  config?: UseQueryOptions<t.TenantFunctionListResponse>,
+): QueryObserverResult<t.TenantFunctionListResponse> => {
+  return useQuery<t.TenantFunctionListResponse>(
     [QueryKeys.adminFunctions, tenantId],
     () => dataService.listAdminFunctions(tenantId),
     {
@@ -397,13 +413,13 @@ export const useListAdminFunctions = (
 
 export const useCreateAdminFunctionMutation = (
   options?: t.MutationOptions<
-    q.TenantFunctionResponse,
-    Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>
+    t.TenantFunctionResponse,
+    Omit<t.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>
   >,
 ): UseMutationResult<
-  q.TenantFunctionResponse,
+  t.TenantFunctionResponse,
   t.TError | undefined,
-  Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>,
+  Omit<t.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>,
   unknown
 > => {
   const queryClient = useQueryClient();
@@ -430,11 +446,11 @@ export const useCreateAdminFunctionMutation = (
 
 export const useToggleAdminFunctionMutation = (
   options?: t.MutationOptions<
-    q.TenantFunctionResponse,
+    t.TenantFunctionResponse,
     { id: string; tenantId: string; isActive: boolean }
   >,
 ): UseMutationResult<
-  q.TenantFunctionResponse,
+  t.TenantFunctionResponse,
   t.TError | undefined,
   { id: string; tenantId: string; isActive: boolean },
   unknown
@@ -496,9 +512,9 @@ export const useDeleteAdminFunctionMutation = (
 /* Admin Secrets */
 export const useListAdminSecrets = (
   tenantId: string,
-  config?: UseQueryOptions<q.TenantSecretListResponse>,
-): QueryObserverResult<q.TenantSecretListResponse> => {
-  return useQuery<q.TenantSecretListResponse>(
+  config?: UseQueryOptions<t.TenantSecretListResponse>,
+): QueryObserverResult<t.TenantSecretListResponse> => {
+  return useQuery<t.TenantSecretListResponse>(
     [QueryKeys.adminSecrets, tenantId],
     () => dataService.listAdminSecrets(tenantId),
     {
@@ -513,11 +529,11 @@ export const useListAdminSecrets = (
 
 export const useCreateAdminSecretMutation = (
   options?: t.MutationOptions<
-    q.TenantSecretResponse,
+    t.TenantSecretResponse,
     { tenantId: string; name: string; value: string; type: string }
   >,
 ): UseMutationResult<
-  q.TenantSecretResponse,
+  t.TenantSecretResponse,
   t.TError | undefined,
   { tenantId: string; name: string; value: string; type: string },
   unknown

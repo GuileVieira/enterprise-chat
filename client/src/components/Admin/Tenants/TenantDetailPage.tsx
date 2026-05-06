@@ -1,174 +1,149 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Bot, Key, MessageSquare, Plus, Users, Wrench } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useGetAdminTenantStats, useGetAdminTenantUsers } from '~/data-provider/admin';
+import { useLocalize } from '~/hooks';
 import {
-  Building2,
-  Users,
-  ArrowLeft,
-  Loader2,
-  MessageSquare,
-  Bot,
-  Wrench,
-  Key,
-  Plus,
-} from 'lucide-react';
-import { useGetAdminTenantUsers, useGetAdminTenantStats } from '~/data-provider/admin';
+  AdminBadge,
+  AdminPanel,
+  AdminSkeleton,
+  AdminDataTable,
+  AdminMetricCard,
+  AdminEmptyState,
+  AdminActionButton,
+  AdminPageHeader,
+  AdminStatGrid,
+} from '../common';
 import CreateUserModal from '../Users/CreateUserModal';
+import type { AdminUser } from 'librechat-data-provider';
 
 const TenantDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'users' | 'stats'>('users');
+  const localize = useLocalize();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const { data: usersData, isLoading: usersLoading } = useGetAdminTenantUsers(id ?? '', 1, 50);
-  const { data: statsData, isLoading: statsLoading } = useGetAdminTenantStats(id ?? '');
+  const tenantId = id ?? '';
+  const { data: usersData, isLoading: usersLoading, isError: usersError } =
+    useGetAdminTenantUsers(tenantId, 1, 50);
+  const { data: statsData, isLoading: statsLoading, isError: statsError } =
+    useGetAdminTenantStats(tenantId);
 
   const users = usersData?.users ?? [];
   const stats = statsData?.stats;
-  const tenantId = id ?? '';
-
   const isLoading = usersLoading || statsLoading;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-text-secondary" />
-      </div>
-    );
-  }
+  const isError = usersError || statsError;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/admin/tenants')}
-            className="text-text-secondary transition-colors hover:text-text-primary"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary">{tenantId}</h1>
-            <p className="mt-1 text-sm text-text-secondary">Tenant Overview</p>
+      <AdminPageHeader
+        eyebrow={localize('com_admin_tenant')}
+        title={tenantId}
+        description={localize('com_admin_tenant_detail_description')}
+        action={
+          <div className="flex gap-2">
+            <AdminActionButton
+              variant="ghost"
+              icon={<ArrowLeft className="size-4" />}
+              onClick={() => navigate('/admin/tenants')}
+            >
+              {localize('com_admin_back_to_tenants')}
+            </AdminActionButton>
+            <AdminActionButton
+              icon={<Plus className="size-4" />}
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              {localize('com_admin_add_user')}
+            </AdminActionButton>
           </div>
-        </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
-        >
-          <Plus className="h-4 w-4" />
-          Add User
-        </button>
-      </div>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-4">
-          <div className="flex items-center gap-2 text-text-secondary">
-            <Users className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">Users</span>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-text-primary">{stats?.users ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-4">
-          <div className="flex items-center gap-2 text-text-secondary">
-            <MessageSquare className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">Conversations</span>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-text-primary">{stats?.conversations ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-4">
-          <div className="flex items-center gap-2 text-text-secondary">
-            <Bot className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">Agents</span>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-text-primary">{stats?.agents ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-4">
-          <div className="flex items-center gap-2 text-text-secondary">
-            <Wrench className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">Functions</span>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-text-primary">{stats?.functions ?? 0}</p>
-        </div>
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-4">
-          <div className="flex items-center gap-2 text-text-secondary">
-            <Key className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase">Secrets</span>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-text-primary">{stats?.secrets ?? 0}</p>
-        </div>
-      </div>
-
-      <div className="flex gap-4 border-b border-border-medium">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`pb-2 text-sm font-medium transition-colors ${
-            activeTab === 'users'
-              ? 'border-b-2 border-text-primary text-text-primary'
-              : 'text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          Users ({users.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`pb-2 text-sm font-medium transition-colors ${
-            activeTab === 'stats'
-              ? 'border-b-2 border-text-primary text-text-primary'
-              : 'text-text-secondary hover:text-text-primary'
-          }`}
-        >
-          Stats
-        </button>
-      </div>
-
-      {activeTab === 'users' && (
-        <div className="rounded-xl border border-border-medium bg-surface-secondary">
-          {users.length === 0 ? (
-            <div className="py-8 text-center">
-              <Users className="mx-auto h-10 w-10 text-text-secondary" />
-              <p className="mt-2 text-sm text-text-secondary">No users in this tenant.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-border-medium">
-                  <th className="px-6 py-3 font-medium text-text-secondary">Name</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Email</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Username</th>
-                  <th className="px-6 py-3 font-medium text-text-secondary">Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr
-                    key={user._id}
-                    className="border-b border-border-medium transition-colors hover:bg-surface-tertiary"
-                  >
-                    <td className="px-6 py-4 font-medium text-text-primary">
-                      {user.name ?? user.username}
-                    </td>
-                    <td className="px-6 py-4 text-text-secondary">{user.email}</td>
-                    <td className="px-6 py-4 text-text-secondary">{user.username}</td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center rounded-full bg-surface-tertiary px-2.5 py-0.5 text-xs font-medium">
-                        {user.role}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {isLoading && (
+        <AdminPanel className="p-4">
+          <AdminSkeleton rows={6} />
+        </AdminPanel>
       )}
 
-      {activeTab === 'stats' && (
-        <div className="rounded-xl border border-border-medium bg-surface-secondary p-6">
-          <p className="text-sm text-text-secondary">
-            Detailed stats per entity type will be available in a future update.
-          </p>
-        </div>
+      {isError && (
+        <AdminEmptyState
+          icon={<Users className="size-6" />}
+          title={localize('com_admin_tenant_error_title')}
+          description={localize('com_admin_tenant_error_description')}
+        />
+      )}
+
+      {!isLoading && !isError && (
+        <>
+          <AdminStatGrid>
+            <AdminMetricCard
+              title={localize('com_admin_users')}
+              value={stats?.users ?? 0}
+              icon={Users}
+            />
+            <AdminMetricCard
+              title={localize('com_admin_conversations')}
+              value={stats?.conversations ?? 0}
+              icon={MessageSquare}
+            />
+            <AdminMetricCard title={localize('com_admin_agents')} value={stats?.agents ?? 0} icon={Bot} />
+            <AdminMetricCard
+              title={localize('com_admin_functions')}
+              value={stats?.functions ?? 0}
+              icon={Wrench}
+              onClick={() => navigate('/admin/functions')}
+            />
+            <AdminMetricCard
+              title={localize('com_admin_secrets')}
+              value={stats?.secrets ?? 0}
+              icon={Key}
+              onClick={() => navigate('/admin/secrets')}
+            />
+          </AdminStatGrid>
+
+          {users.length === 0 ? (
+            <AdminEmptyState
+              icon={<Users className="size-6" />}
+              title={localize('com_admin_no_users_found')}
+              description={localize('com_admin_no_users_found_description')}
+            />
+          ) : (
+            <AdminDataTable<AdminUser>
+              items={users}
+              getRowKey={(user) => user._id}
+              columns={[
+                {
+                  key: 'name',
+                  header: localize('com_admin_name'),
+                  render: (user) => (
+                    <span className="font-medium text-text-primary">
+                      {user.name ?? user.username}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'email',
+                  header: localize('com_admin_email'),
+                  render: (user) => <span className="text-text-secondary">{user.email}</span>,
+                },
+                {
+                  key: 'username',
+                  header: localize('com_admin_username'),
+                  render: (user) => <span className="text-text-secondary">{user.username}</span>,
+                },
+                {
+                  key: 'role',
+                  header: localize('com_admin_role'),
+                  render: (user) => (
+                    <AdminBadge tone={user.role === 'ADMIN' ? 'accent' : 'neutral'}>
+                      {user.role === 'ADMIN' ? localize('com_admin_role_super_admin') : user.role}
+                    </AdminBadge>
+                  ),
+                },
+              ]}
+            />
+          )}
+        </>
       )}
 
       <CreateUserModal

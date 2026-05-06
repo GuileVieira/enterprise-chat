@@ -92,6 +92,7 @@ export enum QueryKeys {
   adminGroupMembers = 'adminGroupMembers',
   adminConfigs = 'adminConfigs',
   adminConfigBase = 'adminConfigBase',
+  adminOverview = 'adminOverview',
   adminTenants = 'adminTenants',
   adminTenantUsers = 'adminTenantUsers',
   adminTenantStats = 'adminTenantStats',
