@@ -30,7 +30,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         data-testid="nav-user"
         className={
           collapsed
-            ? 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
+            ? 'flex h-9 w-9 items-center justify-center rounded-xl border border-transparent transition-all duration-200 hover:border-border-light hover:bg-surface-hover aria-[expanded=true]:border-border-light aria-[expanded=true]:bg-surface-active-alt'
             : 'mt-text-sm flex h-auto w-full items-center gap-2 rounded-xl p-2 text-sm transition-all duration-200 ease-in-out hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
         }
       >

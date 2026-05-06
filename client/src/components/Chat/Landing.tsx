@@ -9,7 +9,7 @@ import { useLocalize, useAuthContext } from '~/hooks';
 import { getIconEndpoint, getEntity } from '~/utils';
 
 const containerClassName =
-  'shadow-stroke relative flex h-full items-center justify-center rounded-full bg-white dark:bg-presentation dark:text-white text-black dark:after:shadow-none ';
+  'shadow-stroke relative flex h-full items-center justify-center rounded-2xl bg-surface-secondary text-text-primary dark:bg-presentation dark:after:shadow-none ';
 
 function getTextSizeClass(text: string | undefined | null) {
   if (!text) {
@@ -141,11 +141,11 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
     <div
       className={`flex h-full transform-gpu flex-col items-center justify-center pb-16 transition-all duration-200 ${centerFormOnLanding ? 'max-h-full sm:max-h-0' : 'max-h-full'} ${getDynamicMargin}`}
     >
-      <div ref={contentRef} className="flex flex-col items-center gap-0 p-2">
+      <div ref={contentRef} className="flex max-w-4xl flex-col items-center gap-0 p-2">
         <div
           className={`flex ${textHasMultipleLines ? 'flex-col' : 'flex-col md:flex-row'} items-center justify-center gap-2`}
         >
-          <div className={`relative size-10 justify-center ${textHasMultipleLines ? 'mb-2' : ''}`}>
+          <div className={`relative size-11 justify-center ${textHasMultipleLines ? 'mb-2' : ''}`}>
             <ConvoIcon
               agentsMap={agentsMap}
               assistantMap={assistantMap}
@@ -153,7 +153,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
               endpointsConfig={endpointsConfig}
               containerClassName={containerClassName}
               context="landing"
-              className="h-2/3 w-2/3 text-black dark:text-white"
+              className="h-2/3 w-2/3 text-text-primary"
               size={41}
             />
             {startupConfig?.showBirthdayIcon && (
@@ -171,7 +171,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
               <SplitText
                 key={`split-text-${name}`}
                 text={name}
-                className={`${getTextSizeClass(name)} font-medium text-text-primary`}
+                className={`${getTextSizeClass(name)} text-balance font-semibold leading-tight text-text-primary`}
                 delay={50}
                 textAlign="center"
                 animationFrom={{ opacity: 0, transform: 'translate3d(0,50px,0)' }}
@@ -186,7 +186,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
             <SplitText
               key={`split-text-${greetingText}${user?.name ? '-user' : ''}`}
               text={greetingText}
-              className={`${getTextSizeClass(greetingText)} font-medium text-text-primary`}
+              className={`${getTextSizeClass(greetingText)} text-balance font-semibold leading-tight text-text-primary`}
               delay={50}
               textAlign="center"
               animationFrom={{ opacity: 0, transform: 'translate3d(0,50px,0)' }}
@@ -199,7 +199,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
           )}
         </div>
         {description && (
-          <div className="animate-fadeIn mt-4 max-w-md text-center text-sm font-normal text-text-primary">
+          <div className="animate-fadeIn mt-4 max-w-xl text-pretty text-center text-sm font-normal leading-6 text-text-secondary">
             {description}
           </div>
         )}

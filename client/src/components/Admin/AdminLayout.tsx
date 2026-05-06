@@ -46,11 +46,11 @@ const AdminNav: React.FC<AdminNavProps> = ({ onNavigate }) => {
   const localize = useLocalize();
 
   return (
-    <nav className="flex h-full flex-col border-r border-border-medium bg-surface-primary">
+    <nav className="flex h-full flex-col border-r border-border-light bg-surface-primary-alt">
       <div className="px-5 py-5">
         <NavLink
           to="/c/new"
-          className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+          className="inline-flex items-center gap-2 rounded-xl px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
         >
           <ChevronLeft className="size-4" />
           {localize('com_admin_back_to_chat')}
@@ -83,9 +83,9 @@ const AdminNav: React.FC<AdminNavProps> = ({ onNavigate }) => {
               end={item.end}
               onClick={onNavigate}
               className={cn(
-                'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
+                'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
                 isActive
-                  ? 'bg-surface-tertiary text-text-primary shadow-sm shadow-black/5'
+                  ? 'bg-surface-tertiary text-text-primary shadow-sm shadow-black/[0.04] dark:shadow-black/20'
                   : 'text-text-secondary hover:bg-surface-secondary hover:text-text-primary',
               )}
             >
@@ -148,13 +148,13 @@ const AdminLayout: React.FC = () => {
       )}
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 border-b border-border-light bg-surface-primary/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-border-light bg-surface-primary/90 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 aria-label={localize('com_admin_open_navigation')}
-                className="inline-flex size-10 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-secondary hover:text-text-primary md:hidden"
+                className="inline-flex size-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary md:hidden"
                 onClick={() => setIsMobileNavOpen(true)}
               >
                 <Menu className="size-5" />
@@ -171,7 +171,7 @@ const AdminLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/admin/users')}
-                className="flex h-10 w-full max-w-md items-center gap-2 rounded-lg border border-border-light bg-surface-secondary px-3 text-left text-sm text-text-secondary shadow-sm shadow-black/5 transition-colors hover:bg-surface-tertiary"
+                className="flex h-10 w-full max-w-md items-center gap-2 rounded-xl border border-border-light bg-surface-secondary px-3 text-left text-sm text-text-secondary shadow-sm shadow-black/[0.03] transition-all duration-200 hover:border-border-medium hover:bg-surface-tertiary dark:shadow-black/20"
               >
                 <Search className="size-4" />
                 {localize('com_admin_search_shortcut')}
@@ -179,13 +179,13 @@ const AdminLayout: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="hidden rounded-md bg-surface-tertiary px-2 py-1 text-xs font-semibold text-text-secondary sm:inline-flex">
+              <span className="hidden rounded-lg bg-surface-tertiary px-2 py-1 text-xs font-semibold text-text-secondary sm:inline-flex">
                 {localize('com_admin_role_super_admin')}
               </span>
               <button
                 type="button"
                 aria-label={localize('com_admin_close_navigation')}
-                className="hidden size-10 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-secondary hover:text-text-primary"
+                className="hidden size-10 items-center justify-center rounded-xl text-text-secondary hover:bg-surface-secondary hover:text-text-primary"
               >
                 <X className="size-5" />
               </button>
@@ -193,7 +193,7 @@ const AdminLayout: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto">
+        <div className="admin-ambient-bg flex-1 overflow-auto">
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>
