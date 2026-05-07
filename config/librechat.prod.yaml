@@ -17,8 +17,8 @@ interface:
   multiConvo: false
   agents:
     use: true
-    create: false
-    share: false
+    create: true
+    share: true
     public: false
   peoplePicker:
     users: true
@@ -29,6 +29,15 @@ interface:
   fileCitations: true
 
 endpoints:
+  agents:
+    recursionLimit: 50
+    maxRecursionLimit: 100
+    disableBuilder: false
+    maxCitations: 30
+    maxCitationsPerFile: 7
+    minRelevanceScore: 0.45
+    capabilities: ['deferred_tools', 'execute_code', 'file_search', 'actions', 'tools']
+
   custom:
     - name: 'OpenRouter'
       apiKey: '${OPENROUTER_KEY}'
