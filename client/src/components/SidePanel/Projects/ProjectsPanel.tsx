@@ -24,6 +24,7 @@ import store from '~/store';
 
 function ProjectListItem({ projectId, name }: { projectId: string; name: string }) {
   const navigate = useNavigate();
+  const localize = useLocalize();
   const queryClient = useQueryClient();
   const { conversationId } = useParams();
   const [isExpanded, setIsExpanded] = useState(false);
