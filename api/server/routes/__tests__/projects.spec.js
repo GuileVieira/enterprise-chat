@@ -38,6 +38,10 @@ jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
   },
 }));
 
+jest.mock('~/server/middleware/roles/capabilities', () => ({
+  hasCapability: jest.fn().mockResolvedValue(false),
+}));
+
 describe('Projects Routes', () => {
   let app;
   const {
@@ -150,14 +154,7 @@ describe('Projects Routes', () => {
       const response = await request(app).post('/api/projects').send({ name: 'New Project' });
 
       expect(response.status).toBe(201);
-      expect(grantPermission).toHaveBeenCalledWith(
-        'user',
-        'test-user-123',
-        'project',
-        'mock-object-id',
-        expect.any(Number),
-        'test-user-123',
-      );
+      expect(createProject).toHaveBeenCalledWith('test-user-123', { name: 'New Project' });
     });
   });
 
@@ -170,7 +167,7 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
-      expect(getProjectById).toHaveBeenCalledWith('test-user-123', 'proj-1');
+      expect(getProjectById).toHaveBeenCalledWith('proj-1');
     });
 
     it('should return 404 when project not found', async () => {
@@ -204,7 +201,7 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
-      expect(updateProject).toHaveBeenCalledWith('test-user-123', 'proj-1', { name: 'Updated' });
+      expect(updateProject).toHaveBeenCalledWith('proj-1', { name: 'Updated' });
     });
 
     it('should return 404 when project not found', async () => {
@@ -226,7 +223,7 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
-      expect(deleteProject).toHaveBeenCalledWith('test-user-123', 'proj-1');
+      expect(deleteProject).toHaveBeenCalledWith('proj-1');
     });
 
     it('should return 404 when project not found', async () => {
@@ -269,7 +266,7 @@ describe('Projects Routes', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
-      expect(archiveProject).toHaveBeenCalledWith('test-user-123', 'proj-1', true);
+      expect(archiveProject).toHaveBeenCalledWith('proj-1', true);
     });
 
     it('should return 400 when isArchived is not a boolean', async () => {

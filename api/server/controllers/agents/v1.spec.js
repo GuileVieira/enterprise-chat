@@ -59,6 +59,7 @@ jest.mock('~/models', () => {
   return {
     ...methods,
     getCategoriesWithCounts: jest.fn(),
+    getTenantFunctions: jest.fn().mockResolvedValue([]),
     deleteFileByFilter: jest.fn(),
   };
 });
@@ -1120,6 +1121,24 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       // Verify in database
       const agentInDb = await Agent.findOne({ id: createdAgent.id });
       expect(agentInDb.author.toString()).toBe(originalAuthorId.toString());
+    });
+
+    test('should persist tenantId for admin-created agents', async () => {
+      mockReq.user.role = 'ADMIN';
+      mockReq.user.tenantId = 'tenant-admin';
+      mockReq.body = {
+        provider: 'openai',
+        model: 'gpt-4',
+        name: 'Tenant Admin Agent',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+
+      const createdAgent = mockRes.json.mock.calls[0][0];
+      const agentInDb = await Agent.findOne({ id: createdAgent.id });
+      expect(agentInDb.tenantId).toBe('tenant-admin');
     });
 
     test('should strip unknown fields to prevent future vulnerabilities', async () => {

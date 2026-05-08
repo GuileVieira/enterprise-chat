@@ -21,6 +21,7 @@ export interface IRole extends Document {
       [Permissions.CREATE]?: boolean;
       [Permissions.UPDATE]?: boolean;
       [Permissions.READ]?: boolean;
+      [Permissions.OPT_OUT]?: boolean;
     };
     [PermissionTypes.AGENTS]?: {
       [Permissions.USE]?: boolean;
@@ -55,6 +56,12 @@ export interface IRole extends Document {
       [Permissions.USE]?: boolean;
     };
     [PermissionTypes.MCP_SERVERS]?: {
+      [Permissions.USE]?: boolean;
+      [Permissions.CREATE]?: boolean;
+      [Permissions.SHARE]?: boolean;
+      [Permissions.SHARE_PUBLIC]?: boolean;
+    };
+    [PermissionTypes.PROJECTS]?: {
       [Permissions.USE]?: boolean;
       [Permissions.CREATE]?: boolean;
       [Permissions.SHARE]?: boolean;

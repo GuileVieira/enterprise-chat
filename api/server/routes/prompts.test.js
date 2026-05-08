@@ -24,7 +24,13 @@ jest.mock('~/models', () => {
     removeAllPermissions: async ({ resourceType, resourceId }) => {
       const AclEntry = mongoose.models.AclEntry;
       if (AclEntry) {
-        await AclEntry.deleteMany({ resourceType, resourceId });
+        const resourceIdText = resourceId.toString();
+        await AclEntry.deleteMany({
+          resourceType,
+          resourceId: {
+            $in: [resourceIdText, new mongoose.Types.ObjectId(resourceIdText)],
+          },
+        });
       }
     },
   });

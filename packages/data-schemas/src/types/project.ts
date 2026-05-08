@@ -9,7 +9,7 @@ export interface IProjectPromptSnippet {
 }
 
 export interface IProject {
-  projectId?: string;
+  projectId: string;
   name?: string;
   description?: string;
   user?: string;
