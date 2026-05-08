@@ -119,8 +119,14 @@ services:
 
 volumes:
   orqest_images:
+    name: orqest_images_prod
   orqest_uploads:
+    name: orqest_uploads_prod
   orqest_logs:
+    name: orqest_logs_prod
   orqest_mongodb:
+    name: orqest_mongodb_prod
   orqest_meilisearch:
+    name: orqest_meilisearch_prod
   orqest_pgvector:
+    name: orqest_pgvector_prod
