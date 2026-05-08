@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const fs = require('fs').promises;
 const { nanoid } = require('nanoid');
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger, runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   refreshS3Url,
   agentCreateSchema,
@@ -43,6 +43,7 @@ const { getCachedTools } = require('~/server/services/Config');
 const { resolveConfigServers } = require('~/server/services/MCP');
 const { getMCPServersRegistry } = require('~/config');
 const { getLogStores } = require('~/cache');
+const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const db = require('~/models');
 
 const systemTools = {
@@ -53,6 +54,14 @@ const systemTools = {
 
 const MAX_SEARCH_LEN = 100;
 const escapeRegex = (str = '') => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const createAgentInRequestTenant = async (req, createAgent) => {
+  if (req.user?.tenantId || req.user?.role !== 'ADMIN') {
+    return await createAgent();
+  }
+
+  return await runAsSystem(createAgent);
+};
 
 /**
  * Validates that the requesting user has VIEW access to every agent referenced in edges.
@@ -210,6 +219,9 @@ const createAgentHandler = async (req, res) => {
     agentData.id = `agent_${nanoid()}`;
     agentData.author = userId;
     agentData.tools = [];
+    if (req.user.tenantId) {
+      agentData.tenantId = req.user.tenantId;
+    }
 
     const hasMCPTools = tools.some((t) => t?.includes(Constants.mcp_delimiter));
     const [availableTools, configServers] = await Promise.all([
@@ -225,8 +237,7 @@ const createAgentHandler = async (req, res) => {
     });
 
     const createAgent = () => db.createAgent(agentData);
-    const agent =
-      req.user.role === 'ADMIN' ? await runAsSystem(createAgent) : await createAgent();
+    const agent = await createAgentInRequestTenant(req, createAgent);
 
     try {
       await Promise.all([
@@ -552,6 +563,7 @@ const duplicateAgentHandler = async (req, res) => {
     const newAgentData = Object.assign(cloneData, {
       id: newAgentId,
       author: userId,
+      ...(req.user.tenantId && { tenantId: req.user.tenantId }),
     });
 
     const newActionsList = [];
@@ -614,10 +626,7 @@ const duplicateAgentHandler = async (req, res) => {
     }
 
     const createDuplicatedAgent = () => db.createAgent(newAgentData);
-    const newAgent =
-      req.user.role === 'ADMIN'
-        ? await runAsSystem(createDuplicatedAgent)
-        : await createDuplicatedAgent();
+    const newAgent = await createAgentInRequestTenant(req, createDuplicatedAgent);
 
     try {
       await Promise.all([
@@ -683,8 +692,7 @@ const deleteAgentHandler = async (req, res) => {
 };
 
 /**
- * Creates a tenant-specific clone of an existing agent and grants viewer access
- * to every user in the target tenant.
+ * Shares an existing agent with a target tenant using viewer access.
  */
 const cloneAgentToTenantHandler = async (req, res) => {
   try {
@@ -701,47 +709,16 @@ const cloneAgentToTenantHandler = async (req, res) => {
       return res.status(404).json({ error: 'Agent not found' });
     }
 
-    const {
-      id: _id,
-      _id: __id,
-      author: _author,
-      createdAt: _createdAt,
-      updatedAt: _updatedAt,
-      versions: _versions,
-      __v: _v,
-      tenantId: _tenantId,
-      ...cloneData
-    } = sourceAgent;
+    await grantPermission({
+      principalType: PrincipalType.TENANT,
+      principalId: tenantId,
+      resourceType: ResourceType.AGENT,
+      resourceId: sourceAgent._id,
+      accessRoleId: AccessRoleIds.AGENT_VIEWER,
+      grantedBy: userId,
+    });
 
-    const clonedAgent = await runAsSystem(() =>
-      db.createAgent({
-        ...cloneData,
-        id: `agent_${nanoid()}`,
-        name: `${sourceAgent.name || 'Agent'} (${tenantId})`,
-        author: userId,
-      }),
-    );
-
-    await Promise.all([
-      grantPermission({
-        principalType: PrincipalType.USER,
-        principalId: userId,
-        resourceType: ResourceType.AGENT,
-        resourceId: clonedAgent._id,
-        accessRoleId: AccessRoleIds.AGENT_OWNER,
-        grantedBy: userId,
-      }),
-      grantPermission({
-        principalType: PrincipalType.TENANT,
-        principalId: tenantId,
-        resourceType: ResourceType.AGENT,
-        resourceId: clonedAgent._id,
-        accessRoleId: AccessRoleIds.AGENT_VIEWER,
-        grantedBy: userId,
-      }),
-    ]);
-
-    return res.status(201).json(clonedAgent);
+    return res.status(200).json(sourceAgent);
   } catch (error) {
     logger.error('[/Agents/:id/clone-to-tenant] Error cloning Agent to tenant', error);
     return res.status(500).json({ error: error.message });
@@ -792,12 +769,21 @@ const getListAgentsHandler = async (req, res) => {
     }
 
     // Get agent IDs the user has VIEW access to via ACL
-    const accessibleIds = await findAccessibleResources({
-      userId,
-      role: req.user.role,
-      resourceType: ResourceType.AGENT,
-      requiredPermissions: requiredPermission,
-    });
+    let accessibleIds;
+    const canManageAgents = await hasCapability(req.user, SystemCapabilities.MANAGE_AGENTS).catch(
+      () => false,
+    );
+    if (canManageAgents) {
+      const agents = await db.getAgents({});
+      accessibleIds = agents.map((agent) => agent._id);
+    } else {
+      accessibleIds = await findAccessibleResources({
+        userId,
+        role: req.user.role,
+        resourceType: ResourceType.AGENT,
+        requiredPermissions: requiredPermission,
+      });
+    }
 
     const publiclyAccessibleIds = await findPubliclyAccessibleResources({
       resourceType: ResourceType.AGENT,

@@ -7,7 +7,10 @@ const {
   agentPermissionsSchema,
   promptPermissionsSchema,
   memoryPermissionsSchema,
+  fileSearchPermissionsSchema,
+  fileCitationsPermissionsSchema,
   mcpServersPermissionsSchema,
+  projectPermissionsSchema,
   marketplacePermissionsSchema,
   peoplePickerPermissionsSchema,
   remoteAgentsPermissionsSchema,
@@ -54,6 +57,21 @@ const permissionConfigs = {
     schema: marketplacePermissionsSchema,
     permissionType: PermissionTypes.MARKETPLACE,
     errorMessage: 'Invalid marketplace permissions.',
+  },
+  'file-search': {
+    schema: fileSearchPermissionsSchema,
+    permissionType: PermissionTypes.FILE_SEARCH,
+    errorMessage: 'Invalid file search permissions.',
+  },
+  'file-citations': {
+    schema: fileCitationsPermissionsSchema,
+    permissionType: PermissionTypes.FILE_CITATIONS,
+    errorMessage: 'Invalid file citations permissions.',
+  },
+  projects: {
+    schema: projectPermissionsSchema,
+    permissionType: PermissionTypes.PROJECTS,
+    errorMessage: 'Invalid project permissions.',
   },
   'remote-agents': {
     schema: remoteAgentsPermissionsSchema,
@@ -170,6 +188,16 @@ router.put('/:roleName/mcp-servers', manageRoles, createPermissionUpdateHandler(
  * Update marketplace permissions for a specific role
  */
 router.put('/:roleName/marketplace', manageRoles, createPermissionUpdateHandler('marketplace'));
+
+router.put('/:roleName/file-search', manageRoles, createPermissionUpdateHandler('file-search'));
+
+router.put(
+  '/:roleName/file-citations',
+  manageRoles,
+  createPermissionUpdateHandler('file-citations'),
+);
+
+router.put('/:roleName/projects', manageRoles, createPermissionUpdateHandler('projects'));
 
 /**
  * PUT /api/roles/:roleName/remote-agents

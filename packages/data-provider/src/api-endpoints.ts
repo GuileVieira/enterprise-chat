@@ -382,6 +382,10 @@ export const updateAgentPermissions = (roleName: string) => `${getRole(roleName)
 export const updatePeoplePickerPermissions = (roleName: string) =>
   `${getRole(roleName)}/people-picker`;
 export const updateMCPServersPermissions = (roleName: string) => `${getRole(roleName)}/mcp-servers`;
+export const updateFileSearchPermissions = (roleName: string) => `${getRole(roleName)}/file-search`;
+export const updateFileCitationsPermissions = (roleName: string) =>
+  `${getRole(roleName)}/file-citations`;
+export const updateProjectPermissions = (roleName: string) => `${getRole(roleName)}/projects`;
 export const updateRemoteAgentsPermissions = (roleName: string) =>
   `${getRole(roleName)}/remote-agents`;
 

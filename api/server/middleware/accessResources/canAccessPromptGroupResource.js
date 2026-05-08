@@ -1,6 +1,7 @@
 const { ResourceType } = require('librechat-data-provider');
 const { canAccessResource } = require('./canAccessResource');
 const { getPromptGroup } = require('~/models');
+const mongoose = require('mongoose');
 
 /**
  * PromptGroup ID resolver function
@@ -11,6 +12,21 @@ const { getPromptGroup } = require('~/models');
  */
 const resolvePromptGroupId = async (groupId) => {
   return await getPromptGroup({ _id: groupId });
+};
+
+const resolveProjectInheritance = async ({ resourceId, requiredPermission }) => {
+  const Project = mongoose.models.Project;
+  if (!Project) {
+    return [];
+  }
+  const projects = await Project.find({ promptGroupIds: resourceId.toString() })
+    .select('_id')
+    .lean();
+  return projects.map((project) => ({
+    resourceType: ResourceType.PROJECT,
+    resourceId: project._id,
+    requiredPermission,
+  }));
 };
 
 /**
@@ -53,6 +69,7 @@ const canAccessPromptGroupResource = (options) => {
     requiredPermission,
     resourceIdParam,
     idResolver: resolvePromptGroupId,
+    inheritedResourceResolver: resolveProjectInheritance,
   });
 };
 

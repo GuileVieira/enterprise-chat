@@ -248,7 +248,7 @@ export function createAgentMethods(mongoose: typeof import('mongoose'), deps: Ag
    */
   async function createAgent(agentData: Record<string, unknown>): Promise<IAgent> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
-    const { author: _author, ...versionData } = agentData;
+    const { author: _author, tenantId: _tenantId, ...versionData } = agentData;
     const timestamp = new Date();
     const initialAgentData = {
       ...agentData,

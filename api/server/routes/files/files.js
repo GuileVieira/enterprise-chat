@@ -38,11 +38,48 @@ const db = require('~/models');
 
 const router = express.Router();
 
+const hasProjectAccess = async ({ req, projectId, requiredPermission }) => {
+  if (!projectId) {
+    return false;
+  }
+
+  try {
+    const canManageProjects = await hasCapability(req.user, SystemCapabilities.MANAGE_PROJECTS);
+    if (canManageProjects) {
+      return true;
+    }
+  } catch (err) {
+    logger.warn(`[/files] project capability check failed, denying bypass: ${err.message}`);
+  }
+
+  const project = await db.findProjectById(projectId);
+  if (!project?._id) {
+    return false;
+  }
+
+  return await checkPermission({
+    userId: req.user.id,
+    role: req.user.role,
+    resourceType: ResourceType.PROJECT,
+    resourceId: project._id,
+    requiredPermission,
+  });
+};
+
 router.get('/', async (req, res) => {
   try {
     const appConfig = req.config;
     const filter = { user: req.user.id };
     if (req.query.projectId) {
+      const allowed = await hasProjectAccess({
+        req,
+        projectId: req.query.projectId,
+        requiredPermission: PermissionBits.VIEW,
+      });
+      if (!allowed) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+      delete filter.user;
       filter.projectId = req.query.projectId;
     }
     const files = await db.getFiles(filter);
@@ -167,6 +204,37 @@ router.delete('/', async (req, res) => {
         ownedFiles.push(file);
       } else {
         nonOwnedFiles.push(file);
+      }
+    }
+
+    if (nonOwnedFiles.length > 0) {
+      const projectIds = [
+        ...new Set(
+          nonOwnedFiles
+            .map((file) => file.projectId)
+            .filter(Boolean)
+            .map((projectId) => projectId.toString()),
+        ),
+      ];
+
+      if (projectIds.length === 1) {
+        const allowed = await hasProjectAccess({
+          req,
+          projectId: projectIds[0],
+          requiredPermission: PermissionBits.EDIT,
+        });
+
+        if (allowed) {
+          await processDeleteRequest({ req, files: dbFiles });
+          logger.debug(
+            `[/files] Project files deleted successfully: ${dbFiles
+              .filter((f) => f.file_id)
+              .map((f) => f.file_id)
+              .join(', ')}`,
+          );
+          res.status(200).json({ message: 'Files deleted successfully' });
+          return;
+        }
       }
     }
 
@@ -394,7 +462,16 @@ router.post('/', async (req, res) => {
       logger.warn(`[/files] capability check failed, denying bypass: ${err.message}`);
     }
 
-    if (!skipUploadAuth && !metadata.projectId) {
+    if (metadata.projectId) {
+      const allowed = await hasProjectAccess({
+        req,
+        projectId: metadata.projectId,
+        requiredPermission: PermissionBits.EDIT,
+      });
+      if (!allowed) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+    } else if (!skipUploadAuth) {
       const denied = await verifyAgentUploadPermission({
         req,
         res,

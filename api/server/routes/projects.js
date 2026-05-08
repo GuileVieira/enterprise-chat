@@ -59,6 +59,7 @@ router.get('/', async (req, res) => {
     if (hasCap) {
       projects = await Project.find({}).sort({ updatedAt: -1 }).lean();
     } else {
+      const ownProjects = await getProjects(req.user.id);
       const principals = await getUserPrincipals({ userId: req.user.id, role: req.user.role });
       const accessibleIds = await findAccessibleResources(
         principals,
@@ -67,14 +68,19 @@ router.get('/', async (req, res) => {
       );
 
       if (accessibleIds.length === 0) {
-        return res.status(200).json([]);
+        return res.status(200).json(ownProjects);
       }
 
-      projects = await Project.find({
+      const sharedProjects = await Project.find({
         _id: { $in: accessibleIds },
       })
         .sort({ updatedAt: -1 })
         .lean();
+      const ownProjectIds = new Set(ownProjects.map((project) => project._id?.toString()));
+      projects = [
+        ...ownProjects,
+        ...sharedProjects.filter((project) => !ownProjectIds.has(project._id?.toString())),
+      ];
     }
 
     res.status(200).json(projects);
@@ -109,7 +115,9 @@ router.get(
   async (req, res) => {
     try {
       const project =
-        req.resourceAccess?.resourceInfo || (await getProjectById(req.params.projectId));
+        req.resourceAccess?.resourceInfo ||
+        (await getProjectById(req.params.projectId)) ||
+        (await findProjectById(req.params.projectId));
       if (project) {
         res.status(200).json(project);
       } else {
@@ -128,7 +136,7 @@ router.get(
  */
 router.put(
   '/:projectId',
-  checkProjectCreate,
+  checkProjectAccess,
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
@@ -151,7 +159,7 @@ router.put(
  */
 router.delete(
   '/:projectId',
-  checkProjectCreate,
+  checkProjectAccess,
   canAccessProjectResource({ requiredPermission: PermissionBits.DELETE }),
   async (req, res) => {
     try {
@@ -179,7 +187,7 @@ router.delete(
  */
 router.put(
   '/:projectId/archive',
-  checkProjectCreate,
+  checkProjectAccess,
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
