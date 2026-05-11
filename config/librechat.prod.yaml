@@ -16,7 +16,7 @@ interface:
   prompts:
     use: true
     create: true
-    share: false
+    share: true
     public: false
   bookmarks: false
   multiConvo: false
