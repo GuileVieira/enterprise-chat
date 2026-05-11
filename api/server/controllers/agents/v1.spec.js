@@ -84,6 +84,7 @@ const {
   findAccessibleResources,
   findPubliclyAccessibleResources,
   getResourcePermissionsMap,
+  grantPermission,
 } = require('~/server/services/PermissionService');
 
 const { refreshS3Url } = require('@librechat/api');
@@ -176,6 +177,21 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(agentInDb).toBeDefined();
       expect(agentInDb.name).toBe('Test Agent');
       expect(agentInDb.author.toString()).toBe(mockReq.user.id);
+    });
+
+    test('should fail creation when owner permission grant fails', async () => {
+      grantPermission.mockRejectedValueOnce(new Error('owner grant failed'));
+
+      mockReq.body = {
+        name: 'Test Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to grant owner permissions' });
     });
 
     test('should reject creation with unauthorized fields (mass assignment protection)', async () => {
