@@ -215,9 +215,7 @@ const filterAuthorizedTools = async ({
   let mcpServerConfigs;
   let registryUnavailable = false;
   const existingToolSet = existingTools?.length ? new Set(existingTools) : null;
-  const tenantFunctions = tenantId
-    ? await db.getTenantFunctions({ tenantId, isActive: true })
-    : [];
+  const tenantFunctions = tenantId ? await db.getTenantFunctions({ tenantId, isActive: true }) : [];
 
   for (const tool of tools) {
     if (availableTools[tool] || systemTools[tool]) {
@@ -442,6 +440,13 @@ const createAgentHandler = async (req, res) => {
         `[createAgent] Failed to grant owner permissions for agent ${agent.id}:`,
         permissionError,
       );
+      await db.deleteAgent({ id: agent.id }).catch((deleteError) => {
+        logger.error(
+          `[createAgent] Failed to delete agent ${agent.id} after permission grant failure:`,
+          deleteError,
+        );
+      });
+      return res.status(500).json({ error: 'Failed to grant owner permissions' });
     }
 
     res.status(201).json(agent);
@@ -848,6 +853,13 @@ const duplicateAgentHandler = async (req, res) => {
         `[duplicateAgent] Failed to grant owner permissions for duplicated agent ${newAgent.id}:`,
         permissionError,
       );
+      await db.deleteAgent({ id: newAgent.id }).catch((deleteError) => {
+        logger.error(
+          `[duplicateAgent] Failed to delete duplicated agent ${newAgent.id} after permission grant failure:`,
+          deleteError,
+        );
+      });
+      return res.status(500).json({ error: 'Failed to grant owner permissions' });
     }
 
     return res.status(201).json({

@@ -2,7 +2,7 @@ jest.unmock('winston');
 jest.unmock('winston-daily-rotate-file');
 
 const mongoose = require('mongoose');
-const { RoleBits, createModels } = require('@librechat/data-schemas');
+const { RoleBits, createModels, runAsSystem } = require('@librechat/data-schemas');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   ResourceType,
@@ -746,6 +746,42 @@ describe('PermissionService', () => {
         resourceId: newResourceId,
       });
       expect(aclEntries).toHaveLength(3);
+    });
+
+    test('should persist tenant-wide agent viewer grants in bulk', async () => {
+      const newResourceId = new mongoose.Types.ObjectId();
+      const tenantId = 'tenant-2';
+      const updatedPrincipals = [
+        {
+          type: PrincipalType.TENANT,
+          id: tenantId,
+          name: 'Tenant: tenant-2',
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+        },
+      ];
+
+      const results = await bulkUpdateResourcePermissions({
+        resourceType: ResourceType.AGENT,
+        resourceId: newResourceId,
+        updatedPrincipals,
+        grantedBy: grantedById,
+      });
+
+      expect(results.granted).toHaveLength(1);
+      expect(results.errors).toHaveLength(0);
+
+      const tenantEntry = await runAsSystem(() =>
+        AclEntry.findOne({
+          principalType: PrincipalType.TENANT,
+          principalId: tenantId,
+          resourceType: ResourceType.AGENT,
+          resourceId: newResourceId,
+        }).populate('roleId', 'accessRoleId'),
+      );
+
+      expect(tenantEntry).toBeTruthy();
+      expect(tenantEntry.tenantId).toBe(tenantId);
+      expect(tenantEntry.roleId.accessRoleId).toBe(AccessRoleIds.AGENT_VIEWER);
     });
 
     test('should update existing permissions in bulk', async () => {

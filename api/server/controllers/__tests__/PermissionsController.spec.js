@@ -4,9 +4,11 @@ const mockLogger = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: 
 
 jest.mock('@librechat/data-schemas', () => ({
   logger: mockLogger,
+  runAsSystem: (fn) => fn(),
 }));
 
-const { ResourceType, PrincipalType } = jest.requireActual('librechat-data-provider');
+const { ResourceType, PrincipalType, AccessRoleIds } =
+  jest.requireActual('librechat-data-provider');
 
 jest.mock('librechat-data-provider', () => ({
   ...jest.requireActual('librechat-data-provider'),
@@ -18,25 +20,30 @@ jest.mock('@librechat/api', () => ({
 }));
 
 const mockBulkUpdateResourcePermissions = jest.fn();
+const mockGrantPermission = jest.fn();
 
 jest.mock('~/server/services/PermissionService', () => ({
   bulkUpdateResourcePermissions: (...args) => mockBulkUpdateResourcePermissions(...args),
+  grantPermission: (...args) => mockGrantPermission(...args),
   ensureGroupPrincipalExists: jest.fn(),
   getEffectivePermissions: jest.fn(),
   ensurePrincipalExists: jest.fn(),
   getAvailableRoles: jest.fn(),
   findAccessibleResources: jest.fn(),
   getResourcePermissionsMap: jest.fn(),
-  getEffectivePermissions: jest.fn(),
 }));
 
 const mockRemoveAgentFromUserFavorites = jest.fn();
+const mockUpdateAgent = jest.fn();
 
 jest.mock('~/models', () => ({
+  aggregateAclEntries: jest.fn(),
   searchPrincipals: jest.fn(),
   sortPrincipalsByRelevance: jest.fn(),
   calculateRelevanceScore: jest.fn(),
   removeAgentFromUserFavorites: (...args) => mockRemoveAgentFromUserFavorites(...args),
+  updateAgent: (...args) => mockUpdateAgent(...args),
+  getAgent: jest.fn(),
   findProjectById: jest.fn(),
 }));
 
@@ -47,6 +54,7 @@ jest.mock('~/server/services/GraphApiService', () => ({
 
 const {
   updateResourcePermissions,
+  getResourcePermissions,
   getUserEffectivePermissions,
   searchPrincipals,
 } = require('../PermissionsController');
@@ -146,6 +154,72 @@ describe('PermissionsController', () => {
     });
   });
 
+  describe('getResourcePermissions', () => {
+    const agentObjectId = new mongoose.Types.ObjectId();
+    const authorObjectId = new mongoose.Types.ObjectId();
+
+    it('backfills and returns agent author as owner when ACL has no owner', async () => {
+      db.aggregateAclEntries.mockResolvedValue([
+        {
+          principalType: PrincipalType.TENANT,
+          principalId: 'mm-marketing',
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+        },
+      ]);
+      db.getAgent.mockResolvedValue({
+        _id: agentObjectId,
+        id: 'agent_test',
+        author: authorObjectId,
+      });
+      mockGrantPermission.mockResolvedValue({});
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId.toString() },
+        user: { id: authorObjectId.toString(), role: 'ADMIN' },
+      });
+      const res = createMockRes();
+
+      await getResourcePermissions(req, res);
+
+      expect(db.aggregateAclEntries).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              resourceId: {
+                $in: expect.arrayContaining([agentObjectId.toString(), agentObjectId]),
+              },
+            }),
+          }),
+        ]),
+      );
+      expect(mockGrantPermission).toHaveBeenCalledWith({
+        principalType: PrincipalType.USER,
+        principalId: authorObjectId.toString(),
+        resourceType: ResourceType.AGENT,
+        resourceId: agentObjectId.toString(),
+        accessRoleId: AccessRoleIds.AGENT_OWNER,
+        grantedBy: authorObjectId.toString(),
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principals: expect.arrayContaining([
+            expect.objectContaining({
+              type: PrincipalType.USER,
+              id: authorObjectId.toString(),
+              accessRoleId: AccessRoleIds.AGENT_OWNER,
+            }),
+            expect.objectContaining({
+              type: PrincipalType.TENANT,
+              id: 'mm-marketing',
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+            }),
+          ]),
+        }),
+      );
+    });
+  });
+
   describe('updateResourcePermissions — favorites cleanup', () => {
     const agentObjectId = new mongoose.Types.ObjectId().toString();
     const revokedUserId = new mongoose.Types.ObjectId().toString();
@@ -159,6 +233,129 @@ describe('PermissionsController', () => {
       });
 
       mockRemoveAgentFromUserFavorites.mockResolvedValue(undefined);
+      mockUpdateAgent.mockResolvedValue({});
+    });
+
+    it('passes tenant principals through to the permission service', async () => {
+      const tenantPrincipal = {
+        type: PrincipalType.TENANT,
+        id: 'tenant-2',
+        name: 'Tenant: tenant-2',
+        source: 'local',
+        idOnTheSource: 'tenant-2',
+        accessRoleId: AccessRoleIds.AGENT_VIEWER,
+      };
+
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [tenantPrincipal],
+        updated: [],
+        revoked: [],
+        errors: [],
+      });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [tenantPrincipal],
+          removed: [],
+          public: false,
+        },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockUpdateAgent).toHaveBeenCalledWith(
+        { _id: agentObjectId },
+        { $unset: { tenantId: '' } },
+        { updatingUserId: 'user-1', skipVersioning: true },
+      );
+      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceType: ResourceType.AGENT,
+          resourceId: agentObjectId,
+          updatedPrincipals: [tenantPrincipal],
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('normalizes agent tenant principals to viewer access', async () => {
+      const requestTenantPrincipal = {
+        type: PrincipalType.TENANT,
+        id: 'tenant-2',
+        accessRoleId: AccessRoleIds.AGENT_OWNER,
+      };
+      const normalizedTenantPrincipal = {
+        ...requestTenantPrincipal,
+        accessRoleId: AccessRoleIds.AGENT_VIEWER,
+      };
+
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [normalizedTenantPrincipal],
+        updated: [],
+        revoked: [],
+        errors: [],
+      });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [requestTenantPrincipal],
+          removed: [],
+          public: false,
+        },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updatedPrincipals: [normalizedTenantPrincipal],
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('returns an error when permission service reports failed grants', async () => {
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [],
+        updated: [],
+        revoked: [],
+        errors: [
+          {
+            principal: { type: PrincipalType.USER, id: 'invalid-user-id' },
+            error: 'Invalid principal ID',
+          },
+        ],
+      });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.USER,
+              id: 'invalid-user-id',
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+            },
+          ],
+          removed: [],
+          public: false,
+        },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: 'Failed to update permissions',
+          details: 'One or more permission updates failed',
+        }),
+      );
     });
 
     it('removes agent from revoked users favorites on AGENT resource type', async () => {
@@ -204,7 +401,7 @@ describe('PermissionsController', () => {
         granted: [],
         updated: [],
         revoked: [{ type: PrincipalType.USER, id: validId }],
-        errors: [{ principal: { type: PrincipalType.USER, id: invalidId }, error: 'Invalid ID' }],
+        errors: [],
       });
 
       const req = createMockReq({

@@ -4,7 +4,12 @@
 
 const mongoose = require('mongoose');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
-const { ResourceType, PrincipalType, PermissionBits } = require('librechat-data-provider');
+const {
+  ResourceType,
+  PrincipalType,
+  AccessRoleIds,
+  PermissionBits,
+} = require('librechat-data-provider');
 const { enrichRemoteAgentPrincipals, backfillRemoteAgentPermissions } = require('@librechat/api');
 const {
   bulkUpdateResourcePermissions,
@@ -14,6 +19,7 @@ const {
   getEffectivePermissions,
   ensurePrincipalExists,
   getAvailableRoles,
+  grantPermission,
 } = require('~/server/services/PermissionService');
 const {
   entraIdPrincipalFeatureEnabled,
@@ -36,6 +42,57 @@ const validateResourceType = (resourceType) => {
   if (!validTypes.includes(resourceType)) {
     throw new Error(`Invalid resourceType: ${resourceType}. Valid types: ${validTypes.join(', ')}`);
   }
+};
+
+const getResourceIdVariants = (resourceId) => {
+  if (!mongoose.Types.ObjectId.isValid(resourceId)) {
+    return [resourceId];
+  }
+
+  return [resourceId, mongoose.Types.ObjectId.createFromHexString(resourceId)];
+};
+
+const toIdString = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  return value.toString();
+};
+
+const getAuthorPrincipal = async ({ agent, resourceId, grantedBy }) => {
+  const authorId = toIdString(agent?.author);
+  if (!authorId || !mongoose.Types.ObjectId.isValid(authorId)) {
+    return null;
+  }
+
+  let user = null;
+  if (typeof db.getUserById === 'function') {
+    user = await db.getUserById(authorId).catch((error) => {
+      logger.warn('[getResourcePermissions] Failed to fetch agent author', error);
+      return null;
+    });
+  }
+
+  await grantPermission({
+    principalType: PrincipalType.USER,
+    principalId: authorId,
+    resourceType: ResourceType.AGENT,
+    resourceId,
+    accessRoleId: AccessRoleIds.AGENT_OWNER,
+    grantedBy,
+  });
+
+  return {
+    type: PrincipalType.USER,
+    id: authorId,
+    name: user?.name || user?.username,
+    email: user?.email,
+    avatar: user?.avatar,
+    source: 'local',
+    idOnTheSource: user?.idOnTheSource || authorId,
+    accessRoleId: AccessRoleIds.AGENT_OWNER,
+  };
 };
 
 /**
@@ -115,6 +172,10 @@ const updateResourcePermissions = async (req, res) => {
         validatedPrincipals.push({
           ...principal,
           id: principalId,
+          ...(resourceType === ResourceType.AGENT &&
+            principal.type === PrincipalType.TENANT && {
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+            }),
         });
       } catch (error) {
         logger.error('Error ensuring principal exists:', {
@@ -144,7 +205,9 @@ const updateResourcePermissions = async (req, res) => {
       });
     }
 
-    const hasTenantGrant = validatedPrincipals.some((principal) => principal.type === PrincipalType.TENANT);
+    const hasTenantGrant = validatedPrincipals.some(
+      (principal) => principal.type === PrincipalType.TENANT,
+    );
     if (resourceType === ResourceType.AGENT && hasTenantGrant) {
       await runAsSystem(() =>
         db.updateAgent(
@@ -162,6 +225,19 @@ const updateResourcePermissions = async (req, res) => {
       revokedPrincipals,
       grantedBy: userId,
     });
+
+    if (results.errors.length > 0) {
+      logger.error('[updateResourcePermissions] Permission updates failed', {
+        resourceType,
+        resourceId,
+        errors: results.errors,
+      });
+      return res.status(400).json({
+        error: 'Failed to update permissions',
+        details: 'One or more permission updates failed',
+        results,
+      });
+    }
 
     const isAgentResource =
       resourceType === ResourceType.AGENT || resourceType === ResourceType.REMOTE_AGENT;
@@ -205,54 +281,55 @@ const getResourcePermissions = async (req, res) => {
     const { resourceType, resourceId } = req.params;
     validateResourceType(resourceType);
 
-    const results = await runAsSystem(() => db.aggregateAclEntries([
-      // Match ACL entries for this resource
-      {
-        $match: {
-          resourceType,
-          resourceId: mongoose.Types.ObjectId.isValid(resourceId)
-            ? mongoose.Types.ObjectId.createFromHexString(resourceId)
-            : resourceId,
+    const resourceIds = getResourceIdVariants(resourceId);
+    const results = await runAsSystem(() =>
+      db.aggregateAclEntries([
+        // Match ACL entries for this resource
+        {
+          $match: {
+            resourceType,
+            resourceId: { $in: resourceIds },
+          },
         },
-      },
-      // Lookup AccessRole information
-      {
-        $lookup: {
-          from: 'accessroles',
-          localField: 'roleId',
-          foreignField: '_id',
-          as: 'role',
+        // Lookup AccessRole information
+        {
+          $lookup: {
+            from: 'accessroles',
+            localField: 'roleId',
+            foreignField: '_id',
+            as: 'role',
+          },
         },
-      },
-      // Lookup User information (for user principals)
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'principalId',
-          foreignField: '_id',
-          as: 'userInfo',
+        // Lookup User information (for user principals)
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'principalId',
+            foreignField: '_id',
+            as: 'userInfo',
+          },
         },
-      },
-      // Lookup Group information (for group principals)
-      {
-        $lookup: {
-          from: 'groups',
-          localField: 'principalId',
-          foreignField: '_id',
-          as: 'groupInfo',
+        // Lookup Group information (for group principals)
+        {
+          $lookup: {
+            from: 'groups',
+            localField: 'principalId',
+            foreignField: '_id',
+            as: 'groupInfo',
+          },
         },
-      },
-      // Project final structure
-      {
-        $project: {
-          principalType: 1,
-          principalId: 1,
-          accessRoleId: { $arrayElemAt: ['$role.accessRoleId', 0] },
-          userInfo: { $arrayElemAt: ['$userInfo', 0] },
-          groupInfo: { $arrayElemAt: ['$groupInfo', 0] },
+        // Project final structure
+        {
+          $project: {
+            principalType: 1,
+            principalId: 1,
+            accessRoleId: { $arrayElemAt: ['$role.accessRoleId', 0] },
+            userInfo: { $arrayElemAt: ['$userInfo', 0] },
+            groupInfo: { $arrayElemAt: ['$groupInfo', 0] },
+          },
         },
-      },
-    ]));
+      ]),
+    );
 
     let principals = [];
     let publicPermission = null;
@@ -307,6 +384,27 @@ const getResourcePermissions = async (req, res) => {
           description: `System role: ${result.principalId}`,
           accessRoleId: result.accessRoleId,
         });
+      }
+    }
+
+    const hasOwner = principals.some((principal) => {
+      if (resourceType === ResourceType.AGENT) {
+        return principal.accessRoleId === AccessRoleIds.AGENT_OWNER;
+      }
+
+      return false;
+    });
+
+    if (resourceType === ResourceType.AGENT && !hasOwner) {
+      const agent = await runAsSystem(() => db.getAgent({ _id: resourceIds[1] || resourceId }));
+      const authorPrincipal = await getAuthorPrincipal({
+        agent,
+        resourceId,
+        grantedBy: req.user.id,
+      });
+
+      if (authorPrincipal) {
+        principals.unshift(authorPrincipal);
       }
     }
 
