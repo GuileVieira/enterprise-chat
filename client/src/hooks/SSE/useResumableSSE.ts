@@ -562,9 +562,22 @@ export default function useResumableSSE(
    */
   const startGeneration = useCallback(
     async (currentSubmission: TSubmission): Promise<string | null> => {
-      const payloadData = createPayload(currentSubmission);
-      let { payload } = payloadData;
-      payload = removeNullishValues(payload) as TPayload;
+      let payloadData: ReturnType<typeof createPayload>;
+      let payload: TPayload;
+
+      try {
+        payloadData = createPayload(currentSubmission);
+        payload = removeNullishValues(payloadData.payload) as TPayload;
+      } catch (error) {
+        console.error('[ResumableSSE] Failed to create generation payload:', {
+          error,
+          submission: currentSubmission,
+        });
+        errorHandler({ data: undefined, submission: currentSubmission as EventSubmission });
+        setIsSubmitting(false);
+        setShowStopButton(false);
+        return null;
+      }
 
       clearStepMaps();
 
@@ -576,9 +589,16 @@ export default function useResumableSSE(
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           // Use request.post which handles auth token refresh via axios interceptors
-          const data = (await request.post(url, payload)) as { streamId: string };
-          console.log('[ResumableSSE] Generation started:', { streamId: data.streamId });
-          return data.streamId;
+          const data = (await request.post(url, payload)) as {
+            streamId?: string;
+            conversationId?: string;
+          };
+          const streamId = data.streamId ?? data.conversationId ?? null;
+          console.log('[ResumableSSE] Generation started:', { streamId, response: data });
+          if (!streamId) {
+            throw new Error('Generation response did not include streamId');
+          }
+          return streamId;
         } catch (error) {
           lastError = error;
           // Check if it's a network error (retry) vs server error (don't retry)
@@ -618,7 +638,7 @@ export default function useResumableSSE(
       setIsSubmitting(false);
       return null;
     },
-    [clearStepMaps, errorHandler, setIsSubmitting],
+    [clearStepMaps, errorHandler, setIsSubmitting, setShowStopButton],
   );
 
   useEffect(() => {

@@ -515,7 +515,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
   const isImage = file.mimetype.startsWith('image');
   let fileInfoMetadata;
-  const entity_id = messageAttachment === true ? undefined : (agent_id || req.body.projectId);
+  const entity_id = messageAttachment === true ? undefined : agent_id || req.body.projectId;
   const basePath = mime.getType(file.originalname)?.startsWith('image') ? 'images' : 'uploads';
   if (tool_resource === EToolResources.execute_code) {
     const isCodeEnabled =
@@ -541,7 +541,10 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
       throw new Error('File search is not enabled');
     }
     // Note: File search processing continues to dual storage logic below
-  } else if (tool_resource === EToolResources.context) {
+  } else if (
+    tool_resource === EToolResources.context ||
+    (messageAttachment && !isImage && !tool_resource)
+  ) {
     const { file_id, temp_file_id = null } = metadata;
 
     /**
