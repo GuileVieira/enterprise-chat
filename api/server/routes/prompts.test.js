@@ -172,6 +172,12 @@ async function setupTestData() {
       email: 'admin@example.com',
       role: SystemRoles.ADMIN,
     }),
+    tenantViewer: await User.create({
+      name: 'Tenant Viewer',
+      email: 'tenant-viewer@example.com',
+      role: SystemRoles.USER,
+      tenantId: 'tenant-a',
+    }),
   };
 
   // Seed capabilities for the ADMIN role
@@ -222,6 +228,54 @@ describe('Prompt Routes - ACL Permissions', () => {
 
     // We expect a 401 or 404, not 500
     expect(response.status).not.toBe(500);
+  });
+
+  it('grants viewer access to multiple tenants when admin creates a prompt group', async () => {
+    setTestUser(app, testUsers.admin);
+
+    const response = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Shared Tenant Prompt', category: 'ops' },
+        prompt: { prompt: 'Use tenant context', type: 'text' },
+        shareTenantIds: ['tenant-a', 'tenant-b'],
+      });
+
+    expect(response.status).toBe(200);
+    const groupId = response.body.prompt.groupId;
+
+    const tenantEntries = await AclEntry.find({
+      principalType: PrincipalType.TENANT,
+      principalId: { $in: ['tenant-a', 'tenant-b'] },
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: { $in: [groupId.toString(), new ObjectId(groupId)] },
+    }).lean();
+
+    expect(tenantEntries).toHaveLength(2);
+    expect(tenantEntries.every((entry) => entry.permBits === PermissionBits.VIEW)).toBe(true);
+  });
+
+  it('ignores requested tenant sharing when non-admin creates a prompt group', async () => {
+    setTestUser(app, testUsers.owner);
+
+    const response = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Private Prompt', category: 'ops' },
+        prompt: { prompt: 'Keep private', type: 'text' },
+        shareTenantIds: ['tenant-a'],
+      });
+
+    expect(response.status).toBe(200);
+    const groupId = response.body.prompt.groupId;
+
+    const tenantEntries = await AclEntry.find({
+      principalType: PrincipalType.TENANT,
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: { $in: [groupId.toString(), new ObjectId(groupId)] },
+    }).lean();
+
+    expect(tenantEntries).toHaveLength(0);
   });
 
   describe('POST /api/prompts - Create Prompt', () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AccessRoleIds, PrincipalType, ResourceType } from 'librechat-data-provider';
+import { AccessRoleIds, PrincipalType, ResourceType, SystemRoles } from 'librechat-data-provider';
 import {
   Buildings as Building2,
   ClipboardText as CopyCheck,
@@ -27,6 +27,7 @@ import {
   useResourcePermissionState,
   useCopyToClipboard,
   useCanSharePublic,
+  useAuthContext,
   useLocalize,
 } from '~/hooks';
 import UnifiedPeopleSearch from './PeoplePicker/UnifiedPeopleSearch';
@@ -56,13 +57,18 @@ export default function GenericGrantAccessDialog({
   children?: React.ReactNode;
 }) {
   const localize = useLocalize();
+  const { user } = useAuthContext();
   const { showToast } = useToastContext();
   const [isCopying, setIsCopying] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const canSharePublic = useCanSharePublic(resourceType);
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
+  const isAdmin = user?.role === SystemRoles.ADMIN;
+  const canSelectTenants =
+    isAdmin && (resourceType === ResourceType.AGENT || resourceType === ResourceType.PROMPTGROUP);
+  const lockPromptSharesToViewer = resourceType === ResourceType.PROMPTGROUP && !isAdmin;
   const { data: tenantsData } = useListAdminTenants({
-    enabled: resourceType === ResourceType.AGENT && isModalOpen,
+    enabled: canSelectTenants && isModalOpen,
   });
 
   /** User can use the share dialog if they have people picker access OR can share publicly */
@@ -126,7 +132,9 @@ export default function GenericGrantAccessDialog({
 
     const sharesWithDefaults = sharesToAdd.map((share) => ({
       ...share,
-      accessRoleId: defaultPermissionId || config?.defaultViewerRoleId,
+      accessRoleId: lockPromptSharesToViewer
+        ? config?.defaultViewerRoleId
+        : defaultPermissionId || config?.defaultViewerRoleId,
       isExisting: false, // Mark as newly added
     }));
 
@@ -158,7 +166,7 @@ export default function GenericGrantAccessDialog({
         source: 'local',
         idOnTheSource: selectedTenantId,
         description: localize('com_ui_tenant_wide_access'),
-        accessRoleId: defaultPermissionId || config?.defaultViewerRoleId,
+        accessRoleId: config?.defaultViewerRoleId,
         isExisting: false,
       },
     ]);
@@ -336,11 +344,13 @@ export default function GenericGrantAccessDialog({
                 <UnifiedPeopleSearch
                   onAddPeople={handleAddFromSearch}
                   placeholder={localize('com_ui_search_people_placeholder')}
-                  typeFilter={peoplePickerTypeFilter}
+                  typeFilter={
+                    lockPromptSharesToViewer ? [PrincipalType.USER] : peoplePickerTypeFilter
+                  }
                   excludeIds={allShares.map((s) => s.idOnTheSource)}
                 />
 
-                {resourceType === ResourceType.AGENT && (tenantsData?.tenants?.length ?? 0) > 0 && (
+                {canSelectTenants && (tenantsData?.tenants?.length ?? 0) > 0 && (
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-text-secondary" aria-hidden="true" />
                     <select
@@ -406,7 +416,11 @@ export default function GenericGrantAccessDialog({
                         principles={allShares}
                         onRemoveHandler={handleRemoveShare}
                         resourceType={resourceType}
-                        onRoleChange={(id, newRole) => handleRoleChange(id, newRole)}
+                        onRoleChange={
+                          lockPromptSharesToViewer
+                            ? undefined
+                            : (id, newRole) => handleRoleChange(id, newRole)
+                        }
                       />
                     </div>
                   );

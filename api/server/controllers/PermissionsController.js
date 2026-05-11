@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   ResourceType,
+  SystemRoles,
   PrincipalType,
   AccessRoleIds,
   PermissionBits,
@@ -58,6 +59,50 @@ const toIdString = (value) => {
   }
 
   return value.toString();
+};
+
+const getPromptGroupViewerRole = () => AccessRoleIds.PROMPTGROUP_VIEWER;
+
+const isAdminUser = (user) => user?.role === SystemRoles.ADMIN;
+
+const getUserTenantId = async (userId) => {
+  if (!userId || typeof db.getUserById !== 'function') {
+    return undefined;
+  }
+
+  const user = await db.getUserById(userId, 'tenantId').catch((error) => {
+    logger.warn('[updateResourcePermissions] Failed to fetch target user tenant', error);
+    return null;
+  });
+  return user?.tenantId;
+};
+
+const sameTenant = (left, right) => (left || '') === (right || '');
+
+const normalizePromptGroupPrincipal = async ({ principal, reqUser, action }) => {
+  if (isAdminUser(reqUser)) {
+    if (principal.type === PrincipalType.TENANT) {
+      return {
+        ...principal,
+        accessRoleId: getPromptGroupViewerRole(),
+      };
+    }
+    return principal;
+  }
+
+  if (principal.type !== PrincipalType.USER) {
+    throw new Error(`Only admins can ${action} prompt access for this principal type`);
+  }
+
+  const targetTenantId = await getUserTenantId(principal.id);
+  if (!sameTenant(targetTenantId, reqUser?.tenantId)) {
+    throw new Error('Cannot share prompt outside your tenant');
+  }
+
+  return {
+    ...principal,
+    accessRoleId: getPromptGroupViewerRole(),
+  };
 };
 
 const getAuthorPrincipal = async ({ agent, resourceId, grantedBy }) => {
@@ -134,7 +179,7 @@ const updateResourcePermissions = async (req, res) => {
     }
 
     // Prepare authentication context for enhanced group member fetching
-    const useEntraId = entraIdPrincipalFeatureEnabled(req.user);
+    const useEntraId = isAdminUser(req.user) && entraIdPrincipalFeatureEnabled(req.user);
     const authHeader = req.headers.authorization;
     const accessToken =
       authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
@@ -169,15 +214,33 @@ const updateResourcePermissions = async (req, res) => {
         }
 
         // Update the principal with the validated ID for ACL operations
-        validatedPrincipals.push({
+        const validatedPrincipal = {
           ...principal,
           id: principalId,
           ...(resourceType === ResourceType.AGENT &&
             principal.type === PrincipalType.TENANT && {
               accessRoleId: AccessRoleIds.AGENT_VIEWER,
             }),
-        });
+        };
+
+        if (resourceType === ResourceType.PROMPTGROUP) {
+          validatedPrincipals.push(
+            await normalizePromptGroupPrincipal({
+              principal: validatedPrincipal,
+              reqUser: req.user,
+              action: 'grant',
+            }),
+          );
+        } else {
+          validatedPrincipals.push(validatedPrincipal);
+        }
       } catch (error) {
+        if (resourceType === ResourceType.PROMPTGROUP) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            details: error.message,
+          });
+        }
         logger.error('Error ensuring principal exists:', {
           principal: {
             type: principal.type,
@@ -194,7 +257,27 @@ const updateResourcePermissions = async (req, res) => {
 
     // Add removed principals
     if (removed && Array.isArray(removed)) {
-      revokedPrincipals.push(...removed);
+      for (const principal of removed) {
+        if (resourceType !== ResourceType.PROMPTGROUP || principal.type === PrincipalType.PUBLIC) {
+          revokedPrincipals.push(principal);
+          continue;
+        }
+
+        try {
+          revokedPrincipals.push(
+            await normalizePromptGroupPrincipal({
+              principal,
+              reqUser: req.user,
+              action: 'revoke',
+            }),
+          );
+        } catch (error) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            details: error.message,
+          });
+        }
+      }
     }
 
     // If public is disabled, add public to revoked list
@@ -539,7 +622,10 @@ const searchPrincipals = async (req, res) => {
       typeFilters = validTypes.length > 0 ? validTypes : null;
     }
 
-    const localResults = await db.searchPrincipals(query.trim(), searchLimit, typeFilters);
+    const localResults = await db.searchPrincipals(query.trim(), searchLimit, typeFilters, {
+      tenantId: req.user?.tenantId,
+      global: isAdminUser(req.user),
+    });
     let allPrincipals = [...localResults];
 
     const useEntraId = entraIdPrincipalFeatureEnabled(req.user);

@@ -552,6 +552,7 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     searchPattern: string,
     limitPerType: number = 10,
     typeFilter: Array<PrincipalType.USER | PrincipalType.GROUP | PrincipalType.ROLE> | null = null,
+    options: { tenantId?: string; global?: boolean } = {},
     session?: ClientSession,
   ): Promise<TPrincipalSearchResult[]> {
     if (!searchPattern || searchPattern.trim().length === 0) {
@@ -567,11 +568,13 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
       /** For now, we'll use a direct query instead of searchUsers */
       const User = mongoose.models.User as Model<IUser>;
       const regex = new RegExp(trimmedPattern, 'i');
-      const userQuery = User.find({
+      const userFilter: FilterQuery<IUser> = {
         $or: [{ name: regex }, { email: regex }, { username: regex }],
-      })
-        .select(userFields)
-        .limit(limitPerType);
+      };
+      if (!options.global) {
+        userFilter.tenantId = options.tenantId ?? { $exists: false };
+      }
+      const userQuery = User.find(userFilter).select(userFields).limit(limitPerType);
 
       if (session) {
         userQuery.session(session);
@@ -597,10 +600,22 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     }
 
     if (!typeFilter || typeFilter.includes(PrincipalType.GROUP)) {
+      const Group = mongoose.models.Group as Model<IGroup>;
+      const regex = new RegExp(trimmedPattern, 'i');
+      const groupFilter: FilterQuery<IGroup> = {
+        $or: [{ name: regex }, { email: regex }, { description: regex }],
+      };
+      if (!options.global) {
+        groupFilter.tenantId = options.tenantId ?? { $exists: false };
+      }
+      const groupQuery = Group.find(groupFilter).limit(limitPerType);
+
+      if (session) {
+        groupQuery.session(session);
+      }
+
       promises.push(
-        findGroupsByNamePattern(trimmedPattern, null, limitPerType, session).then((groups) =>
-          groups.map(transformGroupToTPrincipalSearchResult),
-        ),
+        groupQuery.lean().then((groups) => groups.map(transformGroupToTPrincipalSearchResult)),
       );
     } else {
       promises.push(Promise.resolve([]));

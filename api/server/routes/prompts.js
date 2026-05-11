@@ -12,6 +12,7 @@ const {
 } = require('@librechat/api');
 const {
   Permissions,
+  SystemRoles,
   ResourceType,
   AccessRoleIds,
   PrincipalType,
@@ -83,6 +84,32 @@ const grantPromptGroupOwnerPermission = async ({ userId, promptGroupId }) => {
     undefined,
     ownerRole?._id,
   );
+};
+
+const grantPromptGroupTenantViewerPermission = async ({ userId, promptGroupId, tenantId }) => {
+  await grantPermission({
+    principalType: PrincipalType.TENANT,
+    principalId: tenantId,
+    resourceType: ResourceType.PROMPTGROUP,
+    resourceId: promptGroupId,
+    accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+    grantedBy: userId,
+  });
+};
+
+const normalizeShareTenantIds = (shareTenantIds) => {
+  if (!Array.isArray(shareTenantIds)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      shareTenantIds
+        .filter((tenantId) => typeof tenantId === 'string')
+        .map((tenantId) => tenantId.trim())
+        .filter(Boolean),
+    ),
+  ];
 };
 
 const checkPromptAccess = generateCheckAccess({
@@ -304,7 +331,7 @@ router.get('/groups', async (req, res) => {
  */
 const createNewPromptGroup = async (req, res) => {
   try {
-    const { prompt, group } = req.body;
+    const { prompt, group, shareTenantIds } = req.body;
 
     if (!prompt || !group || !group.name) {
       return res.status(400).send({ error: 'Prompt and group name are required' });
@@ -328,6 +355,17 @@ const createNewPromptGroup = async (req, res) => {
         logger.debug(
           `[createPromptGroup] Granted owner permissions to user ${req.user.id} for promptGroup ${result.prompt.groupId}`,
         );
+        if (req.user.role === SystemRoles.ADMIN) {
+          await Promise.all(
+            normalizeShareTenantIds(shareTenantIds).map((tenantId) =>
+              grantPromptGroupTenantViewerPermission({
+                userId: req.user.id,
+                promptGroupId: result.prompt.groupId.toString(),
+                tenantId,
+              }),
+            ),
+          );
+        }
       } catch (permissionError) {
         logger.error(
           `[createPromptGroup] Failed to grant owner permissions for promptGroup ${result.prompt.groupId}:`,

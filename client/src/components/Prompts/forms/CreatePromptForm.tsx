@@ -1,18 +1,24 @@
-import { useEffect } from 'react';
-import { FileText } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { Buildings, FileText, Plus, X } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { Button, TextareaAutosize, Input } from '@librechat/client';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
-import { LocalStorageKeys, PermissionTypes, Permissions } from 'librechat-data-provider';
+import {
+  SystemRoles,
+  Permissions,
+  LocalStorageKeys,
+  PermissionTypes,
+} from 'librechat-data-provider';
 import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
 import CategorySelector from '../fields/CategorySelector';
 import VariablesDropdown from '../editor/VariablesDropdown';
 import PromptVariables from '../display/PromptVariables';
 import Description from '../fields/Description';
 import { usePromptGroupsContext } from '~/Providers';
-import { useLocalize, useHasAccess } from '~/hooks';
+import { useLocalize, useHasAccess, useAuthContext } from '~/hooks';
 import Command from '../fields/Command';
 import { useCreatePrompt } from '~/data-provider';
+import { useListAdminTenants } from '~/data-provider/admin';
 import { cn } from '~/utils';
 
 type CreateFormValues = {
@@ -42,6 +48,10 @@ const CreatePromptForm = ({
 }) => {
   const localize = useLocalize();
   const navigate = useNavigate();
+  const { user } = useAuthContext();
+  const isAdmin = user?.role === SystemRoles.ADMIN;
+  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [tenantToAdd, setTenantToAdd] = useState('');
   const { hasAccess: hasUseAccess } = usePromptGroupsContext() ?? {};
   const hasCreateAccess = useHasAccess({
     permissionType: PermissionTypes.PROMPTS,
@@ -74,6 +84,7 @@ const CreatePromptForm = ({
     handleSubmit,
     formState: { isDirty, isSubmitting, errors, isValid },
   } = methods;
+  const { data: tenantsData } = useListAdminTenants({ enabled: isAdmin && hasAccess });
 
   const createPromptMutation = useCreatePrompt({
     onSuccess: (response) => {
@@ -87,6 +98,8 @@ const CreatePromptForm = ({
   });
 
   const promptText = watch('prompt');
+  const availableTenants =
+    tenantsData?.tenants.filter((tenant) => !selectedTenantIds.includes(tenant.id)) ?? [];
 
   const onSubmit = (data: CreateFormValues) => {
     const { name, category, oneliner, command, ...rest } = data;
@@ -103,6 +116,7 @@ const CreatePromptForm = ({
     createPromptMutation.mutate({
       prompt: rest,
       group: groupData,
+      ...(isAdmin && selectedTenantIds.length > 0 ? { shareTenantIds: selectedTenantIds } : {}),
     });
   };
 
@@ -207,6 +221,73 @@ const CreatePromptForm = ({
             tabIndex={0}
           />
           <Command onValueChange={(value) => methods.setValue('command', value)} tabIndex={0} />
+          {isAdmin && (tenantsData?.tenants?.length ?? 0) > 0 && (
+            <div className="bg-surface-secondary/40 rounded-lg border border-border-light p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Buildings className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+                  <h2 className="text-sm font-semibold text-text-primary">
+                    {localize('com_ui_share_with_tenants')}
+                  </h2>
+                </div>
+                <div className="flex min-w-0 gap-2 sm:w-[28rem]">
+                  <select
+                    className="focus:ring-ring-primary/20 h-10 min-w-0 flex-1 rounded-md border border-border-medium bg-surface-primary px-3 text-sm text-text-primary outline-none transition-colors hover:border-border-xheavy focus:border-border-xheavy focus:ring-2"
+                    value={tenantToAdd}
+                    onChange={(event) => setTenantToAdd(event.target.value)}
+                    aria-label={localize('com_ui_select_tenant')}
+                  >
+                    <option value="">{localize('com_ui_select_tenant')}</option>
+                    {availableTenants.map((tenant) => (
+                      <option key={tenant.id} value={tenant.id}>
+                        {tenant.id}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="h-10 shrink-0 gap-1.5"
+                    disabled={!tenantToAdd}
+                    onClick={() => {
+                      if (!tenantToAdd) {
+                        return;
+                      }
+                      setSelectedTenantIds((current) => [...current, tenantToAdd]);
+                      setTenantToAdd('');
+                    }}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    {localize('com_ui_add')}
+                  </Button>
+                </div>
+              </div>
+              {selectedTenantIds.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedTenantIds.map((tenantId) => (
+                    <span
+                      key={tenantId}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-sm font-medium text-text-primary"
+                    >
+                      <span className="max-w-56 truncate">{tenantId}</span>
+                      <button
+                        type="button"
+                        className="focus:ring-ring-primary/30 rounded-sm text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus:ring-2"
+                        aria-label={localize('com_ui_remove_user', { 0: tenantId })}
+                        onClick={() =>
+                          setSelectedTenantIds((current) =>
+                            current.filter((selectedTenantId) => selectedTenantId !== tenantId),
+                          )
+                        }
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-4 flex justify-end">
             <Button
               aria-label={localize('com_ui_create_prompt')}
