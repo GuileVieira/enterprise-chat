@@ -41,7 +41,7 @@ endpoints:
     maxCitations: 30
     maxCitationsPerFile: 7
     minRelevanceScore: 0.45
-    capabilities: ['deferred_tools', 'execute_code', 'file_search', 'actions', 'tools']
+    capabilities: ['deferred_tools', 'execute_code', 'file_search', 'actions', 'tools', 'artifacts']
 
   custom:
     - name: 'OpenRouter'
