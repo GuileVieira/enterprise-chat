@@ -1,4 +1,5 @@
 const { ResourceType } = require('librechat-data-provider');
+const { runAsSystem } = require('@librechat/data-schemas');
 const { canAccessResource } = require('./canAccessResource');
 const { getPrompt } = require('~/models');
 const mongoose = require('mongoose');
@@ -11,7 +12,7 @@ const mongoose = require('mongoose');
  * @returns {Promise<Object|null>} Object with promptGroup's _id field, or null if not found
  */
 const resolvePromptToGroupId = async (promptId) => {
-  const prompt = await getPrompt({ _id: promptId });
+  const prompt = await runAsSystem(() => getPrompt({ _id: promptId }));
   if (!prompt || !prompt.groupId) {
     return null;
   }
