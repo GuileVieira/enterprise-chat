@@ -1,6 +1,11 @@
 const express = require('express');
 const { ObjectId } = require('mongodb');
-const { logger, isValidObjectIdString } = require('@librechat/data-schemas');
+const {
+  logger,
+  runAsSystem,
+  SystemCapabilities,
+  isValidObjectIdString,
+} = require('@librechat/data-schemas');
 const {
   generateCheckAccess,
   markPublicPromptGroups,
@@ -19,7 +24,6 @@ const {
   PermissionBits,
   PermissionTypes,
 } = require('librechat-data-provider');
-const { SystemCapabilities } = require('@librechat/data-schemas');
 const {
   getListPromptGroupsByAccess,
   getOwnedPromptGroupIds,
@@ -145,7 +149,7 @@ router.get(
     const { groupId } = req.params;
 
     try {
-      const group = await getPromptGroup({ _id: groupId });
+      const group = await runAsSystem(() => getPromptGroup({ _id: groupId }));
 
       if (!group) {
         return res.status(404).send({ message: 'Prompt group not found' });
@@ -178,7 +182,7 @@ router.get('/all', async (req, res) => {
     );
     if (canManagePrompts) {
       const PromptGroup = require('~/models').PromptGroup || require('mongoose').models.PromptGroup;
-      const groups = await PromptGroup.find({}).select('_id').lean();
+      const groups = await runAsSystem(() => PromptGroup.find({}).select('_id').lean());
       accessibleIds = groups.map((group) => group._id);
     } else {
       accessibleIds = await findAccessibleResources({
@@ -205,10 +209,12 @@ router.get('/all', async (req, res) => {
       ownedPromptGroupIds,
     });
 
-    const result = await getListPromptGroupsByAccess({
-      accessibleIds: filteredAccessibleIds,
-      otherParams: filter,
-    });
+    const result = await runAsSystem(() =>
+      getListPromptGroupsByAccess({
+        accessibleIds: filteredAccessibleIds,
+        otherParams: filter,
+      }),
+    );
 
     if (!result) {
       return res.status(200).send([]);
@@ -261,7 +267,7 @@ router.get('/groups', async (req, res) => {
     );
     if (canManagePrompts) {
       const PromptGroup = require('~/models').PromptGroup || require('mongoose').models.PromptGroup;
-      const groups = await PromptGroup.find({}).select('_id').lean();
+      const groups = await runAsSystem(() => PromptGroup.find({}).select('_id').lean());
       accessibleIds = groups.map((group) => group._id);
     } else {
       accessibleIds = await findAccessibleResources({
@@ -289,12 +295,14 @@ router.get('/groups', async (req, res) => {
     });
 
     // Cursor-based pagination only
-    const result = await getListPromptGroupsByAccess({
-      accessibleIds: filteredAccessibleIds,
-      otherParams: filter,
-      limit: actualLimit,
-      after: actualCursor,
-    });
+    const result = await runAsSystem(() =>
+      getListPromptGroupsByAccess({
+        accessibleIds: filteredAccessibleIds,
+        otherParams: filter,
+        limit: actualLimit,
+        after: actualCursor,
+      }),
+    );
 
     if (!result) {
       const emptyResponse = createEmptyPromptGroupsResponse({
@@ -311,7 +319,7 @@ router.get('/groups', async (req, res) => {
     const response = formatPromptGroupsResponse({
       promptGroups: groupsWithPublicFlag,
       pageNumber: '1', // Always 1 for cursor-based pagination
-      pageSize: actualLimit.toString(),
+      pageSize: actualLimit != null ? actualLimit.toString() : undefined,
       hasMore: has_more,
       after,
     });
@@ -452,7 +460,7 @@ router.post(
       if (!isValidObjectIdString(groupId)) {
         return res.status(400).send({ error: 'Invalid groupId' });
       }
-      const result = await incrementPromptGroupUsage(groupId);
+      const result = await runAsSystem(() => incrementPromptGroupUsage(groupId));
       res.status(200).send(result);
     } catch (error) {
       logger.error('[recordPromptUsage]', error);
@@ -533,7 +541,7 @@ router.get(
   }),
   async (req, res) => {
     const { promptId } = req.params;
-    const prompt = await getPrompt({ _id: promptId });
+    const prompt = await runAsSystem(() => getPrompt({ _id: promptId }));
     res.status(200).send(prompt);
   },
 );
@@ -581,7 +589,7 @@ router.get('/', async (req, res) => {
       }
 
       // If user has access, fetch all prompts in the group (not just their own)
-      const prompts = await getPrompts({ groupId: new ObjectId(groupId) });
+      const prompts = await runAsSystem(() => getPrompts({ groupId: new ObjectId(groupId) }));
       return res.status(200).send(prompts);
     }
 
