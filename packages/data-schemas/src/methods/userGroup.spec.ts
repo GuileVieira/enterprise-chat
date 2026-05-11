@@ -787,6 +787,80 @@ describe('userGroup methods', () => {
       expect(results[0].id).toBeDefined();
       expect(results[0].memberCount).toBeDefined();
     });
+
+    it('scopes user and group search to the requested tenant', async () => {
+      await User.create([
+        {
+          name: 'Tenant Match',
+          email: 'tenant-a-user@test.com',
+          username: 'tenant-match-a',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-a',
+        },
+        {
+          name: 'Tenant Match',
+          email: 'tenant-b-user@test.com',
+          username: 'tenant-match-b',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-b',
+        },
+      ]);
+      await Group.create([
+        { name: 'Tenant Match Group', source: 'local', tenantId: 'tenant-a' },
+        { name: 'Tenant Match Group', source: 'local', tenantId: 'tenant-b' },
+      ]);
+
+      const results = await methods.searchPrincipals('tenant match', 10, null, {
+        tenantId: 'tenant-a',
+        global: false,
+      });
+
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: PrincipalType.USER, email: 'tenant-a-user@test.com' }),
+          expect.objectContaining({ type: PrincipalType.GROUP, name: 'Tenant Match Group' }),
+        ]),
+      );
+      expect(results).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: PrincipalType.USER, email: 'tenant-b-user@test.com' }),
+        ]),
+      );
+    });
+
+    it('allows global search across tenants', async () => {
+      await User.create([
+        {
+          name: 'Global Match',
+          email: 'global-a@test.com',
+          username: 'global-a',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-a',
+        },
+        {
+          name: 'Global Match',
+          email: 'global-b@test.com',
+          username: 'global-b',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-b',
+        },
+      ]);
+
+      const results = await methods.searchPrincipals('global match', 10, [PrincipalType.USER], {
+        global: true,
+      });
+
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ email: 'global-a@test.com' }),
+          expect.objectContaining({ email: 'global-b@test.com' }),
+        ]),
+      );
+    });
   });
 
   describe('findGroupByQuery', () => {

@@ -7,7 +7,7 @@ jest.mock('@librechat/data-schemas', () => ({
   runAsSystem: (fn) => fn(),
 }));
 
-const { ResourceType, PrincipalType, AccessRoleIds } =
+const { ResourceType, PrincipalType, AccessRoleIds, SystemRoles } =
   jest.requireActual('librechat-data-provider');
 
 jest.mock('librechat-data-provider', () => ({
@@ -21,13 +21,14 @@ jest.mock('@librechat/api', () => ({
 
 const mockBulkUpdateResourcePermissions = jest.fn();
 const mockGrantPermission = jest.fn();
+const mockEnsurePrincipalExists = jest.fn();
 
 jest.mock('~/server/services/PermissionService', () => ({
   bulkUpdateResourcePermissions: (...args) => mockBulkUpdateResourcePermissions(...args),
   grantPermission: (...args) => mockGrantPermission(...args),
   ensureGroupPrincipalExists: jest.fn(),
   getEffectivePermissions: jest.fn(),
-  ensurePrincipalExists: jest.fn(),
+  ensurePrincipalExists: (...args) => mockEnsurePrincipalExists(...args),
   getAvailableRoles: jest.fn(),
   findAccessibleResources: jest.fn(),
   getResourcePermissionsMap: jest.fn(),
@@ -44,6 +45,7 @@ jest.mock('~/models', () => ({
   removeAgentFromUserFavorites: (...args) => mockRemoveAgentFromUserFavorites(...args),
   updateAgent: (...args) => mockUpdateAgent(...args),
   getAgent: jest.fn(),
+  getUserById: jest.fn(),
   findProjectById: jest.fn(),
 }));
 
@@ -81,6 +83,7 @@ const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
 describe('PermissionsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    db.getUserById.mockResolvedValue(null);
   });
 
   describe('searchPrincipals', () => {
@@ -234,6 +237,7 @@ describe('PermissionsController', () => {
 
       mockRemoveAgentFromUserFavorites.mockResolvedValue(undefined);
       mockUpdateAgent.mockResolvedValue({});
+      mockEnsurePrincipalExists.mockImplementation((principal) => principal.id);
     });
 
     it('passes tenant principals through to the permission service', async () => {
@@ -316,6 +320,156 @@ describe('PermissionsController', () => {
         }),
       );
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('allows admin to grant multiple promptGroup tenants as viewer access', async () => {
+      const requestTenantPrincipals = [
+        {
+          type: PrincipalType.TENANT,
+          id: 'tenant-a',
+          accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
+        },
+        {
+          type: PrincipalType.TENANT,
+          id: 'tenant-b',
+          accessRoleId: AccessRoleIds.PROMPTGROUP_EDITOR,
+        },
+      ];
+      const normalizedTenantPrincipals = requestTenantPrincipals.map((principal) => ({
+        ...principal,
+        accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+      }));
+
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: normalizedTenantPrincipals,
+        updated: [],
+        revoked: [],
+        errors: [],
+      });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
+        body: {
+          updated: requestTenantPrincipals,
+          removed: [],
+          public: false,
+        },
+        user: { id: 'admin-1', role: SystemRoles.ADMIN },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceType: ResourceType.PROMPTGROUP,
+          updatedPrincipals: normalizedTenantPrincipals,
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('rejects promptGroup tenant grants from non-admin users', async () => {
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.TENANT,
+              id: 'tenant-a',
+              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+            },
+          ],
+          removed: [],
+          public: false,
+        },
+        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it('normalizes non-admin promptGroup user shares to viewer access', async () => {
+      const targetUserId = new mongoose.Types.ObjectId().toString();
+      mockEnsurePrincipalExists.mockResolvedValue(targetUserId);
+      db.getUserById.mockResolvedValue({ _id: targetUserId, tenantId: 'tenant-a' });
+
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [
+          {
+            type: PrincipalType.USER,
+            id: targetUserId,
+            accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+          },
+        ],
+        updated: [],
+        revoked: [],
+        errors: [],
+      });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.USER,
+              id: targetUserId,
+              accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
+            },
+          ],
+          removed: [],
+          public: false,
+        },
+        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updatedPrincipals: [
+            {
+              type: PrincipalType.USER,
+              id: targetUserId,
+              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+            },
+          ],
+        }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('rejects non-admin promptGroup user shares outside caller tenant', async () => {
+      const targetUserId = new mongoose.Types.ObjectId().toString();
+      mockEnsurePrincipalExists.mockResolvedValue(targetUserId);
+      db.getUserById.mockResolvedValue({ _id: targetUserId, tenantId: 'tenant-b' });
+
+      const req = createMockReq({
+        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.USER,
+              id: targetUserId,
+              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+            },
+          ],
+          removed: [],
+          public: false,
+        },
+        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
     });
 
     it('returns an error when permission service reports failed grants', async () => {
@@ -457,6 +611,7 @@ describe('PermissionsController', () => {
 
       const req = createMockReq({
         params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
+        user: { id: 'admin-1', role: SystemRoles.ADMIN },
         body: {
           updated: [],
           removed: [{ type: PrincipalType.USER, id: revokedUserId }],
@@ -584,6 +739,46 @@ describe('PermissionsController', () => {
         resourceType: ResourceType.AGENT,
         resourceId: agentId,
       });
+    });
+  });
+
+  describe('searchPrincipals', () => {
+    it('scopes non-admin local search to caller tenant', async () => {
+      db.searchPrincipals.mockResolvedValue([]);
+      db.sortPrincipalsByRelevance.mockImplementation((items) => items);
+      db.calculateRelevanceScore.mockReturnValue(1);
+      const req = createMockReq({
+        query: { q: 'jo', limit: '10', types: PrincipalType.USER },
+        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await searchPrincipals(req, res);
+
+      expect(db.searchPrincipals).toHaveBeenCalledWith('jo', 10, [PrincipalType.USER], {
+        tenantId: 'tenant-a',
+        global: false,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('allows admin local search across tenants', async () => {
+      db.searchPrincipals.mockResolvedValue([]);
+      db.sortPrincipalsByRelevance.mockImplementation((items) => items);
+      db.calculateRelevanceScore.mockReturnValue(1);
+      const req = createMockReq({
+        query: { q: 'jo', limit: '10', types: PrincipalType.USER },
+        user: { id: 'admin-1', role: SystemRoles.ADMIN },
+      });
+      const res = createMockRes();
+
+      await searchPrincipals(req, res);
+
+      expect(db.searchPrincipals).toHaveBeenCalledWith('jo', 10, [PrincipalType.USER], {
+        tenantId: undefined,
+        global: true,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 });

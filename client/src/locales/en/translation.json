@@ -665,6 +665,7 @@
   "com_ui_tenant": "Tenant",
   "com_ui_select_tenant": "Select tenant",
   "com_ui_tenant_wide_access": "Tenant-wide access",
+  "com_ui_share_with_tenants": "Share with tenants",
   "com_ui_add_code_interpreter_api_key": "Add Code Interpreter API Key",
   "com_ui_add_first_bookmark": "Click on a chat to add one",
   "com_ui_add_first_mcp_server": "Create your first MCP server to get started",
