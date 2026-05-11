@@ -57,7 +57,9 @@ async function buildEndpointOption(req, res, next) {
 
   const appConfig = req.config;
   let appliedModelSpecPrivateFields = new Set();
-  if (appConfig.modelSpecs?.list?.length && appConfig.modelSpecs?.enforce) {
+  const isSavedAgentRequest =
+    isAgentsEndpoint(endpoint) && Boolean(parsedBody.agent_id || req.body.agent_id);
+  if (appConfig.modelSpecs?.list?.length && appConfig.modelSpecs?.enforce && !isSavedAgentRequest) {
     /** @type {{ list: TModelSpec[] }}*/
     const { list } = appConfig.modelSpecs;
     const { spec } = parsedBody;
