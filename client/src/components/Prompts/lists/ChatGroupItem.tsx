@@ -101,7 +101,7 @@ function ChatGroupItem({
       return;
     }
 
-    submitPrompt(text);
+    submitPrompt(text, group);
     if (group._id) {
       recordUsage.mutate(group._id);
     }
