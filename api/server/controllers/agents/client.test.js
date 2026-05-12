@@ -190,9 +190,31 @@ describe('AgentClient - titleConvo', () => {
 
       expect(mockRun.generateTitle).toHaveBeenCalledWith(
         expect.objectContaining({
-          titlePrompt: undefined,
-          titlePromptTemplate: undefined,
+          titlePrompt: expect.stringContaining('português do Brasil'),
+          titlePromptTemplate: expect.stringContaining('Mensagem do usuário: {input}'),
           titleMethod: undefined,
+        }),
+      );
+    });
+
+    it('should use pt-BR title defaults when endpoint config omits title prompts', async () => {
+      mockReq.config = {
+        endpoints: {
+          [EModelEndpoint.openAI]: {
+            titleModel: 'gpt-3.5-turbo',
+          },
+        },
+      };
+
+      const text = 'Como faço uma análise de contrato?';
+      const abortController = new AbortController();
+
+      await client.titleConvo({ text, abortController });
+
+      expect(mockRun.generateTitle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titlePrompt: expect.stringContaining('português do Brasil'),
+          titlePromptTemplate: expect.stringContaining('Resposta do assistente: {output}'),
         }),
       );
     });

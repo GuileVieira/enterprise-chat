@@ -14,11 +14,11 @@ const { saveConvo } = require('~/models');
  * @returns {Promise<string>}
  */
 const generateTitle = async ({ openai, text, responseText }) => {
-  const titlePrompt = `Please generate a concise title (max 40 characters) for a conversation that starts with:
-User: ${text}
-Assistant: ${responseText}
+  const titlePrompt = `Gere um título curto e descritivo em português do Brasil (PT-BR) para uma conversa que começa com:
+Usuário: ${text}
+Assistente: ${responseText}
 
-Title:`;
+Título:`;
 
   const completion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
@@ -32,7 +32,7 @@ Title:`;
     max_tokens: 20,
   });
 
-  const title = completion.choices[0]?.message?.content?.trim() || 'New conversation';
+  const title = completion.choices[0]?.message?.content?.trim() || 'Nova conversa';
   return sanitizeTitle(title);
 };
 
