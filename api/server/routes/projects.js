@@ -17,11 +17,12 @@ const {
   archiveProject,
   getUserPrincipals,
   findAccessibleResources,
-  grantPermission,
   deleteAclEntries,
   getRoleByName,
+  getFiles,
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
+const { checkPermission } = require('~/server/services/PermissionService');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
@@ -41,6 +42,41 @@ const checkProjectCreate = generateCheckAccess({
 const router = express.Router();
 
 router.use(requireJwtAuth);
+
+const validateProjectUpdate = async ({ req, res }) => {
+  const { promptGroupIds, fileIds } = req.body ?? {};
+
+  if (Array.isArray(promptGroupIds) && promptGroupIds.length > 0) {
+    for (const groupId of [...new Set(promptGroupIds)]) {
+      const allowed = await checkPermission({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.PROMPTGROUP,
+        resourceId: groupId,
+        requiredPermission: PermissionBits.VIEW,
+      });
+      if (!allowed) {
+        res.status(403).json({ error: 'Insufficient prompt group permissions' });
+        return false;
+      }
+    }
+  }
+
+  if (Array.isArray(fileIds) && fileIds.length > 0) {
+    const uniqueFileIds = [...new Set(fileIds)];
+    const files = await getFiles(
+      { file_id: { $in: uniqueFileIds }, projectId: req.params.projectId },
+      null,
+      { text: 0 },
+    );
+    if ((files?.length ?? 0) !== uniqueFileIds.length) {
+      res.status(403).json({ error: 'Insufficient file permissions' });
+      return false;
+    }
+  }
+
+  return true;
+};
 
 /**
  * GET /
@@ -140,6 +176,10 @@ router.put(
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
+      const isValidUpdate = await validateProjectUpdate({ req, res });
+      if (!isValidUpdate) {
+        return;
+      }
       const project = await updateProject(req.params.projectId, req.body);
       if (project) {
         res.status(200).json(project);

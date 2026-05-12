@@ -854,6 +854,37 @@ describe('initializeClient — subagent loading', () => {
     expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
   });
 
+  it('should not load project context from request projectId without project VIEW access', async () => {
+    const privateProjectId = new mongoose.Types.ObjectId();
+    mockGetProjectById.mockResolvedValue({
+      _id: privateProjectId,
+      instructions: 'Private project context.',
+    });
+
+    const endpointOption = makeEndpointOption();
+    const primaryAgent = await endpointOption.agent;
+    primaryAgent.instructions = 'Agent instructions.';
+
+    const req = makeReq();
+    req.body = { conversationId: 'new', projectId: 'private-project', files: [] };
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req,
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption,
+    });
+
+    expect(mockGetConvo).not.toHaveBeenCalled();
+    expect(mockGetProjectById).toHaveBeenCalledWith('private-project');
+    expect(agentClientArgs.projectId).toBeUndefined();
+
+    const agentPassedToInitializeAgent = mockInitializeAgent.mock.calls[0][0].agent;
+    expect(agentPassedToInitializeAgent.instructions).toBe('Agent instructions.');
+  });
+
   it('should handle getConvo error gracefully without breaking', async () => {
     mockGetConvo.mockRejectedValue(new Error('DB error'));
 

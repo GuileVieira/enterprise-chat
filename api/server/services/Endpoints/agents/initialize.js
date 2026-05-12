@@ -297,7 +297,21 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     }
 
     if (projectId) {
-      const project = await db.getProjectById(projectId);
+      let project = await db.getProjectById(projectId);
+      if (project?._id) {
+        const hasProjectAccess = await checkPermission({
+          userId: req.user.id,
+          role: req.user.role,
+          resourceType: ResourceType.PROJECT,
+          resourceId: project._id,
+          requiredPermission: PermissionBits.VIEW,
+        });
+        if (!hasProjectAccess) {
+          logger.warn(`[initializeClient] User ${req.user.id} denied project context ${projectId}`);
+          projectId = undefined;
+          project = null;
+        }
+      }
       const contextParts = [];
       if (project?.instructions) {
         contextParts.push(project.instructions);

@@ -9,6 +9,7 @@ beforeAll(() => {
 const mockShowToast = jest.fn();
 const mockSetFilesLoading = jest.fn();
 const mockMutate = jest.fn();
+const mockInvalidateQueries = jest.fn();
 
 let mockConversation: Record<string, string | null | undefined> = {};
 
@@ -39,6 +40,7 @@ jest.mock('~/store', () => ({
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(() => ({
     getQueryData: jest.fn(),
+    invalidateQueries: mockInvalidateQueries,
     refetchQueries: jest.fn(),
   })),
 }));
@@ -284,6 +286,48 @@ describe('useFileHandling', () => {
       expect(mockMutate).toHaveBeenCalledTimes(1);
       const formData: FormData = mockMutate.mock.calls[0][0];
       expect(formData.get('endpoint')).toBe('default');
+    });
+
+    it('sends the conversation projectId by default', async () => {
+      mockConversation = {
+        conversationId: 'convo-1',
+        endpoint: 'openAI',
+        projectId: 'project-123',
+      };
+
+      const useFileHandling = await loadHook();
+      const { result } = renderHook(() => useFileHandling());
+
+      const textFile = new File(['hello'], 'test.txt', { type: 'text/plain' });
+
+      await act(async () => {
+        await result.current.handleFiles([textFile]);
+      });
+
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      const formData: FormData = mockMutate.mock.calls[0][0];
+      expect(formData.get('projectId')).toBe('project-123');
+    });
+
+    it('keeps uploads local when project saving is disabled', async () => {
+      mockConversation = {
+        conversationId: 'convo-1',
+        endpoint: 'openAI',
+        projectId: 'project-123',
+      };
+
+      const useFileHandling = await loadHook();
+      const { result } = renderHook(() => useFileHandling({ saveUploadsToProject: false }));
+
+      const textFile = new File(['hello'], 'test.txt', { type: 'text/plain' });
+
+      await act(async () => {
+        await result.current.handleFiles([textFile]);
+      });
+
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      const formData: FormData = mockMutate.mock.calls[0][0];
+      expect(formData.get('projectId')).toBeNull();
     });
   });
 });

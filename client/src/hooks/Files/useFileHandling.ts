@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   QueryKeys,
   Constants,
+  DynamicQueryKeys,
   EToolResources,
   mergeFileConfig,
   isAssistantsEndpoint,
@@ -30,6 +31,7 @@ type UseFileHandling = {
   fileSetter?: FileSetter;
   fileFilter?: (file: File) => boolean;
   additionalMetadata?: Record<string, string | undefined>;
+  saveUploadsToProject?: boolean;
   /** Overrides `endpoint` for upload routing; also used as `endpointType` fallback when `endpointTypeOverride` is not set */
   endpointOverride?: EModelEndpoint | string;
   /** Overrides `endpointType` independently from `endpointOverride` */
@@ -116,9 +118,14 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
 
   const uploadFile = useUploadFileMutation(
     {
-      onSuccess: (data) => {
+      onSuccess: (data, body) => {
         clearUploadTimer(data.temp_file_id);
         console.log('upload success', data);
+        const projectId = body.get('projectId');
+        if (typeof projectId === 'string' && projectId) {
+          queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(projectId));
+          queryClient.invalidateQueries([QueryKeys.project, projectId]);
+        }
         if (agent_id) {
           queryClient.refetchQueries([QueryKeys.agent, agent_id]);
           return;
@@ -209,6 +216,13 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
           formData.append(key, value);
         }
       }
+    }
+
+    const projectId =
+      metadata.projectId ||
+      (params?.saveUploadsToProject !== false ? (conversation?.projectId ?? '') : '');
+    if (projectId && formData.get('projectId') == null) {
+      formData.append('projectId', projectId);
     }
 
     if (!isAssistantsEndpoint(endpointType ?? endpoint)) {

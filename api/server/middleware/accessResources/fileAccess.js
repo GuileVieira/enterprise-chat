@@ -1,7 +1,7 @@
 const { logger } = require('@librechat/data-schemas');
 const { PermissionBits, hasPermissions, ResourceType } = require('librechat-data-provider');
 const { getEffectivePermissions } = require('~/server/services/PermissionService');
-const { getAgents, getFiles } = require('~/models');
+const { getAgents, getFiles, findProjectById } = require('~/models');
 
 /**
  * Checks if user has access to a file through agent permissions
@@ -73,6 +73,39 @@ const denyFileAccess = (res) =>
   });
 
 /**
+ * Checks if user has access to a file through project permissions.
+ * Files inherit VIEW access from the project they belong to; conversations do not.
+ */
+const checkProjectBasedFileAccess = async ({ userId, role, file }) => {
+  if (!file?.projectId) {
+    return false;
+  }
+
+  try {
+    const project = await findProjectById(file.projectId);
+    if (!project?._id) {
+      return false;
+    }
+
+    const permissions = await getEffectivePermissions({
+      userId,
+      role,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+    });
+
+    if (hasPermissions(permissions, PermissionBits.VIEW)) {
+      logger.debug(`[fileAccess] User ${userId} has VIEW permissions on project ${file.projectId}`);
+      return true;
+    }
+  } catch (error) {
+    logger.warn(`[fileAccess] Project permission check failed for file ${file.file_id}:`, error);
+  }
+
+  return false;
+};
+
+/**
  * Middleware to check if user can access a file
  * Checks: 1) File ownership, 2) Agent-based access through a file-owner agent
  */
@@ -129,6 +162,13 @@ const fileAccess = async (req, res, next) => {
       return next();
     }
 
+    /** Project-based access (files inherit project permissions; conversations remain separate) */
+    const hasProjectAccess = await checkProjectBasedFileAccess({ userId, role: userRole, file });
+    if (hasProjectAccess) {
+      req.fileAccess = { file };
+      return next();
+    }
+
     logger.warn(`[fileAccess] User ${userId} denied access to file ${fileId}`);
     return denyFileAccess(res);
   } catch (error) {
@@ -142,4 +182,5 @@ const fileAccess = async (req, res, next) => {
 
 module.exports = {
   fileAccess,
+  checkProjectBasedFileAccess,
 };

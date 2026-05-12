@@ -54,6 +54,7 @@ interface AttachFileMenuProps {
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  saveUploadsToProject?: boolean;
 }
 
 const AttachFileMenu = ({
@@ -68,6 +69,7 @@ const AttachFileMenu = ({
   setFiles,
   setFilesLoading,
   conversation,
+  saveUploadsToProject,
 }: AttachFileMenuProps) => {
   const localize = useLocalize();
   const isUploadDisabled = disabled ?? false;
@@ -77,7 +79,9 @@ const AttachFileMenu = ({
     ephemeralAgentByConvoId(conversationId),
   );
   const toolResourceRef = useRef<EToolResources | undefined>();
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
+  const [toolResource, setToolResourceState] = useState<EToolResources | undefined>();
+  const fileHandlingParams = useMemo(() => ({ saveUploadsToProject }), [saveUploadsToProject]);
+  const { handleFileChange } = useFileHandlingNoChatContext(fileHandlingParams, {
     files,
     setFiles,
     setFilesLoading,
@@ -85,7 +89,7 @@ const AttachFileMenu = ({
   });
   const { handleSharePointFiles, isProcessing, downloadProgress } =
     useSharePointFileHandlingNoChatContext(
-      { toolResource: toolResourceRef.current },
+      { toolResource, saveUploadsToProject },
       { files, setFiles, setFilesLoading, conversation },
     );
 
@@ -139,6 +143,7 @@ const AttachFileMenu = ({
   const dropdownItems = useMemo(() => {
     const setToolResource = (value: EToolResources | undefined) => {
       toolResourceRef.current = value;
+      setToolResourceState(value);
     };
 
     const createMenuItems = (onAction: (fileType?: FileUploadType) => void) => {

@@ -7,7 +7,12 @@ const {
   restoreTenantContextFromReq,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
-const { CacheKeys, EModelEndpoint } = require('librechat-data-provider');
+const {
+  CacheKeys,
+  EModelEndpoint,
+  ResourceType,
+  PermissionBits,
+} = require('librechat-data-provider');
 const {
   createImportLimiters,
   validateConvoAccess,
@@ -17,6 +22,7 @@ const {
 const { forkConversation, duplicateConversation } = require('~/server/utils/import/fork');
 const { storage, importFileFilter } = require('~/server/routes/files/multer');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
+const { checkPermission } = require('~/server/services/PermissionService');
 const { importConversations } = require('~/server/utils/import');
 const getLogStores = require('~/cache/getLogStores');
 const db = require('~/models');
@@ -222,6 +228,22 @@ router.post('/update', validateConvoAccess, async (req, res) => {
     updatePayload.title = title.trim().slice(0, MAX_CONVO_TITLE_LENGTH);
   }
   if (projectId !== undefined) {
+    if (projectId !== null) {
+      const project = await db.findProjectById(projectId);
+      if (!project?._id) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      const allowed = await checkPermission({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        requiredPermission: PermissionBits.VIEW,
+      });
+      if (!allowed) {
+        return res.status(403).json({ error: 'Insufficient project permissions' });
+      }
+    }
     updatePayload.projectId = projectId;
   }
 

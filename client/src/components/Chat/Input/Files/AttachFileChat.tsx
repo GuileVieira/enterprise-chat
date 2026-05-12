@@ -1,4 +1,6 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { TooltipAnchor } from '@librechat/client';
+import { FolderOpen } from '@phosphor-icons/react';
 import {
   Constants,
   supportsFiles,
@@ -11,7 +13,10 @@ import {
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import { useGetFileConfig, useGetEndpointsQuery, useGetAgentByIdQuery } from '~/data-provider';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { useAgentsMapContext } from '~/Providers';
+import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 import AttachFileMenu from './AttachFileMenu';
 import AttachFile from './AttachFile';
 
@@ -28,10 +33,18 @@ function AttachFileChat({
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
+  const localize = useLocalize();
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
+  const projectId = conversation?.projectId;
   const isAgents = useMemo(() => isAgentsEndpoint(endpoint), [endpoint]);
   const isAssistants = useMemo(() => isAssistantsEndpoint(endpoint), [endpoint]);
+  const { permissions, isLoading: isProjectPermissionsLoading } = useProjectPermissions(projectId);
+  const [saveUploadsToProject, setSaveUploadsToProject] = useState(Boolean(projectId));
+
+  useEffect(() => {
+    setSaveUploadsToProject(Boolean(projectId));
+  }, [projectId]);
 
   const agentsMap = useAgentsMapContext();
 
@@ -96,32 +109,79 @@ function AttachFileChat({
     () => (disableInputs || endpointFileConfig?.disabled) ?? false,
     [disableInputs, endpointFileConfig?.disabled],
   );
+  const canSaveUploadsToProject = Boolean(projectId && permissions.canEdit);
+  const shouldSaveUploadsToProject = Boolean(saveUploadsToProject && canSaveUploadsToProject);
+  const projectUploadToggle = projectId ? (
+    <TooltipAnchor
+      id="project-upload-target"
+      description={
+        canSaveUploadsToProject
+          ? localize(
+              shouldSaveUploadsToProject
+                ? 'com_ui_upload_keep_local'
+                : 'com_ui_upload_save_to_project',
+            )
+          : localize('com_ui_upload_project_requires_edit')
+      }
+      render={
+        <button
+          type="button"
+          aria-label={localize(
+            shouldSaveUploadsToProject
+              ? 'com_ui_upload_keep_local'
+              : 'com_ui_upload_save_to_project',
+          )}
+          aria-pressed={shouldSaveUploadsToProject}
+          disabled={disableInputs || isProjectPermissionsLoading || !canSaveUploadsToProject}
+          className={cn(
+            'flex size-9 items-center justify-center rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-50',
+            shouldSaveUploadsToProject
+              ? 'bg-surface-hover text-text-primary'
+              : 'text-text-secondary hover:bg-surface-hover',
+            (!canSaveUploadsToProject || isProjectPermissionsLoading) &&
+              'cursor-not-allowed opacity-50 hover:bg-transparent',
+          )}
+          onClick={() => setSaveUploadsToProject((prev) => !prev)}
+        >
+          <FolderOpen size={22} aria-hidden="true" />
+        </button>
+      }
+    />
+  ) : null;
 
   if (isAssistants && endpointSupportsFiles && !isUploadDisabled) {
     return (
-      <AttachFile
-        disabled={disableInputs}
-        files={files}
-        setFiles={setFiles}
-        setFilesLoading={setFilesLoading}
-        conversation={conversation}
-      />
+      <div className="flex items-center gap-0.5">
+        {projectUploadToggle}
+        <AttachFile
+          disabled={disableInputs}
+          files={files}
+          setFiles={setFiles}
+          setFilesLoading={setFilesLoading}
+          conversation={conversation}
+          saveUploadsToProject={shouldSaveUploadsToProject}
+        />
+      </div>
     );
   } else if ((isAgents || endpointSupportsFiles) && !isUploadDisabled) {
     return (
-      <AttachFileMenu
-        endpoint={endpoint}
-        disabled={disableInputs}
-        endpointType={endpointType}
-        conversationId={conversationId}
-        agentId={conversation?.agent_id}
-        endpointFileConfig={endpointFileConfig}
-        useResponsesApi={useResponsesApi}
-        files={files}
-        setFiles={setFiles}
-        setFilesLoading={setFilesLoading}
-        conversation={conversation}
-      />
+      <div className="flex items-center gap-0.5">
+        {projectUploadToggle}
+        <AttachFileMenu
+          endpoint={endpoint}
+          disabled={disableInputs}
+          endpointType={endpointType}
+          conversationId={conversationId}
+          agentId={conversation?.agent_id}
+          endpointFileConfig={endpointFileConfig}
+          useResponsesApi={useResponsesApi}
+          files={files}
+          setFiles={setFiles}
+          setFilesLoading={setFilesLoading}
+          conversation={conversation}
+          saveUploadsToProject={shouldSaveUploadsToProject}
+        />
+      </div>
     );
   }
   return null;

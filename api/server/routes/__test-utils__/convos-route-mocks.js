@@ -36,6 +36,8 @@ module.exports = {
       azureAssistants: 'azureAssistants',
       assistants: 'assistants',
     },
+    ResourceType: { PROJECT: 'project' },
+    PermissionBits: { VIEW: 1 },
     ...overrides,
   }),
 
@@ -53,6 +55,7 @@ module.exports = {
     getConvo: jest.fn(),
     deleteConvos: jest.fn(),
     saveConvo: jest.fn(),
+    findProjectById: jest.fn(),
     deleteAllSharedLinks: jest.fn(),
     deleteConvoSharedLink: jest.fn(),
     deleteToolCalls: jest.fn(),

@@ -12,23 +12,28 @@ const AttachFile = ({
   setFiles,
   setFilesLoading,
   conversation,
+  saveUploadsToProject,
 }: {
   disabled?: boolean | null;
   files: Map<string, ExtendedFile>;
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  saveUploadsToProject?: boolean;
 }) => {
   const localize = useLocalize();
   const inputRef = useRef<HTMLInputElement>(null);
   const isUploadDisabled = disabled ?? false;
 
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
-    files,
-    setFiles,
-    setFilesLoading,
-    conversation,
-  });
+  const { handleFileChange } = useFileHandlingNoChatContext(
+    { saveUploadsToProject },
+    {
+      files,
+      setFiles,
+      setFilesLoading,
+      conversation,
+    },
+  );
 
   return (
     <FileUpload ref={inputRef} handleFileChange={handleFileChange}>
