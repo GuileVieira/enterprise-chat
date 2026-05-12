@@ -57,6 +57,12 @@ const BaseClient = require('~/app/clients/BaseClient');
 const { getMCPManager } = require('~/config');
 const db = require('~/models');
 
+const DEFAULT_PT_BR_TITLE_PROMPT =
+  'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.';
+
+const DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE =
+  'Mensagem do usuário: {input}\n\nResposta do assistente: {output}';
+
 const loadAgent = (params) => loadAgentFn(params, { getAgent: db.getAgent, getMCPServerTools });
 
 class AgentClient extends BaseClient {
@@ -985,7 +991,10 @@ class AgentClient extends BaseClient {
     try {
       titleProviderConfig = getProviderConfig({ provider: endpoint, appConfig });
     } catch (err) {
-      logger.error(`[AgentClient #titleConvo] getProviderConfig failed for endpoint "${endpoint}"`, err);
+      logger.error(
+        `[AgentClient #titleConvo] getProviderConfig failed for endpoint "${endpoint}"`,
+        err,
+      );
       return;
     }
 
@@ -1118,8 +1127,9 @@ class AgentClient extends BaseClient {
         inputText: text,
         contentParts: this.contentParts,
         titleMethod: endpointConfig?.titleMethod,
-        titlePrompt: endpointConfig?.titlePrompt,
-        titlePromptTemplate: endpointConfig?.titlePromptTemplate,
+        titlePrompt: endpointConfig?.titlePrompt ?? DEFAULT_PT_BR_TITLE_PROMPT,
+        titlePromptTemplate:
+          endpointConfig?.titlePromptTemplate ?? DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE,
         chainOptions: {
           runName: 'TitleRun',
           signal: abortController.signal,
