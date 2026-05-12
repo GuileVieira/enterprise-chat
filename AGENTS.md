@@ -120,6 +120,9 @@ Quirks:
 - **Do not use `Model.bulkWrite()`** in production code. Use `tenantSafeBulkWrite()` (Mongoose middleware does not intercept raw `bulkWrite`).
 - **Do not use `Model.collection.*`** in production code (bypasses tenant isolation middleware).
 - These are enforced by custom ESLint rules in `eslint.config.mjs`.
+- **Project ACL is inherited by project files.** File access must allow `FILE VIEW` directly or `PROJECT VIEW` via `file.projectId`; never require users to own a project file when the project is tenant-shared.
+- **Project context injection requires `PROJECT VIEW`.** Agents/assistants may load project instructions, memories, and files only after checking effective project permissions.
+- **Mutating project contents requires project access.** Upload/link files with `projectId` only after project permission checks; reject attaching foreign file IDs or prompt groups the user cannot view.
 
 ### Frontend-specific rules
 - All user-facing strings must use `useLocalize()`.
@@ -128,6 +131,9 @@ Quirks:
 - Query/Mutation keys live in `packages/data-provider/src/keys.ts`.
 - Endpoints: `packages/data-provider/src/api-endpoints.ts`
 - Data service: `packages/data-provider/src/data-service.ts`
+- **Preserve `projectId` when switching conversation setup.** Agent/model/assistant/preset/spec/URL-param flows must carry the current `conversation.projectId`; use `prepareNewConvoTemplate()` for new-conversation templates that may be trimmed for param endpoints.
+- **Project chat uploads default to project storage.** If `conversation.projectId` exists and the user has `PROJECT EDIT`, uploads should send `projectId` by default; offer a local-only toggle and invalidate `DynamicQueryKeys.projectFiles(projectId)` after upload.
+- **Project selector state is not project membership.** `selectedProjectId` filters the sidebar; `conversation.projectId` is the source of truth for chat context, prompt injection, upload target, and ACL inheritance.
 
 ---
 

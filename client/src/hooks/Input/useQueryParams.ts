@@ -167,7 +167,11 @@ export default function useQueryParams({
         return;
       }
 
-      newConversation({ preset: newPreset, keepAddedConvos: true });
+      newConversation({
+        template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
+        preset: newPreset,
+        keepAddedConvos: true,
+      });
     },
     [
       queryClient,
