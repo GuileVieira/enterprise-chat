@@ -54,6 +54,7 @@ interface AttachFileMenuProps {
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  saveUploadsToProject?: boolean;
 }
 
 const AttachFileMenu = ({
@@ -68,6 +69,7 @@ const AttachFileMenu = ({
   setFiles,
   setFilesLoading,
   conversation,
+  saveUploadsToProject,
 }: AttachFileMenuProps) => {
   const localize = useLocalize();
   const isUploadDisabled = disabled ?? false;
@@ -77,7 +79,8 @@ const AttachFileMenu = ({
     ephemeralAgentByConvoId(conversationId),
   );
   const [toolResource, setToolResource] = useState<EToolResources | undefined>();
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
+  const fileHandlingParams = useMemo(() => ({ saveUploadsToProject }), [saveUploadsToProject]);
+  const { handleFileChange } = useFileHandlingNoChatContext(fileHandlingParams, {
     files,
     setFiles,
     setFilesLoading,
@@ -85,7 +88,7 @@ const AttachFileMenu = ({
   });
   const { handleSharePointFiles, isProcessing, downloadProgress } =
     useSharePointFileHandlingNoChatContext(
-      { toolResource },
+      { toolResource, saveUploadsToProject },
       { files, setFiles, setFilesLoading, conversation },
     );
 

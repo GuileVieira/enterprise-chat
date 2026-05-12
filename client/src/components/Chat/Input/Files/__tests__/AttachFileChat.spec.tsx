@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EModelEndpoint, mergeFileConfig } from 'librechat-data-provider';
@@ -25,6 +25,10 @@ let mockFileConfig = defaultFileConfig;
 
 let mockAgentsMap: Record<string, Partial<Agent>> = {};
 let mockAgentQueryData: Partial<Agent> | undefined;
+let mockProjectPermissions = {
+  permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
+  isLoading: false,
+};
 
 jest.mock('~/data-provider', () => ({
   useGetEndpointsQuery: () => ({ data: mockEndpointsConfig }),
@@ -38,6 +42,14 @@ jest.mock('~/Providers', () => ({
   useAgentsMapContext: () => mockAgentsMap,
 }));
 
+jest.mock('~/hooks', () => ({
+  useLocalize: () => (key: string) => key,
+}));
+
+jest.mock('~/hooks/useProjectPermissions', () => ({
+  useProjectPermissions: () => mockProjectPermissions,
+}));
+
 /** Capture the props passed to AttachFileMenu */
 let mockAttachFileMenuProps: Record<string, unknown> = {};
 jest.mock('../AttachFileMenu', () => {
@@ -47,8 +59,10 @@ jest.mock('../AttachFileMenu', () => {
   };
 });
 
+let mockAttachFileProps: Record<string, unknown> = {};
 jest.mock('../AttachFile', () => {
-  return function MockAttachFile() {
+  return function MockAttachFile(props: Record<string, unknown>) {
+    mockAttachFileProps = props;
     return <div data-testid="attach-file" />;
   };
 });
@@ -77,6 +91,11 @@ describe('AttachFileChat', () => {
     mockAgentsMap = {};
     mockAgentQueryData = undefined;
     mockAttachFileMenuProps = {};
+    mockAttachFileProps = {};
+    mockProjectPermissions = {
+      permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
+      isLoading: false,
+    };
   });
 
   describe('rendering decisions', () => {
@@ -93,6 +112,53 @@ describe('AttachFileChat', () => {
     it('renders null for null conversation', () => {
       const { container } = renderComponent(null);
       expect(container.innerHTML).toBe('');
+    });
+
+    it('saves uploads to the project by default when the conversation is in a project', () => {
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        projectId: 'project-1',
+      });
+
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(true);
+      expect(screen.getByLabelText('com_ui_upload_keep_local')).toBeInTheDocument();
+    });
+
+    it('lets users keep uploads local from a project conversation', () => {
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        projectId: 'project-1',
+      });
+
+      fireEvent.click(screen.getByLabelText('com_ui_upload_keep_local'));
+
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
+      expect(screen.getByLabelText('com_ui_upload_save_to_project')).toBeInTheDocument();
+    });
+
+    it('keeps uploads local when the user cannot edit the project', () => {
+      mockProjectPermissions = {
+        permissions: { canView: true, canEdit: false, canDelete: false, canShare: false },
+        isLoading: false,
+      };
+
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        projectId: 'project-1',
+      });
+
+      const toggle = screen.getByLabelText('com_ui_upload_save_to_project');
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
+      expect(toggle).toBeDisabled();
+    });
+
+    it('passes project upload behavior to assistants uploads', () => {
+      renderComponent({ endpoint: EModelEndpoint.assistants, projectId: 'project-1' });
+
+      expect(mockAttachFileProps.saveUploadsToProject).toBe(true);
     });
   });
 

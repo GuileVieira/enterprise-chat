@@ -17,6 +17,9 @@ jest.mock('~/server/routes/files/multer', () => require(MOCKS).multerSetup());
 jest.mock('multer', () => require(MOCKS).multerLib());
 jest.mock('~/server/services/Endpoints/azureAssistants', () => require(MOCKS).assistantEndpoint());
 jest.mock('~/server/services/Endpoints/assistants', () => require(MOCKS).assistantEndpoint());
+jest.mock('~/server/services/PermissionService', () => ({
+  checkPermission: jest.fn(),
+}));
 
 describe('Convos Routes', () => {
   let app;
@@ -26,8 +29,10 @@ describe('Convos Routes', () => {
     deleteConvoSharedLink,
     deleteToolCalls,
     deleteConvos,
+    findProjectById,
     saveConvo,
   } = require('~/models');
+  const { checkPermission } = require('~/server/services/PermissionService');
 
   beforeAll(() => {
     convosRouter = require('../convos');
@@ -542,6 +547,26 @@ describe('Convos Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({ error: 'conversationId is required' });
+    });
+  });
+
+  describe('POST /update', () => {
+    it('should reject moving a conversation to a project without VIEW access', async () => {
+      findProjectById.mockResolvedValue({ _id: 'project-object-id', projectId: 'proj-private' });
+      checkPermission.mockResolvedValue(false);
+
+      const response = await request(app)
+        .post('/api/convos/update')
+        .send({
+          arg: {
+            conversationId: 'conv-123',
+            projectId: 'proj-private',
+          },
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({ error: 'Insufficient project permissions' });
+      expect(saveConvo).not.toHaveBeenCalled();
     });
   });
 });

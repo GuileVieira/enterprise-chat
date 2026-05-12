@@ -7,6 +7,7 @@ jest.mock('~/models', () => ({
   getProjects: jest.fn(),
   getProjectById: jest.fn(),
   findProjectById: jest.fn(),
+  getFiles: jest.fn(),
   createProject: jest.fn(),
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
@@ -17,6 +18,10 @@ jest.mock('~/models', () => ({
   deleteAclEntries: jest.fn(),
   getRoleByName: jest.fn(),
   Project: { find: () => ({ sort: () => ({ lean: mockProjectFind }) }) },
+}));
+
+jest.mock('~/server/services/PermissionService', () => ({
+  checkPermission: jest.fn(),
 }));
 
 jest.mock('~/server/middleware', () => ({
@@ -52,11 +57,13 @@ describe('Projects Routes', () => {
     updateProject,
     deleteProject,
     archiveProject,
+    getFiles,
     getUserPrincipals,
     findAccessibleResources,
     grantPermission,
     deleteAclEntries,
   } = require('~/models');
+  const { checkPermission } = require('~/server/services/PermissionService');
 
   beforeAll(() => {
     const projectsRouter = require('../projects');
@@ -202,6 +209,30 @@ describe('Projects Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProject);
       expect(updateProject).toHaveBeenCalledWith('proj-1', { name: 'Updated' });
+    });
+
+    it('should reject prompt groups the user cannot view', async () => {
+      checkPermission.mockResolvedValue(false);
+
+      const response = await request(app)
+        .put('/api/projects/proj-1')
+        .send({ promptGroupIds: ['507f1f77bcf86cd799439011'] });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Insufficient prompt group permissions');
+      expect(updateProject).not.toHaveBeenCalled();
+    });
+
+    it('should reject fileIds that are not already attached to the project', async () => {
+      getFiles.mockResolvedValue([]);
+
+      const response = await request(app)
+        .put('/api/projects/proj-1')
+        .send({ fileIds: ['foreign-file'] });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Insufficient file permissions');
+      expect(updateProject).not.toHaveBeenCalled();
     });
 
     it('should return 404 when project not found', async () => {

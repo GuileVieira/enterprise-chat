@@ -1,12 +1,20 @@
 const mongoose = require('mongoose');
-const { ResourceType, PrincipalType, PrincipalModel } = require('librechat-data-provider');
+const { createMethods } = require('@librechat/data-schemas');
+const {
+  ResourceType,
+  PrincipalType,
+  PrincipalModel,
+  AccessRoleIds,
+} = require('librechat-data-provider');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { fileAccess } = require('./fileAccess');
-const { User, Role, AclEntry } = require('~/db/models');
+const { User, Role, AclEntry, Project } = require('~/db/models');
 const { createAgent, createFile } = require('~/models');
+const { grantPermission } = require('~/server/services/PermissionService');
 
 describe('fileAccess middleware', () => {
   let mongoServer;
+  let methods;
   let req, res, next;
   let testUser, otherUser, thirdUser;
 
@@ -14,6 +22,7 @@ describe('fileAccess middleware', () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+    methods = createMethods(mongoose);
   });
 
   afterAll(async () => {
@@ -23,6 +32,7 @@ describe('fileAccess middleware', () => {
 
   beforeEach(async () => {
     await mongoose.connection.dropDatabase();
+    await methods.seedDefaultRoles();
 
     // Create test role
     await Role.create({
@@ -42,6 +52,7 @@ describe('fileAccess middleware', () => {
       name: 'Test User',
       username: 'testuser',
       role: 'test-role',
+      tenantId: 'tenant-a',
     });
 
     otherUser = await User.create({
@@ -49,6 +60,7 @@ describe('fileAccess middleware', () => {
       name: 'Other User',
       username: 'otheruser',
       role: 'test-role',
+      tenantId: 'tenant-a',
     });
 
     thirdUser = await User.create({
@@ -56,6 +68,7 @@ describe('fileAccess middleware', () => {
       name: 'Third User',
       username: 'thirduser',
       role: 'test-role',
+      tenantId: 'tenant-b',
     });
 
     // Setup request/response objects
@@ -271,6 +284,81 @@ describe('fileAccess middleware', () => {
       });
 
       req.params.file_id = 'shared_file_via_agent';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
+  describe('project-based file access', () => {
+    test('should allow access when the file belongs to a tenant-shared project', async () => {
+      const project = await Project.create({
+        projectId: 'project_shared_to_tenant',
+        name: 'Shared Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['project_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'project_file',
+        filepath: '/test/project.txt',
+        filename: 'project.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+      });
+
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: 'tenant-a',
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: otherUser._id,
+      });
+
+      req.params.file_id = 'project_file';
+      await fileAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.fileAccess).toBeDefined();
+      expect(req.fileAccess.file).toBeDefined();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    test('should deny access when user is outside the tenant-shared project', async () => {
+      const project = await Project.create({
+        projectId: 'project_shared_to_other_tenant',
+        name: 'Tenant A Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['tenant_project_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'tenant_project_file',
+        filepath: '/test/project.txt',
+        filename: 'project.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+      });
+
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: 'tenant-a',
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: otherUser._id,
+      });
+
+      req.user = { id: thirdUser._id.toString(), role: thirdUser.role };
+      req.params.file_id = 'tenant_project_file';
       await fileAccess(req, res, next);
 
       expect(next).not.toHaveBeenCalled();

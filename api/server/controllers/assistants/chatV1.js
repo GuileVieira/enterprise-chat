@@ -19,6 +19,8 @@ const {
   ContentTypes,
   EModelEndpoint,
   ViolationTypes,
+  ResourceType,
+  PermissionBits,
   ImageVisionTool,
   checkOpenAIStorage,
   AssistantStreamEvents,
@@ -39,6 +41,7 @@ const { createRun, StreamRunManager } = require('~/server/services/Runs');
 const { addTitle } = require('~/server/services/Endpoints/assistants');
 const { createRunBody } = require('~/server/services/createRunBody');
 const { sendResponse } = require('~/server/middleware/error');
+const { checkPermission } = require('~/server/services/PermissionService');
 const {
   createAutoRefillTransaction,
   findBalanceByUser,
@@ -339,7 +342,22 @@ const chatV1 = async (req, res) => {
       try {
         const convo = await getConvo(req.user.id, convoId);
         if (convo?.projectId) {
-          const project = await getProjectById(convo.projectId);
+          let project = await getProjectById(convo.projectId);
+          if (project?._id) {
+            const hasProjectAccess = await checkPermission({
+              userId: req.user.id,
+              role: req.user.role,
+              resourceType: ResourceType.PROJECT,
+              resourceId: project._id,
+              requiredPermission: PermissionBits.VIEW,
+            });
+            if (!hasProjectAccess) {
+              logger.warn(
+                `[/assistants/chat/] User ${req.user.id} denied project context ${convo.projectId}`,
+              );
+              project = null;
+            }
+          }
           if (project?.instructions) {
             projectInstructions = project.instructions;
           }
