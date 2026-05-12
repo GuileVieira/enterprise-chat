@@ -20,6 +20,7 @@ export * from './presets';
 export * from './prompts';
 export * from './textarea';
 export * from './messages';
+export * from './newConvo';
 export * from './redirect';
 export * from './languages';
 export * from './endpoints';

@@ -265,6 +265,7 @@ export default function useSelectMention({
 
       logger.info('conversation', 'Switching conversation to new preset', template);
       newConversation({
+        template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
         preset: newPreset,
         keepAddedConvos: isModular,
         disableParams,

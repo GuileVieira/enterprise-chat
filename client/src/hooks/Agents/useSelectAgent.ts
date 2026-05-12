@@ -24,21 +24,25 @@ export default function useSelectAgent() {
   const updateConversation = useCallback(
     async (agent: Partial<Agent>, template: Partial<TPreset | TConversation>) => {
       const conversation = await getConversation();
+      const nextTemplate = { ...template };
+      if (conversation?.projectId && !nextTemplate.projectId) {
+        nextTemplate.projectId = conversation.projectId;
+      }
       logger.log('conversation', 'Updating conversation with agent', agent);
       if (isAssistantsEndpoint(conversation?.endpoint)) {
         newConversation({
-          template: { ...(template as Partial<TConversation>) },
-          preset: template as Partial<TPreset>,
+          template: { ...(nextTemplate as Partial<TConversation>) },
+          preset: nextTemplate as Partial<TPreset>,
         });
         return;
       }
       const currentConvo = getDefaultConversation({
         conversation: { ...(conversation ?? {}), agent_id: agent.id },
-        preset: template,
+        preset: nextTemplate,
       });
       newConversation({
         template: currentConvo,
-        preset: template as Partial<TPreset>,
+        preset: nextTemplate as Partial<TPreset>,
         keepLatestMessage: true,
       });
     },
