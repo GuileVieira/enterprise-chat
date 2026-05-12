@@ -70,6 +70,7 @@ function MCPSelectContent() {
           disabled={isOpen}
           render={
             <Ariakit.MenuButton
+              type="button"
               className={cn(
                 'group relative inline-flex items-center justify-center gap-1.5',
                 'border border-border-medium text-sm font-medium transition-all',

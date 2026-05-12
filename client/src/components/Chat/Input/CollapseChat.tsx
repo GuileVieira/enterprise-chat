@@ -28,6 +28,7 @@ const CollapseChat = ({
         description={description}
         render={
           <button
+            type="button"
             aria-label={description}
             onClick={(event) => {
               event.preventDefault();

@@ -313,6 +313,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     <TooltipAnchor
       render={
         <Ariakit.MenuButton
+          type="button"
           disabled={isDisabled}
           id="tools-dropdown-button"
           aria-label="Tools Options"

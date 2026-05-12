@@ -48,6 +48,7 @@ const ArtifactsSubMenu = React.forwardRef<HTMLDivElement, ArtifactsSubMenuProps>
             hideOnClick={false}
             render={
               <Ariakit.MenuButton
+                type="button"
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   handleArtifactsToggle();

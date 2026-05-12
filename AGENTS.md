@@ -134,6 +134,7 @@ Quirks:
 - **Preserve `projectId` when switching conversation setup.** Agent/model/assistant/preset/spec/URL-param flows must carry the current `conversation.projectId`; use `prepareNewConvoTemplate()` for new-conversation templates that may be trimmed for param endpoints.
 - **Project chat uploads default to project storage.** If `conversation.projectId` exists and the user has `PROJECT EDIT`, uploads should send `projectId` by default; offer a local-only toggle and invalidate `DynamicQueryKeys.projectFiles(projectId)` after upload.
 - **Project selector state is not project membership.** `selectedProjectId` filters the sidebar; `conversation.projectId` is the source of truth for chat context, prompt injection, upload target, and ACL inheritance.
+- **ChatForm buttons must opt out of submit.** Inside `client/src/components/Chat/Input/ChatForm.tsx`, only `SendButton` should use `type="submit"`; menus, toggles, badges, uploads, prompt snippets, collapse, and action buttons must use `type="button"` to avoid accidental empty submits/regeneration.
 
 ---
 

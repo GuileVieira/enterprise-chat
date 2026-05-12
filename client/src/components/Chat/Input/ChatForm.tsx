@@ -160,6 +160,16 @@ const ChatForm = memo(function ChatForm({
   });
 
   const { submitMessage, submitPrompt } = useSubmitMessage();
+  const handleSubmit = methods.handleSubmit((data, event) => {
+    const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter as
+      | HTMLElement
+      | null
+      | undefined;
+    if (submitter && submitter.id !== 'send-button') {
+      return;
+    }
+    submitMessage(data);
+  });
 
   const handleKeyUp = useHandleKeyUp({
     index,
@@ -236,7 +246,7 @@ const ChatForm = memo(function ChatForm({
 
   return (
     <form
-      onSubmit={methods.handleSubmit(submitMessage)}
+      onSubmit={handleSubmit}
       className={cn(
         'mx-auto flex w-full flex-row gap-3 transition-[max-width] duration-300 sm:px-2',
         maximizeChatSpace ? 'max-w-full' : 'md:max-w-3xl xl:max-w-4xl',
