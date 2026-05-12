@@ -82,7 +82,7 @@ const canAccessResource = (options) => {
           `[canAccessResource] Resolving ${resourceType} custom ID ${rawResourceId} to ObjectId`,
         );
 
-        const resolutionResult = await idResolver(rawResourceId);
+        const resolutionResult = await idResolver(rawResourceId, req);
 
         if (!resolutionResult) {
           logger.warn(`[canAccessResource] ${resourceType} not found: ${rawResourceId}`);

@@ -1,7 +1,8 @@
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { PermissionBits, hasPermissions, ResourceType } = require('librechat-data-provider');
 const { getEffectivePermissions } = require('~/server/services/PermissionService');
-const { getAgents, getFiles, findProjectById } = require('~/models');
+const { getAgents, getFiles } = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 /**
  * Checks if user has access to a file through agent permissions
@@ -64,13 +65,13 @@ const checkAgentBasedFileAccess = async ({ userId, role, fileId }) => {
  * Checks if user has access to a file through project permissions.
  * Files inherit VIEW access from the project they belong to; conversations do not.
  */
-const checkProjectBasedFileAccess = async ({ userId, role, file }) => {
+const checkProjectBasedFileAccess = async ({ userId, role, file, user }) => {
   if (!file?.projectId) {
     return false;
   }
 
   try {
-    const project = await findProjectById(file.projectId);
+    const project = await findProjectForRequest({ projectId: file.projectId, user });
     if (!project?._id) {
       return false;
     }
@@ -116,7 +117,7 @@ const fileAccess = async (req, res, next) => {
       });
     }
 
-    const [file] = await getFiles({ file_id: fileId });
+    const [file] = await runAsSystem(async () => getFiles({ file_id: fileId }));
     if (!file) {
       return res.status(404).json({
         error: 'Not Found',
@@ -137,7 +138,12 @@ const fileAccess = async (req, res, next) => {
     }
 
     /** Project-based access (files inherit project permissions; conversations remain separate) */
-    const hasProjectAccess = await checkProjectBasedFileAccess({ userId, role: userRole, file });
+    const hasProjectAccess = await checkProjectBasedFileAccess({
+      userId,
+      role: userRole,
+      file,
+      user: req.user,
+    });
     if (hasProjectAccess) {
       req.fileAccess = { file };
       return next();

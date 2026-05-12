@@ -1,4 +1,5 @@
-import type { Model } from 'mongoose';
+import type { Model, Types } from 'mongoose';
+import { PrincipalType, ResourceType, PermissionBits } from 'librechat-data-provider';
 import logger from '~/config/winston';
 import { getTenantId } from '~/config/tenantContext';
 import type { IProject } from '~/types';
@@ -7,12 +8,12 @@ export interface ProjectDeps {
   removeAllPermissions: (params: { resourceType: string; resourceId: unknown }) => Promise<void>;
   grantPermission: (
     principalType: string,
-    principalId: string | any,
+    principalId: string | Types.ObjectId | null,
     resourceType: string,
-    resourceId: string | any,
+    resourceId: string | Types.ObjectId,
     permBits: number,
-    grantedBy: string | any,
-  ) => Promise<any>;
+    grantedBy: string | Types.ObjectId,
+  ) => Promise<unknown>;
 }
 
 export function createProjectMethods(mongoose: typeof import('mongoose'), deps?: ProjectDeps) {
@@ -75,15 +76,24 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
       await project.save();
 
       if (deps?.grantPermission) {
-        const { ResourceType, PermissionBits } = require('librechat-data-provider');
         await deps.grantPermission(
-          'user',
+          PrincipalType.USER,
           user,
           ResourceType.PROJECT,
           project._id,
           PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
           user,
         );
+        if (tenantId) {
+          await deps.grantPermission(
+            PrincipalType.TENANT,
+            tenantId,
+            ResourceType.PROJECT,
+            project._id,
+            PermissionBits.VIEW | PermissionBits.EDIT,
+            user,
+          );
+        }
       }
 
       return project.toObject();
@@ -123,7 +133,6 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
       await Conversation.updateMany({ projectId }, { $unset: { projectId: 1 } });
 
       if (deps?.removeAllPermissions) {
-        const { ResourceType } = require('librechat-data-provider');
         await deps.removeAllPermissions({
           resourceType: ResourceType.PROJECT,
           resourceId: deleted._id,

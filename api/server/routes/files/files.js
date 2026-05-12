@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const express = require('express');
 const { EnvVar } = require('@librechat/agents');
-const { logger, SystemCapabilities } = require('@librechat/data-schemas');
+const { logger, runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   refreshS3FileUrls,
   resolveUploadErrorMessage,
@@ -31,6 +31,10 @@ const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { hasAccessToFilesViaAgent } = require('~/server/services/Files');
+const {
+  findProjectForRequest,
+  userCanAccessProject,
+} = require('~/server/services/Projects/access');
 const { cleanFileName } = require('~/server/utils/files');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
@@ -40,30 +44,29 @@ const router = express.Router();
 
 const hasProjectAccess = async ({ req, projectId, requiredPermission }) => {
   if (!projectId) {
-    return false;
+    return { allowed: false, project: null };
+  }
+
+  const project = await findProjectForRequest({ projectId, user: req.user });
+  if (!project?._id) {
+    return { allowed: false, project: null };
   }
 
   try {
     const canManageProjects = await hasCapability(req.user, SystemCapabilities.MANAGE_PROJECTS);
     if (canManageProjects) {
-      return true;
+      return { allowed: true, project };
     }
   } catch (err) {
     logger.warn(`[/files] project capability check failed, denying bypass: ${err.message}`);
   }
 
-  const project = await db.findProjectById(projectId);
-  if (!project?._id) {
-    return false;
-  }
-
-  return await checkPermission({
-    userId: req.user.id,
-    role: req.user.role,
-    resourceType: ResourceType.PROJECT,
-    resourceId: project._id,
+  const allowed = await userCanAccessProject({
+    req,
+    project,
     requiredPermission,
   });
+  return { allowed, project };
 };
 
 router.get('/', async (req, res) => {
@@ -72,7 +75,7 @@ router.get('/', async (req, res) => {
     const filter = { user: req.user.id };
     if (req.query.projectId) {
       const projectId = req.query.projectId;
-      const allowed = await hasProjectAccess({
+      const { allowed, project } = await hasProjectAccess({
         req,
         projectId,
         requiredPermission: PermissionBits.VIEW,
@@ -81,14 +84,15 @@ router.get('/', async (req, res) => {
         return res.status(403).json({ message: 'Insufficient project permissions' });
       }
       delete filter.user;
-      const project = await db.findProjectById(projectId);
       const fileIds = Array.isArray(project?.fileIds) ? project.fileIds.filter(Boolean) : [];
-      filter.$or = [{ projectId }];
+      filter.$or = [{ projectId: project.projectId }];
       if (fileIds.length > 0) {
         filter.$or.push({ file_id: { $in: fileIds } });
       }
     }
-    const files = await db.getFiles(filter);
+    const files = req.query.projectId
+      ? await runAsSystem(async () => db.getFiles(filter))
+      : await db.getFiles(filter);
     if (appConfig.fileStrategy === FileSources.s3) {
       try {
         const cache = getLogStores(CacheKeys.S3_EXPIRY_INTERVAL);
@@ -224,7 +228,7 @@ router.delete('/', async (req, res) => {
       ];
 
       if (projectIds.length === 1) {
-        const allowed = await hasProjectAccess({
+        const { allowed } = await hasProjectAccess({
           req,
           projectId: projectIds[0],
           requiredPermission: PermissionBits.EDIT,
@@ -469,7 +473,7 @@ router.post('/', async (req, res) => {
     }
 
     if (metadata.projectId) {
-      const allowed = await hasProjectAccess({
+      const { allowed } = await hasProjectAccess({
         req,
         projectId: metadata.projectId,
         requiredPermission: PermissionBits.EDIT,

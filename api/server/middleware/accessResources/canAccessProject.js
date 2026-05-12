@@ -1,6 +1,6 @@
 const { ResourceType } = require('librechat-data-provider');
 const { canAccessResource } = require('./canAccessResource');
-const { findProjectById } = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 /**
  * Project ID resolver function
@@ -9,8 +9,8 @@ const { findProjectById } = require('~/models');
  * @param {string} projectCustomId - Custom project ID from route parameter
  * @returns {Promise<Object|null>} Project document with _id field, or null if not found
  */
-const resolveProjectId = async (projectCustomId) => {
-  return await findProjectById(projectCustomId);
+const resolveProjectId = async (projectCustomId, req) => {
+  return await findProjectForRequest({ projectId: projectCustomId, user: req.user });
 };
 
 /**
