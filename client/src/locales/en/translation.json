@@ -1932,6 +1932,7 @@
   "com_admin_remove_member_confirm": "Remove {{0}} from this group?",
   "com_admin_role": "Role",
   "com_admin_role_admin": "ADMIN",
+  "com_admin_role_owner": "OWNER",
   "com_admin_role_super_admin": "Super Admin",
   "com_admin_role_user": "USER",
   "com_admin_roles": "Roles",

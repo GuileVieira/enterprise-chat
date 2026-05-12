@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { SystemRoles } from 'librechat-data-provider';
 import {
   Buildings as Building2,
   Check,
@@ -20,7 +21,7 @@ interface CreateUserModalProps {
 }
 
 const NEW_TENANT_VALUE = '__new__';
-const DEFAULT_ROLE = 'USER';
+const DEFAULT_ROLE = SystemRoles.USER;
 
 const inputClassName =
   'focus:ring-ring-primary/20 mt-1 w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2.5 text-sm text-text-primary shadow-sm shadow-black/5 placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2';
@@ -277,8 +278,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                       onChange={(e) => setRole(e.target.value)}
                       className={selectClassName}
                     >
-                      <option value="USER">{localize('com_admin_role_user')}</option>
-                      <option value="ADMIN">{localize('com_admin_role_admin')}</option>
+                      <option value={SystemRoles.USER}>{localize('com_admin_role_user')}</option>
+                      <option value={SystemRoles.OWNER}>{localize('com_admin_role_owner')}</option>
+                      <option value={SystemRoles.ADMIN}>{localize('com_admin_role_admin')}</option>
                     </select>
                   </div>
 

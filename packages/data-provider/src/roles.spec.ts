@@ -10,7 +10,7 @@ const RESOURCE_MANAGEMENT_FIELDS: Permissions[] = [
 /**
  * Permission types where CREATE/SHARE/SHARE_PUBLIC must default to false for USER.
  * MEMORIES is excluded: its CREATE/READ/UPDATE apply to the user's own private data.
- * AGENTS/PROMPTS are excluded: CREATE=true is intentional (users own their agents/prompts).
+ * AGENTS/PROMPTS/PROJECTS are excluded: CREATE=true is intentional for owned resources.
  * Add new types here if they gate shared/multi-user resources.
  */
 const RESOURCE_PERMISSION_TYPES: PermissionTypes[] = [
@@ -89,7 +89,8 @@ describe('roleDefaults', () => {
           permType === PermissionTypes.MEMORIES ||
           permType === PermissionTypes.PROMPTS ||
           permType === PermissionTypes.AGENTS ||
-          permType === PermissionTypes.SKILLS;
+          permType === PermissionTypes.SKILLS ||
+          permType === PermissionTypes.PROJECTS;
 
         expect({
           permType,
@@ -100,6 +101,31 @@ describe('roleDefaults', () => {
             tracked: true,
           }),
         );
+      }
+    });
+  });
+
+  describe('OWNER role', () => {
+    const ownerPerms = roleDefaults[SystemRoles.OWNER].permissions;
+
+    it('should allow creating agents without public sharing by default', () => {
+      expect(ownerPerms[PermissionTypes.AGENTS]).toEqual(
+        expect.objectContaining({
+          [Permissions.USE]: true,
+          [Permissions.CREATE]: true,
+          [Permissions.SHARE]: false,
+          [Permissions.SHARE_PUBLIC]: false,
+        }),
+      );
+    });
+
+    it('should inherit non-agent defaults from USER', () => {
+      for (const permType of Object.values(PermissionTypes)) {
+        if (permType === PermissionTypes.AGENTS) {
+          continue;
+        }
+
+        expect(ownerPerms[permType]).toEqual(roleDefaults[SystemRoles.USER].permissions[permType]);
       }
     });
   });

@@ -23,6 +23,7 @@ const {
   ResourceType,
   AccessRoleIds,
   PrincipalType,
+  SystemRoles,
   EToolResources,
   PermissionBits,
   actionDelimiter,
@@ -95,7 +96,7 @@ const sanitizeViewerSkillScope = (agent, accessibleSkillSet) => {
 };
 
 const createAgentInRequestTenant = async (req, createAgent) => {
-  if (req.user?.tenantId || req.user?.role !== 'ADMIN') {
+  if (req.user?.tenantId || req.user?.role !== SystemRoles.ADMIN) {
     return await createAgent();
   }
 
@@ -414,24 +415,37 @@ const createAgentHandler = async (req, res) => {
     const agent = await createAgentInRequestTenant(req, createAgent);
 
     try {
-      await Promise.all([
-        grantPermission({
+      const permissionGrants = [
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.AGENT,
           resourceId: agent._id,
           accessRoleId: AccessRoleIds.AGENT_OWNER,
           grantedBy: userId,
-        }),
-        grantPermission({
+        },
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.REMOTE_AGENT,
           resourceId: agent._id,
           accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
           grantedBy: userId,
-        }),
-      ]);
+        },
+      ];
+
+      if (req.user.role === SystemRoles.OWNER && req.user.tenantId) {
+        permissionGrants.push({
+          principalType: PrincipalType.TENANT,
+          principalId: req.user.tenantId,
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: userId,
+        });
+      }
+
+      await Promise.all(permissionGrants.map((permissionGrant) => grantPermission(permissionGrant)));
       logger.debug(
         `[createAgent] Granted owner permissions to user ${userId} for agent ${agent.id}`,
       );
@@ -912,6 +926,10 @@ const cloneAgentToTenantHandler = async (req, res) => {
     const sourceAgent = await db.getAgent({ id });
     if (!sourceAgent) {
       return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    if (req.user.role !== SystemRoles.ADMIN && tenantId !== req.user.tenantId) {
+      return res.status(403).json({ error: 'Cannot share agent outside your tenant' });
     }
 
     await grantPermission({
