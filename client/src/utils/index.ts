@@ -11,6 +11,7 @@ export * from './files';
 export * from './latex';
 export * from './forms';
 export * from './roles';
+export * from './speech';
 export * from './errors';
 export * from './agents';
 export * from './drafts';

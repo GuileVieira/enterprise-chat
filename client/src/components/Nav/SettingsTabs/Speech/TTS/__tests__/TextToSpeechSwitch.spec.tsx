@@ -35,4 +35,14 @@ describe('TextToSpeechSwitch', () => {
 
     expect(mockSetTextToSpeech).toHaveBeenCalledWith(false);
   });
+
+  it('can be disabled by admin config', () => {
+    const { getByTestId } = render(
+      <RecoilRoot>
+        <TextToSpeechSwitch disabled />
+      </RecoilRoot>,
+    );
+
+    expect(getByTestId('TextToSpeech')).toBeDisabled();
+  });
 });

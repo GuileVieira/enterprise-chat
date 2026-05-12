@@ -146,7 +146,6 @@ router.post('/', checkProjectCreate, async (req, res) => {
  */
 router.get(
   '/:projectId',
-  checkProjectAccess,
   canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
   async (req, res) => {
     try {

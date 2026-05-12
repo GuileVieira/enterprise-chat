@@ -6,6 +6,7 @@ const { createMethods } = require('@librechat/data-schemas');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   SystemRoles,
+  FileSources,
   ResourceType,
   AccessRoleIds,
   PrincipalType,
@@ -75,6 +76,7 @@ describe('File Routes - Delete with Agent Access', () => {
   let Agent;
   let AclEntry;
   let User;
+  let Project;
   let methods;
   let modelsToCleanup = [];
 
@@ -101,6 +103,7 @@ describe('File Routes - Delete with Agent Access', () => {
     Agent = models.Agent;
     AclEntry = models.AclEntry;
     User = models.User;
+    Project = models.Project;
 
     // Seed default roles using our methods
     await methods.seedDefaultRoles();
@@ -113,7 +116,8 @@ describe('File Routes - Delete with Agent Access', () => {
         id: otherUserId || 'default-user',
         role: SystemRoles.USER,
       };
-      req.app = { locals: {} };
+      req.config = { fileStrategy: FileSources.local };
+      req.app.locals = req.app.locals || {};
       next();
     });
 
@@ -144,6 +148,7 @@ describe('File Routes - Delete with Agent Access', () => {
     // Clear database - clean up all test data
     await File.deleteMany({});
     await Agent.deleteMany({});
+    await Project.deleteMany({});
     await User.deleteMany({});
     await AclEntry.deleteMany({});
     // Don't delete AccessRole as they are seeded defaults needed for tests
@@ -174,6 +179,47 @@ describe('File Routes - Delete with Agent Access', () => {
       filepath: '/uploads/test.txt',
       bytes: 100,
       type: 'text/plain',
+    });
+  });
+
+  describe('GET /files', () => {
+    it('lists project-linked files for a user with project VIEW access', async () => {
+      const projectId = uuidv4();
+      const project = await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Shared Project',
+        fileIds: [fileId],
+      });
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: otherUserId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.map((file) => file.file_id)).toContain(fileId);
+    });
+
+    it('denies project file listing without project VIEW access', async () => {
+      const projectId = uuidv4();
+      await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Private Project',
+        fileIds: [fileId],
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toBe('Insufficient project permissions');
     });
   });
 

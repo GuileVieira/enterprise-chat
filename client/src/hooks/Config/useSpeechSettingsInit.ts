@@ -4,6 +4,8 @@ import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-que
 import { logger } from '~/utils';
 import store from '~/store';
 
+const adminControlledBooleans = new Set(['speechToText', 'textToSpeech']);
+
 /**
  * Initializes speech-related Recoil values from the server-side custom
  * configuration on first load (only when the user is authenticated)
@@ -37,6 +39,17 @@ export default function useSpeechSettingsInit(isAuthenticated: boolean) {
 
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'sttExternal' || key === 'ttsExternal') return;
+
+      if (adminControlledBooleans.has(key) && (value as unknown) === false) {
+        const setter = setters[key as keyof typeof setters] as
+          | ((value: boolean) => void)
+          | undefined;
+        if (setter) {
+          logger.log(`Disabling speech setting from config: ${key}`);
+          setter(false);
+        }
+        return;
+      }
 
       if (localStorage.getItem(key) !== null) return;
 

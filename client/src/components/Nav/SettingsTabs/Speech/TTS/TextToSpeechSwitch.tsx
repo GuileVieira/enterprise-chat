@@ -3,8 +3,10 @@ import store from '~/store';
 
 export default function TextToSpeechSwitch({
   onCheckedChange,
+  disabled = false,
 }: {
   onCheckedChange?: (value: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <ToggleSwitch
@@ -12,6 +14,7 @@ export default function TextToSpeechSwitch({
       localizationKey={'com_nav_text_to_speech' as const}
       switchId="TextToSpeech"
       onCheckedChange={onCheckedChange}
+      disabled={disabled}
       strongLabel={true}
     />
   );
