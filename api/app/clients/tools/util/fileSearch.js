@@ -70,6 +70,7 @@ const primeFiles = async (options) => {
     files.push({
       file_id: file.file_id,
       filename: file.filename,
+      projectId: file.projectId,
     });
   }
 
@@ -106,10 +107,11 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
           query,
           k: 5,
         };
-        if (!entity_id) {
+        const queryEntityId = file.projectId || entity_id;
+        if (!queryEntityId) {
           return body;
         }
-        body.entity_id = entity_id;
+        body.entity_id = queryEntityId;
         logger.debug(`[${Tools.file_search}] RAG API /query body`, body);
         return body;
       };

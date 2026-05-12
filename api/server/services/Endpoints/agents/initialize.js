@@ -234,9 +234,10 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       if (contextParts.length > 0) {
         primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
       }
-      const projectFileIds = await loadProjectFileIds(project, async () => {
+      const projectFileIds = await loadProjectFileIds(project, async (declaredFileIds = []) => {
         const files = await db.getFilesByProjectId(projectId);
-        return files?.map((f) => f.file_id) ?? [];
+        const fileIds = files?.map((f) => f.file_id) ?? [];
+        return [...new Set([...fileIds, ...declaredFileIds])];
       });
       if (projectFileIds && projectFileIds.length > 0) {
         const existingIds = new Set(requestFiles.map((f) => f.file_id));
