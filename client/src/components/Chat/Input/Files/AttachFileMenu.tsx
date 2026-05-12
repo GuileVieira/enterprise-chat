@@ -274,6 +274,7 @@ const AttachFileMenu = ({
     <TooltipAnchor
       render={
         <Ariakit.MenuButton
+          type="button"
           disabled={isUploadDisabled}
           id="attach-file-menu-button"
           aria-label="Attach File Options"

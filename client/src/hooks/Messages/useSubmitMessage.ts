@@ -22,6 +22,9 @@ export default function useSubmitMessage() {
         return console.warn('No data provided to submitMessage');
       }
       const rawText = data?.text?.trim() ?? '';
+      if (!rawText && !activeHiddenPrompt) {
+        return console.warn('No message text provided to submitMessage');
+      }
       const text =
         activeHiddenPrompt && (!rawText || rawText.startsWith('/'))
           ? activeHiddenPrompt.name
