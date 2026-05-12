@@ -228,5 +228,75 @@ describe('fileSearch.js - tuple return validation', () => {
       expect(artifact.file_search.sources[0].fileId).toBe('file-2');
       expect(artifact.file_search.sources[1].fileId).toBe('file-1');
     });
+
+    it('should query project files with the project entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Project file content',
+              metadata: { source: '/path/to/project.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-project', filename: 'project.docx', projectId: 'project-123' }],
+        entity_id: 'agent-456',
+      });
+
+      await fileSearchTool.func({ query: 'project query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+    });
+
+    it('should query non-project files with the agent entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Agent file content',
+              metadata: { source: '/path/to/agent.pdf', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-agent', filename: 'agent.pdf' }],
+        entity_id: 'agent-456',
+      });
+
+      await fileSearchTool.func({ query: 'agent query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-agent',
+          query: 'agent query',
+          k: 5,
+          entity_id: 'agent-456',
+        },
+        expect.any(Object),
+      );
+    });
   });
 });

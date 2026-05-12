@@ -1,14 +1,9 @@
 import React, { useState, useMemo, memo } from 'react';
-import { useRecoilState } from 'recoil';
 import { Check, Copy, PencilSimple, ArrowClockwise, ArrowBendUpLeft } from '@phosphor-icons/react';
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
-import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import { useGenerationsByLatest, useLocalize } from '~/hooks';
-import { Fork } from '~/components/Conversations';
-import MessageAudio from './MessageAudio';
 import Feedback from './Feedback';
-import { cn, isSpeechFeatureEnabled } from '~/utils';
-import store from '~/store';
+import { cn } from '~/utils';
 
 type THoverButtons = {
   isEditing: boolean;
@@ -36,38 +31,6 @@ type HoverButtonProps = {
   isLast?: boolean;
   className?: string;
   buttonStyle?: string;
-};
-
-const extractMessageContent = (message: TMessage): string => {
-  if (typeof message.content === 'string') {
-    return message.content;
-  }
-
-  if (Array.isArray(message.content)) {
-    return message.content
-      .map((part) => {
-        if (part == null) {
-          return '';
-        }
-        if (typeof part === 'string') {
-          return part;
-        }
-        if ('text' in part) {
-          return part.text || '';
-        }
-        if ('think' in part) {
-          const think = part.think;
-          if (typeof think === 'string') {
-            return think;
-          }
-          return think && 'text' in think ? think.text || '' : '';
-        }
-        return '';
-      })
-      .join('');
-  }
-
-  return message.text || '';
 };
 
 const HoverButton = memo(
@@ -111,7 +74,6 @@ const HoverButton = memo(
 HoverButton.displayName = 'HoverButton';
 
 const HoverButtons = ({
-  index,
   isEditing,
   enterEdit,
   copyToClipboard,
@@ -126,9 +88,6 @@ const HoverButtons = ({
 }: THoverButtons) => {
   const localize = useLocalize();
   const [isCopied, setIsCopied] = useState(false);
-  const [TextToSpeech] = useRecoilState<boolean>(store.textToSpeech);
-  const { data: speechConfig } = useGetCustomConfigSpeechQuery();
-  const canUseTextToSpeech = isSpeechFeatureEnabled(speechConfig, 'textToSpeech');
 
   const endpoint = useMemo(() => {
     if (!conversation) {
@@ -149,13 +108,8 @@ const HoverButtons = ({
     latestMessageId: latestMessageId,
   });
 
-  const {
-    hideEditButton,
-    regenerateEnabled,
-    continueSupported,
-    forkingSupported,
-    isEditableEndpoint,
-  } = generationCapabilities;
+  const { hideEditButton, regenerateEnabled, continueSupported, isEditableEndpoint } =
+    generationCapabilities;
 
   if (!conversation) {
     return null;
@@ -189,25 +143,6 @@ const HoverButtons = ({
 
   return (
     <div className="group visible flex justify-center gap-0.5 self-end focus-within:outline-none lg:justify-start">
-      {/* Text to Speech */}
-      {TextToSpeech && canUseTextToSpeech && (
-        <MessageAudio
-          index={index}
-          isLast={isLast}
-          messageId={message.messageId}
-          content={extractMessageContent(message)}
-          renderButton={(props) => (
-            <HoverButton
-              onClick={props.onClick}
-              title={props.title}
-              icon={props.icon}
-              isActive={props.isActive}
-              isLast={isLast}
-            />
-          )}
-        />
-      )}
-
       {/* Copy Button */}
       <HoverButton
         onClick={handleCopy}
@@ -242,15 +177,6 @@ const HoverButtons = ({
           className={isCreatedByUser ? '' : 'active'}
         />
       )}
-
-      {/* Fork Button */}
-      <Fork
-        messageId={message.messageId}
-        conversationId={conversation.conversationId}
-        forkingSupported={forkingSupported}
-        latestMessageId={latestMessageId}
-        isLast={isLast}
-      />
 
       {/* Feedback Buttons */}
       {!isCreatedByUser && handleFeedback != null && (

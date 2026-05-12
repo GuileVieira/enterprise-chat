@@ -76,12 +76,16 @@ jest.spyOn(logger, 'warn').mockImplementation(() => {});
 const mockGetConvo = jest.fn();
 const mockGetProjectById = jest.fn();
 const mockGetAllUserMemories = jest.fn();
+const mockGetFilesByProjectId = jest.fn();
+const mockGetFiles = jest.fn();
 
 jest.mock('~/models', () => ({
   ...jest.requireActual('~/models'),
   getConvo: (...args) => mockGetConvo(...args),
   getProjectById: (...args) => mockGetProjectById(...args),
   getAllUserMemories: (...args) => mockGetAllUserMemories(...args),
+  getFilesByProjectId: (...args) => mockGetFilesByProjectId(...args),
+  getFiles: (...args) => mockGetFiles(...args),
 }));
 
 const PRIMARY_ID = 'agent_primary';
@@ -989,5 +993,35 @@ describe('initializeClient — subagent loading', () => {
     expect(agentPassedToInitializeAgent.instructions).toBe(
       '## Project Memories\n\n- pref_1: Value A\n- pref_2: Value B\n\nAgent instructions.',
     );
+  });
+
+  it('should attach project files found by projectId and linked fileIds', async () => {
+    mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
+    mockGetProjectById.mockResolvedValue({
+      instructions: '',
+      fileIds: ['linked-file'],
+    });
+    mockGetFilesByProjectId.mockResolvedValue([{ file_id: 'project-file' }]);
+    mockGetFiles.mockResolvedValue([{ file_id: 'project-file' }, { file_id: 'linked-file' }]);
+
+    mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+
+    await initializeClient({
+      req: makeReq(),
+      res: {},
+      signal: new AbortController().signal,
+      endpointOption: makeEndpointOption(),
+    });
+
+    expect(mockGetFilesByProjectId).toHaveBeenCalledWith('proj-123');
+    expect(mockGetFiles).toHaveBeenCalledWith(
+      { file_id: { $in: ['project-file', 'linked-file'] } },
+      null,
+      { text: 0 },
+    );
+    expect(mockInitializeAgent.mock.calls[0][0].requestFiles).toEqual([
+      { file_id: 'project-file' },
+      { file_id: 'linked-file' },
+    ]);
   });
 });
