@@ -5,7 +5,14 @@ const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 const { v4: uuidv4 } = require('uuid');
 const { agentSchema, fileSchema } = require('@librechat/data-schemas');
-const { FileSources, PermissionBits } = require('librechat-data-provider');
+const {
+  FileSources,
+  PermissionBits,
+  PrincipalType,
+  ResourceType,
+  AccessRoleIds,
+  SystemRoles,
+} = require('librechat-data-provider');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Only mock the dependencies that are not database-related
@@ -78,6 +85,7 @@ const {
   createAgent: createAgentHandler,
   updateAgent: updateAgentHandler,
   getListAgents: getListAgentsHandler,
+  cloneAgentToTenant: cloneAgentToTenantHandler,
 } = require('./v1');
 
 const {
@@ -177,6 +185,34 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(agentInDb).toBeDefined();
       expect(agentInDb.name).toBe('Test Agent');
       expect(agentInDb.author.toString()).toBe(mockReq.user.id);
+    });
+
+    test('should share owner-created tenant agents with the tenant as viewer', async () => {
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.body = {
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+
+      const createdAgent = mockRes.json.mock.calls[0][0];
+      const agentInDb = await Agent.findOne({ id: createdAgent.id });
+      expect(agentInDb.tenantId).toBe('tenant-owner');
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-owner',
+          resourceType: ResourceType.AGENT,
+          resourceId: agentInDb._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
     });
 
     test('should fail creation when owner permission grant fails', async () => {
@@ -453,6 +489,62 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
           error: 'Invalid request data',
+        }),
+      );
+    });
+  });
+
+  describe('cloneAgentToTenantHandler', () => {
+    test('should reject non-admin users cloning an agent outside their tenant', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_cross_tenant',
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'tenant-owner',
+      });
+
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-other' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Cannot share agent outside your tenant',
+      });
+      expect(grantPermission).not.toHaveBeenCalled();
+    });
+
+    test('should allow non-admin users cloning an agent to their own tenant', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_own_tenant',
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'tenant-owner',
+      });
+
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-owner' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-owner',
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
         }),
       );
     });

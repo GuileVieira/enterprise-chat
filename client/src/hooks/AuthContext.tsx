@@ -61,6 +61,9 @@ const AuthContextProvider = ({
   const { data: adminRole = null } = useGetRole(SystemRoles.ADMIN, {
     enabled: !!(isAuthenticated && user?.role === SystemRoles.ADMIN),
   });
+  const { data: ownerRole = null } = useGetRole(SystemRoles.OWNER, {
+    enabled: !!(isAuthenticated && user?.role === SystemRoles.OWNER),
+  });
   const { data: customRole = null } = useGetRole(isCustomRole ? userRoleName : '_', {
     enabled: isCustomRole,
   });
@@ -278,6 +281,7 @@ const AuthContextProvider = ({
       roles: {
         [SystemRoles.USER]: userRole,
         [SystemRoles.ADMIN]: adminRole,
+        [SystemRoles.OWNER]: ownerRole,
         ...(isCustomRole && customRole ? { [userRoleName]: customRole } : {}),
       },
       isAuthenticated,

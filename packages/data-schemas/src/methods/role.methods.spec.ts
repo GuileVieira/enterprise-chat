@@ -397,14 +397,17 @@ describe('initializeRoles', () => {
     await initializeRoles();
 
     const adminRole = await getRoleByName(SystemRoles.ADMIN);
+    const ownerRole = await getRoleByName(SystemRoles.OWNER);
     const userRole = await getRoleByName(SystemRoles.USER);
 
     expect(adminRole).toBeTruthy();
+    expect(ownerRole).toBeTruthy();
     expect(userRole).toBeTruthy();
 
     // Check if all permission types exist in the permissions field
     Object.values(PermissionTypes).forEach((permType) => {
       expect(adminRole.permissions[permType]).toBeDefined();
+      expect(ownerRole.permissions[permType]).toBeDefined();
       expect(userRole.permissions[permType]).toBeDefined();
     });
 
@@ -412,6 +415,8 @@ describe('initializeRoles', () => {
     expect(adminRole.permissions[PermissionTypes.PROMPTS]?.SHARE).toBe(true);
     expect(adminRole.permissions[PermissionTypes.BOOKMARKS]?.USE).toBe(true);
     expect(adminRole.permissions[PermissionTypes.AGENTS]?.CREATE).toBe(true);
+    expect(ownerRole.permissions[PermissionTypes.AGENTS]?.CREATE).toBe(true);
+    expect(ownerRole.permissions[PermissionTypes.AGENTS]?.SHARE_PUBLIC).toBe(false);
   });
 
   it('should not modify existing permissions for existing roles', async () => {
@@ -466,15 +471,19 @@ describe('initializeRoles', () => {
     await initializeRoles();
 
     const adminRoles = await Role.find({ name: SystemRoles.ADMIN });
+    const ownerRoles = await Role.find({ name: SystemRoles.OWNER });
     const userRoles = await Role.find({ name: SystemRoles.USER });
 
     expect(adminRoles).toHaveLength(1);
+    expect(ownerRoles).toHaveLength(1);
     expect(userRoles).toHaveLength(1);
 
     const adminPerms = adminRoles[0].toObject().permissions as RolePermissions;
+    const ownerPerms = ownerRoles[0].toObject().permissions as RolePermissions;
     const userPerms = userRoles[0].toObject().permissions as RolePermissions;
     Object.values(PermissionTypes).forEach((permType) => {
       expect(adminPerms[permType]).toBeDefined();
+      expect(ownerPerms[permType]).toBeDefined();
       expect(userPerms[permType]).toBeDefined();
     });
   });
