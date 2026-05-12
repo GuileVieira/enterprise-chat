@@ -123,6 +123,7 @@ Quirks:
 - **Project ACL is inherited by project files.** File access must allow `FILE VIEW` directly or `PROJECT VIEW` via `file.projectId`; never require users to own a project file when the project is tenant-shared.
 - **Project context injection requires `PROJECT VIEW`.** Agents/assistants may load project instructions, memories, and files only after checking effective project permissions.
 - **Mutating project contents requires project access.** Upload/link files with `projectId` only after project permission checks; reject attaching foreign file IDs or prompt groups the user cannot view.
+- **Project detail and file list must follow project ACL.** `GET /api/projects/:projectId` should rely on project `VIEW` ACL, not global project feature gates after a project is already shared. `GET /api/files?projectId=...` must list files by both `file.projectId` and `project.fileIds` for legacy/linked files.
 
 ### Frontend-specific rules
 - All user-facing strings must use `useLocalize()`.
@@ -135,6 +136,7 @@ Quirks:
 - **Project chat uploads default to project storage.** If `conversation.projectId` exists and the user has `PROJECT EDIT`, uploads should send `projectId` by default; offer a local-only toggle and invalidate `DynamicQueryKeys.projectFiles(projectId)` after upload.
 - **Project selector state is not project membership.** `selectedProjectId` filters the sidebar; `conversation.projectId` is the source of truth for chat context, prompt injection, upload target, and ACL inheritance.
 - **ChatForm buttons must opt out of submit.** Inside `client/src/components/Chat/Input/ChatForm.tsx`, only `SendButton` should use `type="submit"`; menus, toggles, badges, uploads, prompt snippets, collapse, and action buttons must use `type="button"` to avoid accidental empty submits/regeneration.
+- **Admin-disabled speech overrides local preferences.** `speechTab.speechToText=false` and `speechTab.textToSpeech=false` must hide/disable STT/TTS UI even if localStorage has user toggles enabled.
 
 ---
 

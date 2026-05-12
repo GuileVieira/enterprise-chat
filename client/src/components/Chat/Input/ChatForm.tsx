@@ -4,6 +4,7 @@ import { TextareaAutosize } from '@librechat/client';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { Sparkle, X } from '@phosphor-icons/react';
 import { Constants, isAssistantsEndpoint, isAgentsEndpoint } from 'librechat-data-provider';
+import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter, ConvoGenerator } from '~/common';
 import {
@@ -23,7 +24,7 @@ import {
   useFocusChatEffect,
 } from '~/hooks';
 import PendingManualSkillsChips from './PendingManualSkillsChips';
-import { cn, getModelSpec, removeFocusRings } from '~/utils';
+import { cn, getModelSpec, isSpeechFeatureEnabled, removeFocusRings } from '~/utils';
 import { useGetStartupConfig, useProjectByIdQuery } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
 import AttachFileChat from './Files/AttachFileChat';
@@ -91,6 +92,9 @@ const ChatForm = memo(function ChatForm({
     store.activeHiddenPromptByIndex(index),
   );
   const [showStopButton, setShowStopButton] = useRecoilState(store.showStopButtonByIndex(index));
+  const { data: speechConfig } = useGetCustomConfigSpeechQuery();
+  const canUseSpeechToText = isSpeechFeatureEnabled(speechConfig, 'speechToText');
+  const canUseTextToSpeech = isSpeechFeatureEnabled(speechConfig, 'textToSpeech');
   const plusPopoverAtom = useMemo(() => store.showPlusPopoverFamily(index), [index]);
   const mentionPopoverAtom = useMemo(() => store.showMentionPopoverFamily(index), [index]);
 
@@ -421,7 +425,7 @@ const ChatForm = memo(function ChatForm({
                 }
               />
               <div className="mx-auto flex" />
-              {SpeechToText && (
+              {SpeechToText && canUseSpeechToText && (
                 <AudioRecorder
                   methods={methods}
                   ask={submitMessage}
@@ -445,7 +449,9 @@ const ChatForm = memo(function ChatForm({
                 )}
               </div>
             </div>
-            {TextToSpeech && automaticPlayback && <StreamAudio index={index} />}
+            {TextToSpeech && canUseTextToSpeech && automaticPlayback && (
+              <StreamAudio index={index} />
+            )}
           </div>
         </div>
       </div>

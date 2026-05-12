@@ -23,7 +23,7 @@ import {
 } from './STT';
 import ConversationModeSwitch from './ConversationModeSwitch';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
+import { cn, isSpeechFeatureDisabled } from '~/utils';
 import store from '~/store';
 
 function Speech() {
@@ -53,6 +53,8 @@ function Speech() {
   const [languageTTS, setLanguageTTS] = useRecoilState<string>(store.languageTTS);
   const [automaticPlayback, setAutomaticPlayback] = useRecoilState(store.automaticPlayback);
   const [playbackRate, setPlaybackRate] = useRecoilState(store.playbackRate);
+  const speechToTextDisabled = isSpeechFeatureDisabled(data, 'speechToText');
+  const textToSpeechDisabled = isSpeechFeatureDisabled(data, 'textToSpeech');
 
   const updateSetting = useCallback(
     (key: string, newValue: string | number) => {
@@ -188,11 +190,11 @@ function Speech() {
 
       <Tabs.Content value={'simple'} tabIndex={-1}>
         <div className="flex flex-col gap-3 text-sm text-text-primary">
-          <SpeechToTextSwitch />
+          <SpeechToTextSwitch disabled={speechToTextDisabled} />
           <EngineSTTDropdown external={sttExternal} />
           <LanguageSTTDropdown />
           <div className="h-px bg-border-medium" role="none" />
-          <TextToSpeechSwitch />
+          <TextToSpeechSwitch disabled={textToSpeechDisabled} />
           <EngineTTSDropdown external={ttsExternal} />
           <VoiceDropdown />
         </div>
@@ -202,7 +204,7 @@ function Speech() {
         <div className="flex flex-col gap-3 text-sm text-text-primary">
           <ConversationModeSwitch />
           <div className="mt-2 h-px bg-border-medium" role="none" />
-          <SpeechToTextSwitch />
+          <SpeechToTextSwitch disabled={speechToTextDisabled} />
 
           <EngineSTTDropdown external={sttExternal} />
 
@@ -220,7 +222,7 @@ function Speech() {
           </div>
           <div className="h-px bg-border-medium" role="none" />
           <div className="pb-3">
-            <TextToSpeechSwitch />
+            <TextToSpeechSwitch disabled={textToSpeechDisabled} />
           </div>
           <AutomaticPlaybackSwitch />
           <EngineTTSDropdown external={ttsExternal} />

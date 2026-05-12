@@ -2,11 +2,12 @@ import React, { useState, useMemo, memo } from 'react';
 import { useRecoilState } from 'recoil';
 import { Check, Copy, PencilSimple, ArrowClockwise, ArrowBendUpLeft } from '@phosphor-icons/react';
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
+import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import { useGenerationsByLatest, useLocalize } from '~/hooks';
 import { Fork } from '~/components/Conversations';
 import MessageAudio from './MessageAudio';
 import Feedback from './Feedback';
-import { cn } from '~/utils';
+import { cn, isSpeechFeatureEnabled } from '~/utils';
 import store from '~/store';
 
 type THoverButtons = {
@@ -126,6 +127,8 @@ const HoverButtons = ({
   const localize = useLocalize();
   const [isCopied, setIsCopied] = useState(false);
   const [TextToSpeech] = useRecoilState<boolean>(store.textToSpeech);
+  const { data: speechConfig } = useGetCustomConfigSpeechQuery();
+  const canUseTextToSpeech = isSpeechFeatureEnabled(speechConfig, 'textToSpeech');
 
   const endpoint = useMemo(() => {
     if (!conversation) {
@@ -187,7 +190,7 @@ const HoverButtons = ({
   return (
     <div className="group visible flex justify-center gap-0.5 self-end focus-within:outline-none lg:justify-start">
       {/* Text to Speech */}
-      {TextToSpeech && (
+      {TextToSpeech && canUseTextToSpeech && (
         <MessageAudio
           index={index}
           isLast={isLast}

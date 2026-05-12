@@ -70,16 +70,22 @@ router.get('/', async (req, res) => {
     const appConfig = req.config;
     const filter = { user: req.user.id };
     if (req.query.projectId) {
+      const projectId = req.query.projectId;
       const allowed = await hasProjectAccess({
         req,
-        projectId: req.query.projectId,
+        projectId,
         requiredPermission: PermissionBits.VIEW,
       });
       if (!allowed) {
         return res.status(403).json({ message: 'Insufficient project permissions' });
       }
       delete filter.user;
-      filter.projectId = req.query.projectId;
+      const project = await db.findProjectById(projectId);
+      const fileIds = Array.isArray(project?.fileIds) ? project.fileIds.filter(Boolean) : [];
+      filter.$or = [{ projectId }];
+      if (fileIds.length > 0) {
+        filter.$or.push({ file_id: { $in: fileIds } });
+      }
     }
     const files = await db.getFiles(filter);
     if (appConfig.fileStrategy === FileSources.s3) {
