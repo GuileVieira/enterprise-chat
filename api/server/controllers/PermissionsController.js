@@ -27,6 +27,7 @@ const {
   searchEntraIdPrincipals,
 } = require('~/server/services/GraphApiService');
 const db = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 /**
  * Generic controller for resource permission endpoints
@@ -565,7 +566,7 @@ const getUserEffectivePermissions = async (req, res) => {
 
     let effectiveResourceId = resourceId;
     if (resourceType === ResourceType.PROJECT) {
-      const project = await db.findProjectById(resourceId);
+      const project = await findProjectForRequest({ projectId: resourceId, user: req.user });
       if (project) {
         effectiveResourceId = project._id.toString();
       }

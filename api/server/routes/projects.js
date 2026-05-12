@@ -1,5 +1,5 @@
 const express = require('express');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { generateCheckAccess } = require('@librechat/api');
 const {
   PermissionBits,
@@ -23,6 +23,7 @@ const {
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 const { checkPermission } = require('~/server/services/PermissionService');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
@@ -64,10 +65,21 @@ const validateProjectUpdate = async ({ req, res }) => {
 
   if (Array.isArray(fileIds) && fileIds.length > 0) {
     const uniqueFileIds = [...new Set(fileIds)];
-    const files = await getFiles(
-      { file_id: { $in: uniqueFileIds }, projectId: req.params.projectId },
-      null,
-      { text: 0 },
+    const project =
+      req.resourceAccess?.resourceInfo ||
+      (await findProjectForRequest({ projectId: req.params.projectId, user: req.user }));
+    const existingProjectFileIds = Array.isArray(project?.fileIds)
+      ? project.fileIds.filter(Boolean)
+      : [];
+    const files = await runAsSystem(async () =>
+      getFiles(
+        {
+          file_id: { $in: uniqueFileIds },
+          $or: [{ projectId: project?.projectId }, { file_id: { $in: existingProjectFileIds } }],
+        },
+        null,
+        { text: 0 },
+      ),
     );
     if ((files?.length ?? 0) !== uniqueFileIds.length) {
       res.status(403).json({ error: 'Insufficient file permissions' });
@@ -151,6 +163,7 @@ router.get(
     try {
       const project =
         req.resourceAccess?.resourceInfo ||
+        (await findProjectForRequest({ projectId: req.params.projectId, user: req.user })) ||
         (await getProjectById(req.params.projectId)) ||
         (await findProjectById(req.params.projectId));
       if (project) {

@@ -2,6 +2,7 @@ const express = require('express');
 const request = require('supertest');
 
 const mockProjectFind = jest.fn();
+const mockFindProjectForRequest = jest.fn();
 
 jest.mock('~/models', () => ({
   getProjects: jest.fn(),
@@ -43,6 +44,10 @@ jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
   },
 }));
 
+jest.mock('~/server/services/Projects/access', () => ({
+  findProjectForRequest: (...args) => mockFindProjectForRequest(...args),
+}));
+
 jest.mock('~/server/middleware/roles/capabilities', () => ({
   hasCapability: jest.fn().mockResolvedValue(false),
 }));
@@ -77,6 +82,7 @@ describe('Projects Routes', () => {
     jest.clearAllMocks();
     getUserPrincipals.mockResolvedValue([]);
     findAccessibleResources.mockResolvedValue([]);
+    mockFindProjectForRequest.mockResolvedValue(null);
   });
 
   describe('GET /', () => {

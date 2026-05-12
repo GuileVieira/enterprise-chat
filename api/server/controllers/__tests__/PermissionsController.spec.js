@@ -22,6 +22,7 @@ jest.mock('@librechat/api', () => ({
 const mockBulkUpdateResourcePermissions = jest.fn();
 const mockGrantPermission = jest.fn();
 const mockEnsurePrincipalExists = jest.fn();
+const mockFindProjectForRequest = jest.fn();
 
 jest.mock('~/server/services/PermissionService', () => ({
   bulkUpdateResourcePermissions: (...args) => mockBulkUpdateResourcePermissions(...args),
@@ -32,6 +33,10 @@ jest.mock('~/server/services/PermissionService', () => ({
   getAvailableRoles: jest.fn(),
   findAccessibleResources: jest.fn(),
   getResourcePermissionsMap: jest.fn(),
+}));
+
+jest.mock('~/server/services/Projects/access', () => ({
+  findProjectForRequest: (...args) => mockFindProjectForRequest(...args),
 }));
 
 const mockRemoveAgentFromUserFavorites = jest.fn();
@@ -679,10 +684,11 @@ describe('PermissionsController', () => {
 
     beforeEach(() => {
       PermissionService.getEffectivePermissions.mockResolvedValue(7); // VIEW | EDIT | DELETE
+      mockFindProjectForRequest.mockResolvedValue(null);
     });
 
     it('resolves project UUID to MongoDB _id', async () => {
-      db.findProjectById.mockResolvedValue({ _id: projectObjectId, projectId: projectUuid });
+      mockFindProjectForRequest.mockResolvedValue({ _id: projectObjectId, projectId: projectUuid });
 
       const req = createMockReq({
         params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
@@ -692,7 +698,10 @@ describe('PermissionsController', () => {
 
       await getUserEffectivePermissions(req, res);
 
-      expect(db.findProjectById).toHaveBeenCalledWith(projectUuid);
+      expect(mockFindProjectForRequest).toHaveBeenCalledWith({
+        projectId: projectUuid,
+        user: { id: userId, role },
+      });
       expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
         userId,
         role,
@@ -704,8 +713,6 @@ describe('PermissionsController', () => {
     });
 
     it('uses original resourceId if project is not found', async () => {
-      db.findProjectById.mockResolvedValue(null);
-
       const req = createMockReq({
         params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
         user: { id: userId, role },
@@ -732,7 +739,7 @@ describe('PermissionsController', () => {
 
       await getUserEffectivePermissions(req, res);
 
-      expect(db.findProjectById).not.toHaveBeenCalled();
+      expect(mockFindProjectForRequest).not.toHaveBeenCalled();
       expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
         userId,
         role,

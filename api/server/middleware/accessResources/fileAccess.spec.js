@@ -73,7 +73,7 @@ describe('fileAccess middleware', () => {
 
     // Setup request/response objects
     req = {
-      user: { id: testUser._id.toString(), role: testUser.role },
+      user: { id: testUser._id.toString(), role: testUser.role, tenantId: testUser.tenantId },
       params: {},
     };
     res = {
@@ -484,7 +484,11 @@ describe('fileAccess middleware', () => {
         grantedBy: otherUser._id,
       });
 
-      req.user = { id: thirdUser._id.toString(), role: thirdUser.role };
+      req.user = {
+        id: thirdUser._id.toString(),
+        role: thirdUser.role,
+        tenantId: thirdUser.tenantId,
+      };
       req.params.file_id = 'tenant_project_file';
       await fileAccess(req, res, next);
 

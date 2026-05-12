@@ -1,9 +1,9 @@
 const bcrypt = require('bcryptjs');
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger, getTenantId, runAsSystem } = require('@librechat/data-schemas');
 const { errorsToString } = require('librechat-data-provider');
 const { Strategy: PassportLocalStrategy } = require('passport-local');
 const { isEnabled, checkEmailConfig, comparePassword } = require('@librechat/api');
-const { findUser, updateUser } = require('~/models');
+const { findUser, findUsers, updateUser } = require('~/models');
 const { loginSchema } = require('./validators');
 
 // Unix timestamp for 2024-06-07 15:20:18 Eastern Time
@@ -12,6 +12,38 @@ const verificationEnabledTimestamp = 1717788018;
 async function validateLoginRequest(req) {
   const { error } = loginSchema.safeParse(req.body);
   return error ? errorsToString(error.errors) : null;
+}
+
+function getLoginTenantId() {
+  const tenantId = getTenantId();
+  if (tenantId) {
+    return tenantId;
+  }
+
+  const envTenantId = process.env.ORQEST_TENANT_ID ?? process.env.LOCAL_TENANT_ID;
+  return envTenantId?.trim() || undefined;
+}
+
+async function findLoginUser(email, tenantId) {
+  if (tenantId) {
+    return {
+      reason: 'ok',
+      user: await findUser({ email, tenantId }, '+password'),
+    };
+  }
+
+  const users = await findUsers({ email }, '+password', { limit: 2, sort: { createdAt: -1 } });
+  if (users.length > 1) {
+    return {
+      user: null,
+      reason: 'tenant-required',
+    };
+  }
+
+  return {
+    reason: 'ok',
+    user: users[0] ?? null,
+  };
 }
 
 async function passportLogin(req, email, password, done) {
@@ -23,11 +55,22 @@ async function passportLogin(req, email, password, done) {
       return done(null, false, { message: validationError });
     }
 
-    // Login runs before tenantContextMiddleware can set ALS context, so we look
-    // up users across all tenants under SYSTEM context. Downstream auth steps
-    // re-establish the proper tenantId from req.user.
+    const normalizedEmail = email.trim();
+    const tenantId = getLoginTenantId();
+
+    // Login runs before authenticated tenant middleware. Pre-auth routes can
+    // provide tenant ALS via X-Tenant-Id; local dev can set ORQEST_TENANT_ID.
     const result = await runAsSystem(async () => {
-      const user = await findUser({ email: email.trim() }, '+password');
+      const loginUser = await findLoginUser(normalizedEmail, tenantId);
+      if (loginUser.reason === 'tenant-required') {
+        return {
+          user: null,
+          info: { message: 'Tenant context required for this email.' },
+          reason: 'tenant-required',
+        };
+      }
+
+      const user = loginUser.user;
       if (!user) {
         return { user: null, info: { message: 'Email does not exist.' }, reason: 'not-found' };
       }
@@ -64,6 +107,11 @@ async function passportLogin(req, email, password, done) {
       return { user, info: null, reason: 'ok' };
     });
 
+    if (result.reason === 'tenant-required') {
+      logError('Passport Local Strategy - Tenant context required', { email });
+      logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
+      return done(null, false, result.info);
+    }
     if (result.reason === 'not-found' || result.reason === 'no-password') {
       logError(`Passport Local Strategy - ${result.reason}`, { email });
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
@@ -102,3 +150,5 @@ module.exports = () =>
     },
     passportLogin,
   );
+
+module.exports.passportLogin = passportLogin;

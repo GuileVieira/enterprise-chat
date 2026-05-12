@@ -3,7 +3,7 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
-const { createMethods, tenantStorage } = require('@librechat/data-schemas');
+const { createMethods, runAsSystem, tenantStorage } = require('@librechat/data-schemas');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   SystemRoles,
@@ -82,6 +82,7 @@ describe('File Routes - Delete with Agent Access', () => {
   let Project;
   let methods;
   let modelsToCleanup = [];
+  let currentTenantId;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -118,9 +119,13 @@ describe('File Routes - Delete with Agent Access', () => {
       req.user = {
         id: otherUserId?.toString() || 'default-user',
         role: SystemRoles.USER,
+        ...(currentTenantId && { tenantId: currentTenantId }),
       };
       req.config = { fileStrategy: FileSources.local };
       req.app.locals = req.app.locals || {};
+      if (currentTenantId) {
+        return tenantStorage.run({ tenantId: currentTenantId }, async () => next());
+      }
       next();
     });
 
@@ -147,6 +152,7 @@ describe('File Routes - Delete with Agent Access', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    currentTenantId = undefined;
 
     // Clear database - clean up all test data
     await File.deleteMany({});
@@ -208,6 +214,47 @@ describe('File Routes - Delete with Agent Access', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.map((file) => file.file_id)).toContain(fileId);
+    });
+
+    it('lists legacy project files missing tenantId for tenant project viewers', async () => {
+      currentTenantId = 'tenant-a';
+      const projectId = uuidv4();
+      const legacyFileId = uuidv4();
+      const project = await tenantStorage.run({ tenantId: currentTenantId }, async () =>
+        Project.create({
+          user: authorId,
+          projectId,
+          name: 'Tenant Project',
+          fileIds: [legacyFileId],
+        }),
+      );
+      await runAsSystem(async () =>
+        File.create({
+          user: authorId,
+          file_id: legacyFileId,
+          filename: 'legacy.txt',
+          filepath: '/uploads/legacy.txt',
+          bytes: 100,
+          type: 'text/plain',
+        }),
+      );
+      await runAsSystem(async () =>
+        User.updateOne({ _id: otherUserId }, { $set: { tenantId: currentTenantId } }),
+      );
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: currentTenantId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.map((file) => file.file_id)).toContain(legacyFileId);
     });
 
     it('denies project file listing without project VIEW access', async () => {
