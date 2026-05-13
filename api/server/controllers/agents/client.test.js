@@ -210,6 +210,27 @@ describe('AgentClient - titleConvo', () => {
       );
     });
 
+    it('should include the conversation content in the pt-BR title prompt', async () => {
+      mockReq.config = {
+        endpoints: {
+          [EModelEndpoint.openAI]: {
+            titleModel: 'gpt-3.5-turbo',
+          },
+        },
+      };
+
+      const text = 'Como faço uma análise de contrato?';
+      const abortController = new AbortController();
+
+      await client.titleConvo({ text, abortController });
+
+      expect(mockRun.generateTitle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          titlePrompt: expect.stringContaining('{convo}'),
+        }),
+      );
+    });
+
     it('should use agent model when titleModel is not provided', async () => {
       // Remove titleModel from config
       mockReq.config = {

@@ -58,7 +58,7 @@ const { getMCPManager } = require('~/config');
 const db = require('~/models');
 
 const DEFAULT_PT_BR_TITLE_PROMPT =
-  'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.';
+  'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.\n\nConversa:\n{convo}';
 
 const DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE =
   'Mensagem do usuário: {input}\n\nResposta do assistente: {output}';
