@@ -5,7 +5,7 @@ cache: true
 summarization:
   enabled: true
   provider: OpenRouter
-  model: google/gemini-3.1-flash-lite
+  model: anthropic/claude-haiku-4.5
 
 interface:
   modelSelect: true
@@ -52,7 +52,7 @@ endpoints:
       models:
         default:
           - 'google/gemini-3-flash-preview'
-          - 'google/gemini-3.1-flash-lite'
+          - 'anthropic/claude-haiku-4.5'
           - 'google/gemini-3.1-pro-preview-customtools'
           - 'anthropic/claude-opus-4.7'
         fetch: false
@@ -73,7 +73,7 @@ modelSpecs:
       label: 'Padrão (1x)'
       preset:
         endpoint: 'OpenRouter'
-        model: 'google/gemini-3-flash-preview'
+        model: 'anthropic/claude-haiku-4.5'
       default: true
     - name: 'avancado'
       label: 'Avançado (3x)'
