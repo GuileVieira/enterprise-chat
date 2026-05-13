@@ -2,7 +2,12 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EModelEndpoint, EToolResources, Providers } from 'librechat-data-provider';
+import {
+  EModelEndpoint,
+  EToolResources,
+  Providers,
+  fileConfig as defaultFileConfig,
+} from 'librechat-data-provider';
 import AttachFileMenu from '../AttachFileMenu';
 
 jest.mock('~/hooks', () => ({
@@ -38,8 +43,8 @@ jest.mock('@librechat/client', () => {
         props.children,
         R.createElement('input', {
           ref,
-          multiple: true,
           type: 'file',
+          multiple: true,
           'data-testid': 'file-input',
           onChange: props.handleFileChange,
         }),
@@ -91,6 +96,9 @@ const mockUseSharePointFileHandlingNoChatContext = jest.requireMock(
 const mockUseGetStartupConfig = jest.requireMock('~/data-provider').useGetStartupConfig;
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const defaultEndpointFileConfig = defaultFileConfig.endpoints.default;
+let capturedAccept = '';
+let inputClickSpy: jest.SpyInstance;
 
 function setupMocks(overrides: { provider?: string } = {}) {
   const translations: Record<string, string> = {
@@ -148,7 +156,19 @@ function openMenu() {
 }
 
 describe('AttachFileMenu', () => {
-  beforeEach(jest.clearAllMocks);
+  beforeEach(() => {
+    jest.clearAllMocks();
+    capturedAccept = '';
+    inputClickSpy = jest.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (
+      this: HTMLInputElement,
+    ) {
+      capturedAccept = this.accept;
+    });
+  });
+
+  afterEach(() => {
+    inputClickSpy.mockRestore();
+  });
 
   describe('Upload to Provider vs Upload Image', () => {
     it('shows "Upload to Provider" when endpointType is custom (resolved from agent provider)', () => {
@@ -164,6 +184,31 @@ describe('AttachFileMenu', () => {
       renderMenu({ endpointType: EModelEndpoint.openAI });
       openMenu();
       expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
+    });
+
+    it('allows DOCX in the native picker for provider uploads when endpoint config allows it', () => {
+      setupMocks({ provider: EModelEndpoint.openAI });
+      renderMenu({
+        endpointType: EModelEndpoint.openAI,
+        endpointFileConfig: defaultEndpointFileConfig,
+      });
+      openMenu();
+
+      fireEvent.click(screen.getByText('Upload to Provider'));
+
+      expect(capturedAccept).toContain(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      );
+    });
+
+    it('keeps image-only uploads restricted to images', () => {
+      setupMocks({ provider: 'unknown-provider' });
+      renderMenu({ endpointType: 'unknown-type', endpointFileConfig: defaultEndpointFileConfig });
+      openMenu();
+
+      fireEvent.click(screen.getByText('Upload Image'));
+
+      expect(capturedAccept).toBe('image/*,.heif,.heic');
     });
 
     it('shows "Upload to Provider" when endpointType is anthropic', () => {
