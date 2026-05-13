@@ -58,8 +58,8 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'google/gemini-3-flash-preview'
-      titlePrompt: 'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.'
-      titlePromptTemplate: 'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa com base na mensagem do usuário. O título deve ter entre 3 e 7 palavras, refletir o tema principal e NÃO usar aspas. Responda APENAS com o título, sem explicações.\n\nMensagem do usuário: {input}\n\nResposta do assistente: {output}'
+      titlePrompt: 'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.\n\nConversa:\n{convo}'
+      titlePromptTemplate: 'Mensagem do usuário: {input}\n\nResposta do assistente: {output}'
       dropParams: ['stop']
       modelDisplayLabel: 'OpenRouter'
 
