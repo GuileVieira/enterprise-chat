@@ -1,20 +1,30 @@
 jest.mock('@librechat/data-schemas', () => ({
-  logger: { error: jest.fn() },
+  logger: { error: jest.fn(), warn: jest.fn() },
 }));
 
 jest.mock('~/server/services/PermissionService', () => ({
   checkPermission: jest.fn(),
+  getEffectivePermissions: jest.fn(),
+}));
+
+jest.mock('~/server/services/Projects/access', () => ({
+  findProjectForRequest: jest.fn(),
 }));
 
 jest.mock('~/models', () => ({
   getAgent: jest.fn(),
   getFiles: jest.fn(),
+  getUserById: jest.fn(),
 }));
 
 const { logger } = require('@librechat/data-schemas');
 const { Constants, PermissionBits, ResourceType } = require('librechat-data-provider');
-const { checkPermission } = require('~/server/services/PermissionService');
-const { getAgent, getFiles } = require('~/models');
+const {
+  checkPermission,
+  getEffectivePermissions,
+} = require('~/server/services/PermissionService');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
+const { getAgent, getFiles, getUserById } = require('~/models');
 const { filterFilesByAgentAccess, hasAccessToFilesViaAgent } = require('./permissions');
 
 const AUTHOR_ID = 'author-user-id';
@@ -47,6 +57,8 @@ beforeEach(() => {
     makeFile('attached-3', AUTHOR_ID),
     makeFile('not-attached', AUTHOR_ID),
   ]);
+  getUserById.mockResolvedValue({ _id: USER_ID, tenantId: 'tenant-1' });
+  getEffectivePermissions.mockResolvedValue(0);
 });
 
 describe('filterFilesByAgentAccess', () => {
