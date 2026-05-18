@@ -1,5 +1,5 @@
 import { WebSearchToolDefinition, CalculatorToolDefinition } from '@librechat/agents';
-import { geminiToolkit } from '~/tools/toolkits/gemini';
+import { geminiToolkit, openRouterGeminiToolkit } from '~/tools/toolkits/gemini';
 import { oaiToolkit } from '~/tools/toolkits/oai';
 
 /** Extended JSON Schema type that includes standard validation keywords */
@@ -531,6 +531,13 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     schema: geminiToolkit.gemini_image_gen.schema,
     toolType: 'builtin',
     responseFormat: geminiToolkit.gemini_image_gen.responseFormat,
+  },
+  openrouter_gemini_image_gen: {
+    name: openRouterGeminiToolkit.openrouter_gemini_image_gen.name,
+    description: openRouterGeminiToolkit.openrouter_gemini_image_gen.description,
+    schema: openRouterGeminiToolkit.openrouter_gemini_image_gen.schema,
+    toolType: 'builtin',
+    responseFormat: openRouterGeminiToolkit.openrouter_gemini_image_gen.responseFormat,
   },
 };
 

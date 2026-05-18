@@ -91,9 +91,9 @@
     "authConfig": []
   },
   {
-    "name": "Calculator",
+    "name": "Calculadora",
     "pluginKey": "calculator",
-    "description": "Perform simple and complex mathematical calculations.",
+    "description": "Executa cálculos matemáticos simples e complexos.",
     "icon": "assets/calculator.svg",
     "authConfig": []
   },
@@ -180,5 +180,19 @@
     "description": "Read active ad-level insights from Meta Graph API using the tenant Meta access token.",
     "icon": "assets/logo.svg",
     "authConfig": []
+  },
+  {
+    "name": "Premium Image Generator",
+    "pluginKey": "openrouter_gemini_image_gen",
+    "description": "Generate premium images with Nano Banana Pro through OpenRouter. Costs 3x tokens.",
+    "icon": "assets/premium-image-generator.svg",
+    "authConfig": [
+      {
+        "authField": "OPENROUTER_KEY",
+        "label": "OpenRouter API Key",
+        "description": "Your OpenRouter API key from <a href='https://openrouter.ai/keys' target='_blank'>OpenRouter</a>. If omitted, the server OPENROUTER_KEY environment variable may be used.",
+        "optional": true
+      }
+    ]
   }
 ]

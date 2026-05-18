@@ -2,6 +2,10 @@
 version: 1.3.9
 cache: true
 
+includedTools:
+  - calculator
+  - openrouter_gemini_image_gen
+
 summarization:
   enabled: true
   provider: OpenRouter

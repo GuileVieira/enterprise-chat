@@ -1728,6 +1728,7 @@ export const imageGenTools = new Set([
   'stable-diffusion',
   'flux',
   'gemini_image_gen',
+  'openrouter_gemini_image_gen',
 ]);
 
 /**

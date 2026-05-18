@@ -14,6 +14,7 @@ const DuckDuckGoSearch = require('./structured/DuckDuckGoSearch');
 const createOpenAIImageTools = require('./structured/OpenAIImageTools');
 const TavilySearchResults = require('./structured/TavilySearchResults');
 const createGeminiImageTool = require('./structured/GeminiImageGen');
+const createOpenRouterGeminiImageTool = require('./structured/OpenRouterGeminiImageGen');
 
 module.exports = {
   ...manifest,
@@ -31,4 +32,5 @@ module.exports = {
   TavilySearchResults,
   createOpenAIImageTools,
   createGeminiImageTool,
+  createOpenRouterGeminiImageTool,
 };

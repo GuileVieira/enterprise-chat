@@ -924,6 +924,7 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
   if (imageFiles.length > 0) {
     const hasOaiImageGen = filteredTools.includes('image_gen_oai');
     const hasGeminiImageGen = filteredTools.includes('gemini_image_gen');
+    const hasOpenRouterGeminiImageGen = filteredTools.includes('openrouter_gemini_image_gen');
 
     if (hasOaiImageGen) {
       const toolContext = buildImageToolContext({
@@ -944,6 +945,17 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       });
       if (toolContext) {
         dynamicToolContextMap.gemini_image_gen = toolContext;
+      }
+    }
+
+    if (hasOpenRouterGeminiImageGen) {
+      const toolContext = buildImageToolContext({
+        imageFiles,
+        toolName: 'openrouter_gemini_image_gen',
+        contextDescription: 'image context',
+      });
+      if (toolContext) {
+        toolContextMap.openrouter_gemini_image_gen = toolContext;
       }
     }
   }

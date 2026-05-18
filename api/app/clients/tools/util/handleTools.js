@@ -36,6 +36,7 @@ const {
   TavilySearchResults,
   createGeminiImageTool,
   createOpenAIImageTools,
+  createOpenRouterGeminiImageTool,
 } = require('../');
 const { createMCPTool, createMCPTools, resolveConfigServers } = require('~/server/services/MCP');
 const { createFileSearchTool, primeFiles: primeSearchFiles } = require('./fileSearch');
@@ -228,6 +229,27 @@ const loadTools = async ({
         fileStrategy,
       });
     },
+    openrouter_gemini_image_gen: async (toolContextMap) => {
+      const authFields = getAuthFields('openrouter_gemini_image_gen');
+      const authValues = await loadAuthValues({ userId: user, authFields, throwError: false });
+      const imageFiles = options.tool_resources?.[EToolResources.image_edit]?.files ?? [];
+      const toolContext = buildImageToolContext({
+        imageFiles,
+        toolName: 'openrouter_gemini_image_gen',
+        contextDescription: 'image context',
+      });
+      if (toolContext) {
+        toolContextMap.openrouter_gemini_image_gen = toolContext;
+      }
+      return createOpenRouterGeminiImageTool({
+        ...authValues,
+        isAgent: !!agent,
+        req: options.req,
+        imageFiles,
+        userId: user,
+        fileStrategy,
+      });
+    },
   };
 
   const requestedTools = {};
@@ -251,6 +273,7 @@ const loadTools = async ({
     dalle: imageGenOptions,
     'stable-diffusion': imageGenOptions,
     gemini_image_gen: imageGenOptions,
+    openrouter_gemini_image_gen: imageGenOptions,
     meta_ads_get_insights: {
       tenantId: options.req?.user?.tenantId,
       getTenantSecret,
