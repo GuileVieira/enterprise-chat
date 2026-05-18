@@ -6,14 +6,20 @@ jest.mock('~/server/services/PermissionService', () => ({
   checkPermission: jest.fn(),
 }));
 
+jest.mock('~/server/services/Projects/access', () => ({
+  findProjectForRequest: jest.fn(),
+}));
+
 jest.mock('~/models', () => ({
   getAgent: jest.fn(),
+  getUserById: jest.fn(),
 }));
 
 const { logger } = require('@librechat/data-schemas');
 const { Constants, PermissionBits, ResourceType } = require('librechat-data-provider');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { getAgent } = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
+const { getAgent, getUserById } = require('~/models');
 const { filterFilesByAgentAccess, hasAccessToFilesViaAgent } = require('./permissions');
 
 const AUTHOR_ID = 'author-user-id';
@@ -40,6 +46,7 @@ function makeAgent(overrides = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getUserById.mockResolvedValue({ _id: USER_ID, tenantId: 'tenant-1' });
 });
 
 describe('filterFilesByAgentAccess', () => {

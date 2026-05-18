@@ -1,8 +1,8 @@
 const { logger } = require('@librechat/data-schemas');
 const { PermissionBits, ResourceType, isEphemeralAgentId } = require('librechat-data-provider');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { getAgent } = require('~/models');
-
+const { getAgent, getUserById } = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 /**
  * @param {Object} agent - The agent document (lean)
  * @returns {Set<string>} All file IDs attached across all resource types
@@ -109,29 +109,56 @@ const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
   }
 
   // Separate owned files from files that need access check
-  const filesToCheck = [];
+  const filesToCheckAgent = [];
   const ownedFiles = [];
+  const projectAccessibleFiles = [];
+
+  const user = await getUserById(userId);
 
   for (const file of files) {
     if (file.user && file.user.toString() === userId.toString()) {
       ownedFiles.push(file);
     } else {
-      filesToCheck.push(file);
+      let hasProjectAccess = false;
+      if (file.projectId) {
+        try {
+          const project = await findProjectForRequest({ projectId: file.projectId, user });
+          if (project?._id) {
+            const permissions = await getEffectivePermissions({
+              userId,
+              role,
+              resourceType: ResourceType.PROJECT,
+              resourceId: project._id,
+            });
+            if (hasPermissions(permissions, PermissionBits.VIEW)) {
+              hasProjectAccess = true;
+            }
+          }
+        } catch (err) {
+          logger.warn(`[filterFilesByAgentAccess] Project check failed for file ${file.file_id}:`, err);
+        }
+      }
+
+      if (hasProjectAccess) {
+        projectAccessibleFiles.push(file);
+      } else {
+        filesToCheckAgent.push(file);
+      }
     }
   }
 
-  if (filesToCheck.length === 0) {
-    return ownedFiles;
+  if (filesToCheckAgent.length === 0) {
+    return [...ownedFiles, ...projectAccessibleFiles];
   }
 
   // Batch check access for all non-owned files
-  const fileIds = filesToCheck.map((f) => f.file_id);
+  const fileIds = filesToCheckAgent.map((f) => f.file_id);
   const accessMap = await hasAccessToFilesViaAgent({ userId, role, fileIds, agentId });
 
   // Filter files based on access
-  const accessibleFiles = filesToCheck.filter((file) => accessMap.get(file.file_id));
+  const accessibleFiles = filesToCheckAgent.filter((file) => accessMap.get(file.file_id));
 
-  return [...ownedFiles, ...accessibleFiles];
+  return [...ownedFiles, ...projectAccessibleFiles, ...accessibleFiles];
 };
 
 module.exports = {
