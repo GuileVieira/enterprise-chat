@@ -17,18 +17,18 @@ import InvocationModePicker from './InvocationModePicker';
 import CategorySelector from './CategorySelector';
 import { cn } from '~/utils';
 
-const DEFAULT_BODY = `# Overview
+const DEFAULT_BODY = `# Visao geral
 
-Describe what this skill does and how it should be applied.
+Descreva o que esta skill faz e como ela deve ser aplicada.
 
-## When to use
+## Quando usar
 
-- List concrete signals that should trigger this skill
-- Add examples that make the trigger unambiguous
+- Liste sinais concretos que devem acionar esta skill
+- Adicione exemplos para deixar o acionamento claro
 
-## How to apply
+## Como aplicar
 
-Walk through the steps the agent should take.
+Descreva os passos que o agente deve seguir.
 `;
 
 interface CreateSkillFormValues {

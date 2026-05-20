@@ -32,6 +32,11 @@ interface:
   marketplace:
     use: true
   fileCitations: true
+  skills:
+    use: true
+    create: true
+    share: true
+    public: false
 
 endpoints:
   agents:
@@ -41,7 +46,7 @@ endpoints:
     maxCitations: 30
     maxCitationsPerFile: 7
     minRelevanceScore: 0.45
-    capabilities: ['deferred_tools', 'execute_code', 'file_search', 'actions', 'tools', 'artifacts']
+    capabilities: ['deferred_tools', 'execute_code', 'file_search', 'actions', 'tools', 'artifacts', 'skills']
 
   custom:
     - name: 'OpenRouter'

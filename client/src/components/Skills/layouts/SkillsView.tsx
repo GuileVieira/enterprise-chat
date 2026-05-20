@@ -6,7 +6,7 @@ import { useHasAccess, useAuthContext, useLocalize } from '~/hooks';
 import SkillFileViewer from '~/components/Skills/display/SkillFileViewer';
 import SkillDetail from '~/components/Skills/display/SkillDetail';
 import SkillState from '~/components/Skills/display/SkillState';
-import { SkillForm } from '~/components/Skills/forms';
+import { CreateSkillForm, SkillForm } from '~/components/Skills/forms';
 
 /**
  * Skill detail / edit route content.
@@ -19,6 +19,7 @@ import { SkillForm } from '~/components/Skills/forms';
 export default function SkillsView() {
   const { skillId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const localize = useLocalize();
   const { user, roles } = useAuthContext();
 
@@ -26,8 +27,13 @@ export default function SkillsView() {
     permissionType: PermissionTypes.SKILLS,
     permission: Permissions.USE,
   });
+  const hasCreateAccess = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.CREATE,
+  });
 
   const isEdit = location.pathname.endsWith('/edit');
+  const isCreate = skillId === 'new';
 
   const rolesLoaded = user?.role != null && roles?.[user.role] != null;
   if (!rolesLoaded) {
@@ -40,6 +46,18 @@ export default function SkillsView() {
 
   if (!hasAccess) {
     return <Navigate to="/c/new" replace />;
+  }
+
+  if (isCreate) {
+    if (!hasCreateAccess) {
+      return <Navigate to="/skills" replace />;
+    }
+
+    return (
+      <div className="flex h-full w-full flex-col overflow-y-auto bg-presentation">
+        <CreateSkillForm onCancel={() => navigate('/skills', { replace: true })} />
+      </div>
+    );
   }
 
   // No skill selected — empty state
