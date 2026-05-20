@@ -1347,14 +1347,10 @@ async function loadToolsForExecution({
   ].filter((name) => toolNames.includes(name));
   const isPTCRequested = ptcToolNames.length > 0;
 
-  let enabledCapabilities;
-  if (actionsEnabled === undefined || isPTCRequested) {
-    enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
-  }
+  const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
   if (actionsEnabled === undefined) {
     actionsEnabled = enabledCapabilities.has(AgentCapabilities.actions);
   }
-  const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
   const webSearchEnabled = enabledCapabilities.has(AgentCapabilities.web_search);
 
   const isPTC =

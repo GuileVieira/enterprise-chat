@@ -84,9 +84,13 @@ const startServer = async () => {
    * `runAsSystem` is required — `File` is tenant-isolated and strict
    * mode rejects unscoped queries. Lazy sweep in the preview endpoint
    * covers anything younger than the boot cutoff. */
-  runAsSystem(sweepOrphanedPreviews).catch((err) => {
-    logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
-  });
+  if (typeof sweepOrphanedPreviews === 'function') {
+    runAsSystem(sweepOrphanedPreviews).catch((err) => {
+      logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
+    });
+  } else {
+    logger.warn('[sweepOrphanedPreviews] Skipping background sweep; method is unavailable');
+  }
   const appConfig = await getAppConfig({ baseOnly: true });
   initializeFileStorage(appConfig);
   await runAsSystem(async () => {
@@ -298,6 +302,10 @@ const startServer = async () => {
  */
 startServer().catch((err) => {
   logger.error('Failed to start server:', err);
+  if (err?.stack) {
+    logger.error(err.stack);
+    console.error(err.stack);
+  }
   process.exit(1);
 });
 

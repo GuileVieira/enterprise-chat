@@ -152,7 +152,7 @@ export function useParseArgs(args?: string | Record<string, unknown>): ParsedArg
   }, [args]);
 }
 
-const ERROR_PATTERNS = /^(Traceback|Error:|Exception:|.*Error:)/m;
+export const ERROR_PATTERNS = /^(Traceback|Error:|Exception:|.*Error:)/m;
 
 export default function ExecuteCode({
   isSubmitting,
