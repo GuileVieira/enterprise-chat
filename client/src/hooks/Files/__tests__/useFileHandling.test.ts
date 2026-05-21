@@ -288,7 +288,7 @@ describe('useFileHandling', () => {
       expect(formData.get('endpoint')).toBe('default');
     });
 
-    it('sends the conversation projectId by default', async () => {
+    it('keeps chat uploads local by default when conversation has a projectId', async () => {
       mockConversation = {
         conversationId: 'convo-1',
         endpoint: 'openAI',
@@ -306,10 +306,10 @@ describe('useFileHandling', () => {
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
       const formData: FormData = mockMutate.mock.calls[0][0];
-      expect(formData.get('projectId')).toBe('project-123');
+      expect(formData.get('projectId')).toBeNull();
     });
 
-    it('keeps uploads local when project saving is disabled', async () => {
+    it('sends the conversation projectId when project saving is explicitly enabled', async () => {
       mockConversation = {
         conversationId: 'convo-1',
         endpoint: 'openAI',
@@ -317,7 +317,7 @@ describe('useFileHandling', () => {
       };
 
       const useFileHandling = await loadHook();
-      const { result } = renderHook(() => useFileHandling({ saveUploadsToProject: false }));
+      const { result } = renderHook(() => useFileHandling({ saveUploadsToProject: true }));
 
       const textFile = new File(['hello'], 'test.txt', { type: 'text/plain' });
 
@@ -327,7 +327,7 @@ describe('useFileHandling', () => {
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
       const formData: FormData = mockMutate.mock.calls[0][0];
-      expect(formData.get('projectId')).toBeNull();
+      expect(formData.get('projectId')).toBe('project-123');
     });
   });
 });

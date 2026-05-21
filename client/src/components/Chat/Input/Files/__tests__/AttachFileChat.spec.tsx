@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EModelEndpoint, mergeFileConfig } from 'librechat-data-provider';
@@ -114,28 +114,16 @@ describe('AttachFileChat', () => {
       expect(container.innerHTML).toBe('');
     });
 
-    it('saves uploads to the project by default when the conversation is in a project', () => {
+    it('keeps project chat uploads local and hides project-save controls', () => {
       renderComponent({
         endpoint: EModelEndpoint.agents,
         agent_id: 'agent-1',
         projectId: 'project-1',
       });
-
-      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(true);
-      expect(screen.getByLabelText('com_ui_upload_keep_local')).toBeInTheDocument();
-    });
-
-    it('lets users keep uploads local from a project conversation', () => {
-      renderComponent({
-        endpoint: EModelEndpoint.agents,
-        agent_id: 'agent-1',
-        projectId: 'project-1',
-      });
-
-      fireEvent.click(screen.getByLabelText('com_ui_upload_keep_local'));
 
       expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
-      expect(screen.getByLabelText('com_ui_upload_save_to_project')).toBeInTheDocument();
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('com_ui_upload_keep_local')).not.toBeInTheDocument();
     });
 
     it('keeps uploads local when the user cannot edit the project', () => {
@@ -150,15 +138,15 @@ describe('AttachFileChat', () => {
         projectId: 'project-1',
       });
 
-      const toggle = screen.getByLabelText('com_ui_upload_save_to_project');
       expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
-      expect(toggle).toBeDisabled();
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
     });
 
-    it('passes project upload behavior to assistants uploads', () => {
+    it('keeps assistants project chat uploads local', () => {
       renderComponent({ endpoint: EModelEndpoint.assistants, projectId: 'project-1' });
 
-      expect(mockAttachFileProps.saveUploadsToProject).toBe(true);
+      expect(mockAttachFileProps.saveUploadsToProject).toBe(false);
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
     });
   });
 

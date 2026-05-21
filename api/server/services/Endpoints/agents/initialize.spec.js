@@ -305,6 +305,11 @@ describe('initializeClient — subagent loading', () => {
     _resumableStreamId: null,
   });
 
+  const makeReq = () => ({
+    ...makeSubagentReq(),
+    body: { conversationId: 'conv_1', files: [] },
+  });
+
   const makeEndpointOption = () => ({
     agent: Promise.resolve({
       id: PRIMARY_ID,
@@ -995,7 +1000,7 @@ describe('initializeClient — subagent loading', () => {
     );
   });
 
-  it('should attach project files found by projectId and linked fileIds', async () => {
+  it('should not attach project files automatically to new chat requests', async () => {
     mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
     mockGetProjectById.mockResolvedValue({
       instructions: '',
@@ -1013,15 +1018,8 @@ describe('initializeClient — subagent loading', () => {
       endpointOption: makeEndpointOption(),
     });
 
-    expect(mockGetFilesByProjectId).toHaveBeenCalledWith('proj-123');
-    expect(mockGetFiles).toHaveBeenCalledWith(
-      { file_id: { $in: ['project-file', 'linked-file'] } },
-      null,
-      { text: 0 },
-    );
-    expect(mockInitializeAgent.mock.calls[0][0].requestFiles).toEqual([
-      { file_id: 'project-file' },
-      { file_id: 'linked-file' },
-    ]);
+    expect(mockGetFilesByProjectId).not.toHaveBeenCalled();
+    expect(mockGetFiles).not.toHaveBeenCalled();
+    expect(mockInitializeAgent.mock.calls[0][0].requestFiles).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger } = require('@librechat/data-schemas');
 const { createContentAggregator } = require('@librechat/agents');
 const {
   loadSkillStates,
@@ -12,7 +12,6 @@ const {
   resolveAgentScopedSkillIds,
   buildAgentContextAttachmentsByAgentId,
   loadProjectMemories,
-  loadProjectFileIds,
 } = require('@librechat/api');
 const {
   ResourceType,
@@ -329,22 +328,6 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       }
       if (contextParts.length > 0) {
         primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
-      }
-      const projectFileIds = await loadProjectFileIds(project, async (declaredFileIds = []) => {
-        const files = await runAsSystem(() => db.getFilesByProjectId(projectId));
-        const fileIds = files?.map((f) => f.file_id) ?? [];
-        return [...new Set([...fileIds, ...declaredFileIds])];
-      });
-      if (projectFileIds && projectFileIds.length > 0) {
-        const existingIds = new Set(requestFiles.map((f) => f.file_id));
-        const newProjectFiles = await runAsSystem(() => db.getFiles({ file_id: { $in: projectFileIds } }, null, {
-          text: 0,
-        }));
-        for (const file of newProjectFiles ?? []) {
-          if (!existingIds.has(file.file_id)) {
-            requestFiles.push(file);
-          }
-        }
       }
     }
   } catch (err) {

@@ -220,7 +220,7 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
 
     const projectId =
       metadata.projectId ||
-      (params?.saveUploadsToProject !== false ? (conversation?.projectId ?? '') : '');
+      (params?.saveUploadsToProject === true ? (conversation?.projectId ?? '') : '');
     if (projectId && formData.get('projectId') == null) {
       formData.append('projectId', projectId);
     }

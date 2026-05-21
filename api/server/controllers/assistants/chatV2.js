@@ -8,7 +8,6 @@ const {
   getBalanceConfig,
   getModelMaxTokens,
   loadProjectMemories,
-  loadProjectFileIds,
 } = require('@librechat/api');
 const {
   Time,
@@ -46,7 +45,6 @@ const {
   createAutoRefillTransaction,
   getProjectById,
   getAllUserMemories,
-  getFilesByProjectId,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -209,8 +207,6 @@ const chatV2 = async (req, res) => {
     /** Load project context if conversation belongs to a project */
     let projectInstructions = '';
     let projectMemories = '';
-    /** @type {string[]} */
-    let projectFileIds = [];
     if (convoId) {
       try {
         const convo = await getConvo(req.user.id, convoId);
@@ -244,13 +240,6 @@ const chatV2 = async (req, res) => {
           );
           if (memoriesText) {
             projectMemories = memoriesText;
-          }
-          const fileIds = await loadProjectFileIds(project, async (_ids) => {
-            const files = await getFilesByProjectId(convo.projectId);
-            return files?.map((f) => f.file_id) ?? [];
-          });
-          if (fileIds) {
-            projectFileIds = fileIds;
           }
         }
       } catch (err) {
@@ -296,8 +285,8 @@ const chatV2 = async (req, res) => {
         }
       }
 
-      if (files.length || thread_file_ids.length || projectFileIds.length) {
-        attachedFileIds = new Set([...file_ids, ...thread_file_ids, ...projectFileIds]);
+      if (files.length || thread_file_ids.length) {
+        attachedFileIds = new Set([...file_ids, ...thread_file_ids]);
 
         let attachmentIndex = 0;
         for (const file of files) {

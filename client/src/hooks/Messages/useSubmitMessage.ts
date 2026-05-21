@@ -10,7 +10,7 @@ export default function useSubmitMessage() {
   const { user } = useAuthContext();
   const methods = useChatFormContext();
   const { conversation: addedConvo } = useAddedChatContext();
-  const { ask, index, getMessages, setMessages } = useChatContext();
+  const { ask, index, files, getMessages, setMessages } = useChatContext();
   const latestMessage = useRecoilValue(store.latestMessageFamily(index));
 
   const activeHiddenPrompt = useRecoilValue(store.activeHiddenPromptByIndex(index));
@@ -22,7 +22,8 @@ export default function useSubmitMessage() {
         return console.warn('No data provided to submitMessage');
       }
       const rawText = data?.text?.trim() ?? '';
-      if (!rawText && !activeHiddenPrompt) {
+      const hasAttachedFiles = files != null && files.size > 0;
+      if (!rawText && !activeHiddenPrompt && !hasAttachedFiles) {
         return console.warn('No message text provided to submitMessage');
       }
       const text =
@@ -58,6 +59,7 @@ export default function useSubmitMessage() {
       latestMessage,
       activeHiddenPrompt,
       setActiveHiddenPrompt,
+      files,
     ],
   );
 

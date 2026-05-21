@@ -6,6 +6,7 @@ const mockSetActiveHiddenPrompt = jest.fn();
 let mockLatestMessage: unknown = null;
 let mockActiveHiddenPrompt: unknown = null;
 let mockAddedConvo: unknown = null;
+let mockFiles: Map<string, unknown> = new Map();
 
 jest.mock('recoil', () => ({
   useRecoilValue: jest.fn((atom) => {
@@ -29,6 +30,7 @@ jest.mock('~/Providers', () => ({
   useChatContext: jest.fn(() => ({
     ask: mockAsk,
     index: 0,
+    files: mockFiles,
     getMessages: mockGetMessages,
     setMessages: mockSetMessages,
   })),
@@ -62,6 +64,7 @@ describe('useSubmitMessage', () => {
     mockLatestMessage = null;
     mockActiveHiddenPrompt = null;
     mockAddedConvo = null;
+    mockFiles = new Map();
     mockGetMessages.mockReturnValue([]);
   });
 
@@ -94,6 +97,22 @@ describe('useSubmitMessage', () => {
     );
     expect(mockSetActiveHiddenPrompt).toHaveBeenCalledWith(null);
     expect(mockReset).toHaveBeenCalled();
+  });
+
+  it('submits empty text when files are attached', () => {
+    mockFiles = new Map([['file-1', { file_id: 'file-1' }]]);
+    const { result } = renderHook(() => useSubmitMessage());
+
+    act(() => {
+      result.current.submitMessage({ text: '   ' });
+    });
+
+    expect(mockAsk).toHaveBeenCalledWith(
+      { text: '', hiddenPromptContext: null },
+      { addedConvo: undefined },
+    );
+    expect(mockReset).toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('allows empty visible text when a hidden prompt is active', () => {
