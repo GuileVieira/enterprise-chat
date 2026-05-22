@@ -7,7 +7,6 @@ const {
   checkBalance,
   getBalanceConfig,
   getModelMaxTokens,
-  loadProjectMemories,
 } = require('@librechat/api');
 const {
   Time,
@@ -18,8 +17,6 @@ const {
   ContentTypes,
   EModelEndpoint,
   ViolationTypes,
-  ResourceType,
-  PermissionBits,
   ImageVisionTool,
   checkOpenAIStorage,
   AssistantStreamEvents,
@@ -40,7 +37,7 @@ const { createRun, StreamRunManager } = require('~/server/services/Runs');
 const { addTitle } = require('~/server/services/Endpoints/assistants');
 const { createRunBody } = require('~/server/services/createRunBody');
 const { sendResponse } = require('~/server/middleware/error');
-const { checkPermission } = require('~/server/services/PermissionService');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const {
   createAutoRefillTransaction,
   findBalanceByUser,
@@ -48,8 +45,6 @@ const {
   getTransactions,
   getMultiplier,
   getConvo,
-  getProjectById,
-  getAllUserMemories,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -332,47 +327,14 @@ const chatV1 = async (req, res) => {
     await validateAuthor({ req, openai });
 
     /** Load project context if conversation belongs to a project */
-    let projectInstructions = '';
-    let projectMemories = '';
-    if (convoId) {
-      try {
-        const convo = await getConvo(req.user.id, convoId);
-        if (convo?.projectId) {
-          let project = await getProjectById(convo.projectId);
-          if (project?._id) {
-            const hasProjectAccess = await checkPermission({
-              userId: req.user.id,
-              role: req.user.role,
-              resourceType: ResourceType.PROJECT,
-              resourceId: project._id,
-              requiredPermission: PermissionBits.VIEW,
-            });
-            if (!hasProjectAccess) {
-              logger.warn(
-                `[/assistants/chat/] User ${req.user.id} denied project context ${convo.projectId}`,
-              );
-              project = null;
-            }
-          }
-          if (project?.instructions) {
-            projectInstructions = project.instructions;
-          }
-          const memoriesText = await loadProjectMemories(
-            project,
-            async (uid) => {
-              const memories = await getAllUserMemories(uid);
-              return memories.map((m) => ({ key: m.key, value: m.value }));
-            },
-            req.user.id,
-          );
-          if (memoriesText) {
-            projectMemories = memoriesText;
-          }
-        }
-      } catch (err) {
-        logger.error('[/assistants/chat/] Error loading project context', err);
-      }
-    }
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: convoId,
+      projectId: req.body.projectId,
+    });
+    const projectInstructions = projectContext.projectInstructions;
+    const projectMemories = projectContext.projectMemories;
+    const projectFileIds = projectContext.projectFileIds;
 
     if (previousMessages.length) {
       parentMessageId = previousMessages[previousMessages.length - 1].messageId;
@@ -408,8 +370,8 @@ const chatV1 = async (req, res) => {
       }
 
       file_ids = files.map(({ file_id }) => file_id);
-      if (file_ids.length || thread_file_ids.length) {
-        attachedFileIds = new Set([...file_ids, ...thread_file_ids]);
+      if (file_ids.length || thread_file_ids.length || projectFileIds.length) {
+        attachedFileIds = new Set([...file_ids, ...thread_file_ids, ...projectFileIds]);
         if (endpoint === EModelEndpoint.azureAssistants) {
           userMessage.attachments = Array.from(attachedFileIds).map((file_id) => ({
             file_id,

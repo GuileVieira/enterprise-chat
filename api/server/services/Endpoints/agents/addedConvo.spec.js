@@ -105,4 +105,13 @@ describe('processAddedConvo — codeEnvAvailable passthrough', () => {
       expect.anything(),
     );
   });
+
+  it('forwards active project file ids to the added-convo initializeAgent call', async () => {
+    await processAddedConvo(baseParams({ projectFileIds: ['project-file'] }));
+
+    expect(mockInitializeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ projectFileIds: ['project-file'] }),
+      expect.anything(),
+    );
+  });
 });

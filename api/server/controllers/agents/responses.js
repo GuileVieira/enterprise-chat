@@ -59,6 +59,7 @@ const {
   enrichWithSkillConfigurable,
   buildSkillPrimedIdsByName,
 } = require('~/server/services/Endpoints/agents/skillDeps');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { logViolation } = require('~/cache');
 const db = require('~/models');
@@ -356,6 +357,18 @@ const createResponse = async (req, res) => {
       endpoint: agent.provider,
       model_parameters: agent.model_parameters ?? {},
     };
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: request.previous_response_id,
+      projectId: req.body.projectId,
+    });
+    const projectFileIds = projectContext.projectFileIds;
+    const contextParts = [projectContext.projectInstructions, projectContext.projectMemories].filter(
+      Boolean,
+    );
+    if (contextParts.length > 0) {
+      agent.instructions = `${contextParts.join('\n\n')}\n\n${agent.instructions ?? ''}`;
+    }
 
     // `filterFilesByAgentAccess` is intentionally omitted: it calls
     // `checkPermission` with `resourceType: AGENT`, but this route
@@ -423,6 +436,7 @@ const createResponse = async (req, res) => {
         skillStates,
         defaultActiveOnShare,
         manualSkills,
+        projectFileIds,
       },
       dbMethods,
     );

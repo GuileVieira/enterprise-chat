@@ -61,6 +61,7 @@ const processAddedConvo = async ({
   primaryAgent,
   userMCPAuthMap,
   codeEnvAvailable,
+  projectFileIds,
 }) => {
   const addedConvo = endpointOption.addedConvo;
   if (addedConvo == null) {
@@ -106,6 +107,7 @@ const processAddedConvo = async ({
         endpointOption,
         allowedProviders,
         codeEnvAvailable,
+        projectFileIds,
       },
       {
         getFiles: db.getFiles,

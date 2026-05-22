@@ -7,7 +7,6 @@ const {
   checkBalance,
   getBalanceConfig,
   getModelMaxTokens,
-  loadProjectMemories,
 } = require('@librechat/api');
 const {
   Time,
@@ -17,8 +16,6 @@ const {
   ContentTypes,
   ToolCallTypes,
   EModelEndpoint,
-  ResourceType,
-  PermissionBits,
   retrievalMimeTypes,
   AssistantStreamEvents,
 } = require('librechat-data-provider');
@@ -35,7 +32,7 @@ const validateAuthor = require('~/server/middleware/assistants/validateAuthor');
 const { createRun, StreamRunManager } = require('~/server/services/Runs');
 const { addTitle } = require('~/server/services/Endpoints/assistants');
 const { createRunBody } = require('~/server/services/createRunBody');
-const { checkPermission } = require('~/server/services/PermissionService');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const {
   getConvo,
   getMultiplier,
@@ -43,8 +40,6 @@ const {
   findBalanceByUser,
   upsertBalanceFields,
   createAutoRefillTransaction,
-  getProjectById,
-  getAllUserMemories,
 } = require('~/models');
 const { logViolation, getLogStores } = require('~/cache');
 const { getOpenAIClient } = require('./helpers');
@@ -205,47 +200,14 @@ const chatV2 = async (req, res) => {
     await validateAuthor({ req, openai });
 
     /** Load project context if conversation belongs to a project */
-    let projectInstructions = '';
-    let projectMemories = '';
-    if (convoId) {
-      try {
-        const convo = await getConvo(req.user.id, convoId);
-        if (convo?.projectId) {
-          let project = await getProjectById(convo.projectId);
-          if (project?._id) {
-            const hasProjectAccess = await checkPermission({
-              userId: req.user.id,
-              role: req.user.role,
-              resourceType: ResourceType.PROJECT,
-              resourceId: project._id,
-              requiredPermission: PermissionBits.VIEW,
-            });
-            if (!hasProjectAccess) {
-              logger.warn(
-                `[/assistants/chat/] User ${req.user.id} denied project context ${convo.projectId}`,
-              );
-              project = null;
-            }
-          }
-          if (project?.instructions) {
-            projectInstructions = project.instructions;
-          }
-          const memoriesText = await loadProjectMemories(
-            project,
-            async (uid) => {
-              const memories = await getAllUserMemories(uid);
-              return memories.map((m) => ({ key: m.key, value: m.value }));
-            },
-            req.user.id,
-          );
-          if (memoriesText) {
-            projectMemories = memoriesText;
-          }
-        }
-      } catch (err) {
-        logger.error('[/assistants/chat/] Error loading project context', err);
-      }
-    }
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: convoId,
+      projectId: req.body.projectId,
+    });
+    const projectInstructions = projectContext.projectInstructions;
+    const projectMemories = projectContext.projectMemories;
+    const projectFileIds = projectContext.projectFileIds;
 
     if (previousMessages.length) {
       parentMessageId = previousMessages[previousMessages.length - 1].messageId;
@@ -285,8 +247,8 @@ const chatV2 = async (req, res) => {
         }
       }
 
-      if (files.length || thread_file_ids.length) {
-        attachedFileIds = new Set([...file_ids, ...thread_file_ids]);
+      if (files.length || thread_file_ids.length || projectFileIds.length) {
+        attachedFileIds = new Set([...file_ids, ...thread_file_ids, ...projectFileIds]);
 
         let attachmentIndex = 0;
         for (const file of files) {
@@ -320,6 +282,15 @@ const chatV2 = async (req, res) => {
           }
 
           attachmentIndex++;
+        }
+        for (const file_id of projectFileIds) {
+          if (!userMessage.attachments) {
+            userMessage.attachments = [];
+          }
+          userMessage.attachments.push({
+            file_id,
+            tools: [{ type: ToolCallTypes.FILE_SEARCH }],
+          });
         }
       }
     };

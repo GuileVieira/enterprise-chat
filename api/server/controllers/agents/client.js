@@ -61,6 +61,7 @@ const { filterFilesByAgentAccess } = require('~/server/services/Files/permission
 const { encodeAndFormat } = require('~/server/services/Files/images/encode');
 const { createContextHandlers } = require('~/app/clients/prompts');
 const { resolveConfigServers } = require('~/server/services/MCP');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const { getMCPServerTools } = require('~/server/services/Config');
 const BaseClient = require('~/app/clients/BaseClient');
 const { getMCPManager } = require('~/config');
@@ -596,6 +597,11 @@ class AgentClient extends BaseClient {
      *  tool registered unconditionally; without this passthrough the
      *  memory path would silently lose code-execution tooling). */
     const memoryCapabilities = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities);
+    const projectContext = await loadProjectContext({
+      req: this.options.req,
+      conversationId: this.conversationId,
+      projectId: this.options.projectId,
+    });
     const agent = await initializeAgent(
       {
         req: this.options.req,
@@ -608,6 +614,7 @@ class AgentClient extends BaseClient {
             : memoryConfig.agent?.provider,
         },
         codeEnvAvailable: memoryCapabilities.has(AgentCapabilities.execute_code),
+        projectFileIds: projectContext.projectFileIds,
       },
       {
         getFiles: db.getFiles,
