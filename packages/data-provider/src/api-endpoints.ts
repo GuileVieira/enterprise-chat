@@ -147,6 +147,8 @@ export const models = () => `${BASE_URL}/api/models`;
 
 export const tokenizer = () => `${BASE_URL}/api/tokenizer`;
 
+export const promptImprove = () => `${BASE_URL}/api/prompt/improve`;
+
 export const login = () => `${BASE_URL}/api/auth/login`;
 
 export const logout = () => `${BASE_URL}/api/auth/logout`;

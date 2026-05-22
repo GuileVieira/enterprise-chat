@@ -40,6 +40,7 @@ import SendButton from './SendButton';
 import EditBadges from './EditBadges';
 import BadgeRow from './BadgeRow';
 import Mention from './Mention';
+import PromptImproveButton from './PromptImproveButton';
 import ProjectPromptSnippets from './ProjectPromptSnippets';
 import store from '~/store';
 
@@ -212,6 +213,10 @@ const ChatForm = memo(function ChatForm({
   });
 
   const textValue = useWatch({ control: methods.control, name: 'text' });
+  const setPromptText = useCallback(
+    (value: string) => methods.setValue('text', value, { shouldValidate: true }),
+    [methods],
+  );
 
   useEffect(() => {
     if (textAreaRef.current) {
@@ -432,6 +437,14 @@ const ChatForm = memo(function ChatForm({
                   textAreaRef={textAreaRef}
                   disabled={disableInputs || isNotAppendable}
                   isSubmitting={isSubmitting}
+                />
+              )}
+              {endpoint && (
+                <PromptImproveButton
+                  text={textValue}
+                  setText={setPromptText}
+                  textAreaRef={textAreaRef}
+                  disabled={filesLoading || isSubmitting || disableInputs || isNotAppendable}
                 />
               )}
               <div className={`${isRTL ? 'ml-2' : 'mr-2'}`}>

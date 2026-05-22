@@ -63,6 +63,17 @@ export const useMoveConversationToProjectMutation = (): UseMutationResult<
   );
 };
 
+export const useImprovePromptMutation = (): UseMutationResult<
+  t.TImprovePromptResponse,
+  unknown,
+  t.TImprovePromptRequest,
+  unknown
+> => {
+  return useMutation([MutationKeys.improvePrompt], (payload: t.TImprovePromptRequest) =>
+    dataService.improvePrompt(payload),
+  );
+};
+
 export const useTagConversationMutation = (
   conversationId: string,
   options?: t.updateTagsInConvoOptions,

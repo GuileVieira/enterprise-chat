@@ -149,6 +149,12 @@ export const updateTokenCount = (text: string) => {
   return request.post(endpoints.tokenizer(), { arg: text });
 };
 
+export const improvePrompt = (
+  payload: m.TImprovePromptRequest,
+): Promise<m.TImprovePromptResponse> => {
+  return request.post(endpoints.promptImprove(), payload);
+};
+
 export const login = (payload: t.TLoginUser): Promise<t.TLoginResponse> => {
   return request.post(endpoints.login(), payload);
 };

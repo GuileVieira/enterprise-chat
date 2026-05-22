@@ -18,6 +18,7 @@ const memories = require('./memories');
 const presets = require('./presets');
 const projects = require('./projects');
 const prompts = require('./prompts');
+const promptImprove = require('./promptImprove');
 const skills = require('./skills');
 const balance = require('./balance');
 const actions = require('./actions');
@@ -67,6 +68,7 @@ module.exports = {
   models,
   projects,
   prompts,
+  promptImprove,
   skills,
   actions,
   presets,

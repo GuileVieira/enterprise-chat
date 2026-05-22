@@ -53,6 +53,15 @@ export type TGenTitleResponse = {
   title: string;
 };
 
+export type TImprovePromptRequest = {
+  text: string;
+};
+
+export type TImprovePromptResponse = {
+  improvedText: string;
+  cached: boolean;
+};
+
 export type PresetDeleteResponse = {
   acknowledged: boolean;
   deletedCount: number;
