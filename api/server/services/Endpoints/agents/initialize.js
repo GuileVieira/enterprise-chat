@@ -1,4 +1,4 @@
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { createContentAggregator } = require('@librechat/agents');
 const {
   loadSkillStates,
@@ -289,7 +289,13 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
 
   /** Load project context (instructions + memories) if conversation belongs to a project */
   let projectId = req.body.projectId;
+  let projectFileIds;
   try {
+    logger.debug('[initializeClient] Project context request', {
+      conversationId,
+      projectId,
+      hasRequestProjectId: !!projectId,
+    });
     if (!projectId && conversationId && conversationId !== 'new') {
       const conversation = await db.getConvo(req.user.id, conversationId);
       projectId = conversation?.projectId;
@@ -325,6 +331,26 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       );
       if (projectMemories) {
         contextParts.push(projectMemories);
+      }
+      if (project?.projectId) {
+        const declaredIds = Array.isArray(project.fileIds) ? project.fileIds.filter(Boolean) : [];
+        const projectFiles = await runAsSystem(async () =>
+          db.getFiles(
+            {
+              $or: [{ projectId: project.projectId }, { file_id: { $in: declaredIds } }],
+            },
+            null,
+            { text: 0 },
+          ),
+        );
+        projectFileIds = [
+          ...new Set((projectFiles ?? []).map((file) => file?.file_id).filter(Boolean)),
+        ];
+        logger.debug('[initializeClient] Project files resolved', {
+          projectId: project.projectId,
+          declaredFileIds: declaredIds.length,
+          projectFileIds: projectFileIds.length,
+        });
       }
       if (contextParts.length > 0) {
         primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
@@ -368,6 +394,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       skillStates,
       defaultActiveOnShare,
       manualSkills,
+      projectFileIds,
     },
     {
       getFiles: db.getFiles,
@@ -389,6 +416,14 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   logger.debug(
     `[initializeClient] Storing tool context for ${primaryConfig.id}: ${primaryConfig.toolDefinitions?.length ?? 0} tools, registry size: ${primaryConfig.toolRegistry?.size ?? '0'}`,
   );
+  logger.debug('[initializeClient] file_search context summary', {
+    projectId,
+    fileSearchFileIds:
+      primaryConfig.tool_resources?.file_search?.file_ids?.length ??
+      primaryConfig.tool_resources?.file_search?.files?.length ??
+      0,
+    hasFileSearchDynamicContext: !!primaryConfig.dynamicToolContextMap?.file_search,
+  });
   /** Maps each primed skill name (manual `$` or always-apply) to the
    *  `_id` of the exact doc that was primed. Plumbed to
    *  `enrichWithSkillConfigurable` so the read_file handler can pin

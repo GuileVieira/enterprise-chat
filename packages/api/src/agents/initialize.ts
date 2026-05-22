@@ -267,6 +267,8 @@ export interface InitializeAgentParams {
    * meta user messages before the LLM call.
    */
   manualSkills?: string[];
+  /** File IDs inherited from the active project after the caller has checked PROJECT VIEW. */
+  projectFileIds?: string[];
 }
 
 /**
@@ -436,6 +438,7 @@ export async function initializeAgent(
   }
 
   let currentFiles: IMongoFile[] | undefined;
+  let projectToolResources: AgentToolResources | undefined;
 
   const _modelOptions = structuredClone(
     Object.assign(
@@ -452,22 +455,58 @@ export async function initializeAgent(
   const provider = agent.provider;
   agent.endpoint = provider;
 
+  const projectFileIds = params.projectFileIds ?? [];
+  const hasProjectFiles = projectFileIds.length > 0;
+
   /**
    * Load conversation files for ALL agents, not just the initial agent.
    * This enables handoff agents to access files that were uploaded earlier
    * in the conversation. Without this, file_search and execute_code tools
    * on handoff agents would fail to find previously attached files.
    */
-  if (conversationId != null && resendFiles) {
-    const fileIds = (await db.getConvoFiles(conversationId)) ?? [];
+  if ((conversationId != null && resendFiles) || hasProjectFiles) {
+    const convoFileIds =
+      conversationId != null && resendFiles
+        ? ((await db.getConvoFiles(conversationId)) ?? [])
+        : [];
     const toolResourceSet = new Set<EToolResources>();
     for (const tool of agent.tools ?? []) {
       if (EToolResources[tool as keyof typeof EToolResources]) {
         toolResourceSet.add(EToolResources[tool as keyof typeof EToolResources]);
       }
     }
+    if (hasProjectFiles) {
+      toolResourceSet.add(EToolResources.file_search);
+    }
 
-    const toolFiles = (await db.getToolFilesByIds(fileIds, toolResourceSet)) as IMongoFile[];
+    if (hasProjectFiles) {
+      projectToolResources = { ...(agent.tool_resources ?? {}) };
+      const addProjectFileIds = (
+        resourceType: EToolResources.file_search | EToolResources.context,
+      ) => {
+        const resource = projectToolResources?.[resourceType] ?? {};
+        const existingFileIds = resource.file_ids ?? [];
+        projectToolResources = {
+          ...projectToolResources,
+          [resourceType]: {
+            ...resource,
+            file_ids: Array.from(new Set([...existingFileIds, ...projectFileIds])),
+          },
+        };
+      };
+
+      if (toolResourceSet.has(EToolResources.file_search)) {
+        addProjectFileIds(EToolResources.file_search);
+      }
+      if (toolResourceSet.has(EToolResources.context)) {
+        addProjectFileIds(EToolResources.context);
+      }
+    }
+
+    const toolFiles =
+      convoFileIds.length > 0
+        ? ((await db.getToolFilesByIds(convoFileIds, toolResourceSet)) as IMongoFile[])
+        : [];
 
     /**
      * Retrieve execute_code files filtered to the current thread.
@@ -476,7 +515,7 @@ export async function initializeAgent(
     let codeGeneratedFiles: IMongoFile[] = [];
     let userCodeFiles: IMongoFile[] = [];
 
-    if (toolResourceSet.has(EToolResources.execute_code)) {
+    if (toolResourceSet.has(EToolResources.execute_code) && conversationId != null) {
       let threadFileIds: string[] | undefined;
 
       if (parentMessageId && parentMessageId !== Constants.NO_PARENT && db.getMessages) {
@@ -544,7 +583,7 @@ export async function initializeAgent(
     attachments: primedAttachments,
     requestAttachments: primedRequestAttachments,
     agentContextAttachments: primedAgentContextAttachments,
-    tool_resources,
+    tool_resources: primedToolResources,
   } = await primeResources({
     req: req as never,
     getFiles: db.getFiles as never,
@@ -554,9 +593,10 @@ export async function initializeAgent(
     attachments: currentFiles
       ? (Promise.resolve(currentFiles) as unknown as Promise<TFile[]>)
       : undefined,
-    tool_resources: agent.tool_resources,
+    tool_resources: projectToolResources ?? agent.tool_resources,
     requestFileSet: new Set(requestFiles?.map((file) => file.file_id)),
   });
+  const tool_resources = primedToolResources ?? projectToolResources ?? agent.tool_resources;
 
   /**
    * Pre-resolve manually-invoked + always-apply skill primes so their
@@ -668,9 +708,21 @@ export async function initializeAgent(
     }
   }
 
-  const baseToolNames = agent.tools ?? [];
+  const savedToolNames = agent.tools ?? [];
+  const baseToolNames =
+    hasProjectFiles && !savedToolNames.includes(Tools.file_search)
+      ? [...savedToolNames, Tools.file_search]
+      : savedToolNames;
   const requestedToolNames =
     extraAllowedToolNames.length > 0 ? [...baseToolNames, ...extraAllowedToolNames] : baseToolNames;
+  if (hasProjectFiles) {
+    logger.debug('[initializeAgent] Project file_search resources prepared', {
+      agentId: agent.id,
+      projectFileIds: projectFileIds.length,
+      fileSearchFileIds: tool_resources?.[EToolResources.file_search]?.file_ids?.length ?? 0,
+      requestedTools: requestedToolNames,
+    });
+  }
 
   /**
    * `loadTools` failures take two forms:

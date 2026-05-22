@@ -1000,13 +1000,13 @@ describe('initializeClient — subagent loading', () => {
     );
   });
 
-  it('should not attach project files automatically to new chat requests', async () => {
+  it('should prime project files separately from new chat request files', async () => {
     mockGetConvo.mockResolvedValue({ projectId: 'proj-123' });
     mockGetProjectById.mockResolvedValue({
+      projectId: 'proj-123',
       instructions: '',
       fileIds: ['linked-file'],
     });
-    mockGetFilesByProjectId.mockResolvedValue([{ file_id: 'project-file' }]);
     mockGetFiles.mockResolvedValue([{ file_id: 'project-file' }, { file_id: 'linked-file' }]);
 
     mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
@@ -1019,7 +1019,17 @@ describe('initializeClient — subagent loading', () => {
     });
 
     expect(mockGetFilesByProjectId).not.toHaveBeenCalled();
-    expect(mockGetFiles).not.toHaveBeenCalled();
+    expect(mockGetFiles).toHaveBeenCalledWith(
+      {
+        $or: [{ projectId: 'proj-123' }, { file_id: { $in: ['linked-file'] } }],
+      },
+      null,
+      { text: 0 },
+    );
     expect(mockInitializeAgent.mock.calls[0][0].requestFiles).toEqual([]);
+    expect(mockInitializeAgent.mock.calls[0][0].projectFileIds).toEqual([
+      'project-file',
+      'linked-file',
+    ]);
   });
 });

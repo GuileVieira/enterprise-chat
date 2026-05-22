@@ -62,7 +62,9 @@ const primeFiles = async (options) => {
       continue;
     }
     if (i === 0) {
-      toolContext = `- Note: Use the ${Tools.file_search} tool to find relevant information within:`;
+      toolContext =
+        `- Note: Use the ${Tools.file_search} tool to find relevant information within the available attached or project files. ` +
+        `When the user asks about anexo, arquivo, documento, PDF, DOCX, attachment, file, document, or asks to summarize available files, call ${Tools.file_search} before answering:`;
     }
     toolContext += `\n\t- ${file.filename}${
       agentResourceIds.has(file.file_id) ? '' : ' (just attached by user)'
