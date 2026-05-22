@@ -12,9 +12,9 @@ const faqs = [
       'O agente não substitui o julgamento criativo. Ele acelera a parte operacional: estrutura, formato, pesquisa, organização. O redator ainda edita. O planejador ainda aprova. Só que começam de um ponto 80% pronto, não do zero.',
   },
   {
-    question: 'Meus clientes vao perceber que usamos IA.',
+    question: 'Meus clientes vão perceber que usamos IA.',
     answer:
-      'Os agentes usam o tom, o formato e as referências que você define. O objetivo não e enganar ninguém - e garantir que a entrega operacional não dependa de qual pessoa da equipe esta disponível no momento.',
+      'Os agentes usam o tom, o formato e as referências que você define. O objetivo não é enganar ninguém - é garantir que a entrega operacional não dependa de qual pessoa da equipe está disponível no momento.',
   },
   {
     question: 'E se eu já tiver templates e processos?',
@@ -22,14 +22,14 @@ const faqs = [
       'Melhor ainda. Transformamos seus templates em agentes inteligentes que preenchem, adaptam e entregam no contexto de cada cliente. Seu processo vira tecnologia, não fica no papel.',
   },
   {
-    question: 'Como eu sei se esta funcionando?',
+    question: 'Como eu sei se está funcionando?',
     answer:
       'Você acompanha tudo em um dashboard: quantas entregas cada agente gerou, tempo médio de uso, avaliação de qualidade pela equipe. E fazemos reuniões mensais de ajuste baseadas nos números.',
   },
   {
     question: 'E se eu quiser cancelar?',
     answer:
-      'Não temos fidelidade. Mas o cancelamento só faz sentido se a operação estiver tão padronizada que você não precisa mais de nos - e nesse caso, parabéns.',
+      'Não temos fidelidade. Mas o cancelamento só faz sentido se a operação estiver tão padronizada que você não precisa mais de nós - e nesse caso, parabéns.',
   },
 ];
 

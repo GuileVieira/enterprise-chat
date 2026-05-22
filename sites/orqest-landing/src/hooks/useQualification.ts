@@ -29,8 +29,8 @@ const QUESTIONS = [
   {
     id: 'pain',
     question: 'Qual sua maior dor operacional?',
-    options: ['Briefing', 'Roteiro', 'Planejamento', 'Relatorios', 'Todas'],
-    scores: { Briefing: 1, Roteiro: 1, Planejamento: 1, Relatorios: 1, Todas: 2 },
+    options: ['Briefing', 'Roteiro', 'Planejamento', 'Relatórios', 'Todas'],
+    scores: { Briefing: 1, Roteiro: 1, Planejamento: 1, Relatórios: 1, Todas: 2 },
   },
   {
     id: 'timeline',

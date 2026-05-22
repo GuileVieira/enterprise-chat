@@ -4,6 +4,28 @@ import { MagneticButton } from '@/components/ui/MagneticButton';
 export const metadata: Metadata = {
   title: 'Obrigado - Orqest',
   description: 'Obrigado por se interessar no Orqest. Agende sua reunião de diagnóstico gratuito.',
+  openGraph: {
+    title: 'Obrigado - Orqest',
+    description: 'Obrigado por se interessar no Orqest. Agende sua reunião de diagnóstico gratuito.',
+    type: 'website',
+    locale: 'pt_BR',
+    url: 'https://orqest.com/obrigado',
+    siteName: 'Orqest',
+    images: [
+      {
+        url: '/logo-full.png',
+        width: 1200,
+        height: 630,
+        alt: 'Obrigado - Orqest',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Obrigado - Orqest',
+    description: 'Obrigado por se interessar no Orqest. Agende sua reunião de diagnóstico gratuito.',
+    images: ['/logo-full.png'],
+  },
 };
 
 export default function ObrigadoPage() {

@@ -21,8 +21,8 @@ export function Problem() {
       text: 'escreve o roteiro do vídeo do zero - pela centésima vez - porque não existe um padrão que acelere o trabalho.',
     },
     {
-      role: 'Operacao',
-      text: 'para tudo para criar um relatorio que o cliente pediu com urgencia.',
+      role: 'Operação',
+      text: 'para tudo para criar um relatório que o cliente pediu com urgência.',
     },
   ];
 
@@ -38,8 +38,8 @@ export function Problem() {
 
         <ScrollReveal delay={0.1}>
           <p className="mt-8 text-lg leading-relaxed text-text-secondary">
-            Sua agência tem bons profissionais. O problema não e falta de talento. E que o talento
-            esta preso em tarefas operacionais.
+            Sua agência tem bons profissionais. O problema não é falta de talento. É que o talento
+            está preso em tarefas operacionais.
           </p>
         </ScrollReveal>
 
@@ -57,7 +57,7 @@ export function Problem() {
 
         <ScrollReveal delay={0.8}>
           <p className="mt-8 text-base leading-relaxed text-text-secondary">
-            E no final do dia, a equipe esta exausta. E a parte criativa - a que realmente
+            E no final do dia, a equipe está exausta. E a parte criativa - a que realmente
             diferencia sua agência - ficou para depois. Sempre para depois.
           </p>
         </ScrollReveal>
@@ -70,7 +70,7 @@ export function Problem() {
                 até 60% do tempo em tarefas operacionais
               </span>
               : relatórios, organização de dados, formatação, configuração de campanhas,
-              comunicações repetitivas. O que sobra para criatividade e estratégia e menos da metade
+              comunicações repetitivas. O que sobra para criatividade e estratégia é menos da metade
               da jornada.
             </p>
           </div>

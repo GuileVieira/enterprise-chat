@@ -7,13 +7,13 @@ const forYou = [
   'Seu briefing varia de qualidade dependendo de quem monta.',
   'Você já tem processos, mas ninguém segue do mesmo jeito.',
   'Roteiros, pautas e planejamentos começam do zero a cada novo projeto.',
-  'Sua equipe criativa esta sobrecarregada com tarefas que não deveriam ser dela.',
+  'Sua equipe criativa está sobrecarregada com tarefas que não deveriam ser dela.',
 ];
 
 const notForYou = [
   'Sua agência ainda não tem processo definido - primeiro precisa organizar a operação.',
-  'Procura uma ferramenta pronta para usar sozinho - o Orqest inclui mapeamento e implementacao feitos por especialistas.',
-  'Sua equipe tem 2 pessoas e todo mundo faz tudo - ainda não ha o que orquestrar.',
+  'Procura uma ferramenta pronta para usar sozinho - o Orqest inclui mapeamento e implementação feitos por especialistas.',
+  'Sua equipe tem 2 pessoas e todo mundo faz tudo - ainda não há o que orquestrar.',
 ];
 
 export function WhoIsFor() {

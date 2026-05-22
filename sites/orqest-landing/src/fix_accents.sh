@@ -2,7 +2,7 @@
 set -e
 export LC_ALL=en_US.UTF-8
 
-cd /Users/guilherme/Projetos/LibreChat/sites/orqest-landing/src
+cd "$(dirname "$0")"
 
 FILES=(
   "components/sections/Hero.tsx"

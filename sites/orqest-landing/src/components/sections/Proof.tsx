@@ -5,10 +5,10 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 const results = [
   'Briefing completo em 5 minutos, não em 2 horas.',
   'Roteiro de vídeo estruturado no padrão da agência, entregue em minutos.',
-  'Planejamento de campanha com esqueleto, publico e cronograma - pronto para revisão, não para começar do zero.',
+  'Planejamento de campanha com esqueleto, público e cronograma - pronto para revisão, não para começar do zero.',
   'Pautas de conteúdo para o mês inteiro geradas em uma manhã.',
-  'Relatorios e insights de dados respondidos instantaneamente, sem fila.',
-  'Padronizacao de qualidade: não importa quem esta usando o agente, a entrega sai no mesmo formato.',
+  'Relatórios e insights de dados respondidos instantaneamente, sem fila.',
+  'Padronização de qualidade: não importa quem está usando o agente, a entrega sai no mesmo formato.',
 ];
 
 export function Proof() {
