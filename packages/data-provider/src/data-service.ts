@@ -62,6 +62,10 @@ export function getSharedMessages(shareId: string): Promise<t.TSharedMessagesRes
   return request.get(endpoints.shareMessages(shareId));
 }
 
+export function getTenantSharedMessages(shareId: string): Promise<t.TSharedMessagesResponse> {
+  return request.get(endpoints.tenantShareMessages(shareId));
+}
+
 export const listSharedLinks = async (
   params: q.SharedLinksListParams,
 ): Promise<q.SharedLinksResponse> => {
@@ -81,6 +85,21 @@ export function createSharedLink(
   targetMessageId?: string,
 ): Promise<t.TSharedLinkResponse> {
   return request.post(endpoints.createSharedLink(conversationId), { targetMessageId });
+}
+
+export function createTenantSharedLink(
+  conversationId: string,
+  targetMessageId?: string,
+): Promise<t.TSharedLinkResponse> {
+  return request.post(endpoints.createTenantSharedLink(conversationId), { targetMessageId });
+}
+
+export function forkTenantSharedLink({
+  shareId,
+  targetMessageId,
+  option,
+}: t.TForkTenantShareRequest): Promise<t.TForkConvoResponse> {
+  return request.post(endpoints.forkTenantSharedLink(shareId), { targetMessageId, option });
 }
 
 export function updateSharedLink(

@@ -216,6 +216,16 @@ export type CreateSharedLinkOptions = MutationOptions<
   Partial<types.TSharedLink>
 >;
 
+export type CreateTenantSharedLinkOptions = MutationOptions<
+  types.TSharedLinkResponse,
+  types.TCreateTenantShareLinkRequest
+>;
+
+export type ForkTenantShareOptions = MutationOptions<
+  types.TForkConvoResponse,
+  types.TForkTenantShareRequest
+>;
+
 export type updateTagsInConvoOptions = MutationOptions<
   types.TTagConversationResponse,
   types.TTagConversationRequest

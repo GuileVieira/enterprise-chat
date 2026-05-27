@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSetRecoilState } from 'recoil';
@@ -16,6 +16,7 @@ import type { TConversation } from 'librechat-data-provider';
 import {
   useProjectsQuery,
   useProjectByIdQuery,
+  useUpdateConversationMutation,
   useConversationsInfiniteQuery,
 } from '~/data-provider';
 import { useLocalize, useNewConvo } from '~/hooks';
@@ -27,8 +28,12 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
   const localize = useLocalize();
   const queryClient = useQueryClient();
   const { conversationId } = useParams();
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const [titleInput, setTitleInput] = useState('');
+  const [renamingConvoId, setRenamingConvoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const { newConversation } = useNewConvo();
+  const updateConvoMutation = useUpdateConversationMutation(conversationId ?? '');
   const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
   const { data: project } = useProjectByIdQuery(projectId, {
     enabled: isExpanded,
@@ -42,6 +47,16 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
   const conversations = useMemo(() => {
     return data ? data.pages.flatMap((page) => page.conversations) : [];
   }, [data]);
+
+  useEffect(() => {
+    if (!renamingConvoId) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+    });
+  }, [renamingConvoId]);
 
   const handleNewChat = useCallback(
     (e: React.MouseEvent) => {
@@ -65,6 +80,34 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
       });
     },
     [conversationId, newConversation, project, projectId, queryClient, setSelectedProjectId],
+  );
+
+  const startRename = useCallback((convo: TConversation) => {
+    setRenamingConvoId(convo.conversationId ?? null);
+    setTitleInput(convo.title ?? '');
+  }, []);
+
+  const cancelRename = useCallback(() => {
+    setRenamingConvoId(null);
+    setTitleInput('');
+  }, []);
+
+  const submitRename = useCallback(
+    async (convo: TConversation) => {
+      const nextTitle = titleInput.trim();
+      const targetConvoId = convo.conversationId;
+      if (!targetConvoId || !nextTitle || nextTitle === convo.title) {
+        cancelRename();
+        return;
+      }
+
+      await updateConvoMutation.mutateAsync({
+        conversationId: targetConvoId,
+        title: nextTitle,
+      });
+      cancelRename();
+    },
+    [cancelRename, titleInput, updateConvoMutation],
   );
 
   return (
@@ -106,22 +149,63 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
               {localize('com_ui_no_conversations_in_project')}
             </div>
           )}
-          {conversations.map((convo) => (
-            <button
-              key={convo.conversationId}
-              type="button"
-              onClick={() => navigate(`/c/${convo.conversationId}`)}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
-                conversationId === convo.conversationId
-                  ? 'bg-surface-active-alt font-medium text-text-primary'
-                  : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary',
-              )}
-            >
-              <ChatCircle className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
-              <span className="truncate text-left">{convo.title || 'Untitled'}</span>
-            </button>
-          ))}
+          {conversations.map((convo) => {
+            const isActive = conversationId === convo.conversationId;
+            const isRenaming = renamingConvoId === convo.conversationId;
+
+            return (
+              <div
+                key={convo.conversationId}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-xs transition-colors',
+                  isActive
+                    ? 'bg-surface-active-alt font-medium text-text-primary'
+                    : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary',
+                )}
+              >
+                <ChatCircle className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                {isRenaming ? (
+                  <form
+                    className="min-w-0 flex-1"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void submitRename(convo);
+                    }}
+                  >
+                    <input
+                      ref={renameInputRef}
+                      className="w-full rounded bg-transparent px-1 py-0.5 text-xs outline-none ring-1 ring-border-medium focus:ring-ring"
+                      value={titleInput}
+                      maxLength={100}
+                      aria-label={localize('com_ui_new_conversation_title')}
+                      onChange={(event) => setTitleInput(event.target.value)}
+                      onBlur={() => void submitRename(convo)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          cancelRename();
+                        }
+                      }}
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isActive) {
+                        startRename(convo);
+                        return;
+                      }
+                      navigate(`/c/${convo.conversationId}`);
+                    }}
+                    className={cn('min-w-0 flex-1 truncate text-left', isActive && 'cursor-text')}
+                  >
+                    {convo.title || 'Untitled'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
           <button
             type="button"
             onClick={() => navigate(`/projects/${projectId}`)}

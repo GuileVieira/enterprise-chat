@@ -551,6 +551,34 @@ describe('Convos Routes', () => {
   });
 
   describe('POST /update', () => {
+    it('should rename a conversation', async () => {
+      const renamedConvo = {
+        conversationId: 'conv-123',
+        title: 'Novo nome',
+      };
+      saveConvo.mockResolvedValue(renamedConvo);
+
+      const response = await request(app)
+        .post('/api/convos/update')
+        .send({
+          arg: {
+            conversationId: 'conv-123',
+            title: '  Novo nome  ',
+          },
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual(renamedConvo);
+      expect(saveConvo).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: expect.any(String) }),
+        {
+          conversationId: 'conv-123',
+          title: 'Novo nome',
+        },
+        { context: 'POST /api/convos/update conv-123' },
+      );
+    });
+
     it('should reject moving a conversation to a project without VIEW access', async () => {
       findProjectById.mockResolvedValue({ _id: 'project-object-id', projectId: 'proj-private' });
       checkPermission.mockResolvedValue(false);

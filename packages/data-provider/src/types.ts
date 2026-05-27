@@ -346,6 +346,10 @@ export type TSharedMessagesResponse = Omit<TSharedLink, 'messages'> & {
 
 export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'>;
 
+export type TCreateTenantShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
+
 export type TUpdateShareLinkRequest = Pick<TSharedLink, 'shareId' | 'targetMessageId'>;
 
 export type TSharedLinkResponse = Pick<TSharedLink, 'shareId'> &
@@ -396,6 +400,12 @@ export type TForkConvoRequest = {
 export type TForkConvoResponse = {
   conversation: TConversation;
   messages: TMessage[];
+};
+
+export type TForkTenantShareRequest = {
+  shareId: string;
+  targetMessageId?: string;
+  option?: string;
 };
 
 export type TSearchResults = {

@@ -3,7 +3,7 @@ jest.mock('librechat-data-provider', () => ({
 }));
 
 import { apiBaseUrl } from 'librechat-data-provider';
-import { buildShareLinkUrl } from '../share';
+import { buildShareLinkUrl, buildTenantShareLinkUrl } from '../share';
 
 describe('buildShareLinkUrl', () => {
   it('includes the base path for subdirectory deployments', () => {
@@ -17,6 +17,13 @@ describe('buildShareLinkUrl', () => {
     (apiBaseUrl as jest.Mock).mockReturnValue('');
     expect(buildShareLinkUrl('reW8SsFGQEH1b1uzSHe4I')).toBe(
       'http://localhost:3080/share/reW8SsFGQEH1b1uzSHe4I',
+    );
+  });
+
+  it('builds tenant share links under the base path', () => {
+    (apiBaseUrl as jest.Mock).mockReturnValue('/librechat');
+    expect(buildTenantShareLinkUrl('tenantShareId')).toBe(
+      'http://localhost:3080/librechat/share/tenant/tenantShareId',
     );
   });
 });

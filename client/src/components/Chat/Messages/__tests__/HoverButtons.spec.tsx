@@ -34,8 +34,10 @@ jest.mock('~/utils', () => ({
   isSpeechFeatureEnabled: jest.fn(() => true),
 }));
 
-jest.mock('~/components/Conversations', () => ({
+jest.mock('../Fork', () => ({
+  __esModule: true,
   Fork: () => <button type="button" data-testid="fork-button" />,
+  default: () => <button type="button" data-testid="fork-button" />,
 }));
 
 jest.mock('../MessageAudio', () => ({
@@ -67,7 +69,7 @@ const message = {
 } as TMessage;
 
 describe('HoverButtons', () => {
-  it('does not render audio or fork buttons in the message toolbar', () => {
+  it('renders local fork in the message toolbar when supported', () => {
     render(
       <HoverButtons
         index={0}
@@ -86,7 +88,7 @@ describe('HoverButtons', () => {
     );
 
     expect(screen.queryByTestId('audio-button')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('fork-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fork-button')).toBeInTheDocument();
     expect(screen.getByTitle('com_ui_copy_to_clipboard')).toBeInTheDocument();
     expect(screen.getByTitle('com_ui_edit')).toBeInTheDocument();
     expect(screen.getByTestId('feedback-buttons')).toBeInTheDocument();

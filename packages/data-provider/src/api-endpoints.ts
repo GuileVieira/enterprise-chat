@@ -70,6 +70,7 @@ export const messagesBranch = () => `${messagesRoot}/branch`;
 
 const shareRoot = `${BASE_URL}/api/share`;
 export const shareMessages = (shareId: string) => `${shareRoot}/${shareId}`;
+export const tenantShareMessages = (shareId: string) => `${shareRoot}/tenant/${shareId}`;
 export const getSharedLink = (conversationId: string) => `${shareRoot}/link/${conversationId}`;
 export const getSharedLinks = (
   pageSize: number,
@@ -83,6 +84,9 @@ export const getSharedLinks = (
     search ? `&search=${search}` : ''
   }${cursor ? `&cursor=${cursor}` : ''}`;
 export const createSharedLink = (conversationId: string) => `${shareRoot}/${conversationId}`;
+export const createTenantSharedLink = (conversationId: string) =>
+  `${shareRoot}/tenant/${conversationId}`;
+export const forkTenantSharedLink = (shareId: string) => `${shareRoot}/tenant/${shareId}/fork`;
 export const updateSharedLink = (shareId: string) => `${shareRoot}/${shareId}`;
 
 const keysEndpoint = `${BASE_URL}/api/keys`;

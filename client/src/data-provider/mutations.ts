@@ -212,6 +212,26 @@ export const useCreateSharedLinkMutation = (
   );
 };
 
+export const useCreateTenantSharedLinkMutation = (
+  options?: t.CreateTenantSharedLinkOptions,
+): UseMutationResult<t.TSharedLinkResponse, unknown, t.TCreateTenantShareLinkRequest, unknown> => {
+  const { onSuccess, ..._options } = options || {};
+  return useMutation(
+    ({ conversationId, targetMessageId }) => {
+      if (!conversationId) {
+        throw new Error('Conversation ID is required');
+      }
+      return dataService.createTenantSharedLink(conversationId, targetMessageId);
+    },
+    {
+      onSuccess: (data, vars, context) => {
+        onSuccess?.(data, vars, context);
+      },
+      ..._options,
+    },
+  );
+};
+
 export const useUpdateSharedLinkMutation = (
   options?: t.MutationOptions<t.TUpdateShareLinkRequest, t.TUpdateShareLinkRequest>,
 ): UseMutationResult<t.TSharedLinkResponse, unknown, t.TUpdateShareLinkRequest, unknown> => {
@@ -647,6 +667,40 @@ export const useForkConvoMutation = (
     },
     ..._options,
   });
+};
+
+export const useForkTenantShareMutation = (
+  options?: t.ForkTenantShareOptions,
+): UseMutationResult<t.TForkConvoResponse, unknown, t.TForkTenantShareRequest, unknown> => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ..._options } = options || {};
+
+  return useMutation(
+    (payload: t.TForkTenantShareRequest) => dataService.forkTenantSharedLink(payload),
+    {
+      onSuccess: (data, vars, context) => {
+        const forkedConversation = data.conversation;
+        const forkedConversationId = forkedConversation.conversationId;
+        if (!forkedConversationId) {
+          return;
+        }
+
+        queryClient.setQueryData(
+          [QueryKeys.conversation, forkedConversationId],
+          forkedConversation,
+        );
+        addConvoToAllQueries(queryClient, forkedConversation);
+        queryClient.setQueryData([QueryKeys.messages, forkedConversationId], data.messages);
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.allConversations],
+          refetchPage: (_, index) => index === 0,
+        });
+
+        onSuccess?.(data, vars, context);
+      },
+      ..._options,
+    },
+  );
 };
 
 export const useUploadConversationsMutation = (

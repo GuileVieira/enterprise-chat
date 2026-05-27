@@ -50,6 +50,11 @@ export const router = createBrowserRouter(
       errorElement: <RouteErrorBoundary />,
     },
     {
+      path: 'share/tenant/:shareId',
+      element: <ShareRoute isTenantShare={true} />,
+      errorElement: <RouteErrorBoundary />,
+    },
+    {
       path: 'oauth',
       errorElement: <RouteErrorBoundary />,
       children: [

@@ -34,6 +34,23 @@ export const useGetSharedMessages = (
   );
 };
 
+export const useGetTenantSharedMessages = (
+  shareId: string,
+  config?: UseQueryOptions<t.TSharedMessagesResponse>,
+): QueryObserverResult<t.TSharedMessagesResponse> => {
+  return useQuery<t.TSharedMessagesResponse>(
+    [QueryKeys.sharedMessages, 'tenant', shareId],
+    () => dataService.getTenantSharedMessages(shareId),
+    {
+      enabled: !!shareId,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
 export const useGetSharedLinkQuery = (
   conversationId: string,
   config?: UseQueryOptions<t.TSharedLinkGetResponse>,

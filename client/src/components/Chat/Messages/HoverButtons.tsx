@@ -3,6 +3,7 @@ import { Check, Copy, PencilSimple, ArrowClockwise, ArrowBendUpLeft } from '@pho
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
 import { useGenerationsByLatest, useLocalize } from '~/hooks';
 import Feedback from './Feedback';
+import Fork from './Fork';
 import { cn } from '~/utils';
 
 type THoverButtons = {
@@ -108,8 +109,13 @@ const HoverButtons = ({
     latestMessageId: latestMessageId,
   });
 
-  const { hideEditButton, regenerateEnabled, continueSupported, isEditableEndpoint } =
-    generationCapabilities;
+  const {
+    hideEditButton,
+    regenerateEnabled,
+    continueSupported,
+    forkingSupported,
+    isEditableEndpoint,
+  } = generationCapabilities;
 
   if (!conversation) {
     return null;
@@ -204,6 +210,14 @@ const HoverButtons = ({
           className="active"
         />
       )}
+
+      <Fork
+        isLast={isLast}
+        messageId={message.messageId}
+        latestMessageId={latestMessageId}
+        conversationId={conversation.conversationId}
+        forkingSupported={forkingSupported}
+      />
     </div>
   );
 };

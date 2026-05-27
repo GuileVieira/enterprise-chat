@@ -199,6 +199,10 @@ export default function Conversation({
           return;
         }
         if (e.button === 0) {
+          if (isActiveConvo && !isPopoverActive && !isSmallScreen) {
+            handleRename();
+            return;
+          }
           handleNavigation(e.ctrlKey || e.metaKey);
         }
       }}

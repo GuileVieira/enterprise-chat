@@ -200,6 +200,100 @@ export function createShareMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
+  async function getTenantSharedMessages(
+    shareId: string,
+    tenantId: string,
+  ): Promise<t.SharedMessagesResult | null> {
+    if (!shareId || !tenantId) {
+      throw new ShareServiceError('Missing required parameters', 'INVALID_PARAMS');
+    }
+
+    try {
+      const SharedLink = mongoose.models.SharedLink as Model<t.ISharedLink>;
+      const share = (await SharedLink.findOne({ shareId, isPublic: false, tenantId })
+        .populate({
+          path: 'messages',
+          select: '-_id -__v -user',
+        })
+        .select('-_id -__v -user')
+        .lean()) as (t.ISharedLink & { messages: t.IMessage[] }) | null;
+
+      if (!share?.conversationId) {
+        return null;
+      }
+
+      let messagesToShare: t.IMessage[] = share.messages;
+      if (share.targetMessageId) {
+        messagesToShare = getMessagesUpToTarget(share.messages, share.targetMessageId);
+      }
+
+      const newConvoId = anonymizeConvoId(share.conversationId);
+      return {
+        shareId: share.shareId || shareId,
+        title: share.title,
+        isPublic: false,
+        createdAt: share.createdAt,
+        updatedAt: share.updatedAt,
+        conversationId: newConvoId,
+        messages: anonymizeMessages(messagesToShare, newConvoId),
+      };
+    } catch (error) {
+      logger.error('[getTenantSharedMessages] Error getting share link', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        shareId,
+        tenantId,
+      });
+      throw new ShareServiceError('Error getting share link', 'SHARE_FETCH_ERROR');
+    }
+  }
+
+  async function getTenantSharedLinkForFork(
+    shareId: string,
+    tenantId: string,
+  ): Promise<t.TenantSharedForkResult | null> {
+    if (!shareId || !tenantId) {
+      throw new ShareServiceError('Missing required parameters', 'INVALID_PARAMS');
+    }
+
+    try {
+      const SharedLink = mongoose.models.SharedLink as Model<t.ISharedLink>;
+      const Conversation = mongoose.models.Conversation as SchemaWithMeiliMethods;
+      const share = (await SharedLink.findOne({ shareId, isPublic: false, tenantId })
+        .populate({
+          path: 'messages',
+          select: '-_id -__v',
+        })
+        .select('-_id -__v')
+        .lean()) as (t.ISharedLink & { messages: t.IMessage[] }) | null;
+
+      if (!share?.conversationId || !share.user) {
+        return null;
+      }
+
+      const conversation = (await Conversation.findOne({
+        conversationId: share.conversationId,
+        user: share.user,
+      }).lean()) as Record<string, unknown> | null;
+
+      return {
+        user: share.user,
+        targetMessageId: share.targetMessageId,
+        conversation: conversation ?? {
+          conversationId: share.conversationId,
+          title: share.title,
+        },
+        messages: share.messages,
+      };
+    } catch (error) {
+      logger.error('[getTenantSharedLinkForFork] Error getting share link', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        shareId,
+        tenantId,
+      });
+      throw new ShareServiceError('Error getting share link', 'SHARE_FETCH_ERROR');
+    }
+  }
+
   /**
    * Get shared links for a specific user with pagination and search
    */
@@ -425,6 +519,82 @@ export function createShareMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
+  async function createTenantSharedLink(
+    user: string,
+    tenantId: string,
+    conversationId: string,
+    targetMessageId?: string,
+  ): Promise<t.CreateShareResult> {
+    if (!user || !tenantId || !conversationId) {
+      throw new ShareServiceError('Missing required parameters', 'INVALID_PARAMS');
+    }
+
+    try {
+      const Message = mongoose.models.Message as SchemaWithMeiliMethods;
+      const SharedLink = mongoose.models.SharedLink as Model<t.ISharedLink>;
+      const Conversation = mongoose.models.Conversation as SchemaWithMeiliMethods;
+
+      const [existingShare, conversationMessages, conversation] = await Promise.all([
+        SharedLink.findOne({
+          conversationId,
+          user,
+          tenantId,
+          isPublic: false,
+          ...(targetMessageId && { targetMessageId }),
+        })
+          .select('-_id -__v -user')
+          .lean() as Promise<t.ISharedLink | null>,
+        Message.find({ conversationId, user }).sort({ createdAt: 1 }).lean(),
+        Conversation.findOne({ conversationId, user }).lean() as Promise<{ title?: string } | null>,
+      ]);
+
+      if (existingShare) {
+        return {
+          shareId: existingShare.shareId || '',
+          conversationId,
+          targetMessageId: existingShare.targetMessageId,
+        };
+      }
+
+      if (!conversation) {
+        throw new ShareServiceError(
+          'Conversation not found or access denied',
+          'CONVERSATION_NOT_FOUND',
+        );
+      }
+
+      if (!conversationMessages || conversationMessages.length === 0) {
+        throw new ShareServiceError('No messages to share', 'NO_MESSAGES');
+      }
+
+      const shareId = nanoid();
+      await SharedLink.create({
+        shareId,
+        conversationId,
+        messages: conversationMessages,
+        title: conversation.title || 'Untitled',
+        user,
+        tenantId,
+        isPublic: false,
+        ...(targetMessageId && { targetMessageId }),
+      });
+
+      return { shareId, conversationId, targetMessageId };
+    } catch (error) {
+      if (error instanceof ShareServiceError) {
+        throw error;
+      }
+      logger.error('[createTenantSharedLink] Error creating shared link', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        user,
+        tenantId,
+        conversationId,
+        targetMessageId,
+      });
+      throw new ShareServiceError('Error creating shared link', 'SHARE_CREATE_ERROR');
+    }
+  }
+
   /**
    * Get a shared link for a conversation
    */
@@ -566,7 +736,10 @@ export function createShareMethods(mongoose: typeof import('mongoose')) {
   return {
     getSharedLink,
     getSharedLinks,
+    createTenantSharedLink,
     createSharedLink,
+    getTenantSharedMessages,
+    getTenantSharedLinkForFork,
     updateSharedLink,
     deleteSharedLink,
     getSharedMessages,

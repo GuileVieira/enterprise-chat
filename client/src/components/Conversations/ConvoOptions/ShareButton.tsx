@@ -6,7 +6,8 @@ import { useGetSharedLinkQuery } from 'librechat-data-provider/react-query';
 import { OGDialogTemplate, Button, Spinner, OGDialog } from '@librechat/client';
 import { useLocalize, useCopyToClipboard } from '~/hooks';
 import SharedLinkButton from './SharedLinkButton';
-import { buildShareLinkUrl, cn } from '~/utils';
+import { useCreateTenantSharedLinkMutation } from '~/data-provider';
+import { buildShareLinkUrl, buildTenantShareLinkUrl, cn } from '~/utils';
 import store from '~/store';
 
 export default function ShareButton({
@@ -25,9 +26,12 @@ export default function ShareButton({
   const localize = useLocalize();
   const [showQR, setShowQR] = useState(false);
   const [sharedLink, setSharedLink] = useState('');
+  const [tenantSharedLink, setTenantSharedLink] = useState('');
   const [isCopying, setIsCopying] = useState(false);
+  const [isTenantCopying, setIsTenantCopying] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const copyLink = useCopyToClipboard({ text: sharedLink });
+  const copyTenantLink = useCopyToClipboard({ text: tenantSharedLink });
   const copyLinkAndAnnounce = (setIsCopying: React.Dispatch<React.SetStateAction<boolean>>) => {
     setAnnouncement(localize('com_ui_link_copied'));
     copyLink(setIsCopying);
@@ -37,6 +41,9 @@ export default function ShareButton({
   };
   const latestMessage = useRecoilValue(store.latestMessageFamily(0));
   const { data: share, isLoading } = useGetSharedLinkQuery(conversationId);
+  const tenantShareMutation = useCreateTenantSharedLinkMutation({
+    onSuccess: (data) => setTenantSharedLink(buildTenantShareLinkUrl(data.shareId)),
+  });
 
   useEffect(() => {
     if (share?.shareId !== undefined) {
@@ -57,6 +64,9 @@ export default function ShareButton({
     );
 
   const shareId = share?.shareId ?? '';
+  const createTenantShareLink = () => {
+    tenantShareMutation.mutate({ conversationId, targetMessageId: latestMessage?.messageId });
+  };
 
   return (
     <OGDialog open={open} onOpenChange={onOpenChange} triggerRef={triggerRef}>
@@ -119,6 +129,55 @@ export default function ShareButton({
                   </Button>
                 </div>
               )}
+              <div className="mt-3 rounded-md border border-border-light p-3">
+                <div className="mb-2 text-sm font-medium text-text-primary">
+                  {localize('com_ui_share_tenant_link')}
+                </div>
+                <div className="mb-3 text-sm text-text-secondary">
+                  {localize('com_ui_share_tenant_message')}
+                </div>
+                {!tenantSharedLink ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={tenantShareMutation.isLoading}
+                    onClick={createTenantShareLink}
+                  >
+                    {tenantShareMutation.isLoading ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      localize('com_ui_create_tenant_link')
+                    )}
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-md bg-surface-secondary p-2">
+                    <div className="flex-1 break-all text-sm text-text-secondary">
+                      {tenantSharedLink}
+                    </div>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      aria-label={localize('com_ui_copy_link')}
+                      onClick={() => {
+                        if (isTenantCopying) {
+                          return;
+                        }
+                        setAnnouncement(localize('com_ui_link_copied'));
+                        copyTenantLink(setIsTenantCopying);
+                        setTimeout(() => setAnnouncement(''), 1000);
+                      }}
+                      className={cn('shrink-0', isTenantCopying ? 'cursor-default' : '')}
+                    >
+                      {isTenantCopying ? (
+                        <CopyCheck className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Copy className="size-4" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         }
