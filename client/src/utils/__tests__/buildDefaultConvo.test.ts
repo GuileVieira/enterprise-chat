@@ -19,6 +19,28 @@ const baseConversation: TConversation = {
 };
 
 describe('buildDefaultConvo - defaultParamsEndpoint', () => {
+  it('should preserve projectId when applying endpoint defaults', () => {
+    const preset: TConversation = {
+      ...baseConversation,
+      endpoint: EModelEndpoint.agents,
+      agent_id: 'agent-1',
+    };
+
+    const result = buildDefaultConvo({
+      models: [],
+      conversation: {
+        ...baseConversation,
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-2',
+        projectId: 'project-1',
+      },
+      endpoint: EModelEndpoint.agents,
+      lastConversationSetup: preset,
+    });
+
+    expect(result.projectId).toBe('project-1');
+  });
+
   describe('custom endpoint with defaultParamsEndpoint: anthropic', () => {
     const models = ['anthropic/claude-opus-4.5', 'anthropic/claude-sonnet-4'];
 

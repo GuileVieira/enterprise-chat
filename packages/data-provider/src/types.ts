@@ -312,7 +312,7 @@ export type TAgentApiKeyListResponse = {
 export type TUpdateConversationRequest = {
   conversationId: string;
   title?: string;
-  projectId?: string;
+  projectId?: string | null;
 };
 
 export type TUpdateConversationResponse = TConversation;

@@ -1,12 +1,10 @@
 import { memo, useId, useMemo, useState, useCallback } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { CaretDown, Check, Folder } from '@phosphor-icons/react';
 import { DropdownPopup, useMediaQuery } from '@librechat/client';
 import {
   Constants,
-  QueryKeys,
   getConfigDefaults,
   PermissionTypes,
   Permissions,
@@ -16,6 +14,7 @@ import ModelSelector from './Menus/Endpoints/ModelSelector';
 import {
   useGetProjectFiles,
   useGetStartupConfig,
+  useMoveConversationToProjectMutation,
   useProjectByIdQuery,
   useProjectsQuery,
 } from '~/data-provider';
@@ -24,17 +23,23 @@ import { OpenSidebar, PresetsMenu } from './Menus';
 import BookmarkMenu from './Menus/BookmarkMenu';
 import { TemporaryChat } from './TemporaryChat';
 import AddMultiConvo from './AddMultiConvo';
-import { useHasAccess, useLocalize, useNewConvo } from '~/hooks';
-import { clearMessagesCache, cn } from '~/utils';
+import { useHasAccess, useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
+export function shouldUpdateExistingConversationProject(
+  conversation?: Pick<TConversation, 'conversationId'> | null,
+) {
+  const conversationId = conversation?.conversationId;
+  return !!conversationId && conversationId !== Constants.NEW_CONVO && conversationId !== 'search';
+}
+
 function ProjectSelectorBadges({ conversation }: { conversation?: TConversation | null }) {
   const localize = useLocalize();
   const menuId = useId();
-  const queryClient = useQueryClient();
-  const { newConversation } = useNewConvo();
+  const moveConversationToProject = useMoveConversationToProjectMutation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const setConversation = useSetRecoilState(store.conversationByIndex(0));
   const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
@@ -56,10 +61,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
   const memoryCount = project
     ? (project.memories?.length ?? 0) + (project.memoryKeys?.length ?? 0)
     : 0;
-  const isExistingConversation =
-    !!conversation?.conversationId &&
-    conversation.conversationId !== Constants.NEW_CONVO &&
-    conversation.conversationId !== 'search';
+  const isExistingConversation = shouldUpdateExistingConversationProject(conversation);
 
   const handleProjectChange = useCallback(
     (nextProjectId: string | null) => {
@@ -74,28 +76,20 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
       setSelectedProjectId(nextProjectId);
 
       if (isExistingConversation) {
-        clearMessagesCache(queryClient, conversation?.conversationId);
-        queryClient.invalidateQueries([QueryKeys.messages]);
-
-        const template: Partial<TConversation> = {
-          endpoint: conversation?.endpoint,
-          endpointType: conversation?.endpointType,
-          model: conversation?.model,
-          spec: conversation?.spec,
-          agent_id: conversation?.agent_id,
-          assistant_id: conversation?.assistant_id,
-        };
-        if (nextProjectId) {
-          template.projectId = nextProjectId;
-        }
-        if (!template.endpoint && nextProject?.endpoint) {
-          template.endpoint = nextProject.endpoint as unknown as typeof template.endpoint;
-        }
-        if (!template.model && nextProject?.model) {
-          template.model = nextProject.model;
-        }
-
-        newConversation(Object.keys(template).length > 0 ? { template } : undefined);
+        moveConversationToProject.mutate(
+          {
+            conversationId: conversation?.conversationId ?? '',
+            projectId: nextProjectId,
+          },
+          {
+            onSuccess: (updatedConversation) => {
+              setConversation(updatedConversation);
+            },
+            onError: () => {
+              setSelectedProjectId(projectId || null);
+            },
+          },
+        );
         return;
       }
 
@@ -125,12 +119,11 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
     [
       projects,
       projectId,
-      queryClient,
       conversation,
-      newConversation,
       setConversation,
       setSelectedProjectId,
       isExistingConversation,
+      moveConversationToProject,
     ],
   );
 

@@ -51,11 +51,13 @@ export const useMoveConversationToProjectMutation = (): UseMutationResult<
       dataService.updateConversation({ conversationId, projectId }),
     {
       onSuccess: (updatedConvo) => {
-        queryClient.setQueryData(
-          [QueryKeys.conversation, updatedConvo.conversationId],
-          updatedConvo,
-        );
-        updateConvoInAllQueries(queryClient, updatedConvo.conversationId, () => updatedConvo);
+        const updatedConversationId = updatedConvo.conversationId;
+        if (!updatedConversationId) {
+          return;
+        }
+
+        queryClient.setQueryData([QueryKeys.conversation, updatedConversationId], updatedConvo);
+        updateConvoInAllQueries(queryClient, updatedConversationId, () => updatedConvo);
         // Invalidate conversation lists since project association changed
         queryClient.invalidateQueries([QueryKeys.allConversations]);
       },

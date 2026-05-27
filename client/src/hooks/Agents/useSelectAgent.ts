@@ -14,6 +14,31 @@ import { useAgentsMapContext } from '~/Providers/AgentsMapContext';
 import useNewConvo from '~/hooks/useNewConvo';
 import { logger } from '~/utils';
 
+export function buildAgentSwitchTemplate({
+  template,
+  conversation,
+}: {
+  template: Partial<TPreset | TConversation>;
+  conversation?: Pick<TConversation, 'conversationId' | 'projectId'> | null;
+}): Partial<TPreset | TConversation> {
+  const conversationId = conversation?.conversationId ?? '';
+  const isExistingConversation =
+    !!conversationId && conversationId !== Constants.NEW_CONVO && conversationId !== 'search';
+  const nextTemplate = { ...template };
+
+  if (isExistingConversation) {
+    nextTemplate.conversationId = conversationId;
+  } else if (!nextTemplate.conversationId) {
+    nextTemplate.conversationId = Constants.NEW_CONVO as string;
+  }
+
+  if (conversation?.projectId && !nextTemplate.projectId) {
+    nextTemplate.projectId = conversation.projectId;
+  }
+
+  return nextTemplate;
+}
+
 export default function useSelectAgent() {
   const queryClient = useQueryClient();
   const agentsMap = useAgentsMapContext();
@@ -24,10 +49,7 @@ export default function useSelectAgent() {
   const updateConversation = useCallback(
     async (agent: Partial<Agent>, template: Partial<TPreset | TConversation>) => {
       const conversation = await getConversation();
-      const nextTemplate = { ...template };
-      if (conversation?.projectId && !nextTemplate.projectId) {
-        nextTemplate.projectId = conversation.projectId;
-      }
+      const nextTemplate = buildAgentSwitchTemplate({ template, conversation });
       logger.log('conversation', 'Updating conversation with agent', agent);
       if (isAssistantsEndpoint(conversation?.endpoint)) {
         newConversation({
