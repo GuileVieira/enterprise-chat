@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   CaretDown as ChevronDown,
   Eye,
@@ -35,7 +35,16 @@ interface PendingDelete {
   name: string;
 }
 
-const SECRET_TYPES: SecretType[] = ['bearer', 'basic', 'api_key', 'custom'];
+const SECRET_TYPES: SecretType[] = ['bearer', 'basic', 'api_key', 'custom', 'meta_access_token'];
+const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
+const META_ACCESS_TOKEN_SECRET_TYPE: SecretType = 'meta_access_token';
+const SECRET_TYPE_LABELS: Record<SecretType, string> = {
+  bearer: 'Bearer',
+  basic: 'Basic',
+  api_key: 'API Key',
+  custom: 'Custom',
+  meta_access_token: 'Meta Access Token',
+};
 
 const SecretsPage: React.FC = () => {
   const localize = useLocalize();
@@ -57,6 +66,7 @@ const SecretsPage: React.FC = () => {
   const tenants = tenantsData?.tenants ?? [];
 
   const typeCount = new Set(secrets.map((secret) => secret.type)).size;
+  const isMetaAccessToken = secretType === META_ACCESS_TOKEN_SECRET_TYPE;
 
   const resetForm = () => {
     setSecretName('');
@@ -73,17 +83,34 @@ const SecretsPage: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!tenantId || !secretName.trim() || !secretValue.trim()) {
+    const name = isMetaAccessToken ? META_ACCESS_TOKEN_SECRET_NAME : secretName.trim();
+    if (!tenantId || !name || !secretValue.trim()) {
       return;
     }
     await createSecret.mutateAsync({
       tenantId,
       type: secretType,
-      name: secretName.trim(),
+      name,
       value: secretValue.trim(),
     });
     closeModal();
   };
+
+  const handleSecretTypeChange = (type: SecretType) => {
+    setSecretType(type);
+    if (type === META_ACCESS_TOKEN_SECRET_TYPE) {
+      setSecretName(META_ACCESS_TOKEN_SECRET_NAME);
+      setIsSecretFormEditable(true);
+    } else if (secretName === META_ACCESS_TOKEN_SECRET_NAME) {
+      setSecretName('');
+    }
+  };
+
+  useEffect(() => {
+    if (isMetaAccessToken && secretName !== META_ACCESS_TOKEN_SECRET_NAME) {
+      setSecretName(META_ACCESS_TOKEN_SECRET_NAME);
+    }
+  }, [isMetaAccessToken, secretName]);
 
   const handleDelete = async () => {
     if (pendingDelete == null || !tenantId) {
@@ -212,7 +239,7 @@ const SecretsPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <AdminBadge tone="accent" className="uppercase">
-                        {secret.type}
+                        {SECRET_TYPE_LABELS[secret.type]}
                       </AdminBadge>
                     </td>
                     <td className="px-6 py-4">
@@ -289,12 +316,13 @@ const SecretsPage: React.FC = () => {
                   data-1p-ignore="true"
                   data-lpignore="true"
                   readOnly={!isSecretFormEditable}
+                  disabled={isMetaAccessToken}
                   spellCheck={false}
                   value={secretName}
                   onFocus={() => setIsSecretFormEditable(true)}
                   onChange={(e) => setSecretName(e.target.value)}
                   placeholder={localize('com_admin_secret_name_placeholder')}
-                  className="focus:ring-ring-primary/20 mt-1 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
+                  className="focus:ring-ring-primary/20 mt-1 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-70"
                 />
               </div>
               <div>
@@ -304,12 +332,12 @@ const SecretsPage: React.FC = () => {
                 <div className="relative mt-1">
                   <select
                     value={secretType}
-                    onChange={(e) => setSecretType(e.target.value as SecretType)}
+                    onChange={(e) => handleSecretTypeChange(e.target.value as SecretType)}
                     className="focus:ring-ring-primary/20 h-10 w-full appearance-none rounded-lg border border-border-light bg-surface-primary py-0 pl-3 pr-10 text-sm text-text-primary outline-none transition-colors hover:bg-surface-secondary focus:border-border-xheavy focus:ring-2"
                   >
                     {SECRET_TYPES.map((type) => (
                       <option key={type} value={type}>
-                        {type}
+                        {SECRET_TYPE_LABELS[type]}
                       </option>
                     ))}
                   </select>

@@ -18,7 +18,7 @@ const tenantSecretSchema = new Schema<ITenantSecret>(
     },
     type: {
       type: String,
-      enum: ['bearer', 'basic', 'api_key', 'custom'],
+      enum: ['bearer', 'basic', 'api_key', 'custom', 'meta_access_token'],
       required: true,
     },
   },

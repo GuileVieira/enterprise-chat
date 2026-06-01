@@ -366,6 +366,50 @@ export const duckDuckGoSearchSchema: ExtendedJsonSchema = {
   required: ['query'],
 };
 
+/** Meta Ads insights tool JSON schema */
+export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    ad_account_id: {
+      type: 'string',
+      pattern: '^act_\\d+$',
+      description: 'Meta ad account id in act_<number> format.',
+    },
+    since: {
+      type: 'string',
+      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+      description: 'Start date in YYYY-MM-DD format.',
+    },
+    until: {
+      type: 'string',
+      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+      description: 'End date in YYYY-MM-DD format.',
+    },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 500,
+      description: 'Rows per Meta page. Defaults to 100.',
+    },
+    max_pages: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 10,
+      description: 'Maximum pages to fetch. Defaults to 3.',
+    },
+    after: {
+      type: 'string',
+      description: 'Optional Meta cursor for continuing a previous paginated request.',
+    },
+    graph_version: {
+      type: 'string',
+      pattern: '^v[1-9]\\d?\\.0$',
+      description: 'Optional Meta Graph API version, for example v25.0. Defaults to v25.0.',
+    },
+  },
+  required: ['ad_account_id', 'since', 'until'],
+};
+
 /** File Search tool JSON schema */
 export const fileSearchSchema: ExtendedJsonSchema = {
   type: 'object',
@@ -450,6 +494,13 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     description:
       'Search DuckDuckGo and optionally fetch readable text from each result. Useful for open web research without API keys.',
     schema: duckDuckGoSearchSchema,
+    toolType: 'builtin',
+  },
+  meta_ads_get_insights: {
+    name: 'meta_ads_get_insights',
+    description:
+      'Read-only Meta Graph API tool for active ad-level insights. Uses the tenant secret "meta_graph_access_token" and always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
+    schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },
   file_search: {

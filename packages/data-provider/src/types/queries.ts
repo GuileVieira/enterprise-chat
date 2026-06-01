@@ -390,7 +390,7 @@ export type TenantSecret = {
   _id: string;
   tenantId: string;
   name: string;
-  type: 'bearer' | 'basic' | 'api_key' | 'custom';
+  type: 'bearer' | 'basic' | 'api_key' | 'custom' | 'meta_access_token';
   createdAt?: string;
   updatedAt?: string;
 };

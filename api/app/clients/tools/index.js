@@ -8,6 +8,7 @@ const StructuredWolfram = require('./structured/Wolfram');
 const StructuredACS = require('./structured/AzureAISearch');
 const StructuredSD = require('./structured/StableDiffusion');
 const GoogleSearchAPI = require('./structured/GoogleSearch');
+const MetaAdsGetInsights = require('./structured/MetaAdsGetInsights');
 const TraversaalSearch = require('./structured/TraversaalSearch');
 const DuckDuckGoSearch = require('./structured/DuckDuckGoSearch');
 const createOpenAIImageTools = require('./structured/OpenAIImageTools');
@@ -23,6 +24,7 @@ module.exports = {
   StructuredSD,
   StructuredACS,
   GoogleSearchAPI,
+  MetaAdsGetInsights,
   TraversaalSearch,
   DuckDuckGoSearch,
   StructuredWolfram,

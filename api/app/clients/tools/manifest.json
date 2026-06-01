@@ -173,5 +173,12 @@
         "optional": true
       }
     ]
+  },
+  {
+    "name": "Meta Ads Insights",
+    "pluginKey": "meta_ads_get_insights",
+    "description": "Read active ad-level insights from Meta Graph API using the tenant Meta access token.",
+    "icon": "assets/logo.svg",
+    "authConfig": []
   }
 ]

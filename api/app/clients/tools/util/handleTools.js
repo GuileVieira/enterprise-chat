@@ -31,6 +31,7 @@ const {
   StructuredSD,
   StructuredACS,
   TraversaalSearch,
+  MetaAdsGetInsights,
   StructuredWolfram,
   TavilySearchResults,
   createGeminiImageTool,
@@ -43,7 +44,7 @@ const { getUserPluginAuthValue } = require('~/server/services/PluginService');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { getMCPServerTools } = require('~/server/services/Config');
 const { getMCPServersRegistry } = require('~/config');
-const { getRoleByName } = require('~/models');
+const { getRoleByName, getTenantSecret } = require('~/models');
 
 /**
  * Validates the availability and authentication of tools for a user based on environment variables or user-specific plugin authentication values.
@@ -176,6 +177,7 @@ const loadTools = async ({
     google: GoogleSearchAPI,
     duckduckgo_search: DuckDuckGoSearch,
     open_weather: OpenWeather,
+    meta_ads_get_insights: MetaAdsGetInsights,
     wolfram: StructuredWolfram,
     'stable-diffusion': StructuredSD,
     'azure-ai-search': StructuredACS,
@@ -249,6 +251,10 @@ const loadTools = async ({
     dalle: imageGenOptions,
     'stable-diffusion': imageGenOptions,
     gemini_image_gen: imageGenOptions,
+    meta_ads_get_insights: {
+      tenantId: options.req?.user?.tenantId,
+      getTenantSecret,
+    },
   };
 
   /** @type {Record<string, string>} */

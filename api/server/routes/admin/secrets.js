@@ -7,6 +7,8 @@ const db = require('~/models');
 const router = express.Router();
 const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
 const requireManageFunctions = requireCapability(SystemCapabilities.MANAGE_CONFIGS);
+const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
+const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
 
 router.use(requireJwtAuth, requireAdminAccess);
 
@@ -25,7 +27,9 @@ router.get('/', async (req, res) => {
 
 router.post('/', requireManageFunctions, async (req, res) => {
   try {
-    const { tenantId, name, value, type } = req.body;
+    const { tenantId, value, type } = req.body;
+    const name =
+      type === META_ACCESS_TOKEN_SECRET_TYPE ? META_ACCESS_TOKEN_SECRET_NAME : req.body.name;
     if (!tenantId || !name || !value || !type) {
       return res.status(400).json({ message: 'tenantId, name, value, and type are required' });
     }
