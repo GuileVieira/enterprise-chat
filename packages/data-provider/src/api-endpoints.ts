@@ -135,6 +135,11 @@ const projectsRoot = `${BASE_URL}/api/projects`;
 export const projects = () => projectsRoot;
 export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}`;
 export const archiveProject = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}/archive`;
+export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
+export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
+export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
+export const projectMetaAdsApply = (id: string, recommendationId: string) =>
+  `${projectMetaAds(id)}/recommendations/${encodeURIComponent(recommendationId)}/apply`;
 
 export const search = (q: string, cursor?: string | null) =>
   `${BASE_URL}/api/search?q=${q}${cursor ? `&cursor=${cursor}` : ''}`;

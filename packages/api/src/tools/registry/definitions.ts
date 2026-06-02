@@ -410,6 +410,34 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
   required: ['ad_account_id', 'since', 'until'],
 };
 
+/** Meta Ads budget manager tool JSON schema */
+export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    action: {
+      type: 'string',
+      enum: [
+        'get_status',
+        'list_recommendations',
+        'run_now',
+        'approve_change',
+        'pause_automation',
+      ],
+      description:
+        'Action to run. Use approve_change only after showing the recommendation to the user.',
+    },
+    project_id: {
+      type: 'string',
+      description: 'Project id that owns the Meta Ads configuration.',
+    },
+    recommendation_id: {
+      type: 'string',
+      description: 'Recommendation id. Required for approve_change.',
+    },
+  },
+  required: ['action', 'project_id'],
+};
+
 /** File Search tool JSON schema */
 export const fileSearchSchema: ExtendedJsonSchema = {
   type: 'object',
@@ -501,6 +529,13 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     description:
       'Read-only Meta Graph API tool for active ad-level insights. Uses the tenant secret "meta_graph_access_token" and always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
     schema: metaAdsGetInsightsSchema,
+    toolType: 'builtin',
+  },
+  meta_ads_budget_manager: {
+    name: 'meta_ads_budget_manager',
+    description:
+      'Manage Meta Ads budget recommendations for a project-linked ad account. Can read status, list recommendations, run analysis now, pause automation, and apply one approved recommendation. Requires project permissions.',
+    schema: metaAdsBudgetManagerSchema,
     toolType: 'builtin',
   },
   file_search: {

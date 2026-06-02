@@ -7,6 +7,7 @@ import {
   GearSix,
   PencilSimple,
   Sparkle,
+  TrendUp,
 } from '@phosphor-icons/react';
 import { useProjectByIdQuery, useGetProjectFiles, useTitleGeneration } from '~/data-provider';
 import { useLocalize } from '~/hooks';
@@ -18,9 +19,10 @@ import ProjectConversationsTab from './ProjectConversationsTab';
 import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectFileUploader from './ProjectFileUploader';
 import ProjectForm from './ProjectForm';
+import ProjectMetaAdsPanel from './ProjectMetaAdsPanel';
 import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 
-const tabs = ['conversations', 'prompts', 'memories', 'files', 'settings'] as const;
+const tabs = ['conversations', 'prompts', 'memories', 'files', 'metaAds', 'settings'] as const;
 type Tab = (typeof tabs)[number];
 
 const tabIcons: Record<Tab, typeof ChatCircle> = {
@@ -28,6 +30,7 @@ const tabIcons: Record<Tab, typeof ChatCircle> = {
   prompts: Sparkle,
   memories: FileText,
   files: Folder,
+  metaAds: TrendUp,
   settings: GearSix,
 };
 
@@ -253,6 +256,9 @@ export default function ProjectDetailPage() {
                 </div>
               )}
             </>
+          )}
+          {activeTab === 'metaAds' && (
+            <ProjectMetaAdsPanel project={project} canEdit={permissions.canEdit} />
           )}
           {activeTab === 'settings' && (
             <>

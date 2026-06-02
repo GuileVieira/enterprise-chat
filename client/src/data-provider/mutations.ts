@@ -1208,3 +1208,54 @@ export const useArchiveProjectMutation = (): UseMutationResult<
     },
   );
 };
+
+export const useUpdateProjectMetaAdsMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  { projectId: string; metaAds: t.TProject['metaAds'] },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, metaAds }) => dataService.updateProjectMetaAdsSettings(projectId, metaAds),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useRunProjectMetaAdsMutation = (): UseMutationResult<
+  t.ProjectMetaAdsRunResponse,
+  unknown,
+  string,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((projectId) => dataService.runProjectMetaAdsAnalysis(projectId), {
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries([QueryKeys.projectMetaAds, projectId]);
+    },
+  });
+};
+
+export const useApplyProjectMetaAdsRecommendationMutation = (): UseMutationResult<
+  t.ProjectMetaAdsApplyResponse,
+  unknown,
+  { projectId: string; recommendationId: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, recommendationId }) =>
+      dataService.applyProjectMetaAdsRecommendation(projectId, recommendationId),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};

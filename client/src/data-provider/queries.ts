@@ -208,6 +208,22 @@ export const useProjectByIdQuery = (
   );
 };
 
+export const useProjectMetaAdsQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.ProjectMetaAdsStatus>,
+): QueryObserverResult<t.ProjectMetaAdsStatus> => {
+  return useQuery<t.ProjectMetaAdsStatus>(
+    [QueryKeys.projectMetaAds, projectId],
+    () => dataService.getProjectMetaAdsStatus(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

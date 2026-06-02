@@ -38,6 +38,11 @@ jest.mock('../ProjectConversationsTab', () => ({
   default: () => <div data-testid="project-conversations-tab" />,
 }));
 
+jest.mock('../ProjectMetaAdsPanel', () => ({
+  __esModule: true,
+  default: () => <div data-testid="project-meta-ads-panel" />,
+}));
+
 jest.mock('../ProjectForm', () => ({
   __esModule: true,
   default: ({ onSuccess }) => (

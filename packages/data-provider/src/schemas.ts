@@ -878,6 +878,26 @@ export const projectSchema = z.object({
   promptSnippets: z.array(z.object({ title: z.string(), content: z.string() })).optional(),
   promptGroupIds: z.array(z.string()).optional(),
   fileIds: z.array(z.string()).optional(),
+  metaAds: z
+    .object({
+      enabled: z.boolean().optional(),
+      adAccountId: z.string().optional(),
+      automationMode: z.enum(['recommend', 'auto_limited']).optional(),
+      budgetLevel: z.enum(['adset']).optional(),
+      rules: z
+        .object({
+          targetCpa: z.number().optional(),
+          minRoas: z.number().optional(),
+          maxIncreasePct: z.number().optional(),
+          maxDecreasePct: z.number().optional(),
+          minDailyBudget: z.number().optional(),
+          maxDailyBudget: z.number().optional(),
+          cooldownHours: z.number().optional(),
+          minSpend: z.number().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   isArchived: z.boolean().optional(),
   iconURL: z.string().optional(),
   accessLevel: z.number().optional(),

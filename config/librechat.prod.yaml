@@ -5,6 +5,7 @@ cache: true
 includedTools:
   - calculator
   - meta_ads_get_insights
+  - meta_ads_budget_manager
   - openrouter_gemini_image_gen
 
 summarization:

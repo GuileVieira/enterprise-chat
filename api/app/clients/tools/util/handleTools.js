@@ -32,6 +32,7 @@ const {
   StructuredACS,
   TraversaalSearch,
   MetaAdsGetInsights,
+  MetaAdsBudgetManager,
   StructuredWolfram,
   TavilySearchResults,
   createGeminiImageTool,
@@ -179,6 +180,7 @@ const loadTools = async ({
     duckduckgo_search: DuckDuckGoSearch,
     open_weather: OpenWeather,
     meta_ads_get_insights: MetaAdsGetInsights,
+    meta_ads_budget_manager: MetaAdsBudgetManager,
     wolfram: StructuredWolfram,
     'stable-diffusion': StructuredSD,
     'azure-ai-search': StructuredACS,
@@ -277,6 +279,9 @@ const loadTools = async ({
     meta_ads_get_insights: {
       tenantId: options.req?.user?.tenantId,
       getTenantSecret,
+    },
+    meta_ads_budget_manager: {
+      req: options.req,
     },
   };
 

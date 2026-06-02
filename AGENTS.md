@@ -88,6 +88,7 @@ Quirks:
 ## Testing
 
 - **Framework:** Jest everywhere. Run per workspace.
+- **Prefer focused tests/checks.** Do not run full builds by default during local agent work; they are slow in this repo. Use targeted Jest specs, JSON validation, focused `tsc`/package checks, and only run `npm run build` or slow package builds when the user explicitly asks or the change cannot be validated otherwise.
 - Backend unit tests: `cd api && npm run test:ci`
 - Package unit tests: `cd packages/<pkg> && npm run test:ci`
 - Frontend unit tests: `cd client && npm run test:ci`
