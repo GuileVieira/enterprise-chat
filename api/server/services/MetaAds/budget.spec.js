@@ -2,6 +2,8 @@ const {
   DEFAULT_RULES,
   normalizeAdAccountId,
   proposeBudget,
+  getScheduleIntervalMinutes,
+  isProjectDueForMetaAdsRun,
   resolveMetaAccessToken,
 } = require('./budget');
 
@@ -95,5 +97,29 @@ describe('Meta Ads budget service', () => {
     expect(normalizeAdAccountId('123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123 456-789')).toBe('act_123456789');
+  });
+
+  it('defaults project cron interval to 180 minutes and respects due windows', () => {
+    const now = new Date('2026-06-02T12:00:00.000Z');
+
+    expect(getScheduleIntervalMinutes({})).toBe(180);
+    expect(
+      isProjectDueForMetaAdsRun(
+        { metaAds: { lastRunAt: '2026-06-02T09:00:00.000Z' } },
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      isProjectDueForMetaAdsRun(
+        { metaAds: { scheduleIntervalMinutes: 180, lastRunAt: '2026-06-02T10:00:00.000Z' } },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      isProjectDueForMetaAdsRun(
+        { metaAds: { scheduleIntervalMinutes: 30, lastRunAt: '2026-06-02T11:30:00.000Z' } },
+        now,
+      ),
+    ).toBe(true);
   });
 });

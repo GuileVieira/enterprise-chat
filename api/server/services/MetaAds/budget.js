@@ -7,6 +7,8 @@ const META_GRAPH_HOST = 'https://graph.facebook.com';
 const DEFAULT_META_GRAPH_VERSION = 'v25.0';
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const DEFAULT_LIMIT = 100;
+const DEFAULT_SCHEDULE_INTERVAL_MINUTES = 180;
+const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const MIN_SAMPLE_SPEND = 10;
 const DEFAULT_RULES = {
   targetCpa: 45,
@@ -120,6 +122,20 @@ function normalizeAdAccountId(value) {
   }
   const digits = value.replace(/^act_/i, '').replace(/\D/g, '');
   return digits ? `act_${digits}` : value;
+}
+
+function getScheduleIntervalMinutes(metaAds = {}) {
+  const interval = Number(metaAds.scheduleIntervalMinutes);
+  return SCHEDULE_INTERVALS.has(interval) ? interval : DEFAULT_SCHEDULE_INTERVAL_MINUTES;
+}
+
+function isProjectDueForMetaAdsRun(project, now = new Date()) {
+  const intervalMinutes = getScheduleIntervalMinutes(project.metaAds ?? {});
+  const lastRunAt = project.metaAds?.lastRunAt ? new Date(project.metaAds.lastRunAt) : null;
+  if (!lastRunAt || Number.isNaN(lastRunAt.getTime())) {
+    return true;
+  }
+  return now.getTime() - lastRunAt.getTime() >= intervalMinutes * 60 * 1000;
 }
 
 function calculateMetrics(row) {
@@ -437,8 +453,19 @@ async function runCron() {
   );
   const results = [];
   for (const project of projects) {
+    if (!isProjectDueForMetaAdsRun(project)) {
+      results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'not_due' });
+      continue;
+    }
     try {
-      results.push(await analyzeProject({ projectId: project.projectId, actor: 'cron' }));
+      const result = await analyzeProject({ projectId: project.projectId, actor: 'cron' });
+      await runAsSystem(() =>
+        Project.updateOne(
+          { projectId: project.projectId },
+          { $set: { 'metaAds.lastRunAt': new Date() } },
+        ),
+      );
+      results.push(result);
     } catch (error) {
       logger.error('[MetaAdsBudgetCron] Project failed', {
         projectId: project.projectId,
@@ -456,6 +483,8 @@ module.exports = {
   applyRecommendation,
   getModels,
   getProjectMetaAdsStatus,
+  getScheduleIntervalMinutes,
+  isProjectDueForMetaAdsRun,
   normalizeAdAccountId,
   proposeBudget,
   resolveMetaAccessToken,

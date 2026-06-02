@@ -13,6 +13,17 @@ type MetaAdsSettings = NonNullable<TProject['metaAds']>;
 type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules'> & {
   rules: Required<MetaAdsRules>;
 };
+type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
+
+const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: string }> = [
+  { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
+  { value: 60, labelKey: 'com_ui_project_meta_ads_schedule_60' },
+  { value: 120, labelKey: 'com_ui_project_meta_ads_schedule_120' },
+  { value: 180, labelKey: 'com_ui_project_meta_ads_schedule_180' },
+  { value: 360, labelKey: 'com_ui_project_meta_ads_schedule_360' },
+  { value: 720, labelKey: 'com_ui_project_meta_ads_schedule_720' },
+  { value: 1440, labelKey: 'com_ui_project_meta_ads_schedule_1440' },
+];
 
 const defaultRules: Required<MetaAdsRules> = {
   targetCpa: 45,
@@ -61,6 +72,8 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
     credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
     budgetLevel: 'adset',
+    scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
+    lastRunAt: project.metaAds?.lastRunAt,
     rules: {
       ...defaultRules,
       ...(project.metaAds?.rules ?? {}),
@@ -149,7 +162,7 @@ export default function ProjectMetaAdsPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-4">
+        <div className="mt-5 grid gap-4 md:grid-cols-5">
           <label className="flex flex-col gap-2 text-sm text-text-secondary">
             {localize('com_ui_project_meta_ads_enabled')}
             <select
@@ -201,6 +214,28 @@ export default function ProjectMetaAdsPanel({
               <option value="auto_limited">
                 {localize('com_ui_project_meta_ads_mode_auto_limited')}
               </option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-text-secondary">
+            {localize('com_ui_project_meta_ads_schedule')}
+            <select
+              disabled={!canEdit}
+              value={settings.scheduleIntervalMinutes}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  scheduleIntervalMinutes: Number(
+                    event.target.value,
+                  ) as ScheduleIntervalMinutes,
+                }))
+              }
+              className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
+            >
+              {scheduleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {localize(option.labelKey)}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex flex-col gap-2 text-sm text-text-secondary">
