@@ -16,6 +16,8 @@ const router = express.Router({ mergeParams: true });
 
 router.use(requireJwtAuth);
 
+const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
+
 function normalizeMetaAds(metaAds = {}) {
   const digits =
     typeof metaAds.adAccountId === 'string'
@@ -28,6 +30,9 @@ function normalizeMetaAds(metaAds = {}) {
     adAccountId: digits ? `act_${digits}` : metaAds.adAccountId,
     tokenSecretName,
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
+    scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(metaAds.scheduleIntervalMinutes))
+      ? Number(metaAds.scheduleIntervalMinutes)
+      : 180,
   };
 }
 

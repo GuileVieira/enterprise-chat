@@ -62,6 +62,23 @@ describe('ProjectMetaAdsPanel', () => {
         adAccountId: 'act_123456789',
         tokenSecretName: 'meta_graph_access_token_project_p1',
         credentialMode: 'project_secret',
+        scheduleIntervalMinutes: 180,
+      }),
+    });
+  });
+
+  it('saves a selected schedule interval', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_schedule_180'), {
+      target: { value: '30' },
+    });
+    fireEvent.click(screen.getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith({
+      projectId: 'p1',
+      metaAds: expect.objectContaining({
+        scheduleIntervalMinutes: 30,
       }),
     });
   });

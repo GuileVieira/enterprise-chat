@@ -26,6 +26,8 @@ export interface IProjectMetaAds {
   credentialMode?: 'project_secret' | 'tenant_default';
   automationMode?: 'recommend' | 'auto_limited';
   budgetLevel?: 'adset';
+  scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
+  lastRunAt?: Date;
   rules?: IProjectMetaAdsRules;
 }
 

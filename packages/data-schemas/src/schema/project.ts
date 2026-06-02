@@ -70,6 +70,14 @@ const ProjectMetaAdsSchema = new Schema(
       enum: ['adset'],
       default: 'adset',
     },
+    scheduleIntervalMinutes: {
+      type: Number,
+      enum: [30, 60, 120, 180, 360, 720, 1440],
+      default: 180,
+    },
+    lastRunAt: {
+      type: Date,
+    },
     rules: {
       type: ProjectMetaAdsRulesSchema,
       default: {},
