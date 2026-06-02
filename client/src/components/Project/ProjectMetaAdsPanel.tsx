@@ -44,10 +44,21 @@ function formatMetric(value?: number | null) {
   return value == null || Number.isNaN(value) ? '-' : value.toFixed(2);
 }
 
+function getAdAccountDigits(value?: string) {
+  return (value ?? '').replace(/^act_/i, '').replace(/\D/g, '');
+}
+
+function toAdAccountId(value: string) {
+  const digits = getAdAccountDigits(value);
+  return digits ? `act_${digits}` : '';
+}
+
 function normalizeSettings(project: TProject): MetaAdsSettingsState {
   return {
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
+    tokenSecretName: project.metaAds?.tokenSecretName ?? '',
+    credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
     budgetLevel: 'adset',
     rules: {
@@ -138,7 +149,7 @@ export default function ProjectMetaAdsPanel({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="mt-5 grid gap-4 md:grid-cols-4">
           <label className="flex flex-col gap-2 text-sm text-text-secondary">
             {localize('com_ui_project_meta_ads_enabled')}
             <select
@@ -160,11 +171,16 @@ export default function ProjectMetaAdsPanel({
             {localize('com_ui_project_meta_ads_account')}
             <input
               disabled={!canEdit}
-              value={settings.adAccountId}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={getAdAccountDigits(settings.adAccountId)}
               onChange={(event) =>
-                setSettings((current) => ({ ...current, adAccountId: event.target.value }))
+                setSettings((current) => ({
+                  ...current,
+                  adAccountId: toAdAccountId(event.target.value),
+                }))
               }
-              placeholder="act_123456789"
+              placeholder="123456789"
               className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
             />
           </label>
@@ -186,6 +202,25 @@ export default function ProjectMetaAdsPanel({
                 {localize('com_ui_project_meta_ads_mode_auto_limited')}
               </option>
             </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-text-secondary">
+            {localize('com_ui_project_meta_ads_token_secret')}
+            <input
+              disabled={!canEdit}
+              value={settings.tokenSecretName ?? ''}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  tokenSecretName: event.target.value,
+                  credentialMode: event.target.value.trim() ? 'project_secret' : 'tenant_default',
+                }))
+              }
+              placeholder={`meta_graph_access_token_project_${project.projectId}`}
+              className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
+            />
+            <span className="text-xs leading-5 text-text-tertiary">
+              {localize('com_ui_project_meta_ads_token_secret_hint')}
+            </span>
           </label>
         </div>
 

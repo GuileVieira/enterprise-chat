@@ -52,6 +52,14 @@ const ProjectMetaAdsSchema = new Schema(
     adAccountId: {
       type: String,
     },
+    tokenSecretName: {
+      type: String,
+    },
+    credentialMode: {
+      type: String,
+      enum: ['project_secret', 'tenant_default'],
+      default: 'tenant_default',
+    },
     automationMode: {
       type: String,
       enum: ['recommend', 'auto_limited'],

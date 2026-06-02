@@ -1027,6 +1027,8 @@
   "com_ui_project_meta_ads_enabled_state": "Ativa",
   "com_ui_project_meta_ads_disabled": "Desativada",
   "com_ui_project_meta_ads_account": "Conta de anúncio",
+  "com_ui_project_meta_ads_token_secret": "Nome do secret do token",
+  "com_ui_project_meta_ads_token_secret_hint": "Deixe vazio para usar o token global meta_graph_access_token da tenant.",
   "com_ui_project_meta_ads_mode": "Modo",
   "com_ui_project_meta_ads_mode_recommend": "Só recomendar",
   "com_ui_project_meta_ads_mode_auto_limited": "Automático limitado",

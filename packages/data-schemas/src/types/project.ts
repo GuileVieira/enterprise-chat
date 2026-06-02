@@ -22,6 +22,8 @@ export interface IProjectMetaAdsRules {
 export interface IProjectMetaAds {
   enabled?: boolean;
   adAccountId?: string;
+  tokenSecretName?: string;
+  credentialMode?: 'project_secret' | 'tenant_default';
   automationMode?: 'recommend' | 'auto_limited';
   budgetLevel?: 'adset';
   rules?: IProjectMetaAdsRules;

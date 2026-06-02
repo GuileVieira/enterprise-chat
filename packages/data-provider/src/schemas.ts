@@ -882,6 +882,8 @@ export const projectSchema = z.object({
     .object({
       enabled: z.boolean().optional(),
       adAccountId: z.string().optional(),
+      tokenSecretName: z.string().optional(),
+      credentialMode: z.enum(['project_secret', 'tenant_default']).optional(),
       automationMode: z.enum(['recommend', 'auto_limited']).optional(),
       budgetLevel: z.enum(['adset']).optional(),
       rules: z

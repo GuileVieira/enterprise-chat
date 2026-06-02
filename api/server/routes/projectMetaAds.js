@@ -16,6 +16,21 @@ const router = express.Router({ mergeParams: true });
 
 router.use(requireJwtAuth);
 
+function normalizeMetaAds(metaAds = {}) {
+  const digits =
+    typeof metaAds.adAccountId === 'string'
+      ? metaAds.adAccountId.replace(/^act_/i, '').replace(/\D/g, '')
+      : '';
+  const tokenSecretName =
+    typeof metaAds.tokenSecretName === 'string' ? metaAds.tokenSecretName.trim() : '';
+  return {
+    ...metaAds,
+    adAccountId: digits ? `act_${digits}` : metaAds.adAccountId,
+    tokenSecretName,
+    credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
+  };
+}
+
 router.get(
   '/',
   canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
@@ -34,7 +49,9 @@ router.put(
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
-      const project = await updateProject(req.params.projectId, { metaAds: req.body.metaAds });
+      const project = await updateProject(req.params.projectId, {
+        metaAds: normalizeMetaAds(req.body.metaAds),
+      });
       if (!project) {
         return res.status(404).json({ message: 'Project not found' });
       }

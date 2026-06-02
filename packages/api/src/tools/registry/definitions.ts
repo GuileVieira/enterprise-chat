@@ -406,6 +406,11 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
       pattern: '^v[1-9]\\d?\\.0$',
       description: 'Optional Meta Graph API version, for example v25.0. Defaults to v25.0.',
     },
+    project_id: {
+      type: 'string',
+      description:
+        'Optional project id. When provided, uses the project Meta Ads token secret before the tenant default.',
+    },
   },
   required: ['ad_account_id', 'since', 'until'],
 };
