@@ -67,6 +67,64 @@ export type MessagesListResponse = {
   nextCursor: string | null;
 };
 
+export type ProjectMetaAdsSnapshot = {
+  _id?: string;
+  entityId: string;
+  entityName?: string;
+  dailyBudget?: number;
+  spend?: number;
+  cpa?: number | null;
+  roas?: number | null;
+  resultCount?: number;
+  resultType?: string;
+  createdAt?: string;
+};
+
+export type ProjectMetaAdsRecommendation = {
+  _id?: string;
+  entityId: string;
+  entityName?: string;
+  action: 'increase' | 'decrease' | 'hold';
+  status: 'pending' | 'applied' | 'ignored' | 'blocked';
+  currentDailyBudget?: number;
+  proposedDailyBudget?: number;
+  spend?: number;
+  cpa?: number | null;
+  roas?: number | null;
+  reason?: string;
+  mode?: string;
+  createdAt?: string;
+};
+
+export type ProjectMetaAdsBudgetChange = {
+  _id?: string;
+  entityId: string;
+  entityName?: string;
+  previousDailyBudget?: number;
+  newDailyBudget?: number;
+  actor?: 'cron' | 'user' | 'tool';
+  reason?: string;
+  createdAt?: string;
+};
+
+export type ProjectMetaAdsStatus = {
+  latestSnapshots: ProjectMetaAdsSnapshot[];
+  recommendations: ProjectMetaAdsRecommendation[];
+  changes: ProjectMetaAdsBudgetChange[];
+};
+
+export type ProjectMetaAdsRunResponse = {
+  projectId: string;
+  adAccountId: string;
+  since: string;
+  until: string;
+  recommendations: ProjectMetaAdsRecommendation[];
+};
+
+export type ProjectMetaAdsApplyResponse = {
+  recommendation: ProjectMetaAdsRecommendation;
+};
+
 /* Shared Links */
 export type SharedMessagesResponse = Omit<s.TSharedLink, 'messages'> & {
   messages: s.TMessage[];

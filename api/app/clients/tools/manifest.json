@@ -182,6 +182,13 @@
     "authConfig": []
   },
   {
+    "name": "Meta Ads Budget Manager",
+    "pluginKey": "meta_ads_budget_manager",
+    "description": "Review and apply Meta Ads budget recommendations for project-linked ad accounts.",
+    "icon": "assets/logo.svg",
+    "authConfig": []
+  },
+  {
     "name": "Premium Image Generator",
     "pluginKey": "openrouter_gemini_image_gen",
     "description": "Generate premium images with Nano Banana Pro through OpenRouter. Costs 3x tokens.",

@@ -53,6 +53,7 @@ export enum QueryKeys {
   projects = 'projects',
   project = 'project',
   projectFiles = 'projectFiles',
+  projectMetaAds = 'projectMetaAds',
   health = 'health',
   userTerms = 'userTerms',
   banner = 'banner',
@@ -104,6 +105,7 @@ export enum QueryKeys {
 export const DynamicQueryKeys = {
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
   projectFiles: (projectId: string) => ['projectFiles', projectId] as const,
+  projectMetaAds: (projectId: string) => ['projectMetaAds', projectId] as const,
 } as const;
 
 export enum MutationKeys {

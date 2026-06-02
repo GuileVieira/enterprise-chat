@@ -71,6 +71,31 @@ services:
       - orqest_uploads:/app/uploads
       - orqest_logs:/app/api/logs
 
+  meta_ads_budget_job:
+    profiles:
+      - jobs
+    build:
+      context: .
+      dockerfile: Dockerfile.multi
+      target: api-build
+      args:
+        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
+        VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
+    depends_on:
+      mongodb:
+        condition: service_started
+    command: node api/server/jobs/metaAdsBudgetCron.js
+    environment:
+      NODE_ENV: production
+      CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
+      CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
+      MONGO_URI: mongodb://mongodb:27017/Orqest
+      MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
+      MONGO_AUTO_CREATE: ${MONGO_AUTO_CREATE:-true}
+    volumes:
+      - orqest_logs:/app/api/logs
+
   mongodb:
     image: mongo:8.0.20
     restart: always

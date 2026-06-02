@@ -871,6 +871,28 @@ export const archiveProject = (id: string, isArchived: boolean): Promise<s.TProj
   return request.put(endpoints.archiveProject(id), { isArchived });
 };
 
+export const getProjectMetaAdsStatus = (id: string): Promise<q.ProjectMetaAdsStatus> => {
+  return request.get(endpoints.projectMetaAds(id));
+};
+
+export const updateProjectMetaAdsSettings = (
+  id: string,
+  metaAds: s.TProject['metaAds'],
+): Promise<s.TProject> => {
+  return request.put(endpoints.projectMetaAdsSettings(id), { metaAds });
+};
+
+export const runProjectMetaAdsAnalysis = (id: string): Promise<q.ProjectMetaAdsRunResponse> => {
+  return request.post(endpoints.projectMetaAdsRun(id), {});
+};
+
+export const applyProjectMetaAdsRecommendation = (
+  id: string,
+  recommendationId: string,
+): Promise<q.ProjectMetaAdsApplyResponse> => {
+  return request.post(endpoints.projectMetaAdsApply(id, recommendationId), {});
+};
+
 export const listMessages = (params?: q.MessagesListParams): Promise<q.MessagesListResponse> => {
   return request.get(endpoints.messages(params ?? {}));
 };

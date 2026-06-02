@@ -29,6 +29,47 @@ const ProjectPromptSnippetSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsRulesSchema = new Schema(
+  {
+    targetCpa: Number,
+    minRoas: Number,
+    maxIncreasePct: Number,
+    maxDecreasePct: Number,
+    minDailyBudget: Number,
+    maxDailyBudget: Number,
+    cooldownHours: Number,
+    minSpend: Number,
+  },
+  { _id: false },
+);
+
+const ProjectMetaAdsSchema = new Schema(
+  {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    adAccountId: {
+      type: String,
+    },
+    automationMode: {
+      type: String,
+      enum: ['recommend', 'auto_limited'],
+      default: 'recommend',
+    },
+    budgetLevel: {
+      type: String,
+      enum: ['adset'],
+      default: 'adset',
+    },
+    rules: {
+      type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+  },
+  { _id: false },
+);
+
 const projectSchema = new Schema<IProject>(
   {
     projectId: {
@@ -79,6 +120,10 @@ const projectSchema = new Schema<IProject>(
     fileIds: {
       type: [String],
       default: [],
+    },
+    metaAds: {
+      type: ProjectMetaAdsSchema,
+      default: undefined,
     },
     isArchived: {
       type: Boolean,

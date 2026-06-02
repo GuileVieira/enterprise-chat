@@ -60,6 +60,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
       promptSnippets?: IProject['promptSnippets'];
       promptGroupIds?: string[];
       fileIds?: string[];
+      metaAds?: IProject['metaAds'];
       iconURL?: string;
     },
   ) {
