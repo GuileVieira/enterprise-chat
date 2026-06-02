@@ -2002,6 +2002,8 @@
   "com_ui_project_meta_ads_enabled_state": "Enabled",
   "com_ui_project_meta_ads_disabled": "Disabled",
   "com_ui_project_meta_ads_account": "Ad account",
+  "com_ui_project_meta_ads_token_secret": "Token secret name",
+  "com_ui_project_meta_ads_token_secret_hint": "Leave empty to use the tenant default meta_graph_access_token.",
   "com_ui_project_meta_ads_mode": "Mode",
   "com_ui_project_meta_ads_mode_recommend": "Recommend only",
   "com_ui_project_meta_ads_mode_auto_limited": "Auto limited",

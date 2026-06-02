@@ -277,6 +277,7 @@ const loadTools = async ({
     gemini_image_gen: imageGenOptions,
     openrouter_gemini_image_gen: imageGenOptions,
     meta_ads_get_insights: {
+      req: options.req,
       tenantId: options.req?.user?.tenantId,
       getTenantSecret,
     },

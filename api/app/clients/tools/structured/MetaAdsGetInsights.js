@@ -1,10 +1,15 @@
 const fetch = require('node-fetch');
 const { Tool } = require('@librechat/agents/langchain/tools');
+const { PermissionBits } = require('librechat-data-provider');
+const {
+  findProjectForRequest,
+  userCanAccessProject,
+} = require('~/server/services/Projects/access');
+const { resolveMetaAccessToken } = require('~/server/services/MetaAds/budget');
 
 const META_GRAPH_HOST = 'https://graph.facebook.com';
 const DEFAULT_META_GRAPH_VERSION = 'v25.0';
 const META_GRAPH_VERSION_PATTERN = /^v[1-9]\d?\.0$/;
-const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const META_INSIGHTS_FIELDS = 'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas';
 const META_ACTIVE_AD_FILTERING = JSON.stringify([
   { field: 'ad.delivery_info', operator: 'IN', values: ['ACTIVE'] },
@@ -49,6 +54,11 @@ const metaAdsGetInsightsJsonSchema = {
     graph_version: {
       type: 'string',
       description: `Optional Meta Graph API version. Defaults to ${DEFAULT_META_GRAPH_VERSION}.`,
+    },
+    project_id: {
+      type: 'string',
+      description:
+        'Optional project id. When provided, the tool uses the project Meta Ads token secret before falling back to the tenant token.',
     },
   },
   required: ['ad_account_id', 'since', 'until'],
@@ -139,19 +149,44 @@ class MetaAdsGetInsights extends Tool {
 
   constructor(fields = {}) {
     super();
+    this.req = fields.req;
     this.tenantId = fields.tenantId;
     this.getTenantSecret = fields.getTenantSecret;
   }
 
-  async getAccessToken() {
+  async getProjectMetaAds(projectId) {
+    if (!projectId) {
+      return {};
+    }
+    if (!this.req?.user) {
+      throw new Error('User context is required for project Meta Ads credentials.');
+    }
+    const project = await findProjectForRequest({ projectId, user: this.req.user });
+    if (!project) {
+      throw new Error('Project not found.');
+    }
+    const hasAccess = await userCanAccessProject({
+      req: this.req,
+      project,
+      requiredPermission: PermissionBits.VIEW,
+    });
+    if (!hasAccess) {
+      throw new Error('Project access denied.');
+    }
+    return project.metaAds ?? {};
+  }
+
+  async getAccessToken(projectId) {
     if (!this.tenantId || typeof this.getTenantSecret !== 'function') {
       throw new Error('Tenant context is required for Meta Ads insights.');
     }
-    const secret = await this.getTenantSecret(this.tenantId, META_TOKEN_SECRET_NAME);
-    if (!secret?.value) {
-      throw new Error('Meta access token not configured for tenant.');
-    }
-    return secret.value;
+    const metaAds = await this.getProjectMetaAds(projectId);
+    const credentials = await resolveMetaAccessToken({
+      tenantId: this.tenantId,
+      metaAds,
+      getSecret: this.getTenantSecret,
+    });
+    return credentials.accessToken;
   }
 
   async fetchPage({ accessToken, graphVersion, adAccountId, since, until, limit, after }) {
@@ -193,7 +228,7 @@ class MetaAdsGetInsights extends Tool {
       const graphVersion = parseGraphVersion(args.graph_version);
       let nextAfter =
         typeof args.after === 'string' && args.after.length > 0 ? args.after : undefined;
-      const accessToken = await this.getAccessToken();
+      const accessToken = await this.getAccessToken(args.project_id);
       const data = [];
       let status = 200;
       let pagesFetched = 0;

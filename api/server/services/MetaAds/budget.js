@@ -114,6 +114,14 @@ function mergeRules(metaAds = {}) {
   return { ...DEFAULT_RULES, ...(metaAds.rules ?? {}) };
 }
 
+function normalizeAdAccountId(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const digits = value.replace(/^act_/i, '').replace(/\D/g, '');
+  return digits ? `act_${digits}` : value;
+}
+
 function calculateMetrics(row) {
   const spend = Number(row.spend ?? 0);
   const purchaseAction = Array.isArray(row.actions)
@@ -175,12 +183,30 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
   };
 }
 
-async function getAccessToken(tenantId) {
-  const secret = await getTenantSecret(tenantId, META_TOKEN_SECRET_NAME);
+function normalizeSecretName(value) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+async function resolveMetaAccessToken({ tenantId, metaAds = {}, getSecret = getTenantSecret }) {
+  const projectSecretName = normalizeSecretName(metaAds.tokenSecretName);
+  const secretName = projectSecretName || META_TOKEN_SECRET_NAME;
+  const secret = await getSecret(tenantId, secretName);
   if (!secret?.value) {
+    if (projectSecretName) {
+      throw new Error('Meta access token not configured for project or tenant.');
+    }
     throw new Error('Meta access token not configured for tenant.');
   }
-  return secret.value;
+  return {
+    accessToken: secret.value,
+    secretName,
+    source: projectSecretName ? 'project' : 'tenant',
+  };
+}
+
+async function getAccessToken(tenantId, metaAds = {}) {
+  const credentials = await resolveMetaAccessToken({ tenantId, metaAds });
+  return credentials.accessToken;
 }
 
 async function metaGet(path, token, params = {}) {
@@ -261,7 +287,12 @@ async function applyRecommendation({ recommendationId, projectId, actor, actorUs
     );
   }
 
-  const token = await getAccessToken(recommendation.tenantId);
+  const project = await runAsSystem(
+    async () =>
+      (await getProjectById(recommendation.projectId)) ||
+      (await findProjectById(recommendation.projectId)),
+  );
+  const token = await getAccessToken(recommendation.tenantId, project?.metaAds ?? {});
   await metaPost(encodeURIComponent(recommendation.entityId), token, {
     daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
   });
@@ -293,19 +324,20 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     throw new Error('Project not found.');
   }
   const metaAds = project.metaAds ?? {};
-  if (!metaAds.adAccountId) {
+  const adAccountId = normalizeAdAccountId(metaAds.adAccountId);
+  if (!adAccountId) {
     throw new Error('Project Meta Ads account is not configured.');
   }
   const rules = mergeRules(metaAds);
-  const token = await getAccessToken(project.tenantId);
+  const token = await getAccessToken(project.tenantId, metaAds);
   const now = new Date();
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const until = now.toISOString().slice(0, 10);
   const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
 
   const [adsets, insights] = await Promise.all([
-    listActiveAdSets({ adAccountId: metaAds.adAccountId, token }),
-    listInsights({ adAccountId: metaAds.adAccountId, token, since, until }),
+    listActiveAdSets({ adAccountId, token }),
+    listInsights({ adAccountId, token, since, until }),
   ]);
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
   const recommendations = [];
@@ -329,7 +361,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     await MetaAdsSnapshot.create({
       tenantId: project.tenantId,
       projectId,
-      adAccountId: metaAds.adAccountId,
+      adAccountId,
       entityId,
       entityName: adset.name || row.adset_name,
       dailyBudget: currentDailyBudget,
@@ -344,7 +376,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     const recommendation = await MetaAdsRecommendation.create({
       tenantId: project.tenantId,
       projectId,
-      adAccountId: metaAds.adAccountId,
+      adAccountId,
       entityId,
       entityName: adset.name || row.adset_name,
       action: blockedByCooldown ? 'hold' : proposal.action,
@@ -375,7 +407,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
 
   return {
     projectId,
-    adAccountId: metaAds.adAccountId,
+    adAccountId,
     since,
     until,
     recommendations,
@@ -424,6 +456,8 @@ module.exports = {
   applyRecommendation,
   getModels,
   getProjectMetaAdsStatus,
+  normalizeAdAccountId,
   proposeBudget,
+  resolveMetaAccessToken,
   runCron,
 };
