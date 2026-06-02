@@ -56,7 +56,7 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-2xl text-sm leading-6 text-text-secondary">
-          Memories are key-value pairs injected into every conversation in this project.
+          {localize('com_ui_project_memories_description')}
         </p>
         <div className="flex items-center gap-2">
           {hasChanges && (

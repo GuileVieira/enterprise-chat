@@ -1019,6 +1019,7 @@
   "com_ui_project_tab_memories": "Memórias",
   "com_ui_project_tab_files": "Arquivos",
   "com_ui_project_tab_settings": "Configurações",
+  "com_ui_project_memories_description": "Memórias são pares de chave e valor adicionados em todas as conversas deste projeto.",
   "com_ui_project_no_memories": "Nenhuma memória configurada",
   "com_ui_project_no_instructions": "Nenhuma instrução configurada",
   "com_ui_project_no_prompt_groups": "Nenhum grupo de prompts associado",

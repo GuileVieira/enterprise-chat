@@ -1983,6 +1983,7 @@
   "com_ui_project_tab_memories": "Memories",
   "com_ui_project_tab_settings": "Settings",
   "com_ui_project_conversations_placeholder": "Conversations will appear here",
+  "com_ui_project_memories_description": "Memories are key-value pairs injected into every conversation in this project.",
   "com_ui_project_no_memories": "No memories configured",
   "com_ui_project_no_instructions": "No instructions configured",
   "com_ui_project_instructions": "System Prompt",
