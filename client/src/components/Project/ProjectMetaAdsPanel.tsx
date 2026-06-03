@@ -20,6 +20,14 @@ type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules'> & {
   rules: Required<MetaAdsRules>;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
+type RequestError = {
+  message?: unknown;
+  response?: {
+    data?: {
+      message?: unknown;
+    };
+  };
+};
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -95,6 +103,17 @@ function createMetaAdsBriefStorageKey() {
   return `meta_ads_brief:${id}`;
 }
 
+function getRequestErrorMessage(error: unknown, fallback: string) {
+  const requestError = error as RequestError;
+  if (typeof requestError.response?.data?.message === 'string') {
+    return requestError.response.data.message;
+  }
+  if (typeof requestError.message === 'string') {
+    return requestError.message;
+  }
+  return fallback;
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -109,6 +128,7 @@ export default function ProjectMetaAdsPanel({
   const [metaAccessToken, setMetaAccessToken] = useState('');
   const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId);
   const updateSettings = useUpdateProjectMetaAdsMutation();
@@ -202,6 +222,31 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
+  const onRunAnalysis = () => {
+    setRunErrorMessage(null);
+    runAnalysis.mutate(project.projectId, {
+      onSuccess: () => {
+        statusQuery.refetch();
+        showToast({
+          message: localize('com_ui_project_meta_ads_run_success'),
+          status: 'success',
+        });
+      },
+      onError: (error) => {
+        const message = getRequestErrorMessage(
+          error,
+          localize('com_ui_project_meta_ads_run_failed'),
+        );
+        setRunErrorMessage(message);
+        showToast({ message, status: 'error' });
+        logger.error('MetaAds', 'Failed to run project Meta Ads analysis', {
+          projectId: project.projectId,
+          error,
+        });
+      },
+    });
+  };
+
   const onToggleSnapshot = (entityId: string) => {
     setSelectedEntityIds((current) =>
       current.includes(entityId)
@@ -251,10 +296,14 @@ export default function ProjectMetaAdsPanel({
             <button
               type="button"
               disabled={!canEdit || runAnalysis.isLoading}
-              onClick={() => runAnalysis.mutate(project.projectId)}
+              onClick={onRunAnalysis}
               className="h-9 rounded-lg border border-border-light bg-surface-primary px-3 text-sm font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {localize('com_ui_project_meta_ads_run')}
+              {localize(
+                runAnalysis.isLoading
+                  ? 'com_ui_project_meta_ads_running'
+                  : 'com_ui_project_meta_ads_run',
+              )}
             </button>
             <button
               type="button"
@@ -266,6 +315,14 @@ export default function ProjectMetaAdsPanel({
             </button>
           </div>
         </div>
+        {runErrorMessage && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+          >
+            {runErrorMessage}
+          </div>
+        )}
 
         <div className="mt-5 grid gap-4 md:grid-cols-5">
           <label className="flex flex-col gap-2 text-sm text-text-secondary">

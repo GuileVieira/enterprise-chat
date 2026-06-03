@@ -26,6 +26,31 @@ function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
 }
 
+function getBodySnippet(text) {
+  if (!text) {
+    return '';
+  }
+  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
+}
+
+function getMetaResourceLabel(path) {
+  if (path.endsWith('/adsets')) {
+    return 'ad sets';
+  }
+  if (path.endsWith('/insights')) {
+    return 'insights';
+  }
+  return 'Meta API';
+}
+
+function formatMetaFetchError({ resource, adAccountId, path, params, error }) {
+  const detail = error?.message ? ` ${error.message}` : '';
+  const paramKeys = params ? Object.keys(params).join(',') : '';
+  return `Meta Ads ${resource} request failed for ${adAccountId} (${path}${
+    paramKeys ? `; params: ${paramKeys}` : ''
+  }).${detail}`;
+}
+
 function getModels() {
   const snapshotSchema =
     mongoose.models.MetaAdsSnapshot?.schema ||
@@ -299,19 +324,58 @@ async function metaGet(path, token, params = {}) {
       url.searchParams.set(key, String(value));
     }
   }
-  const response = await fetch(url.toString(), {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const payload = await response.json().catch(() => null);
+  const paramKeys = Object.keys(params);
+  let response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    logger.error('[MetaAdsBudget] Meta fetch threw', {
+      path,
+      params: paramKeys,
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
+
+  const body = await response.text();
+  const bodySnippet = getBodySnippet(body);
+  let payload;
+  try {
+    payload = body ? JSON.parse(body) : {};
+  } catch (error) {
+    const resourceLabel = getMetaResourceLabel(path);
+    logger.error('[MetaAdsBudget] Meta response body is not JSON', {
+      path,
+      status: response.status,
+      contentType: response.headers?.get?.('content-type'),
+      params: paramKeys,
+      bodySnippet,
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(
+      `Meta returned an invalid ${resourceLabel} response (${response.status}). Body: ${
+        bodySnippet || error.message
+      }`,
+    );
+  }
+
   if (!response.ok) {
+    const fallbackMessage = bodySnippet
+      ? `Meta API GET failed with ${response.status}: ${bodySnippet}`
+      : `Meta API GET failed with ${response.status}`;
     logger.error('[MetaAdsBudget] Meta GET failed', {
       path,
       status: response.status,
       message: payload?.error?.message,
       code: payload?.error?.code,
-      params: Object.keys(params),
+      params: paramKeys,
+      bodySnippet,
     });
-    throw new Error(payload?.error?.message || `Meta API GET failed with ${response.status}`);
+    throw new Error(payload?.error?.message || fallbackMessage);
   }
   return payload;
 }
@@ -333,22 +397,68 @@ async function metaPost(path, token, body = {}) {
 }
 
 async function listActiveAdSets({ adAccountId, token }) {
-  const payload = await metaGet(`${encodeURIComponent(adAccountId)}/adsets`, token, {
+  logger.debug('[MetaAdsBudget] listing adsets', { adAccountId });
+  const path = `${encodeURIComponent(adAccountId)}/adsets`;
+  const params = {
     fields: 'id,name,daily_budget,effective_status',
     limit: DEFAULT_LIMIT,
-  });
+  };
+  let payload;
+  try {
+    payload = await metaGet(path, token, params);
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'ad sets',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsBudget] adsets request failed with context', {
+      adAccountId,
+      path,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
   return Array.isArray(payload.data)
     ? payload.data.filter((adset) => adset.effective_status === 'ACTIVE')
     : [];
 }
 
 async function listInsights({ adAccountId, token, since, until }) {
-  const payload = await metaGet(`${encodeURIComponent(adAccountId)}/insights`, token, {
+  logger.debug('[MetaAdsBudget] listing insights', { adAccountId, since, until });
+  const path = `${encodeURIComponent(adAccountId)}/insights`;
+  const params = {
     level: 'adset',
     fields: 'adset_id,adset_name,spend,actions,purchase_roas',
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
-  });
+  };
+  let payload;
+  try {
+    payload = await metaGet(path, token, params);
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'insights',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsBudget] insights request failed with context', {
+      adAccountId,
+      path,
+      since,
+      until,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
@@ -430,10 +540,32 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const until = now.toISOString().slice(0, 10);
   const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
 
-  const [adsets, insights] = await Promise.all([
-    listActiveAdSets({ adAccountId, token }),
-    listInsights({ adAccountId, token, since, until }),
-  ]);
+  let adsets;
+  let insights;
+  try {
+    adsets = await listActiveAdSets({ adAccountId, token });
+  } catch (error) {
+    logger.error('[MetaAdsBudget] adsets fetch failed', {
+      projectId,
+      adAccountId,
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
+  try {
+    insights = await listInsights({ adAccountId, token, since, until });
+  } catch (error) {
+    logger.error('[MetaAdsBudget] insights fetch failed', {
+      projectId,
+      adAccountId,
+      since,
+      until,
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
   const recommendations = [];
 
@@ -585,6 +717,7 @@ module.exports = {
   isMetaAdsFeatureEnabled,
   isProjectDueForMetaAdsRun,
   listActiveAdSets,
+  listInsights,
   normalizeAdAccountId,
   proposeBudget,
   resolveMetaCredentialStatus,
