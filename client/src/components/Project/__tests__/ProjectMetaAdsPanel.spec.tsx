@@ -182,6 +182,49 @@ describe('ProjectMetaAdsPanel', () => {
     expect(brief.markdown).toContain('"entityId": "adset-1"');
   });
 
+  it('runs Meta Ads analysis with visible success feedback', () => {
+    mockMutateRun.mockImplementationOnce((_projectId, options?: { onSuccess?: () => void }) =>
+      options?.onSuccess?.(),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_run'));
+
+    expect(mockMutateRun).toHaveBeenCalledWith('p1', expect.any(Object));
+    expect(mockRefetchStatus).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_project_meta_ads_run_success',
+      status: 'success',
+    });
+  });
+
+  it('shows Meta Ads analysis errors to the user', () => {
+    mockMutateRun.mockImplementationOnce(
+      (
+        _projectId,
+        options?: { onError?: (error: { response: { data: { message: string } } }) => void },
+      ) =>
+        options?.onError?.({
+          response: {
+            data: {
+              message: 'Invalid JSON for postcard',
+            },
+          },
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_run'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid JSON for postcard');
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'Invalid JSON for postcard',
+      status: 'error',
+    });
+  });
+
   it('shows a masked token status when the Meta Ads secret is configured', () => {
     mockStatusData.credentials = {
       effectiveSource: 'tenant',
