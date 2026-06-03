@@ -304,6 +304,13 @@ async function metaGet(path, token, params = {}) {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    logger.error('[MetaAdsBudget] Meta GET failed', {
+      path,
+      status: response.status,
+      message: payload?.error?.message,
+      code: payload?.error?.code,
+      params: Object.keys(params),
+    });
     throw new Error(payload?.error?.message || `Meta API GET failed with ${response.status}`);
   }
   return payload;
@@ -328,10 +335,11 @@ async function metaPost(path, token, body = {}) {
 async function listActiveAdSets({ adAccountId, token }) {
   const payload = await metaGet(`${encodeURIComponent(adAccountId)}/adsets`, token, {
     fields: 'id,name,daily_budget,effective_status',
-    effective_status: JSON.stringify(['ACTIVE']),
     limit: DEFAULT_LIMIT,
   });
-  return Array.isArray(payload.data) ? payload.data : [];
+  return Array.isArray(payload.data)
+    ? payload.data.filter((adset) => adset.effective_status === 'ACTIVE')
+    : [];
 }
 
 async function listInsights({ adAccountId, token, since, until }) {
@@ -576,6 +584,7 @@ module.exports = {
   getScheduleIntervalMinutes,
   isMetaAdsFeatureEnabled,
   isProjectDueForMetaAdsRun,
+  listActiveAdSets,
   normalizeAdAccountId,
   proposeBudget,
   resolveMetaCredentialStatus,
