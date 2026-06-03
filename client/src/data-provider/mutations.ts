@@ -1212,12 +1212,13 @@ export const useArchiveProjectMutation = (): UseMutationResult<
 export const useUpdateProjectMetaAdsMutation = (): UseMutationResult<
   t.TProject,
   unknown,
-  { projectId: string; metaAds: t.TProject['metaAds'] },
+  { projectId: string; metaAds: t.TProject['metaAds']; metaAccessToken?: string },
   unknown
 > => {
   const queryClient = useQueryClient();
   return useMutation(
-    ({ projectId, metaAds }) => dataService.updateProjectMetaAdsSettings(projectId, metaAds),
+    ({ projectId, metaAds, metaAccessToken }) =>
+      dataService.updateProjectMetaAdsSettings(projectId, metaAds, metaAccessToken),
     {
       onSuccess: (_, vars) => {
         queryClient.invalidateQueries([QueryKeys.projects]);

@@ -878,8 +878,9 @@ export const getProjectMetaAdsStatus = (id: string): Promise<q.ProjectMetaAdsSta
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],
+  metaAccessToken?: string,
 ): Promise<s.TProject> => {
-  return request.put(endpoints.projectMetaAdsSettings(id), { metaAds });
+  return request.put(endpoints.projectMetaAdsSettings(id), { metaAds, metaAccessToken });
 };
 
 export const runProjectMetaAdsAnalysis = (id: string): Promise<q.ProjectMetaAdsRunResponse> => {
