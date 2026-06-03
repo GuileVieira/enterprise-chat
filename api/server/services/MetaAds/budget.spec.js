@@ -1,3 +1,6 @@
+jest.mock('node-fetch', () => jest.fn());
+
+const fetch = require('node-fetch');
 const {
   DEFAULT_RULES,
   normalizeAdAccountId,
@@ -7,11 +10,16 @@ const {
   withImplicitProjectTokenSecret,
   getProjectMetaTokenSecretName,
   isProjectDueForMetaAdsRun,
+  listActiveAdSets,
   resolveMetaAccessToken,
   resolveMetaCredentialStatus,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
+  beforeEach(() => {
+    fetch.mockReset();
+  });
+
   it('holds when spend is below the minimum sample', () => {
     const result = proposeBudget({
       currentDailyBudget: 100,
@@ -199,6 +207,28 @@ describe('Meta Ads budget service', () => {
     expect(normalizeAdAccountId('123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123 456-789')).toBe('act_123456789');
+  });
+
+  it('lists ad sets without effective_status JSON query and filters active locally', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [
+          { id: 'active-1', effective_status: 'ACTIVE' },
+          { id: 'paused-1', effective_status: 'PAUSED' },
+        ],
+      }),
+    });
+
+    const result = await listActiveAdSets({
+      adAccountId: 'act_123',
+      token: 'token',
+    });
+
+    const requestUrl = fetch.mock.calls[0][0];
+    expect(requestUrl).toContain('/act_123/adsets');
+    expect(requestUrl).not.toContain('effective_status=');
+    expect(result).toEqual([{ id: 'active-1', effective_status: 'ACTIVE' }]);
   });
 
   it('defaults project cron interval to 180 minutes and respects due windows', () => {
