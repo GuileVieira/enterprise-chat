@@ -126,6 +126,7 @@ Quirks:
 - **Mutating project contents requires project access.** Upload/link files with `projectId` only after project permission checks; reject attaching foreign file IDs or prompt groups the user cannot view.
 - **Project detail and file list must follow project ACL.** `GET /api/projects/:projectId` should rely on project `VIEW` ACL, not global project feature gates after a project is already shared. `GET /api/files?projectId=...` must list files by both `file.projectId` and `project.fileIds` for legacy/linked files.
 - **Project Meta Ads is default-on.** Treat missing `interface.metaAds` as enabled; only `interface.metaAds: false` disables the UI, API routes, and cron. Global YAML config and tenant config overrides may both disable it.
+- **Meta Ads campaign chat is explicit.** The project panel must show metrics without IA/token spend; only open a draft chat when the user selects ad sets and clicks the traffic-agent button. Use `interface.metaAdsTrafficAgentId` to preselect the agent, preserve `projectId`, and never auto-submit that draft.
 
 ### Frontend-specific rules
 - All user-facing strings must use `useLocalize()`.

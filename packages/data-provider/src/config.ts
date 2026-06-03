@@ -913,6 +913,7 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     metaAds: z.boolean().optional(),
+    metaAdsTrafficAgentId: z.string().optional(),
     presets: z.boolean().optional(),
     prompts: z
       .union([

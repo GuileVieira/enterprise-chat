@@ -19,6 +19,10 @@ router.use(requireJwtAuth);
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 
+function looksLikeMetaAccessToken(value) {
+  return typeof value === 'string' && /^EAA[a-zA-Z0-9_-]{40,}$/.test(value.trim());
+}
+
 async function requireMetaAdsFeature(req, res, next) {
   try {
     const appConfig = await getAppConfig({
@@ -45,6 +49,12 @@ function normalizeMetaAds(metaAds = {}) {
       : '';
   const tokenSecretName =
     typeof metaAds.tokenSecretName === 'string' ? metaAds.tokenSecretName.trim() : '';
+  if (looksLikeMetaAccessToken(tokenSecretName)) {
+    throw Object.assign(
+      new Error('Token secret name must be a secret name, not the Meta access token value.'),
+      { statusCode: 400 },
+    );
+  }
   return {
     ...metaAds,
     adAccountId: digits ? `act_${digits}` : metaAds.adAccountId,
@@ -83,7 +93,7 @@ router.put(
       return res.json(project);
     } catch (error) {
       logger.error('[projectMetaAds] settings failed', error);
-      return res.status(500).json({ message: error.message });
+      return res.status(error.statusCode ?? 500).json({ message: error.message });
     }
   },
 );
@@ -119,5 +129,7 @@ router.post(
     }
   },
 );
+
+router._normalizeMetaAdsForTest = normalizeMetaAds;
 
 module.exports = router;

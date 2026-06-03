@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { TProject, ProjectMetaAdsRecommendation } from 'librechat-data-provider';
 import {
+  useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
   useProjectMetaAdsQuery,
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
 type MetaAdsSettings = NonNullable<TProject['metaAds']>;
@@ -81,6 +84,18 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
   };
 }
 
+function createMetaAdsBriefStorageKey() {
+  const id =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `meta_ads_brief:${id}`;
+}
+
+function looksLikeMetaAccessToken(value?: string) {
+  return /^EAA[a-zA-Z0-9_-]{40,}$/.test((value ?? '').trim());
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -89,7 +104,10 @@ export default function ProjectMetaAdsPanel({
   canEdit: boolean;
 }) {
   const localize = useLocalize();
+  const navigate = useNavigate();
   const [settings, setSettings] = useState(() => normalizeSettings(project));
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId);
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
@@ -102,6 +120,11 @@ export default function ProjectMetaAdsPanel({
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
   const latestSnapshots = statusQuery.data?.latestSnapshots.slice(0, 8) ?? [];
+  const tokenCredentials = statusQuery.data?.credentials;
+  const selectedCount = selectedEntityIds.length;
+  const hasTokenSecretNameError = looksLikeMetaAccessToken(settings.tokenSecretName);
+  const canOpenTrafficAgentChat =
+    selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
 
   const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setSettings((current) => ({
@@ -130,6 +153,39 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
+  const onToggleSnapshot = (entityId: string) => {
+    setSelectedEntityIds((current) =>
+      current.includes(entityId)
+        ? current.filter((selectedId) => selectedId !== entityId)
+        : [...current, entityId].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES),
+    );
+  };
+
+  const onOpenTrafficAgentChat = () => {
+    if (!canOpenTrafficAgentChat || !statusQuery.data) {
+      return;
+    }
+    const brief = buildMetaAdsChatBrief({
+      project,
+      snapshots: latestSnapshots,
+      recommendations: statusQuery.data.recommendations,
+      changes: statusQuery.data.changes,
+      selectedEntityIds,
+    });
+    const storageKey = createMetaAdsBriefStorageKey();
+    sessionStorage.setItem(storageKey, JSON.stringify(brief));
+
+    const params = new URLSearchParams({
+      project_id: project.projectId,
+      meta_ads_brief: storageKey,
+    });
+    const trafficAgentId = startupConfigQuery.data?.interface?.metaAdsTrafficAgentId;
+    if (trafficAgentId) {
+      params.set('agent_id', trafficAgentId);
+    }
+    navigate(`/c/new?${params.toString()}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
@@ -153,7 +209,7 @@ export default function ProjectMetaAdsPanel({
             </button>
             <button
               type="button"
-              disabled={!canEdit || updateSettings.isLoading}
+              disabled={!canEdit || updateSettings.isLoading || hasTokenSecretNameError}
               onClick={onSave}
               className="h-9 rounded-lg bg-text-primary px-3 text-sm font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -210,7 +266,9 @@ export default function ProjectMetaAdsPanel({
               }
               className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
             >
-              <option value="recommend">{localize('com_ui_project_meta_ads_mode_recommend')}</option>
+              <option value="recommend">
+                {localize('com_ui_project_meta_ads_mode_recommend')}
+              </option>
               <option value="auto_limited">
                 {localize('com_ui_project_meta_ads_mode_auto_limited')}
               </option>
@@ -224,9 +282,7 @@ export default function ProjectMetaAdsPanel({
               onChange={(event) =>
                 setSettings((current) => ({
                   ...current,
-                  scheduleIntervalMinutes: Number(
-                    event.target.value,
-                  ) as ScheduleIntervalMinutes,
+                  scheduleIntervalMinutes: Number(event.target.value) as ScheduleIntervalMinutes,
                 }))
               }
               className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
@@ -256,6 +312,22 @@ export default function ProjectMetaAdsPanel({
             <span className="text-xs leading-5 text-text-tertiary">
               {localize('com_ui_project_meta_ads_token_secret_hint')}
             </span>
+            {tokenCredentials?.configured === true && (
+              <span className="inline-flex w-fit items-center gap-2 rounded-md border border-border-light px-2 py-1 text-xs text-text-secondary">
+                {localize('com_ui_project_meta_ads_token_configured')}
+                <span className="font-mono text-text-primary">********</span>
+              </span>
+            )}
+            {tokenCredentials?.configured === false && (
+              <span className="inline-flex w-fit items-center rounded-md border border-red-500/30 px-2 py-1 text-xs text-red-400">
+                {localize('com_ui_project_meta_ads_token_missing')}
+              </span>
+            )}
+            {hasTokenSecretNameError && (
+              <span className="text-xs leading-5 text-red-400">
+                {localize('com_ui_project_meta_ads_token_secret_name_error')}
+              </span>
+            )}
           </label>
         </div>
 
@@ -322,13 +394,28 @@ export default function ProjectMetaAdsPanel({
         </div>
 
         <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {localize('com_ui_project_meta_ads_latest')}
-          </h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold text-text-primary">
+              {localize('com_ui_project_meta_ads_latest')}
+            </h3>
+            <button
+              type="button"
+              disabled={!canOpenTrafficAgentChat}
+              onClick={onOpenTrafficAgentChat}
+              className="h-8 rounded-lg border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {localize('com_ui_project_meta_ads_chat_with_agent')}
+            </button>
+          </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr>
+                  <th className="py-2 pr-3">
+                    <span className="sr-only">
+                      {localize('com_ui_project_meta_ads_select_ad_set')}
+                    </span>
+                  </th>
                   <th className="py-2 pr-3">{localize('com_ui_name')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_budget')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_spend')}</th>
@@ -338,14 +425,28 @@ export default function ProjectMetaAdsPanel({
               </thead>
               <tbody>
                 {latestSnapshots.map((snapshot) => (
-                  <tr key={snapshot._id ?? snapshot.entityId} className="border-t border-border-light">
+                  <tr
+                    key={snapshot._id ?? snapshot.entityId}
+                    className="border-t border-border-light"
+                  >
+                    <td className="py-2 pr-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedEntityIds.includes(snapshot.entityId)}
+                        aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
+                        onChange={() => onToggleSnapshot(snapshot.entityId)}
+                        className="h-4 w-4 rounded border-border-light"
+                      />
+                    </td>
                     <td className="max-w-[220px] truncate py-2 pr-3 text-text-primary">
                       {snapshot.entityName ?? snapshot.entityId}
                     </td>
                     <td className="py-2 pr-3 text-text-secondary">
                       {formatMetric(snapshot.dailyBudget)}
                     </td>
-                    <td className="py-2 pr-3 text-text-secondary">{formatMetric(snapshot.spend)}</td>
+                    <td className="py-2 pr-3 text-text-secondary">
+                      {formatMetric(snapshot.spend)}
+                    </td>
                     <td className="py-2 pr-3 text-text-secondary">{formatMetric(snapshot.cpa)}</td>
                     <td className="py-2 pr-3 text-text-secondary">{formatMetric(snapshot.roas)}</td>
                   </tr>
