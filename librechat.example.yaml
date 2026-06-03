@@ -70,6 +70,8 @@ interface:
   fileSearch: true
   # Enable/disable the project Meta Ads budget automation UI, API, and cron.
   metaAds: true
+  # Optional agent ID used by the project Meta Ads "chat with traffic agent" action.
+  # metaAdsTrafficAgentId: ''
   # Privacy policy settings
   privacyPolicy:
     externalUrl: ''

@@ -89,4 +89,19 @@ describe('loadDefaultInterface', () => {
 
     expect(interfaceConfig?.metaAds).toBe(false);
   });
+
+  it('preserves the configured Meta Ads traffic agent', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        metaAdsTrafficAgentId: 'traffic-agent-1',
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.metaAdsTrafficAgentId).toBe('traffic-agent-1');
+  });
 });

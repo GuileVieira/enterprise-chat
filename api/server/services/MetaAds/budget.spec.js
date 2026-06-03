@@ -5,6 +5,7 @@ const {
   getScheduleIntervalMinutes,
   isProjectDueForMetaAdsRun,
   resolveMetaAccessToken,
+  resolveMetaCredentialStatus,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
@@ -93,6 +94,39 @@ describe('Meta Ads budget service', () => {
     ).rejects.toThrow('Meta access token not configured for project or tenant.');
   });
 
+  it('reports masked tenant credential status without exposing the token', async () => {
+    const getSecret = jest.fn(async () => ({ value: 'tenant-token' }));
+
+    const result = await resolveMetaCredentialStatus({
+      tenantId: 'tenant-x',
+      metaAds: { tokenSecretName: '' },
+      getSecret,
+    });
+
+    expect(getSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
+    expect(result).toEqual({
+      configured: true,
+      secretName: 'meta_graph_access_token',
+      source: 'tenant',
+    });
+  });
+
+  it('reports missing project credential status without throwing', async () => {
+    const getSecret = jest.fn(async () => null);
+
+    const result = await resolveMetaCredentialStatus({
+      tenantId: 'tenant-x',
+      metaAds: { tokenSecretName: 'missing-project-secret' },
+      getSecret,
+    });
+
+    expect(result).toEqual({
+      configured: false,
+      secretName: 'missing-project-secret',
+      source: 'project',
+    });
+  });
+
   it('normalizes numeric Meta account ids to act_ format', () => {
     expect(normalizeAdAccountId('123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123456789')).toBe('act_123456789');
@@ -104,10 +138,7 @@ describe('Meta Ads budget service', () => {
 
     expect(getScheduleIntervalMinutes({})).toBe(180);
     expect(
-      isProjectDueForMetaAdsRun(
-        { metaAds: { lastRunAt: '2026-06-02T09:00:00.000Z' } },
-        now,
-      ),
+      isProjectDueForMetaAdsRun({ metaAds: { lastRunAt: '2026-06-02T09:00:00.000Z' } }, now),
     ).toBe(true);
     expect(
       isProjectDueForMetaAdsRun(

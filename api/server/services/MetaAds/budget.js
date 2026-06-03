@@ -226,6 +226,21 @@ async function resolveMetaAccessToken({ tenantId, metaAds = {}, getSecret = getT
   };
 }
 
+async function resolveMetaCredentialStatus({
+  tenantId,
+  metaAds = {},
+  getSecret = getTenantSecret,
+}) {
+  const projectSecretName = normalizeSecretName(metaAds.tokenSecretName);
+  const secretName = projectSecretName || META_TOKEN_SECRET_NAME;
+  const secret = await getSecret(tenantId, secretName);
+  return {
+    configured: !!secret?.value,
+    secretName,
+    source: projectSecretName ? 'project' : 'tenant',
+  };
+}
+
 async function getAccessToken(tenantId, metaAds = {}) {
   const credentials = await resolveMetaAccessToken({ tenantId, metaAds });
   return credentials.accessToken;
@@ -438,12 +453,21 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
 
 async function getProjectMetaAdsStatus(projectId) {
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
-  const [latestSnapshots, recommendations, changes] = await Promise.all([
+  const [project, latestSnapshots, recommendations, changes] = await Promise.all([
+    runAsSystem(
+      async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+    ),
     MetaAdsSnapshot.find({ projectId }).sort({ createdAt: -1 }).limit(50).lean(),
     MetaAdsRecommendation.find({ projectId }).sort({ createdAt: -1 }).limit(50).lean(),
     MetaAdsBudgetChange.find({ projectId }).sort({ createdAt: -1 }).limit(20).lean(),
   ]);
-  return { latestSnapshots, recommendations, changes };
+  const credentials = project
+    ? await resolveMetaCredentialStatus({
+        tenantId: project.tenantId,
+        metaAds: project.metaAds ?? {},
+      })
+    : undefined;
+  return { latestSnapshots, recommendations, changes, credentials };
 }
 
 async function runCron() {
@@ -498,6 +522,7 @@ module.exports = {
   isProjectDueForMetaAdsRun,
   normalizeAdAccountId,
   proposeBudget,
+  resolveMetaCredentialStatus,
   resolveMetaAccessToken,
   runCron,
 };

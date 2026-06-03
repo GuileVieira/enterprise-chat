@@ -111,6 +111,11 @@ export type ProjectMetaAdsStatus = {
   latestSnapshots: ProjectMetaAdsSnapshot[];
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
+  credentials?: {
+    configured: boolean;
+    secretName: string;
+    source: 'project' | 'tenant';
+  };
 };
 
 export type ProjectMetaAdsRunResponse = {
