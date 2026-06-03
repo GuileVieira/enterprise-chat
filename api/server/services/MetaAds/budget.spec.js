@@ -3,6 +3,9 @@ const {
   normalizeAdAccountId,
   proposeBudget,
   getScheduleIntervalMinutes,
+  getProjectTenantId,
+  withImplicitProjectTokenSecret,
+  getProjectMetaTokenSecretName,
   isProjectDueForMetaAdsRun,
   resolveMetaAccessToken,
   resolveMetaCredentialStatus,
@@ -82,7 +85,27 @@ describe('Meta Ads budget service', () => {
     });
   });
 
-  it('returns a clear error when the configured project secret is missing', async () => {
+  it('falls back to tenant default when the configured project secret is missing', async () => {
+    const getSecret = jest.fn(async (_tenantId, secretName) =>
+      secretName === 'meta_graph_access_token' ? { value: 'tenant-token' } : null,
+    );
+
+    const result = await resolveMetaAccessToken({
+      tenantId: 'tenant-x',
+      metaAds: { tokenSecretName: 'missing-project-secret' },
+      getSecret,
+    });
+
+    expect(getSecret).toHaveBeenCalledWith('tenant-x', 'missing-project-secret');
+    expect(getSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
+    expect(result).toEqual({
+      accessToken: 'tenant-token',
+      secretName: 'meta_graph_access_token',
+      source: 'tenant',
+    });
+  });
+
+  it('returns a clear error when project and tenant secrets are missing', async () => {
     const getSecret = jest.fn(async () => null);
 
     await expect(
@@ -105,13 +128,14 @@ describe('Meta Ads budget service', () => {
 
     expect(getSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
     expect(result).toEqual({
-      configured: true,
+      effectiveSource: 'tenant',
+      projectConfigured: false,
+      tenantConfigured: true,
       secretName: 'meta_graph_access_token',
-      source: 'tenant',
     });
   });
 
-  it('reports missing project credential status without throwing', async () => {
+  it('reports missing project credential status while still checking tenant fallback', async () => {
     const getSecret = jest.fn(async () => null);
 
     const result = await resolveMetaCredentialStatus({
@@ -120,10 +144,54 @@ describe('Meta Ads budget service', () => {
       getSecret,
     });
 
+    expect(getSecret).toHaveBeenCalledWith('tenant-x', 'missing-project-secret');
+    expect(getSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
     expect(result).toEqual({
-      configured: false,
+      effectiveSource: 'missing',
+      projectConfigured: false,
+      tenantConfigured: false,
       secretName: 'missing-project-secret',
-      source: 'project',
+    });
+  });
+
+  it('reports project credential status when project and tenant tokens exist', async () => {
+    const getSecret = jest.fn(async (_tenantId, secretName) => ({
+      value: `${secretName}-value`,
+    }));
+
+    const result = await resolveMetaCredentialStatus({
+      tenantId: 'tenant-x',
+      metaAds: { tokenSecretName: 'meta_graph_access_token_project_p1' },
+      getSecret,
+    });
+
+    expect(result).toEqual({
+      effectiveSource: 'project',
+      projectConfigured: true,
+      tenantConfigured: true,
+      secretName: 'meta_graph_access_token_project_p1',
+    });
+  });
+
+  it('uses request tenant fallback for legacy projects without tenantId', () => {
+    expect(getProjectTenantId({ projectId: 'legacy-project' }, 'orqest-admin')).toBe(
+      'orqest-admin',
+    );
+    expect(
+      getProjectTenantId({ projectId: 'tenant-project', tenantId: 'tenant-x' }, 'fallback'),
+    ).toBe('tenant-x');
+  });
+
+  it('infers the generated project token secret when legacy project metaAds has no reference', () => {
+    expect(getProjectMetaTokenSecretName('p1')).toBe('meta_graph_access_token_project_p1');
+    expect(withImplicitProjectTokenSecret('p1', { adAccountId: 'act_123' })).toEqual({
+      adAccountId: 'act_123',
+      tokenSecretName: 'meta_graph_access_token_project_p1',
+    });
+    expect(
+      withImplicitProjectTokenSecret('p1', { tokenSecretName: 'custom-project-secret' }),
+    ).toEqual({
+      tokenSecretName: 'custom-project-secret',
     });
   });
 

@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 const mongoose = require('mongoose');
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger, runAsSystem, getTenantId } = require('@librechat/data-schemas');
 const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config/app');
 
@@ -21,6 +21,10 @@ const DEFAULT_RULES = {
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
 };
+
+function getProjectMetaTokenSecretName(projectId) {
+  return `meta_graph_access_token_project_${projectId}`;
+}
 
 function getModels() {
   const snapshotSchema =
@@ -117,6 +121,16 @@ function mergeRules(metaAds = {}) {
   return { ...DEFAULT_RULES, ...(metaAds.rules ?? {}) };
 }
 
+function withImplicitProjectTokenSecret(projectId, metaAds = {}) {
+  if (normalizeSecretName(metaAds.tokenSecretName)) {
+    return metaAds;
+  }
+  return {
+    ...metaAds,
+    tokenSecretName: getProjectMetaTokenSecretName(projectId),
+  };
+}
+
 function normalizeAdAccountId(value) {
   if (typeof value !== 'string') {
     return value;
@@ -209,20 +223,36 @@ function normalizeSecretName(value) {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+function getProjectTenantId(project = {}, fallbackTenantId) {
+  return project.tenantId || fallbackTenantId || getTenantId();
+}
+
 async function resolveMetaAccessToken({ tenantId, metaAds = {}, getSecret = getTenantSecret }) {
   const projectSecretName = normalizeSecretName(metaAds.tokenSecretName);
-  const secretName = projectSecretName || META_TOKEN_SECRET_NAME;
-  const secret = await getSecret(tenantId, secretName);
-  if (!secret?.value) {
-    if (projectSecretName) {
-      throw new Error('Meta access token not configured for project or tenant.');
+  if (projectSecretName) {
+    const projectSecret = await getSecret(tenantId, projectSecretName);
+    if (projectSecret?.value) {
+      return {
+        accessToken: projectSecret.value,
+        secretName: projectSecretName,
+        source: 'project',
+      };
     }
-    throw new Error('Meta access token not configured for tenant.');
   }
+
+  const tenantSecret = await getSecret(tenantId, META_TOKEN_SECRET_NAME);
+  if (!tenantSecret?.value) {
+    throw new Error(
+      projectSecretName
+        ? 'Meta access token not configured for project or tenant.'
+        : 'Meta access token not configured for tenant.',
+    );
+  }
+
   return {
-    accessToken: secret.value,
-    secretName,
-    source: projectSecretName ? 'project' : 'tenant',
+    accessToken: tenantSecret.value,
+    secretName: META_TOKEN_SECRET_NAME,
+    source: 'tenant',
   };
 }
 
@@ -232,12 +262,28 @@ async function resolveMetaCredentialStatus({
   getSecret = getTenantSecret,
 }) {
   const projectSecretName = normalizeSecretName(metaAds.tokenSecretName);
-  const secretName = projectSecretName || META_TOKEN_SECRET_NAME;
-  const secret = await getSecret(tenantId, secretName);
+  logger.debug('[MetaAdsBudget] resolving credential status', {
+    tenantId,
+    projectSecretName,
+    tenantSecretName: META_TOKEN_SECRET_NAME,
+  });
+  const [projectSecret, tenantSecret] = await Promise.all([
+    projectSecretName ? getSecret(tenantId, projectSecretName) : Promise.resolve(null),
+    getSecret(tenantId, META_TOKEN_SECRET_NAME),
+  ]);
+  const projectConfigured = !!projectSecret?.value;
+  const tenantConfigured = !!tenantSecret?.value;
+  const effectiveSource = projectConfigured ? 'project' : tenantConfigured ? 'tenant' : 'missing';
   return {
-    configured: !!secret?.value,
-    secretName,
-    source: projectSecretName ? 'project' : 'tenant',
+    effectiveSource,
+    projectConfigured,
+    tenantConfigured,
+    secretName:
+      effectiveSource === 'project'
+        ? projectSecretName
+        : effectiveSource === 'tenant'
+          ? META_TOKEN_SECRET_NAME
+          : (projectSecretName ?? META_TOKEN_SECRET_NAME),
   };
 }
 
@@ -360,13 +406,17 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   if (!project) {
     throw new Error('Project not found.');
   }
-  const metaAds = project.metaAds ?? {};
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
   const adAccountId = normalizeAdAccountId(metaAds.adAccountId);
   if (!adAccountId) {
     throw new Error('Project Meta Ads account is not configured.');
   }
   const rules = mergeRules(metaAds);
-  const token = await getAccessToken(project.tenantId, metaAds);
+  const tenantId = getProjectTenantId(project);
+  const token = await getAccessToken(tenantId, metaAds);
   const now = new Date();
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const until = now.toISOString().slice(0, 10);
@@ -396,7 +446,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
 
     await MetaAdsSnapshot.create({
-      tenantId: project.tenantId,
+      tenantId,
       projectId,
       adAccountId,
       entityId,
@@ -411,7 +461,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
 
     const recommendation = await MetaAdsRecommendation.create({
-      tenantId: project.tenantId,
+      tenantId,
       projectId,
       adAccountId,
       entityId,
@@ -451,7 +501,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   };
 }
 
-async function getProjectMetaAdsStatus(projectId) {
+async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
   const [project, latestSnapshots, recommendations, changes] = await Promise.all([
     runAsSystem(
@@ -463,8 +513,11 @@ async function getProjectMetaAdsStatus(projectId) {
   ]);
   const credentials = project
     ? await resolveMetaCredentialStatus({
-        tenantId: project.tenantId,
-        metaAds: project.metaAds ?? {},
+        tenantId: getProjectTenantId(project, fallbackTenantId),
+        metaAds: withImplicitProjectTokenSecret(
+          project.projectId || projectId,
+          project.metaAds ?? {},
+        ),
       })
     : undefined;
   return { latestSnapshots, recommendations, changes, credentials };
@@ -516,7 +569,10 @@ module.exports = {
   analyzeProject,
   applyRecommendation,
   getModels,
+  getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,
+  withImplicitProjectTokenSecret,
+  getProjectTenantId,
   getScheduleIntervalMinutes,
   isMetaAdsFeatureEnabled,
   isProjectDueForMetaAdsRun,

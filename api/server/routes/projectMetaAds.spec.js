@@ -1,5 +1,8 @@
 jest.mock('~/models', () => ({
+  findProjectById: jest.fn(),
+  getProjectById: jest.fn(),
   updateProject: jest.fn(),
+  upsertTenantSecret: jest.fn(),
 }));
 
 jest.mock('~/server/middleware', () => ({
@@ -44,5 +47,63 @@ describe('projectMetaAds settings normalization', () => {
         credentialMode: 'project_secret',
       }),
     );
+  });
+
+  it('saves a pasted Meta token as a generated project secret', async () => {
+    const upsertSecret = jest.fn(async () => ({}));
+
+    const result = await router._prepareMetaAdsSettingsUpdateForTest({
+      projectId: 'p1',
+      tenantId: 'request-tenant',
+      metaAds: {
+        adAccountId: '123-456',
+        metaAccessToken: 'must-not-save',
+        accessToken: 'also-must-not-save',
+      },
+      metaAccessToken: `EAA${'a'.repeat(48)}`,
+      resolveProject: jest.fn(async () => ({
+        projectId: 'p1',
+        tenantId: 'project-tenant',
+      })),
+      upsertSecret,
+    });
+
+    expect(upsertSecret).toHaveBeenCalledWith(
+      'project-tenant',
+      'meta_graph_access_token_project_p1',
+      `EAA${'a'.repeat(48)}`,
+      'meta_access_token',
+    );
+    expect(result).toEqual({
+      metaAds: expect.objectContaining({
+        adAccountId: 'act_123456',
+        tokenSecretName: 'meta_graph_access_token_project_p1',
+        credentialMode: 'project_secret',
+      }),
+    });
+    expect(result.metaAds).not.toHaveProperty('metaAccessToken');
+    expect(result.metaAds).not.toHaveProperty('accessToken');
+  });
+
+  it('does not alter project credentials when no token is submitted', async () => {
+    const upsertSecret = jest.fn();
+
+    const result = await router._prepareMetaAdsSettingsUpdateForTest({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      metaAds: {
+        tokenSecretName: 'meta_graph_access_token_project_p1',
+      },
+      resolveProject: jest.fn(),
+      upsertSecret,
+    });
+
+    expect(upsertSecret).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      metaAds: expect.objectContaining({
+        tokenSecretName: 'meta_graph_access_token_project_p1',
+        credentialMode: 'project_secret',
+      }),
+    });
   });
 });

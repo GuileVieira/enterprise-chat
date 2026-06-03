@@ -1,12 +1,17 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ProjectMetaAdsStatus, TProject } from 'librechat-data-provider';
 import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
 
-const mockMutateSettings = jest.fn();
+const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
+  options?.onSuccess?.(),
+);
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
 const mockNavigate = jest.fn();
-const mockStatusData = {
+const mockRefetchStatus = jest.fn();
+const mockShowToast = jest.fn();
+const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
   changes: [],
@@ -21,6 +26,12 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
+jest.mock('@librechat/client', () => ({
+  useToastContext: () => ({
+    showToast: mockShowToast,
+  }),
+}));
+
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
 }));
@@ -31,6 +42,7 @@ jest.mock('~/data-provider', () => ({
   }),
   useProjectMetaAdsQuery: () => ({
     data: mockStatusData,
+    refetch: mockRefetchStatus,
   }),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
@@ -52,7 +64,7 @@ const project = {
   user: 'u1',
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
-};
+} as TProject;
 
 describe('ProjectMetaAdsPanel', () => {
   beforeEach(() => {
@@ -65,25 +77,44 @@ describe('ProjectMetaAdsPanel', () => {
     mockStartupConfig.interface.metaAdsTrafficAgentId = 'traffic-agent-1';
   });
 
-  it('accepts numeric ad account input and saves act_ format with project token secret', () => {
+  it('accepts numeric ad account input and saves a pasted project token outside metaAds', async () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    const token = `EAA${'a'.repeat(48)}`;
     fireEvent.change(screen.getByPlaceholderText('123456789'), {
       target: { value: '123-456-789' },
     });
-    fireEvent.change(screen.getByPlaceholderText('meta_graph_access_token_project_p1'), {
-      target: { value: 'meta_graph_access_token_project_p1' },
+    fireEvent.change(screen.getByPlaceholderText('com_ui_project_meta_ads_token_placeholder'), {
+      target: { value: token },
     });
     fireEvent.click(screen.getByText('com_ui_save'));
 
-    expect(mockMutateSettings).toHaveBeenCalledWith({
-      projectId: 'p1',
-      metaAds: expect.objectContaining({
-        adAccountId: 'act_123456789',
-        tokenSecretName: 'meta_graph_access_token_project_p1',
-        credentialMode: 'project_secret',
-        scheduleIntervalMinutes: 180,
-      }),
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          adAccountId: 'act_123456789',
+          tokenSecretName: '',
+          credentialMode: 'tenant_default',
+          scheduleIntervalMinutes: 180,
+        }),
+        metaAccessToken: token,
+      },
+      expect.any(Object),
+    );
+    const savePayload = mockMutateSettings.mock.calls[0][0] as {
+      metaAds: Record<string, unknown>;
+    };
+    expect(savePayload.metaAds).not.toHaveProperty('metaAccessToken');
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('com_ui_project_meta_ads_token_placeholder')).toHaveValue(
+        '',
+      );
+    });
+    expect(mockRefetchStatus).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_saved',
+      status: 'success',
     });
   });
 
@@ -95,12 +126,16 @@ describe('ProjectMetaAdsPanel', () => {
     });
     fireEvent.click(screen.getByText('com_ui_save'));
 
-    expect(mockMutateSettings).toHaveBeenCalledWith({
-      projectId: 'p1',
-      metaAds: expect.objectContaining({
-        scheduleIntervalMinutes: 30,
-      }),
-    });
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          scheduleIntervalMinutes: 30,
+        }),
+      },
+      expect.any(Object),
+    );
+    expect(mockMutateSettings.mock.calls[0][0]).not.toHaveProperty('metaAccessToken');
   });
 
   it('opens a project chat with selected Meta Ads data and the configured traffic agent', () => {
@@ -122,8 +157,8 @@ describe('ProjectMetaAdsPanel', () => {
       {
         _id: 'r1',
         entityId: 'adset-1',
-        action: 'increase',
-        status: 'pending',
+        action: 'increase' as const,
+        status: 'pending' as const,
         proposedDailyBudget: 115,
         reason: 'CPA below target.',
       },
@@ -149,22 +184,24 @@ describe('ProjectMetaAdsPanel', () => {
 
   it('shows a masked token status when the Meta Ads secret is configured', () => {
     mockStatusData.credentials = {
-      configured: true,
+      effectiveSource: 'tenant',
+      projectConfigured: false,
+      tenantConfigured: true,
       secretName: 'meta_graph_access_token',
-      source: 'tenant',
     };
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    expect(screen.getByText('com_ui_project_meta_ads_token_configured')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_tenant_token_configured')).toBeInTheDocument();
     expect(screen.getByText('********')).toBeInTheDocument();
   });
 
   it('shows a missing token status when the configured Meta Ads secret is absent', () => {
     mockStatusData.credentials = {
-      configured: false,
+      effectiveSource: 'missing',
+      projectConfigured: false,
+      tenantConfigured: false,
       secretName: 'meta_graph_access_token_project_p1',
-      source: 'project',
     };
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -172,15 +209,37 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_token_missing')).toBeInTheDocument();
   });
 
-  it('blocks saving when a Meta token value is pasted as the token secret name', () => {
-    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+  it('clears the project token reference when switching back to tenant token', () => {
+    const projectWithToken = {
+      ...project,
+      metaAds: {
+        tokenSecretName: 'meta_graph_access_token_project_p1',
+      },
+    };
+    mockStatusData.credentials = {
+      effectiveSource: 'project',
+      projectConfigured: true,
+      tenantConfigured: true,
+      secretName: 'meta_graph_access_token_project_p1',
+    };
 
-    fireEvent.change(screen.getByPlaceholderText('meta_graph_access_token_project_p1'), {
-      target: { value: `EAA${'a'.repeat(48)}` },
-    });
+    render(<ProjectMetaAdsPanel project={projectWithToken} canEdit={true} />);
+
+    expect(
+      screen.getByText('com_ui_project_meta_ads_project_token_configured'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_use_tenant_token'));
     fireEvent.click(screen.getByText('com_ui_save'));
 
-    expect(screen.getByText('com_ui_project_meta_ads_token_secret_name_error')).toBeInTheDocument();
-    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          tokenSecretName: '',
+          credentialMode: 'tenant_default',
+        }),
+      },
+      expect.any(Object),
+    );
   });
 });

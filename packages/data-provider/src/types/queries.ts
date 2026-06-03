@@ -112,9 +112,10 @@ export type ProjectMetaAdsStatus = {
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
   credentials?: {
-    configured: boolean;
-    secretName: string;
-    source: 'project' | 'tenant';
+    effectiveSource: 'project' | 'tenant' | 'missing';
+    projectConfigured: boolean;
+    tenantConfigured: boolean;
+    secretName?: string;
   };
 };
 

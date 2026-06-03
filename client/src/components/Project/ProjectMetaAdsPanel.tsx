@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToastContext } from '@librechat/client';
 import type { TProject, ProjectMetaAdsRecommendation } from 'librechat-data-provider';
 import {
   useGetStartupConfig,
@@ -9,6 +10,8 @@ import {
   useUpdateProjectMetaAdsMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import type { TranslationKeys } from '~/hooks';
+import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
@@ -18,7 +21,7 @@ type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules'> & {
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
 
-const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: string }> = [
+const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
   { value: 60, labelKey: 'com_ui_project_meta_ads_schedule_60' },
   { value: 120, labelKey: 'com_ui_project_meta_ads_schedule_120' },
@@ -41,7 +44,7 @@ const defaultRules: Required<MetaAdsRules> = {
 
 const numberFields: Array<{
   key: keyof Required<MetaAdsRules>;
-  labelKey: string;
+  labelKey: TranslationKeys;
   step: string;
 }> = [
   { key: 'targetCpa', labelKey: 'com_ui_project_meta_ads_target_cpa', step: '0.01' },
@@ -92,10 +95,6 @@ function createMetaAdsBriefStorageKey() {
   return `meta_ads_brief:${id}`;
 }
 
-function looksLikeMetaAccessToken(value?: string) {
-  return /^EAA[a-zA-Z0-9_-]{40,}$/.test((value ?? '').trim());
-}
-
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -105,7 +104,10 @@ export default function ProjectMetaAdsPanel({
 }) {
   const localize = useLocalize();
   const navigate = useNavigate();
+  const { showToast } = useToastContext();
   const [settings, setSettings] = useState(() => normalizeSettings(project));
+  const [metaAccessToken, setMetaAccessToken] = useState('');
+  const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId);
@@ -122,9 +124,17 @@ export default function ProjectMetaAdsPanel({
   const latestSnapshots = statusQuery.data?.latestSnapshots.slice(0, 8) ?? [];
   const tokenCredentials = statusQuery.data?.credentials;
   const selectedCount = selectedEntityIds.length;
-  const hasTokenSecretNameError = looksLikeMetaAccessToken(settings.tokenSecretName);
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
+  const tokenStatusKey: TranslationKeys =
+    tokenCredentials?.effectiveSource === 'project'
+      ? 'com_ui_project_meta_ads_project_token_configured'
+      : tokenCredentials?.effectiveSource === 'tenant'
+        ? 'com_ui_project_meta_ads_tenant_token_configured'
+        : 'com_ui_project_meta_ads_token_missing';
+  const hasMaskedToken =
+    tokenCredentials?.effectiveSource === 'project' ||
+    tokenCredentials?.effectiveSource === 'tenant';
 
   const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setSettings((current) => ({
@@ -137,10 +147,49 @@ export default function ProjectMetaAdsPanel({
   };
 
   const onSave = () => {
-    updateSettings.mutate({
+    const trimmedToken = metaAccessToken.trim();
+    logger.debug('MetaAds', 'Saving project Meta Ads settings', {
       projectId: project.projectId,
-      metaAds: settings,
+      hasMetaAccessToken: trimmedToken.length > 0,
+      tokenLength: trimmedToken.length,
+      tokenSecretName: settings.tokenSecretName,
     });
+    updateSettings.mutate(
+      {
+        projectId: project.projectId,
+        metaAds: settings,
+        ...(trimmedToken ? { metaAccessToken: trimmedToken } : {}),
+      },
+      {
+        onSuccess: () => {
+          setMetaAccessToken('');
+          statusQuery.refetch();
+          showToast({ message: localize('com_ui_saved'), status: 'success' });
+          logger.debug('MetaAds', 'Saved project Meta Ads settings', {
+            projectId: project.projectId,
+            savedProjectToken: trimmedToken.length > 0,
+          });
+        },
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+          showToast({ message, status: 'error' });
+          logger.error('MetaAds', 'Failed to save project Meta Ads settings', {
+            projectId: project.projectId,
+            error,
+          });
+        },
+      },
+    );
+  };
+
+  const onUseTenantToken = () => {
+    setMetaAccessToken('');
+    setSettings((current) => ({
+      ...current,
+      tokenSecretName: '',
+      credentialMode: 'tenant_default',
+    }));
   };
 
   const onApply = (recommendation: ProjectMetaAdsRecommendation) => {
@@ -209,7 +258,7 @@ export default function ProjectMetaAdsPanel({
             </button>
             <button
               type="button"
-              disabled={!canEdit || updateSettings.isLoading || hasTokenSecretNameError}
+              disabled={!canEdit || updateSettings.isLoading}
               onClick={onSave}
               className="h-9 rounded-lg bg-text-primary px-3 text-sm font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -294,41 +343,50 @@ export default function ProjectMetaAdsPanel({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-2 text-sm text-text-secondary">
-            {localize('com_ui_project_meta_ads_token_secret')}
-            <input
-              disabled={!canEdit}
-              value={settings.tokenSecretName ?? ''}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  tokenSecretName: event.target.value,
-                  credentialMode: event.target.value.trim() ? 'project_secret' : 'tenant_default',
-                }))
-              }
-              placeholder={`meta_graph_access_token_project_${project.projectId}`}
-              className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
-            />
+          <div className="flex flex-col gap-2 text-sm text-text-secondary">
+            <span>{localize('com_ui_project_meta_ads_project_token')}</span>
+            <div className="flex h-10 overflow-hidden rounded-lg border border-border-light bg-surface-primary">
+              <input
+                disabled={!canEdit}
+                type={showMetaAccessToken ? 'text' : 'password'}
+                value={metaAccessToken}
+                onChange={(event) => setMetaAccessToken(event.target.value)}
+                placeholder={
+                  hasMaskedToken
+                    ? '********'
+                    : localize('com_ui_project_meta_ads_token_placeholder')
+                }
+                className="min-w-0 flex-1 bg-transparent px-3 text-text-primary outline-none disabled:cursor-not-allowed"
+              />
+              <button
+                type="button"
+                disabled={!canEdit}
+                onClick={() => setShowMetaAccessToken((current) => !current)}
+                className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize(showMetaAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password')}
+              </button>
+            </div>
             <span className="text-xs leading-5 text-text-tertiary">
-              {localize('com_ui_project_meta_ads_token_secret_hint')}
+              {localize('com_ui_project_meta_ads_project_token_hint')}
             </span>
-            {tokenCredentials?.configured === true && (
+            {tokenCredentials && (
               <span className="inline-flex w-fit items-center gap-2 rounded-md border border-border-light px-2 py-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_token_configured')}
-                <span className="font-mono text-text-primary">********</span>
+                {localize(tokenStatusKey)}
+                {hasMaskedToken && <span className="font-mono text-text-primary">********</span>}
               </span>
             )}
-            {tokenCredentials?.configured === false && (
-              <span className="inline-flex w-fit items-center rounded-md border border-red-500/30 px-2 py-1 text-xs text-red-400">
-                {localize('com_ui_project_meta_ads_token_missing')}
-              </span>
+            {settings.tokenSecretName && (
+              <button
+                type="button"
+                disabled={!canEdit}
+                onClick={onUseTenantToken}
+                className="w-fit text-xs font-medium text-text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize('com_ui_project_meta_ads_use_tenant_token')}
+              </button>
             )}
-            {hasTokenSecretNameError && (
-              <span className="text-xs leading-5 text-red-400">
-                {localize('com_ui_project_meta_ads_token_secret_name_error')}
-              </span>
-            )}
-          </label>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
