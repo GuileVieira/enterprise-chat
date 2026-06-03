@@ -9,7 +9,12 @@ import {
   Sparkle,
   TrendUp,
 } from '@phosphor-icons/react';
-import { useProjectByIdQuery, useGetProjectFiles, useTitleGeneration } from '~/data-provider';
+import {
+  useGetStartupConfig,
+  useProjectByIdQuery,
+  useGetProjectFiles,
+  useTitleGeneration,
+} from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { cn } from '~/utils';
@@ -44,8 +49,13 @@ export default function ProjectDetailPage() {
 
   const projectQuery = useProjectByIdQuery(projectId ?? '');
   const filesQuery = useGetProjectFiles(projectId ?? '');
+  const startupConfigQuery = useGetStartupConfig();
   const { permissions } = useProjectPermissions(projectId ?? '');
   const project = projectQuery.data;
+  const visibleTabs =
+    startupConfigQuery.data?.interface?.metaAds !== false
+      ? tabs
+      : tabs.filter((tab) => tab !== 'metaAds');
 
   if (projectQuery.isLoading) {
     return (
@@ -157,7 +167,7 @@ export default function ProjectDetailPage() {
 
       <div className="border-b border-border-light px-5 py-3">
         <div className="hide-scrollbar mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto rounded-xl bg-surface-secondary p-1">
-          {tabs.map((tab) => {
+          {visibleTabs.map((tab) => {
             const Icon = tabIcons[tab];
             return (
               <button
@@ -257,7 +267,7 @@ export default function ProjectDetailPage() {
               )}
             </>
           )}
-          {activeTab === 'metaAds' && (
+          {startupConfigQuery.data?.interface?.metaAds !== false && activeTab === 'metaAds' && (
             <ProjectMetaAdsPanel project={project} canEdit={permissions.canEdit} />
           )}
           {activeTab === 'settings' && (

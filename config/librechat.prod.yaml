@@ -25,6 +25,7 @@ interface:
     share: true
     public: false
   bookmarks: false
+  metaAds: true
   multiConvo: false
   agents:
     use: true

@@ -10,6 +10,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
+  useGetStartupConfig: jest.fn(),
   useProjectByIdQuery: jest.fn(),
   useGetProjectFiles: jest.fn(),
   useTitleGeneration: jest.fn(),
@@ -52,7 +53,7 @@ jest.mock('../ProjectForm', () => ({
   ),
 }));
 
-import { useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
+import { useGetStartupConfig, useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 
 const createQueryClient = () =>
@@ -76,6 +77,9 @@ function renderPage() {
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (useGetStartupConfig as jest.Mock).mockReturnValue({
+      data: { interface: { metaAds: true } },
+    });
     (useGetProjectFiles as jest.Mock).mockReturnValue({
       data: [],
       isLoading: false,
@@ -139,6 +143,60 @@ describe('ProjectDetailPage', () => {
     });
     renderPage();
     expect(screen.getByTestId('project-conversations-tab')).toBeInTheDocument();
+  });
+
+  it('hides Meta Ads tab when startup config disables it', () => {
+    (useGetStartupConfig as jest.Mock).mockReturnValue({
+      data: { interface: { metaAds: false } },
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.queryByText('com_ui_project_tab_metaAds')).not.toBeInTheDocument();
+  });
+
+  it('shows Meta Ads tab when startup config has no explicit setting', () => {
+    (useGetStartupConfig as jest.Mock).mockReturnValue({
+      data: { interface: {} },
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText('com_ui_project_tab_metaAds')).toBeInTheDocument();
+  });
+
+  it('shows Meta Ads tab while startup config is loading', () => {
+    (useGetStartupConfig as jest.Mock).mockReturnValue({
+      data: undefined,
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText('com_ui_project_tab_metaAds')).toBeInTheDocument();
   });
 
   it('switches to prompts tab', () => {

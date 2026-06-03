@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const mongoose = require('mongoose');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
+const { getAppConfig } = require('~/server/services/Config/app');
 
 const META_GRAPH_HOST = 'https://graph.facebook.com';
 const DEFAULT_META_GRAPH_VERSION = 'v25.0';
@@ -136,6 +137,11 @@ function isProjectDueForMetaAdsRun(project, now = new Date()) {
     return true;
   }
   return now.getTime() - lastRunAt.getTime() >= intervalMinutes * 60 * 1000;
+}
+
+async function isMetaAdsFeatureEnabled(tenantId) {
+  const appConfig = await getAppConfig(tenantId ? { tenantId } : { baseOnly: true });
+  return appConfig?.interfaceConfig?.metaAds !== false;
 }
 
 function calculateMetrics(row) {
@@ -453,6 +459,10 @@ async function runCron() {
   );
   const results = [];
   for (const project of projects) {
+    if (!(await isMetaAdsFeatureEnabled(project.tenantId))) {
+      results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'disabled' });
+      continue;
+    }
     if (!isProjectDueForMetaAdsRun(project)) {
       results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'not_due' });
       continue;
@@ -484,6 +494,7 @@ module.exports = {
   getModels,
   getProjectMetaAdsStatus,
   getScheduleIntervalMinutes,
+  isMetaAdsFeatureEnabled,
   isProjectDueForMetaAdsRun,
   normalizeAdAccountId,
   proposeBudget,

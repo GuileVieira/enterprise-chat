@@ -1,11 +1,12 @@
 const express = require('express');
 const { PermissionBits } = require('librechat-data-provider');
-const { logger } = require('@librechat/data-schemas');
+const { logger, getTenantId } = require('@librechat/data-schemas');
 const { updateProject } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
+const { getAppConfig } = require('~/server/services/Config/app');
 const {
   analyzeProject,
   applyRecommendation,
@@ -17,6 +18,25 @@ const router = express.Router({ mergeParams: true });
 router.use(requireJwtAuth);
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
+
+async function requireMetaAdsFeature(req, res, next) {
+  try {
+    const appConfig = await getAppConfig({
+      role: req.user.role,
+      userId: req.user.id,
+      tenantId: req.user.tenantId || getTenantId(),
+    });
+    if (appConfig?.interfaceConfig?.metaAds === false) {
+      return res.status(404).json({ message: 'Meta Ads is disabled.' });
+    }
+    return next();
+  } catch (error) {
+    logger.error('[projectMetaAds] feature check failed', error);
+    return res.status(500).json({ message: error.message });
+  }
+}
+
+router.use(requireMetaAdsFeature);
 
 function normalizeMetaAds(metaAds = {}) {
   const digits =
