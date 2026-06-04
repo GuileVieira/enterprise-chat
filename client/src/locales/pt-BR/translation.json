@@ -1038,6 +1038,8 @@
   "com_ui_project_meta_ads_tenant_token_configured": "Usando token global da tenant",
   "com_ui_project_meta_ads_token_missing": "Nenhum token configurado",
   "com_ui_project_meta_ads_use_tenant_token": "Usar token global da tenant",
+  "com_ui_project_meta_ads_graph_version": "Versão Graph API",
+  "com_ui_project_meta_ads_graph_version_hint": "Deixe vazio para usar a versão global da Meta Graph API.",
   "com_ui_project_meta_ads_mode": "Modo",
   "com_ui_project_meta_ads_mode_recommend": "Só recomendar",
   "com_ui_project_meta_ads_mode_auto_limited": "Automático limitado",

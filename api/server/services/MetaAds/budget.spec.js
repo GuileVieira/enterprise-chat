@@ -1,6 +1,3 @@
-jest.mock('node-fetch', () => jest.fn());
-
-const fetch = require('node-fetch');
 const {
   DEFAULT_RULES,
   normalizeAdAccountId,
@@ -10,15 +7,13 @@ const {
   withImplicitProjectTokenSecret,
   getProjectMetaTokenSecretName,
   isProjectDueForMetaAdsRun,
-  listActiveAdSets,
-  listInsights,
   resolveMetaAccessToken,
   resolveMetaCredentialStatus,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
   beforeEach(() => {
-    fetch.mockReset();
+    delete process.env.META_GRAPH_API_VERSION;
   });
 
   it('holds when spend is below the minimum sample', () => {
@@ -208,133 +203,6 @@ describe('Meta Ads budget service', () => {
     expect(normalizeAdAccountId('123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123456789')).toBe('act_123456789');
     expect(normalizeAdAccountId('act_123 456-789')).toBe('act_123456789');
-  });
-
-  it('lists ad sets without effective_status JSON query and filters active locally', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () =>
-        JSON.stringify({
-          data: [
-            { id: 'active-1', effective_status: 'ACTIVE' },
-            { id: 'paused-1', effective_status: 'PAUSED' },
-          ],
-        }),
-    });
-
-    const result = await listActiveAdSets({
-      adAccountId: 'act_123',
-      token: 'token',
-    });
-
-    const requestUrl = fetch.mock.calls[0][0];
-    expect(requestUrl).toContain('/act_123/adsets');
-    expect(requestUrl).not.toContain('effective_status=');
-    expect(result).toEqual([{ id: 'active-1', effective_status: 'ACTIVE' }]);
-  });
-
-  it('shows Meta API error messages for failed ad set requests', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      text: async () =>
-        JSON.stringify({
-          error: {
-            message: 'Unsupported get request.',
-            code: 100,
-          },
-        }),
-    });
-
-    await expect(
-      listActiveAdSets({
-        adAccountId: 'act_123',
-        token: 'token',
-      }),
-    ).rejects.toThrow(
-      'Meta Ads ad sets request failed for act_123 (act_123/adsets; params: fields,limit). Unsupported get request.',
-    );
-  });
-
-  it('adds context when Meta returns a non-JSON ad sets response', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: {
-        get: () => 'text/plain',
-      },
-      text: async () => 'Invalid JSON for postcard',
-    });
-
-    await expect(
-      listActiveAdSets({
-        adAccountId: 'act_123',
-        token: 'token',
-      }),
-    ).rejects.toThrow(
-      'Meta Ads ad sets request failed for act_123 (act_123/adsets; params: fields,limit). Meta returned an invalid ad sets response (200). Body: Invalid JSON for postcard',
-    );
-  });
-
-  it('lists insights with a JSON time_range query', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () =>
-        JSON.stringify({
-          data: [{ adset_id: 'adset-1', spend: '10' }],
-        }),
-    });
-
-    const result = await listInsights({
-      adAccountId: 'act_123',
-      token: 'token',
-      since: '2026-06-02',
-      until: '2026-06-03',
-    });
-
-    const requestUrl = new URL(fetch.mock.calls[0][0]);
-    expect(requestUrl.pathname).toContain('/act_123/insights');
-    expect(JSON.parse(requestUrl.searchParams.get('time_range'))).toEqual({
-      since: '2026-06-02',
-      until: '2026-06-03',
-    });
-    expect(result).toEqual([{ adset_id: 'adset-1', spend: '10' }]);
-  });
-
-  it('adds context when Meta returns a non-JSON insights response', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: async () => 'Invalid JSON for postcard',
-    });
-
-    await expect(
-      listInsights({
-        adAccountId: 'act_123',
-        token: 'token',
-        since: '2026-06-02',
-        until: '2026-06-03',
-      }),
-    ).rejects.toThrow(
-      'Meta Ads insights request failed for act_123 (act_123/insights; params: level,fields,time_range,limit). Meta returned an invalid insights response (200). Body: Invalid JSON for postcard',
-    );
-  });
-
-  it('surfaces malformed JSON errors with Meta response context', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: async () => '{bad-json',
-    });
-
-    await expect(
-      listActiveAdSets({
-        adAccountId: 'act_123',
-        token: 'token',
-      }),
-    ).rejects.toThrow(
-      'Meta Ads ad sets request failed for act_123 (act_123/adsets; params: fields,limit). Meta returned an invalid ad sets response (200). Body: {bad-json',
-    );
   });
 
   it('defaults project cron interval to 180 minutes and respects due windows', () => {

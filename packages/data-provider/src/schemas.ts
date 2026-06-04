@@ -883,18 +883,21 @@ export const projectSchema = z.object({
       enabled: z.boolean().optional(),
       adAccountId: z.string().optional(),
       tokenSecretName: z.string().optional(),
+      graphVersion: z.string().optional(),
       credentialMode: z.enum(['project_secret', 'tenant_default']).optional(),
       automationMode: z.enum(['recommend', 'auto_limited']).optional(),
       budgetLevel: z.enum(['adset']).optional(),
-      scheduleIntervalMinutes: z.union([
-        z.literal(30),
-        z.literal(60),
-        z.literal(120),
-        z.literal(180),
-        z.literal(360),
-        z.literal(720),
-        z.literal(1440),
-      ]).optional(),
+      scheduleIntervalMinutes: z
+        .union([
+          z.literal(30),
+          z.literal(60),
+          z.literal(120),
+          z.literal(180),
+          z.literal(360),
+          z.literal(720),
+          z.literal(1440),
+        ])
+        .optional(),
       lastRunAt: z.string().optional(),
       rules: z
         .object({

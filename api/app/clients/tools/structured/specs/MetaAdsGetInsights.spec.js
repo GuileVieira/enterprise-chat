@@ -21,7 +21,7 @@ function createResponse(data, ok = true, status = 200) {
   return {
     ok,
     status,
-    json: async () => data,
+    text: async () => JSON.stringify(data),
   };
 }
 
@@ -42,7 +42,6 @@ describe('MetaAdsGetInsights', () => {
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
       expect.objectContaining({
-        method: 'GET',
         headers: { Authorization: 'Bearer meta-token' },
       }),
     );

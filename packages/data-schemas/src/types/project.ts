@@ -23,6 +23,7 @@ export interface IProjectMetaAds {
   enabled?: boolean;
   adAccountId?: string;
   tokenSecretName?: string;
+  graphVersion?: string;
   credentialMode?: 'project_secret' | 'tenant_default';
   automationMode?: 'recommend' | 'auto_limited';
   budgetLevel?: 'adset';

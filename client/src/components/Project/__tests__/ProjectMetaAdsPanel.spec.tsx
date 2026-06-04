@@ -15,6 +15,10 @@ const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
   changes: [],
+  graphVersion: {
+    effective: 'v25.0',
+    source: 'global',
+  },
 };
 const mockStartupConfig = {
   interface: {
@@ -74,6 +78,10 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.recommendations = [];
     mockStatusData.changes = [];
     delete mockStatusData.credentials;
+    mockStatusData.graphVersion = {
+      effective: 'v25.0',
+      source: 'global',
+    };
     mockStartupConfig.interface.metaAdsTrafficAgentId = 'traffic-agent-1';
   });
 
@@ -136,6 +144,25 @@ describe('ProjectMetaAdsPanel', () => {
       expect.any(Object),
     );
     expect(mockMutateSettings.mock.calls[0][0]).not.toHaveProperty('metaAccessToken');
+  });
+
+  it('saves a project Meta Graph API version override', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByPlaceholderText('v25.0'), {
+      target: { value: 'v23.0' },
+    });
+    fireEvent.click(screen.getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          graphVersion: 'v23.0',
+        }),
+      },
+      expect.any(Object),
+    );
   });
 
   it('opens a project chat with selected Meta Ads data and the configured traffic agent', () => {
