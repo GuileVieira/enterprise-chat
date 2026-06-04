@@ -117,11 +117,17 @@ export type ProjectMetaAdsStatus = {
     tenantConfigured: boolean;
     secretName?: string;
   };
+  graphVersion?: {
+    effective: string;
+    configured?: string;
+    source: 'project' | 'global';
+  };
 };
 
 export type ProjectMetaAdsRunResponse = {
   projectId: string;
   adAccountId: string;
+  graphVersion?: string;
   since: string;
   until: string;
   recommendations: ProjectMetaAdsRecommendation[];

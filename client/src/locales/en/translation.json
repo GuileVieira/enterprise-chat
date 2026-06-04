@@ -2012,6 +2012,8 @@
   "com_ui_project_meta_ads_tenant_token_configured": "Using tenant global token",
   "com_ui_project_meta_ads_token_missing": "No token configured",
   "com_ui_project_meta_ads_use_tenant_token": "Use tenant global token",
+  "com_ui_project_meta_ads_graph_version": "Graph API version",
+  "com_ui_project_meta_ads_graph_version_hint": "Leave empty to use the global Meta Graph API version.",
   "com_ui_project_meta_ads_mode": "Mode",
   "com_ui_project_meta_ads_mode_recommend": "Recommend only",
   "com_ui_project_meta_ads_mode_auto_limited": "Auto limited",

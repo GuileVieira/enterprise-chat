@@ -19,6 +19,7 @@ router.use(requireJwtAuth);
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
+const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -48,13 +49,22 @@ async function requireMetaAdsFeature(req, res, next) {
 router.use(requireMetaAdsFeature);
 
 function normalizeMetaAds(metaAds = {}) {
-  const { metaAccessToken: _metaAccessToken, accessToken: _accessToken, ...safeMetaAds } = metaAds;
+  const {
+    metaAccessToken: _metaAccessToken,
+    accessToken: _accessToken,
+    graphVersion: rawGraphVersion,
+    ...safeMetaAds
+  } = metaAds;
   const digits =
     typeof safeMetaAds.adAccountId === 'string'
       ? safeMetaAds.adAccountId.replace(/^act_/i, '').replace(/\D/g, '')
       : '';
   const tokenSecretName =
     typeof safeMetaAds.tokenSecretName === 'string' ? safeMetaAds.tokenSecretName.trim() : '';
+  const graphVersion =
+    typeof rawGraphVersion === 'string' && META_GRAPH_VERSION_PATTERN.test(rawGraphVersion.trim())
+      ? rawGraphVersion.trim()
+      : undefined;
   if (looksLikeMetaAccessToken(tokenSecretName)) {
     throw Object.assign(
       new Error('Token secret name must be a secret name, not the Meta access token value.'),
@@ -65,6 +75,7 @@ function normalizeMetaAds(metaAds = {}) {
     ...safeMetaAds,
     adAccountId: digits ? `act_${digits}` : safeMetaAds.adAccountId,
     tokenSecretName,
+    ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
     scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(safeMetaAds.scheduleIntervalMinutes))
       ? Number(safeMetaAds.scheduleIntervalMinutes)

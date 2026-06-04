@@ -1,4 +1,3 @@
-const fetch = require('node-fetch');
 const { Tool } = require('@librechat/agents/langchain/tools');
 const { PermissionBits } = require('librechat-data-provider');
 const {
@@ -6,9 +5,12 @@ const {
   userCanAccessProject,
 } = require('~/server/services/Projects/access');
 const { resolveMetaAccessToken } = require('~/server/services/MetaAds/budget');
+const {
+  DEFAULT_META_GRAPH_VERSION,
+  getMetaGraphVersion,
+  metaGet,
+} = require('~/server/services/MetaAds/graph');
 
-const META_GRAPH_HOST = 'https://graph.facebook.com';
-const DEFAULT_META_GRAPH_VERSION = 'v25.0';
 const META_GRAPH_VERSION_PATTERN = /^v[1-9]\d?\.0$/;
 const META_INSIGHTS_FIELDS = 'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas';
 const META_ACTIVE_AD_FILTERING = JSON.stringify([
@@ -106,27 +108,12 @@ function validateAdAccountId(adAccountId) {
 
 function parseGraphVersion(value) {
   if (value === undefined || value === null || value === '') {
-    return DEFAULT_META_GRAPH_VERSION;
+    return getMetaGraphVersion();
   }
   if (typeof value !== 'string' || !META_GRAPH_VERSION_PATTERN.test(value)) {
     throw new Error('graph_version must match Meta Graph API version format like v25.0.');
   }
-  return value;
-}
-
-function buildInsightsUrl({ graphVersion, adAccountId, since, until, limit, after }) {
-  const url = new URL(
-    `${META_GRAPH_HOST}/${graphVersion}/${encodeURIComponent(adAccountId)}/insights`,
-  );
-  url.searchParams.set('level', 'ad');
-  url.searchParams.set('filtering', META_ACTIVE_AD_FILTERING);
-  url.searchParams.set('fields', META_INSIGHTS_FIELDS);
-  url.searchParams.set('time_range', JSON.stringify({ since, until }));
-  url.searchParams.set('limit', String(limit));
-  if (after) {
-    url.searchParams.set('after', after);
-  }
-  return url;
+  return getMetaGraphVersion(value);
 }
 
 function extractNextAfter(payload) {
@@ -190,27 +177,24 @@ class MetaAdsGetInsights extends Tool {
   }
 
   async fetchPage({ accessToken, graphVersion, adAccountId, since, until, limit, after }) {
-    const url = buildInsightsUrl({ graphVersion, adAccountId, since, until, limit, after });
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const params = {
+      level: 'ad',
+      filtering: META_ACTIVE_AD_FILTERING,
+      fields: META_INSIGHTS_FIELDS,
+      time_range: JSON.stringify({ since, until }),
+      limit,
+      ...(after ? { after } : {}),
+    };
+    const payload = await metaGet({
+      path: `${encodeURIComponent(adAccountId)}/insights`,
+      token: accessToken,
+      params,
+      graphVersion,
+      resourceLabel: 'ad insights',
     });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: response.status,
-        error: {
-          message: payload?.error?.message || `HTTP ${response.status}`,
-          data: payload?.error || payload,
-        },
-      };
-    }
     return {
       ok: true,
-      status: response.status,
+      status: 200,
       data: Array.isArray(payload?.data) ? payload.data : [],
       nextAfter: extractNextAfter(payload),
     };
@@ -271,12 +255,15 @@ class MetaAdsGetInsights extends Tool {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Meta Ads insights request failed.';
-      return JSON.stringify({
+      const payload = {
         ok: false,
+        ...(typeof error.status === 'number' ? { status: error.status } : {}),
         error: {
           message,
+          ...(error.data ? { data: error.data } : {}),
         },
-      });
+      };
+      return JSON.stringify(payload);
     }
   }
 }

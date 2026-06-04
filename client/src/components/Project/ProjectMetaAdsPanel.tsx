@@ -83,6 +83,7 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
     tokenSecretName: project.metaAds?.tokenSecretName ?? '',
+    graphVersion: project.metaAds?.graphVersion ?? '',
     credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
     budgetLevel: 'adset',
@@ -444,6 +445,24 @@ export default function ProjectMetaAdsPanel({
               </button>
             )}
           </div>
+          <label className="flex flex-col gap-2 text-sm text-text-secondary">
+            {localize('com_ui_project_meta_ads_graph_version')}
+            <input
+              disabled={!canEdit}
+              value={settings.graphVersion ?? ''}
+              onChange={(event) =>
+                setSettings((current) => ({
+                  ...current,
+                  graphVersion: event.target.value,
+                }))
+              }
+              placeholder={statusQuery.data?.graphVersion?.effective ?? 'v25.0'}
+              className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
+            />
+            <span className="text-xs leading-5 text-text-tertiary">
+              {localize('com_ui_project_meta_ads_graph_version_hint')}
+            </span>
+          </label>
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

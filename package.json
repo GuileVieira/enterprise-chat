@@ -44,6 +44,7 @@
     "create-secret": "node config/manage-secrets.js create",
     "rotate-secret": "node config/manage-secrets.js rotate",
     "delete-secret": "node config/manage-secrets.js delete",
+    "meta-ads:test-accounts": "node scripts/test-meta-ads-accounts.cjs",
     "reset-meili-sync": "node config/reset-meili-sync.js",
     "update-banner": "node config/update-banner.js",
     "delete-banner": "node config/delete-banner.js",

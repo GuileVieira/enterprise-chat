@@ -55,6 +55,9 @@ const ProjectMetaAdsSchema = new Schema(
     tokenSecretName: {
       type: String,
     },
+    graphVersion: {
+      type: String,
+    },
     credentialMode: {
       type: String,
       enum: ['project_secret', 'tenant_default'],

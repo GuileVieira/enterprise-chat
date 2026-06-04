@@ -1,13 +1,15 @@
-const fetch = require('node-fetch');
 const mongoose = require('mongoose');
 const { logger, runAsSystem, getTenantId } = require('@librechat/data-schemas');
 const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config/app');
+const {
+  getMetaGraphVersion,
+  listAdSetInsights,
+  listAdSets,
+  metaPost,
+} = require('~/server/services/MetaAds/graph');
 
-const META_GRAPH_HOST = 'https://graph.facebook.com';
-const DEFAULT_META_GRAPH_VERSION = 'v25.0';
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
-const DEFAULT_LIMIT = 100;
 const DEFAULT_SCHEDULE_INTERVAL_MINUTES = 180;
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const MIN_SAMPLE_SPEND = 10;
@@ -24,31 +26,6 @@ const DEFAULT_RULES = {
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
-}
-
-function getBodySnippet(text) {
-  if (!text) {
-    return '';
-  }
-  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
-}
-
-function getMetaResourceLabel(path) {
-  if (path.endsWith('/adsets')) {
-    return 'ad sets';
-  }
-  if (path.endsWith('/insights')) {
-    return 'insights';
-  }
-  return 'Meta API';
-}
-
-function formatMetaFetchError({ resource, adAccountId, path, params, error }) {
-  const detail = error?.message ? ` ${error.message}` : '';
-  const paramKeys = params ? Object.keys(params).join(',') : '';
-  return `Meta Ads ${resource} request failed for ${adAccountId} (${path}${
-    paramKeys ? `; params: ${paramKeys}` : ''
-  }).${detail}`;
 }
 
 function getModels() {
@@ -317,151 +294,6 @@ async function getAccessToken(tenantId, metaAds = {}) {
   return credentials.accessToken;
 }
 
-async function metaGet(path, token, params = {}) {
-  const url = new URL(`${META_GRAPH_HOST}/${DEFAULT_META_GRAPH_VERSION}/${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    if (value != null && value !== '') {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  const paramKeys = Object.keys(params);
-  let response;
-  try {
-    response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch (error) {
-    logger.error('[MetaAdsBudget] Meta fetch threw', {
-      path,
-      params: paramKeys,
-      message: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  }
-
-  const body = await response.text();
-  const bodySnippet = getBodySnippet(body);
-  let payload;
-  try {
-    payload = body ? JSON.parse(body) : {};
-  } catch (error) {
-    const resourceLabel = getMetaResourceLabel(path);
-    logger.error('[MetaAdsBudget] Meta response body is not JSON', {
-      path,
-      status: response.status,
-      contentType: response.headers?.get?.('content-type'),
-      params: paramKeys,
-      bodySnippet,
-      message: error.message,
-      stack: error.stack,
-    });
-    throw new Error(
-      `Meta returned an invalid ${resourceLabel} response (${response.status}). Body: ${
-        bodySnippet || error.message
-      }`,
-    );
-  }
-
-  if (!response.ok) {
-    const fallbackMessage = bodySnippet
-      ? `Meta API GET failed with ${response.status}: ${bodySnippet}`
-      : `Meta API GET failed with ${response.status}`;
-    logger.error('[MetaAdsBudget] Meta GET failed', {
-      path,
-      status: response.status,
-      message: payload?.error?.message,
-      code: payload?.error?.code,
-      params: paramKeys,
-      bodySnippet,
-    });
-    throw new Error(payload?.error?.message || fallbackMessage);
-  }
-  return payload;
-}
-
-async function metaPost(path, token, body = {}) {
-  const response = await fetch(`${META_GRAPH_HOST}/${DEFAULT_META_GRAPH_VERSION}/${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(payload?.error?.message || `Meta API POST failed with ${response.status}`);
-  }
-  return payload;
-}
-
-async function listActiveAdSets({ adAccountId, token }) {
-  logger.debug('[MetaAdsBudget] listing adsets', { adAccountId });
-  const path = `${encodeURIComponent(adAccountId)}/adsets`;
-  const params = {
-    fields: 'id,name,daily_budget,effective_status',
-    limit: DEFAULT_LIMIT,
-  };
-  let payload;
-  try {
-    payload = await metaGet(path, token, params);
-  } catch (error) {
-    const message = formatMetaFetchError({
-      resource: 'ad sets',
-      adAccountId,
-      path,
-      params,
-      error,
-    });
-    logger.error('[MetaAdsBudget] adsets request failed with context', {
-      adAccountId,
-      path,
-      params: Object.keys(params),
-      message: error.message,
-      stack: error.stack,
-    });
-    throw new Error(message);
-  }
-  return Array.isArray(payload.data)
-    ? payload.data.filter((adset) => adset.effective_status === 'ACTIVE')
-    : [];
-}
-
-async function listInsights({ adAccountId, token, since, until }) {
-  logger.debug('[MetaAdsBudget] listing insights', { adAccountId, since, until });
-  const path = `${encodeURIComponent(adAccountId)}/insights`;
-  const params = {
-    level: 'adset',
-    fields: 'adset_id,adset_name,spend,actions,purchase_roas',
-    time_range: JSON.stringify({ since, until }),
-    limit: DEFAULT_LIMIT,
-  };
-  let payload;
-  try {
-    payload = await metaGet(path, token, params);
-  } catch (error) {
-    const message = formatMetaFetchError({
-      resource: 'insights',
-      adAccountId,
-      path,
-      params,
-      error,
-    });
-    logger.error('[MetaAdsBudget] insights request failed with context', {
-      adAccountId,
-      path,
-      since,
-      until,
-      params: Object.keys(params),
-      message: error.message,
-      stack: error.stack,
-    });
-    throw new Error(message);
-  }
-  return Array.isArray(payload.data) ? payload.data : [];
-}
-
 async function getRecentChange({ projectId, entityId, cooldownHours }) {
   const { MetaAdsBudgetChange } = getModels();
   const since = new Date(Date.now() - cooldownHours * 60 * 60 * 1000);
@@ -493,9 +325,16 @@ async function applyRecommendation({ recommendationId, projectId, actor, actorUs
       (await getProjectById(recommendation.projectId)) ||
       (await findProjectById(recommendation.projectId)),
   );
-  const token = await getAccessToken(recommendation.tenantId, project?.metaAds ?? {});
-  await metaPost(encodeURIComponent(recommendation.entityId), token, {
-    daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
+  const metaAds = project?.metaAds ?? {};
+  const token = await getAccessToken(recommendation.tenantId, metaAds);
+  await metaPost({
+    path: encodeURIComponent(recommendation.entityId),
+    token,
+    graphVersion: metaAds.graphVersion,
+    resourceLabel: 'budget update',
+    body: {
+      daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
+    },
   });
   await MetaAdsBudgetChange.create({
     tenantId: recommendation.tenantId,
@@ -539,11 +378,12 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const until = now.toISOString().slice(0, 10);
   const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
 
   let adsets;
   let insights;
   try {
-    adsets = await listActiveAdSets({ adAccountId, token });
+    adsets = await listAdSets({ adAccountId, token, graphVersion });
   } catch (error) {
     logger.error('[MetaAdsBudget] adsets fetch failed', {
       projectId,
@@ -554,7 +394,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     throw error;
   }
   try {
-    insights = await listInsights({ adAccountId, token, since, until });
+    insights = await listAdSetInsights({ adAccountId, token, since, until, graphVersion });
   } catch (error) {
     logger.error('[MetaAdsBudget] insights fetch failed', {
       projectId,
@@ -635,6 +475,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   return {
     projectId,
     adAccountId,
+    graphVersion,
     since,
     until,
     recommendations,
@@ -660,7 +501,14 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
         ),
       })
     : undefined;
-  return { latestSnapshots, recommendations, changes, credentials };
+  const graphVersion = project
+    ? {
+        effective: getMetaGraphVersion(project.metaAds?.graphVersion),
+        configured: project.metaAds?.graphVersion,
+        source: project.metaAds?.graphVersion ? 'project' : 'global',
+      }
+    : undefined;
+  return { latestSnapshots, recommendations, changes, credentials, graphVersion };
 }
 
 async function runCron() {
@@ -709,6 +557,7 @@ module.exports = {
   analyzeProject,
   applyRecommendation,
   getModels,
+  getMetaGraphVersion,
   getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,
   withImplicitProjectTokenSecret,
@@ -716,8 +565,6 @@ module.exports = {
   getScheduleIntervalMinutes,
   isMetaAdsFeatureEnabled,
   isProjectDueForMetaAdsRun,
-  listActiveAdSets,
-  listInsights,
   normalizeAdAccountId,
   proposeBudget,
   resolveMetaCredentialStatus,
