@@ -1,7 +1,7 @@
 import { useState, useId, useRef, useEffect } from 'react';
 import { useRecoilValue } from 'recoil';
 import * as Ariakit from '@ariakit/react';
-import { Pen, ShareNetwork as Share2, Upload } from '@phosphor-icons/react';
+import { DotsThree, Pen, ShareNetwork as Share2, Upload } from '@phosphor-icons/react';
 import type { FormEvent } from 'react';
 import {
   Button,
@@ -138,11 +138,12 @@ export default function ExportAndShareMenu({
             render={
               <Ariakit.MenuButton
                 id="export-menu-button"
-                aria-label="Export options"
+                aria-label={localize('com_endpoint_export_share')}
                 className="inline-flex size-9 flex-shrink-0 items-center justify-center rounded-xl border border-border-light bg-presentation text-text-primary transition-all ease-in-out hover:bg-surface-tertiary disabled:pointer-events-none disabled:opacity-50 radix-state-open:bg-surface-tertiary"
               >
-                <Share2
-                  className="icon-md text-text-primary"
+                <DotsThree
+                  weight="bold"
+                  className="h-5 w-5 text-text-primary"
                   aria-hidden="true"
                   focusable="false"
                 />
