@@ -252,6 +252,83 @@ describe('ProjectMetaAdsPanel', () => {
     });
   });
 
+  it('refetches status and shows feedback after applying a recommendation', () => {
+    mockStatusData.recommendations = [
+      {
+        _id: 'r1',
+        entityId: 'adset-1',
+        entityName: 'Prospecting',
+        action: 'increase',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 115,
+      },
+    ];
+    mockMutateApply.mockImplementationOnce(
+      (
+        _payload,
+        options?: {
+          onSuccess?: () => void;
+        },
+      ) => options?.onSuccess?.(),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_apply'));
+
+    expect(mockMutateApply).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        recommendationId: 'r1',
+      },
+      expect.any(Object),
+    );
+    expect(mockRefetchStatus).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_project_meta_ads_apply_success',
+      status: 'success',
+    });
+  });
+
+  it('shows apply errors to the user', () => {
+    mockStatusData.recommendations = [
+      {
+        _id: 'r1',
+        entityId: 'adset-1',
+        entityName: 'Prospecting',
+        action: 'increase',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 115,
+      },
+    ];
+    mockMutateApply.mockImplementationOnce(
+      (
+        _payload,
+        options?: {
+          onError?: (error: { response: { data: { message: string } } }) => void;
+        },
+      ) =>
+        options?.onError?.({
+          response: {
+            data: {
+              message: 'Meta budget changed since recommendation.',
+            },
+          },
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_apply'));
+
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'Meta budget changed since recommendation.',
+      status: 'error',
+    });
+  });
+
   it('shows a masked token status when the Meta Ads secret is configured', () => {
     mockStatusData.credentials = {
       effectiveSource: 'tenant',

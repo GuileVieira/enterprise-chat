@@ -16,9 +16,9 @@ services:
       rag_api:
         condition: service_started
     expose:
-      - "3080"
+      - '3080'
     ports:
-      - "3080:3080"
+      - '3080:3080'
     environment:
       HOST: 0.0.0.0
       PORT: 3080
@@ -84,7 +84,8 @@ services:
     depends_on:
       mongodb:
         condition: service_started
-    command: node api/server/jobs/metaAdsBudgetCron.js
+    working_dir: /app
+    command: /bin/sh -lc 'node api/server/jobs/metaAdsBudgetCron.js'
     environment:
       NODE_ENV: production
       CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
@@ -108,7 +109,7 @@ services:
     restart: always
     environment:
       MEILI_HOST: http://meilisearch:7700
-      MEILI_NO_ANALYTICS: "true"
+      MEILI_NO_ANALYTICS: 'true'
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
     volumes:
       - orqest_meilisearch:/meili_data

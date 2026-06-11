@@ -217,10 +217,33 @@ export default function ProjectMetaAdsPanel({
     if (!recommendation._id) {
       return;
     }
-    applyRecommendation.mutate({
-      projectId: project.projectId,
-      recommendationId: recommendation._id,
-    });
+    applyRecommendation.mutate(
+      {
+        projectId: project.projectId,
+        recommendationId: recommendation._id,
+      },
+      {
+        onSuccess: () => {
+          statusQuery.refetch();
+          showToast({
+            message: localize('com_ui_project_meta_ads_apply_success'),
+            status: 'success',
+          });
+        },
+        onError: (error) => {
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_project_meta_ads_apply_failed'),
+          );
+          showToast({ message, status: 'error' });
+          logger.error('MetaAds', 'Failed to apply project Meta Ads recommendation', {
+            projectId: project.projectId,
+            recommendationId: recommendation._id,
+            error,
+          });
+        },
+      },
+    );
   };
 
   const onRunAnalysis = () => {
@@ -473,6 +496,20 @@ export default function ProjectMetaAdsPanel({
                 disabled={!canEdit}
                 type="number"
                 step={field.step}
+                min={
+                  field.key === 'minRoas' || field.key === 'minSpend'
+                    ? '0'
+                    : field.key === 'cooldownHours'
+                      ? '1'
+                      : '0.01'
+                }
+                max={
+                  field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
+                    ? '100'
+                    : field.key === 'cooldownHours'
+                      ? '168'
+                      : undefined
+                }
                 value={settings.rules[field.key]}
                 onChange={(event) => onRuleChange(field.key, event.target.value)}
                 className="h-10 rounded-lg border border-border-light bg-surface-primary px-3 text-text-primary"
