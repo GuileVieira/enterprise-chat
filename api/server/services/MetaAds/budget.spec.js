@@ -226,3 +226,239 @@ describe('Meta Ads budget service', () => {
     ).toBe(true);
   });
 });
+
+describe('Meta Ads budget service persistence safety', () => {
+  const loadBudgetWithMocks = ({
+    recommendation,
+    project,
+    latestBudget,
+    insights = [],
+    adsets = [],
+  } = {}) => {
+    jest.resetModules();
+
+    const findRecommendationLean = jest.fn(async () => recommendation);
+    const findById = jest.fn(() => ({ lean: findRecommendationLean }));
+    const findByIdAndUpdate = jest.fn(async (_id, update) => ({
+      ...recommendation,
+      ...update,
+    }));
+    const updateMany = jest.fn(async () => ({ modifiedCount: 1 }));
+    const createRecommendation = jest.fn(async (payload) => ({
+      _id: 'new-rec',
+      ...payload,
+      toObject: () => ({ _id: 'new-rec', ...payload }),
+    }));
+    const createSnapshot = jest.fn(async (payload) => payload);
+    const createChange = jest.fn(async (payload) => payload);
+    const findChangeOne = jest.fn(() => ({ lean: async () => null }));
+    const makeFindChain = jest.fn(() => ({
+      sort: () => ({
+        limit: () => ({
+          lean: async () => [],
+        }),
+      }),
+    }));
+
+    jest.doMock('mongoose', () => ({
+      models: {
+        MetaAdsSnapshot: {
+          schema: {},
+          create: createSnapshot,
+          find: makeFindChain,
+        },
+        MetaAdsRecommendation: {
+          schema: {},
+          create: createRecommendation,
+          find: makeFindChain,
+          findById,
+          findByIdAndUpdate,
+          updateMany,
+        },
+        MetaAdsBudgetChange: {
+          schema: {},
+          create: createChange,
+          find: makeFindChain,
+          findOne: findChangeOne,
+        },
+      },
+      Schema: function Schema() {},
+      model: jest.fn(),
+    }));
+
+    const getProjectById = jest.fn(async () => project);
+    const findProjectById = jest.fn(async () => project);
+    const getTenantSecret = jest.fn(async () => ({ value: 'meta-token' }));
+
+    jest.doMock('~/models', () => ({
+      getProjectById,
+      findProjectById,
+      getTenantSecret,
+    }));
+    jest.doMock('@librechat/data-schemas', () => ({
+      logger: {
+        debug: jest.fn(),
+        error: jest.fn(),
+      },
+      runAsSystem: (fn) => fn(),
+      getTenantId: () => 'fallback-tenant',
+    }));
+    jest.doMock('~/server/services/Config/app', () => ({
+      getAppConfig: jest.fn(async () => ({ interfaceConfig: { metaAds: true } })),
+    }));
+
+    const metaPost = jest.fn(async () => ({}));
+    const getAdSetDailyBudget = jest.fn(async () => latestBudget);
+    const listAdSets = jest.fn(async () => adsets);
+    const listAdSetInsights = jest.fn(async () => insights);
+
+    jest.doMock('~/server/services/MetaAds/graph', () => ({
+      getMetaGraphVersion: (value) => value || 'v25.0',
+      getAdSetDailyBudget,
+      listAdSets,
+      listAdSetInsights,
+      metaPost,
+    }));
+
+    const budget = require('./budget');
+    return {
+      budget,
+      createChange,
+      createRecommendation,
+      findByIdAndUpdate,
+      getAdSetDailyBudget,
+      makeFindChain,
+      metaPost,
+      updateMany,
+    };
+  };
+
+  afterEach(() => {
+    jest.resetModules();
+    jest.dontMock('mongoose');
+    jest.dontMock('~/models');
+    jest.dontMock('@librechat/data-schemas');
+    jest.dontMock('~/server/services/Config/app');
+    jest.dontMock('~/server/services/MetaAds/graph');
+  });
+
+  it('rejects applying a recommendation from another tenant', async () => {
+    const { budget, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      recommendation: {
+        _id: 'rec1',
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        entityId: 'adset-1',
+        action: 'increase',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 115,
+      },
+      latestBudget: 100,
+    });
+
+    await expect(
+      budget.applyRecommendation({
+        recommendationId: 'rec1',
+        projectId: 'p1',
+        tenantId: 'tenant-b',
+        actor: 'user',
+      }),
+    ).rejects.toThrow('Recommendation does not belong to this tenant.');
+    expect(metaPost).not.toHaveBeenCalled();
+  });
+
+  it('blocks stale recommendations when the Meta daily budget changed', async () => {
+    const { budget, findByIdAndUpdate, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      recommendation: {
+        _id: 'rec1',
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        entityId: 'adset-1',
+        action: 'increase',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 115,
+      },
+      latestBudget: 130,
+    });
+
+    const result = await budget.applyRecommendation({
+      recommendationId: 'rec1',
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      actor: 'user',
+    });
+
+    expect(metaPost).not.toHaveBeenCalled();
+    expect(findByIdAndUpdate).toHaveBeenCalledWith(
+      'rec1',
+      expect.objectContaining({
+        action: 'hold',
+        status: 'blocked',
+      }),
+      { new: true, lean: true },
+    );
+    expect(result.status).toBe('blocked');
+  });
+
+  it('queries Meta Ads status by project and tenant', async () => {
+    const { budget, makeFindChain } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+    });
+
+    await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(makeFindChain).toHaveBeenCalledWith({ projectId: 'p1', tenantId: 'tenant-a' });
+  });
+
+  it('ignores older pending recommendations before creating a new one for an ad set', async () => {
+    const { budget, updateMany } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          rules: {
+            targetCpa: 45,
+            minRoas: 2,
+            maxIncreasePct: 15,
+            maxDecreasePct: 20,
+            minDailyBudget: 20,
+            maxDailyBudget: 500,
+            cooldownHours: 24,
+            minSpend: 10,
+          },
+        },
+      },
+      adsets: [{ id: 'adset-1', name: 'Prospecting', daily_budget: '10000' }],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Prospecting',
+          spend: '200',
+          actions: [{ action_type: 'purchase', value: '10' }],
+          purchase_roas: [{ value: '3' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(updateMany).toHaveBeenCalledWith(
+      {
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        entityId: 'adset-1',
+        status: 'pending',
+      },
+      {
+        $set: {
+          status: 'ignored',
+        },
+      },
+    );
+  });
+});

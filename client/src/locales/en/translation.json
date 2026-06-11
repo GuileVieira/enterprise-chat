@@ -2038,6 +2038,8 @@
   "com_ui_project_meta_ads_budget": "Budget",
   "com_ui_project_meta_ads_spend": "Spend",
   "com_ui_project_meta_ads_apply": "Apply",
+  "com_ui_project_meta_ads_apply_success": "Meta Ads recommendation applied.",
+  "com_ui_project_meta_ads_apply_failed": "Could not apply Meta Ads recommendation.",
   "com_ui_project_meta_ads_chat_with_agent": "Chat with traffic agent",
   "com_ui_project_meta_ads_select_ad_set": "Select ad set",
   "com_ui_project_meta_ads_no_recommendations": "No pending recommendations.",

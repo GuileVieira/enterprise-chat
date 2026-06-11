@@ -1,7 +1,13 @@
 jest.mock('node-fetch', () => jest.fn());
 
 const fetch = require('node-fetch');
-const { getMetaGraphVersion, listAdSets, listAdSetInsights, metaGet } = require('./graph');
+const {
+  getAdSetDailyBudget,
+  getMetaGraphVersion,
+  listAdSets,
+  listAdSetInsights,
+  metaGet,
+} = require('./graph');
 
 describe('Meta Ads Graph client', () => {
   beforeEach(() => {
@@ -80,5 +86,20 @@ describe('Meta Ads Graph client', () => {
     ).rejects.toThrow(
       'Meta returned an invalid ad sets response (200). Body: Invalid JSON for postcard',
     );
+  });
+
+  it('fetches the current ad set daily budget before a budget update', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ daily_budget: '13000' }),
+    });
+
+    await expect(
+      getAdSetDailyBudget({ entityId: 'adset-1', token: 'token', graphVersion: 'v23.0' }),
+    ).resolves.toBe(130);
+
+    expect(fetch.mock.calls[0][0]).toContain('/v23.0/adset-1');
+    expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget');
   });
 });

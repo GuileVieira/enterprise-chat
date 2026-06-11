@@ -20,6 +20,26 @@ router.use(requireJwtAuth);
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
 const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
+const DEFAULT_RULES = {
+  targetCpa: 45,
+  minRoas: 2,
+  maxIncreasePct: 15,
+  maxDecreasePct: 20,
+  minDailyBudget: 20,
+  maxDailyBudget: 500,
+  cooldownHours: 24,
+  minSpend: 10,
+};
+const RULE_LIMITS = {
+  targetCpa: { min: 0.01 },
+  minRoas: { min: 0 },
+  maxIncreasePct: { min: 0, max: 100 },
+  maxDecreasePct: { min: 0, max: 100 },
+  minDailyBudget: { min: 0.01 },
+  maxDailyBudget: { min: 0.01 },
+  cooldownHours: { min: 1, max: 168 },
+  minSpend: { min: 0 },
+};
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -27,6 +47,33 @@ function getProjectMetaTokenSecretName(projectId) {
 
 function looksLikeMetaAccessToken(value) {
   return typeof value === 'string' && /^EAA[a-zA-Z0-9_-]{40,}$/.test(value.trim());
+}
+
+function validateMetaAdsRules(rules = {}) {
+  const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
+  const validated = {};
+  const errors = [];
+  for (const [key, limits] of Object.entries(RULE_LIMITS)) {
+    const value = Number(merged[key]);
+    validated[key] = value;
+    if (
+      !Number.isFinite(value) ||
+      value < limits.min ||
+      (limits.max != null && value > limits.max)
+    ) {
+      errors.push(key);
+    }
+  }
+  if (validated.minDailyBudget > validated.maxDailyBudget) {
+    errors.push('minDailyBudget', 'maxDailyBudget');
+  }
+  if (errors.length > 0) {
+    throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: [...new Set(errors)],
+    });
+  }
+  return validated;
 }
 
 async function requireMetaAdsFeature(req, res, next) {
@@ -75,6 +122,7 @@ function normalizeMetaAds(metaAds = {}) {
     ...safeMetaAds,
     adAccountId: digits ? `act_${digits}` : safeMetaAds.adAccountId,
     tokenSecretName,
+    rules: validateMetaAdsRules(safeMetaAds.rules),
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
     scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(safeMetaAds.scheduleIntervalMinutes))
@@ -198,6 +246,7 @@ router.post(
       const recommendation = await applyRecommendation({
         recommendationId: req.params.recommendationId,
         projectId: req.params.projectId,
+        tenantId: req.user.tenantId || getTenantId(),
         actor: 'user',
         actorUserId: req.user.id,
       });

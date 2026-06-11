@@ -3,6 +3,7 @@ const { logger, runAsSystem, getTenantId } = require('@librechat/data-schemas');
 const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
+  getAdSetDailyBudget,
   getMetaGraphVersion,
   listAdSetInsights,
   listAdSets,
@@ -22,6 +23,16 @@ const DEFAULT_RULES = {
   maxDailyBudget: 500,
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
+};
+const RULE_LIMITS = {
+  targetCpa: { min: 0.01 },
+  minRoas: { min: 0 },
+  maxIncreasePct: { min: 0, max: 100 },
+  maxDecreasePct: { min: 0, max: 100 },
+  minDailyBudget: { min: 0.01 },
+  maxDailyBudget: { min: 0.01 },
+  cooldownHours: { min: 1, max: 168 },
+  minSpend: { min: 0 },
 };
 
 function getProjectMetaTokenSecretName(projectId) {
@@ -120,7 +131,40 @@ function dailyBudgetToCents(value) {
 }
 
 function mergeRules(metaAds = {}) {
-  return { ...DEFAULT_RULES, ...(metaAds.rules ?? {}) };
+  return validateMetaAdsRules(metaAds.rules);
+}
+
+function validateRuleNumber(rules, key, errors) {
+  const value = Number(rules[key]);
+  const limits = RULE_LIMITS[key];
+  if (!Number.isFinite(value)) {
+    errors.push(key);
+    return value;
+  }
+  if (value < limits.min || (limits.max != null && value > limits.max)) {
+    errors.push(key);
+  }
+  return value;
+}
+
+function validateMetaAdsRules(rules = {}) {
+  const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
+  const errors = [];
+  const validated = {};
+  for (const key of Object.keys(DEFAULT_RULES)) {
+    validated[key] = validateRuleNumber(merged, key, errors);
+  }
+  if (validated.minDailyBudget > validated.maxDailyBudget) {
+    errors.push('minDailyBudget');
+    errors.push('maxDailyBudget');
+  }
+  if (errors.length > 0) {
+    throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: [...new Set(errors)],
+    });
+  }
+  return validated;
 }
 
 function withImplicitProjectTokenSecret(projectId, metaAds = {}) {
@@ -300,7 +344,7 @@ async function getRecentChange({ projectId, entityId, cooldownHours }) {
   return MetaAdsBudgetChange.findOne({ projectId, entityId, createdAt: { $gte: since } }).lean();
 }
 
-async function applyRecommendation({ recommendationId, projectId, actor, actorUserId }) {
+async function applyRecommendation({ recommendationId, projectId, tenantId, actor, actorUserId }) {
   const { MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
   const recommendation = await MetaAdsRecommendation.findById(recommendationId).lean();
   if (!recommendation) {
@@ -308,6 +352,9 @@ async function applyRecommendation({ recommendationId, projectId, actor, actorUs
   }
   if (projectId && recommendation.projectId !== projectId) {
     throw new Error('Recommendation does not belong to this project.');
+  }
+  if (tenantId && recommendation.tenantId !== tenantId) {
+    throw new Error('Recommendation does not belong to this tenant.');
   }
   if (recommendation.status !== 'pending') {
     return recommendation;
@@ -325,12 +372,32 @@ async function applyRecommendation({ recommendationId, projectId, actor, actorUs
       (await getProjectById(recommendation.projectId)) ||
       (await findProjectById(recommendation.projectId)),
   );
-  const metaAds = project?.metaAds ?? {};
+  const metaAds = withImplicitProjectTokenSecret(recommendation.projectId, project?.metaAds ?? {});
   const token = await getAccessToken(recommendation.tenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const currentDailyBudget = await getAdSetDailyBudget({
+    entityId: recommendation.entityId,
+    token,
+    graphVersion,
+  });
+  if (
+    currentDailyBudget != null &&
+    Math.abs(currentDailyBudget - recommendation.currentDailyBudget) > 0.005
+  ) {
+    return MetaAdsRecommendation.findByIdAndUpdate(
+      recommendationId,
+      {
+        action: 'hold',
+        status: 'blocked',
+        reason: 'Meta budget changed since recommendation.',
+      },
+      { new: true, lean: true },
+    );
+  }
   await metaPost({
     path: encodeURIComponent(recommendation.entityId),
     token,
-    graphVersion: metaAds.graphVersion,
+    graphVersion,
     resourceLabel: 'budget update',
     body: {
       daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
@@ -440,6 +507,20 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       raw: row,
     });
 
+    await MetaAdsRecommendation.updateMany(
+      {
+        tenantId,
+        projectId,
+        entityId,
+        status: 'pending',
+      },
+      {
+        $set: {
+          status: 'ignored',
+        },
+      },
+    );
+
     const recommendation = await MetaAdsRecommendation.create({
       tenantId,
       projectId,
@@ -467,6 +548,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       await applyRecommendation({
         recommendationId: recommendation._id,
         projectId,
+        tenantId,
         actor,
       });
     }
@@ -484,13 +566,15 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
 
 async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
-  const [project, latestSnapshots, recommendations, changes] = await Promise.all([
-    runAsSystem(
-      async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
-    ),
-    MetaAdsSnapshot.find({ projectId }).sort({ createdAt: -1 }).limit(50).lean(),
-    MetaAdsRecommendation.find({ projectId }).sort({ createdAt: -1 }).limit(50).lean(),
-    MetaAdsBudgetChange.find({ projectId }).sort({ createdAt: -1 }).limit(20).lean(),
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  const tenantId = project ? getProjectTenantId(project, fallbackTenantId) : fallbackTenantId;
+  const query = tenantId ? { projectId, tenantId } : { projectId };
+  const [latestSnapshots, recommendations, changes] = await Promise.all([
+    MetaAdsSnapshot.find(query).sort({ createdAt: -1 }).limit(50).lean(),
+    MetaAdsRecommendation.find(query).sort({ createdAt: -1 }).limit(50).lean(),
+    MetaAdsBudgetChange.find(query).sort({ createdAt: -1 }).limit(20).lean(),
   ]);
   const credentials = project
     ? await resolveMetaCredentialStatus({
@@ -570,4 +654,5 @@ module.exports = {
   resolveMetaCredentialStatus,
   resolveMetaAccessToken,
   runCron,
+  validateMetaAdsRules,
 };

@@ -157,6 +157,25 @@ async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 
   });
 }
 
+function centsToDailyBudget(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+  return numeric / 100;
+}
+
+async function getAdSetDailyBudget({ entityId, token, graphVersion }) {
+  const payload = await metaGet({
+    path: encodeURIComponent(entityId),
+    token,
+    params: { fields: 'daily_budget' },
+    graphVersion,
+    resourceLabel: 'ad set budget',
+  });
+  return centsToDailyBudget(payload.daily_budget);
+}
+
 async function listAdSets({ adAccountId, token, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
@@ -235,6 +254,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
 
 module.exports = {
   DEFAULT_META_GRAPH_VERSION,
+  getAdSetDailyBudget,
   getMetaGraphVersion,
   listAdSetInsights,
   listAdSets,

@@ -62,6 +62,23 @@ describe('projectMetaAds settings normalization', () => {
     ).not.toHaveProperty('graphVersion');
   });
 
+  it('rejects invalid budget rules before saving settings', () => {
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        rules: {
+          targetCpa: 45,
+          minRoas: 2,
+          maxIncreasePct: 150,
+          maxDecreasePct: 20,
+          minDailyBudget: 500,
+          maxDailyBudget: 20,
+          cooldownHours: 0,
+          minSpend: 10,
+        },
+      }),
+    ).toThrow('Invalid Meta Ads budget rules.');
+  });
+
   it('saves a pasted Meta token as a generated project secret', async () => {
     const upsertSecret = jest.fn(async () => ({}));
 
