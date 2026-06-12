@@ -3,6 +3,7 @@ const {
   normalizeAdAccountId,
   proposeBudget,
   getEffectiveRules,
+  detectBudgetMode,
   getScheduleIntervalMinutes,
   getProjectTenantId,
   withImplicitProjectTokenSecret,
@@ -268,6 +269,63 @@ describe('Meta Ads budget service', () => {
       }),
     );
   });
+
+  it('uses rule groups before project rules and after direct overrides', () => {
+    const projectRules = { ...DEFAULT_RULES, targetCpa: 80, maxDailyBudget: 500 };
+    const ruleGroups = [
+      {
+        id: 'group-1',
+        name: 'Floripa',
+        entityLevel: 'campaign',
+        entityIds: ['campaign-1'],
+        enabled: true,
+        rules: { targetCpa: 60, maxDailyBudget: 900 },
+      },
+    ];
+
+    expect(
+      getEffectiveRules({
+        projectRules,
+        ruleGroups,
+        ruleOverrides: [],
+        campaignId: 'campaign-1',
+        adsetId: 'adset-1',
+      }),
+    ).toEqual(expect.objectContaining({ targetCpa: 60, maxDailyBudget: 900 }));
+
+    expect(
+      getEffectiveRules({
+        projectRules,
+        ruleGroups,
+        ruleOverrides: [
+          {
+            entityLevel: 'adset',
+            entityId: 'adset-1',
+            enabled: true,
+            rules: { targetCpa: 35 },
+          },
+        ],
+        campaignId: 'campaign-1',
+        adsetId: 'adset-1',
+      }),
+    ).toEqual(expect.objectContaining({ targetCpa: 35, maxDailyBudget: 900 }));
+  });
+
+  it('detects CBO when campaign has budget and ABO when ad sets carry budget', () => {
+    expect(
+      detectBudgetMode({
+        campaign: { id: 'campaign-1', daily_budget: '7000' },
+        adsets: [{ id: 'adset-1', daily_budget: '0' }],
+      }),
+    ).toEqual({ budgetLevel: 'campaign', editableBudgetLevel: 'campaign', budgetMode: 'CBO' });
+
+    expect(
+      detectBudgetMode({
+        campaign: { id: 'campaign-1' },
+        adsets: [{ id: 'adset-1', daily_budget: '5000' }],
+      }),
+    ).toEqual({ budgetLevel: 'adset', editableBudgetLevel: 'adset', budgetMode: 'ABO' });
+  });
 });
 
 describe('Meta Ads budget service persistence safety', () => {
@@ -275,7 +333,9 @@ describe('Meta Ads budget service persistence safety', () => {
     recommendation,
     project,
     latestBudget,
+    latestEntityBudget,
     insights = [],
+    campaigns = [],
     adsets = [],
     snapshots = [],
     recommendations = [],
@@ -373,13 +433,15 @@ describe('Meta Ads budget service persistence safety', () => {
 
     const metaPost = jest.fn(async () => ({}));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
-    const listCampaigns = jest.fn(async () => []);
+    const getEntityDailyBudget = jest.fn(async () => latestEntityBudget);
+    const listCampaigns = jest.fn(async () => campaigns);
     const listAdSets = jest.fn(async () => adsets);
     const listAdSetInsights = jest.fn(async () => insights);
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
       getMetaGraphVersion: (value) => value || 'v25.0',
       getAdSetDailyBudget,
+      getEntityDailyBudget,
       listCampaigns,
       listAdSets,
       listAdSetInsights,
@@ -391,8 +453,11 @@ describe('Meta Ads budget service persistence safety', () => {
       budget,
       createChange,
       createRecommendation,
+      createSnapshot,
       findByIdAndUpdate,
       getAdSetDailyBudget,
+      getEntityDailyBudget,
+      listCampaigns,
       makeFindChain,
       metaPost,
       updateMany,
@@ -410,7 +475,7 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('rejects applying a recommendation from another tenant', async () => {
     const { budget, metaPost } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
       recommendation: {
         _id: 'rec1',
         tenantId: 'tenant-a',
@@ -437,7 +502,7 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('blocks stale recommendations when the Meta daily budget changed', async () => {
     const { budget, findByIdAndUpdate, metaPost } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
       recommendation: {
         _id: 'rec1',
         tenantId: 'tenant-a',
@@ -472,7 +537,7 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('queries Meta Ads status by project and tenant', async () => {
     const { budget, makeFindChain } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
     });
 
     await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
@@ -483,7 +548,7 @@ describe('Meta Ads budget service persistence safety', () => {
   });
 
   it('returns campaigns grouped with active ad sets and pending recommendations', async () => {
-    const { budget } = loadBudgetWithMocks({
+    const { budget, listCampaigns } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
       snapshots: [
         {
@@ -537,6 +602,154 @@ describe('Meta Ads budget service persistence safety', () => {
         ],
       }),
     ]);
+  });
+
+  it('marks CBO campaigns as campaign-editable and ABO campaigns as adset-editable', async () => {
+    const { budget, listCampaigns } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      snapshots: [
+        {
+          entityId: 'adset-cbo',
+          entityName: 'CBO child',
+          campaignId: 'campaign-cbo',
+          campaignName: 'CBO Campaign',
+          dailyBudget: 0,
+          spend: 100,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+        {
+          entityId: 'adset-abo',
+          entityName: 'ABO child',
+          campaignId: 'campaign-abo',
+          campaignName: 'ABO Campaign',
+          dailyBudget: 50,
+          spend: 80,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+      campaigns: [
+        { id: 'campaign-cbo', name: 'CBO Campaign', daily_budget: '7000' },
+        { id: 'campaign-abo', name: 'ABO Campaign' },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(listCampaigns).toHaveBeenCalledWith(
+      expect.objectContaining({ adAccountId: 'act_123', token: 'meta-token' }),
+    );
+    expect(status.campaigns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          campaignId: 'campaign-cbo',
+          budgetMode: 'CBO',
+          editableBudgetLevel: 'campaign',
+          dailyBudget: 70,
+        }),
+        expect.objectContaining({
+          campaignId: 'campaign-abo',
+          budgetMode: 'ABO',
+          editableBudgetLevel: 'adset',
+          dailyBudget: 50,
+        }),
+      ]),
+    );
+  });
+
+  it('calculates message result cost and video 75 percent metrics from Meta insights', async () => {
+    const { budget, createSnapshot } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', rules: { ...DEFAULT_RULES, targetCpa: 10 } },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Messages set',
+          daily_budget: '5000',
+          campaign_id: 'campaign-1',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          adset_id: 'adset-1',
+          adset_name: 'Messages set',
+          spend: '120',
+          impressions: '1000',
+          clicks: '50',
+          ctr: '5',
+          cost_per_action_type: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '6',
+            },
+          ],
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '20',
+            },
+          ],
+          video_p75_watched_actions: [{ value: '250' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+        resultCount: 20,
+        cpa: 6,
+        ctr: 5,
+        videoP75Watched: 250,
+      }),
+    );
+  });
+
+  it('applies a manual campaign budget update and records the change', async () => {
+    const { budget, createChange, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+      },
+      latestEntityBudget: { dailyBudget: 70 },
+    });
+
+    const result = await budget.applyManualBudgetChange({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      entityLevel: 'campaign',
+      entityId: 'campaign-1',
+      entityName: 'CBO Campaign',
+      dailyBudget: 100,
+      actor: 'user',
+      actorUserId: 'u1',
+      reason: 'Manual scale',
+    });
+
+    expect(metaPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'campaign-1',
+        body: { daily_budget: 10000 },
+      }),
+    );
+    expect(createChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        previousDailyBudget: 70,
+        newDailyBudget: 100,
+        reason: 'Manual scale',
+      }),
+    );
+    expect(result.change).toEqual(expect.objectContaining({ newDailyBudget: 100 }));
   });
 
   it('uses only the latest snapshot per ad set when building campaign summaries', async () => {

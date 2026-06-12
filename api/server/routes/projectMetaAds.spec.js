@@ -19,6 +19,7 @@ jest.mock('~/server/services/Config/app', () => ({
 
 jest.mock('~/server/services/MetaAds/budget', () => ({
   analyzeProject: jest.fn(),
+  applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
 }));
@@ -131,6 +132,39 @@ describe('projectMetaAds settings normalization', () => {
             rules: expect.objectContaining({
               targetCpa: 40,
             }),
+          },
+        ],
+      }),
+    );
+  });
+
+  it('normalizes campaign rule groups for shared rules', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Floripa',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-1', '', 'campaign-2'],
+            enabled: true,
+            ignored: true,
+            rules: {
+              targetCpa: 60,
+            },
+          },
+        ],
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Floripa',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-1', 'campaign-2'],
+            enabled: true,
+            rules: expect.objectContaining({ targetCpa: 60 }),
           },
         ],
       }),

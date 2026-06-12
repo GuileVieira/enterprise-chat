@@ -88,6 +88,8 @@ export type ProjectMetaAdsSnapshot = {
   ctr?: number;
   cpc?: number;
   cpm?: number;
+  videoP75Watched?: number;
+  videoP75Rate?: number;
   createdAt?: string;
 };
 
@@ -146,9 +148,24 @@ export type ProjectMetaAdsCampaignSummary = {
   ctr?: number;
   cpc?: number;
   cpm?: number;
+  videoP75Watched?: number;
+  videoP75Rate?: number;
   budgetLevel?: 'campaign' | 'adset';
   editableBudgetLevel?: 'campaign' | 'adset' | 'none';
+  budgetMode?: 'CBO' | 'ABO' | 'UNKNOWN';
   adSets: ProjectMetaAdsAdSetSummary[];
+};
+
+export type ProjectMetaAdsManualBudgetPayload = {
+  entityLevel: 'campaign' | 'adset';
+  entityId: string;
+  entityName?: string;
+  dailyBudget: number;
+  reason?: string;
+};
+
+export type ProjectMetaAdsManualBudgetResponse = {
+  change: ProjectMetaAdsBudgetChange;
 };
 
 export type ProjectMetaAdsStatus = {

@@ -69,6 +69,37 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsRuleGroupSchema = new Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    entityLevel: {
+      type: String,
+      enum: ['campaign', 'adset'],
+      required: true,
+    },
+    entityIds: {
+      type: [String],
+      default: [],
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+    rules: {
+      type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+  },
+  { _id: false },
+);
+
 const ProjectMetaAdsSchema = new Schema(
   {
     enabled: {
@@ -96,7 +127,7 @@ const ProjectMetaAdsSchema = new Schema(
     },
     budgetLevel: {
       type: String,
-      enum: ['adset'],
+      enum: ['campaign', 'adset'],
       default: 'adset',
     },
     scheduleIntervalMinutes: {
@@ -113,6 +144,10 @@ const ProjectMetaAdsSchema = new Schema(
     },
     ruleOverrides: {
       type: [ProjectMetaAdsRuleOverrideSchema],
+      default: [],
+    },
+    ruleGroups: {
+      type: [ProjectMetaAdsRuleGroupSchema],
       default: [],
     },
   },

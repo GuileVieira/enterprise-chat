@@ -3,6 +3,7 @@ jest.mock('node-fetch', () => jest.fn());
 const fetch = require('node-fetch');
 const {
   getAdSetDailyBudget,
+  getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
   listAdSets,
@@ -167,5 +168,23 @@ describe('Meta Ads Graph client', () => {
 
     expect(fetch.mock.calls[0][0]).toContain('/v23.0/adset-1');
     expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget');
+  });
+
+  it('fetches campaign or ad set budget with CBO/ABO fields', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ daily_budget: '7000', lifetime_budget: '0' }),
+    });
+
+    await expect(
+      getEntityDailyBudget({ entityId: 'campaign-1', token: 'token', graphVersion: 'v23.0' }),
+    ).resolves.toEqual({
+      dailyBudget: 70,
+      lifetimeBudget: 0,
+    });
+
+    expect(fetch.mock.calls[0][0]).toContain('/v23.0/campaign-1');
+    expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget%2Clifetime_budget');
   });
 });

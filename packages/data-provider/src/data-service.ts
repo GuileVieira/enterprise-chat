@@ -887,6 +887,13 @@ export const runProjectMetaAdsAnalysis = (id: string): Promise<q.ProjectMetaAdsR
   return request.post(endpoints.projectMetaAdsRun(id), {});
 };
 
+export const updateProjectMetaAdsBudget = (
+  id: string,
+  payload: q.ProjectMetaAdsManualBudgetPayload,
+): Promise<q.ProjectMetaAdsManualBudgetResponse> => {
+  return request.post(endpoints.projectMetaAdsBudget(id), payload);
+};
+
 export const applyProjectMetaAdsRecommendation = (
   id: string,
   recommendationId: string,

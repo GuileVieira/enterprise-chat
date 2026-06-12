@@ -4,6 +4,7 @@ const { getProjectById, findProjectById, getTenantSecret } = require('~/models')
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
   getAdSetDailyBudget,
+  getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
   listAdSetInsights,
@@ -67,6 +68,8 @@ function getModels() {
         ctr: Number,
         cpc: Number,
         cpm: Number,
+        videoP75Watched: Number,
+        videoP75Rate: Number,
         raw: mongoose.Schema.Types.Mixed,
       },
       { timestamps: true },
@@ -151,8 +154,30 @@ function mergeRules(metaAds = {}) {
   return validateMetaAdsRules(metaAds.rules);
 }
 
-function getEffectiveRules({ projectRules = {}, ruleOverrides = [], campaignId, adsetId }) {
+function findRuleGroup({ ruleGroups = [], campaignId, adsetId }) {
+  return ruleGroups.find((group) => {
+    if (group?.enabled === false || !Array.isArray(group.entityIds)) {
+      return false;
+    }
+    if (group.entityLevel === 'campaign') {
+      return group.entityIds.includes(campaignId);
+    }
+    if (group.entityLevel === 'adset') {
+      return group.entityIds.includes(adsetId);
+    }
+    return false;
+  });
+}
+
+function getEffectiveRules({
+  projectRules = {},
+  ruleGroups = [],
+  ruleOverrides = [],
+  campaignId,
+  adsetId,
+}) {
   const baseRules = validateMetaAdsRules(projectRules);
+  const ruleGroup = findRuleGroup({ ruleGroups, campaignId, adsetId });
   const campaignOverride = ruleOverrides.find(
     (override) =>
       override?.enabled !== false &&
@@ -167,6 +192,7 @@ function getEffectiveRules({ projectRules = {}, ruleOverrides = [], campaignId, 
   );
   return validateMetaAdsRules({
     ...baseRules,
+    ...(ruleGroup?.rules ?? {}),
     ...(campaignOverride?.rules ?? {}),
     ...(adsetOverride?.rules ?? {}),
   });
@@ -244,29 +270,74 @@ async function isMetaAdsFeatureEnabled(tenantId) {
 
 function calculateMetrics(row) {
   const spend = Number(row.spend ?? 0);
-  const purchaseAction = Array.isArray(row.actions)
-    ? row.actions.find((action) => action.action_type === 'purchase')
+  const actionPriority = [
+    'onsite_conversion.messaging_conversation_started_7d',
+    'lead',
+    'purchase',
+  ];
+  const actions = Array.isArray(row.actions) ? row.actions : [];
+  const costPerAction = Array.isArray(row.cost_per_action_type) ? row.cost_per_action_type : [];
+  const resultAction =
+    actionPriority
+      .map((actionType) => actions.find((action) => action.action_type === actionType))
+      .find(Boolean) ?? actions[0];
+  const resultCount = Number(resultAction?.value ?? 0);
+  const resultCost = resultAction
+    ? costPerAction.find((item) => item.action_type === resultAction.action_type)
     : null;
-  const resultCount = Number(purchaseAction?.value ?? 0);
-  const cpa = resultCount > 0 ? spend / resultCount : null;
+  const cpaFromMeta = Number(resultCost?.value);
+  const cpa =
+    Number.isFinite(cpaFromMeta) && cpaFromMeta > 0
+      ? cpaFromMeta
+      : resultCount > 0
+        ? spend / resultCount
+        : null;
   const roasValue = Array.isArray(row.purchase_roas)
     ? Number(row.purchase_roas[0]?.value ?? 0)
     : Number(row.purchase_roas ?? 0);
   const roas = Number.isFinite(roasValue) && roasValue > 0 ? roasValue : null;
+  const videoP75Watched = Array.isArray(row.video_p75_watched_actions)
+    ? Number(row.video_p75_watched_actions[0]?.value ?? 0)
+    : Number(row.video_p75_watched_actions ?? 0);
+  const impressions = Number(row.impressions ?? 0);
   return {
     spend,
     resultCount,
     cpa,
     roas,
-    resultType: purchaseAction?.action_type ?? 'purchase',
-    impressions: Number(row.impressions ?? 0),
+    resultType: resultAction?.action_type ?? 'purchase',
+    impressions,
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
     clicks: Number(row.clicks ?? 0),
     ctr: Number(row.ctr ?? 0),
     cpc: Number(row.cpc ?? 0),
     cpm: Number(row.cpm ?? 0),
+    videoP75Watched,
+    videoP75Rate:
+      impressions > 0 ? Number(((Number(videoP75Watched) / impressions) * 100).toFixed(2)) : 0,
   };
+}
+
+function hasBudget(value) {
+  return Number(value ?? 0) > 0;
+}
+
+function detectBudgetMode({ campaign = {}, adsets = [] }) {
+  if (hasBudget(campaign.daily_budget) || hasBudget(campaign.lifetime_budget)) {
+    return { budgetLevel: 'campaign', editableBudgetLevel: 'campaign', budgetMode: 'CBO' };
+  }
+  if (
+    adsets.some(
+      (adset) =>
+        hasBudget(adset.dailyBudget) ||
+        hasBudget(adset.daily_budget) ||
+        hasBudget(adset.lifetime_budget),
+    )
+  ) {
+    return { budgetLevel: 'adset', editableBudgetLevel: 'adset', budgetMode: 'ABO' };
+  }
+  return { budgetLevel: 'adset', editableBudgetLevel: 'none', budgetMode: 'UNKNOWN' };
 }
 
 function latestByEntity(items = []) {
@@ -284,9 +355,14 @@ function latestByEntity(items = []) {
   return latest;
 }
 
-function buildCampaignSummaries({ latestSnapshots = [], recommendations = [] }) {
+function buildCampaignSummaries({
+  latestSnapshots = [],
+  recommendations = [],
+  campaignConfigs = [],
+}) {
   const recommendationByEntity = latestByEntity(recommendations);
   const snapshotByEntity = latestByEntity(latestSnapshots);
+  const campaignConfigById = new Map(campaignConfigs.map((campaign) => [campaign.id, campaign]));
   const campaigns = new Map();
 
   for (const snapshot of snapshotByEntity.values()) {
@@ -296,10 +372,12 @@ function buildCampaignSummaries({ latestSnapshots = [], recommendations = [] }) 
       continue;
     }
     if (!campaigns.has(campaignId)) {
+      const campaignConfig = campaignConfigById.get(campaignId);
+      const budgetInfo = detectBudgetMode({ campaign: campaignConfig, adsets: [] });
       campaigns.set(campaignId, {
         campaignId,
         campaignName,
-        objective: snapshot.campaignObjective,
+        objective: snapshot.campaignObjective || campaignConfig?.objective,
         spend: 0,
         resultCount: 0,
         resultType: snapshot.resultType,
@@ -307,8 +385,9 @@ function buildCampaignSummaries({ latestSnapshots = [], recommendations = [] }) 
         impressions: 0,
         reach: 0,
         clicks: 0,
-        budgetLevel: 'adset',
-        editableBudgetLevel: 'adset',
+        budgetLevel: budgetInfo.budgetLevel,
+        editableBudgetLevel: budgetInfo.editableBudgetLevel,
+        budgetMode: budgetInfo.budgetMode,
         adSets: [],
       });
     }
@@ -350,9 +429,22 @@ function buildCampaignSummaries({ latestSnapshots = [], recommendations = [] }) 
       ctr: snapshot.ctr,
       cpc: snapshot.cpc,
       cpm: snapshot.cpm,
+      videoP75Watched: snapshot.videoP75Watched,
+      videoP75Rate: snapshot.videoP75Rate,
       snapshotAt: snapshot.createdAt,
       latestRecommendation,
     });
+  }
+
+  for (const campaign of campaigns.values()) {
+    const campaignConfig = campaignConfigById.get(campaign.campaignId);
+    const budgetInfo = detectBudgetMode({ campaign: campaignConfig, adsets: campaign.adSets });
+    campaign.budgetLevel = budgetInfo.budgetLevel;
+    campaign.editableBudgetLevel = budgetInfo.editableBudgetLevel;
+    campaign.budgetMode = budgetInfo.budgetMode;
+    if (budgetInfo.budgetLevel === 'campaign') {
+      campaign.dailyBudget = centsToDailyBudget(campaignConfig?.daily_budget);
+    }
   }
 
   return Array.from(campaigns.values()).sort((left, right) => {
@@ -650,6 +742,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
     const rules = getEffectiveRules({
       projectRules,
+      ruleGroups: metaAds.ruleGroups,
       ruleOverrides: metaAds.ruleOverrides,
       campaignId,
       adsetId: entityId,
@@ -687,6 +780,8 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       ctr: metrics.ctr,
       cpc: metrics.cpc,
       cpm: metrics.cpm,
+      videoP75Watched: metrics.videoP75Watched,
+      videoP75Rate: metrics.videoP75Rate,
       raw: row,
     });
 
@@ -778,8 +873,101 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
         source: project.metaAds?.graphVersion ? 'project' : 'global',
       }
     : undefined;
-  const campaigns = buildCampaignSummaries({ latestSnapshots, recommendations });
+  let campaignConfigs = [];
+  if (project?.metaAds?.adAccountId) {
+    try {
+      const metaAds = withImplicitProjectTokenSecret(
+        project.projectId || projectId,
+        project.metaAds ?? {},
+      );
+      const token = await getAccessToken(tenantId, metaAds);
+      campaignConfigs = await listCampaigns({
+        adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+        token,
+        graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+      });
+    } catch (error) {
+      logger.error('[MetaAdsBudget] campaign status enrichment failed', {
+        projectId,
+        message: error.message,
+      });
+    }
+  }
+  const campaigns = buildCampaignSummaries({
+    latestSnapshots,
+    recommendations,
+    campaignConfigs,
+  });
   return { latestSnapshots, recommendations, changes, campaigns, credentials, graphVersion };
+}
+
+async function applyManualBudgetChange({
+  projectId,
+  tenantId,
+  entityLevel,
+  entityId,
+  entityName,
+  dailyBudget,
+  actor,
+  actorUserId,
+  reason,
+}) {
+  if (!['campaign', 'adset'].includes(entityLevel)) {
+    throw new Error('Invalid Meta Ads budget entity level.');
+  }
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw new Error('Project not found.');
+  }
+  const projectTenantId = getProjectTenantId(project, tenantId);
+  if (tenantId && projectTenantId !== tenantId) {
+    throw new Error('Project does not belong to this tenant.');
+  }
+  const rules = validateMetaAdsRules(project.metaAds?.rules);
+  const nextDailyBudget = Number(dailyBudget);
+  if (
+    !Number.isFinite(nextDailyBudget) ||
+    nextDailyBudget < rules.minDailyBudget ||
+    nextDailyBudget > rules.maxDailyBudget
+  ) {
+    throw new Error('Manual Meta Ads budget is outside the effective rule limits.');
+  }
+
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const currentBudget = await getEntityDailyBudget({ entityId, token, graphVersion });
+
+  await metaPost({
+    path: encodeURIComponent(entityId),
+    token,
+    graphVersion,
+    resourceLabel: 'manual budget update',
+    body: {
+      daily_budget: dailyBudgetToCents(nextDailyBudget),
+    },
+  });
+
+  const { MetaAdsBudgetChange } = getModels();
+  const change = await MetaAdsBudgetChange.create({
+    tenantId: projectTenantId,
+    projectId,
+    adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+    entityLevel,
+    entityId,
+    entityName,
+    previousDailyBudget: currentBudget?.dailyBudget,
+    newDailyBudget: nextDailyBudget,
+    actor,
+    actorUserId,
+    reason,
+  });
+  return { change };
 }
 
 async function runCron() {
@@ -826,8 +1014,10 @@ async function runCron() {
 module.exports = {
   DEFAULT_RULES,
   analyzeProject,
+  applyManualBudgetChange,
   applyRecommendation,
   buildCampaignSummaries,
+  detectBudgetMode,
   getModels,
   getEffectiveRules,
   getMetaGraphVersion,

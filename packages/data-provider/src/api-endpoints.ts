@@ -138,6 +138,7 @@ export const archiveProject = (id: string) => `${projectsRoot}/${encodeURICompon
 export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
+export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
 export const projectMetaAdsApply = (id: string, recommendationId: string) =>
   `${projectMetaAds(id)}/recommendations/${encodeURIComponent(recommendationId)}/apply`;
 

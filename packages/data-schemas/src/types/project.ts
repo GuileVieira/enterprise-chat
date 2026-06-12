@@ -26,10 +26,18 @@ export interface IProjectMetaAds {
   graphVersion?: string;
   credentialMode?: 'project_secret' | 'tenant_default';
   automationMode?: 'recommend' | 'auto_limited';
-  budgetLevel?: 'adset';
+  budgetLevel?: 'campaign' | 'adset';
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;
   rules?: IProjectMetaAdsRules;
+  ruleGroups?: Array<{
+    id: string;
+    name: string;
+    entityLevel: 'campaign' | 'adset';
+    entityIds: string[];
+    enabled?: boolean;
+    rules?: IProjectMetaAdsRules;
+  }>;
   ruleOverrides?: Array<{
     entityLevel: 'campaign' | 'adset';
     entityId: string;

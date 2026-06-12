@@ -1243,6 +1243,23 @@ export const useRunProjectMetaAdsMutation = (): UseMutationResult<
   });
 };
 
+export const useUpdateProjectMetaAdsBudgetMutation = (): UseMutationResult<
+  t.ProjectMetaAdsManualBudgetResponse,
+  unknown,
+  { projectId: string; payload: t.ProjectMetaAdsManualBudgetPayload },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, payload }) => dataService.updateProjectMetaAdsBudget(projectId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
 export const useApplyProjectMetaAdsRecommendationMutation = (): UseMutationResult<
   t.ProjectMetaAdsApplyResponse,
   unknown,

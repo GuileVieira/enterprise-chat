@@ -4,6 +4,7 @@ import { useToastContext } from '@librechat/client';
 import type {
   TProject,
   ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsManualBudgetPayload,
   ProjectMetaAdsRecommendation,
 } from 'librechat-data-provider';
 import {
@@ -11,6 +12,7 @@ import {
   useApplyProjectMetaAdsRecommendationMutation,
   useProjectMetaAdsQuery,
   useRunProjectMetaAdsMutation,
+  useUpdateProjectMetaAdsBudgetMutation,
   useUpdateProjectMetaAdsMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
@@ -20,7 +22,20 @@ import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaA
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
 type MetaAdsSettings = NonNullable<TProject['metaAds']>;
+type MetaAdsRuleGroup = NonNullable<MetaAdsSettings['ruleGroups']>[number];
 type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules'> & {
+  rules: Required<MetaAdsRules>;
+};
+type BudgetEditor = {
+  entityLevel: ProjectMetaAdsManualBudgetPayload['entityLevel'];
+  entityId: string;
+  entityName?: string;
+  currentBudget?: number;
+};
+type RuleGroupDraft = {
+  name: string;
+  entityLevel: MetaAdsRuleGroup['entityLevel'];
+  entityIds: string[];
   rules: Required<MetaAdsRules>;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
@@ -111,6 +126,8 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
     budgetLevel: 'adset',
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
     lastRunAt: project.metaAds?.lastRunAt,
+    ruleGroups: project.metaAds?.ruleGroups ?? [],
+    ruleOverrides: project.metaAds?.ruleOverrides ?? [],
     rules: {
       ...defaultRules,
       ...(project.metaAds?.rules ?? {}),
@@ -152,10 +169,14 @@ export default function ProjectMetaAdsPanel({
   const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
+  const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
+  const [manualDailyBudget, setManualDailyBudget] = useState('');
+  const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId);
   const updateSettings = useUpdateProjectMetaAdsMutation();
+  const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
 
@@ -183,6 +204,14 @@ export default function ProjectMetaAdsPanel({
   const hasMaskedToken =
     tokenCredentials?.effectiveSource === 'project' ||
     tokenCredentials?.effectiveSource === 'tenant';
+  const selectedCampaignIds = selectedEntityIds
+    .filter((id) => id.startsWith('campaign:'))
+    .map((id) => id.replace('campaign:', ''));
+  const selectedAdSetIds = selectedEntityIds
+    .filter((id) => id.startsWith('adset:'))
+    .map((id) => id.replace('adset:', ''));
+  const canCreateRuleGroup =
+    canEdit && (selectedCampaignIds.length > 0 || selectedAdSetIds.length > 0);
 
   const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setSettings((current) => ({
@@ -268,6 +297,121 @@ export default function ProjectMetaAdsPanel({
             recommendationId: recommendation._id,
             error,
           });
+        },
+      },
+    );
+  };
+
+  const onOpenBudgetEditor = (editor: BudgetEditor) => {
+    setBudgetEditor(editor);
+    setManualDailyBudget(editor.currentBudget == null ? '' : String(editor.currentBudget));
+  };
+
+  const onSaveManualBudget = () => {
+    if (!budgetEditor) {
+      return;
+    }
+    const dailyBudget = Number(manualDailyBudget);
+    if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) {
+      showToast({
+        message: localize('com_ui_project_meta_ads_invalid_budget'),
+        status: 'error',
+      });
+      return;
+    }
+    updateBudget.mutate(
+      {
+        projectId: project.projectId,
+        payload: {
+          entityLevel: budgetEditor.entityLevel,
+          entityId: budgetEditor.entityId,
+          entityName: budgetEditor.entityName,
+          dailyBudget,
+          reason: 'manual-ui',
+        },
+      },
+      {
+        onSuccess: () => {
+          setBudgetEditor(null);
+          setManualDailyBudget('');
+          statusQuery.refetch();
+          showToast({
+            message: localize('com_ui_project_meta_ads_budget_success'),
+            status: 'success',
+          });
+        },
+        onError: (error) => {
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_project_meta_ads_budget_failed'),
+          );
+          showToast({ message, status: 'error' });
+        },
+      },
+    );
+  };
+
+  const onOpenRuleGroupDraft = () => {
+    if (!canCreateRuleGroup) {
+      return;
+    }
+    const entityLevel = selectedCampaignIds.length > 0 ? 'campaign' : 'adset';
+    const entityIds = entityLevel === 'campaign' ? selectedCampaignIds : selectedAdSetIds;
+    setRuleGroupDraft({
+      name: '',
+      entityLevel,
+      entityIds,
+      rules: { ...settings.rules },
+    });
+  };
+
+  const onRuleGroupRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              [key]: Number(value),
+            },
+          }
+        : current,
+    );
+  };
+
+  const onSaveRuleGroup = () => {
+    if (!ruleGroupDraft || ruleGroupDraft.entityIds.length === 0) {
+      return;
+    }
+    const nextGroup: MetaAdsRuleGroup = {
+      id: `${ruleGroupDraft.entityLevel}-${Date.now()}`,
+      name:
+        ruleGroupDraft.name.trim() || localize('com_ui_project_meta_ads_rule_group_default_name'),
+      entityLevel: ruleGroupDraft.entityLevel,
+      entityIds: ruleGroupDraft.entityIds,
+      enabled: true,
+      rules: ruleGroupDraft.rules,
+    };
+    const nextSettings = {
+      ...settings,
+      ruleGroups: [...(settings.ruleGroups ?? []), nextGroup],
+    };
+    setSettings(nextSettings);
+    updateSettings.mutate(
+      {
+        projectId: project.projectId,
+        metaAds: nextSettings,
+      },
+      {
+        onSuccess: () => {
+          setRuleGroupDraft(null);
+          statusQuery.refetch();
+          showToast({ message: localize('com_ui_saved'), status: 'success' });
+        },
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+          showToast({ message, status: 'error' });
         },
       },
     );
@@ -615,17 +759,132 @@ export default function ProjectMetaAdsPanel({
             <h3 className="text-sm font-semibold text-text-primary">
               {localize('com_ui_project_meta_ads_latest')}
             </h3>
-            <button
-              type="button"
-              disabled={!canOpenTrafficAgentChat}
-              onClick={onOpenTrafficAgentChat}
-              className="h-8 rounded-lg border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {localize('com_ui_project_meta_ads_chat_with_agent')}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canCreateRuleGroup}
+                onClick={onOpenRuleGroupDraft}
+                className="h-8 rounded-lg border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize('com_ui_project_meta_ads_create_rule_group')}
+              </button>
+              <button
+                type="button"
+                disabled={!canOpenTrafficAgentChat}
+                onClick={onOpenTrafficAgentChat}
+                className="h-8 rounded-lg border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize('com_ui_project_meta_ads_chat_with_agent')}
+              </button>
+            </div>
           </div>
+          {budgetEditor && (
+            <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border-light bg-surface-primary p-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-text-primary">
+                  {budgetEditor.entityName ?? budgetEditor.entityId}
+                </div>
+                <div className="text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_manual_budget_hint')}
+                </div>
+              </div>
+              <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                {localize('com_ui_project_meta_ads_new_budget')}
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={manualDailyBudget}
+                  onChange={(event) => setManualDailyBudget(event.target.value)}
+                  className="h-9 w-32 rounded-lg border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                />
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBudgetEditor(null)}
+                  className="h-9 rounded-lg border border-border-light px-3 text-xs font-medium text-text-secondary"
+                >
+                  {localize('com_ui_cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={updateBudget.isLoading}
+                  onClick={onSaveManualBudget}
+                  className="h-9 rounded-lg bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize('com_ui_project_meta_ads_save_budget')}
+                </button>
+              </div>
+            </div>
+          )}
+          {ruleGroupDraft && (
+            <div className="mt-4 rounded-lg border border-border-light bg-surface-primary p-3">
+              <div className="grid gap-3 md:grid-cols-4">
+                <label className="flex flex-col gap-1 text-xs text-text-secondary md:col-span-2">
+                  {localize('com_ui_project_meta_ads_rule_group_name')}
+                  <input
+                    value={ruleGroupDraft.name}
+                    onChange={(event) =>
+                      setRuleGroupDraft((current) =>
+                        current ? { ...current, name: event.target.value } : current,
+                      )
+                    }
+                    className="h-9 rounded-lg border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_rule_group_target_cpa')}
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={ruleGroupDraft.rules.targetCpa}
+                    onChange={(event) => onRuleGroupRuleChange('targetCpa', event.target.value)}
+                    className="h-9 rounded-lg border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_max_budget')}
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={ruleGroupDraft.rules.maxDailyBudget}
+                    onChange={(event) =>
+                      onRuleGroupRuleChange('maxDailyBudget', event.target.value)
+                    }
+                    className="h-9 rounded-lg border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_rule_group_selected')}:{' '}
+                  {ruleGroupDraft.entityIds.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRuleGroupDraft(null)}
+                    className="h-8 rounded-lg border border-border-light px-3 text-xs font-medium text-text-secondary"
+                  >
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateSettings.isLoading}
+                    onClick={onSaveRuleGroup}
+                    className="h-8 rounded-lg bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_save_rule_group')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[1120px] text-left text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr>
                   <th className="py-2 pr-3">
@@ -640,12 +899,22 @@ export default function ProjectMetaAdsPanel({
                   </th>
                   <th className="py-2 pr-3">{localize('com_ui_name')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_objective')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_budget_mode')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_result')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_cost_result')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_budget')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_spend')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_reach')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_impressions')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_clicks')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_frequency')}</th>
                   <th className="py-2 pr-3">CTR</th>
+                  <th className="py-2 pr-3">CPC</th>
+                  <th className="py-2 pr-3">CPM</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_video_p75')}</th>
+                  <th className="py-2 pr-3">
+                    <span className="sr-only">{localize('com_ui_project_meta_ads_actions')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -683,6 +952,9 @@ export default function ProjectMetaAdsPanel({
                           {campaign.objective ?? '-'}
                         </td>
                         <td className="py-2 pr-3 text-text-secondary">
+                          {campaign.budgetMode ?? '-'}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
                           {formatMetric(campaign.resultCount)}
                         </td>
                         <td className="py-2 pr-3 text-text-secondary">
@@ -695,10 +967,47 @@ export default function ProjectMetaAdsPanel({
                           {formatMetric(campaign.spend)}
                         </td>
                         <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.reach)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.impressions)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.clicks)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
                           {formatMetric(campaign.frequency)}
                         </td>
                         <td className="py-2 pr-3 text-text-secondary">
                           {formatMetric(campaign.ctr)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.cpc)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.cpm)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.videoP75Watched)}
+                        </td>
+                        <td className="py-2 pr-3">
+                          {campaign.editableBudgetLevel === 'campaign' && (
+                            <button
+                              type="button"
+                              disabled={!canEdit}
+                              onClick={() =>
+                                onOpenBudgetEditor({
+                                  entityLevel: 'campaign',
+                                  entityId: campaign.campaignId,
+                                  entityName: campaign.campaignName,
+                                  currentBudget: campaign.dailyBudget,
+                                })
+                              }
+                              className="h-8 rounded-lg border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {localize('com_ui_project_meta_ads_edit_budget')}
+                            </button>
+                          )}
                         </td>
                       </tr>
                       {expanded &&
@@ -723,6 +1032,9 @@ export default function ProjectMetaAdsPanel({
                               </td>
                               <td className="py-2 pr-3 text-text-tertiary">-</td>
                               <td className="py-2 pr-3 text-text-secondary">
+                                {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
                                 {formatMetric(adset.resultCount)}
                               </td>
                               <td className="py-2 pr-3 text-text-secondary">
@@ -735,10 +1047,47 @@ export default function ProjectMetaAdsPanel({
                                 {formatMetric(adset.spend)}
                               </td>
                               <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.reach)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.impressions)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.clicks)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
                                 {formatMetric(adset.frequency)}
                               </td>
                               <td className="py-2 pr-3 text-text-secondary">
                                 {formatMetric(adset.ctr)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.cpc)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.cpm)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.videoP75Watched)}
+                              </td>
+                              <td className="py-2 pr-3">
+                                {campaign.editableBudgetLevel === 'adset' && (
+                                  <button
+                                    type="button"
+                                    disabled={!canEdit}
+                                    onClick={() =>
+                                      onOpenBudgetEditor({
+                                        entityLevel: 'adset',
+                                        entityId: adset.entityId,
+                                        entityName: adset.entityName,
+                                        currentBudget: adset.dailyBudget,
+                                      })
+                                    }
+                                    className="h-8 rounded-lg border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {localize('com_ui_project_meta_ads_edit_budget')}
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );

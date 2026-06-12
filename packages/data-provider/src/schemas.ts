@@ -886,7 +886,7 @@ export const projectSchema = z.object({
       graphVersion: z.string().optional(),
       credentialMode: z.enum(['project_secret', 'tenant_default']).optional(),
       automationMode: z.enum(['recommend', 'auto_limited']).optional(),
-      budgetLevel: z.enum(['adset']).optional(),
+      budgetLevel: z.enum(['campaign', 'adset']).optional(),
       scheduleIntervalMinutes: z
         .union([
           z.literal(30),
@@ -917,6 +917,29 @@ export const projectSchema = z.object({
             entityLevel: z.enum(['campaign', 'adset']),
             entityId: z.string(),
             entityName: z.string().optional(),
+            enabled: z.boolean().optional(),
+            rules: z
+              .object({
+                targetCpa: z.number().optional(),
+                minRoas: z.number().optional(),
+                maxIncreasePct: z.number().optional(),
+                maxDecreasePct: z.number().optional(),
+                minDailyBudget: z.number().optional(),
+                maxDailyBudget: z.number().optional(),
+                cooldownHours: z.number().optional(),
+                minSpend: z.number().optional(),
+              })
+              .optional(),
+          }),
+        )
+        .optional(),
+      ruleGroups: z
+        .array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+            entityLevel: z.enum(['campaign', 'adset']),
+            entityIds: z.array(z.string()),
             enabled: z.boolean().optional(),
             rules: z
               .object({

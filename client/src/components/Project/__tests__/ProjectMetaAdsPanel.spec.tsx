@@ -8,6 +8,7 @@ const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: (
 );
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
+const mockMutateBudget = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
@@ -58,6 +59,10 @@ jest.mock('~/data-provider', () => ({
   }),
   useApplyProjectMetaAdsRecommendationMutation: () => ({
     mutate: mockMutateApply,
+    isLoading: false,
+  }),
+  useUpdateProjectMetaAdsBudgetMutation: () => ({
+    mutate: mockMutateBudget,
     isLoading: false,
   }),
 }));
@@ -246,6 +251,146 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_expand_campaign'));
 
     expect(screen.getByText('Topo')).toBeInTheDocument();
+  });
+
+  it('shows Ads Manager metrics, CBO/ABO budget modes, and sends manual budget changes', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 230,
+        cpa: 38,
+        resultCount: 6,
+        resultType: 'messages',
+        dailyBudget: 100,
+        budgetLevel: 'campaign',
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        impressions: 10000,
+        reach: 7000,
+        clicks: 400,
+        cpc: 0.57,
+        cpm: 23,
+        videoP75Watched: 800,
+        videoP75Rate: 8,
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Topo CBO',
+            campaignId: 'campaign-cbo',
+            campaignName: 'CBO Messages',
+            dailyBudget: 0,
+            spend: 120,
+          },
+        ],
+      },
+      {
+        campaignId: 'campaign-abo',
+        campaignName: 'ABO Sales',
+        spend: 180,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-abo',
+            entityName: 'Purchase ABO',
+            campaignId: 'campaign-abo',
+            campaignName: 'ABO Sales',
+            dailyBudget: 70,
+            spend: 180,
+          },
+        ],
+      },
+    ];
+    mockMutateBudget.mockImplementationOnce((_payload, options?: { onSuccess?: () => void }) =>
+      options?.onSuccess?.(),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_budget_mode')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_reach')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_impressions')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_video_p75')).toBeInTheDocument();
+    expect(screen.getByText('CBO')).toBeInTheDocument();
+    expect(screen.getByText('ABO')).toBeInTheDocument();
+    expect(screen.getByText('800.00')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_edit_budget')[0]);
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '125' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+
+    expect(mockMutateBudget).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: {
+          entityLevel: 'campaign',
+          entityId: 'campaign-cbo',
+          entityName: 'CBO Messages',
+          dailyBudget: 125,
+          reason: 'manual-ui',
+        },
+      },
+      expect.any(Object),
+    );
+    expect(mockRefetchStatus).toHaveBeenCalled();
+  });
+
+  it('creates a campaign rule group from selected campaigns', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-2',
+        campaignName: 'Messages SP',
+        spend: 180,
+        dailyBudget: 90,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[0]);
+    fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[1]);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Topo mensagens' },
+    });
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_target_cpa'), {
+      target: { value: '35' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          ruleGroups: [
+            expect.objectContaining({
+              name: 'Topo mensagens',
+              entityLevel: 'campaign',
+              entityIds: ['campaign-1', 'campaign-2'],
+              rules: expect.objectContaining({ targetCpa: 35 }),
+            }),
+          ],
+        }),
+      },
+      expect.any(Object),
+    );
   });
 
   it('runs Meta Ads analysis with visible success feedback', () => {

@@ -9,6 +9,7 @@ const {
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
   analyzeProject,
+  applyManualBudgetChange,
   applyRecommendation,
   getProjectMetaAdsStatus,
 } = require('~/server/services/MetaAds/budget');
@@ -104,6 +105,35 @@ function normalizeRuleOverrides(ruleOverrides = []) {
     .filter(Boolean);
 }
 
+function normalizeRuleGroups(ruleGroups = []) {
+  if (!Array.isArray(ruleGroups)) {
+    return [];
+  }
+  return ruleGroups
+    .map((group) => {
+      const entityLevel = group?.entityLevel;
+      const entityIds = Array.isArray(group?.entityIds)
+        ? group.entityIds.filter((entityId) => typeof entityId === 'string' && entityId.trim())
+        : [];
+      if (!['campaign', 'adset'].includes(entityLevel) || entityIds.length === 0) {
+        return null;
+      }
+      return {
+        id:
+          typeof group.id === 'string' && group.id.trim()
+            ? group.id.trim()
+            : `${entityLevel}-${entityIds.join('-')}`,
+        name:
+          typeof group.name === 'string' && group.name.trim() ? group.name.trim() : entityIds[0],
+        entityLevel,
+        entityIds: [...new Set(entityIds.map((entityId) => entityId.trim()))],
+        enabled: group.enabled !== false,
+        rules: validateMetaAdsRules(group.rules),
+      };
+    })
+    .filter(Boolean);
+}
+
 async function requireMetaAdsFeature(req, res, next) {
   try {
     const appConfig = await getAppConfig({
@@ -151,6 +181,7 @@ function normalizeMetaAds(metaAds = {}) {
     adAccountId: digits ? `act_${digits}` : safeMetaAds.adAccountId,
     tokenSecretName,
     rules: validateMetaAdsRules(safeMetaAds.rules),
+    ruleGroups: normalizeRuleGroups(safeMetaAds.ruleGroups),
     ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
@@ -263,6 +294,30 @@ router.post(
     } catch (error) {
       logger.error('[projectMetaAds] run failed', error);
       return res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+router.post(
+  '/budget',
+  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  async (req, res) => {
+    try {
+      const change = await applyManualBudgetChange({
+        projectId: req.params.projectId,
+        tenantId: req.user.tenantId || getTenantId(),
+        entityLevel: req.body.entityLevel,
+        entityId: req.body.entityId,
+        entityName: req.body.entityName,
+        dailyBudget: req.body.dailyBudget,
+        reason: req.body.reason,
+        actor: 'user',
+        actorUserId: req.user.id,
+      });
+      return res.json(change);
+    } catch (error) {
+      logger.error('[projectMetaAds] manual budget failed', error);
+      return res.status(error.statusCode ?? 500).json({ message: error.message });
     }
   },
 );

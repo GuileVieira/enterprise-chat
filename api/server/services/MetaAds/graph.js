@@ -176,11 +176,25 @@ async function getAdSetDailyBudget({ entityId, token, graphVersion }) {
   return centsToDailyBudget(payload.daily_budget);
 }
 
+async function getEntityDailyBudget({ entityId, token, graphVersion }) {
+  const payload = await metaGet({
+    path: encodeURIComponent(entityId),
+    token,
+    params: { fields: 'daily_budget,lifetime_budget' },
+    graphVersion,
+    resourceLabel: 'budget',
+  });
+  return {
+    dailyBudget: centsToDailyBudget(payload.daily_budget),
+    lifetimeBudget: centsToDailyBudget(payload.lifetime_budget),
+  };
+}
+
 async function listAdSets({ adAccountId, token, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
   const params = {
-    fields: 'id,name,daily_budget,effective_status,campaign_id,campaign{id,name}',
+    fields: 'id,name,daily_budget,lifetime_budget,effective_status,campaign_id,campaign{id,name}',
     limit: DEFAULT_LIMIT,
   };
   try {
@@ -217,7 +231,7 @@ async function listCampaigns({ adAccountId, token, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing campaigns', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/campaigns`;
   const params = {
-    fields: 'id,name,objective,daily_budget,effective_status',
+    fields: 'id,name,objective,daily_budget,lifetime_budget,effective_status',
     limit: DEFAULT_LIMIT,
   };
   try {
@@ -256,7 +270,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
   const params = {
     level: 'adset',
     fields:
-      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas',
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
@@ -293,6 +307,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
 module.exports = {
   DEFAULT_META_GRAPH_VERSION,
   getAdSetDailyBudget,
+  getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
   listAdSetInsights,
