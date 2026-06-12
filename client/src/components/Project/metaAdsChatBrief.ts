@@ -1,5 +1,6 @@
 import type {
   ProjectMetaAdsBudgetChange,
+  ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsSnapshot,
   TProject,
@@ -47,12 +48,14 @@ export type MetaAdsChatBrief = {
   omittedEntityCount: number;
   rules: MetaAdsRules;
   entities: MetaAdsChatBriefEntity[];
+  campaigns?: ProjectMetaAdsCampaignSummary[];
   markdown: string;
 };
 
 type BuildMetaAdsChatBriefParams = {
   project: TProject;
   snapshots: ProjectMetaAdsSnapshot[];
+  campaigns?: ProjectMetaAdsCampaignSummary[];
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
   selectedEntityIds: string[];
@@ -134,7 +137,7 @@ function toBriefEntity({
 
 function buildMarkdown(brief: Omit<MetaAdsChatBrief, 'markdown'>) {
   const lines = [
-    `Quero analisar os conjuntos selecionados de Meta Ads do projeto "${brief.projectName}".`,
+    `Quero analisar as campanhas/conjuntos selecionados de Meta Ads do projeto "${brief.projectName}".`,
     '',
     'Responda como agente de tráfego. Use apenas os dados abaixo, cite os números principais e diga próximos passos práticos.',
     '',
@@ -154,6 +157,7 @@ function buildMarkdown(brief: Omit<MetaAdsChatBrief, 'markdown'>) {
 export function buildMetaAdsChatBrief({
   project,
   snapshots,
+  campaigns = [],
   recommendations,
   changes,
   selectedEntityIds,
@@ -163,7 +167,10 @@ export function buildMetaAdsChatBrief({
   const recommendationByEntity = latestByEntity(recommendations);
   const changeByEntity = latestByEntity(changes);
   const entities = snapshots
-    .filter((snapshot) => selectedSet.has(snapshot.entityId))
+    .filter(
+      (snapshot) =>
+        selectedSet.has(snapshot.entityId) || selectedSet.has(`adset:${snapshot.entityId}`),
+    )
     .map((snapshot) =>
       toBriefEntity({
         snapshot,
@@ -171,6 +178,17 @@ export function buildMetaAdsChatBrief({
         change: changeByEntity.get(snapshot.entityId),
       }),
     );
+  const selectedCampaigns = campaigns
+    .filter((campaign) => selectedSet.has(`campaign:${campaign.campaignId}`))
+    .map((campaign) => ({
+      ...campaign,
+      adSets: campaign.adSets.filter(
+        (adset) =>
+          selectedSet.has(`campaign:${campaign.campaignId}`) ||
+          selectedSet.has(adset.entityId) ||
+          selectedSet.has(`adset:${adset.entityId}`),
+      ),
+    }));
   const briefWithoutMarkdown = {
     source: 'meta_ads' as const,
     projectId: project.projectId,
@@ -180,6 +198,7 @@ export function buildMetaAdsChatBrief({
     omittedEntityCount: Math.max(0, selectedEntityIds.length - MAX_META_ADS_CHAT_BRIEF_ENTITIES),
     rules: project.metaAds?.rules ?? {},
     entities,
+    campaigns: selectedCampaigns,
   };
 
   return {

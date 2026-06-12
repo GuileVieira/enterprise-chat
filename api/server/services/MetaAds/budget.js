@@ -5,6 +5,7 @@ const { getAppConfig } = require('~/server/services/Config/app');
 const {
   getAdSetDailyBudget,
   getMetaGraphVersion,
+  listCampaigns,
   listAdSetInsights,
   listAdSets,
   metaPost,
@@ -47,15 +48,25 @@ function getModels() {
         tenantId: { type: String, index: true },
         projectId: { type: String, index: true },
         adAccountId: { type: String, index: true },
-        level: { type: String, enum: ['adset'], default: 'adset' },
+        level: { type: String, enum: ['campaign', 'adset'], default: 'adset' },
         entityId: { type: String, index: true },
         entityName: String,
+        campaignId: { type: String, index: true },
+        campaignName: String,
+        campaignObjective: String,
         dailyBudget: Number,
         spend: Number,
         cpa: Number,
         roas: Number,
         resultCount: Number,
         resultType: String,
+        impressions: Number,
+        reach: Number,
+        frequency: Number,
+        clicks: Number,
+        ctr: Number,
+        cpc: Number,
+        cpm: Number,
         raw: mongoose.Schema.Types.Mixed,
       },
       { timestamps: true },
@@ -68,8 +79,11 @@ function getModels() {
         tenantId: { type: String, index: true },
         projectId: { type: String, index: true },
         adAccountId: { type: String, index: true },
+        entityLevel: { type: String, enum: ['campaign', 'adset'], default: 'adset' },
         entityId: { type: String, index: true },
         entityName: String,
+        campaignId: { type: String, index: true },
+        campaignName: String,
         action: { type: String, enum: ['increase', 'decrease', 'hold'], required: true },
         status: {
           type: String,
@@ -96,8 +110,11 @@ function getModels() {
         projectId: { type: String, index: true },
         adAccountId: { type: String, index: true },
         recommendationId: String,
+        entityLevel: { type: String, enum: ['campaign', 'adset'], default: 'adset' },
         entityId: { type: String, index: true },
         entityName: String,
+        campaignId: { type: String, index: true },
+        campaignName: String,
         previousDailyBudget: Number,
         newDailyBudget: Number,
         actor: { type: String, enum: ['cron', 'user', 'tool'], required: true },
@@ -132,6 +149,27 @@ function dailyBudgetToCents(value) {
 
 function mergeRules(metaAds = {}) {
   return validateMetaAdsRules(metaAds.rules);
+}
+
+function getEffectiveRules({ projectRules = {}, ruleOverrides = [], campaignId, adsetId }) {
+  const baseRules = validateMetaAdsRules(projectRules);
+  const campaignOverride = ruleOverrides.find(
+    (override) =>
+      override?.enabled !== false &&
+      override.entityLevel === 'campaign' &&
+      override.entityId === campaignId,
+  );
+  const adsetOverride = ruleOverrides.find(
+    (override) =>
+      override?.enabled !== false &&
+      override.entityLevel === 'adset' &&
+      override.entityId === adsetId,
+  );
+  return validateMetaAdsRules({
+    ...baseRules,
+    ...(campaignOverride?.rules ?? {}),
+    ...(adsetOverride?.rules ?? {}),
+  });
 }
 
 function validateRuleNumber(rules, key, errors) {
@@ -215,7 +253,120 @@ function calculateMetrics(row) {
     ? Number(row.purchase_roas[0]?.value ?? 0)
     : Number(row.purchase_roas ?? 0);
   const roas = Number.isFinite(roasValue) && roasValue > 0 ? roasValue : null;
-  return { spend, resultCount, cpa, roas, resultType: purchaseAction?.action_type ?? 'purchase' };
+  return {
+    spend,
+    resultCount,
+    cpa,
+    roas,
+    resultType: purchaseAction?.action_type ?? 'purchase',
+    impressions: Number(row.impressions ?? 0),
+    reach: Number(row.reach ?? 0),
+    frequency: Number(row.frequency ?? 0),
+    clicks: Number(row.clicks ?? 0),
+    ctr: Number(row.ctr ?? 0),
+    cpc: Number(row.cpc ?? 0),
+    cpm: Number(row.cpm ?? 0),
+  };
+}
+
+function latestByEntity(items = []) {
+  const latest = new Map();
+  for (const item of items) {
+    const entityId = item.entityId;
+    if (!entityId) {
+      continue;
+    }
+    const current = latest.get(entityId);
+    if (!current || String(item.createdAt ?? '') > String(current.createdAt ?? '')) {
+      latest.set(entityId, item);
+    }
+  }
+  return latest;
+}
+
+function buildCampaignSummaries({ latestSnapshots = [], recommendations = [] }) {
+  const recommendationByEntity = latestByEntity(recommendations);
+  const snapshotByEntity = latestByEntity(latestSnapshots);
+  const campaigns = new Map();
+
+  for (const snapshot of snapshotByEntity.values()) {
+    const campaignId = snapshot.campaignId || snapshot.entityId;
+    const campaignName = snapshot.campaignName || snapshot.entityName || campaignId;
+    if (!campaignId) {
+      continue;
+    }
+    if (!campaigns.has(campaignId)) {
+      campaigns.set(campaignId, {
+        campaignId,
+        campaignName,
+        objective: snapshot.campaignObjective,
+        spend: 0,
+        resultCount: 0,
+        resultType: snapshot.resultType,
+        dailyBudget: 0,
+        impressions: 0,
+        reach: 0,
+        clicks: 0,
+        budgetLevel: 'adset',
+        editableBudgetLevel: 'adset',
+        adSets: [],
+      });
+    }
+
+    const campaign = campaigns.get(campaignId);
+    const spend = Number(snapshot.spend ?? 0);
+    const resultCount = Number(snapshot.resultCount ?? 0);
+    const dailyBudget = Number(snapshot.dailyBudget ?? 0);
+    campaign.spend += spend;
+    campaign.resultCount += resultCount;
+    campaign.dailyBudget += dailyBudget;
+    campaign.impressions += Number(snapshot.impressions ?? 0);
+    campaign.reach += Number(snapshot.reach ?? 0);
+    campaign.clicks += Number(snapshot.clicks ?? 0);
+    campaign.frequency = Math.max(Number(campaign.frequency ?? 0), Number(snapshot.frequency ?? 0));
+    campaign.ctr =
+      campaign.impressions > 0
+        ? Number(((campaign.clicks / campaign.impressions) * 100).toFixed(2))
+        : 0;
+    campaign.cpa =
+      campaign.resultCount > 0 ? Number((campaign.spend / campaign.resultCount).toFixed(2)) : null;
+
+    const latestRecommendation = recommendationByEntity.get(snapshot.entityId);
+    campaign.adSets.push({
+      entityId: snapshot.entityId,
+      entityName: snapshot.entityName,
+      campaignId,
+      campaignName,
+      dailyBudget: snapshot.dailyBudget,
+      spend: snapshot.spend,
+      cpa: snapshot.cpa,
+      roas: snapshot.roas,
+      resultCount: snapshot.resultCount,
+      resultType: snapshot.resultType,
+      impressions: snapshot.impressions,
+      reach: snapshot.reach,
+      frequency: snapshot.frequency,
+      clicks: snapshot.clicks,
+      ctr: snapshot.ctr,
+      cpc: snapshot.cpc,
+      cpm: snapshot.cpm,
+      snapshotAt: snapshot.createdAt,
+      latestRecommendation,
+    });
+  }
+
+  return Array.from(campaigns.values()).sort((left, right) => {
+    const leftPending = left.adSets.some(
+      (adset) => adset.latestRecommendation?.status === 'pending',
+    );
+    const rightPending = right.adSets.some(
+      (adset) => adset.latestRecommendation?.status === 'pending',
+    );
+    if (leftPending !== rightPending) {
+      return leftPending ? -1 : 1;
+    }
+    return Number(right.spend ?? 0) - Number(left.spend ?? 0);
+  });
 }
 
 function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
@@ -438,7 +589,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   if (!adAccountId) {
     throw new Error('Project Meta Ads account is not configured.');
   }
-  const rules = mergeRules(metaAds);
+  const projectRules = mergeRules(metaAds);
   const tenantId = getProjectTenantId(project);
   const token = await getAccessToken(tenantId, metaAds);
   const now = new Date();
@@ -447,8 +598,19 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
 
+  let campaigns = [];
   let adsets;
   let insights;
+  try {
+    campaigns = await listCampaigns({ adAccountId, token, graphVersion });
+  } catch (error) {
+    logger.error('[MetaAdsBudget] campaigns fetch failed', {
+      projectId,
+      adAccountId,
+      message: error.message,
+      stack: error.stack,
+    });
+  }
   try {
     adsets = await listAdSets({ adAccountId, token, graphVersion });
   } catch (error) {
@@ -473,6 +635,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     throw error;
   }
+  const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
   const recommendations = [];
 
@@ -482,6 +645,15 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     if (!adset) {
       continue;
     }
+    const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
+    const campaign = campaignById.get(campaignId);
+    const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
+    const rules = getEffectiveRules({
+      projectRules,
+      ruleOverrides: metaAds.ruleOverrides,
+      campaignId,
+      adsetId: entityId,
+    });
     const currentDailyBudget = centsToDailyBudget(adset.daily_budget);
     const metrics = calculateMetrics(row);
     const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules });
@@ -496,14 +668,25 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       tenantId,
       projectId,
       adAccountId,
+      level: 'adset',
       entityId,
       entityName: adset.name || row.adset_name,
+      campaignId,
+      campaignName,
+      campaignObjective: campaign?.objective,
       dailyBudget: currentDailyBudget,
       spend: metrics.spend,
       cpa: metrics.cpa,
       roas: metrics.roas,
       resultCount: metrics.resultCount,
       resultType: metrics.resultType,
+      impressions: metrics.impressions,
+      reach: metrics.reach,
+      frequency: metrics.frequency,
+      clicks: metrics.clicks,
+      ctr: metrics.ctr,
+      cpc: metrics.cpc,
+      cpm: metrics.cpm,
       raw: row,
     });
 
@@ -525,8 +708,11 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       tenantId,
       projectId,
       adAccountId,
+      entityLevel: 'adset',
       entityId,
       entityName: adset.name || row.adset_name,
+      campaignId,
+      campaignName,
       action: blockedByCooldown ? 'hold' : proposal.action,
       status: blockedByCooldown ? 'blocked' : 'pending',
       currentDailyBudget,
@@ -592,7 +778,8 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
         source: project.metaAds?.graphVersion ? 'project' : 'global',
       }
     : undefined;
-  return { latestSnapshots, recommendations, changes, credentials, graphVersion };
+  const campaigns = buildCampaignSummaries({ latestSnapshots, recommendations });
+  return { latestSnapshots, recommendations, changes, campaigns, credentials, graphVersion };
 }
 
 async function runCron() {
@@ -640,7 +827,9 @@ module.exports = {
   DEFAULT_RULES,
   analyzeProject,
   applyRecommendation,
+  buildCampaignSummaries,
   getModels,
+  getEffectiveRules,
   getMetaGraphVersion,
   getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,

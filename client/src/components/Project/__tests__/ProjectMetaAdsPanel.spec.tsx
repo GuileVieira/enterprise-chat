@@ -193,7 +193,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_ad_set'));
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_chat_with_agent'));
 
     expect(mockNavigate).toHaveBeenCalledWith(
@@ -207,6 +207,45 @@ describe('ProjectMetaAdsPanel', () => {
     const brief = JSON.parse(sessionStorage.getItem(params.get('meta_ads_brief') ?? '') ?? '{}');
     expect(brief.markdown).toContain('Prospecting');
     expect(brief.markdown).toContain('"entityId": "adset-1"');
+  });
+
+  it('renders campaigns first and expands ad sets for ABO-style review', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 230,
+        cpa: 38,
+        resultCount: 6,
+        resultType: 'messages',
+        dailyBudget: 100,
+        budgetLevel: 'campaign',
+        editableBudgetLevel: 'campaign',
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Topo',
+            campaignId: 'campaign-1',
+            campaignName: 'Messages Floripa',
+            dailyBudget: 50,
+            spend: 120,
+            cpa: 40,
+            resultCount: 3,
+            resultType: 'messages',
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
+    expect(screen.queryByText('Topo')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_expand_campaign'));
+
+    expect(screen.getByText('Topo')).toBeInTheDocument();
   });
 
   it('runs Meta Ads analysis with visible success feedback', () => {

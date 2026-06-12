@@ -79,6 +79,64 @@ describe('projectMetaAds settings normalization', () => {
     ).toThrow('Invalid Meta Ads budget rules.');
   });
 
+  it('normalizes enabled rule overrides without saving unknown keys', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-1',
+            entityName: 'Messages Floripa',
+            enabled: true,
+            ignored: true,
+            rules: {
+              targetCpa: 60,
+              minRoas: 0,
+              maxIncreasePct: 10,
+              maxDecreasePct: 15,
+              minDailyBudget: 20,
+              maxDailyBudget: 1000,
+              cooldownHours: 12,
+              minSpend: 10,
+            },
+          },
+          {
+            entityLevel: 'adset',
+            entityId: 'adset-1',
+            enabled: false,
+            rules: {
+              targetCpa: 40,
+            },
+          },
+        ],
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-1',
+            entityName: 'Messages Floripa',
+            enabled: true,
+            rules: expect.objectContaining({
+              targetCpa: 60,
+              maxDailyBudget: 1000,
+            }),
+          },
+          {
+            entityLevel: 'adset',
+            entityId: 'adset-1',
+            entityName: undefined,
+            enabled: false,
+            rules: expect.objectContaining({
+              targetCpa: 40,
+            }),
+          },
+        ],
+      }),
+    );
+  });
+
   it('saves a pasted Meta token as a generated project secret', async () => {
     const upsertSecret = jest.fn(async () => ({}));
 

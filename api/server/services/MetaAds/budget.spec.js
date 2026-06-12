@@ -2,6 +2,7 @@ const {
   DEFAULT_RULES,
   normalizeAdAccountId,
   proposeBudget,
+  getEffectiveRules,
   getScheduleIntervalMinutes,
   getProjectTenantId,
   withImplicitProjectTokenSecret,
@@ -225,6 +226,48 @@ describe('Meta Ads budget service', () => {
       ),
     ).toBe(true);
   });
+
+  it('uses ad set rule overrides before campaign and project rules', () => {
+    const projectRules = {
+      ...DEFAULT_RULES,
+      targetCpa: 45,
+      maxDailyBudget: 500,
+    };
+    const campaignRules = {
+      targetCpa: 60,
+      maxDailyBudget: 800,
+    };
+    const adsetRules = {
+      targetCpa: 30,
+    };
+
+    expect(
+      getEffectiveRules({
+        projectRules,
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-1',
+            enabled: true,
+            rules: campaignRules,
+          },
+          {
+            entityLevel: 'adset',
+            entityId: 'adset-1',
+            enabled: true,
+            rules: adsetRules,
+          },
+        ],
+        campaignId: 'campaign-1',
+        adsetId: 'adset-1',
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        targetCpa: 30,
+        maxDailyBudget: 800,
+      }),
+    );
+  });
 });
 
 describe('Meta Ads budget service persistence safety', () => {
@@ -234,6 +277,9 @@ describe('Meta Ads budget service persistence safety', () => {
     latestBudget,
     insights = [],
     adsets = [],
+    snapshots = [],
+    recommendations = [],
+    changes = [],
   } = {}) => {
     jest.resetModules();
 
@@ -252,25 +298,43 @@ describe('Meta Ads budget service persistence safety', () => {
     const createSnapshot = jest.fn(async (payload) => payload);
     const createChange = jest.fn(async (payload) => payload);
     const findChangeOne = jest.fn(() => ({ lean: async () => null }));
-    const makeFindChain = jest.fn(() => ({
+    const makeFindChain = jest.fn((query) => ({
       sort: () => ({
         limit: () => ({
-          lean: async () => [],
+          lean: async () => {
+            if (query?.__collection === 'snapshots') {
+              return snapshots;
+            }
+            if (query?.__collection === 'recommendations') {
+              return recommendations;
+            }
+            if (query?.__collection === 'changes') {
+              return changes;
+            }
+            return [];
+          },
         }),
       }),
     }));
+    const findSnapshots = jest.fn((query) =>
+      makeFindChain({ ...query, __collection: 'snapshots' }),
+    );
+    const findRecommendations = jest.fn((query) =>
+      makeFindChain({ ...query, __collection: 'recommendations' }),
+    );
+    const findChanges = jest.fn((query) => makeFindChain({ ...query, __collection: 'changes' }));
 
     jest.doMock('mongoose', () => ({
       models: {
         MetaAdsSnapshot: {
           schema: {},
           create: createSnapshot,
-          find: makeFindChain,
+          find: findSnapshots,
         },
         MetaAdsRecommendation: {
           schema: {},
           create: createRecommendation,
-          find: makeFindChain,
+          find: findRecommendations,
           findById,
           findByIdAndUpdate,
           updateMany,
@@ -278,7 +342,7 @@ describe('Meta Ads budget service persistence safety', () => {
         MetaAdsBudgetChange: {
           schema: {},
           create: createChange,
-          find: makeFindChain,
+          find: findChanges,
           findOne: findChangeOne,
         },
       },
@@ -309,12 +373,14 @@ describe('Meta Ads budget service persistence safety', () => {
 
     const metaPost = jest.fn(async () => ({}));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
+    const listCampaigns = jest.fn(async () => []);
     const listAdSets = jest.fn(async () => adsets);
     const listAdSetInsights = jest.fn(async () => insights);
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
       getMetaGraphVersion: (value) => value || 'v25.0',
       getAdSetDailyBudget,
+      listCampaigns,
       listAdSets,
       listAdSetInsights,
       metaPost,
@@ -411,7 +477,102 @@ describe('Meta Ads budget service persistence safety', () => {
 
     await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
 
-    expect(makeFindChain).toHaveBeenCalledWith({ projectId: 'p1', tenantId: 'tenant-a' });
+    expect(makeFindChain).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 'p1', tenantId: 'tenant-a' }),
+    );
+  });
+
+  it('returns campaigns grouped with active ad sets and pending recommendations', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      snapshots: [
+        {
+          _id: 's1',
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          campaignObjective: 'OUTCOME_ENGAGEMENT',
+          dailyBudget: 50,
+          spend: 200,
+          cpa: 20,
+          resultCount: 10,
+          resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+      recommendations: [
+        {
+          _id: 'r1',
+          entityId: 'adset-1',
+          campaignId: 'campaign-1',
+          action: 'increase',
+          status: 'pending',
+          proposedDailyBudget: 60,
+          createdAt: '2026-06-03T12:05:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(status.campaigns).toEqual([
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 200,
+        resultCount: 10,
+        adSets: [
+          expect.objectContaining({
+            entityId: 'adset-1',
+            entityName: 'Topo',
+            latestRecommendation: expect.objectContaining({
+              action: 'increase',
+              proposedDailyBudget: 60,
+            }),
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it('uses only the latest snapshot per ad set when building campaign summaries', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 100,
+          resultCount: 2,
+          createdAt: '2026-06-03T10:00:00.000Z',
+        },
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 200,
+          resultCount: 4,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(status.campaigns[0]).toEqual(
+      expect.objectContaining({
+        spend: 200,
+        resultCount: 4,
+        adSets: [expect.objectContaining({ spend: 200 })],
+      }),
+    );
   });
 
   it('ignores older pending recommendations before creating a new one for an ad set', async () => {

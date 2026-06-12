@@ -69,21 +69,35 @@ export type MessagesListResponse = {
 
 export type ProjectMetaAdsSnapshot = {
   _id?: string;
+  level?: 'campaign' | 'adset';
   entityId: string;
   entityName?: string;
+  campaignId?: string;
+  campaignName?: string;
+  campaignObjective?: string;
   dailyBudget?: number;
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
   resultCount?: number;
   resultType?: string;
+  impressions?: number;
+  reach?: number;
+  frequency?: number;
+  clicks?: number;
+  ctr?: number;
+  cpc?: number;
+  cpm?: number;
   createdAt?: string;
 };
 
 export type ProjectMetaAdsRecommendation = {
   _id?: string;
+  entityLevel?: 'campaign' | 'adset';
   entityId: string;
   entityName?: string;
+  campaignId?: string;
+  campaignName?: string;
   action: 'increase' | 'decrease' | 'hold';
   status: 'pending' | 'applied' | 'ignored' | 'blocked';
   currentDailyBudget?: number;
@@ -98,8 +112,11 @@ export type ProjectMetaAdsRecommendation = {
 
 export type ProjectMetaAdsBudgetChange = {
   _id?: string;
+  entityLevel?: 'campaign' | 'adset';
   entityId: string;
   entityName?: string;
+  campaignId?: string;
+  campaignName?: string;
   previousDailyBudget?: number;
   newDailyBudget?: number;
   actor?: 'cron' | 'user' | 'tool';
@@ -107,10 +124,38 @@ export type ProjectMetaAdsBudgetChange = {
   createdAt?: string;
 };
 
+export type ProjectMetaAdsAdSetSummary = ProjectMetaAdsSnapshot & {
+  snapshotAt?: string;
+  latestRecommendation?: ProjectMetaAdsRecommendation;
+};
+
+export type ProjectMetaAdsCampaignSummary = {
+  campaignId: string;
+  campaignName?: string;
+  objective?: string;
+  dailyBudget?: number;
+  spend?: number;
+  cpa?: number | null;
+  roas?: number | null;
+  resultCount?: number;
+  resultType?: string;
+  impressions?: number;
+  reach?: number;
+  frequency?: number;
+  clicks?: number;
+  ctr?: number;
+  cpc?: number;
+  cpm?: number;
+  budgetLevel?: 'campaign' | 'adset';
+  editableBudgetLevel?: 'campaign' | 'adset' | 'none';
+  adSets: ProjectMetaAdsAdSetSummary[];
+};
+
 export type ProjectMetaAdsStatus = {
   latestSnapshots: ProjectMetaAdsSnapshot[];
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
+  campaigns?: ProjectMetaAdsCampaignSummary[];
   credentials?: {
     effectiveSource: 'project' | 'tenant' | 'missing';
     projectConfigured: boolean;

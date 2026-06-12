@@ -126,4 +126,51 @@ describe('buildMetaAdsChatBrief', () => {
     expect(brief.omittedEntityCount).toBe(2);
     expect(brief.markdown).toContain('2 selected ad sets were omitted');
   });
+
+  it('builds a campaign-aware brief when grouped campaigns are available', () => {
+    const brief = buildMetaAdsChatBrief({
+      project,
+      snapshots,
+      campaigns: [
+        {
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          objective: 'OUTCOME_ENGAGEMENT',
+          spend: 230,
+          cpa: 38,
+          resultCount: 6,
+          resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          adSets: [
+            {
+              entityId: 'adset-1',
+              entityName: 'Topo',
+              campaignId: 'campaign-1',
+              campaignName: 'Messages Floripa',
+              dailyBudget: 100,
+              spend: 230,
+              cpa: 38,
+              roas: 3.1,
+              resultCount: 6,
+              resultType: 'onsite_conversion.messaging_conversation_started_7d',
+              snapshotAt: '2026-06-03T12:00:00.000Z',
+            },
+          ],
+        },
+      ],
+      recommendations,
+      changes,
+      selectedEntityIds: ['campaign:campaign-1', 'adset:adset-1'],
+      generatedAt: '2026-06-03T12:30:00.000Z',
+    });
+
+    expect(brief.campaigns).toEqual([
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        adSets: [expect.objectContaining({ entityId: 'adset-1' })],
+      }),
+    ]);
+    expect(brief.markdown).toContain('campanhas/conjuntos selecionados');
+    expect(brief.markdown).toContain('"campaignId": "campaign-1"');
+  });
 });

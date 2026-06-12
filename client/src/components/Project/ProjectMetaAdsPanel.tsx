@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToastContext } from '@librechat/client';
-import type { TProject, ProjectMetaAdsRecommendation } from 'librechat-data-provider';
+import type {
+  TProject,
+  ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsRecommendation,
+} from 'librechat-data-provider';
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
@@ -69,6 +73,24 @@ function formatMetric(value?: number | null) {
   return value == null || Number.isNaN(value) ? '-' : value.toFixed(2);
 }
 
+function buildCampaignFallback(
+  snapshots: NonNullable<ProjectMetaAdsCampaignSummary['adSets']>,
+): ProjectMetaAdsCampaignSummary[] {
+  return snapshots.map((snapshot) => ({
+    campaignId: snapshot.campaignId ?? snapshot.entityId,
+    campaignName: snapshot.campaignName ?? snapshot.entityName,
+    spend: snapshot.spend,
+    cpa: snapshot.cpa,
+    roas: snapshot.roas,
+    resultCount: snapshot.resultCount,
+    resultType: snapshot.resultType,
+    dailyBudget: snapshot.dailyBudget,
+    budgetLevel: 'adset',
+    editableBudgetLevel: 'adset',
+    adSets: [snapshot],
+  }));
+}
+
 function getAdAccountDigits(value?: string) {
   return (value ?? '').replace(/^act_/i, '').replace(/\D/g, '');
 }
@@ -129,6 +151,7 @@ export default function ProjectMetaAdsPanel({
   const [metaAccessToken, setMetaAccessToken] = useState('');
   const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
+  const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId);
@@ -143,6 +166,10 @@ export default function ProjectMetaAdsPanel({
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
   const latestSnapshots = statusQuery.data?.latestSnapshots.slice(0, 8) ?? [];
+  const campaigns =
+    statusQuery.data?.campaigns && statusQuery.data.campaigns.length > 0
+      ? statusQuery.data.campaigns
+      : buildCampaignFallback(latestSnapshots);
   const tokenCredentials = statusQuery.data?.credentials;
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
@@ -271,11 +298,29 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
-  const onToggleSnapshot = (entityId: string) => {
-    setSelectedEntityIds((current) =>
-      current.includes(entityId)
-        ? current.filter((selectedId) => selectedId !== entityId)
-        : [...current, entityId].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES),
+  const onToggleCampaign = (campaignId: string) => {
+    setSelectedEntityIds((current) => {
+      const id = `campaign:${campaignId}`;
+      return current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
+    });
+  };
+
+  const onToggleAdSet = (entityId: string) => {
+    setSelectedEntityIds((current) => {
+      const id = `adset:${entityId}`;
+      return current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
+    });
+  };
+
+  const onToggleCampaignExpanded = (campaignId: string) => {
+    setExpandedCampaignIds((current) =>
+      current.includes(campaignId)
+        ? current.filter((id) => id !== campaignId)
+        : [...current, campaignId],
     );
   };
 
@@ -286,6 +331,7 @@ export default function ProjectMetaAdsPanel({
     const brief = buildMetaAdsChatBrief({
       project,
       snapshots: latestSnapshots,
+      campaigns,
       recommendations: statusQuery.data.recommendations,
       changes: statusQuery.data.changes,
       selectedEntityIds,
@@ -520,7 +566,7 @@ export default function ProjectMetaAdsPanel({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
+        <div className="rounded-xl border border-border-light bg-surface-secondary p-4 lg:col-span-2">
           <h3 className="text-sm font-semibold text-text-primary">
             {localize('com_ui_project_meta_ads_recommendations')}
           </h3>
@@ -579,7 +625,7 @@ export default function ProjectMetaAdsPanel({
             </button>
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="text-xs text-text-tertiary">
                 <tr>
                   <th className="py-2 pr-3">
@@ -587,44 +633,122 @@ export default function ProjectMetaAdsPanel({
                       {localize('com_ui_project_meta_ads_select_ad_set')}
                     </span>
                   </th>
+                  <th className="py-2 pr-3">
+                    <span className="sr-only">
+                      {localize('com_ui_project_meta_ads_expand_campaign')}
+                    </span>
+                  </th>
                   <th className="py-2 pr-3">{localize('com_ui_name')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_objective')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_result')}</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_cost_result')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_budget')}</th>
                   <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_spend')}</th>
-                  <th className="py-2 pr-3">CPA</th>
-                  <th className="py-2 pr-3">ROAS</th>
+                  <th className="py-2 pr-3">{localize('com_ui_project_meta_ads_frequency')}</th>
+                  <th className="py-2 pr-3">CTR</th>
                 </tr>
               </thead>
               <tbody>
-                {latestSnapshots.map((snapshot) => (
-                  <tr
-                    key={snapshot._id ?? snapshot.entityId}
-                    className="border-t border-border-light"
-                  >
-                    <td className="py-2 pr-3">
-                      <input
-                        type="checkbox"
-                        checked={selectedEntityIds.includes(snapshot.entityId)}
-                        aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
-                        onChange={() => onToggleSnapshot(snapshot.entityId)}
-                        className="h-4 w-4 rounded border-border-light"
-                      />
-                    </td>
-                    <td className="max-w-[220px] truncate py-2 pr-3 text-text-primary">
-                      {snapshot.entityName ?? snapshot.entityId}
-                    </td>
-                    <td className="py-2 pr-3 text-text-secondary">
-                      {formatMetric(snapshot.dailyBudget)}
-                    </td>
-                    <td className="py-2 pr-3 text-text-secondary">
-                      {formatMetric(snapshot.spend)}
-                    </td>
-                    <td className="py-2 pr-3 text-text-secondary">{formatMetric(snapshot.cpa)}</td>
-                    <td className="py-2 pr-3 text-text-secondary">{formatMetric(snapshot.roas)}</td>
-                  </tr>
-                ))}
+                {campaigns.map((campaign) => {
+                  const expanded = expandedCampaignIds.includes(campaign.campaignId);
+                  const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
+                  return (
+                    <Fragment key={campaign.campaignId}>
+                      <tr key={campaign.campaignId} className="border-t border-border-light">
+                        <td className="py-2 pr-3">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            aria-label={localize('com_ui_project_meta_ads_select_campaign')}
+                            onChange={() => onToggleCampaign(campaign.campaignId)}
+                            className="h-4 w-4 rounded border-border-light"
+                          />
+                        </td>
+                        <td className="py-2 pr-3">
+                          {campaign.adSets.length > 0 && (
+                            <button
+                              type="button"
+                              aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                              onClick={() => onToggleCampaignExpanded(campaign.campaignId)}
+                              className="h-7 w-7 rounded-md border border-border-light text-xs text-text-secondary"
+                            >
+                              {expanded ? '-' : '+'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="max-w-[240px] truncate py-2 pr-3 font-medium text-text-primary">
+                          {campaign.campaignName ?? campaign.campaignId}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {campaign.objective ?? '-'}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.resultCount)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.cpa)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.dailyBudget)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.spend)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.frequency)}
+                        </td>
+                        <td className="py-2 pr-3 text-text-secondary">
+                          {formatMetric(campaign.ctr)}
+                        </td>
+                      </tr>
+                      {expanded &&
+                        campaign.adSets.map((adset) => {
+                          const adsetSelected = selectedEntityIds.includes(
+                            `adset:${adset.entityId}`,
+                          );
+                          return (
+                            <tr key={adset.entityId} className="border-t border-border-light">
+                              <td className="py-2 pl-6 pr-3">
+                                <input
+                                  type="checkbox"
+                                  checked={adsetSelected}
+                                  aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
+                                  onChange={() => onToggleAdSet(adset.entityId)}
+                                  className="h-4 w-4 rounded border-border-light"
+                                />
+                              </td>
+                              <td className="py-2 pr-3" />
+                              <td className="max-w-[240px] truncate py-2 pr-3 text-text-primary">
+                                {adset.entityName ?? adset.entityId}
+                              </td>
+                              <td className="py-2 pr-3 text-text-tertiary">-</td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.resultCount)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.cpa)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.dailyBudget)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.spend)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.frequency)}
+                              </td>
+                              <td className="py-2 pr-3 text-text-secondary">
+                                {formatMetric(adset.ctr)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
-            {latestSnapshots.length === 0 && (
+            {campaigns.length === 0 && (
               <div className="rounded-lg border border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
                 {localize('com_ui_project_meta_ads_no_snapshots')}
               </div>

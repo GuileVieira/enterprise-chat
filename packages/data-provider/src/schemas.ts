@@ -911,6 +911,28 @@ export const projectSchema = z.object({
           minSpend: z.number().optional(),
         })
         .optional(),
+      ruleOverrides: z
+        .array(
+          z.object({
+            entityLevel: z.enum(['campaign', 'adset']),
+            entityId: z.string(),
+            entityName: z.string().optional(),
+            enabled: z.boolean().optional(),
+            rules: z
+              .object({
+                targetCpa: z.number().optional(),
+                minRoas: z.number().optional(),
+                maxIncreasePct: z.number().optional(),
+                maxDecreasePct: z.number().optional(),
+                minDailyBudget: z.number().optional(),
+                maxDailyBudget: z.number().optional(),
+                cooldownHours: z.number().optional(),
+                minSpend: z.number().optional(),
+              })
+              .optional(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
   isArchived: z.boolean().optional(),

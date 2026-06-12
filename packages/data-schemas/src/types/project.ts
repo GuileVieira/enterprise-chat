@@ -30,6 +30,13 @@ export interface IProjectMetaAds {
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;
   rules?: IProjectMetaAdsRules;
+  ruleOverrides?: Array<{
+    entityLevel: 'campaign' | 'adset';
+    entityId: string;
+    entityName?: string;
+    enabled?: boolean;
+    rules?: IProjectMetaAdsRules;
+  }>;
 }
 
 export interface IProject {

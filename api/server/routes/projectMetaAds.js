@@ -76,6 +76,34 @@ function validateMetaAdsRules(rules = {}) {
   return validated;
 }
 
+function normalizeRuleOverrides(ruleOverrides = []) {
+  if (!Array.isArray(ruleOverrides)) {
+    return [];
+  }
+  return ruleOverrides
+    .map((override) => {
+      const entityLevel = override?.entityLevel;
+      const entityId =
+        typeof override?.entityId === 'string' && override.entityId.trim()
+          ? override.entityId.trim()
+          : '';
+      if (!['campaign', 'adset'].includes(entityLevel) || !entityId) {
+        return null;
+      }
+      return {
+        entityLevel,
+        entityId,
+        entityName:
+          typeof override.entityName === 'string' && override.entityName.trim()
+            ? override.entityName.trim()
+            : undefined,
+        enabled: override.enabled !== false,
+        rules: validateMetaAdsRules(override.rules),
+      };
+    })
+    .filter(Boolean);
+}
+
 async function requireMetaAdsFeature(req, res, next) {
   try {
     const appConfig = await getAppConfig({
@@ -123,6 +151,7 @@ function normalizeMetaAds(metaAds = {}) {
     adAccountId: digits ? `act_${digits}` : safeMetaAds.adAccountId,
     tokenSecretName,
     rules: validateMetaAdsRules(safeMetaAds.rules),
+    ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
     scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(safeMetaAds.scheduleIntervalMinutes))

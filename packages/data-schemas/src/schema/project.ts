@@ -43,6 +43,32 @@ const ProjectMetaAdsRulesSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsRuleOverrideSchema = new Schema(
+  {
+    entityLevel: {
+      type: String,
+      enum: ['campaign', 'adset'],
+      required: true,
+    },
+    entityId: {
+      type: String,
+      required: true,
+    },
+    entityName: {
+      type: String,
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+    rules: {
+      type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+  },
+  { _id: false },
+);
+
 const ProjectMetaAdsSchema = new Schema(
   {
     enabled: {
@@ -84,6 +110,10 @@ const ProjectMetaAdsSchema = new Schema(
     rules: {
       type: ProjectMetaAdsRulesSchema,
       default: {},
+    },
+    ruleOverrides: {
+      type: [ProjectMetaAdsRuleOverrideSchema],
+      default: [],
     },
   },
   { _id: false },

@@ -180,7 +180,7 @@ async function listAdSets({ adAccountId, token, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
   const params = {
-    fields: 'id,name,daily_budget,effective_status',
+    fields: 'id,name,daily_budget,effective_status,campaign_id,campaign{id,name}',
     limit: DEFAULT_LIMIT,
   };
   try {
@@ -213,12 +213,50 @@ async function listAdSets({ adAccountId, token, graphVersion }) {
   }
 }
 
+async function listCampaigns({ adAccountId, token, graphVersion }) {
+  logger.debug('[MetaAdsGraph] listing campaigns', { adAccountId, graphVersion });
+  const path = `${encodeURIComponent(adAccountId)}/campaigns`;
+  const params = {
+    fields: 'id,name,objective,daily_budget,effective_status',
+    limit: DEFAULT_LIMIT,
+  };
+  try {
+    const payload = await metaGet({
+      path,
+      token,
+      params,
+      graphVersion,
+      resourceLabel: 'campaigns',
+    });
+    return Array.isArray(payload.data)
+      ? payload.data.filter((campaign) => campaign.effective_status === 'ACTIVE')
+      : [];
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'campaigns',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsGraph] campaigns request failed with context', {
+      adAccountId,
+      path,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
+}
+
 async function listAdSetInsights({ adAccountId, token, since, until, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing insights', { adAccountId, since, until, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level: 'adset',
-    fields: 'adset_id,adset_name,spend,actions,purchase_roas',
+    fields:
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas',
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
@@ -256,6 +294,7 @@ module.exports = {
   DEFAULT_META_GRAPH_VERSION,
   getAdSetDailyBudget,
   getMetaGraphVersion,
+  listCampaigns,
   listAdSetInsights,
   listAdSets,
   metaGet,
