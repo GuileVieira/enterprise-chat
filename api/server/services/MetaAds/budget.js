@@ -4,6 +4,7 @@ const { getProjectById, findProjectById, getTenantSecret } = require('~/models')
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
   getAdSetDailyBudget,
+  getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
@@ -272,7 +273,13 @@ function calculateMetrics(row) {
   const spend = Number(row.spend ?? 0);
   const actionPriority = [
     'onsite_conversion.messaging_conversation_started_7d',
+    'onsite_conversion.messaging_first_reply',
+    'onsite_conversion.lead_grouped',
+    'offsite_conversion.fb_pixel_lead',
+    'leadgen_grouped',
     'lead',
+    'omni_purchase',
+    'offsite_conversion.fb_pixel_purchase',
     'purchase',
   ];
   const actions = Array.isArray(row.actions) ? row.actions : [];
@@ -281,7 +288,7 @@ function calculateMetrics(row) {
     actionPriority
       .map((actionType) => actions.find((action) => action.action_type === actionType))
       .find(Boolean) ?? actions[0];
-  const resultCount = Number(resultAction?.value ?? 0);
+  const resultCount = resultAction ? Number(resultAction.value ?? 0) : undefined;
   const resultCost = resultAction
     ? costPerAction.find((item) => item.action_type === resultAction.action_type)
     : null;
@@ -289,7 +296,7 @@ function calculateMetrics(row) {
   const cpa =
     Number.isFinite(cpaFromMeta) && cpaFromMeta > 0
       ? cpaFromMeta
-      : resultCount > 0
+      : Number(resultCount) > 0
         ? spend / resultCount
         : null;
   const roasValue = Array.isArray(row.purchase_roas)
@@ -305,7 +312,7 @@ function calculateMetrics(row) {
     resultCount,
     cpa,
     roas,
-    resultType: resultAction?.action_type ?? 'purchase',
+    resultType: resultAction?.action_type,
     impressions,
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
@@ -367,6 +374,37 @@ function getSnapshotAdSetName(snapshot, campaignName) {
   return snapshot.entityName;
 }
 
+function buildSnapshotsFromInsights({ insights = [], adsets = [], campaigns = [], currency }) {
+  const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
+  const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
+  return insights
+    .map((row) => {
+      const entityId = row.adset_id;
+      const adset = adsetById.get(entityId);
+      if (!entityId || !adset) {
+        return null;
+      }
+      const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
+      const campaign = campaignById.get(campaignId);
+      const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
+      const metrics = calculateMetrics(row);
+      return {
+        level: 'adset',
+        entityId,
+        entityName: row.adset_name || adset.name || entityId,
+        campaignId,
+        campaignName,
+        campaignObjective: campaign?.objective,
+        dailyBudget: centsToDailyBudget(adset.daily_budget),
+        currency,
+        ...metrics,
+        raw: row,
+        createdAt: new Date().toISOString(),
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildCampaignSummaries({
   latestSnapshots = [],
   recommendations = [],
@@ -393,6 +431,7 @@ function buildCampaignSummaries({
         spend: 0,
         resultCount: 0,
         resultType: snapshot.resultType,
+        currency: snapshot.currency,
         dailyBudget: 0,
         impressions: 0,
         reach: 0,
@@ -435,6 +474,7 @@ function buildCampaignSummaries({
       roas: snapshot.roas,
       resultCount: snapshot.resultCount,
       resultType: snapshot.resultType,
+      currency: snapshot.currency,
       impressions: snapshot.impressions,
       reach: snapshot.reach,
       frequency: snapshot.frequency,
@@ -504,6 +544,36 @@ function buildDashboardSummary(campaigns = []) {
     bestCampaignByCost: sortedByCost[0],
     worstCampaignByCost: sortedByCost[sortedByCost.length - 1],
   };
+}
+
+function resolveStatusPeriod(options = {}, now = new Date()) {
+  if (options.since || options.until) {
+    return {
+      since: options.since,
+      until: options.until,
+    };
+  }
+  const today = now.toISOString().slice(0, 10);
+  if (options.datePreset === 'today') {
+    return { since: today, until: today };
+  }
+  if (options.datePreset === 'yesterday') {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    return { since: yesterday, until: yesterday };
+  }
+  const daysByPreset = {
+    last_7d: 7,
+    last_14d: 14,
+    last_30d: 30,
+  };
+  const days = daysByPreset[options.datePreset];
+  if (days) {
+    const since = new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    return { since, until: today };
+  }
+  return {};
 }
 
 function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
@@ -920,6 +990,9 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       }
     : undefined;
   let campaignConfigs = [];
+  let adsetConfigs = [];
+  let liveSnapshots;
+  let currency;
   if (project?.metaAds?.adAccountId) {
     try {
       const metaAds = withImplicitProjectTokenSecret(
@@ -932,6 +1005,32 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
         token,
         graphVersion: getMetaGraphVersion(metaAds.graphVersion),
       });
+      currency = await getAdAccountCurrency({
+        adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+        token,
+        graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+      });
+      if (options.datePreset || options.since || options.until) {
+        const { since, until } = resolveStatusPeriod(options);
+        adsetConfigs = await listAdSets({
+          adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+          token,
+          graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+        });
+        const insights = await listAdSetInsights({
+          adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+          token,
+          since,
+          until,
+          graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+        });
+        liveSnapshots = buildSnapshotsFromInsights({
+          insights,
+          adsets: adsetConfigs,
+          campaigns: campaignConfigs,
+          currency,
+        });
+      }
     } catch (error) {
       logger.error('[MetaAdsBudget] campaign status enrichment failed', {
         projectId,
@@ -940,7 +1039,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     }
   }
   const campaigns = buildCampaignSummaries({
-    latestSnapshots,
+    latestSnapshots: liveSnapshots ?? latestSnapshots,
     recommendations,
     campaignConfigs,
   });
@@ -957,6 +1056,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     recommendations,
     changes,
     campaigns,
+    currency: currency || 'BRL',
     credentials,
     graphVersion,
     period,

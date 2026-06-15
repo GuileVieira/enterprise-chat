@@ -359,6 +359,51 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
+  it('formats monetary metrics with the ad account currency and shows missing results as dash', () => {
+    mockStatusData.currency = 'BRL';
+    mockStatusData.summary = {
+      totalSpend: 85.76,
+      totalResults: 0,
+      averageCostPerResult: null,
+      averageFrequency: 0,
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-abo',
+        campaignName: 'FB/IG - REMARKETING',
+        spend: 85.76,
+        cpa: null,
+        resultCount: undefined,
+        dailyBudget: 15,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-abo',
+            entityName: '25 65+ ARTES',
+            campaignId: 'campaign-abo',
+            campaignName: 'FB/IG - REMARKETING',
+            spend: 13.69,
+            cpa: null,
+            resultCount: undefined,
+            dailyBudget: 15,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getAllByText('R$ 85,76').length).toBeGreaterThan(0);
+    expect(screen.getByText('R$ 13,69')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 15,00').length).toBeGreaterThan(0);
+    expect(screen.getByText('25 65+ ARTES')).toBeInTheDocument();
+
+    const adSetRow = screen.getByText('25 65+ ARTES').closest('tr');
+    expect(adSetRow).not.toBeNull();
+    expect(adSetRow).toHaveTextContent('-');
+  });
+
   it('auto-expands ABO campaigns by campaign group and keeps CBO ad sets collapsed', () => {
     mockStatusData.campaigns = [
       {
@@ -552,8 +597,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', { datePreset: 'last_7d' });
     expect(screen.getByText('com_ui_project_meta_ads_total_spend')).toBeInTheDocument();
-    expect(screen.getByText('300.00')).toBeInTheDocument();
-    expect(screen.getByText('25.00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 300,00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 25,00')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
       target: { value: 'last_30d' },
@@ -622,7 +667,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
     expect(screen.getByText('CBO Messages')).toBeInTheDocument();
-    expect(screen.getByText('100.00 -> 125.00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
   });
 
   it('edits and removes existing rule groups', () => {

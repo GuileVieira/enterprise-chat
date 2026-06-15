@@ -3,6 +3,7 @@ jest.mock('node-fetch', () => jest.fn());
 const fetch = require('node-fetch');
 const {
   getAdSetDailyBudget,
+  getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
@@ -186,5 +187,20 @@ describe('Meta Ads Graph client', () => {
 
     expect(fetch.mock.calls[0][0]).toContain('/v23.0/campaign-1');
     expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget%2Clifetime_budget');
+  });
+
+  it('fetches ad account currency', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ currency: 'BRL' }),
+    });
+
+    await expect(
+      getAdAccountCurrency({ adAccountId: 'act_123', token: 'token', graphVersion: 'v23.0' }),
+    ).resolves.toBe('BRL');
+
+    expect(fetch.mock.calls[0][0]).toContain('/v23.0/act_123');
+    expect(fetch.mock.calls[0][0]).toContain('fields=currency');
   });
 });

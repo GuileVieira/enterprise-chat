@@ -100,6 +100,16 @@ function formatMetric(value?: number | null) {
   return value == null || Number.isNaN(value) ? '-' : value.toFixed(2);
 }
 
+function formatMoney(value: number | null | undefined, currency = 'BRL') {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency,
+  }).format(value);
+}
+
 function buildCampaignFallback(
   snapshots: NonNullable<ProjectMetaAdsCampaignSummary['adSets']>,
 ): ProjectMetaAdsCampaignSummary[] {
@@ -179,12 +189,15 @@ function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: string) {
   return campaign.campaignName ?? campaign.campaignId;
 }
 
-function getRecommendationLabel(recommendation?: ProjectMetaAdsRecommendation) {
+function getRecommendationLabel(
+  recommendation: ProjectMetaAdsRecommendation | undefined,
+  currency: string,
+) {
   if (!recommendation) {
     return '-';
   }
-  const current = formatMetric(recommendation.currentDailyBudget);
-  const proposed = formatMetric(recommendation.proposedDailyBudget);
+  const current = formatMoney(recommendation.currentDailyBudget, currency);
+  const proposed = formatMoney(recommendation.proposedDailyBudget, currency);
   return `${recommendation.action}: ${current} -> ${proposed}`;
 }
 
@@ -233,6 +246,7 @@ export default function ProjectMetaAdsPanel({
       ? statusQuery.data.campaigns
       : buildCampaignFallback(latestSnapshots);
   const tokenCredentials = statusQuery.data?.credentials;
+  const currency = statusQuery.data?.currency ?? 'BRL';
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
@@ -938,15 +952,21 @@ export default function ProjectMetaAdsPanel({
           </div>
           <div className="grid border border-border-light sm:grid-cols-4">
             {[
-              ['com_ui_project_meta_ads_total_spend', statusQuery.data?.summary?.totalSpend],
-              ['com_ui_project_meta_ads_total_results', statusQuery.data?.summary?.totalResults],
+              [
+                'com_ui_project_meta_ads_total_spend',
+                formatMoney(statusQuery.data?.summary?.totalSpend, currency),
+              ],
+              [
+                'com_ui_project_meta_ads_total_results',
+                formatMetric(statusQuery.data?.summary?.totalResults),
+              ],
               [
                 'com_ui_project_meta_ads_average_cost',
-                statusQuery.data?.summary?.averageCostPerResult,
+                formatMoney(statusQuery.data?.summary?.averageCostPerResult, currency),
               ],
               [
                 'com_ui_project_meta_ads_average_frequency',
-                statusQuery.data?.summary?.averageFrequency,
+                formatMetric(statusQuery.data?.summary?.averageFrequency),
               ],
             ].map(([labelKey, value]) => (
               <div key={labelKey} className="border-border-light p-3 last:border-r-0 sm:border-r">
@@ -954,7 +974,7 @@ export default function ProjectMetaAdsPanel({
                   {localize(labelKey as TranslationKeys)}
                 </div>
                 <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
-                  {formatMetric(value as number | null | undefined)}
+                  {value}
                 </div>
               </div>
             ))}
@@ -1079,9 +1099,9 @@ export default function ProjectMetaAdsPanel({
             </div>
             <div className="mt-1">
               {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
-              {formatMetric(budgetConfirmation.currentBudget)}
+              {formatMoney(budgetConfirmation.currentBudget, currency)}
               {' -> '}
-              {formatMetric(budgetConfirmation.dailyBudget)}
+              {formatMoney(budgetConfirmation.dailyBudget, currency)}
             </div>
             <div className="mt-3 flex gap-2">
               <button
@@ -1269,13 +1289,13 @@ export default function ProjectMetaAdsPanel({
                         {formatMetric(campaign.resultCount)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.cpa)}
+                        {formatMoney(campaign.cpa, currency)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.spend)}
+                        {formatMoney(campaign.spend, currency)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.dailyBudget)}
+                        {formatMoney(campaign.dailyBudget, currency)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMetric(campaign.frequency)}
@@ -1293,7 +1313,9 @@ export default function ProjectMetaAdsPanel({
                         {getEntityRuleLabel('campaign', campaign.campaignId)}
                       </td>
                       <td className="px-2 py-2 text-text-secondary">
-                        <div className="truncate">{getRecommendationLabel(recommendation)}</div>
+                        <div className="truncate">
+                          {getRecommendationLabel(recommendation, currency)}
+                        </div>
                         {recommendation?.reason && (
                           <div className="truncate text-text-tertiary">{recommendation.reason}</div>
                         )}
@@ -1363,13 +1385,13 @@ export default function ProjectMetaAdsPanel({
                               {formatMetric(adset.resultCount)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.cpa)}
+                              {formatMoney(adset.cpa, currency)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.spend)}
+                              {formatMoney(adset.spend, currency)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.dailyBudget)}
+                              {formatMoney(adset.dailyBudget, currency)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMetric(adset.frequency)}
@@ -1388,7 +1410,7 @@ export default function ProjectMetaAdsPanel({
                             </td>
                             <td className="px-2 py-2 text-text-secondary">
                               <div className="truncate">
-                                {getRecommendationLabel(adsetRecommendation)}
+                                {getRecommendationLabel(adsetRecommendation, currency)}
                               </div>
                               {adsetRecommendation?.reason && (
                                 <div className="truncate text-text-tertiary">
@@ -1463,9 +1485,9 @@ export default function ProjectMetaAdsPanel({
                   </div>
                 </div>
                 <div className="font-mono text-xs text-text-secondary">
-                  {formatMetric(change.previousDailyBudget)}
+                  {formatMoney(change.previousDailyBudget, currency)}
                   {' -> '}
-                  {formatMetric(change.newDailyBudget)}
+                  {formatMoney(change.newDailyBudget, currency)}
                 </div>
               </div>
             ))

@@ -434,6 +434,7 @@ describe('Meta Ads budget service persistence safety', () => {
     const metaPost = jest.fn(async () => ({}));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
     const getEntityDailyBudget = jest.fn(async () => latestEntityBudget);
+    const getAdAccountCurrency = jest.fn(async () => 'BRL');
     const listCampaigns = jest.fn(async () => campaigns);
     const listAdSets = jest.fn(async () => adsets);
     const listAdSetInsights = jest.fn(async () => insights);
@@ -442,6 +443,7 @@ describe('Meta Ads budget service persistence safety', () => {
       getMetaGraphVersion: (value) => value || 'v25.0',
       getAdSetDailyBudget,
       getEntityDailyBudget,
+      getAdAccountCurrency,
       listCampaigns,
       listAdSets,
       listAdSetInsights,
@@ -457,7 +459,9 @@ describe('Meta Ads budget service persistence safety', () => {
       findByIdAndUpdate,
       getAdSetDailyBudget,
       getEntityDailyBudget,
+      getAdAccountCurrency,
       listCampaigns,
+      listAdSetInsights,
       makeFindChain,
       metaPost,
       updateMany,
@@ -646,6 +650,80 @@ describe('Meta Ads budget service persistence safety', () => {
       bestCampaignByCost: expect.objectContaining({ campaignId: 'campaign-1' }),
       worstCampaignByCost: expect.objectContaining({ campaignId: 'campaign-2' }),
     });
+  });
+
+  it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
+    const { budget, getAdAccountCurrency, listAdSetInsights } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      snapshots: [
+        {
+          entityId: 'adset-old',
+          entityName: 'Old',
+          campaignId: 'campaign-old',
+          campaignName: 'Old Campaign',
+          spend: 999,
+          resultCount: 99,
+          createdAt: '2026-06-01T12:00:00.000Z',
+        },
+      ],
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Audience real',
+          daily_budget: '5000',
+          campaign_id: 'campaign-1',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          adset_id: 'adset-1',
+          adset_name: 'Audience real',
+          spend: '85.76',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '8',
+            },
+          ],
+          cost_per_action_type: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '10.72',
+            },
+          ],
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-10',
+      until: '2026-06-15',
+    });
+
+    expect(listAdSetInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ since: '2026-06-10', until: '2026-06-15' }),
+    );
+    expect(getAdAccountCurrency).toHaveBeenCalledWith(
+      expect.objectContaining({ adAccountId: 'act_123' }),
+    );
+    expect(status.currency).toBe('BRL');
+    expect(status.summary).toEqual(
+      expect.objectContaining({
+        totalSpend: 85.76,
+        totalResults: 8,
+        averageCostPerResult: 10.72,
+      }),
+    );
+    expect(status.campaigns[0].adSets[0]).toEqual(
+      expect.objectContaining({
+        entityName: 'Audience real',
+        resultCount: 8,
+        cpa: 10.72,
+      }),
+    );
   });
 
   it('marks CBO campaigns as campaign-editable and ABO campaigns as adset-editable', async () => {

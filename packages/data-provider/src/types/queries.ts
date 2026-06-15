@@ -76,6 +76,7 @@ export type ProjectMetaAdsSnapshot = {
   campaignName?: string;
   campaignObjective?: string;
   dailyBudget?: number;
+  currency?: string;
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
@@ -136,6 +137,7 @@ export type ProjectMetaAdsCampaignSummary = {
   campaignName?: string;
   objective?: string;
   dailyBudget?: number;
+  currency?: string;
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
@@ -173,6 +175,7 @@ export type ProjectMetaAdsStatus = {
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
   campaigns?: ProjectMetaAdsCampaignSummary[];
+  currency?: string;
   period?: {
     datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
     since?: string;

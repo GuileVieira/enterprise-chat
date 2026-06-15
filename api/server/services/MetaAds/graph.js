@@ -190,6 +190,19 @@ async function getEntityDailyBudget({ entityId, token, graphVersion }) {
   };
 }
 
+async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
+  const payload = await metaGet({
+    path: encodeURIComponent(adAccountId),
+    token,
+    params: { fields: 'currency' },
+    graphVersion,
+    resourceLabel: 'ad account currency',
+  });
+  return typeof payload.currency === 'string' && payload.currency.trim()
+    ? payload.currency.trim()
+    : undefined;
+}
+
 async function listAdSets({ adAccountId, token, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
@@ -307,6 +320,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
 module.exports = {
   DEFAULT_META_GRAPH_VERSION,
   getAdSetDailyBudget,
+  getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
   listCampaigns,
