@@ -716,6 +716,125 @@ describe('Meta Ads budget service persistence safety', () => {
     });
   });
 
+  it('returns daily campaign trend and evolution deltas from historical snapshots', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          dailyBudget: 50,
+          spend: 100,
+          cpa: 25,
+          resultCount: 4,
+          frequency: 2,
+          createdAt: '2026-06-01T10:00:00.000Z',
+        },
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          dailyBudget: 60,
+          spend: 180,
+          cpa: 30,
+          resultCount: 6,
+          frequency: 3,
+          createdAt: '2026-06-02T10:00:00.000Z',
+        },
+        {
+          entityId: 'adset-2',
+          entityName: 'Retarget',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          dailyBudget: 40,
+          spend: 80,
+          cpa: 20,
+          resultCount: 4,
+          frequency: 4,
+          createdAt: '2026-06-02T11:00:00.000Z',
+        },
+        {
+          entityId: 'adset-2',
+          entityName: 'Retarget',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          dailyBudget: 40,
+          spend: 90,
+          cpa: 18,
+          resultCount: 5,
+          frequency: 4.5,
+          createdAt: '2026-06-02T12:00:00.000Z',
+        },
+      ],
+      changes: [
+        {
+          _id: 'change-1',
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          previousDailyBudget: 50,
+          newDailyBudget: 60,
+          deltaDailyBudget: 10,
+          deltaPercent: 20,
+          actor: 'cron',
+          createdAt: '2026-06-02T09:00:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(status.trend).toEqual({
+      points: [
+        expect.objectContaining({
+          date: '2026-06-01',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 100,
+          resultCount: 4,
+          cpa: 25,
+          dailyBudget: 50,
+          frequency: 2,
+        }),
+        expect.objectContaining({
+          date: '2026-06-02',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 270,
+          resultCount: 11,
+          cpa: 24.55,
+          dailyBudget: 100,
+          frequency: 4.5,
+        }),
+      ],
+      campaignDeltas: [
+        expect.objectContaining({
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spendDelta: 170,
+          resultDelta: 7,
+          cpaDelta: -0.45,
+          budgetDelta: 50,
+          latestChange: expect.objectContaining({
+            entityId: 'adset-1',
+            deltaDailyBudget: 10,
+          }),
+        }),
+      ],
+      changesByDay: [
+        expect.objectContaining({
+          date: '2026-06-02',
+          totalDeltaDailyBudget: 10,
+          changeCount: 1,
+        }),
+      ],
+    });
+  });
+
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
     const { budget, getAdAccountCurrency, listAdSetInsights } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },

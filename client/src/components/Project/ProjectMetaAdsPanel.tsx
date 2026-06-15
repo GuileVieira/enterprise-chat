@@ -192,6 +192,19 @@ function formatSignedPercent(value: number | null | undefined) {
   return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
 
+function formatSignedMetric(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+  return `${sign}${Math.abs(value).toFixed(2)}`;
+}
+
+function formatTrendDate(value: string) {
+  const [, month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
+  return month && day ? `${day}/${month}` : value;
+}
+
 function buildBudgetReferences(currentBudget: number | null | undefined, currency = 'BRL') {
   const current = Number(currentBudget);
   if (!Number.isFinite(current) || current <= 0) {
@@ -417,6 +430,39 @@ export default function ProjectMetaAdsPanel({
   const tokenCredentials = statusQuery.data?.credentials;
   const currency = statusQuery.data?.currency ?? 'BRL';
   const graphVersionOptions = getGraphVersionOptions(statusQuery.data?.graphVersion?.effective);
+  const trend = statusQuery.data?.trend;
+  const trendPoints = trend?.points ?? [];
+  const campaignDeltas = trend?.campaignDeltas ?? [];
+  const changesByDay = trend?.changesByDay ?? [];
+  const dailySpendTrend = trendPoints.reduce<Array<{ date: string; spend: number }>>(
+    (items, point) => {
+      const existing = items.find((item) => item.date === point.date);
+      if (existing) {
+        existing.spend += Number(point.spend ?? 0);
+        return items;
+      }
+      return [...items, { date: point.date, spend: Number(point.spend ?? 0) }];
+    },
+    [],
+  );
+  const maxDailySpend = Math.max(...dailySpendTrend.map((point) => point.spend), 0);
+  const bestEvolution = [...campaignDeltas]
+    .sort((left, right) => {
+      const resultDiff = Number(right.resultDelta ?? 0) - Number(left.resultDelta ?? 0);
+      if (resultDiff !== 0) {
+        return resultDiff;
+      }
+      return Number(left.cpaDelta ?? 0) - Number(right.cpaDelta ?? 0);
+    })
+    .slice(0, 3);
+  const evolutionAlerts = campaignDeltas
+    .filter(
+      (delta) =>
+        Number(delta.cpaDelta ?? 0) > 0 ||
+        Number(delta.frequencyDelta ?? 0) > 0 ||
+        Number(delta.latestChange?.deltaDailyBudget ?? 0) !== 0,
+    )
+    .slice(0, 4);
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
@@ -1252,6 +1298,120 @@ export default function ProjectMetaAdsPanel({
               </div>
             ))}
           </div>
+          {(trendPoints.length > 0 || campaignDeltas.length > 0 || changesByDay.length > 0) && (
+            <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
+              <div className="border border-border-light bg-surface-primary p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_evolution')}
+                  </h4>
+                  <span className="font-mono text-[11px] text-text-tertiary">
+                    {trendPoints.length} {localize('com_ui_project_meta_ads_trend_points')}
+                  </span>
+                </div>
+                <div className="mt-3 flex h-28 items-end gap-1 border-b border-border-light">
+                  {dailySpendTrend.length > 0 ? (
+                    dailySpendTrend.map((point) => {
+                      const height =
+                        maxDailySpend > 0 ? Math.max(8, (point.spend / maxDailySpend) * 100) : 8;
+                      return (
+                        <div
+                          key={point.date}
+                          className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1"
+                        >
+                          <div
+                            title={`${formatTrendDate(point.date)} · ${formatMoney(
+                              point.spend,
+                              currency,
+                            )}`}
+                            className="bg-text-primary/80 w-full"
+                            style={{ height: `${height}%` }}
+                          />
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-text-secondary">
+                      {localize('com_ui_project_meta_ads_no_evolution')}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-tertiary">
+                  {dailySpendTrend.slice(-8).map((point) => (
+                    <span key={point.date} className="font-mono">
+                      {formatTrendDate(point.date)} {formatMoney(point.spend, currency)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                <div className="border border-border-light bg-surface-primary p-3">
+                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_best_evolution')}
+                  </h4>
+                  <div className="mt-3 divide-y divide-border-light">
+                    {bestEvolution.length > 0 ? (
+                      bestEvolution.map((delta) => (
+                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
+                          <div className="truncate text-sm font-medium text-text-primary">
+                            {delta.campaignName ?? delta.campaignId}
+                          </div>
+                          <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs text-text-secondary">
+                            <span>{formatSignedMoney(delta.spendDelta, currency)}</span>
+                            <span>{formatSignedMetric(delta.resultDelta)}</span>
+                            <span>{formatSignedMoney(delta.cpaDelta, currency)}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-sm text-text-secondary">
+                        {localize('com_ui_project_meta_ads_no_evolution')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border border-border-light bg-surface-primary p-3">
+                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_budget_changes')}
+                  </h4>
+                  <div className="mt-3 divide-y divide-border-light">
+                    {evolutionAlerts.length > 0 ? (
+                      evolutionAlerts.map((delta) => (
+                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
+                          <div className="truncate text-sm font-medium text-text-primary">
+                            {delta.latestChange?.entityName ??
+                              delta.campaignName ??
+                              delta.campaignId}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-2 font-mono text-xs text-text-secondary">
+                            <span>
+                              {formatSignedMoney(
+                                delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta,
+                                currency,
+                              )}
+                            </span>
+                            {delta.frequencyDelta != null && (
+                              <span>
+                                {formatSignedMetric(delta.frequencyDelta)}{' '}
+                                {localize('com_ui_project_meta_ads_frequency')}
+                              </span>
+                            )}
+                            {delta.latestChange?.actor && <span>{delta.latestChange.actor}</span>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-sm text-text-secondary">
+                        {localize('com_ui_project_meta_ads_no_history')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {(settings.ruleGroups ?? []).length > 0 && (

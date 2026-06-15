@@ -160,6 +160,45 @@ export type ProjectMetaAdsCampaignSummary = {
   adSets: ProjectMetaAdsAdSetSummary[];
 };
 
+export type ProjectMetaAdsTrendPoint = {
+  date: string;
+  campaignId: string;
+  campaignName?: string;
+  spend: number;
+  resultCount: number;
+  cpa?: number | null;
+  dailyBudget?: number;
+  frequency?: number | null;
+  impressions?: number;
+  clicks?: number;
+  ctr?: number | null;
+};
+
+export type ProjectMetaAdsCampaignDelta = {
+  campaignId: string;
+  campaignName?: string;
+  firstDate: string;
+  lastDate: string;
+  spendDelta: number;
+  resultDelta: number;
+  cpaDelta?: number | null;
+  budgetDelta?: number;
+  frequencyDelta?: number | null;
+  latestChange?: ProjectMetaAdsBudgetChange;
+};
+
+export type ProjectMetaAdsChangesByDay = {
+  date: string;
+  totalDeltaDailyBudget: number;
+  changeCount: number;
+};
+
+export type ProjectMetaAdsTrend = {
+  points: ProjectMetaAdsTrendPoint[];
+  campaignDeltas: ProjectMetaAdsCampaignDelta[];
+  changesByDay: ProjectMetaAdsChangesByDay[];
+};
+
 export type ProjectMetaAdsManualBudgetPayload = {
   entityLevel: 'campaign' | 'adset';
   entityId: string;
@@ -191,6 +230,7 @@ export type ProjectMetaAdsStatus = {
     bestCampaignByCost?: ProjectMetaAdsCampaignSummary;
     worstCampaignByCost?: ProjectMetaAdsCampaignSummary;
   };
+  trend?: ProjectMetaAdsTrend;
   credentials?: {
     effectiveSource: 'project' | 'tenant' | 'missing';
     projectConfigured: boolean;

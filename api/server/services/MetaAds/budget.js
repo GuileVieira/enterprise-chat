@@ -665,6 +665,167 @@ function buildDashboardSummary(campaigns = []) {
   };
 }
 
+function roundMetric(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Number(numeric.toFixed(2)) : null;
+}
+
+function getSnapshotDateKey(snapshot) {
+  const date = new Date(snapshot.createdAt ?? snapshot.updatedAt ?? Date.now());
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function buildCampaignTrend({ snapshots = [], changes = [] }) {
+  const latestByDateEntity = new Map();
+  const entityCampaignId = new Map();
+  const entityCampaignName = new Map();
+
+  for (const snapshot of snapshots) {
+    const date = getSnapshotDateKey(snapshot);
+    const entityId = snapshot.entityId;
+    const campaignId = snapshot.campaignId || snapshot.entityId;
+    if (!date || !entityId || !campaignId) {
+      continue;
+    }
+    entityCampaignId.set(entityId, campaignId);
+    entityCampaignName.set(entityId, snapshot.campaignName || snapshot.entityName || campaignId);
+    const key = `${date}:${campaignId}:${entityId}`;
+    const current = latestByDateEntity.get(key);
+    if (!current || String(snapshot.createdAt ?? '') > String(current.createdAt ?? '')) {
+      latestByDateEntity.set(key, snapshot);
+    }
+  }
+
+  const pointsByDateCampaign = new Map();
+  for (const snapshot of latestByDateEntity.values()) {
+    const date = getSnapshotDateKey(snapshot);
+    const campaignId = snapshot.campaignId || snapshot.entityId;
+    if (!date || !campaignId) {
+      continue;
+    }
+    const key = `${date}:${campaignId}`;
+    const point = pointsByDateCampaign.get(key) || {
+      date,
+      campaignId,
+      campaignName: snapshot.campaignName || snapshot.entityName || campaignId,
+      spend: 0,
+      resultCount: 0,
+      dailyBudget: 0,
+      impressions: 0,
+      clicks: 0,
+      frequency: 0,
+    };
+    point.spend += Number(snapshot.spend ?? 0);
+    point.resultCount += Number(snapshot.resultCount ?? 0);
+    point.dailyBudget += Number(snapshot.dailyBudget ?? 0);
+    point.impressions += Number(snapshot.impressions ?? 0);
+    point.clicks += Number(snapshot.clicks ?? 0);
+    point.frequency = Math.max(Number(point.frequency ?? 0), Number(snapshot.frequency ?? 0));
+    point.cpa = point.resultCount > 0 ? roundMetric(point.spend / point.resultCount) : null;
+    point.ctr =
+      point.impressions > 0 ? roundMetric((point.clicks / point.impressions) * 100) : null;
+    pointsByDateCampaign.set(key, point);
+  }
+
+  const points = Array.from(pointsByDateCampaign.values())
+    .map((point) => ({
+      ...point,
+      spend: roundMetric(point.spend) ?? 0,
+      resultCount: roundMetric(point.resultCount) ?? 0,
+      dailyBudget: roundMetric(point.dailyBudget) ?? 0,
+      frequency: roundMetric(point.frequency) ?? null,
+      impressions: roundMetric(point.impressions) ?? 0,
+      clicks: roundMetric(point.clicks) ?? 0,
+    }))
+    .sort((left, right) =>
+      left.date === right.date
+        ? String(left.campaignName ?? left.campaignId).localeCompare(
+            String(right.campaignName ?? right.campaignId),
+          )
+        : left.date.localeCompare(right.date),
+    );
+
+  const latestChangeByCampaign = new Map();
+  const changesByDayMap = new Map();
+  for (const change of changes) {
+    const date = getSnapshotDateKey(change);
+    if (!date) {
+      continue;
+    }
+    const campaignId = change.campaignId || entityCampaignId.get(change.entityId);
+    const campaignName = change.campaignName || entityCampaignName.get(change.entityId);
+    if (campaignId) {
+      const current = latestChangeByCampaign.get(campaignId);
+      if (!current || String(change.createdAt ?? '') > String(current.createdAt ?? '')) {
+        latestChangeByCampaign.set(campaignId, {
+          ...change,
+          campaignId,
+          campaignName,
+        });
+      }
+    }
+    const dailyChange = changesByDayMap.get(date) || {
+      date,
+      totalDeltaDailyBudget: 0,
+      changeCount: 0,
+    };
+    dailyChange.totalDeltaDailyBudget += Number(change.deltaDailyBudget ?? 0);
+    dailyChange.changeCount += 1;
+    changesByDayMap.set(date, dailyChange);
+  }
+
+  const pointsByCampaign = new Map();
+  for (const point of points) {
+    const campaignPoints = pointsByCampaign.get(point.campaignId) || [];
+    campaignPoints.push(point);
+    pointsByCampaign.set(point.campaignId, campaignPoints);
+  }
+
+  const campaignDeltas = Array.from(pointsByCampaign.entries())
+    .map(([campaignId, campaignPoints]) => {
+      const sorted = [...campaignPoints].sort((left, right) => left.date.localeCompare(right.date));
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      return {
+        campaignId,
+        campaignName: last.campaignName || first.campaignName || campaignId,
+        firstDate: first.date,
+        lastDate: last.date,
+        spendDelta: roundMetric(Number(last.spend ?? 0) - Number(first.spend ?? 0)) ?? 0,
+        resultDelta:
+          roundMetric(Number(last.resultCount ?? 0) - Number(first.resultCount ?? 0)) ?? 0,
+        cpaDelta:
+          last.cpa != null && first.cpa != null
+            ? roundMetric(Number(last.cpa) - Number(first.cpa))
+            : null,
+        budgetDelta:
+          roundMetric(Number(last.dailyBudget ?? 0) - Number(first.dailyBudget ?? 0)) ?? 0,
+        frequencyDelta:
+          last.frequency != null && first.frequency != null
+            ? roundMetric(Number(last.frequency) - Number(first.frequency))
+            : null,
+        latestChange: latestChangeByCampaign.get(campaignId),
+      };
+    })
+    .sort((left, right) => Number(right.spendDelta ?? 0) - Number(left.spendDelta ?? 0));
+
+  const changesByDay = Array.from(changesByDayMap.values())
+    .map((change) => ({
+      ...change,
+      totalDeltaDailyBudget: roundMetric(change.totalDeltaDailyBudget) ?? 0,
+    }))
+    .sort((left, right) => left.date.localeCompare(right.date));
+
+  return {
+    points,
+    campaignDeltas,
+    changesByDay,
+  };
+}
+
 function resolveStatusPeriod(options = {}, now = new Date()) {
   if (options.since || options.until) {
     return {
@@ -1145,10 +1306,11 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   );
   const tenantId = project ? getProjectTenantId(project, fallbackTenantId) : fallbackTenantId;
   const query = tenantId ? { projectId, tenantId } : { projectId };
-  const [latestSnapshots, recommendations, changes] = await Promise.all([
+  const [latestSnapshots, historicalSnapshots, recommendations, changes] = await Promise.all([
     MetaAdsSnapshot.find(query).sort({ createdAt: -1 }).limit(50).lean(),
+    MetaAdsSnapshot.find(query).sort({ createdAt: -1 }).limit(250).lean(),
     MetaAdsRecommendation.find(query).sort({ createdAt: -1 }).limit(50).lean(),
-    MetaAdsBudgetChange.find(query).sort({ createdAt: -1 }).limit(20).lean(),
+    MetaAdsBudgetChange.find(query).sort({ createdAt: -1 }).limit(100).lean(),
   ]);
   const credentials = project
     ? await resolveMetaCredentialStatus({
@@ -1241,6 +1403,10 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     graphVersion,
     period,
     summary: buildDashboardSummary(campaigns),
+    trend: buildCampaignTrend({
+      snapshots: liveSnapshots ?? historicalSnapshots,
+      changes,
+    }),
   };
 }
 

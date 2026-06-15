@@ -13,7 +13,7 @@ const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
 let mockStatusQueryState = {};
-const mockUseProjectMetaAdsQuery = jest.fn(() => ({
+const mockUseProjectMetaAdsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
   data: mockStatusData,
   refetch: mockRefetchStatus,
   ...mockStatusQueryState,
@@ -707,6 +707,79 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
       datePreset: 'last_30d',
     });
+  });
+
+  it('renders campaign evolution dashboard from historical trend data', () => {
+    mockStatusData.summary = {
+      totalSpend: 370,
+      totalResults: 15,
+      averageCostPerResult: 24.67,
+      averageFrequency: 3.8,
+    };
+    mockStatusData.trend = {
+      points: [
+        {
+          date: '2026-06-01',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 100,
+          resultCount: 4,
+          cpa: 25,
+          dailyBudget: 50,
+          frequency: 2,
+        },
+        {
+          date: '2026-06-02',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 270,
+          resultCount: 11,
+          cpa: 24.55,
+          dailyBudget: 100,
+          frequency: 4.5,
+        },
+      ],
+      campaignDeltas: [
+        {
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          firstDate: '2026-06-01',
+          lastDate: '2026-06-02',
+          spendDelta: 170,
+          resultDelta: 7,
+          cpaDelta: -0.45,
+          budgetDelta: 50,
+          frequencyDelta: 2.5,
+          latestChange: {
+            entityId: 'adset-1',
+            entityName: 'Topo',
+            previousDailyBudget: 50,
+            newDailyBudget: 60,
+            deltaDailyBudget: 10,
+            actor: 'cron',
+            createdAt: '2026-06-02T09:00:00.000Z',
+          },
+        },
+      ],
+      changesByDay: [
+        {
+          date: '2026-06-02',
+          totalDeltaDailyBudget: 10,
+          changeCount: 1,
+        },
+      ],
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_evolution')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_budget_changes')).toBeInTheDocument();
+    expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
+    expect(screen.getByText('+R$ 170,00')).toBeInTheDocument();
+    expect(screen.getByText('+7.00')).toBeInTheDocument();
+    expect(screen.getByText('-R$ 0,45')).toBeInTheDocument();
+    expect(screen.getByText('+R$ 10,00')).toBeInTheDocument();
   });
 
   it('requires confirmation before sending a manual budget change', () => {
