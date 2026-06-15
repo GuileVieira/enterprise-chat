@@ -1032,7 +1032,7 @@ export default function ProjectMetaAdsPanel({
                       {recommendation.entityName ?? recommendation.entityId}
                     </div>
                     <div className="text-text-secondary">
-                      {getRecommendationLabel(recommendation)}
+                      {getRecommendationLabel(recommendation, currency)}
                     </div>
                   </div>
                   <button
@@ -1208,6 +1208,9 @@ export default function ProjectMetaAdsPanel({
                   {localize('com_ui_project_meta_ads_budget_mode')}
                 </th>
                 <th className="w-24 px-2 py-2 text-right">
+                  {localize('com_ui_project_meta_ads_frequency')}
+                </th>
+                <th className="w-24 px-2 py-2 text-right">
                   {localize('com_ui_project_meta_ads_results')}
                 </th>
                 <th className="w-28 px-2 py-2 text-right">
@@ -1218,9 +1221,6 @@ export default function ProjectMetaAdsPanel({
                 </th>
                 <th className="w-28 px-2 py-2 text-right">
                   {localize('com_ui_project_meta_ads_budget')}
-                </th>
-                <th className="w-24 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_frequency')}
                 </th>
                 <th className="w-20 px-2 py-2 text-right">CTR</th>
                 <th className="w-20 px-2 py-2 text-right">
@@ -1286,6 +1286,9 @@ export default function ProjectMetaAdsPanel({
                         {campaign.budgetMode ?? '-'}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                        {formatMetric(campaign.frequency)}
+                      </td>
+                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMetric(campaign.resultCount)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
@@ -1296,9 +1299,6 @@ export default function ProjectMetaAdsPanel({
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMoney(campaign.dailyBudget, currency)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.frequency)}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMetric(campaign.ctr)}
@@ -1382,6 +1382,9 @@ export default function ProjectMetaAdsPanel({
                               {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                              {formatMetric(adset.frequency)}
+                            </td>
+                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMetric(adset.resultCount)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
@@ -1392,9 +1395,6 @@ export default function ProjectMetaAdsPanel({
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMoney(adset.dailyBudget, currency)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.frequency)}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMetric(adset.ctr)}
