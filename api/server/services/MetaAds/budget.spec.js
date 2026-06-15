@@ -329,6 +329,16 @@ describe('Meta Ads budget service', () => {
 });
 
 describe('Meta Ads budget service persistence safety', () => {
+  const deferred = () => {
+    let resolve;
+    let reject;
+    const promise = new Promise((promiseResolve, promiseReject) => {
+      resolve = promiseResolve;
+      reject = promiseReject;
+    });
+    return { promise, resolve, reject };
+  };
+
   const loadBudgetWithMocks = ({
     recommendation,
     project,
@@ -418,7 +428,18 @@ describe('Meta Ads budget service persistence safety', () => {
     }));
 
     const getProjectById = jest.fn(async () => project);
-    const findProjectById = jest.fn(async () => project);
+    const findProjectById = jest.fn(async (projectId) => {
+      if (project) {
+        return project;
+      }
+      return projects.find((item) => item.projectId === projectId) ?? null;
+    });
+    getProjectById.mockImplementation(async (projectId) => {
+      if (project) {
+        return project;
+      }
+      return projects.find((item) => item.projectId === projectId) ?? null;
+    });
     const getTenantSecret = jest.fn(async () => ({ value: 'meta-token' }));
 
     jest.doMock('~/models', () => ({
@@ -563,7 +584,7 @@ describe('Meta Ads budget service persistence safety', () => {
   });
 
   it('returns campaigns grouped with active ad sets and pending recommendations', async () => {
-    const { budget, listCampaigns } = loadBudgetWithMocks({
+    const { budget } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
       snapshots: [
         {
@@ -1083,5 +1104,84 @@ describe('Meta Ads budget service persistence safety', () => {
     ]);
     expect(projectUpdateOne).not.toHaveBeenCalled();
     jest.useRealTimers();
+  });
+
+  it('runs due projects with bounded concurrency so one slow project does not block another', async () => {
+    jest.useFakeTimers();
+    const slowAdSets = deferred();
+    const { budget, listAdSets, projectUpdateOne } = loadBudgetWithMocks({
+      projects: [
+        {
+          projectId: 'slow-project',
+          tenantId: 'tenant-a',
+          metaAds: { enabled: true, adAccountId: 'act_123' },
+        },
+        {
+          projectId: 'fast-project',
+          tenantId: 'tenant-a',
+          metaAds: { enabled: true, adAccountId: 'act_456' },
+        },
+      ],
+      adsets: [],
+      insights: [],
+    });
+    listAdSets.mockImplementation(({ adAccountId }) => {
+      if (adAccountId === 'act_123') {
+        return slowAdSets.promise;
+      }
+      return Promise.resolve([]);
+    });
+
+    const run = budget.runCron({
+      projectConcurrency: 2,
+      projectTimeoutMs: 100,
+    });
+    await jest.advanceTimersByTimeAsync(50);
+
+    expect(projectUpdateOne).toHaveBeenCalledWith(
+      { projectId: 'fast-project' },
+      { $set: { 'metaAds.lastRunAt': expect.any(Date) } },
+    );
+
+    await jest.advanceTimersByTimeAsync(50);
+    const results = await run;
+
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ projectId: 'fast-project', adAccountId: 'act_456' }),
+        expect.objectContaining({ projectId: 'slow-project', ok: false }),
+      ]),
+    );
+    jest.useRealTimers();
+  });
+
+  it('starts independent Meta reads for a project in parallel', async () => {
+    const campaigns = deferred();
+    const adsets = deferred();
+    const insights = deferred();
+    const { budget, listCampaigns, listAdSets, listAdSetInsights } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+    });
+    listCampaigns.mockReturnValueOnce(campaigns.promise);
+    listAdSets.mockReturnValueOnce(adsets.promise);
+    listAdSetInsights.mockReturnValueOnce(insights.promise);
+
+    const analysis = budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+    for (let i = 0; i < 5; i += 1) {
+      await Promise.resolve();
+    }
+
+    expect(listCampaigns).toHaveBeenCalledTimes(1);
+    expect(listAdSets).toHaveBeenCalledTimes(1);
+    expect(listAdSetInsights).toHaveBeenCalledTimes(1);
+
+    campaigns.resolve([]);
+    adsets.resolve([]);
+    insights.resolve([]);
+    await analysis;
   });
 });

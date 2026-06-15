@@ -16,6 +16,8 @@ const {
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const DEFAULT_SCHEDULE_INTERVAL_MINUTES = 180;
 const DEFAULT_CRON_PROJECT_TIMEOUT_MS = 45000;
+const DEFAULT_CRON_PROJECT_CONCURRENCY = 2;
+const DEFAULT_CRON_ENTITY_CONCURRENCY = 5;
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const MIN_SAMPLE_SPEND = 10;
 const DEFAULT_RULES = {
@@ -303,6 +305,20 @@ function getCronProjectTimeoutMs(value) {
   );
 }
 
+function getCronProjectConcurrency(value) {
+  return getPositiveInteger(
+    value ?? process.env.META_ADS_CRON_PROJECT_CONCURRENCY,
+    DEFAULT_CRON_PROJECT_CONCURRENCY,
+  );
+}
+
+function getCronEntityConcurrency(value) {
+  return getPositiveInteger(
+    value ?? process.env.META_ADS_CRON_ENTITY_CONCURRENCY,
+    DEFAULT_CRON_ENTITY_CONCURRENCY,
+  );
+}
+
 function withTimeout(promise, timeoutMs, message) {
   let timeout;
   const timeoutPromise = new Promise((_, reject) => {
@@ -310,6 +326,21 @@ function withTimeout(promise, timeoutMs, message) {
     timeout.unref?.();
   });
   return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
+}
+
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrency, items.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function isProjectDueForMetaAdsRun(project, now = new Date()) {
@@ -867,23 +898,18 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const until = now.toISOString().slice(0, 10);
   const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const entityConcurrency = getCronEntityConcurrency();
 
-  let campaigns = [];
-  let adsets;
-  let insights;
-  try {
-    campaigns = await listCampaigns({ adAccountId, token, graphVersion });
-  } catch (error) {
+  const campaignsPromise = listCampaigns({ adAccountId, token, graphVersion }).catch((error) => {
     logger.error('[MetaAdsBudget] campaigns fetch failed', {
       projectId,
       adAccountId,
       message: error.message,
       stack: error.stack,
     });
-  }
-  try {
-    adsets = await listAdSets({ adAccountId, token, graphVersion });
-  } catch (error) {
+    return [];
+  });
+  const adsetsPromise = listAdSets({ adAccountId, token, graphVersion }).catch((error) => {
     logger.error('[MetaAdsBudget] adsets fetch failed', {
       projectId,
       adAccountId,
@@ -891,10 +917,14 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       stack: error.stack,
     });
     throw error;
-  }
-  try {
-    insights = await listAdSetInsights({ adAccountId, token, since, until, graphVersion });
-  } catch (error) {
+  });
+  const insightsPromise = listAdSetInsights({
+    adAccountId,
+    token,
+    since,
+    until,
+    graphVersion,
+  }).catch((error) => {
     logger.error('[MetaAdsBudget] insights fetch failed', {
       projectId,
       adAccountId,
@@ -904,107 +934,113 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       stack: error.stack,
     });
     throw error;
-  }
+  });
+  const [campaigns, adsets, insights] = await Promise.all([
+    campaignsPromise,
+    adsetsPromise,
+    insightsPromise,
+  ]);
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
-  const recommendations = [];
 
-  for (const row of insights) {
-    const entityId = row.adset_id;
-    const adset = adsetById.get(entityId);
-    if (!adset) {
-      continue;
-    }
-    const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
-    const campaign = campaignById.get(campaignId);
-    const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
-    const rules = getEffectiveRules({
-      projectRules,
-      ruleGroups: metaAds.ruleGroups,
-      ruleOverrides: metaAds.ruleOverrides,
-      campaignId,
-      adsetId: entityId,
-    });
-    const adsetName = row.adset_name || adset.name;
-    const currentDailyBudget = centsToDailyBudget(adset.daily_budget);
-    const metrics = calculateMetrics(row);
-    const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules });
-    const recentChange = await getRecentChange({
-      projectId,
-      entityId,
-      cooldownHours: rules.cooldownHours,
-    });
-    const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
-
-    await MetaAdsSnapshot.create({
-      tenantId,
-      projectId,
-      adAccountId,
-      level: 'adset',
-      entityId,
-      entityName: adsetName,
-      campaignId,
-      campaignName,
-      campaignObjective: campaign?.objective,
-      dailyBudget: currentDailyBudget,
-      spend: metrics.spend,
-      cpa: metrics.cpa,
-      roas: metrics.roas,
-      resultCount: metrics.resultCount,
-      resultType: metrics.resultType,
-      impressions: metrics.impressions,
-      reach: metrics.reach,
-      frequency: metrics.frequency,
-      clicks: metrics.clicks,
-      ctr: metrics.ctr,
-      cpc: metrics.cpc,
-      cpm: metrics.cpm,
-      videoP75Watched: metrics.videoP75Watched,
-      videoP75Rate: metrics.videoP75Rate,
-      raw: row,
-    });
-
-    await MetaAdsRecommendation.updateMany(
-      {
-        tenantId,
+  const recommendations = (
+    await mapWithConcurrency(insights, entityConcurrency, async (row) => {
+      const entityId = row.adset_id;
+      const adset = adsetById.get(entityId);
+      if (!adset) {
+        return null;
+      }
+      const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
+      const campaign = campaignById.get(campaignId);
+      const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
+      const rules = getEffectiveRules({
+        projectRules,
+        ruleGroups: metaAds.ruleGroups,
+        ruleOverrides: metaAds.ruleOverrides,
+        campaignId,
+        adsetId: entityId,
+      });
+      const adsetName = row.adset_name || adset.name;
+      const currentDailyBudget = centsToDailyBudget(adset.daily_budget);
+      const metrics = calculateMetrics(row);
+      const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules });
+      const recentChange = await getRecentChange({
         projectId,
         entityId,
-        status: 'pending',
-      },
-      {
-        $set: {
-          status: 'ignored',
+        cooldownHours: rules.cooldownHours,
+      });
+      const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
+
+      await MetaAdsSnapshot.create({
+        tenantId,
+        projectId,
+        adAccountId,
+        level: 'adset',
+        entityId,
+        entityName: adsetName,
+        campaignId,
+        campaignName,
+        campaignObjective: campaign?.objective,
+        dailyBudget: currentDailyBudget,
+        spend: metrics.spend,
+        cpa: metrics.cpa,
+        roas: metrics.roas,
+        resultCount: metrics.resultCount,
+        resultType: metrics.resultType,
+        impressions: metrics.impressions,
+        reach: metrics.reach,
+        frequency: metrics.frequency,
+        clicks: metrics.clicks,
+        ctr: metrics.ctr,
+        cpc: metrics.cpc,
+        cpm: metrics.cpm,
+        videoP75Watched: metrics.videoP75Watched,
+        videoP75Rate: metrics.videoP75Rate,
+        raw: row,
+      });
+
+      await MetaAdsRecommendation.updateMany(
+        {
+          tenantId,
+          projectId,
+          entityId,
+          status: 'pending',
         },
-      },
-    );
+        {
+          $set: {
+            status: 'ignored',
+          },
+        },
+      );
 
-    const recommendation = await MetaAdsRecommendation.create({
-      tenantId,
-      projectId,
-      adAccountId,
-      entityLevel: 'adset',
-      entityId,
-      entityName: adsetName,
-      campaignId,
-      campaignName,
-      action: blockedByCooldown ? 'hold' : proposal.action,
-      status: blockedByCooldown ? 'blocked' : 'pending',
-      currentDailyBudget,
-      proposedDailyBudget: proposal.proposedDailyBudget,
-      spend: metrics.spend,
-      cpa: metrics.cpa,
-      roas: metrics.roas,
-      reason: blockedByCooldown ? 'Bloqueado por cooldown de orçamento.' : proposal.reason,
-      mode: metaAds.automationMode || 'recommend',
-    });
-    recommendations.push(recommendation.toObject());
+      const recommendation = await MetaAdsRecommendation.create({
+        tenantId,
+        projectId,
+        adAccountId,
+        entityLevel: 'adset',
+        entityId,
+        entityName: adsetName,
+        campaignId,
+        campaignName,
+        action: blockedByCooldown ? 'hold' : proposal.action,
+        status: blockedByCooldown ? 'blocked' : 'pending',
+        currentDailyBudget,
+        proposedDailyBudget: proposal.proposedDailyBudget,
+        spend: metrics.spend,
+        cpa: metrics.cpa,
+        roas: metrics.roas,
+        reason: blockedByCooldown ? 'Bloqueado por cooldown de orçamento.' : proposal.reason,
+        mode: metaAds.automationMode || 'recommend',
+      });
+      return recommendation.toObject();
+    })
+  ).filter(Boolean);
 
-    if (
-      applyAuto &&
-      metaAds.automationMode === 'auto_limited' &&
-      recommendation.status === 'pending' &&
-      recommendation.action !== 'hold'
-    ) {
+  if (applyAuto && metaAds.automationMode === 'auto_limited') {
+    for (const recommendation of recommendations) {
+      if (recommendation.status !== 'pending' || recommendation.action === 'hold') {
+        continue;
+      }
       await applyRecommendation({
         recommendationId: recommendation._id,
         projectId,
@@ -1209,6 +1245,7 @@ async function runCron(options = {}) {
   }
   const startedAt = Date.now();
   const projectTimeoutMs = getCronProjectTimeoutMs(options.projectTimeoutMs);
+  const projectConcurrency = getCronProjectConcurrency(options.projectConcurrency);
   const projects = await runAsSystem(() =>
     Project.find({
       'metaAds.enabled': true,
@@ -1218,17 +1255,15 @@ async function runCron(options = {}) {
   logger.info('[MetaAdsBudgetCron] Started', {
     projects: projects.length,
     projectTimeoutMs,
+    projectConcurrency,
   });
-  const results = [];
-  for (const project of projects) {
+  const results = await mapWithConcurrency(projects, projectConcurrency, async (project) => {
     const projectStartedAt = Date.now();
     if (!(await isMetaAdsFeatureEnabled(project.tenantId))) {
-      results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'disabled' });
-      continue;
+      return { projectId: project.projectId, ok: true, skipped: true, reason: 'disabled' };
     }
     if (!isProjectDueForMetaAdsRun(project)) {
-      results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'not_due' });
-      continue;
+      return { projectId: project.projectId, ok: true, skipped: true, reason: 'not_due' };
     }
     try {
       logger.info('[MetaAdsBudgetCron] Project started', {
@@ -1249,16 +1284,16 @@ async function runCron(options = {}) {
         projectId: project.projectId,
         durationMs: Date.now() - projectStartedAt,
       });
-      results.push(result);
+      return result;
     } catch (error) {
       logger.error('[MetaAdsBudgetCron] Project failed', {
         projectId: project.projectId,
         error: error.message,
         durationMs: Date.now() - projectStartedAt,
       });
-      results.push({ projectId: project.projectId, ok: false, error: error.message });
+      return { projectId: project.projectId, ok: false, error: error.message };
     }
-  }
+  });
   logger.info('[MetaAdsBudgetCron] Finished', {
     projects: results.length,
     failed: results.filter((result) => result.ok === false).length,

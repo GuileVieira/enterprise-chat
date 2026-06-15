@@ -27,4 +27,6 @@ Notes:
   - `CONSOLE_JSON=true`
   - `META_ADS_GRAPH_TIMEOUT_MS=30000` (optional; per Meta Graph request)
   - `META_ADS_CRON_PROJECT_TIMEOUT_MS=45000` (optional; per project)
+  - `META_ADS_CRON_PROJECT_CONCURRENCY=2` (optional; parallel projects)
+  - `META_ADS_CRON_ENTITY_CONCURRENCY=5` (optional; parallel ad set analysis per project)
 - Enable the feature in config with `interface.metaAds: true`.
