@@ -98,6 +98,7 @@ describe('ProjectMetaAdsPanel', () => {
   it('accepts numeric ad account input and saves a pasted project token outside metaAds', async () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
     const token = `EAA${'a'.repeat(48)}`;
     fireEvent.change(screen.getByPlaceholderText('123456789'), {
       target: { value: '123-456-789' },
@@ -139,6 +140,7 @@ describe('ProjectMetaAdsPanel', () => {
   it('saves a selected schedule interval', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
     fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_schedule_180'), {
       target: { value: '30' },
     });
@@ -159,6 +161,7 @@ describe('ProjectMetaAdsPanel', () => {
   it('saves a project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
     fireEvent.change(screen.getByPlaceholderText('v25.0'), {
       target: { value: 'v23.0' },
     });
@@ -315,9 +318,12 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    expect(screen.getByText('com_ui_project_meta_ads_delivery')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_campaign')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_results')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_rule')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_recommendation')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_budget_mode')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_reach')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_impressions')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_video_p75')).toBeInTheDocument();
     expect(screen.getAllByText('CBO').length).toBeGreaterThan(0);
     expect(screen.getAllByText('ABO').length).toBeGreaterThan(0);
@@ -729,6 +735,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_tenant_token_configured')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
     expect(screen.getByText('********')).toBeInTheDocument();
   });
 
@@ -764,6 +771,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getByText('com_ui_project_meta_ads_project_token_configured'),
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_use_tenant_token'));
     fireEvent.click(screen.getByText('com_ui_save'));
 
