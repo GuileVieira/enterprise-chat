@@ -907,6 +907,8 @@ describe('Meta Ads budget service persistence safety', () => {
         entityId: 'campaign-1',
         previousDailyBudget: 70,
         newDailyBudget: 100,
+        deltaDailyBudget: 30,
+        deltaPercent: 42.86,
         reason: 'Manual scale',
       }),
     );

@@ -354,6 +354,9 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_budget_defined')).toBeInTheDocument();
     fireEvent.click(within(cboCampaignRow as HTMLElement).getByText('R$ 100,00'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('15% = R$ 115,00')).toBeInTheDocument();
+    expect(screen.getByText('20% = R$ 120,00')).toBeInTheDocument();
+    expect(screen.getByText('30% = R$ 130,00')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });
@@ -475,9 +478,7 @@ describe('ProjectMetaAdsPanel', () => {
     const aboAdSetRow = screen.getByText('Visible ABO audience').closest('tr');
     expect(aboAdSetRow).not.toBeNull();
 
-    fireEvent.click(
-      within(aboAdSetRow as HTMLElement).getByText('com_ui_project_meta_ads_edit_budget'),
-    );
+    fireEvent.click(within(aboAdSetRow as HTMLElement).getByText('R$ 70,00'));
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '90' },
     });
@@ -641,7 +642,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_edit_budget'));
+    fireEvent.click(screen.getByText('R$ 100,00'));
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });
@@ -674,6 +675,8 @@ describe('ProjectMetaAdsPanel', () => {
         entityLevel: 'campaign',
         previousDailyBudget: 100,
         newDailyBudget: 125,
+        deltaDailyBudget: 25,
+        deltaPercent: 25,
         actor: 'user',
         reason: 'manual-ui',
         createdAt: '2026-06-12T12:00:00.000Z',
@@ -685,6 +688,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
     expect(screen.getByText('CBO Messages')).toBeInTheDocument();
     expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
+    expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();
   });
 
   it('edits and removes existing rule groups', () => {

@@ -122,6 +122,8 @@ export type ProjectMetaAdsBudgetChange = {
   campaignName?: string;
   previousDailyBudget?: number;
   newDailyBudget?: number;
+  deltaDailyBudget?: number;
+  deltaPercent?: number | null;
   actor?: 'cron' | 'user' | 'tool';
   reason?: string;
   createdAt?: string;

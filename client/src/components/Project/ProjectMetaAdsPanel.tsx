@@ -4,6 +4,7 @@ import { useToastContext } from '@librechat/client';
 import type {
   TProject,
   ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsBudgetChange,
   ProjectMetaAdsManualBudgetPayload,
   ProjectMetaAdsRecommendation,
 } from 'librechat-data-provider';
@@ -108,6 +109,59 @@ function formatMoney(value: number | null | undefined, currency = 'BRL') {
     style: 'currency',
     currency,
   }).format(value);
+}
+
+function formatSignedMoney(value: number | null | undefined, currency = 'BRL') {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+  return `${sign}${formatMoney(Math.abs(value), currency)}`;
+}
+
+function formatSignedPercent(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+  return `${sign}${Math.abs(value).toFixed(2)}%`;
+}
+
+function buildBudgetReferences(currentBudget: number | null | undefined, currency = 'BRL') {
+  const current = Number(currentBudget);
+  if (!Number.isFinite(current) || current <= 0) {
+    return [];
+  }
+  return [15, 20, 30].map((percent) => ({
+    percent,
+    label: `${percent}% = ${formatMoney(current * (1 + percent / 100), currency)}`,
+  }));
+}
+
+function getBudgetChangeDelta(change: ProjectMetaAdsBudgetChange) {
+  if (change.deltaDailyBudget != null) {
+    return {
+      deltaDailyBudget: change.deltaDailyBudget,
+      deltaPercent: change.deltaPercent ?? null,
+    };
+  }
+  const previous = Number(change.previousDailyBudget);
+  const next = Number(change.newDailyBudget);
+  if (!Number.isFinite(next)) {
+    return {
+      deltaDailyBudget: null,
+      deltaPercent: null,
+    };
+  }
+  const deltaDailyBudget = Number((next - (Number.isFinite(previous) ? previous : 0)).toFixed(2));
+  const deltaPercent =
+    Number.isFinite(previous) && previous > 0
+      ? Number(((deltaDailyBudget / previous) * 100).toFixed(2))
+      : null;
+  return {
+    deltaDailyBudget,
+    deltaPercent,
+  };
 }
 
 function buildCampaignFallback(
@@ -659,7 +713,11 @@ export default function ProjectMetaAdsPanel({
               <span className="text-text-tertiary">·</span>
               <span>{settings.automationMode}</span>
               <span className="text-text-tertiary">·</span>
-              <span>{settings.scheduleIntervalMinutes} min</span>
+              <span>
+                {localize('com_ui_project_meta_ads_schedule_minutes', {
+                  0: String(settings.scheduleIntervalMinutes),
+                })}
+              </span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1099,6 +1157,20 @@ export default function ProjectMetaAdsPanel({
                     {formatMoney(budgetEditor.currentBudget, currency)}
                   </span>
                 </div>
+                {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
+                      (reference) => (
+                        <div
+                          key={reference.percent}
+                          className="border border-border-light bg-surface-secondary p-2 text-center font-mono text-xs text-text-secondary"
+                        >
+                          {reference.label}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
               </div>
               <label className="mt-4 flex flex-col gap-1 text-xs text-text-secondary">
                 {localize('com_ui_project_meta_ads_new_budget')}
@@ -1243,6 +1315,9 @@ export default function ProjectMetaAdsPanel({
                 </th>
                 <th className="w-28 px-2 py-2">{localize('com_ui_project_meta_ads_delivery')}</th>
                 <th className="w-64 px-2 py-2">{localize('com_ui_project_meta_ads_campaign')}</th>
+                <th className="w-28 px-2 py-2 text-right">
+                  {localize('com_ui_project_meta_ads_budget_defined')}
+                </th>
                 <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_objective')}</th>
                 <th className="w-24 px-2 py-2">
                   {localize('com_ui_project_meta_ads_budget_mode')}
@@ -1258,9 +1333,6 @@ export default function ProjectMetaAdsPanel({
                 </th>
                 <th className="w-28 px-2 py-2 text-right">
                   {localize('com_ui_project_meta_ads_spend')}
-                </th>
-                <th className="w-28 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_budget_defined')}
                 </th>
                 <th className="w-20 px-2 py-2 text-right">CTR</th>
                 <th className="w-20 px-2 py-2 text-right">
@@ -1338,6 +1410,27 @@ export default function ProjectMetaAdsPanel({
                       <td className="truncate px-2 py-2 font-medium text-text-primary">
                         {campaign.campaignName ?? campaign.campaignId}
                       </td>
+                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                        {campaign.editableBudgetLevel === 'campaign' ? (
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() =>
+                              onOpenBudgetEditor({
+                                entityLevel: 'campaign',
+                                entityId: campaign.campaignId,
+                                entityName: campaign.campaignName,
+                                currentBudget: campaign.dailyBudget,
+                              })
+                            }
+                            className="border border-border-light bg-surface-secondary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+                          >
+                            {formatMoney(campaign.dailyBudget, currency)}
+                          </button>
+                        ) : (
+                          formatMoney(campaign.dailyBudget, currency)
+                        )}
+                      </td>
                       <td className="truncate px-2 py-2 text-text-secondary">
                         {campaign.objective ?? '-'}
                       </td>
@@ -1355,27 +1448,6 @@ export default function ProjectMetaAdsPanel({
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMoney(campaign.spend, currency)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {campaign.editableBudgetLevel === 'campaign' ? (
-                          <button
-                            type="button"
-                            disabled={!canEdit}
-                            onClick={() =>
-                              onOpenBudgetEditor({
-                                entityLevel: 'campaign',
-                                entityId: campaign.campaignId,
-                                entityName: campaign.campaignName,
-                                currentBudget: campaign.dailyBudget,
-                              })
-                            }
-                            className="font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-                          >
-                            {formatMoney(campaign.dailyBudget, currency)}
-                          </button>
-                        ) : (
-                          formatMoney(campaign.dailyBudget, currency)
-                        )}
                       </td>
                       <td className="px-2 py-2 text-right font-mono text-text-secondary">
                         {formatMetric(campaign.ctr)}
@@ -1409,23 +1481,6 @@ export default function ProjectMetaAdsPanel({
                               {localize('com_ui_project_meta_ads_apply')}
                             </button>
                           )}
-                          {campaign.editableBudgetLevel === 'campaign' && (
-                            <button
-                              type="button"
-                              disabled={!canEdit}
-                              onClick={() =>
-                                onOpenBudgetEditor({
-                                  entityLevel: 'campaign',
-                                  entityId: campaign.campaignId,
-                                  entityName: campaign.campaignName,
-                                  currentBudget: campaign.dailyBudget,
-                                })
-                              }
-                              className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {localize('com_ui_project_meta_ads_edit_budget')}
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -1454,6 +1509,27 @@ export default function ProjectMetaAdsPanel({
                             <td className="truncate px-2 py-2 text-text-primary">
                               {adset.entityName ?? adset.entityId}
                             </td>
+                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                              {campaign.editableBudgetLevel === 'adset' ? (
+                                <button
+                                  type="button"
+                                  disabled={!canEdit}
+                                  onClick={() =>
+                                    onOpenBudgetEditor({
+                                      entityLevel: 'adset',
+                                      entityId: adset.entityId,
+                                      entityName: adset.entityName,
+                                      currentBudget: adset.dailyBudget,
+                                    })
+                                  }
+                                  className="border border-border-light bg-surface-primary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+                                >
+                                  {formatMoney(adset.dailyBudget, currency)}
+                                </button>
+                              ) : (
+                                formatMoney(adset.dailyBudget, currency)
+                              )}
+                            </td>
                             <td className="px-2 py-2 text-text-tertiary">-</td>
                             <td className="px-2 py-2 text-text-secondary">
                               {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
@@ -1469,27 +1545,6 @@ export default function ProjectMetaAdsPanel({
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMoney(adset.spend, currency)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {campaign.editableBudgetLevel === 'adset' ? (
-                                <button
-                                  type="button"
-                                  disabled={!canEdit}
-                                  onClick={() =>
-                                    onOpenBudgetEditor({
-                                      entityLevel: 'adset',
-                                      entityId: adset.entityId,
-                                      entityName: adset.entityName,
-                                      currentBudget: adset.dailyBudget,
-                                    })
-                                  }
-                                  className="font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-                                >
-                                  {formatMoney(adset.dailyBudget, currency)}
-                                </button>
-                              ) : (
-                                formatMoney(adset.dailyBudget, currency)
-                              )}
                             </td>
                             <td className="px-2 py-2 text-right font-mono text-text-secondary">
                               {formatMetric(adset.ctr)}
@@ -1525,23 +1580,6 @@ export default function ProjectMetaAdsPanel({
                                     {localize('com_ui_project_meta_ads_apply')}
                                   </button>
                                 )}
-                                {campaign.editableBudgetLevel === 'adset' && (
-                                  <button
-                                    type="button"
-                                    disabled={!canEdit}
-                                    onClick={() =>
-                                      onOpenBudgetEditor({
-                                        entityLevel: 'adset',
-                                        entityId: adset.entityId,
-                                        entityName: adset.entityName,
-                                        currentBudget: adset.dailyBudget,
-                                      })
-                                    }
-                                    className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {localize('com_ui_project_meta_ads_edit_budget')}
-                                  </button>
-                                )}
                               </div>
                             </td>
                           </tr>
@@ -1566,26 +1604,36 @@ export default function ProjectMetaAdsPanel({
         </h4>
         <div className="mt-3 space-y-2">
           {(statusQuery.data?.changes ?? []).length > 0 ? (
-            (statusQuery.data?.changes ?? []).slice(0, 8).map((change) => (
-              <div
-                key={change._id ?? `${change.entityId}-${change.createdAt}`}
-                className="flex flex-col gap-1 border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-text-primary">
-                    {change.entityName ?? change.entityId}
+            (statusQuery.data?.changes ?? []).slice(0, 8).map((change) => {
+              const delta = getBudgetChangeDelta(change);
+              return (
+                <div
+                  key={change._id ?? `${change.entityId}-${change.createdAt}`}
+                  className="flex flex-col gap-1 border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-text-primary">
+                      {change.entityName ?? change.entityId}
+                    </div>
+                    <div className="text-xs text-text-secondary">
+                      {change.actor ?? '-'} · {change.reason ?? '-'}
+                    </div>
                   </div>
-                  <div className="text-xs text-text-secondary">
-                    {change.actor ?? '-'} · {change.reason ?? '-'}
+                  <div className="text-left sm:text-right">
+                    <div className="font-mono text-xs text-text-secondary">
+                      {formatMoney(change.previousDailyBudget, currency)}
+                      {' -> '}
+                      {formatMoney(change.newDailyBudget, currency)}
+                    </div>
+                    {delta.deltaDailyBudget != null && (
+                      <div className="mt-1 font-mono text-[11px] text-text-tertiary">
+                        {`${formatSignedMoney(delta.deltaDailyBudget, currency)} · ${formatSignedPercent(delta.deltaPercent)}`}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="font-mono text-xs text-text-secondary">
-                  {formatMoney(change.previousDailyBudget, currency)}
-                  {' -> '}
-                  {formatMoney(change.newDailyBudget, currency)}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="border border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
               {localize('com_ui_project_meta_ads_no_history')}

@@ -106,8 +106,20 @@ function getModels() {
       { timestamps: true },
     );
 
+  const existingChangeSchema = mongoose.models.MetaAdsBudgetChange?.schema;
+  if (
+    existingChangeSchema &&
+    typeof existingChangeSchema.path === 'function' &&
+    typeof existingChangeSchema.add === 'function' &&
+    !existingChangeSchema.path('deltaDailyBudget')
+  ) {
+    existingChangeSchema.add({
+      deltaDailyBudget: Number,
+      deltaPercent: Number,
+    });
+  }
   const changeSchema =
-    mongoose.models.MetaAdsBudgetChange?.schema ||
+    existingChangeSchema ||
     new mongoose.Schema(
       {
         tenantId: { type: String, index: true },
@@ -121,6 +133,8 @@ function getModels() {
         campaignName: String,
         previousDailyBudget: Number,
         newDailyBudget: Number,
+        deltaDailyBudget: Number,
+        deltaPercent: Number,
         actor: { type: String, enum: ['cron', 'user', 'tool'], required: true },
         actorUserId: String,
         reason: String,
@@ -149,6 +163,27 @@ function centsToDailyBudget(value) {
 
 function dailyBudgetToCents(value) {
   return Math.max(1, Math.round(Number(value) * 100));
+}
+
+function calculateBudgetDelta(previousDailyBudget, nextDailyBudget) {
+  const previous = Number(previousDailyBudget);
+  const next = Number(nextDailyBudget);
+  if (!Number.isFinite(next)) {
+    return {
+      deltaDailyBudget: null,
+      deltaPercent: null,
+    };
+  }
+  const deltaDailyBudget = Number((next - (Number.isFinite(previous) ? previous : 0)).toFixed(2));
+  const deltaPercent =
+    Number.isFinite(previous) && previous > 0
+      ? Number(((deltaDailyBudget / previous) * 100).toFixed(2))
+      : null;
+
+  return {
+    deltaDailyBudget,
+    deltaPercent,
+  };
 }
 
 function mergeRules(metaAds = {}) {
@@ -761,6 +796,10 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
       daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
     },
   });
+  const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
+    recommendation.currentDailyBudget,
+    recommendation.proposedDailyBudget,
+  );
   await MetaAdsBudgetChange.create({
     tenantId: recommendation.tenantId,
     projectId: recommendation.projectId,
@@ -770,6 +809,8 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     entityName: recommendation.entityName,
     previousDailyBudget: recommendation.currentDailyBudget,
     newDailyBudget: recommendation.proposedDailyBudget,
+    deltaDailyBudget,
+    deltaPercent,
     actor,
     actorUserId,
     reason: recommendation.reason,
@@ -1117,6 +1158,10 @@ async function applyManualBudgetChange({
   });
 
   const { MetaAdsBudgetChange } = getModels();
+  const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
+    currentBudget?.dailyBudget,
+    nextDailyBudget,
+  );
   const change = await MetaAdsBudgetChange.create({
     tenantId: projectTenantId,
     projectId,
@@ -1126,6 +1171,8 @@ async function applyManualBudgetChange({
     entityName,
     previousDailyBudget: currentBudget?.dailyBudget,
     newDailyBudget: nextDailyBudget,
+    deltaDailyBudget,
+    deltaPercent,
     actor,
     actorUserId,
     reason,
