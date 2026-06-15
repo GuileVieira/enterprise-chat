@@ -401,7 +401,7 @@ describe('ProjectMetaAdsPanel', () => {
       .closest('[data-testid="meta-ads-campaign-row"]');
     expect(cboCampaignRow).not.toBeNull();
 
-    expect(screen.getByText('com_ui_project_meta_ads_budget_defined')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_budget_defined').length).toBeGreaterThan(0);
     fireEvent.click(within(cboCampaignRow as HTMLElement).getByText('R$ 100,00'));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('15% = R$ 115,00')).toBeInTheDocument();
@@ -649,6 +649,38 @@ describe('ProjectMetaAdsPanel', () => {
     expect(rows[0]).toHaveTextContent('Low Spend CBO');
     expect(screen.queryByText('High Spend ABO')).not.toBeInTheDocument();
     expect(screen.queryByText('Hidden CBO')).not.toBeInTheDocument();
+  });
+
+  it('sorts campaigns from the table header', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-low-frequency',
+        campaignName: 'Low Frequency',
+        frequency: 2,
+        spend: 50,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-high-frequency',
+        campaignName: 'High Frequency',
+        frequency: 6,
+        spend: 300,
+        dailyBudget: 70,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_project_meta_ads_frequency' }));
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows[0]).toHaveTextContent('High Frequency');
+    expect(rows[1]).toHaveTextContent('Low Frequency');
   });
 
   it('shows period dashboard summary and requests the selected period', () => {

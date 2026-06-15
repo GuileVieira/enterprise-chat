@@ -257,16 +257,43 @@ function getRequestErrorMessage(error: unknown, fallback: string) {
 }
 
 function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: string) {
+  if (key === 'budget') {
+    return campaign.dailyBudget ?? 0;
+  }
+  if (key === 'frequency') {
+    return campaign.frequency ?? 0;
+  }
   if (key === 'spend') {
     return campaign.spend ?? 0;
   }
   if (key === 'cpa') {
-    return campaign.cpa ?? Number.MAX_SAFE_INTEGER;
+    return campaign.cpa;
   }
   if (key === 'result') {
     return campaign.resultCount ?? 0;
   }
+  if (key === 'ctr') {
+    return campaign.ctr ?? 0;
+  }
+  if (key === 'clicks') {
+    return campaign.clicks ?? 0;
+  }
   return campaign.campaignName ?? campaign.campaignId;
+}
+
+function compareNumberSort(
+  left: ProjectMetaAdsCampaignSummary,
+  right: ProjectMetaAdsCampaignSummary,
+  key: string,
+  direction: 'asc' | 'desc',
+) {
+  const leftRaw = getMetricValue(left, key);
+  const rightRaw = getMetricValue(right, key);
+  const emptyValue = key === 'cpa' && direction === 'asc' ? Infinity : -Infinity;
+  const leftValue = typeof leftRaw === 'number' && Number.isFinite(leftRaw) ? leftRaw : emptyValue;
+  const rightValue =
+    typeof rightRaw === 'number' && Number.isFinite(rightRaw) ? rightRaw : emptyValue;
+  return direction === 'asc' ? leftValue - rightValue : rightValue - leftValue;
 }
 
 function getRecommendationLabel(
@@ -370,19 +397,60 @@ export default function ProjectMetaAdsPanel({
       return matchesSearch && matchesMode;
     })
     .sort((first, second) => {
-      if (campaignSort === 'spend_desc') {
-        return Number(getMetricValue(second, 'spend')) - Number(getMetricValue(first, 'spend'));
+      const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
+      if (key === 'name') {
+        const result = String(getMetricValue(first, 'name')).localeCompare(
+          String(getMetricValue(second, 'name')),
+        );
+        return direction === 'desc' ? -result : result;
       }
-      if (campaignSort === 'cpa_asc') {
-        return Number(getMetricValue(first, 'cpa')) - Number(getMetricValue(second, 'cpa'));
-      }
-      if (campaignSort === 'result_desc') {
-        return Number(getMetricValue(second, 'result')) - Number(getMetricValue(first, 'result'));
-      }
-      return String(getMetricValue(first, 'name')).localeCompare(
-        String(getMetricValue(second, 'name')),
-      );
+      return compareNumberSort(first, second, key, direction);
     });
+
+  const onSortColumn = (key: string, defaultDirection: 'asc' | 'desc') => {
+    const [activeKey, activeDirection = defaultDirection] = campaignSort.split('_') as [
+      string,
+      'asc' | 'desc',
+    ];
+    const nextDirection =
+      activeKey === key && activeDirection === defaultDirection
+        ? defaultDirection === 'asc'
+          ? 'desc'
+          : 'asc'
+        : defaultDirection;
+    setCampaignSort(`${key}_${nextDirection}`);
+  };
+
+  const renderSortableHeader = ({
+    key,
+    label,
+    className,
+    defaultDirection = 'desc',
+  }: {
+    key: string;
+    label: string;
+    className?: string;
+    defaultDirection?: 'asc' | 'desc';
+  }) => {
+    const [activeKey, activeDirection] = campaignSort.split('_') as [string, 'asc' | 'desc'];
+    const isActive = activeKey === key;
+    return (
+      <button
+        type="button"
+        onClick={() => onSortColumn(key, defaultDirection)}
+        className={`inline-flex w-full items-center gap-1 text-xs font-semibold uppercase text-text-tertiary hover:text-text-primary ${
+          className ?? ''
+        }`}
+      >
+        <span>{label}</span>
+        {isActive && (
+          <span aria-hidden="true" className="text-text-primary">
+            {activeDirection === 'asc' ? '↑' : '↓'}
+          </span>
+        )}
+      </button>
+    );
+  };
 
   const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setSettings((current) => ({
@@ -1055,9 +1123,17 @@ export default function ProjectMetaAdsPanel({
                   className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
                 >
                   <option value="name_asc">{localize('com_ui_name')}</option>
+                  <option value="budget_desc">
+                    {localize('com_ui_project_meta_ads_budget_defined')}
+                  </option>
+                  <option value="frequency_desc">
+                    {localize('com_ui_project_meta_ads_frequency')}
+                  </option>
                   <option value="spend_desc">{localize('com_ui_project_meta_ads_spend')}</option>
                   <option value="cpa_asc">{localize('com_ui_project_meta_ads_cost_result')}</option>
                   <option value="result_desc">{localize('com_ui_project_meta_ads_result')}</option>
+                  <option value="ctr_desc">CTR</option>
+                  <option value="clicks_desc">{localize('com_ui_project_meta_ads_clicks')}</option>
                 </select>
               </label>
             </div>
@@ -1375,29 +1451,66 @@ export default function ProjectMetaAdsPanel({
                   </span>
                 </th>
                 <th className="w-28 px-2 py-2">{localize('com_ui_project_meta_ads_delivery')}</th>
-                <th className="w-64 px-2 py-2">{localize('com_ui_project_meta_ads_campaign')}</th>
+                <th className="w-64 px-2 py-2">
+                  {renderSortableHeader({
+                    key: 'name',
+                    label: localize('com_ui_project_meta_ads_campaign'),
+                    defaultDirection: 'asc',
+                  })}
+                </th>
                 <th className="w-28 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_budget_defined')}
+                  {renderSortableHeader({
+                    key: 'budget',
+                    label: localize('com_ui_project_meta_ads_budget_defined'),
+                    className: 'justify-end text-right',
+                  })}
                 </th>
                 <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_objective')}</th>
                 <th className="w-24 px-2 py-2">
                   {localize('com_ui_project_meta_ads_budget_mode')}
                 </th>
                 <th className="w-24 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_frequency')}
+                  {renderSortableHeader({
+                    key: 'frequency',
+                    label: localize('com_ui_project_meta_ads_frequency'),
+                    className: 'justify-end text-right',
+                  })}
                 </th>
                 <th className="w-24 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_results')}
+                  {renderSortableHeader({
+                    key: 'result',
+                    label: localize('com_ui_project_meta_ads_results'),
+                    className: 'justify-end text-right',
+                  })}
                 </th>
                 <th className="w-28 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_cost_result')}
+                  {renderSortableHeader({
+                    key: 'cpa',
+                    label: localize('com_ui_project_meta_ads_cost_result'),
+                    className: 'justify-end text-right',
+                    defaultDirection: 'asc',
+                  })}
                 </th>
                 <th className="w-28 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_spend')}
+                  {renderSortableHeader({
+                    key: 'spend',
+                    label: localize('com_ui_project_meta_ads_spend'),
+                    className: 'justify-end text-right',
+                  })}
                 </th>
-                <th className="w-20 px-2 py-2 text-right">CTR</th>
                 <th className="w-20 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_clicks')}
+                  {renderSortableHeader({
+                    key: 'ctr',
+                    label: 'CTR',
+                    className: 'justify-end text-right',
+                  })}
+                </th>
+                <th className="w-20 px-2 py-2 text-right">
+                  {renderSortableHeader({
+                    key: 'clicks',
+                    label: localize('com_ui_project_meta_ads_clicks'),
+                    className: 'justify-end text-right',
+                  })}
                 </th>
                 <th className="w-24 px-2 py-2 text-right">
                   {localize('com_ui_project_meta_ads_video_p75')}
