@@ -2032,6 +2032,7 @@
   "com_ui_project_meta_ads_period_last_7d": "Last 7 days",
   "com_ui_project_meta_ads_period_last_14d": "Last 14 days",
   "com_ui_project_meta_ads_period_last_30d": "Last 30 days",
+  "com_ui_project_meta_ads_loading": "Loading Meta Ads data...",
   "com_ui_project_meta_ads_total_spend": "Total spend",
   "com_ui_project_meta_ads_total_results": "Total results",
   "com_ui_project_meta_ads_average_cost": "Avg. cost",

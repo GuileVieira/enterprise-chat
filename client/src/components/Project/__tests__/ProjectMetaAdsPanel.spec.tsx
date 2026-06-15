@@ -12,9 +12,11 @@ const mockMutateBudget = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
+let mockStatusQueryState = {};
 const mockUseProjectMetaAdsQuery = jest.fn(() => ({
   data: mockStatusData,
   refetch: mockRefetchStatus,
+  ...mockStatusQueryState,
 }));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
@@ -85,6 +87,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.recommendations = [];
     mockStatusData.changes = [];
     mockStatusData.summary = undefined;
+    mockStatusQueryState = {};
     mockUseProjectMetaAdsQuery.mockClear();
     delete mockStatusData.campaigns;
     delete mockStatusData.credentials;
@@ -93,6 +96,20 @@ describe('ProjectMetaAdsPanel', () => {
       source: 'global',
     };
     mockStartupConfig.interface.metaAdsTrafficAgentId = 'traffic-agent-1';
+  });
+
+  it('shows a loading indicator while Meta Ads status is being fetched', () => {
+    mockStatusQueryState = {
+      data: undefined,
+      isLoading: true,
+      isFetching: true,
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_loading')).toBeInTheDocument();
+    expect(screen.getAllByTestId('meta-ads-summary-skeleton')).toHaveLength(4);
+    expect(screen.getAllByTestId('meta-ads-row-skeleton')).toHaveLength(5);
   });
 
   it('accepts numeric ad account input and saves a pasted project token outside metaAds', async () => {

@@ -233,6 +233,8 @@ export default function ProjectMetaAdsPanel({
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
+  const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
+  const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
 
   useEffect(() => {
     setSettings(normalizeSettings(project));
@@ -878,6 +880,15 @@ export default function ProjectMetaAdsPanel({
         )}
 
         <div className="flex flex-col gap-3 border-b border-border-light p-3">
+          {isStatusLoading && (
+            <div
+              role="status"
+              className="flex items-center gap-2 border border-border-light bg-surface-secondary px-3 py-2 text-xs text-text-secondary"
+            >
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+              <span>{localize('com_ui_project_meta_ads_loading')}</span>
+            </div>
+          )}
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="grid gap-2 md:grid-cols-4 lg:flex lg:items-end">
               <label className="flex flex-col gap-1 text-xs text-text-secondary">
@@ -973,9 +984,16 @@ export default function ProjectMetaAdsPanel({
                 <div className="text-[11px] uppercase text-text-tertiary">
                   {localize(labelKey as TranslationKeys)}
                 </div>
-                <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
-                  {value}
-                </div>
+                {isInitialStatusLoading ? (
+                  <div
+                    data-testid="meta-ads-summary-skeleton"
+                    className="mt-2 h-6 w-24 animate-pulse bg-surface-secondary"
+                  />
+                ) : (
+                  <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
+                    {value}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1239,6 +1257,25 @@ export default function ProjectMetaAdsPanel({
               </tr>
             </thead>
             <tbody>
+              {isInitialStatusLoading &&
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr
+                    key={`meta-ads-row-skeleton-${index}`}
+                    data-testid="meta-ads-row-skeleton"
+                    className="border-b border-border-light"
+                  >
+                    <td className="px-2 py-3" colSpan={17}>
+                      <div className="flex items-center gap-4">
+                        <div className="h-4 w-4 animate-pulse bg-surface-secondary" />
+                        <div className="h-4 w-10 animate-pulse bg-surface-secondary" />
+                        <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
+                        <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
+                        <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
+                        <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               {filteredCampaigns.map((campaign) => {
                 const expanded =
                   campaign.budgetMode === 'ABO'
@@ -1457,7 +1494,7 @@ export default function ProjectMetaAdsPanel({
               })}
             </tbody>
           </table>
-          {filteredCampaigns.length === 0 && (
+          {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
             <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
               {localize('com_ui_project_meta_ads_no_snapshots')}
             </div>
