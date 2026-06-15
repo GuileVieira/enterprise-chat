@@ -80,6 +80,30 @@ describe('projectMetaAds settings normalization', () => {
     ).toThrow('Invalid Meta Ads budget rules.');
   });
 
+  it('normalizes creative frequency alert rules separately from budget rules', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        creativeRules: {
+          maxFrequency: 6,
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        creativeRules: {
+          maxFrequency: 6,
+        },
+      }),
+    );
+
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        creativeRules: {
+          maxFrequency: -1,
+        },
+      }),
+    ).toThrow('Invalid Meta Ads creative rules.');
+  });
+
   it('normalizes enabled rule overrides without saving unknown keys', () => {
     expect(
       router._normalizeMetaAdsForTest({

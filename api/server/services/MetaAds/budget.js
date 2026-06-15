@@ -30,6 +30,9 @@ const DEFAULT_RULES = {
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
 };
+const DEFAULT_CREATIVE_RULES = {
+  maxFrequency: 5,
+};
 const RULE_LIMITS = {
   targetCpa: { min: 0.01 },
   minRoas: { min: 0 },
@@ -39,6 +42,9 @@ const RULE_LIMITS = {
   maxDailyBudget: { min: 0.01 },
   cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
+};
+const CREATIVE_RULE_LIMITS = {
+  maxFrequency: { min: 0 },
 };
 
 function getProjectMetaTokenSecretName(projectId) {
@@ -263,6 +269,30 @@ function validateMetaAdsRules(rules = {}) {
   }
   if (errors.length > 0) {
     throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: [...new Set(errors)],
+    });
+  }
+  return validated;
+}
+
+function validateMetaAdsCreativeRules(rules = {}) {
+  const merged = { ...DEFAULT_CREATIVE_RULES, ...(rules ?? {}) };
+  const validated = {};
+  const errors = [];
+  for (const [key, limits] of Object.entries(CREATIVE_RULE_LIMITS)) {
+    const value = Number(merged[key]);
+    validated[key] = value;
+    if (
+      !Number.isFinite(value) ||
+      value < limits.min ||
+      (limits.max != null && value > limits.max)
+    ) {
+      errors.push(key);
+    }
+  }
+  if (errors.length > 0) {
+    throw Object.assign(new Error('Invalid Meta Ads creative rules.'), {
       statusCode: 400,
       details: [...new Set(errors)],
     });
@@ -664,7 +694,7 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   return {};
 }
 
-function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
+function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules, creativeRules }) {
   if (!currentDailyBudget || spend < rules.minSpend) {
     return {
       action: 'hold',
@@ -677,8 +707,24 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
   const roasGood = roas != null && roas >= rules.minRoas;
   const cpaBad = cpa != null && cpa > rules.targetCpa;
   const roasBad = roas != null && roas < rules.minRoas;
+  const maxFrequency = Number(creativeRules?.maxFrequency);
+  const hasHighFrequency =
+    Number.isFinite(maxFrequency) &&
+    maxFrequency > 0 &&
+    frequency != null &&
+    Number.isFinite(Number(frequency)) &&
+    Number(frequency) > maxFrequency;
 
   if (cpaGood && roasGood) {
+    if (hasHighFrequency) {
+      return {
+        action: 'hold',
+        proposedDailyBudget: currentDailyBudget,
+        reason: `Frequência ${Number(frequency).toFixed(2)} acima do limite ${maxFrequency.toFixed(
+          2,
+        )}. Alerta criativo: revisar ou trocar criativo antes de aumentar orçamento.`,
+      };
+    }
     const proposed = Math.min(
       rules.maxDailyBudget,
       currentDailyBudget * (1 + rules.maxIncreasePct / 100),
@@ -858,6 +904,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     projectId: recommendation.projectId,
     adAccountId: recommendation.adAccountId,
     recommendationId: String(recommendation._id),
+    entityLevel: recommendation.entityLevel,
     entityId: recommendation.entityId,
     entityName: recommendation.entityName,
     previousDailyBudget: recommendation.currentDailyBudget,
@@ -891,6 +938,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     throw new Error('Project Meta Ads account is not configured.');
   }
   const projectRules = mergeRules(metaAds);
+  const creativeRules = validateMetaAdsCreativeRules(metaAds.creativeRules);
   const tenantId = getProjectTenantId(project);
   const token = await getAccessToken(tenantId, metaAds);
   const now = new Date();
@@ -942,6 +990,15 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   ]);
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
+  const adsetsByCampaignId = new Map();
+  for (const adset of adsets) {
+    const campaignId = adset.campaign_id || adset.campaign?.id;
+    if (!campaignId) {
+      continue;
+    }
+    adsetsByCampaignId.set(campaignId, [...(adsetsByCampaignId.get(campaignId) ?? []), adset]);
+  }
+  const handledRecommendationEntities = new Set();
 
   const recommendations = (
     await mapWithConcurrency(insights, entityConcurrency, async (row) => {
@@ -953,6 +1010,10 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
       const campaign = campaignById.get(campaignId);
       const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
+      const budgetInfo = detectBudgetMode({
+        campaign,
+        adsets: adsetsByCampaignId.get(campaignId) ?? [adset],
+      });
       const rules = getEffectiveRules({
         projectRules,
         ruleGroups: metaAds.ruleGroups,
@@ -961,15 +1022,17 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         adsetId: entityId,
       });
       const adsetName = row.adset_name || adset.name;
-      const currentDailyBudget = centsToDailyBudget(adset.daily_budget);
+      const recommendationEntityLevel =
+        budgetInfo.editableBudgetLevel === 'campaign' ? 'campaign' : 'adset';
+      const recommendationEntityId =
+        recommendationEntityLevel === 'campaign' ? campaignId : entityId;
+      const recommendationEntityName =
+        recommendationEntityLevel === 'campaign' ? campaignName : adsetName;
+      const currentDailyBudget =
+        recommendationEntityLevel === 'campaign'
+          ? centsToDailyBudget(campaign?.daily_budget)
+          : centsToDailyBudget(adset.daily_budget);
       const metrics = calculateMetrics(row);
-      const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules });
-      const recentChange = await getRecentChange({
-        projectId,
-        entityId,
-        cooldownHours: rules.cooldownHours,
-      });
-      const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
 
       await MetaAdsSnapshot.create({
         tenantId,
@@ -999,11 +1062,25 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         raw: row,
       });
 
+      const recommendationKey = `${recommendationEntityLevel}:${recommendationEntityId}`;
+      if (!recommendationEntityId || handledRecommendationEntities.has(recommendationKey)) {
+        return null;
+      }
+      handledRecommendationEntities.add(recommendationKey);
+
+      const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules, creativeRules });
+      const recentChange = await getRecentChange({
+        projectId,
+        entityId: recommendationEntityId,
+        cooldownHours: rules.cooldownHours,
+      });
+      const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
+
       await MetaAdsRecommendation.updateMany(
         {
           tenantId,
           projectId,
-          entityId,
+          entityId: recommendationEntityId,
           status: 'pending',
         },
         {
@@ -1017,9 +1094,9 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         tenantId,
         projectId,
         adAccountId,
-        entityLevel: 'adset',
-        entityId,
-        entityName: adsetName,
+        entityLevel: recommendationEntityLevel,
+        entityId: recommendationEntityId,
+        entityName: recommendationEntityName,
         campaignId,
         campaignName,
         action: blockedByCooldown ? 'hold' : proposal.action,

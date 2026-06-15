@@ -175,6 +175,27 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockMutateSettings.mock.calls[0][0]).not.toHaveProperty('metaAccessToken');
   });
 
+  it('saves creative frequency alert rules separately from budget rules', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_max_frequency_alert'), {
+      target: { value: '5.5' },
+    });
+    fireEvent.click(screen.getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          creativeRules: { maxFrequency: 5.5 },
+          rules: expect.not.objectContaining({ maxFrequency: expect.anything() }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
   it('saves a project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 

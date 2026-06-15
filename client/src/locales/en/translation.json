@@ -2046,6 +2046,7 @@
   "com_ui_project_meta_ads_max_budget": "Max daily budget",
   "com_ui_project_meta_ads_cooldown": "Cooldown hours",
   "com_ui_project_meta_ads_min_spend": "Min spend",
+  "com_ui_project_meta_ads_max_frequency_alert": "Max frequency alert",
   "com_ui_project_meta_ads_recommendations": "Recommendations",
   "com_ui_project_meta_ads_latest": "Campaigns and ad sets",
   "com_ui_project_meta_ads_delivery": "Delivery",

@@ -19,6 +19,10 @@ export interface IProjectMetaAdsRules {
   minSpend?: number;
 }
 
+export interface IProjectMetaAdsCreativeRules {
+  maxFrequency?: number;
+}
+
 export interface IProjectMetaAds {
   enabled?: boolean;
   adAccountId?: string;
@@ -30,6 +34,7 @@ export interface IProjectMetaAds {
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;
   rules?: IProjectMetaAdsRules;
+  creativeRules?: IProjectMetaAdsCreativeRules;
   ruleGroups?: Array<{
     id: string;
     name: string;

@@ -9,6 +9,7 @@ import type {
 export const MAX_META_ADS_CHAT_BRIEF_ENTITIES = 10;
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
+type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
 
 export type MetaAdsChatBriefEntity = {
   entityId: string;
@@ -47,6 +48,7 @@ export type MetaAdsChatBrief = {
   selectedEntityCount: number;
   omittedEntityCount: number;
   rules: MetaAdsRules;
+  creativeRules: MetaAdsCreativeRules;
   entities: MetaAdsChatBriefEntity[];
   campaigns?: ProjectMetaAdsCampaignSummary[];
   markdown: string;
@@ -197,6 +199,7 @@ export function buildMetaAdsChatBrief({
     selectedEntityCount: entities.length,
     omittedEntityCount: Math.max(0, selectedEntityIds.length - MAX_META_ADS_CHAT_BRIEF_ENTITIES),
     rules: project.metaAds?.rules ?? {},
+    creativeRules: project.metaAds?.creativeRules ?? {},
     entities,
     campaigns: selectedCampaigns,
   };

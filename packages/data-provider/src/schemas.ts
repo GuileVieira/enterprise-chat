@@ -911,6 +911,11 @@ export const projectSchema = z.object({
           minSpend: z.number().optional(),
         })
         .optional(),
+      creativeRules: z
+        .object({
+          maxFrequency: z.number().optional(),
+        })
+        .optional(),
       ruleOverrides: z
         .array(
           z.object({

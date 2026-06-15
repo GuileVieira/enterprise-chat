@@ -43,6 +43,13 @@ const ProjectMetaAdsRulesSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsCreativeRulesSchema = new Schema(
+  {
+    maxFrequency: Number,
+  },
+  { _id: false },
+);
+
 const ProjectMetaAdsRuleOverrideSchema = new Schema(
   {
     entityLevel: {
@@ -140,6 +147,10 @@ const ProjectMetaAdsSchema = new Schema(
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+    creativeRules: {
+      type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
     },
     ruleOverrides: {

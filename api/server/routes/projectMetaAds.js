@@ -31,6 +31,9 @@ const DEFAULT_RULES = {
   cooldownHours: 24,
   minSpend: 10,
 };
+const DEFAULT_CREATIVE_RULES = {
+  maxFrequency: 5,
+};
 const RULE_LIMITS = {
   targetCpa: { min: 0.01 },
   minRoas: { min: 0 },
@@ -40,6 +43,9 @@ const RULE_LIMITS = {
   maxDailyBudget: { min: 0.01 },
   cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
+};
+const CREATIVE_RULE_LIMITS = {
+  maxFrequency: { min: 0 },
 };
 
 function getProjectMetaTokenSecretName(projectId) {
@@ -70,6 +76,30 @@ function validateMetaAdsRules(rules = {}) {
   }
   if (errors.length > 0) {
     throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: [...new Set(errors)],
+    });
+  }
+  return validated;
+}
+
+function validateMetaAdsCreativeRules(rules = {}) {
+  const merged = { ...DEFAULT_CREATIVE_RULES, ...(rules ?? {}) };
+  const validated = {};
+  const errors = [];
+  for (const [key, limits] of Object.entries(CREATIVE_RULE_LIMITS)) {
+    const value = Number(merged[key]);
+    validated[key] = value;
+    if (
+      !Number.isFinite(value) ||
+      value < limits.min ||
+      (limits.max != null && value > limits.max)
+    ) {
+      errors.push(key);
+    }
+  }
+  if (errors.length > 0) {
+    throw Object.assign(new Error('Invalid Meta Ads creative rules.'), {
       statusCode: 400,
       details: [...new Set(errors)],
     });
@@ -181,6 +211,7 @@ function normalizeMetaAds(metaAds = {}) {
     adAccountId: digits ? `act_${digits}` : safeMetaAds.adAccountId,
     tokenSecretName,
     rules: validateMetaAdsRules(safeMetaAds.rules),
+    creativeRules: validateMetaAdsCreativeRules(safeMetaAds.creativeRules),
     ruleGroups: normalizeRuleGroups(safeMetaAds.ruleGroups),
     ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
     ...(graphVersion ? { graphVersion } : {}),

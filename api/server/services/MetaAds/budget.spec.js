@@ -57,6 +57,37 @@ describe('Meta Ads budget service', () => {
     expect(result.proposedDailyBudget).toBe(80);
   });
 
+  it('creates a creative alert instead of increasing when frequency is high', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: 20,
+      roas: 3,
+      spend: 200,
+      frequency: 5.4,
+      rules: DEFAULT_RULES,
+      creativeRules: { maxFrequency: 5 },
+    });
+
+    expect(result.action).toBe('hold');
+    expect(result.proposedDailyBudget).toBe(100);
+    expect(result.reason).toContain('Frequência 5.40 acima do limite 5.00');
+  });
+
+  it('still decreases budget when performance is bad and frequency is high', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: 80,
+      roas: 1,
+      spend: 200,
+      frequency: 5.4,
+      rules: DEFAULT_RULES,
+      creativeRules: { maxFrequency: 5 },
+    });
+
+    expect(result.action).toBe('decrease');
+    expect(result.proposedDailyBudget).toBe(80);
+  });
+
   it('uses project token secret before tenant default', async () => {
     const getSecret = jest.fn(async () => ({ value: 'project-token' }));
 
@@ -1054,6 +1085,68 @@ describe('Meta Ads budget service persistence safety', () => {
           status: 'ignored',
         },
       },
+    );
+  });
+
+  it('creates CBO recommendations at campaign level and ABO recommendations at ad set level', async () => {
+    const { budget, createRecommendation } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES },
+        },
+      },
+      campaigns: [
+        { id: 'campaign-cbo', name: 'CBO Campaign', daily_budget: '10000' },
+        { id: 'campaign-abo', name: 'ABO Campaign' },
+      ],
+      adsets: [
+        { id: 'adset-cbo', name: 'CBO Child', campaign_id: 'campaign-cbo', daily_budget: '0' },
+        { id: 'adset-abo', name: 'ABO Child', campaign_id: 'campaign-abo', daily_budget: '7000' },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-cbo',
+          campaign_name: 'CBO Campaign',
+          adset_id: 'adset-cbo',
+          adset_name: 'CBO Child',
+          spend: '200',
+          actions: [{ action_type: 'purchase', value: '10' }],
+          purchase_roas: [{ value: '3' }],
+        },
+        {
+          campaign_id: 'campaign-abo',
+          campaign_name: 'ABO Campaign',
+          adset_id: 'adset-abo',
+          adset_name: 'ABO Child',
+          spend: '200',
+          actions: [{ action_type: 'purchase', value: '10' }],
+          purchase_roas: [{ value: '3' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityLevel: 'campaign',
+        entityId: 'campaign-cbo',
+        entityName: 'CBO Campaign',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 115,
+      }),
+    );
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityLevel: 'adset',
+        entityId: 'adset-abo',
+        entityName: 'ABO Child',
+        currentDailyBudget: 70,
+        proposedDailyBudget: 80.5,
+      }),
     );
   });
 

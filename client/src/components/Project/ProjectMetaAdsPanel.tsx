@@ -22,10 +22,12 @@ import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
+type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
 type MetaAdsSettings = NonNullable<TProject['metaAds']>;
 type MetaAdsRuleGroup = NonNullable<MetaAdsSettings['ruleGroups']>[number];
-type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules'> & {
+type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules' | 'creativeRules'> & {
   rules: Required<MetaAdsRules>;
+  creativeRules: Required<MetaAdsCreativeRules>;
 };
 type BudgetEditor = {
   entityLevel: ProjectMetaAdsManualBudgetPayload['entityLevel'];
@@ -80,6 +82,9 @@ const defaultRules: Required<MetaAdsRules> = {
   maxDailyBudget: 500,
   cooldownHours: 24,
   minSpend: 10,
+};
+const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
+  maxFrequency: 5,
 };
 
 const numberFields: Array<{
@@ -207,6 +212,10 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
     rules: {
       ...defaultRules,
       ...(project.metaAds?.rules ?? {}),
+    },
+    creativeRules: {
+      ...defaultCreativeRules,
+      ...(project.metaAds?.creativeRules ?? {}),
     },
   };
 }
@@ -362,6 +371,16 @@ export default function ProjectMetaAdsPanel({
       ...current,
       rules: {
         ...current.rules,
+        [key]: Number(value),
+      },
+    }));
+  };
+
+  const onCreativeRuleChange = (key: keyof Required<MetaAdsCreativeRules>, value: string) => {
+    setSettings((current) => ({
+      ...current,
+      creativeRules: {
+        ...current.creativeRules,
         [key]: Number(value),
       },
     }));
@@ -932,6 +951,18 @@ export default function ProjectMetaAdsPanel({
                     />
                   </label>
                 ))}
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_max_frequency_alert')}
+                  <input
+                    disabled={!canEdit}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={settings.creativeRules.maxFrequency}
+                    onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
+                    className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+                  />
+                </label>
               </div>
             </div>
           </div>
