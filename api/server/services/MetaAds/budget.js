@@ -355,6 +355,18 @@ function latestByEntity(items = []) {
   return latest;
 }
 
+function getSnapshotAdSetName(snapshot, campaignName) {
+  const rawAdSetName = snapshot.raw?.adset_name;
+  if (
+    typeof rawAdSetName === 'string' &&
+    rawAdSetName.trim() &&
+    snapshot.entityName === campaignName
+  ) {
+    return rawAdSetName.trim();
+  }
+  return snapshot.entityName;
+}
+
 function buildCampaignSummaries({
   latestSnapshots = [],
   recommendations = [],
@@ -411,9 +423,10 @@ function buildCampaignSummaries({
       campaign.resultCount > 0 ? Number((campaign.spend / campaign.resultCount).toFixed(2)) : null;
 
     const latestRecommendation = recommendationByEntity.get(snapshot.entityId);
+    const entityName = getSnapshotAdSetName(snapshot, campaignName);
     campaign.adSets.push({
       entityId: snapshot.entityId,
-      entityName: snapshot.entityName,
+      entityName,
       campaignId,
       campaignName,
       dailyBudget: snapshot.dailyBudget,
@@ -779,6 +792,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       campaignId,
       adsetId: entityId,
     });
+    const adsetName = row.adset_name || adset.name;
     const currentDailyBudget = centsToDailyBudget(adset.daily_budget);
     const metrics = calculateMetrics(row);
     const proposal = proposeBudget({ currentDailyBudget, ...metrics, rules });
@@ -795,7 +809,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       adAccountId,
       level: 'adset',
       entityId,
-      entityName: adset.name || row.adset_name,
+      entityName: adsetName,
       campaignId,
       campaignName,
       campaignObjective: campaign?.objective,
@@ -837,7 +851,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       adAccountId,
       entityLevel: 'adset',
       entityId,
-      entityName: adset.name || row.adset_name,
+      entityName: adsetName,
       campaignId,
       campaignName,
       action: blockedByCooldown ? 'hold' : proposal.action,

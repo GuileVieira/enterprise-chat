@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ProjectMetaAdsStatus, TProject } from 'librechat-data-provider';
 import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
 
@@ -329,7 +329,14 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('ABO').length).toBeGreaterThan(0);
     expect(screen.getByText('800.00')).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_edit_budget')[0]);
+    const cboCampaignRow = screen
+      .getByText('CBO Messages')
+      .closest('[data-testid="meta-ads-campaign-row"]');
+    expect(cboCampaignRow).not.toBeNull();
+
+    fireEvent.click(
+      within(cboCampaignRow as HTMLElement).getByText('com_ui_project_meta_ads_edit_budget'),
+    );
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });
@@ -350,6 +357,82 @@ describe('ProjectMetaAdsPanel', () => {
       expect.any(Object),
     );
     expect(mockRefetchStatus).toHaveBeenCalled();
+  });
+
+  it('auto-expands ABO campaigns by campaign group and keeps CBO ad sets collapsed', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [
+          {
+            entityId: 'adset-cbo',
+            entityName: 'Hidden CBO audience',
+            campaignId: 'campaign-cbo',
+            campaignName: 'CBO Messages',
+            dailyBudget: 0,
+            spend: 120,
+          },
+        ],
+      },
+      {
+        campaignId: 'campaign-abo',
+        campaignName: 'ABO Sales',
+        spend: 180,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-abo',
+            entityName: 'Visible ABO audience',
+            campaignId: 'campaign-abo',
+            campaignName: 'ABO Sales',
+            dailyBudget: 70,
+            spend: 180,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('ABO Sales')).toBeInTheDocument();
+    expect(screen.getByText('Visible ABO audience')).toBeInTheDocument();
+    expect(screen.queryByText('Hidden CBO audience')).not.toBeInTheDocument();
+
+    const aboCampaignRow = screen
+      .getByText('ABO Sales')
+      .closest('[data-testid="meta-ads-campaign-row"]');
+    expect(aboCampaignRow).not.toHaveTextContent('com_ui_project_meta_ads_edit_budget');
+
+    const aboAdSetRow = screen.getByText('Visible ABO audience').closest('tr');
+    expect(aboAdSetRow).not.toBeNull();
+
+    fireEvent.click(
+      within(aboAdSetRow as HTMLElement).getByText('com_ui_project_meta_ads_edit_budget'),
+    );
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '90' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+
+    expect(mockMutateBudget).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: expect.objectContaining({
+          entityLevel: 'adset',
+          entityId: 'adset-abo',
+          dailyBudget: 90,
+        }),
+      },
+      expect.any(Object),
+    );
   });
 
   it('creates a campaign rule group from selected campaigns', () => {

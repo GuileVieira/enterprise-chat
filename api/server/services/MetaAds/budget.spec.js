@@ -756,6 +756,45 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('uses the insight ad set name when the ad set listing repeats the campaign name', async () => {
+    const { budget, createRecommendation, createSnapshot } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', rules: { ...DEFAULT_RULES, targetCpa: 10 } },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'FB/IG - REMARKETING', objective: 'OUTCOME_SALES' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'FB/IG - REMARKETING',
+          daily_budget: '5000',
+          campaign_id: 'campaign-1',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'FB/IG - REMARKETING',
+          adset_id: 'adset-1',
+          adset_name: '25 65+ ARTES',
+          spend: '120',
+          actions: [{ action_type: 'purchase', value: '20' }],
+          purchase_roas: [{ value: '3' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({ entityName: '25 65+ ARTES' }),
+    );
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({ entityName: '25 65+ ARTES' }),
+    );
+  });
+
   it('applies a manual campaign budget update and records the change', async () => {
     const { budget, createChange, metaPost } = loadBudgetWithMocks({
       project: {
@@ -829,6 +868,32 @@ describe('Meta Ads budget service persistence safety', () => {
         resultCount: 4,
         adSets: [expect.objectContaining({ spend: 200 })],
       }),
+    );
+  });
+
+  it('recovers ad set names from raw insights when old snapshots stored the campaign name', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'FB/IG - REMARKETING',
+          campaignId: 'campaign-1',
+          campaignName: 'FB/IG - REMARKETING',
+          spend: 200,
+          resultCount: 4,
+          raw: {
+            adset_name: '25 65+ ARTES',
+          },
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
+
+    expect(status.campaigns[0].adSets[0]).toEqual(
+      expect.objectContaining({ entityName: '25 65+ ARTES' }),
     );
   });
 

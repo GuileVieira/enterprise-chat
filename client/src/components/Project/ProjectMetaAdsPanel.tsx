@@ -203,6 +203,7 @@ export default function ProjectMetaAdsPanel({
   const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
+  const [collapsedAboCampaignIds, setCollapsedAboCampaignIds] = useState<string[]>([]);
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
@@ -586,11 +587,20 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
-  const onToggleCampaignExpanded = (campaignId: string) => {
+  const onToggleCampaignExpanded = (campaign: ProjectMetaAdsCampaignSummary) => {
+    if (campaign.budgetMode === 'ABO') {
+      setCollapsedAboCampaignIds((current) =>
+        current.includes(campaign.campaignId)
+          ? current.filter((id) => id !== campaign.campaignId)
+          : [...current, campaign.campaignId],
+      );
+      return;
+    }
+
     setExpandedCampaignIds((current) =>
-      current.includes(campaignId)
-        ? current.filter((id) => id !== campaignId)
-        : [...current, campaignId],
+      current.includes(campaign.campaignId)
+        ? current.filter((id) => id !== campaign.campaignId)
+        : [...current, campaign.campaignId],
     );
   };
 
@@ -1210,7 +1220,10 @@ export default function ProjectMetaAdsPanel({
             </thead>
             <tbody>
               {filteredCampaigns.map((campaign) => {
-                const expanded = expandedCampaignIds.includes(campaign.campaignId);
+                const expanded =
+                  campaign.budgetMode === 'ABO'
+                    ? !collapsedAboCampaignIds.includes(campaign.campaignId)
+                    : expandedCampaignIds.includes(campaign.campaignId);
                 const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
                 const recommendation = getEntityRecommendation(campaign.campaignId);
                 return (
@@ -1233,7 +1246,7 @@ export default function ProjectMetaAdsPanel({
                           <button
                             type="button"
                             aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
-                            onClick={() => onToggleCampaignExpanded(campaign.campaignId)}
+                            onClick={() => onToggleCampaignExpanded(campaign)}
                             className="h-6 w-6 border border-border-light text-xs text-text-secondary"
                           >
                             {expanded ? '-' : '+'}
