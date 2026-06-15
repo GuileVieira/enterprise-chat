@@ -351,9 +351,9 @@ describe('ProjectMetaAdsPanel', () => {
       .closest('[data-testid="meta-ads-campaign-row"]');
     expect(cboCampaignRow).not.toBeNull();
 
-    fireEvent.click(
-      within(cboCampaignRow as HTMLElement).getByText('com_ui_project_meta_ads_edit_budget'),
-    );
+    expect(screen.getByText('com_ui_project_meta_ads_budget_defined')).toBeInTheDocument();
+    fireEvent.click(within(cboCampaignRow as HTMLElement).getByText('R$ 100,00'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });

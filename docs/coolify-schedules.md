@@ -11,11 +11,14 @@ Schedules required for Orqest production jobs in Coolify.
 - **Command:**
 
 ```bash
-/bin/sh -lc 'cd /app && node api/server/jobs/metaAdsBudgetCron.js'
+npm run meta-ads:budget-cron
 ```
 
 Notes:
 
+- If Coolify requires an explicit working directory command, use
+  `cd /app && npm run meta-ads:budget-cron` without wrapping it in a dangling
+  single quote.
 - The task can run every 30 minutes because each project has its own
   `metaAds.scheduleIntervalMinutes`; projects that are not due are skipped.
 - Required app env must match the API service, especially:
@@ -23,4 +26,3 @@ Notes:
   - `MONGO_URI=mongodb://mongodb:27017/Orqest`
   - `CONSOLE_JSON=true`
 - Enable the feature in config with `interface.metaAds: true`.
-
