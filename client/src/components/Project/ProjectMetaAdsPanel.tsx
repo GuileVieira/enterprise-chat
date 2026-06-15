@@ -54,6 +54,17 @@ type RequestError = {
     };
   };
 };
+type SelectionCheckboxProps = {
+  checked: boolean;
+  ariaLabel: string;
+  onChange: () => void;
+  className?: string;
+};
+type ExpandToggleProps = {
+  expanded: boolean;
+  ariaLabel: string;
+  onClick: () => void;
+};
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -86,6 +97,55 @@ const defaultRules: Required<MetaAdsRules> = {
 const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
   maxFrequency: 5,
 };
+
+function SelectionCheckbox({
+  checked,
+  ariaLabel,
+  onChange,
+  className = '',
+}: SelectionCheckboxProps) {
+  return (
+    <label className={`group inline-grid h-7 w-7 cursor-pointer place-items-center ${className}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        aria-label={ariaLabel}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden="true"
+        className="flex h-[18px] w-[18px] items-center justify-center border border-border-light bg-surface-primary text-transparent transition-colors duration-150 group-hover:border-text-secondary peer-checked:border-text-primary peer-checked:bg-text-primary peer-checked:text-surface-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-text-primary"
+      >
+        <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M2.25 6.15 4.7 8.6l5.05-5.2"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </label>
+  );
+}
+
+function ExpandToggle({ expanded, ariaLabel, onClick }: ExpandToggleProps) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-expanded={expanded}
+      onClick={onClick}
+      className="inline-grid h-7 w-7 place-items-center border border-border-light bg-surface-primary text-sm leading-none text-text-secondary transition-colors duration-150 hover:border-text-secondary hover:bg-surface-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary active:bg-surface-primary"
+    >
+      <span aria-hidden="true" className="-mt-px font-mono">
+        {expanded ? '-' : '+'}
+      </span>
+    </button>
+  );
+}
 
 const numberFields: Array<{
   key: keyof Required<MetaAdsRules>;
@@ -1534,8 +1594,8 @@ export default function ProjectMetaAdsPanel({
                   >
                     <td className="px-2 py-3" colSpan={17}>
                       <div className="flex items-center gap-4">
-                        <div className="h-4 w-4 animate-pulse bg-surface-secondary" />
-                        <div className="h-4 w-10 animate-pulse bg-surface-secondary" />
+                        <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
+                        <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
                         <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
                         <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
                         <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
@@ -1555,27 +1615,24 @@ export default function ProjectMetaAdsPanel({
                   <Fragment key={campaign.campaignId}>
                     <tr
                       data-testid="meta-ads-campaign-row"
-                      className="border-b border-border-light"
+                      className={`border-b border-border-light transition-colors ${
+                        selected ? 'bg-surface-secondary/50' : ''
+                      }`}
                     >
-                      <td className="px-2 py-2">
-                        <input
-                          type="checkbox"
+                      <td className="px-2 py-2 align-middle">
+                        <SelectionCheckbox
                           checked={selected}
-                          aria-label={localize('com_ui_project_meta_ads_select_campaign')}
                           onChange={() => onToggleCampaign(campaign.campaignId)}
-                          className="h-4 w-4 rounded border-border-light"
+                          ariaLabel={localize('com_ui_project_meta_ads_select_campaign')}
                         />
                       </td>
-                      <td className="px-2 py-2">
+                      <td className="px-2 py-2 align-middle">
                         {campaign.adSets.length > 0 && (
-                          <button
-                            type="button"
-                            aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                          <ExpandToggle
+                            expanded={expanded}
                             onClick={() => onToggleCampaignExpanded(campaign)}
-                            className="h-6 w-6 border border-border-light text-xs text-text-secondary"
-                          >
-                            {expanded ? '-' : '+'}
-                          </button>
+                            ariaLabel={localize('com_ui_project_meta_ads_expand_campaign')}
+                          />
                         )}
                       </td>
                       <td className="px-2 py-2 text-text-secondary">
@@ -1665,18 +1722,21 @@ export default function ProjectMetaAdsPanel({
                         return (
                           <tr
                             key={adset.entityId}
-                            className="bg-surface-secondary/40 border-b border-border-light"
+                            className={`border-b border-border-light transition-colors ${
+                              adsetSelected ? 'bg-surface-secondary/70' : 'bg-surface-secondary/40'
+                            }`}
                           >
-                            <td className="px-2 py-2 pl-6">
-                              <input
-                                type="checkbox"
+                            <td className="px-2 py-2 align-middle">
+                              <SelectionCheckbox
                                 checked={adsetSelected}
-                                aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
                                 onChange={() => onToggleAdSet(adset.entityId)}
-                                className="h-4 w-4 rounded border-border-light"
+                                ariaLabel={localize('com_ui_project_meta_ads_select_ad_set')}
+                                className="ml-4"
                               />
                             </td>
-                            <td className="px-2 py-2" />
+                            <td className="px-2 py-2 align-middle">
+                              <span aria-hidden="true" className="block h-7 w-7" />
+                            </td>
                             <td className="px-2 py-2 text-text-secondary">
                               {localize('com_ui_project_meta_ads_active')}
                             </td>
