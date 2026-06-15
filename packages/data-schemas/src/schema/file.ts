@@ -135,6 +135,40 @@ const file: Schema<IMongoFile> = new Schema(
         ),
         default: undefined,
       },
+      imageRag: {
+        type: new Schema(
+          {
+            kind: {
+              type: String,
+              enum: ['vision_caption'],
+            },
+            status: {
+              type: String,
+              enum: ['ready', 'failed'],
+            },
+            model: {
+              type: String,
+            },
+            error: {
+              type: String,
+              maxlength: 500,
+            },
+            sourceImageFileId: {
+              type: String,
+              index: true,
+            },
+            sourceImageFileName: {
+              type: String,
+            },
+            derivedTextFileId: {
+              type: String,
+              index: true,
+            },
+          },
+          { _id: false },
+        ),
+        default: undefined,
+      },
     },
     expiresAt: {
       type: Date,

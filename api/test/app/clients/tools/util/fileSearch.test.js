@@ -298,5 +298,51 @@ describe('fileSearch.js - tuple return validation', () => {
         expect.any(Object),
       );
     });
+
+    it('should expose source image metadata for derived image RAG files', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Visual description extracted from image "photo.png".',
+              metadata: { source: '/path/to/photo.png.vision.txt' },
+            },
+            0.1,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [
+          {
+            file_id: 'caption-file',
+            filename: 'photo.png.vision.txt',
+            metadata: {
+              imageRag: {
+                sourceImageFileId: 'image-file',
+                sourceImageFileName: 'photo.png',
+              },
+            },
+          },
+        ],
+      });
+
+      const [, artifact] = await fileSearchTool.func({ query: 'what is in the image?' });
+
+      expect(artifact.file_search.sources[0]).toMatchObject({
+        fileId: 'caption-file',
+        fileName: 'photo.png',
+        metadata: {
+          imageRag: {
+            sourceImageFileId: 'image-file',
+            sourceImageFileName: 'photo.png',
+            derivedTextFileId: 'caption-file',
+          },
+        },
+      });
+    });
   });
 });

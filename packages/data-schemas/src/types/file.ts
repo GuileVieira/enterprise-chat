@@ -70,6 +70,15 @@ export interface IMongoFile extends Omit<Document, 'model'> {
      * derive the sessionKey explicitly.
      */
     codeEnvRef?: CodeEnvRef;
+    imageRag?: {
+      kind?: 'vision_caption';
+      status?: 'ready' | 'failed';
+      model?: string;
+      error?: string;
+      sourceImageFileId?: string;
+      sourceImageFileName?: string;
+      derivedTextFileId?: string;
+    };
   };
   projectId?: string;
   expiresAt?: Date;

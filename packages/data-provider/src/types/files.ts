@@ -159,6 +159,15 @@ export type TFile = {
      * resolve via `resolveCodeEnvRef`.
      */
     codeEnvRef?: CodeEnvRef;
+    imageRag?: {
+      kind?: 'vision_caption';
+      status?: 'ready' | 'failed';
+      model?: string;
+      error?: string;
+      sourceImageFileId?: string;
+      sourceImageFileName?: string;
+      derivedTextFileId?: string;
+    };
   };
   createdAt?: string | Date;
   updatedAt?: string | Date;

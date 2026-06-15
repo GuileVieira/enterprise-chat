@@ -73,6 +73,7 @@ const primeFiles = async (options) => {
       file_id: file.file_id,
       filename: file.filename,
       projectId: file.projectId,
+      metadata: file.metadata,
     });
   }
 
@@ -83,7 +84,7 @@ const primeFiles = async (options) => {
  *
  * @param {Object} options
  * @param {string} options.userId
- * @param {Array<{ file_id: string; filename: string }>} options.files
+ * @param {Array<{ file_id: string; filename: string; projectId?: string; metadata?: Object }>} options.files
  * @param {string} [options.entity_id]
  * @param {boolean} [options.fileCitations=false] - Whether to include citation instructions
  * @returns
@@ -142,10 +143,13 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
       const formattedResults = validResults
         .flatMap((result, fileIndex) =>
           result.data.map(([docInfo, distance]) => ({
-            filename: docInfo.metadata.source.split('/').pop(),
+            filename:
+              files[fileIndex]?.metadata?.imageRag?.sourceImageFileName ??
+              docInfo.metadata.source.split('/').pop(),
             content: docInfo.page_content,
             distance,
             file_id: files[fileIndex]?.file_id,
+            file_metadata: files[fileIndex]?.metadata,
             page: docInfo.metadata.page || null,
           })),
         )
@@ -174,6 +178,14 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         content: result.content,
         fileName: result.filename,
         relevance: 1.0 - result.distance,
+        metadata: result.file_metadata?.imageRag
+          ? {
+              imageRag: {
+                ...result.file_metadata.imageRag,
+                derivedTextFileId: result.file_id,
+              },
+            }
+          : undefined,
         pages: result.page ? [result.page] : [],
         pageRelevance: result.page ? { [result.page]: 1.0 - result.distance } : {},
       }));

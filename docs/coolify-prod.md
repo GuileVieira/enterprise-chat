@@ -29,6 +29,7 @@ Production service URLs must stay internal:
 - `MEILI_HOST=http://meilisearch:7700`
 - `RAG_API_URL=http://rag_api:8000`
 - `CONFIG_PATH=/app/config/librechat.prod.yaml`
+- `OPENROUTER_API_KEY=<production key>` enables image uploads for RAG. Default caption/OCR model is `qwen/qwen3.7-plus`; override with `IMAGE_RAG_VISION_MODEL` only if needed.
 
 Do not copy local-only values such as `localhost`, local Meili URLs, or local API keys into production.
 

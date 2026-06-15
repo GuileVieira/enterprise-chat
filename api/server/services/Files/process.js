@@ -1,12 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
+const os = require('os');
+const OpenAI = require('openai');
 const { v4 } = require('uuid');
 const {
   isUUID,
   megabyte,
   FileContext,
   FileSources,
+  VisionModes,
   imageExtRegex,
   EModelEndpoint,
   EToolResources,
@@ -33,13 +36,20 @@ const {
 const { addResourceFileId, deleteResourceFileId } = require('~/server/controllers/assistants/v2');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
+const { encodeAndFormat } = require('~/server/services/Files/images/encode');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
 const { checkCapability } = require('~/server/services/Config');
 const { LB_QueueAsyncCall } = require('~/server/utils/queue');
 const { getStrategyFunctions } = require('./strategies');
 const { determineFileType } = require('~/server/utils');
 const { STTService } = require('./Audio/STTService');
+const { createVisionPrompt } = require('~/app/clients/prompts');
 const db = require('~/models');
+
+const DEFAULT_IMAGE_RAG_CAPTION_MODEL = 'qwen/qwen3.7-plus';
+const DEFAULT_IMAGE_RAG_CAPTION_MAX_TOKENS = 1200;
+const DEFAULT_IMAGE_RAG_CAPTION_TIMEOUT_MS = 30000;
+const DEFAULT_IMAGE_RAG_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 /**
  * Links a newly uploaded file to a project by adding its file_id to the project's fileIds array.
@@ -54,6 +64,101 @@ const maybeLinkFileToProject = async (req, file_id) => {
   } catch (error) {
     logger.error('[maybeLinkFileToProject] Error linking file to project:', error);
   }
+};
+
+const getPositiveInteger = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const withTimeout = (promise, ms, message) => {
+  let timeout;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
+};
+
+const formatImageCaptionText = ({ imageFile, caption }) =>
+  [
+    `Visual description extracted from image "${imageFile.filename}" (${imageFile.file_id}).`,
+    '',
+    caption.trim(),
+  ].join('\n');
+
+const createImageRagCaption = async ({ req, imageFile }) => {
+  const { image_urls } = await encodeAndFormat(
+    req,
+    [imageFile],
+    {
+      provider: EModelEndpoint.openAI,
+      endpoint: EModelEndpoint.openAI,
+    },
+    VisionModes.generative,
+  );
+
+  if (!image_urls?.length) {
+    throw new Error('No encodable image payload available for vision captioning');
+  }
+
+  const model = process.env.IMAGE_RAG_VISION_MODEL || DEFAULT_IMAGE_RAG_CAPTION_MODEL;
+  const apiKey = process.env.IMAGE_RAG_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error('OpenRouter API key not configured for image RAG vision captioning');
+  }
+
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: process.env.IMAGE_RAG_OPENROUTER_BASE_URL || DEFAULT_IMAGE_RAG_OPENROUTER_BASE_URL,
+    defaultHeaders: removeNullishValues({
+      'HTTP-Referer': process.env.OPENROUTER_SITE_URL,
+      'X-Title': process.env.OPENROUTER_APP_NAME || 'Orqest Image RAG',
+    }),
+  });
+  const maxTokens = getPositiveInteger(
+    process.env.IMAGE_RAG_CAPTION_MAX_TOKENS,
+    DEFAULT_IMAGE_RAG_CAPTION_MAX_TOKENS,
+  );
+  const timeoutMs = getPositiveInteger(
+    process.env.IMAGE_RAG_CAPTION_TIMEOUT_MS,
+    DEFAULT_IMAGE_RAG_CAPTION_TIMEOUT_MS,
+  );
+  const prompt = `${createVisionPrompt(false)}
+
+Return only the extracted visual description. Include visible text, labels, chart values, layout, product names, brand marks, and any concrete details useful for semantic search.`;
+
+  const completion = await withTimeout(
+    openai.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }, ...image_urls],
+        },
+      ],
+      max_tokens: maxTokens,
+    }),
+    timeoutMs,
+    `Image RAG vision caption timed out after ${timeoutMs}ms`,
+  );
+
+  const caption = completion?.choices?.[0]?.message?.content;
+  if (!caption?.trim()) {
+    throw new Error('Vision caption response was empty');
+  }
+
+  return { caption: caption.trim(), model };
+};
+
+const createTempTextUpload = async ({ file_id, filename, text }) => {
+  const filepath = path.join(os.tmpdir(), `${file_id}-${sanitizeFilename(filename)}`);
+  await fs.promises.writeFile(filepath, text, 'utf8');
+  return {
+    path: filepath,
+    size: Buffer.byteLength(text, 'utf8'),
+    originalname: filename,
+    mimetype: 'text/plain',
+  };
 };
 
 /**
@@ -386,6 +491,162 @@ const processImageFile = async ({ req, res, metadata, returnFile = false }) => {
   res.status(200).json({ message: 'File uploaded and processed successfully', ...result });
 };
 
+const processImageFileSearchUpload = async ({ req, res, metadata }) => {
+  const { file } = req;
+  const appConfig = req.config;
+  const { agent_id, file_id, temp_file_id = null } = metadata;
+  const source = getFileStrategy(appConfig, { isImage: true });
+  const { handleImageUpload } = getStrategyFunctions(source);
+  const { filepath, bytes, width, height, storageKey, storageRegion } = await handleImageUpload({
+    req,
+    file,
+    file_id,
+    endpoint: metadata.endpoint,
+  });
+  const storageMetadata = getStorageMetadata({ filepath, source, storageKey, storageRegion });
+  const baseImageRag = {
+    kind: 'vision_caption',
+    status: 'failed',
+  };
+  const imageFileInfo = removeNullishValues({
+    user: req.user.id,
+    file_id,
+    temp_file_id,
+    bytes,
+    filepath,
+    ...storageMetadata,
+    filename: file.originalname,
+    context: FileContext.agents,
+    source,
+    type: file.mimetype,
+    width,
+    height,
+    embedded: false,
+    tenantId: req.user.tenantId,
+    projectId: req.body.projectId,
+    metadata: { imageRag: baseImageRag },
+  });
+
+  const imageFile = await db.createFile(imageFileInfo, true);
+  await maybeLinkFileToProject(req, file_id);
+
+  try {
+    const { caption, model } = await createImageRagCaption({ req, imageFile });
+    const derivedFileId = v4();
+    const derivedFilename = `${file.originalname}.vision.txt`;
+    const text = formatImageCaptionText({ imageFile, caption });
+    const textBytes = Buffer.byteLength(text, 'utf8');
+    const textUpload = await createTempTextUpload({
+      file_id: derivedFileId,
+      filename: derivedFilename,
+      text,
+    });
+    let embeddingResult;
+
+    try {
+      const { uploadVectors } = require('./VectorDB/crud');
+      embeddingResult = await uploadVectors({
+        req,
+        file: textUpload,
+        file_id: derivedFileId,
+        entity_id: agent_id || req.body.projectId,
+      });
+    } finally {
+      await fs.promises.unlink(textUpload.path).catch((error) => {
+        logger.warn('[processImageFileSearchUpload] Failed to remove temp caption file:', error);
+      });
+    }
+
+    if (!embeddingResult?.embedded) {
+      throw new Error('Image caption was generated but vector embedding was skipped or failed');
+    }
+
+    const derivedFileInfo = removeNullishValues({
+      user: req.user.id,
+      file_id: derivedFileId,
+      bytes: textBytes,
+      filepath: embeddingResult?.filepath ?? FileSources.vectordb,
+      filename: derivedFilename,
+      context: FileContext.agents,
+      source: FileSources.text,
+      type: 'text/plain',
+      text,
+      textFormat: 'text',
+      embedded: Boolean(embeddingResult?.embedded),
+      tenantId: req.user.tenantId,
+      projectId: req.body.projectId,
+      metadata: {
+        imageRag: {
+          kind: 'vision_caption',
+          status: 'ready',
+          model,
+          sourceImageFileId: file_id,
+          sourceImageFileName: imageFile.filename,
+        },
+      },
+    });
+    const derivedFile = await db.createFile(derivedFileInfo, true);
+    await maybeLinkFileToProject(req, derivedFileId);
+
+    if (agent_id) {
+      await db.addAgentResourceFile({
+        file_id: derivedFileId,
+        agent_id,
+        tool_resource: EToolResources.file_search,
+        updatingUserId: req?.user?.id,
+      });
+    }
+
+    await db
+      .updateFile({
+        file_id,
+        metadata: {
+          imageRag: {
+            kind: 'vision_caption',
+            status: 'ready',
+            model,
+            derivedTextFileId: derivedFileId,
+          },
+        },
+      })
+      .catch((error) => {
+        logger.warn(
+          '[processImageFileSearchUpload] Failed to update source image metadata:',
+          error,
+        );
+      });
+
+    return res.status(200).json({
+      message: 'Agent file uploaded and processed successfully',
+      ...imageFile,
+      imageRagFile: derivedFile,
+    });
+  } catch (error) {
+    logger.error('[processImageFileSearchUpload] Image RAG processing failed:', error);
+    await db
+      .updateFile({
+        file_id,
+        metadata: {
+          imageRag: {
+            ...baseImageRag,
+            error: error.message,
+          },
+        },
+      })
+      .catch((updateError) => {
+        logger.warn(
+          '[processImageFileSearchUpload] Failed to update failed image metadata:',
+          updateError,
+        );
+      });
+
+    return res.status(200).json({
+      message: 'Image uploaded, but visual RAG processing failed',
+      ...imageFile,
+    });
+  }
+};
+
 /**
  * Applies the current strategy for image uploads and
  * returns minimal file metadata, without saving to the database.
@@ -570,10 +831,6 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
     throw new Error('No tool resource provided for agent file upload');
   }
 
-  if (tool_resource === EToolResources.file_search && file.mimetype.startsWith('image')) {
-    throw new Error('Image uploads are not supported for file search tool resources');
-  }
-
   if (!messageAttachment && !agent_id && !req.body.projectId) {
     throw new Error('No agent ID provided for agent file upload');
   }
@@ -633,6 +890,9 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
       (await checkCapability(req, AgentCapabilities.file_search)) || !!req.body.projectId;
     if (!isFileSearchEnabled) {
       throw new Error('File search is not enabled');
+    }
+    if (isImage) {
+      return await processImageFileSearchUpload({ req, res, metadata });
     }
     // Note: File search processing continues to dual storage logic below
   } else if (

@@ -1,5 +1,17 @@
 jest.mock('uuid', () => ({ v4: jest.fn(() => 'mock-uuid') }));
 
+jest.mock('openai', () =>
+  jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'Detailed visual caption' } }],
+        }),
+      },
+    },
+  })),
+);
+
 jest.mock('@librechat/data-schemas', () => ({
   logger: { warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
 }));
@@ -33,6 +45,19 @@ jest.mock('~/server/controllers/assistants/helpers', () => ({
   getOpenAIClient: jest.fn(),
 }));
 
+jest.mock('~/server/services/Files/images/encode', () => ({
+  encodeAndFormat: jest.fn(),
+}));
+
+jest.mock('~/server/services/Files/VectorDB/crud', () => ({
+  uploadVectors: jest.fn().mockResolvedValue({
+    bytes: 42,
+    filename: 'caption.txt',
+    filepath: 'vectordb',
+    embedded: true,
+  }),
+}));
+
 jest.mock('~/server/services/Tools/credentials', () => ({
   loadAuthValues: jest.fn(),
 }));
@@ -41,6 +66,8 @@ jest.mock('~/models', () => ({
   createFile: jest.fn().mockResolvedValue({ file_id: 'created-file-id' }),
   updateFileUsage: jest.fn(),
   deleteFiles: jest.fn(),
+  addProjectFileId: jest.fn(),
+  updateFile: jest.fn(),
   addAgentResourceFile: jest.fn().mockResolvedValue({}),
   removeAgentResourceFiles: jest.fn(),
 }));
@@ -78,6 +105,8 @@ const {
 const { mergeFileConfig } = require('librechat-data-provider');
 const { checkCapability } = require('~/server/services/Config');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { encodeAndFormat } = require('~/server/services/Files/images/encode');
+const OpenAI = require('openai');
 const db = require('~/models');
 const { processAgentFileUpload, processFileURL } = require('./process');
 
@@ -127,15 +156,202 @@ const makeFileConfig = ({ ocrSupportedMimeTypes = [] } = {}) => ({
 describe('processAgentFileUpload', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
+    delete process.env.IMAGE_RAG_OPENROUTER_API_KEY;
+    delete process.env.IMAGE_RAG_VISION_MODEL;
     mockRes.status.mockReturnThis();
     mockRes.json.mockReturnValue({});
     checkCapability.mockResolvedValue(true);
+    db.createFile.mockResolvedValue({ file_id: 'created-file-id' });
+    db.addProjectFileId.mockResolvedValue({});
+    db.updateFile.mockResolvedValue({});
+    encodeAndFormat.mockResolvedValue({
+      files: [],
+      image_urls: [
+        {
+          type: 'image_url',
+          image_url: { url: 'data:image/png;base64,abc', detail: 'auto' },
+        },
+      ],
+    });
     getStrategyFunctions.mockReturnValue({
       handleFileUpload: jest
         .fn()
         .mockResolvedValue({ text: 'extracted text', bytes: 42, filepath: 'doc://result' }),
+      handleImageUpload: jest.fn().mockResolvedValue({
+        filepath: '/images/upload.png',
+        bytes: 123,
+        width: 640,
+        height: 480,
+      }),
     });
     mergeFileConfig.mockReturnValue(makeFileConfig());
+  });
+
+  describe('image file_search uploads', () => {
+    const fs = require('fs');
+    let createReadStreamSpy;
+    let writeFileSpy;
+    let unlinkSpy;
+
+    beforeEach(() => {
+      createReadStreamSpy = jest
+        .spyOn(fs, 'createReadStream')
+        .mockImplementation(() => require('stream').Readable.from(Buffer.from('caption')));
+      writeFileSpy = jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
+      unlinkSpy = jest.spyOn(fs.promises, 'unlink').mockResolvedValue();
+    });
+
+    afterEach(() => {
+      createReadStreamSpy.mockRestore();
+      writeFileSpy.mockRestore();
+      unlinkSpy.mockRestore();
+    });
+
+    test('stores the image and embeds a derived text caption for agent file_search', async () => {
+      const req = makeReq({ mimetype: 'image/png' });
+      req.file.originalname = 'landing.png';
+      req.file.size = 123;
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'image-file-id',
+        },
+      });
+
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'image-file-id',
+          filename: 'landing.png',
+          embedded: false,
+          type: 'image/png',
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({ kind: 'vision_caption' }),
+          }),
+        }),
+        true,
+      );
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: expect.not.stringMatching(/^image-file-id$/),
+          filename: 'landing.png.vision.txt',
+          source: FileSources.text,
+          embedded: true,
+          text: expect.stringContaining('Detailed visual caption'),
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              sourceImageFileId: 'image-file-id',
+              status: 'ready',
+            }),
+          }),
+        }),
+        true,
+      );
+      expect(db.addAgentResourceFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: expect.not.stringMatching(/^image-file-id$/),
+        }),
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    test('links both original image and derived text to the project for file_search', async () => {
+      const req = makeReq({ mimetype: 'image/png' });
+      req.body.projectId = 'project-123';
+      req.file.originalname = 'wireframe.png';
+      req.file.size = 123;
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          tool_resource: EToolResources.file_search,
+          file_id: 'project-image-id',
+        },
+      });
+
+      expect(db.addProjectFileId).toHaveBeenCalledWith('project-123', 'project-image-id');
+      expect(db.addProjectFileId).toHaveBeenCalledWith('project-123', expect.any(String));
+    });
+
+    test('saves the image without RAG when vision captioning fails', async () => {
+      delete process.env.OPENROUTER_API_KEY;
+      const req = makeReq({ mimetype: 'image/png' });
+      req.file.originalname = 'photo.png';
+      req.file.size = 123;
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'failed-image-id',
+        },
+      });
+
+      expect(db.createFile).toHaveBeenCalledTimes(1);
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'failed-image-id',
+          embedded: false,
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              status: 'failed',
+            }),
+          }),
+        }),
+        true,
+      );
+      expect(db.updateFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'failed-image-id',
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              status: 'failed',
+              error: expect.any(String),
+            }),
+          }),
+        }),
+      );
+      expect(db.addAgentResourceFile).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    test('uses qwen on OpenRouter as the default image RAG vision model', async () => {
+      const req = makeReq({ mimetype: 'image/png' });
+      req.file.originalname = 'pricing.png';
+      req.file.size = 123;
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'openrouter-image-id',
+        },
+      });
+
+      expect(OpenAI).toHaveBeenCalledWith(
+        expect.objectContaining({
+          apiKey: 'test-openrouter-key',
+          baseURL: 'https://openrouter.ai/api/v1',
+        }),
+      );
+      const client = OpenAI.mock.results[0].value;
+      expect(client.chat.completions.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'qwen/qwen3.7-plus',
+        }),
+      );
+    });
   });
 
   describe('OCR strategy selection', () => {
