@@ -13,6 +13,7 @@ const {
   applyRecommendation,
   getProjectMetaAdsStatus,
 } = require('~/server/services/MetaAds/budget');
+const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
 
 const router = express.Router({ mergeParams: true });
 
@@ -20,7 +21,6 @@ router.use(requireJwtAuth);
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
-const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
@@ -197,7 +197,7 @@ function normalizeMetaAds(metaAds = {}) {
   const tokenSecretName =
     typeof safeMetaAds.tokenSecretName === 'string' ? safeMetaAds.tokenSecretName.trim() : '';
   const graphVersion =
-    typeof rawGraphVersion === 'string' && META_GRAPH_VERSION_PATTERN.test(rawGraphVersion.trim())
+    typeof rawGraphVersion === 'string' && isSupportedMetaGraphVersion(rawGraphVersion.trim())
       ? rawGraphVersion.trim()
       : undefined;
   if (looksLikeMetaAccessToken(tokenSecretName)) {

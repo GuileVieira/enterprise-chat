@@ -53,9 +53,14 @@ describe('projectMetaAds settings normalization', () => {
   it('normalizes valid graph versions and drops invalid ones', () => {
     expect(
       router._normalizeMetaAdsForTest({
-        graphVersion: ' v23.0 ',
+        graphVersion: ' v24.0 ',
       }),
-    ).toEqual(expect.objectContaining({ graphVersion: 'v23.0' }));
+    ).toEqual(expect.objectContaining({ graphVersion: 'v24.0' }));
+    expect(
+      router._normalizeMetaAdsForTest({
+        graphVersion: 'v23.0',
+      }),
+    ).not.toHaveProperty('graphVersion');
     expect(
       router._normalizeMetaAdsForTest({
         graphVersion: '23',

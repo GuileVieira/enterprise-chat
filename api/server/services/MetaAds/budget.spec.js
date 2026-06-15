@@ -501,6 +501,7 @@ describe('Meta Ads budget service persistence safety', () => {
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
       getMetaGraphVersion: (value) => value || 'v25.0',
+      isSupportedMetaGraphVersion: (value) => /^v(2[4-9]|\d{3,})\.0$/.test(value),
       getAdSetDailyBudget,
       getEntityDailyBudget,
       getAdAccountCurrency,

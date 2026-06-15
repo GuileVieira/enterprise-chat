@@ -196,12 +196,12 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
-  it('saves a project Meta Graph API version override', () => {
+  it('saves a supported project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    fireEvent.change(screen.getByPlaceholderText('v25.0'), {
-      target: { value: 'v23.0' },
+    fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_graph_version_global'), {
+      target: { value: 'v24.0' },
     });
     fireEvent.click(screen.getByText('com_ui_save'));
 
@@ -209,10 +209,39 @@ describe('ProjectMetaAdsPanel', () => {
       {
         projectId: 'p1',
         metaAds: expect.objectContaining({
-          graphVersion: 'v23.0',
+          graphVersion: 'v24.0',
         }),
       },
       expect.any(Object),
+    );
+  });
+
+  it('does not render invalid saved Graph API values or token masks as editable values', () => {
+    mockStatusData.credentials = {
+      effectiveSource: 'project',
+      projectConfigured: true,
+      tenantConfigured: true,
+      secretName: 'meta_graph_access_token_project_p1',
+    };
+    render(
+      <ProjectMetaAdsPanel
+        project={{
+          ...project,
+          metaAds: {
+            graphVersion: 'guilherme@example.com',
+            tokenSecretName: 'meta_graph_access_token_project_p1',
+          },
+        }}
+        canEdit={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
+
+    expect(screen.queryByDisplayValue('guilherme@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('com_ui_project_meta_ads_token_keep_existing')).toHaveValue(
+      '',
     );
   });
 
@@ -906,7 +935,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_tenant_token_configured')).toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    expect(screen.getByText('********')).toBeInTheDocument();
+    expect(screen.queryByText('********')).not.toBeInTheDocument();
+    expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
   });
 
   it('shows a missing token status when the configured Meta Ads secret is absent', () => {

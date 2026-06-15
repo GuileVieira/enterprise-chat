@@ -21,6 +21,20 @@ describe('Meta Ads Graph client', () => {
   });
 
   it('uses a configured global Meta Graph API version', async () => {
+    process.env.META_GRAPH_API_VERSION = 'v24.0';
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: [] }),
+    });
+
+    await listAdSets({ adAccountId: 'act_123', token: 'token' });
+
+    expect(getMetaGraphVersion()).toBe('v24.0');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/adsets');
+  });
+
+  it('falls back to the default Meta Graph API version for deprecated versions', async () => {
     process.env.META_GRAPH_API_VERSION = 'v23.0';
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -30,8 +44,8 @@ describe('Meta Ads Graph client', () => {
 
     await listAdSets({ adAccountId: 'act_123', token: 'token' });
 
-    expect(getMetaGraphVersion()).toBe('v23.0');
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/act_123/adsets');
+    expect(getMetaGraphVersion()).toBe('v25.0');
+    expect(fetch.mock.calls[0][0]).toContain('/v25.0/act_123/adsets');
   });
 
   it('lists active campaigns with daily budget and objective', async () => {
@@ -58,7 +72,7 @@ describe('Meta Ads Graph client', () => {
     });
 
     await expect(
-      listCampaigns({ adAccountId: 'act_123', token: 'token', graphVersion: 'v23.0' }),
+      listCampaigns({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
     ).resolves.toEqual([
       {
         id: 'campaign-1',
@@ -69,7 +83,7 @@ describe('Meta Ads Graph client', () => {
       },
     ]);
 
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/act_123/campaigns');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/campaigns');
     expect(fetch.mock.calls[0][0]).toContain('objective');
     expect(fetch.mock.calls[0][0]).toContain('daily_budget');
   });
@@ -93,7 +107,7 @@ describe('Meta Ads Graph client', () => {
         }),
     });
 
-    await listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v23.0' });
+    await listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' });
 
     expect(fetch.mock.calls[0][0]).toContain('campaign_id');
     expect(fetch.mock.calls[0][0]).toContain('campaign%7Bid%2Cname%7D');
@@ -110,12 +124,12 @@ describe('Meta Ads Graph client', () => {
     await listAdSetInsights({
       adAccountId: 'act_123',
       token: 'token',
-      graphVersion: 'v23.0',
+      graphVersion: 'v24.0',
       since: '2026-06-02',
       until: '2026-06-03',
     });
 
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/act_123/insights');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
   });
 
   it('turns Meta permission errors into actionable messages', async () => {
@@ -132,7 +146,7 @@ describe('Meta Ads Graph client', () => {
     });
 
     await expect(
-      listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v23.0' }),
+      listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
     ).rejects.toThrow(
       'Token Meta Ads sem permissão para act_123. Conceda ads_read ou ads_management ao app/token e confirme acesso à conta de anúncio.',
     );
@@ -189,10 +203,10 @@ describe('Meta Ads Graph client', () => {
     });
 
     await expect(
-      getAdSetDailyBudget({ entityId: 'adset-1', token: 'token', graphVersion: 'v23.0' }),
+      getAdSetDailyBudget({ entityId: 'adset-1', token: 'token', graphVersion: 'v24.0' }),
     ).resolves.toBe(130);
 
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/adset-1');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/adset-1');
     expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget');
   });
 
@@ -204,13 +218,13 @@ describe('Meta Ads Graph client', () => {
     });
 
     await expect(
-      getEntityDailyBudget({ entityId: 'campaign-1', token: 'token', graphVersion: 'v23.0' }),
+      getEntityDailyBudget({ entityId: 'campaign-1', token: 'token', graphVersion: 'v24.0' }),
     ).resolves.toEqual({
       dailyBudget: 70,
       lifetimeBudget: 0,
     });
 
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/campaign-1');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/campaign-1');
     expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget%2Clifetime_budget');
   });
 
@@ -222,10 +236,10 @@ describe('Meta Ads Graph client', () => {
     });
 
     await expect(
-      getAdAccountCurrency({ adAccountId: 'act_123', token: 'token', graphVersion: 'v23.0' }),
+      getAdAccountCurrency({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
     ).resolves.toBe('BRL');
 
-    expect(fetch.mock.calls[0][0]).toContain('/v23.0/act_123');
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123');
     expect(fetch.mock.calls[0][0]).toContain('fields=currency');
   });
 });

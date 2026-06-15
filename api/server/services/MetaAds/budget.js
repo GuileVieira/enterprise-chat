@@ -7,6 +7,7 @@ const {
   getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
+  isSupportedMetaGraphVersion,
   listCampaigns,
   listAdSetInsights,
   listAdSets,
@@ -1158,11 +1159,14 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
         ),
       })
     : undefined;
+  const configuredGraphVersion = isSupportedMetaGraphVersion(project?.metaAds?.graphVersion)
+    ? project.metaAds.graphVersion
+    : undefined;
   const graphVersion = project
     ? {
-        effective: getMetaGraphVersion(project.metaAds?.graphVersion),
-        configured: project.metaAds?.graphVersion,
-        source: project.metaAds?.graphVersion ? 'project' : 'global',
+        effective: getMetaGraphVersion(configuredGraphVersion),
+        configured: configuredGraphVersion,
+        source: configuredGraphVersion ? 'project' : 'global',
       }
     : undefined;
   let campaignConfigs = [];

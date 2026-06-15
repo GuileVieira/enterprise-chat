@@ -3,6 +3,7 @@ const { logger } = require('@librechat/data-schemas');
 
 const META_GRAPH_HOST = 'https://graph.facebook.com';
 const DEFAULT_META_GRAPH_VERSION = 'v25.0';
+const MIN_META_GRAPH_VERSION = 24;
 const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 const DEFAULT_LIMIT = 100;
 const DEFAULT_META_GRAPH_TIMEOUT_MS = 30000;
@@ -50,9 +51,19 @@ function getMetaGraphVersion(value) {
     typeof value === 'string' && value.trim()
       ? value.trim()
       : process.env.META_GRAPH_API_VERSION?.trim();
-  return configuredVersion && META_GRAPH_VERSION_PATTERN.test(configuredVersion)
+  return configuredVersion && isSupportedMetaGraphVersion(configuredVersion)
     ? configuredVersion
     : DEFAULT_META_GRAPH_VERSION;
+}
+
+function getMetaGraphVersionNumber(value) {
+  const match = typeof value === 'string' ? value.trim().match(/^v(\d+)\.0$/) : null;
+  return match ? Number(match[1]) : null;
+}
+
+function isSupportedMetaGraphVersion(value) {
+  const versionNumber = getMetaGraphVersionNumber(value);
+  return versionNumber != null && versionNumber >= MIN_META_GRAPH_VERSION;
 }
 
 function getBodySnippet(text) {
@@ -378,10 +389,12 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
 
 module.exports = {
   DEFAULT_META_GRAPH_VERSION,
+  MIN_META_GRAPH_VERSION,
   getAdSetDailyBudget,
   getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
+  isSupportedMetaGraphVersion,
   listCampaigns,
   listAdSetInsights,
   listAdSets,

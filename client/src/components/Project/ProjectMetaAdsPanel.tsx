@@ -196,12 +196,29 @@ function toAdAccountId(value: string) {
   return digits ? `act_${digits}` : '';
 }
 
+function isSupportedGraphVersion(value?: string) {
+  const match = value?.trim().match(/^v(\d+)\.0$/);
+  return match ? Number(match[1]) >= 24 : false;
+}
+
+function getGraphVersionOptions(effectiveVersion?: string) {
+  return Array.from(
+    new Set([
+      'v24.0',
+      'v25.0',
+      ...(isSupportedGraphVersion(effectiveVersion) ? [effectiveVersion] : []),
+    ]),
+  );
+}
+
 function normalizeSettings(project: TProject): MetaAdsSettingsState {
   return {
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
     tokenSecretName: project.metaAds?.tokenSecretName ?? '',
-    graphVersion: project.metaAds?.graphVersion ?? '',
+    graphVersion: isSupportedGraphVersion(project.metaAds?.graphVersion)
+      ? project.metaAds?.graphVersion
+      : '',
     credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
     budgetLevel: 'adset',
@@ -312,6 +329,7 @@ export default function ProjectMetaAdsPanel({
       : buildCampaignFallback(latestSnapshots);
   const tokenCredentials = statusQuery.data?.credentials;
   const currency = statusQuery.data?.currency ?? 'BRL';
+  const graphVersionOptions = getGraphVersionOptions(statusQuery.data?.graphVersion?.effective);
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
@@ -860,15 +878,26 @@ export default function ProjectMetaAdsPanel({
               </label>
               <label className="flex flex-col gap-1 text-xs text-text-secondary">
                 {localize('com_ui_project_meta_ads_graph_version')}
-                <input
+                <select
                   disabled={!canEdit}
                   value={settings.graphVersion ?? ''}
                   onChange={(event) =>
                     setSettings((current) => ({ ...current, graphVersion: event.target.value }))
                   }
-                  placeholder={statusQuery.data?.graphVersion?.effective ?? 'v25.0'}
+                  autoComplete="off"
                   className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                />
+                >
+                  <option value="">
+                    {localize('com_ui_project_meta_ads_graph_version_global', {
+                      0: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
+                    })}
+                  </option>
+                  {graphVersionOptions.map((version) => (
+                    <option key={version} value={version}>
+                      {version}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
             <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_2fr]">
@@ -878,25 +907,29 @@ export default function ProjectMetaAdsPanel({
                   <input
                     disabled={!canEdit}
                     type={showMetaAccessToken ? 'text' : 'password'}
+                    name="meta_ads_project_token_new"
+                    autoComplete="new-password"
                     value={metaAccessToken}
                     onChange={(event) => setMetaAccessToken(event.target.value)}
                     placeholder={
                       hasMaskedToken
-                        ? '********'
+                        ? localize('com_ui_project_meta_ads_token_keep_existing')
                         : localize('com_ui_project_meta_ads_token_placeholder')
                     }
                     className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
                   />
-                  <button
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => setShowMetaAccessToken((current) => !current)}
-                    className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize(
-                      showMetaAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password',
-                    )}
-                  </button>
+                  {metaAccessToken.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => setShowMetaAccessToken((current) => !current)}
+                      className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize(
+                        showMetaAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password',
+                      )}
+                    </button>
+                  )}
                 </div>
                 <span className="text-xs leading-5 text-text-tertiary">
                   {localize('com_ui_project_meta_ads_project_token_hint')}
@@ -904,9 +937,6 @@ export default function ProjectMetaAdsPanel({
                 {tokenCredentials && (
                   <span className="inline-flex w-fit items-center gap-2 border border-border-light px-2 py-1 text-xs text-text-secondary">
                     {localize(tokenStatusKey)}
-                    {hasMaskedToken && (
-                      <span className="font-mono text-text-primary">********</span>
-                    )}
                   </span>
                 )}
                 {settings.tokenSecretName && (
