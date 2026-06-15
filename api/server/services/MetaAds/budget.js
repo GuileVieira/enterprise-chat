@@ -461,6 +461,38 @@ function buildCampaignSummaries({
   });
 }
 
+function buildDashboardSummary(campaigns = []) {
+  const totalSpend = campaigns.reduce((sum, campaign) => sum + Number(campaign.spend ?? 0), 0);
+  const totalResults = campaigns.reduce(
+    (sum, campaign) => sum + Number(campaign.resultCount ?? 0),
+    0,
+  );
+  const frequencyValues = campaigns
+    .map((campaign) => campaign.frequency)
+    .filter((value) => Number.isFinite(Number(value)));
+  const campaignsWithCost = campaigns.filter((campaign) => Number.isFinite(Number(campaign.cpa)));
+  const sortedByCost = [...campaignsWithCost].sort(
+    (first, second) => Number(first.cpa) - Number(second.cpa),
+  );
+
+  return {
+    totalSpend: Number(totalSpend.toFixed(2)),
+    totalResults: Number(totalResults.toFixed(2)),
+    averageCostPerResult: totalResults > 0 ? Number((totalSpend / totalResults).toFixed(2)) : null,
+    averageFrequency:
+      frequencyValues.length > 0
+        ? Number(
+            (
+              frequencyValues.reduce((sum, value) => sum + Number(value), 0) /
+              frequencyValues.length
+            ).toFixed(2),
+          )
+        : null,
+    bestCampaignByCost: sortedByCost[0],
+    worstCampaignByCost: sortedByCost[sortedByCost.length - 1],
+  };
+}
+
 function proposeBudget({ currentDailyBudget, cpa, roas, spend, rules }) {
   if (!currentDailyBudget || spend < rules.minSpend) {
     return {
@@ -845,7 +877,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   };
 }
 
-async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
+async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}) {
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
   const project = await runAsSystem(
     async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
@@ -898,7 +930,24 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId) {
     recommendations,
     campaignConfigs,
   });
-  return { latestSnapshots, recommendations, changes, campaigns, credentials, graphVersion };
+  const period =
+    options.datePreset || options.since || options.until
+      ? {
+          ...(options.datePreset ? { datePreset: options.datePreset } : {}),
+          ...(options.since ? { since: options.since } : {}),
+          ...(options.until ? { until: options.until } : {}),
+        }
+      : undefined;
+  return {
+    latestSnapshots,
+    recommendations,
+    changes,
+    campaigns,
+    credentials,
+    graphVersion,
+    period,
+    summary: buildDashboardSummary(campaigns),
+  };
 }
 
 async function applyManualBudgetChange({

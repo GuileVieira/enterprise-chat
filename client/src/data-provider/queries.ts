@@ -210,11 +210,12 @@ export const useProjectByIdQuery = (
 
 export const useProjectMetaAdsQuery = (
   projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
   config?: UseQueryOptions<t.ProjectMetaAdsStatus>,
 ): QueryObserverResult<t.ProjectMetaAdsStatus> => {
   return useQuery<t.ProjectMetaAdsStatus>(
-    [QueryKeys.projectMetaAds, projectId],
-    () => dataService.getProjectMetaAdsStatus(projectId),
+    [QueryKeys.projectMetaAds, projectId, params],
+    () => dataService.getProjectMetaAdsStatus(projectId, params),
     {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,

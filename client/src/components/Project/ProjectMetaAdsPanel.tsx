@@ -33,10 +33,14 @@ type BudgetEditor = {
   currentBudget?: number;
 };
 type RuleGroupDraft = {
+  id?: string;
   name: string;
   entityLevel: MetaAdsRuleGroup['entityLevel'];
   entityIds: string[];
   rules: Required<MetaAdsRules>;
+};
+type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
+  currentBudget?: number;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
 type RequestError = {
@@ -57,6 +61,14 @@ const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: Transla
   { value: 720, labelKey: 'com_ui_project_meta_ads_schedule_720' },
   { value: 1440, labelKey: 'com_ui_project_meta_ads_schedule_1440' },
 ];
+
+const periodOptions = [
+  { value: 'today', labelKey: 'com_ui_project_meta_ads_period_today' },
+  { value: 'yesterday', labelKey: 'com_ui_project_meta_ads_period_yesterday' },
+  { value: 'last_7d', labelKey: 'com_ui_project_meta_ads_period_last_7d' },
+  { value: 'last_14d', labelKey: 'com_ui_project_meta_ads_period_last_14d' },
+  { value: 'last_30d', labelKey: 'com_ui_project_meta_ads_period_last_30d' },
+] as const;
 
 const defaultRules: Required<MetaAdsRules> = {
   targetCpa: 45,
@@ -154,6 +166,28 @@ function getRequestErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: string) {
+  if (key === 'spend') {
+    return campaign.spend ?? 0;
+  }
+  if (key === 'cpa') {
+    return campaign.cpa ?? Number.MAX_SAFE_INTEGER;
+  }
+  if (key === 'result') {
+    return campaign.resultCount ?? 0;
+  }
+  return campaign.campaignName ?? campaign.campaignId;
+}
+
+function getRecommendationLabel(recommendation?: ProjectMetaAdsRecommendation) {
+  if (!recommendation) {
+    return '-';
+  }
+  const current = formatMetric(recommendation.currentDailyBudget);
+  const proposed = formatMetric(recommendation.proposedDailyBudget);
+  return `${recommendation.action}: ${current} -> ${proposed}`;
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -171,10 +205,16 @@ export default function ProjectMetaAdsPanel({
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
+  const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [budgetModeFilter, setBudgetModeFilter] = useState('all');
+  const [campaignSort, setCampaignSort] = useState('name_asc');
+  const [datePreset, setDatePreset] = useState<(typeof periodOptions)[number]['value']>('last_7d');
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const startupConfigQuery = useGetStartupConfig();
-  const statusQuery = useProjectMetaAdsQuery(project.projectId);
+  const statusQuery = useProjectMetaAdsQuery(project.projectId, { datePreset });
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
@@ -212,6 +252,42 @@ export default function ProjectMetaAdsPanel({
     .map((id) => id.replace('adset:', ''));
   const canCreateRuleGroup =
     canEdit && (selectedCampaignIds.length > 0 || selectedAdSetIds.length > 0);
+  const getEntityRuleLabel = (
+    entityLevel: MetaAdsRuleGroup['entityLevel'],
+    entityId: string,
+  ) =>
+    settings.ruleGroups?.find(
+      (group) => group.entityLevel === entityLevel && group.entityIds?.includes(entityId),
+    )?.name ?? '-';
+  const getEntityRecommendation = (entityId: string) =>
+    pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
+  const filteredCampaigns = campaigns
+    .filter((campaign) => {
+      const query = campaignSearch.trim().toLowerCase();
+      const matchesSearch =
+        !query ||
+        (campaign.campaignName ?? campaign.campaignId).toLowerCase().includes(query) ||
+        campaign.adSets.some((adset) =>
+          (adset.entityName ?? adset.entityId).toLowerCase().includes(query),
+        );
+      const matchesMode =
+        budgetModeFilter === 'all' || (campaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
+      return matchesSearch && matchesMode;
+    })
+    .sort((first, second) => {
+      if (campaignSort === 'spend_desc') {
+        return Number(getMetricValue(second, 'spend')) - Number(getMetricValue(first, 'spend'));
+      }
+      if (campaignSort === 'cpa_asc') {
+        return Number(getMetricValue(first, 'cpa')) - Number(getMetricValue(second, 'cpa'));
+      }
+      if (campaignSort === 'result_desc') {
+        return Number(getMetricValue(second, 'result')) - Number(getMetricValue(first, 'result'));
+      }
+      return String(getMetricValue(first, 'name')).localeCompare(
+        String(getMetricValue(second, 'name')),
+      );
+    });
 
   const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setSettings((current) => ({
@@ -319,20 +395,35 @@ export default function ProjectMetaAdsPanel({
       });
       return;
     }
+    setBudgetConfirmation({
+      entityLevel: budgetEditor.entityLevel,
+      entityId: budgetEditor.entityId,
+      entityName: budgetEditor.entityName,
+      dailyBudget,
+      currentBudget: budgetEditor.currentBudget,
+      reason: 'manual-ui',
+    });
+  };
+
+  const onConfirmManualBudget = () => {
+    if (!budgetConfirmation) {
+      return;
+    }
     updateBudget.mutate(
       {
         projectId: project.projectId,
         payload: {
-          entityLevel: budgetEditor.entityLevel,
-          entityId: budgetEditor.entityId,
-          entityName: budgetEditor.entityName,
-          dailyBudget,
-          reason: 'manual-ui',
+          entityLevel: budgetConfirmation.entityLevel,
+          entityId: budgetConfirmation.entityId,
+          entityName: budgetConfirmation.entityName,
+          dailyBudget: budgetConfirmation.dailyBudget,
+          reason: budgetConfirmation.reason,
         },
       },
       {
         onSuccess: () => {
           setBudgetEditor(null);
+          setBudgetConfirmation(null);
           setManualDailyBudget('');
           statusQuery.refetch();
           showToast({
@@ -365,6 +456,41 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
+  const onEditRuleGroup = (group: MetaAdsRuleGroup) => {
+    setRuleGroupDraft({
+      id: group.id,
+      name: group.name ?? '',
+      entityLevel: group.entityLevel,
+      entityIds: group.entityIds ?? [],
+      rules: { ...defaultRules, ...(group.rules ?? {}) },
+    });
+  };
+
+  const onDeleteRuleGroup = (groupId?: string) => {
+    const nextSettings = {
+      ...settings,
+      ruleGroups: (settings.ruleGroups ?? []).filter((group) => group.id !== groupId),
+    };
+    setSettings(nextSettings);
+    updateSettings.mutate(
+      {
+        projectId: project.projectId,
+        metaAds: nextSettings,
+      },
+      {
+        onSuccess: () => {
+          statusQuery.refetch();
+          showToast({ message: localize('com_ui_saved'), status: 'success' });
+        },
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+          showToast({ message, status: 'error' });
+        },
+      },
+    );
+  };
+
   const onRuleGroupRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
     setRuleGroupDraft((current) =>
       current
@@ -384,7 +510,7 @@ export default function ProjectMetaAdsPanel({
       return;
     }
     const nextGroup: MetaAdsRuleGroup = {
-      id: `${ruleGroupDraft.entityLevel}-${Date.now()}`,
+      id: ruleGroupDraft.id ?? `${ruleGroupDraft.entityLevel}-${Date.now()}`,
       name:
         ruleGroupDraft.name.trim() || localize('com_ui_project_meta_ads_rule_group_default_name'),
       entityLevel: ruleGroupDraft.entityLevel,
@@ -392,9 +518,12 @@ export default function ProjectMetaAdsPanel({
       enabled: true,
       rules: ruleGroupDraft.rules,
     };
+    const existingGroups = settings.ruleGroups ?? [];
     const nextSettings = {
       ...settings,
-      ruleGroups: [...(settings.ruleGroups ?? []), nextGroup],
+      ruleGroups: ruleGroupDraft.id
+        ? existingGroups.map((group) => (group.id === ruleGroupDraft.id ? nextGroup : group))
+        : [...existingGroups, nextGroup],
     };
     setSettings(nextSettings);
     updateSettings.mutate(
@@ -778,6 +907,129 @@ export default function ProjectMetaAdsPanel({
               </button>
             </div>
           </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr]">
+            <label className="flex flex-col gap-1 text-xs text-text-secondary">
+              {localize('com_ui_project_meta_ads_period')}
+              <select
+                value={datePreset}
+                onChange={(event) =>
+                  setDatePreset(event.target.value as (typeof periodOptions)[number]['value'])
+                }
+                className="h-9 rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+              >
+                {periodOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {localize(option.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid gap-2 sm:grid-cols-4">
+              {[
+                ['com_ui_project_meta_ads_total_spend', statusQuery.data?.summary?.totalSpend],
+                ['com_ui_project_meta_ads_total_results', statusQuery.data?.summary?.totalResults],
+                [
+                  'com_ui_project_meta_ads_average_cost',
+                  statusQuery.data?.summary?.averageCostPerResult,
+                ],
+                [
+                  'com_ui_project_meta_ads_average_frequency',
+                  statusQuery.data?.summary?.averageFrequency,
+                ],
+              ].map(([labelKey, value]) => (
+                <div
+                  key={labelKey}
+                  className="rounded-lg border border-border-light bg-surface-primary p-3"
+                >
+                  <div className="text-xs text-text-tertiary">
+                    {localize(labelKey as TranslationKeys)}
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-text-primary">
+                    {formatMetric(value as number | null | undefined)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <label className="flex flex-col gap-1 text-xs text-text-secondary">
+              {localize('com_ui_project_meta_ads_search')}
+              <input
+                value={campaignSearch}
+                onChange={(event) => setCampaignSearch(event.target.value)}
+                className="h-9 rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-text-secondary">
+              {localize('com_ui_project_meta_ads_budget_mode_filter')}
+              <select
+                value={budgetModeFilter}
+                onChange={(event) => setBudgetModeFilter(event.target.value)}
+                className="h-9 rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+              >
+                <option value="all">{localize('com_ui_all')}</option>
+                <option value="CBO">CBO</option>
+                <option value="ABO">ABO</option>
+                <option value="UNKNOWN">UNKNOWN</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-text-secondary">
+              {localize('com_ui_project_meta_ads_sort')}
+              <select
+                value={campaignSort}
+                onChange={(event) => setCampaignSort(event.target.value)}
+                className="h-9 rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+              >
+                <option value="name_asc">{localize('com_ui_name')}</option>
+                <option value="spend_desc">{localize('com_ui_project_meta_ads_spend')}</option>
+                <option value="cpa_asc">{localize('com_ui_project_meta_ads_cost_result')}</option>
+                <option value="result_desc">{localize('com_ui_project_meta_ads_result')}</option>
+              </select>
+            </label>
+          </div>
+          {(settings.ruleGroups ?? []).length > 0 && (
+            <div className="mt-4 rounded-lg border border-border-light bg-surface-primary p-3">
+              <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                {localize('com_ui_project_meta_ads_rule_groups')}
+              </h4>
+              <div className="mt-3 space-y-2">
+                {(settings.ruleGroups ?? []).map((group) => (
+                  <div
+                    key={group.id ?? group.name}
+                    className="flex flex-col gap-2 rounded-lg border border-border-light p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-text-primary">
+                        {group.name}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        {group.entityLevel} · {(group.entityIds ?? []).length}{' '}
+                        {localize('com_ui_project_meta_ads_rule_group_selected')}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => onEditRuleGroup(group)}
+                        className="h-8 rounded-lg border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {localize('com_ui_project_meta_ads_edit_rule_group')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => onDeleteRuleGroup(group.id)}
+                        className="h-8 rounded-lg border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {localize('com_ui_project_meta_ads_delete_rule_group')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {budgetEditor && (
             <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border-light bg-surface-primary p-3 sm:flex-row sm:items-end">
               <div className="min-w-0 flex-1">
@@ -814,6 +1066,36 @@ export default function ProjectMetaAdsPanel({
                   className="h-9 rounded-lg bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {localize('com_ui_project_meta_ads_save_budget')}
+                </button>
+              </div>
+            </div>
+          )}
+          {budgetConfirmation && (
+            <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <div className="font-semibold">
+                {localize('com_ui_project_meta_ads_confirm_budget_title')}
+              </div>
+              <div className="mt-1">
+                {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
+                {formatMetric(budgetConfirmation.currentBudget)}
+                {' -> '}
+                {formatMetric(budgetConfirmation.dailyBudget)}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBudgetConfirmation(null)}
+                  className="h-8 rounded-lg border border-amber-300 px-3 text-xs font-medium"
+                >
+                  {localize('com_ui_cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={updateBudget.isLoading}
+                  onClick={onConfirmManualBudget}
+                  className="h-8 rounded-lg bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize('com_ui_project_meta_ads_confirm_budget')}
                 </button>
               </div>
             </div>
@@ -918,12 +1200,16 @@ export default function ProjectMetaAdsPanel({
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((campaign) => {
+                {filteredCampaigns.map((campaign) => {
                   const expanded = expandedCampaignIds.includes(campaign.campaignId);
                   const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
                   return (
                     <Fragment key={campaign.campaignId}>
-                      <tr key={campaign.campaignId} className="border-t border-border-light">
+                      <tr
+                        key={campaign.campaignId}
+                        data-testid="meta-ads-campaign-row"
+                        className="border-t border-border-light"
+                      >
                         <td className="py-2 pr-3">
                           <input
                             type="checkbox"
@@ -1097,11 +1383,44 @@ export default function ProjectMetaAdsPanel({
                 })}
               </tbody>
             </table>
-            {campaigns.length === 0 && (
+            {filteredCampaigns.length === 0 && (
               <div className="rounded-lg border border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
                 {localize('com_ui_project_meta_ads_no_snapshots')}
               </div>
             )}
+          </div>
+          <div className="mt-4 rounded-lg border border-border-light bg-surface-primary p-3">
+            <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+              {localize('com_ui_project_meta_ads_history')}
+            </h4>
+            <div className="mt-3 space-y-2">
+              {(statusQuery.data?.changes ?? []).length > 0 ? (
+                (statusQuery.data?.changes ?? []).slice(0, 8).map((change) => (
+                  <div
+                    key={change._id ?? `${change.entityId}-${change.createdAt}`}
+                    className="flex flex-col gap-1 rounded-lg border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-text-primary">
+                        {change.entityName ?? change.entityId}
+                      </div>
+                      <div className="text-xs text-text-secondary">
+                        {change.actor ?? '-'} · {change.reason ?? '-'}
+                      </div>
+                    </div>
+                    <div className="font-mono text-xs text-text-secondary">
+                      {formatMetric(change.previousDailyBudget)}
+                      {' -> '}
+                      {formatMetric(change.newDailyBudget)}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
+                  {localize('com_ui_project_meta_ads_no_history')}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -173,6 +173,19 @@ export type ProjectMetaAdsStatus = {
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
   campaigns?: ProjectMetaAdsCampaignSummary[];
+  period?: {
+    datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+    since?: string;
+    until?: string;
+  };
+  summary?: {
+    totalSpend: number;
+    totalResults: number;
+    averageCostPerResult: number | null;
+    averageFrequency: number | null;
+    bestCampaignByCost?: ProjectMetaAdsCampaignSummary;
+    worstCampaignByCost?: ProjectMetaAdsCampaignSummary;
+  };
   credentials?: {
     effectiveSource: 'project' | 'tenant' | 'missing';
     projectConfigured: boolean;
@@ -184,6 +197,12 @@ export type ProjectMetaAdsStatus = {
     configured?: string;
     source: 'project' | 'global';
   };
+};
+
+export type ProjectMetaAdsStatusParams = {
+  datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+  since?: string;
+  until?: string;
 };
 
 export type ProjectMetaAdsRunResponse = {

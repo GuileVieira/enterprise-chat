@@ -247,7 +247,13 @@ router.get(
         tenantId,
         projectId: req.params.projectId,
       });
-      return res.json(await getProjectMetaAdsStatus(req.params.projectId, tenantId));
+      return res.json(
+        await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
+          datePreset: req.query.datePreset,
+          since: req.query.since,
+          until: req.query.until,
+        }),
+      );
     } catch (error) {
       logger.error('[projectMetaAds] status failed', error);
       return res.status(500).json({ message: error.message });

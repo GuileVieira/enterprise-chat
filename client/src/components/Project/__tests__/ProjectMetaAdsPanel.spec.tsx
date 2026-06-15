@@ -12,6 +12,10 @@ const mockMutateBudget = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
+const mockUseProjectMetaAdsQuery = jest.fn(() => ({
+  data: mockStatusData,
+  refetch: mockRefetchStatus,
+}));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
@@ -45,10 +49,8 @@ jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
     data: mockStartupConfig,
   }),
-  useProjectMetaAdsQuery: () => ({
-    data: mockStatusData,
-    refetch: mockRefetchStatus,
-  }),
+  useProjectMetaAdsQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -82,6 +84,9 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.latestSnapshots = [];
     mockStatusData.recommendations = [];
     mockStatusData.changes = [];
+    mockStatusData.summary = undefined;
+    mockUseProjectMetaAdsQuery.mockClear();
+    delete mockStatusData.campaigns;
     delete mockStatusData.credentials;
     mockStatusData.graphVersion = {
       effective: 'v25.0',
@@ -314,8 +319,8 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_reach')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_impressions')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_video_p75')).toBeInTheDocument();
-    expect(screen.getByText('CBO')).toBeInTheDocument();
-    expect(screen.getByText('ABO')).toBeInTheDocument();
+    expect(screen.getAllByText('CBO').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('ABO').length).toBeGreaterThan(0);
     expect(screen.getByText('800.00')).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_edit_budget')[0]);
@@ -323,6 +328,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '125' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
 
     expect(mockMutateBudget).toHaveBeenCalledWith(
       {
@@ -388,6 +394,205 @@ describe('ProjectMetaAdsPanel', () => {
             }),
           ],
         }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('filters and sorts campaigns like an operator table', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-low',
+        campaignName: 'Low Spend CBO',
+        spend: 50,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-high',
+        campaignName: 'High Spend ABO',
+        spend: 300,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-hidden',
+        campaignName: 'Hidden CBO',
+        spend: 200,
+        dailyBudget: 120,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_search'), {
+      target: { value: 'spend' },
+    });
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_budget_mode_filter'), {
+      target: { value: 'CBO' },
+    });
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_sort'), {
+      target: { value: 'spend_desc' },
+    });
+
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Low Spend CBO');
+    expect(screen.queryByText('High Spend ABO')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hidden CBO')).not.toBeInTheDocument();
+  });
+
+  it('shows period dashboard summary and requests the selected period', () => {
+    mockStatusData.summary = {
+      totalSpend: 300,
+      totalResults: 12,
+      averageCostPerResult: 25,
+      averageFrequency: 3,
+      bestCampaignByCost: undefined,
+      worstCampaignByCost: undefined,
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', { datePreset: 'last_7d' });
+    expect(screen.getByText('com_ui_project_meta_ads_total_spend')).toBeInTheDocument();
+    expect(screen.getByText('300.00')).toBeInTheDocument();
+    expect(screen.getByText('25.00')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
+      target: { value: 'last_30d' },
+    });
+
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
+      datePreset: 'last_30d',
+    });
+  });
+
+  it('requires confirmation before sending a manual budget change', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_edit_budget'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '125' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_project_meta_ads_confirm_budget_title')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+
+    expect(mockMutateBudget).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: expect.objectContaining({
+          entityLevel: 'campaign',
+          entityId: 'campaign-cbo',
+          dailyBudget: 125,
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('shows budget change history', () => {
+    mockStatusData.changes = [
+      {
+        _id: 'change-1',
+        entityId: 'campaign-cbo',
+        entityName: 'CBO Messages',
+        entityLevel: 'campaign',
+        previousDailyBudget: 100,
+        newDailyBudget: 125,
+        actor: 'user',
+        reason: 'manual-ui',
+        createdAt: '2026-06-12T12:00:00.000Z',
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
+    expect(screen.getByText('CBO Messages')).toBeInTheDocument();
+    expect(screen.getByText('100.00 -> 125.00')).toBeInTheDocument();
+  });
+
+  it('edits and removes existing rule groups', () => {
+    const projectWithRuleGroup = {
+      ...project,
+      metaAds: {
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Old group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: {
+              targetCpa: 45,
+              minRoas: 2,
+              maxIncreasePct: 15,
+              maxDecreasePct: 20,
+              minDailyBudget: 20,
+              maxDailyBudget: 500,
+              cooldownHours: 24,
+              minSpend: 10,
+            },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRuleGroup} canEdit={true} />);
+
+    expect(screen.getByText('Old group')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_edit_rule_group'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'New group' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          ruleGroups: [
+            expect.objectContaining({
+              id: 'group-1',
+              name: 'New group',
+            }),
+          ],
+        }),
+      },
+      expect.any(Object),
+    );
+
+    mockMutateSettings.mockClear();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_delete_rule_group'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({ ruleGroups: [] }),
       },
       expect.any(Object),
     );

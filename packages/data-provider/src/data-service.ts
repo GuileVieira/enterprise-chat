@@ -871,8 +871,11 @@ export const archiveProject = (id: string, isArchived: boolean): Promise<s.TProj
   return request.put(endpoints.archiveProject(id), { isArchived });
 };
 
-export const getProjectMetaAdsStatus = (id: string): Promise<q.ProjectMetaAdsStatus> => {
-  return request.get(endpoints.projectMetaAds(id));
+export const getProjectMetaAdsStatus = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsStatus> => {
+  return request.get(endpoints.projectMetaAds(id), { params });
 };
 
 export const updateProjectMetaAdsSettings = (

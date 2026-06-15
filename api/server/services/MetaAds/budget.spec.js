@@ -604,6 +604,50 @@ describe('Meta Ads budget service persistence safety', () => {
     ]);
   });
 
+  it('returns period and summary metrics for the campaign dashboard', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          spend: 200,
+          cpa: 20,
+          resultCount: 10,
+          frequency: 2,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+        {
+          entityId: 'adset-2',
+          entityName: 'Retarget',
+          campaignId: 'campaign-2',
+          campaignName: 'Sales SP',
+          spend: 100,
+          cpa: 50,
+          resultCount: 2,
+          frequency: 4,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.period).toEqual({ datePreset: 'last_7d' });
+    expect(status.summary).toEqual({
+      totalSpend: 300,
+      totalResults: 12,
+      averageCostPerResult: 25,
+      averageFrequency: 3,
+      bestCampaignByCost: expect.objectContaining({ campaignId: 'campaign-1' }),
+      worstCampaignByCost: expect.objectContaining({ campaignId: 'campaign-2' }),
+    });
+  });
+
   it('marks CBO campaigns as campaign-editable and ABO campaigns as adset-editable', async () => {
     const { budget, listCampaigns } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
