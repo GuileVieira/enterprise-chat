@@ -25,4 +25,6 @@ Notes:
   - `CONFIG_PATH=/app/config/librechat.prod.yaml`
   - `MONGO_URI=mongodb://mongodb:27017/Orqest`
   - `CONSOLE_JSON=true`
+  - `META_ADS_GRAPH_TIMEOUT_MS=30000` (optional; per Meta Graph request)
+  - `META_ADS_CRON_PROJECT_TIMEOUT_MS=45000` (optional; per project)
 - Enable the feature in config with `interface.metaAds: true`.

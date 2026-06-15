@@ -15,6 +15,7 @@ const {
 
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const DEFAULT_SCHEDULE_INTERVAL_MINUTES = 180;
+const DEFAULT_CRON_PROJECT_TIMEOUT_MS = 45000;
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const MIN_SAMPLE_SPEND = 10;
 const DEFAULT_RULES = {
@@ -288,6 +289,27 @@ function normalizeAdAccountId(value) {
 function getScheduleIntervalMinutes(metaAds = {}) {
   const interval = Number(metaAds.scheduleIntervalMinutes);
   return SCHEDULE_INTERVALS.has(interval) ? interval : DEFAULT_SCHEDULE_INTERVAL_MINUTES;
+}
+
+function getPositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getCronProjectTimeoutMs(value) {
+  return getPositiveInteger(
+    value ?? process.env.META_ADS_CRON_PROJECT_TIMEOUT_MS,
+    DEFAULT_CRON_PROJECT_TIMEOUT_MS,
+  );
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timeout;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    timeout.unref?.();
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
 }
 
 function isProjectDueForMetaAdsRun(project, now = new Date()) {
@@ -1180,19 +1202,26 @@ async function applyManualBudgetChange({
   return { change };
 }
 
-async function runCron() {
+async function runCron(options = {}) {
   const Project = mongoose.models.Project;
   if (!Project) {
     throw new Error('Project model is not initialized.');
   }
+  const startedAt = Date.now();
+  const projectTimeoutMs = getCronProjectTimeoutMs(options.projectTimeoutMs);
   const projects = await runAsSystem(() =>
     Project.find({
       'metaAds.enabled': true,
       'metaAds.adAccountId': { $exists: true, $ne: '' },
     }).lean(),
   );
+  logger.info('[MetaAdsBudgetCron] Started', {
+    projects: projects.length,
+    projectTimeoutMs,
+  });
   const results = [];
   for (const project of projects) {
+    const projectStartedAt = Date.now();
     if (!(await isMetaAdsFeatureEnabled(project.tenantId))) {
       results.push({ projectId: project.projectId, ok: true, skipped: true, reason: 'disabled' });
       continue;
@@ -1202,22 +1231,39 @@ async function runCron() {
       continue;
     }
     try {
-      const result = await analyzeProject({ projectId: project.projectId, actor: 'cron' });
+      logger.info('[MetaAdsBudgetCron] Project started', {
+        projectId: project.projectId,
+      });
+      const result = await withTimeout(
+        analyzeProject({ projectId: project.projectId, actor: 'cron' }),
+        projectTimeoutMs,
+        `Meta Ads project ${project.projectId} timed out after ${projectTimeoutMs}ms.`,
+      );
       await runAsSystem(() =>
         Project.updateOne(
           { projectId: project.projectId },
           { $set: { 'metaAds.lastRunAt': new Date() } },
         ),
       );
+      logger.info('[MetaAdsBudgetCron] Project finished', {
+        projectId: project.projectId,
+        durationMs: Date.now() - projectStartedAt,
+      });
       results.push(result);
     } catch (error) {
       logger.error('[MetaAdsBudgetCron] Project failed', {
         projectId: project.projectId,
         error: error.message,
+        durationMs: Date.now() - projectStartedAt,
       });
       results.push({ projectId: project.projectId, ok: false, error: error.message });
     }
   }
+  logger.info('[MetaAdsBudgetCron] Finished', {
+    projects: results.length,
+    failed: results.filter((result) => result.ok === false).length,
+    durationMs: Date.now() - startedAt,
+  });
   return results;
 }
 

@@ -16,6 +16,8 @@ describe('Meta Ads Graph client', () => {
   beforeEach(() => {
     fetch.mockReset();
     delete process.env.META_GRAPH_API_VERSION;
+    delete process.env.META_ADS_GRAPH_TIMEOUT_MS;
+    jest.useRealTimers();
   });
 
   it('uses a configured global Meta Graph API version', async () => {
@@ -154,6 +156,29 @@ describe('Meta Ads Graph client', () => {
     ).rejects.toThrow(
       'Meta returned an invalid ad sets response (200). Body: Invalid JSON for postcard',
     );
+  });
+
+  it('aborts Meta requests after the configured timeout', async () => {
+    jest.useFakeTimers();
+    process.env.META_ADS_GRAPH_TIMEOUT_MS = '25';
+    fetch.mockImplementationOnce(
+      () =>
+        new Promise(() => {
+          // pending request
+        }),
+    );
+
+    const request = metaGet({
+      path: 'act_123/adsets',
+      token: 'token',
+      params: { fields: 'id' },
+      resourceLabel: 'ad sets',
+    });
+
+    jest.advanceTimersByTime(25);
+
+    await expect(request).rejects.toThrow('Meta Ads ad sets request timed out after 25ms.');
+    expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
   });
 
   it('fetches the current ad set daily budget before a budget update', async () => {

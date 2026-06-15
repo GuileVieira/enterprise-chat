@@ -5,6 +5,45 @@ const META_GRAPH_HOST = 'https://graph.facebook.com';
 const DEFAULT_META_GRAPH_VERSION = 'v25.0';
 const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 const DEFAULT_LIMIT = 100;
+const DEFAULT_META_GRAPH_TIMEOUT_MS = 30000;
+
+function getPositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getMetaGraphTimeoutMs() {
+  return getPositiveInteger(process.env.META_ADS_GRAPH_TIMEOUT_MS, DEFAULT_META_GRAPH_TIMEOUT_MS);
+}
+
+function createMetaGraphTimeoutError(resourceLabel, timeoutMs) {
+  return new Error(`Meta Ads ${resourceLabel} request timed out after ${timeoutMs}ms.`);
+}
+
+async function fetchWithTimeout(url, options = {}, resourceLabel = 'Meta API') {
+  const timeoutMs = getMetaGraphTimeoutMs();
+  const controller = new AbortController();
+  let timeout;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(createMetaGraphTimeoutError(resourceLabel, timeoutMs));
+      controller.abort();
+    }, timeoutMs);
+    timeout.unref?.();
+  });
+
+  try {
+    return await Promise.race([
+      fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }),
+      timeoutPromise,
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function getMetaGraphVersion(value) {
   const configuredVersion =
@@ -116,9 +155,13 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
   const paramKeys = Object.keys(params);
   let response;
   try {
-    response = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    response = await fetchWithTimeout(
+      url.toString(),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      resourceLabel,
+    );
   } catch (error) {
     logger.error('[MetaAdsGraph] Meta fetch threw', {
       path,
@@ -140,14 +183,30 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
 
 async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 'Meta API' }) {
   const resolvedGraphVersion = getMetaGraphVersion(graphVersion);
-  const response = await fetch(`${META_GRAPH_HOST}/${resolvedGraphVersion}/${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  let response;
+  try {
+    response = await fetchWithTimeout(
+      `${META_GRAPH_HOST}/${resolvedGraphVersion}/${path}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      },
+      resourceLabel,
+    );
+  } catch (error) {
+    logger.error('[MetaAdsGraph] Meta fetch threw', {
+      path,
+      graphVersion: resolvedGraphVersion,
+      params: Object.keys(body),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
   return readMetaResponse({
     response,
     path,

@@ -340,6 +340,7 @@ describe('Meta Ads budget service persistence safety', () => {
     snapshots = [],
     recommendations = [],
     changes = [],
+    projects = [],
   } = {}) => {
     jest.resetModules();
 
@@ -383,9 +384,15 @@ describe('Meta Ads budget service persistence safety', () => {
       makeFindChain({ ...query, __collection: 'recommendations' }),
     );
     const findChanges = jest.fn((query) => makeFindChain({ ...query, __collection: 'changes' }));
+    const projectFind = jest.fn(() => ({ lean: async () => projects }));
+    const projectUpdateOne = jest.fn(async () => ({ modifiedCount: 1 }));
 
     jest.doMock('mongoose', () => ({
       models: {
+        Project: {
+          find: projectFind,
+          updateOne: projectUpdateOne,
+        },
         MetaAdsSnapshot: {
           schema: {},
           create: createSnapshot,
@@ -423,6 +430,7 @@ describe('Meta Ads budget service persistence safety', () => {
       logger: {
         debug: jest.fn(),
         error: jest.fn(),
+        info: jest.fn(),
       },
       runAsSystem: (fn) => fn(),
       getTenantId: () => 'fallback-tenant',
@@ -461,9 +469,12 @@ describe('Meta Ads budget service persistence safety', () => {
       getEntityDailyBudget,
       getAdAccountCurrency,
       listCampaigns,
+      listAdSets,
       listAdSetInsights,
       makeFindChain,
       metaPost,
+      projectFind,
+      projectUpdateOne,
       updateMany,
     };
   };
@@ -1023,5 +1034,54 @@ describe('Meta Ads budget service persistence safety', () => {
         },
       },
     );
+  });
+
+  it('fails a slow project by timeout and continues the cron run', async () => {
+    jest.useFakeTimers();
+    const { budget, listAdSets, projectUpdateOne } = loadBudgetWithMocks({
+      project: {
+        projectId: 'slow-project',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+      projects: [
+        {
+          projectId: 'slow-project',
+          tenantId: 'tenant-a',
+          metaAds: { enabled: true, adAccountId: 'act_123' },
+        },
+        {
+          projectId: 'not-due-project',
+          tenantId: 'tenant-a',
+          metaAds: {
+            enabled: true,
+            adAccountId: 'act_456',
+            lastRunAt: new Date(),
+            scheduleIntervalMinutes: 180,
+          },
+        },
+      ],
+    });
+    listAdSets.mockImplementationOnce(
+      () =>
+        new Promise(() => {
+          // pending Meta request
+        }),
+    );
+
+    const run = budget.runCron({ projectTimeoutMs: 25 });
+    await jest.advanceTimersByTimeAsync(25);
+    const results = await run;
+
+    expect(results).toEqual([
+      {
+        projectId: 'slow-project',
+        ok: false,
+        error: 'Meta Ads project slow-project timed out after 25ms.',
+      },
+      { projectId: 'not-due-project', ok: true, skipped: true, reason: 'not_due' },
+    ]);
+    expect(projectUpdateOne).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 });
