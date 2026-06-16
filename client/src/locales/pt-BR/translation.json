@@ -1104,6 +1104,8 @@
   "com_ui_project_meta_ads_actions": "Ações",
   "com_ui_project_meta_ads_search": "Buscar",
   "com_ui_project_meta_ads_sort": "Ordenar",
+  "com_ui_project_meta_ads_selection_count": "{{0}} selecionado(s)",
+  "com_ui_project_meta_ads_clear_selection": "Limpar seleção",
   "com_ui_project_meta_ads_create_rule_group": "Criar grupo de regras",
   "com_ui_project_meta_ads_save_rule_group": "Salvar grupo de regras",
   "com_ui_project_meta_ads_rule_groups": "Grupos de regras",
