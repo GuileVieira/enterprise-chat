@@ -33,6 +33,70 @@ import type {
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
+const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v1';
+const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
+
+type CachedProjectMetaAdsStatus = {
+  cachedAt: number;
+  data: t.ProjectMetaAdsStatus;
+};
+
+function getProjectMetaAdsStatusCacheKey(projectId: string, params?: t.ProjectMetaAdsStatusParams) {
+  return `${projectMetaAdsStatusCachePrefix}:${projectId}:${params?.datePreset ?? 'default'}`;
+}
+
+function isProjectMetaAdsStatus(value: unknown): value is t.ProjectMetaAdsStatus {
+  if (typeof value !== 'object' || value == null) {
+    return false;
+  }
+  const status = value as Partial<t.ProjectMetaAdsStatus>;
+  return (
+    Array.isArray(status.latestSnapshots) &&
+    Array.isArray(status.recommendations) &&
+    Array.isArray(status.changes)
+  );
+}
+
+function readCachedProjectMetaAdsStatus(cacheKey: string) {
+  if (typeof localStorage === 'undefined') {
+    return undefined;
+  }
+  try {
+    const rawValue = localStorage.getItem(cacheKey);
+    if (!rawValue) {
+      return undefined;
+    }
+    const cachedValue = JSON.parse(rawValue) as Partial<CachedProjectMetaAdsStatus>;
+    if (
+      typeof cachedValue.cachedAt !== 'number' ||
+      Date.now() - cachedValue.cachedAt > projectMetaAdsStatusCacheTtlMs ||
+      !isProjectMetaAdsStatus(cachedValue.data)
+    ) {
+      localStorage.removeItem(cacheKey);
+      return undefined;
+    }
+    return cachedValue.data;
+  } catch {
+    localStorage.removeItem(cacheKey);
+    return undefined;
+  }
+}
+
+function writeCachedProjectMetaAdsStatus(cacheKey: string, data: t.ProjectMetaAdsStatus) {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  try {
+    const cachedValue: CachedProjectMetaAdsStatus = {
+      cachedAt: Date.now(),
+      data,
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cachedValue));
+  } catch {
+    localStorage.removeItem(cacheKey);
+  }
+}
+
 export const useGetPresetsQuery = (
   config?: UseQueryOptions<TPreset[]>,
 ): QueryObserverResult<TPreset[], unknown> => {
@@ -213,6 +277,7 @@ export const useProjectMetaAdsQuery = (
   params?: t.ProjectMetaAdsStatusParams,
   config?: UseQueryOptions<t.ProjectMetaAdsStatus>,
 ): QueryObserverResult<t.ProjectMetaAdsStatus> => {
+  const cacheKey = getProjectMetaAdsStatusCacheKey(projectId, params);
   return useQuery<t.ProjectMetaAdsStatus>(
     [QueryKeys.projectMetaAds, projectId, params],
     () => dataService.getProjectMetaAdsStatus(projectId, params),
@@ -221,6 +286,14 @@ export const useProjectMetaAdsQuery = (
       refetchOnReconnect: false,
       enabled: !!projectId,
       ...config,
+      initialData:
+        typeof config?.initialData === 'function' || config?.initialData != null
+          ? config.initialData
+          : readCachedProjectMetaAdsStatus(cacheKey),
+      onSuccess: (data) => {
+        writeCachedProjectMetaAdsStatus(cacheKey, data);
+        config?.onSuccess?.(data);
+      },
     },
   );
 };

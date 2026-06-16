@@ -773,6 +773,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_evolution')).toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-evolution-chart')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_budget_changes')).toBeInTheDocument();
     expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
@@ -780,6 +781,117 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('+7.00')).toBeInTheDocument();
     expect(screen.getByText('-R$ 0,45')).toBeInTheDocument();
     expect(screen.getByText('+R$ 10,00')).toBeInTheDocument();
+  });
+
+  it('shows a clean empty dashboard when trend has one point and zero deltas', () => {
+    mockStatusData.trend = {
+      points: [
+        {
+          date: '2026-06-01',
+          campaignId: 'campaign-1',
+          campaignName: '🔥 [MENSAGEM] Blumenau Remarketing',
+          spend: 578.58,
+          resultCount: 45,
+          cpa: 12.86,
+          dailyBudget: 30,
+          frequency: 2.65,
+        },
+      ],
+      campaignDeltas: [
+        {
+          campaignId: 'campaign-1',
+          campaignName: '🔥 [MENSAGEM] Blumenau Remarketing',
+          firstDate: '2026-06-01',
+          lastDate: '2026-06-01',
+          spendDelta: 0,
+          resultDelta: 0,
+          cpaDelta: 0,
+          budgetDelta: 0,
+          frequencyDelta: 0,
+        },
+      ],
+      changesByDay: [],
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    const dashboard = screen.getByTestId('meta-ads-evolution-dashboard');
+    expect(within(dashboard).getAllByText('com_ui_project_meta_ads_no_evolution').length).toBe(2);
+    expect(
+      within(dashboard).queryByText('🔥 [MENSAGEM] Blumenau Remarketing'),
+    ).not.toBeInTheDocument();
+    expect(within(dashboard).queryByText('R$ 0,00')).not.toBeInTheDocument();
+  });
+
+  it('keeps selection controls stable and exposes a selection toolbar', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    const rowsBeforeSelection = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(screen.getByText('com_ui_project_meta_ads_selection_count')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+
+    expect(screen.getAllByTestId('meta-ads-campaign-row')).toHaveLength(rowsBeforeSelection.length);
+    expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeEnabled();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_clear_selection'));
+    expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeDisabled();
+  });
+
+  it('selects and clears ad sets when selecting their campaign group', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Remarketing',
+            spend: 120,
+            dailyBudget: 50,
+          },
+          {
+            entityId: 'adset-2',
+            entityName: 'Lookalike',
+            spend: 110,
+            dailyBudget: 50,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+
+    expect(screen.getByLabelText('com_ui_project_meta_ads_select_campaign')).toBeChecked();
+    expect(screen.getAllByLabelText('com_ui_project_meta_ads_select_ad_set')).toHaveLength(2);
+    screen
+      .getAllByLabelText('com_ui_project_meta_ads_select_ad_set')
+      .forEach((checkbox) => expect(checkbox).toBeChecked());
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+
+    expect(screen.getByLabelText('com_ui_project_meta_ads_select_campaign')).not.toBeChecked();
+    screen
+      .getAllByLabelText('com_ui_project_meta_ads_select_ad_set')
+      .forEach((checkbox) => expect(checkbox).not.toBeChecked());
   });
 
   it('requires confirmation before sending a manual budget change', () => {

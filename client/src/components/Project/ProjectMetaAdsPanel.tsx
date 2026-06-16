@@ -4,6 +4,7 @@ import { useToastContext } from '@librechat/client';
 import type {
   TProject,
   ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsCampaignDelta,
   ProjectMetaAdsBudgetChange,
   ProjectMetaAdsManualBudgetPayload,
   ProjectMetaAdsRecommendation,
@@ -54,17 +55,6 @@ type RequestError = {
     };
   };
 };
-type SelectionCheckboxProps = {
-  checked: boolean;
-  ariaLabel: string;
-  onChange: () => void;
-  className?: string;
-};
-type ExpandToggleProps = {
-  expanded: boolean;
-  ariaLabel: string;
-  onClick: () => void;
-};
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -97,55 +87,6 @@ const defaultRules: Required<MetaAdsRules> = {
 const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
   maxFrequency: 5,
 };
-
-function SelectionCheckbox({
-  checked,
-  ariaLabel,
-  onChange,
-  className = '',
-}: SelectionCheckboxProps) {
-  return (
-    <label className={`group inline-grid h-7 w-7 cursor-pointer place-items-center ${className}`}>
-      <input
-        type="checkbox"
-        checked={checked}
-        aria-label={ariaLabel}
-        onChange={onChange}
-        className="peer sr-only"
-      />
-      <span
-        aria-hidden="true"
-        className="flex h-[18px] w-[18px] items-center justify-center border border-border-light bg-surface-primary text-transparent transition-colors duration-150 group-hover:border-text-secondary peer-checked:border-text-primary peer-checked:bg-text-primary peer-checked:text-surface-primary peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-text-primary"
-      >
-        <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-          <path
-            d="M2.25 6.15 4.7 8.6l5.05-5.2"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    </label>
-  );
-}
-
-function ExpandToggle({ expanded, ariaLabel, onClick }: ExpandToggleProps) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      aria-expanded={expanded}
-      onClick={onClick}
-      className="inline-grid h-7 w-7 place-items-center border border-border-light bg-surface-primary text-sm leading-none text-text-secondary transition-colors duration-150 hover:border-text-secondary hover:bg-surface-secondary hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary active:bg-surface-primary"
-    >
-      <span aria-hidden="true" className="-mt-px font-mono">
-        {expanded ? '-' : '+'}
-      </span>
-    </button>
-  );
-}
 
 const numberFields: Array<{
   key: keyof Required<MetaAdsRules>;
@@ -203,6 +144,30 @@ function formatSignedMetric(value: number | null | undefined) {
 function formatTrendDate(value: string) {
   const [, month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
   return month && day ? `${day}/${month}` : value;
+}
+
+function buildChartPath(points: Array<{ x: number; y: number }>) {
+  return points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ');
+}
+
+function hasMeaningfulDelta(delta: ProjectMetaAdsCampaignDelta) {
+  return [
+    delta.spendDelta,
+    delta.resultDelta,
+    delta.cpaDelta,
+    delta.budgetDelta,
+    delta.frequencyDelta,
+  ].some((value) => {
+    const numericValue = Number(value ?? 0);
+    return Number.isFinite(numericValue) && Math.abs(numericValue) > 0.005;
+  });
+}
+
+function cleanDashboardName(value: string | undefined, fallback: string) {
+  const cleanedValue = (value ?? '').replace(/^[^\w[]+\s*/u, '').trim();
+  return cleanedValue || value || fallback;
 }
 
 function buildBudgetReferences(currentBudget: number | null | undefined, currency = 'BRL') {
@@ -434,19 +399,40 @@ export default function ProjectMetaAdsPanel({
   const trendPoints = trend?.points ?? [];
   const campaignDeltas = trend?.campaignDeltas ?? [];
   const changesByDay = trend?.changesByDay ?? [];
-  const dailySpendTrend = trendPoints.reduce<Array<{ date: string; spend: number }>>(
-    (items, point) => {
+  const dailySpendTrend = trendPoints
+    .reduce<Array<{ date: string; spend: number }>>((items, point) => {
       const existing = items.find((item) => item.date === point.date);
       if (existing) {
         existing.spend += Number(point.spend ?? 0);
         return items;
       }
       return [...items, { date: point.date, spend: Number(point.spend ?? 0) }];
-    },
-    [],
-  );
+    }, [])
+    .sort((left, right) => left.date.localeCompare(right.date));
   const maxDailySpend = Math.max(...dailySpendTrend.map((point) => point.spend), 0);
-  const bestEvolution = [...campaignDeltas]
+  const meaningfulDeltas = campaignDeltas.filter(hasMeaningfulDelta);
+  const chartWidth = 480;
+  const chartHeight = 160;
+  const chartPadding = 18;
+  const chartBottom = chartHeight - chartPadding;
+  const canRenderSpendChart = dailySpendTrend.length > 1 && maxDailySpend > 0;
+  const spendChartPoints = dailySpendTrend.map((point, index) => {
+    const x =
+      chartPadding +
+      (index / Math.max(dailySpendTrend.length - 1, 1)) * (chartWidth - chartPadding * 2);
+    const y =
+      chartBottom -
+      (Number(point.spend ?? 0) / Math.max(maxDailySpend, 1)) * (chartHeight - chartPadding * 2);
+    return { x, y };
+  });
+  const spendChartPath = buildChartPath(spendChartPoints);
+  const spendChartAreaPath =
+    spendChartPoints.length > 0
+      ? `${spendChartPath} L ${spendChartPoints[spendChartPoints.length - 1].x.toFixed(
+          2,
+        )} ${chartBottom} L ${spendChartPoints[0].x.toFixed(2)} ${chartBottom} Z`
+      : '';
+  const bestEvolution = [...meaningfulDeltas]
     .sort((left, right) => {
       const resultDiff = Number(right.resultDelta ?? 0) - Number(left.resultDelta ?? 0);
       if (resultDiff !== 0) {
@@ -455,7 +441,7 @@ export default function ProjectMetaAdsPanel({
       return Number(left.cpaDelta ?? 0) - Number(right.cpaDelta ?? 0);
     })
     .slice(0, 3);
-  const evolutionAlerts = campaignDeltas
+  const evolutionAlerts = meaningfulDeltas
     .filter(
       (delta) =>
         Number(delta.cpaDelta ?? 0) > 0 ||
@@ -850,12 +836,17 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
-  const onToggleCampaign = (campaignId: string) => {
+  const onToggleCampaign = (campaign: ProjectMetaAdsCampaignSummary) => {
     setSelectedEntityIds((current) => {
-      const id = `campaign:${campaignId}`;
-      return current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
-        : [...current, id].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
+      const campaignId = `campaign:${campaign.campaignId}`;
+      const adSetIds = campaign.adSets.map((adset) => `adset:${adset.entityId}`);
+      const campaignIds = [campaignId, ...adSetIds];
+      if (current.includes(campaignId)) {
+        return current.filter((selectedId) => !campaignIds.includes(selectedId));
+      }
+      const next = new Set(current);
+      campaignIds.forEach((selectedId) => next.add(selectedId));
+      return Array.from(next).slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
     });
   };
 
@@ -1243,7 +1234,20 @@ export default function ProjectMetaAdsPanel({
                 </select>
               </label>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="h-8 border border-border-light px-3 py-2 font-mono text-xs text-text-secondary">
+                {localize('com_ui_project_meta_ads_selection_count', {
+                  0: String(selectedCount),
+                })}
+              </span>
+              <button
+                type="button"
+                disabled={selectedCount === 0}
+                onClick={() => setSelectedEntityIds([])}
+                className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {localize('com_ui_project_meta_ads_clear_selection')}
+              </button>
               <button
                 type="button"
                 disabled={!canCreateRuleGroup}
@@ -1299,7 +1303,10 @@ export default function ProjectMetaAdsPanel({
             ))}
           </div>
           {(trendPoints.length > 0 || campaignDeltas.length > 0 || changesByDay.length > 0) && (
-            <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
+            <div
+              data-testid="meta-ads-evolution-dashboard"
+              className="grid gap-3 xl:grid-cols-[1.4fr_1fr]"
+            >
               <div className="border border-border-light bg-surface-primary p-3">
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="text-xs font-semibold uppercase text-text-tertiary">
@@ -1309,27 +1316,41 @@ export default function ProjectMetaAdsPanel({
                     {trendPoints.length} {localize('com_ui_project_meta_ads_trend_points')}
                   </span>
                 </div>
-                <div className="mt-3 flex h-28 items-end gap-1 border-b border-border-light">
-                  {dailySpendTrend.length > 0 ? (
-                    dailySpendTrend.map((point) => {
-                      const height =
-                        maxDailySpend > 0 ? Math.max(8, (point.spend / maxDailySpend) * 100) : 8;
-                      return (
-                        <div
-                          key={point.date}
-                          className="flex min-w-8 flex-1 flex-col items-center justify-end gap-1"
+                <div className="mt-3 h-44 border-b border-border-light">
+                  {canRenderSpendChart ? (
+                    <svg
+                      data-testid="meta-ads-evolution-chart"
+                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                      role="img"
+                      aria-label={localize('com_ui_project_meta_ads_evolution')}
+                      className="h-full w-full text-text-primary"
+                      preserveAspectRatio="none"
+                    >
+                      <path d={spendChartAreaPath} fill="currentColor" opacity="0.08" />
+                      <path
+                        d={spendChartPath}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      {spendChartPoints.map((point, index) => (
+                        <circle
+                          key={dailySpendTrend[index].date}
+                          cx={point.x}
+                          cy={point.y}
+                          r="3"
+                          fill="currentColor"
                         >
-                          <div
-                            title={`${formatTrendDate(point.date)} · ${formatMoney(
-                              point.spend,
+                          <title>
+                            {`${formatTrendDate(dailySpendTrend[index].date)} · ${formatMoney(
+                              dailySpendTrend[index].spend,
                               currency,
                             )}`}
-                            className="bg-text-primary/80 w-full"
-                            style={{ height: `${height}%` }}
-                          />
-                        </div>
-                      );
-                    })
+                          </title>
+                        </circle>
+                      ))}
+                    </svg>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-sm text-text-secondary">
                       {localize('com_ui_project_meta_ads_no_evolution')}
@@ -1355,7 +1376,7 @@ export default function ProjectMetaAdsPanel({
                       bestEvolution.map((delta) => (
                         <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
                           <div className="truncate text-sm font-medium text-text-primary">
-                            {delta.campaignName ?? delta.campaignId}
+                            {cleanDashboardName(delta.campaignName, delta.campaignId)}
                           </div>
                           <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs text-text-secondary">
                             <span>{formatSignedMoney(delta.spendDelta, currency)}</span>
@@ -1381,9 +1402,10 @@ export default function ProjectMetaAdsPanel({
                       evolutionAlerts.map((delta) => (
                         <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
                           <div className="truncate text-sm font-medium text-text-primary">
-                            {delta.latestChange?.entityName ??
-                              delta.campaignName ??
-                              delta.campaignId}
+                            {cleanDashboardName(
+                              delta.latestChange?.entityName ?? delta.campaignName,
+                              delta.campaignId,
+                            )}
                           </div>
                           <div className="mt-1 flex flex-wrap gap-2 font-mono text-xs text-text-secondary">
                             <span>
@@ -1656,7 +1678,7 @@ export default function ProjectMetaAdsPanel({
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="max-w-full overflow-x-auto">
           <table className="w-full min-w-[1520px] table-fixed text-left text-xs">
             <thead className="border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
               <tr>
@@ -1775,24 +1797,28 @@ export default function ProjectMetaAdsPanel({
                   <Fragment key={campaign.campaignId}>
                     <tr
                       data-testid="meta-ads-campaign-row"
-                      className={`border-b border-border-light transition-colors ${
-                        selected ? 'bg-surface-secondary/50' : ''
-                      }`}
+                      className="border-b border-border-light"
                     >
                       <td className="px-2 py-2 align-middle">
-                        <SelectionCheckbox
+                        <input
+                          type="checkbox"
                           checked={selected}
-                          onChange={() => onToggleCampaign(campaign.campaignId)}
-                          ariaLabel={localize('com_ui_project_meta_ads_select_campaign')}
+                          aria-label={localize('com_ui_project_meta_ads_select_campaign')}
+                          onChange={() => onToggleCampaign(campaign)}
+                          className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                         />
                       </td>
                       <td className="px-2 py-2 align-middle">
                         {campaign.adSets.length > 0 && (
-                          <ExpandToggle
-                            expanded={expanded}
+                          <button
+                            type="button"
+                            aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                            aria-expanded={expanded}
                             onClick={() => onToggleCampaignExpanded(campaign)}
-                            ariaLabel={localize('com_ui_project_meta_ads_expand_campaign')}
-                          />
+                            className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                          >
+                            {expanded ? '-' : '+'}
+                          </button>
                         )}
                       </td>
                       <td className="px-2 py-2 text-text-secondary">
@@ -1882,16 +1908,15 @@ export default function ProjectMetaAdsPanel({
                         return (
                           <tr
                             key={adset.entityId}
-                            className={`border-b border-border-light transition-colors ${
-                              adsetSelected ? 'bg-surface-secondary/70' : 'bg-surface-secondary/40'
-                            }`}
+                            className="bg-surface-secondary/40 border-b border-border-light"
                           >
-                            <td className="px-2 py-2 align-middle">
-                              <SelectionCheckbox
+                            <td className="px-2 py-2 pl-6 align-middle">
+                              <input
+                                type="checkbox"
                                 checked={adsetSelected}
+                                aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
                                 onChange={() => onToggleAdSet(adset.entityId)}
-                                ariaLabel={localize('com_ui_project_meta_ads_select_ad_set')}
-                                className="ml-4"
+                                className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                               />
                             </td>
                             <td className="px-2 py-2 align-middle">
