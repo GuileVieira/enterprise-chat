@@ -449,6 +449,16 @@ export default function ProjectMetaAdsPanel({
         Number(delta.latestChange?.deltaDailyBudget ?? 0) !== 0,
     )
     .slice(0, 4);
+  const hasCompactEvolutionState =
+    trendPoints.length > 0 &&
+    !canRenderSpendChart &&
+    bestEvolution.length === 0 &&
+    evolutionAlerts.length === 0;
+  const hasEvolutionSection =
+    canRenderSpendChart ||
+    bestEvolution.length > 0 ||
+    evolutionAlerts.length > 0 ||
+    changesByDay.length > 0;
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
@@ -1163,7 +1173,7 @@ export default function ProjectMetaAdsPanel({
           </div>
         )}
 
-        <div className="flex flex-col gap-3 border-b border-border-light p-3">
+        <div className="flex flex-col gap-3 border-b border-border-light bg-surface-primary p-3 lg:sticky lg:top-0 lg:z-10">
           {isStatusLoading && (
             <div
               role="status"
@@ -1302,177 +1312,7 @@ export default function ProjectMetaAdsPanel({
               </div>
             ))}
           </div>
-          {(trendPoints.length > 0 || campaignDeltas.length > 0 || changesByDay.length > 0) && (
-            <div
-              data-testid="meta-ads-evolution-dashboard"
-              className="grid gap-3 xl:grid-cols-[1.4fr_1fr]"
-            >
-              <div className="border border-border-light bg-surface-primary p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_evolution')}
-                  </h4>
-                  <span className="font-mono text-[11px] text-text-tertiary">
-                    {trendPoints.length} {localize('com_ui_project_meta_ads_trend_points')}
-                  </span>
-                </div>
-                <div className="mt-3 h-44 border-b border-border-light">
-                  {canRenderSpendChart ? (
-                    <svg
-                      data-testid="meta-ads-evolution-chart"
-                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                      role="img"
-                      aria-label={localize('com_ui_project_meta_ads_evolution')}
-                      className="h-full w-full text-text-primary"
-                      preserveAspectRatio="none"
-                    >
-                      <path d={spendChartAreaPath} fill="currentColor" opacity="0.08" />
-                      <path
-                        d={spendChartPath}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      {spendChartPoints.map((point, index) => (
-                        <circle
-                          key={dailySpendTrend[index].date}
-                          cx={point.x}
-                          cy={point.y}
-                          r="3"
-                          fill="currentColor"
-                        >
-                          <title>
-                            {`${formatTrendDate(dailySpendTrend[index].date)} · ${formatMoney(
-                              dailySpendTrend[index].spend,
-                              currency,
-                            )}`}
-                          </title>
-                        </circle>
-                      ))}
-                    </svg>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm text-text-secondary">
-                      {localize('com_ui_project_meta_ads_no_evolution')}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-tertiary">
-                  {dailySpendTrend.slice(-8).map((point) => (
-                    <span key={point.date} className="font-mono">
-                      {formatTrendDate(point.date)} {formatMoney(point.spend, currency)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
-                <div className="border border-border-light bg-surface-primary p-3">
-                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_best_evolution')}
-                  </h4>
-                  <div className="mt-3 divide-y divide-border-light">
-                    {bestEvolution.length > 0 ? (
-                      bestEvolution.map((delta) => (
-                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
-                          <div className="truncate text-sm font-medium text-text-primary">
-                            {cleanDashboardName(delta.campaignName, delta.campaignId)}
-                          </div>
-                          <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs text-text-secondary">
-                            <span>{formatSignedMoney(delta.spendDelta, currency)}</span>
-                            <span>{formatSignedMetric(delta.resultDelta)}</span>
-                            <span>{formatSignedMoney(delta.cpaDelta, currency)}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="py-4 text-sm text-text-secondary">
-                        {localize('com_ui_project_meta_ads_no_evolution')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border border-border-light bg-surface-primary p-3">
-                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_budget_changes')}
-                  </h4>
-                  <div className="mt-3 divide-y divide-border-light">
-                    {evolutionAlerts.length > 0 ? (
-                      evolutionAlerts.map((delta) => (
-                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
-                          <div className="truncate text-sm font-medium text-text-primary">
-                            {cleanDashboardName(
-                              delta.latestChange?.entityName ?? delta.campaignName,
-                              delta.campaignId,
-                            )}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-2 font-mono text-xs text-text-secondary">
-                            <span>
-                              {formatSignedMoney(
-                                delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta,
-                                currency,
-                              )}
-                            </span>
-                            {delta.frequencyDelta != null && (
-                              <span>
-                                {formatSignedMetric(delta.frequencyDelta)}{' '}
-                                {localize('com_ui_project_meta_ads_frequency')}
-                              </span>
-                            )}
-                            {delta.latestChange?.actor && <span>{delta.latestChange.actor}</span>}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="py-4 text-sm text-text-secondary">
-                        {localize('com_ui_project_meta_ads_no_history')}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
-
-        {(settings.ruleGroups ?? []).length > 0 && (
-          <div className="border-b border-border-light bg-surface-secondary p-3">
-            <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-              {localize('com_ui_project_meta_ads_rule_groups')}
-            </h4>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(settings.ruleGroups ?? []).map((group) => (
-                <div
-                  key={group.id ?? group.name}
-                  className="flex items-center gap-2 border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary"
-                >
-                  <span className="font-medium text-text-primary">{group.name}</span>
-                  <span>
-                    {group.entityLevel} · {(group.entityIds ?? []).length}{' '}
-                    {localize('com_ui_project_meta_ads_rule_group_selected')}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => onEditRuleGroup(group)}
-                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_edit_rule_group')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => onDeleteRuleGroup(group.id)}
-                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_delete_rule_group')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {pendingRecommendations.length > 0 && campaigns.length === 0 && (
           <div className="border-b border-border-light bg-surface-secondary p-3">
@@ -1615,49 +1455,72 @@ export default function ProjectMetaAdsPanel({
         )}
 
         {ruleGroupDraft && (
-          <div className="border-b border-border-light bg-surface-secondary p-3">
-            <div className="grid gap-3 md:grid-cols-4">
-              <label className="flex flex-col gap-1 text-xs text-text-secondary md:col-span-2">
-                {localize('com_ui_project_meta_ads_rule_group_name')}
-                <input
-                  value={ruleGroupDraft.name}
-                  onChange={(event) =>
-                    setRuleGroupDraft((current) =>
-                      current ? { ...current, name: event.target.value } : current,
-                    )
-                  }
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_rule_group_target_cpa')}
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={ruleGroupDraft.rules.targetCpa}
-                  onChange={(event) => onRuleGroupRuleChange('targetCpa', event.target.value)}
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_max_budget')}
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={ruleGroupDraft.rules.maxDailyBudget}
-                  onChange={(event) => onRuleGroupRuleChange('maxDailyBudget', event.target.value)}
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                />
-              </label>
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <span className="text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_rule_group_selected')}:{' '}
-                {ruleGroupDraft.entityIds.length}
-              </span>
-              <div className="flex gap-2">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="meta-ads-rule-group-dialog-title"
+            className="fixed inset-0 z-50 flex justify-end bg-black/30"
+          >
+            <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
+              <div className="border-b border-border-light p-4">
+                <h4
+                  id="meta-ads-rule-group-dialog-title"
+                  className="text-base font-semibold text-text-primary"
+                >
+                  {localize(
+                    ruleGroupDraft.id
+                      ? 'com_ui_project_meta_ads_edit_rule_group'
+                      : 'com_ui_project_meta_ads_create_rule_group',
+                  )}
+                </h4>
+                <div className="mt-2 text-xs uppercase text-text-tertiary">
+                  {ruleGroupDraft.entityLevel === 'campaign'
+                    ? localize('com_ui_project_meta_ads_campaign')
+                    : localize('com_ui_project_meta_ads_select_ad_set')}
+                  {' · '}
+                  {ruleGroupDraft.entityIds.length}{' '}
+                  {localize('com_ui_project_meta_ads_rule_group_selected')}
+                </div>
+              </div>
+              <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_rule_group_name')}
+                  <input
+                    value={ruleGroupDraft.name}
+                    onChange={(event) =>
+                      setRuleGroupDraft((current) =>
+                        current ? { ...current, name: event.target.value } : current,
+                      )
+                    }
+                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_rule_group_target_cpa')}
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={ruleGroupDraft.rules.targetCpa}
+                    onChange={(event) => onRuleGroupRuleChange('targetCpa', event.target.value)}
+                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_max_budget')}
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={ruleGroupDraft.rules.maxDailyBudget}
+                    onChange={(event) =>
+                      onRuleGroupRuleChange('maxDailyBudget', event.target.value)
+                    }
+                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+              </div>
+              <div className="flex justify-end gap-2 border-t border-border-light p-4">
                 <button
                   type="button"
                   onClick={() => setRuleGroupDraft(null)}
@@ -2015,6 +1878,188 @@ export default function ProjectMetaAdsPanel({
             </div>
           )}
         </div>
+
+        {(settings.ruleGroups ?? []).length > 0 && (
+          <div className="border-t border-border-light bg-surface-secondary p-3">
+            <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+              {localize('com_ui_project_meta_ads_rule_groups')}
+            </h4>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(settings.ruleGroups ?? []).map((group) => (
+                <div
+                  key={group.id ?? group.name}
+                  className="flex items-center gap-2 border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary"
+                >
+                  <span className="font-medium text-text-primary">{group.name}</span>
+                  <span>
+                    {group.entityLevel} · {(group.entityIds ?? []).length}{' '}
+                    {localize('com_ui_project_meta_ads_rule_group_selected')}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => onEditRuleGroup(group)}
+                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_edit_rule_group')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => onDeleteRuleGroup(group.id)}
+                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_delete_rule_group')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {hasCompactEvolutionState && (
+          <div className="border-t border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-secondary">
+            {localize('com_ui_project_meta_ads_insufficient_evolution')}
+          </div>
+        )}
+
+        {hasEvolutionSection && (
+          <div className="border-t border-border-light p-3">
+            <h4 className="mb-3 text-xs font-semibold uppercase text-text-tertiary">
+              {localize('com_ui_project_meta_ads_evolution_analysis')}
+            </h4>
+            <div
+              data-testid="meta-ads-evolution-dashboard"
+              className="grid gap-3 xl:grid-cols-[1.4fr_1fr]"
+            >
+              <div className="border border-border-light bg-surface-primary p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_evolution')}
+                  </h5>
+                  <span className="font-mono text-[11px] text-text-tertiary">
+                    {trendPoints.length} {localize('com_ui_project_meta_ads_trend_points')}
+                  </span>
+                </div>
+                <div className="mt-3 h-44 border-b border-border-light">
+                  {canRenderSpendChart ? (
+                    <svg
+                      data-testid="meta-ads-evolution-chart"
+                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                      role="img"
+                      aria-label={localize('com_ui_project_meta_ads_evolution')}
+                      className="h-full w-full text-text-primary"
+                      preserveAspectRatio="none"
+                    >
+                      <path d={spendChartAreaPath} fill="currentColor" opacity="0.08" />
+                      <path
+                        d={spendChartPath}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      {spendChartPoints.map((point, index) => (
+                        <circle
+                          key={dailySpendTrend[index].date}
+                          cx={point.x}
+                          cy={point.y}
+                          r="3"
+                          fill="currentColor"
+                        >
+                          <title>
+                            {`${formatTrendDate(dailySpendTrend[index].date)} · ${formatMoney(
+                              dailySpendTrend[index].spend,
+                              currency,
+                            )}`}
+                          </title>
+                        </circle>
+                      ))}
+                    </svg>
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-text-secondary">
+                      {localize('com_ui_project_meta_ads_insufficient_evolution')}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-tertiary">
+                  {dailySpendTrend.slice(-8).map((point) => (
+                    <span key={point.date} className="font-mono">
+                      {formatTrendDate(point.date)} {formatMoney(point.spend, currency)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                <div className="border border-border-light bg-surface-primary p-3">
+                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_best_evolution')}
+                  </h5>
+                  <div className="mt-3 divide-y divide-border-light">
+                    {bestEvolution.length > 0 ? (
+                      bestEvolution.map((delta) => (
+                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
+                          <div className="truncate text-sm font-medium text-text-primary">
+                            {cleanDashboardName(delta.campaignName, delta.campaignId)}
+                          </div>
+                          <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs text-text-secondary">
+                            <span>{formatSignedMoney(delta.spendDelta, currency)}</span>
+                            <span>{formatSignedMetric(delta.resultDelta)}</span>
+                            <span>{formatSignedMoney(delta.cpaDelta, currency)}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-sm text-text-secondary">
+                        {localize('com_ui_project_meta_ads_no_evolution')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border border-border-light bg-surface-primary p-3">
+                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_budget_changes')}
+                  </h5>
+                  <div className="mt-3 divide-y divide-border-light">
+                    {evolutionAlerts.length > 0 ? (
+                      evolutionAlerts.map((delta) => (
+                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
+                          <div className="truncate text-sm font-medium text-text-primary">
+                            {cleanDashboardName(
+                              delta.latestChange?.entityName ?? delta.campaignName,
+                              delta.campaignId,
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-2 font-mono text-xs text-text-secondary">
+                            <span>
+                              {formatSignedMoney(
+                                delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta,
+                                currency,
+                              )}
+                            </span>
+                            {delta.frequencyDelta != null && (
+                              <span>
+                                {formatSignedMetric(delta.frequencyDelta)}{' '}
+                                {localize('com_ui_project_meta_ads_frequency')}
+                              </span>
+                            )}
+                            {delta.latestChange?.actor && <span>{delta.latestChange.actor}</span>}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="py-4 text-sm text-text-secondary">
+                        {localize('com_ui_project_meta_ads_no_history')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="border border-border-light bg-surface-primary p-3">

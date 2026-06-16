@@ -575,13 +575,24 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[0]);
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[1]);
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
-    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
-      target: { value: 'Topo mensagens' },
+
+    const ruleGroupDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_create_rule_group',
     });
-    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_target_cpa'), {
-      target: { value: '35' },
-    });
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.change(
+      within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_rule_group_name'),
+      {
+        target: { value: 'Topo mensagens' },
+      },
+    );
+    fireEvent.change(
+      within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_rule_group_target_cpa'),
+      {
+        target: { value: '35' },
+      },
+    );
+    expect(ruleGroupDialog).toHaveTextContent('2 com_ui_project_meta_ads_rule_group_selected');
+    fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -599,6 +610,30 @@ describe('ProjectMetaAdsPanel', () => {
       },
       expect.any(Object),
     );
+  });
+
+  it('opens rule group creation in a drawer above the table context', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+
+    expect(
+      screen.getByRole('dialog', { name: 'com_ui_project_meta_ads_create_rule_group' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-campaign-row')).toBeInTheDocument();
   });
 
   it('filters and sorts campaigns like an operator table', () => {
@@ -772,7 +807,12 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    const table = screen.getByRole('table');
+    const dashboard = screen.getByTestId('meta-ads-evolution-dashboard');
     expect(screen.getByText('com_ui_project_meta_ads_evolution')).toBeInTheDocument();
+    expect(
+      table.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByTestId('meta-ads-evolution-chart')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_budget_changes')).toBeInTheDocument();
@@ -815,12 +855,10 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    const dashboard = screen.getByTestId('meta-ads-evolution-dashboard');
-    expect(within(dashboard).getAllByText('com_ui_project_meta_ads_no_evolution').length).toBe(2);
-    expect(
-      within(dashboard).queryByText('🔥 [MENSAGEM] Blumenau Remarketing'),
-    ).not.toBeInTheDocument();
-    expect(within(dashboard).queryByText('R$ 0,00')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-evolution-dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_insufficient_evolution')).toBeInTheDocument();
+    expect(screen.queryByText('🔥 [MENSAGEM] Blumenau Remarketing')).not.toBeInTheDocument();
+    expect(screen.queryByText('R$ 0,00')).not.toBeInTheDocument();
   });
 
   it('keeps selection controls stable and exposes a selection toolbar', () => {
@@ -988,10 +1026,16 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('Old group')).toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_edit_rule_group'));
-    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
-      target: { value: 'New group' },
+    const ruleGroupDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_edit_rule_group',
     });
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.change(
+      within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_rule_group_name'),
+      {
+        target: { value: 'New group' },
+      },
+    );
+    fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
