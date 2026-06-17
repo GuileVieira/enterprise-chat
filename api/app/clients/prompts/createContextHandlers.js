@@ -22,6 +22,15 @@ function createContextHandlers(req, userMessageContent) {
   const useFullContext = isEnabled(process.env.RAG_USE_FULL_CONTEXT);
 
   const query = async (file) => {
+    const queryBody = {
+      file_id: file.file_id,
+      query: userMessageContent,
+      k: 4,
+    };
+    if (file.projectId) {
+      queryBody.entity_id = file.projectId;
+    }
+
     if (useFullContext) {
       return axios.get(`${process.env.RAG_API_URL}/documents/${file.file_id}/context`, {
         headers: {
@@ -32,11 +41,7 @@ function createContextHandlers(req, userMessageContent) {
 
     return axios.post(
       `${process.env.RAG_API_URL}/query`,
-      {
-        file_id: file.file_id,
-        query: userMessageContent,
-        k: 4,
-      },
+      queryBody,
       {
         headers: {
           Authorization: `Bearer ${jwtToken}`,
