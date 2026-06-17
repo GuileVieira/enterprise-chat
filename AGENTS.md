@@ -15,22 +15,24 @@
 
 npm workspaces with Turborepo caching.
 
-| Path | Language | Role | Build Tool |
-|---|---|---|---|
-| `api/` | JS (legacy CJS) | Express backend entrypoint (`api/server/index.js`) | — |
-| `packages/api/` | TS (CJS) | New backend code consumed by `api/` | Rollup |
-| `packages/data-schemas/` | TS (ESM) | Mongoose models/schemas | Rollup |
-| `packages/data-provider/` | TS | Shared types, endpoints, data-service | Rollup |
-| `packages/client/` | TS | Shared frontend utilities | Rollup |
-| `client/` | TS/React (ESM) | Vite SPA frontend | Vite |
+| Path                      | Language        | Role                                               | Build Tool |
+| ------------------------- | --------------- | -------------------------------------------------- | ---------- |
+| `api/`                    | JS (legacy CJS) | Express backend entrypoint (`api/server/index.js`) | —          |
+| `packages/api/`           | TS (CJS)        | New backend code consumed by `api/`                | Rollup     |
+| `packages/data-schemas/`  | TS (ESM)        | Mongoose models/schemas                            | Rollup     |
+| `packages/data-provider/` | TS              | Shared types, endpoints, data-service              | Rollup     |
+| `packages/client/`        | TS              | Shared frontend utilities                          | Rollup     |
+| `client/`                 | TS/React (ESM)  | Vite SPA frontend                                  | Vite       |
 
 Key dependency graph (build order):
+
 ```
 data-provider → data-schemas → packages/api
                         ↘ packages/client → client
 ```
 
 Quirks:
+
 - `packages/data-provider/package.json` name is **`librechat-data-provider`** (unscoped). All other packages use `@librechat/*`.
 - Keep changes in `api/` (legacy JS) to a minimum. Write new backend logic in `packages/api/` and call it from thin wrappers in `api/`.
 
@@ -38,15 +40,15 @@ Quirks:
 
 ## Development Commands
 
-| Command | What it does |
-|---|---|
-| `npm run smart-reinstall` | Install deps (if lockfile changed) + `turbo` build |
-| `npm run reinstall` | Wipe `node_modules` and full reinstall |
-| `npm run backend:dev` | Start backend with nodemon (port 3080) |
-| `npm run frontend:dev` | Start Vite dev server (port 3090; backend must be running) |
-| `npm run build` | Build all packages via Turborepo (parallel, cached) |
+| Command                       | What it does                                                      |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `npm run smart-reinstall`     | Install deps (if lockfile changed) + `turbo` build                |
+| `npm run reinstall`           | Wipe `node_modules` and full reinstall                            |
+| `npm run backend:dev`         | Start backend with nodemon (port 3080)                            |
+| `npm run frontend:dev`        | Start Vite dev server (port 3090; backend must be running)        |
+| `npm run build`               | Build all packages via Turborepo (parallel, cached)               |
 | `npm run build:data-provider` | Rebuild `packages/data-provider` (rebuild this when types change) |
-| `npm run frontend` | Sequential legacy build (fallback when Turbo misbehaves) |
+| `npm run frontend`            | Sequential legacy build (fallback when Turbo misbehaves)          |
 
 ---
 
@@ -114,6 +116,7 @@ Quirks:
   - `npm run e2e:a11y`
 
 **Testing philosophy (enforced in this repo):**
+
 - Real logic over mocks. Use `mongodb-memory-server` for DB tests.
 - Spies over mocks. Only mock external HTTP APIs or non-deterministic calls.
 
@@ -131,6 +134,7 @@ Quirks:
 - Comments: self-documenting code. JSDoc only for complex/non-obvious logic.
 
 ### Backend-specific rules
+
 - **Do not use `Model.bulkWrite()`** in production code. Use `tenantSafeBulkWrite()` (Mongoose middleware does not intercept raw `bulkWrite`).
 - **Do not use `Model.collection.*`** in production code (bypasses tenant isolation middleware).
 - These are enforced by custom ESLint rules in `eslint.config.mjs`.
@@ -142,8 +146,9 @@ Quirks:
 - **Meta Ads campaign chat is explicit.** The project panel must show metrics without IA/token spend; only open a draft chat when the user selects ad sets and clicks the traffic-agent button. Use `interface.metaAdsTrafficAgentId` to preselect the agent, preserve `projectId`, and never auto-submit that draft.
 
 ### Frontend-specific rules
+
 - All user-facing strings must use `useLocalize()`.
-- Only edit English keys: `client/src/locales/en/translation.json`.
+- For user-facing copy, prioritize Brazilian Portuguese first in `client/src/locales/pt-BR/translation.json`, then keep English as the secondary/fallback locale in `client/src/locales/en/translation.json`.
 - React Query v4 for API interactions; invalidate queries on mutations.
 - Query/Mutation keys live in `packages/data-provider/src/keys.ts`.
 - Endpoints: `packages/data-provider/src/api-endpoints.ts`
