@@ -1,3 +1,6 @@
+const express = require('express');
+const request = require('supertest');
+
 jest.mock('~/models', () => ({
   findProjectById: jest.fn(),
   getProjectById: jest.fn(),
@@ -6,7 +9,14 @@ jest.mock('~/models', () => ({
 }));
 
 jest.mock('~/server/middleware', () => ({
-  requireJwtAuth: (_req, _res, next) => next(),
+  requireJwtAuth: (req, _res, next) => {
+    req.user = { id: 'user-1', role: 'ADMIN', tenantId: 'tenant-x' };
+    next();
+  },
+}));
+
+jest.mock('~/server/middleware/roles/capabilities', () => ({
+  requireCapability: () => (_req, _res, next) => next(),
 }));
 
 jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
@@ -25,6 +35,14 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
 }));
 
 const router = require('./projectMetaAds');
+const { upsertTenantSecret } = require('~/models');
+
+function createApp() {
+  const app = express();
+  app.use(express.json());
+  app.use('/projects/:projectId/meta-ads', router);
+  return app;
+}
 
 describe('projectMetaAds settings normalization', () => {
   it('rejects a Meta token value pasted into tokenSecretName', () => {
@@ -256,5 +274,37 @@ describe('projectMetaAds settings normalization', () => {
         credentialMode: 'project_secret',
       }),
     });
+  });
+});
+
+describe('projectMetaAds tenant token route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    upsertTenantSecret.mockResolvedValue({});
+  });
+
+  it('saves the tenant global Meta token using the canonical secret name', async () => {
+    const token = `EAA${'g'.repeat(48)}`;
+
+    await request(createApp())
+      .put('/projects/p1/meta-ads/tenant-token')
+      .send({ metaAccessToken: token })
+      .expect(200);
+
+    expect(upsertTenantSecret).toHaveBeenCalledWith(
+      'tenant-x',
+      'meta_graph_access_token',
+      token,
+      'meta_access_token',
+    );
+  });
+
+  it('rejects empty tenant global Meta tokens', async () => {
+    await request(createApp())
+      .put('/projects/p1/meta-ads/tenant-token')
+      .send({ metaAccessToken: '   ' })
+      .expect(400);
+
+    expect(upsertTenantSecret).not.toHaveBeenCalled();
   });
 });

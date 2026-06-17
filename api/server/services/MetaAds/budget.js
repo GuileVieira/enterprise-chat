@@ -26,8 +26,8 @@ const MIN_SAMPLE_SPEND = 10;
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
-  maxIncreasePct: 15,
-  maxDecreasePct: 20,
+  maxIncreasePct: 25,
+  maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 500,
   cooldownHours: 24,
@@ -583,10 +583,11 @@ function buildAdSummaries({ ads = [], adInsights = [], currency }) {
           getCreativeValue(linkData, ['description']) ||
           getAssetFeedValue(assetFeedSpec, 'descriptions'),
         thumbnailUrl:
-          getCreativeValue(creative, ['thumbnail_url']) ||
-          getCreativeValue(linkData, ['picture']),
-        imageUrl: getCreativeValue(creative, ['image_url']) || getCreativeValue(linkData, ['picture']),
-        videoId: getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
+          getCreativeValue(creative, ['thumbnail_url']) || getCreativeValue(linkData, ['picture']),
+        imageUrl:
+          getCreativeValue(creative, ['image_url']) || getCreativeValue(linkData, ['picture']),
+        videoId:
+          getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
         linkUrl: getCreativeValue(linkData, ['link']),
         callToActionType: linkData.call_to_action?.type,
         status: ad.effective_status,

@@ -27,8 +27,8 @@ const requireManageConfigs = requireCapability(SystemCapabilities.MANAGE_CONFIGS
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
-  maxIncreasePct: 15,
-  maxDecreasePct: 20,
+  maxIncreasePct: 25,
+  maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 500,
   cooldownHours: 24,
@@ -327,7 +327,8 @@ router.put(
 
 router.put('/tenant-token', requireManageConfigs, async (req, res) => {
   try {
-    const token = typeof req.body.metaAccessToken === 'string' ? req.body.metaAccessToken.trim() : '';
+    const token =
+      typeof req.body.metaAccessToken === 'string' ? req.body.metaAccessToken.trim() : '';
     if (!token) {
       return res.status(400).json({ message: 'metaAccessToken is required' });
     }

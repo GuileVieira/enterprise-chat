@@ -41,7 +41,7 @@ describe('Meta Ads budget service', () => {
     });
 
     expect(result.action).toBe('increase');
-    expect(result.proposedDailyBudget).toBe(115);
+    expect(result.proposedDailyBudget).toBe(125);
   });
 
   it('decreases budget when performance is below rule', () => {
@@ -54,7 +54,7 @@ describe('Meta Ads budget service', () => {
     });
 
     expect(result.action).toBe('decrease');
-    expect(result.proposedDailyBudget).toBe(80);
+    expect(result.proposedDailyBudget).toBe(75);
   });
 
   it('creates a creative alert instead of increasing when frequency is high', () => {
@@ -85,7 +85,7 @@ describe('Meta Ads budget service', () => {
     });
 
     expect(result.action).toBe('decrease');
-    expect(result.proposedDailyBudget).toBe(80);
+    expect(result.proposedDailyBudget).toBe(75);
   });
 
   it('uses project token secret before tenant default', async () => {
@@ -1365,7 +1365,7 @@ describe('Meta Ads budget service persistence safety', () => {
         entityId: 'campaign-cbo',
         entityName: 'CBO Campaign',
         currentDailyBudget: 100,
-        proposedDailyBudget: 115,
+        proposedDailyBudget: 125,
       }),
     );
     expect(createRecommendation).toHaveBeenCalledWith(
@@ -1374,7 +1374,7 @@ describe('Meta Ads budget service persistence safety', () => {
         entityId: 'adset-abo',
         entityName: 'ABO Child',
         currentDailyBudget: 70,
-        proposedDailyBudget: 80.5,
+        proposedDailyBudget: 87.5,
       }),
     );
   });
