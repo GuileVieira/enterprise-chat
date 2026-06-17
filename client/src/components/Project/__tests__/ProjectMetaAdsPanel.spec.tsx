@@ -435,7 +435,7 @@ describe('ProjectMetaAdsPanel', () => {
             campaignName: 'Mensagens Floripa',
             spend: 200,
             resultCount: 10,
-            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+            resultType: 'link_click',
           },
           {
             entityId: 'adset-lead',
@@ -444,7 +444,7 @@ describe('ProjectMetaAdsPanel', () => {
             campaignName: 'Mensagens Floripa',
             spend: 50,
             resultCount: 2,
-            resultType: 'lead',
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
           },
         ],
       },
@@ -477,13 +477,13 @@ describe('ProjectMetaAdsPanel', () => {
           averageCtr: 5,
           resultTypes: [
             {
-              resultType: 'onsite_conversion.messaging_conversation_started_7d',
+              resultType: 'link_click',
               totalSpend: 200,
               totalResults: 10,
               averageCostPerResult: 20,
             },
             {
-              resultType: 'lead',
+              resultType: 'onsite_conversion.messaging_conversation_started_7d',
               totalSpend: 50,
               totalResults: 2,
               averageCostPerResult: 25,
@@ -519,8 +519,17 @@ describe('ProjectMetaAdsPanel', () => {
       0,
     );
     expect(screen.getByTestId('meta-ads-objective-summary')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_campaign_objectives')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_objective_count_many')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_campaign_count_one').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_result_type').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_results').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_result_share').length).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_result_type_link_click')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_result_type_message')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_result_type_lead')).toBeInTheDocument();
+    expect(screen.getByText('83.3%')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_objective_filter'), {
       target: { value: 'OUTCOME_SALES' },
@@ -763,7 +772,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getAllByText('R$ 85,76').length).toBeGreaterThan(0);
-    expect(screen.getByText('R$ 13,69')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 13,69').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 15,00').length).toBeGreaterThan(0);
     expect(screen.getByText('25 65+ ARTES')).toBeInTheDocument();
 

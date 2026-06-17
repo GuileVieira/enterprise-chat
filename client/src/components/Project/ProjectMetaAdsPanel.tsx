@@ -295,12 +295,15 @@ const objectiveLabelKeys: Record<string, TranslationKeys> = {
 };
 
 const resultTypeLabelKeys: Record<string, TranslationKeys> = {
+  landing_page_view: 'com_ui_project_meta_ads_result_type_landing_page_view',
   lead: 'com_ui_project_meta_ads_result_type_lead',
   leadgen_grouped: 'com_ui_project_meta_ads_result_type_lead',
+  link_click: 'com_ui_project_meta_ads_result_type_link_click',
   onsite_conversion_lead_grouped: 'com_ui_project_meta_ads_result_type_lead',
   onsite_conversion_messaging_conversation_started_7d:
     'com_ui_project_meta_ads_result_type_message',
   onsite_conversion_messaging_first_reply: 'com_ui_project_meta_ads_result_type_message',
+  post_engagement: 'com_ui_project_meta_ads_result_type_post_engagement',
   offsite_conversion_fb_pixel_lead: 'com_ui_project_meta_ads_result_type_lead',
   offsite_conversion_fb_pixel_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',
@@ -419,6 +422,19 @@ function getObjectiveLabel(objective: string | undefined, localize: Localize) {
 function getResultTypeLabel(resultType: string | undefined, localize: Localize) {
   const key = resultTypeLabelKeys[toMetaAdsLabelKey(resultType)];
   return key ? localize(key) : formatMetaAdsCode(resultType);
+}
+
+function formatCountLabel(
+  count: number,
+  singularKey: TranslationKeys,
+  pluralKey: TranslationKeys,
+  localize: Localize,
+) {
+  return localize(count === 1 ? singularKey : pluralKey, { 0: String(count) });
+}
+
+function formatSharePercent(value: number, total: number) {
+  return total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '-';
 }
 
 function createObjectiveSummary(objective: string): ProjectMetaAdsObjectiveSummary {
@@ -2728,85 +2744,114 @@ export default function ProjectMetaAdsPanel({
                 className="border border-border-light bg-surface-primary"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-3 py-2">
-                  <div>
-                    <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                      {localize('com_ui_project_meta_ads_metrics_by_objective')}
-                    </h4>
-                    <p className="text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_metrics_by_objective_hint')}
-                    </p>
-                  </div>
+                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_campaign_objectives')}
+                  </h4>
                   <span className="font-mono text-xs text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_objective_count', {
-                      0: String(objectiveSummaries.length),
-                    })}
+                    {formatCountLabel(
+                      objectiveSummaries.length,
+                      'com_ui_project_meta_ads_objective_count_one',
+                      'com_ui_project_meta_ads_objective_count_many',
+                      localize,
+                    )}
                   </span>
                 </div>
                 <div className="divide-y divide-border-light">
                   {objectiveSummaries.map((summary) => (
-                    <div
-                      key={summary.objective || 'UNKNOWN'}
-                      className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(96px,auto))]"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-text-primary">
-                          {getObjectiveLabel(summary.objective, localize)}
+                    <section key={summary.objective || 'UNKNOWN'} className="px-3 py-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <div className="min-w-0">
+                          <h5 className="truncate text-sm font-semibold text-text-primary">
+                            {getObjectiveLabel(summary.objective, localize)}
+                          </h5>
+                          <div className="text-xs text-text-secondary">
+                            {formatCountLabel(
+                              summary.campaignCount,
+                              'com_ui_project_meta_ads_campaign_count_one',
+                              'com_ui_project_meta_ads_campaign_count_many',
+                              localize,
+                            )}
+                          </div>
                         </div>
-                        <div className="text-xs text-text-secondary">
-                          {localize('com_ui_project_meta_ads_campaign_count', {
-                            0: String(summary.campaignCount),
-                          })}
+                        <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-5">
+                          {[
+                            [
+                              'com_ui_project_meta_ads_spend',
+                              formatMoney(summary.totalSpend, currency),
+                            ],
+                            ['com_ui_project_meta_ads_results', formatMetric(summary.totalResults)],
+                            [
+                              'com_ui_project_meta_ads_cost_result',
+                              formatMoney(summary.averageCostPerResult, currency),
+                            ],
+                            [
+                              'com_ui_project_meta_ads_frequency',
+                              formatMetric(summary.averageFrequency),
+                            ],
+                            ['CTR', formatPercent(summary.averageCtr)],
+                          ].map(([label, value]) => (
+                            <div key={label} className="min-w-[82px] text-right">
+                              <div className="text-[10px] uppercase text-text-tertiary">
+                                {label === 'CTR' ? label : localize(label as TranslationKeys)}
+                              </div>
+                              <div className="font-mono text-sm font-semibold tabular-nums text-text-primary">
+                                {value}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      {[
-                        [
-                          'com_ui_project_meta_ads_spend',
-                          formatMoney(summary.totalSpend, currency),
-                        ],
-                        ['com_ui_project_meta_ads_results', formatMetric(summary.totalResults)],
-                        [
-                          'com_ui_project_meta_ads_cost_result',
-                          formatMoney(summary.averageCostPerResult, currency),
-                        ],
-                        [
-                          'com_ui_project_meta_ads_frequency',
-                          formatMetric(summary.averageFrequency),
-                        ],
-                        ['CTR', formatPercent(summary.averageCtr)],
-                      ].map(([label, value]) => (
-                        <div key={label} className="min-w-0 lg:text-right">
-                          <div className="text-[11px] uppercase text-text-tertiary">
-                            {label === 'CTR' ? label : localize(label as TranslationKeys)}
-                          </div>
-                          <div className="font-mono text-sm font-semibold text-text-primary">
-                            {value}
-                          </div>
-                        </div>
-                      ))}
-                      {summary.resultTypes.length > 1 && (
-                        <div className="lg:col-span-6">
-                          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                            {summary.resultTypes.map((resultType) => (
-                              <div
-                                key={resultType.resultType || 'UNKNOWN'}
-                                className="border border-border-light bg-surface-secondary px-3 py-2"
-                              >
-                                <div className="truncate text-xs font-medium text-text-primary">
-                                  {getResultTypeLabel(resultType.resultType, localize)}
-                                </div>
-                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-text-secondary">
-                                  <span>{formatMetric(resultType.totalResults)}</span>
-                                  <span>{formatMoney(resultType.totalSpend, currency)}</span>
-                                  <span>
+
+                      {summary.resultTypes.length > 0 && (
+                        <div className="mt-3 overflow-x-auto border border-border-light">
+                          <table className="w-full min-w-[680px] text-left text-xs">
+                            <thead className="bg-surface-secondary text-[11px] uppercase text-text-tertiary">
+                              <tr>
+                                <th className="px-3 py-2 font-medium">
+                                  {localize('com_ui_project_meta_ads_result_type')}
+                                </th>
+                                <th className="px-3 py-2 text-right font-medium">
+                                  {localize('com_ui_project_meta_ads_results')}
+                                </th>
+                                <th className="px-3 py-2 text-right font-medium">
+                                  {localize('com_ui_project_meta_ads_result_share')}
+                                </th>
+                                <th className="px-3 py-2 text-right font-medium">
+                                  {localize('com_ui_project_meta_ads_spend')}
+                                </th>
+                                <th className="px-3 py-2 text-right font-medium">
+                                  {localize('com_ui_project_meta_ads_cost_result')}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-light">
+                              {summary.resultTypes.map((resultType) => (
+                                <tr key={resultType.resultType || 'UNKNOWN'}>
+                                  <td className="px-3 py-2 font-medium text-text-primary">
+                                    {getResultTypeLabel(resultType.resultType, localize)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
+                                    {formatMetric(resultType.totalResults)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
+                                    {formatSharePercent(
+                                      Number(resultType.totalResults ?? 0),
+                                      Number(summary.totalResults ?? 0),
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
+                                    {formatMoney(resultType.totalSpend, currency)}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
                                     {formatMoney(resultType.averageCostPerResult, currency)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
-                    </div>
+                    </section>
                   ))}
                 </div>
               </div>
