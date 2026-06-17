@@ -33,7 +33,7 @@ import type {
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
-const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v1';
+const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v2';
 const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
 
 type CachedProjectMetaAdsStatus = {
@@ -42,7 +42,13 @@ type CachedProjectMetaAdsStatus = {
 };
 
 function getProjectMetaAdsStatusCacheKey(projectId: string, params?: t.ProjectMetaAdsStatusParams) {
-  return `${projectMetaAdsStatusCachePrefix}:${projectId}:${params?.datePreset ?? 'default'}`;
+  return [
+    projectMetaAdsStatusCachePrefix,
+    projectId,
+    params?.datePreset ?? 'default',
+    params?.since ?? 'none',
+    params?.until ?? 'none',
+  ].join(':');
 }
 
 function isProjectMetaAdsStatus(value: unknown): value is t.ProjectMetaAdsStatus {

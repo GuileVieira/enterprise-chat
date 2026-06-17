@@ -6,8 +6,10 @@ const {
   getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
+  listAds,
   listCampaigns,
   listAdSets,
+  listAdInsights,
   listAdSetInsights,
   metaGet,
 } = require('./graph');
@@ -111,6 +113,104 @@ describe('Meta Ads Graph client', () => {
 
     expect(fetch.mock.calls[0][0]).toContain('campaign_id');
     expect(fetch.mock.calls[0][0]).toContain('campaign%7Bid%2Cname%7D');
+  });
+
+  it('lists active ads with creative fields for preview rendering', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            {
+              id: 'ad-1',
+              name: 'Summer creative',
+              effective_status: 'ACTIVE',
+              adset_id: 'adset-1',
+              campaign_id: 'campaign-1',
+              creative: {
+                id: 'creative-1',
+                title: 'Book now',
+                body: 'Fresh offer for warm leads.',
+                thumbnail_url: 'https://example.com/thumb.jpg',
+                image_url: 'https://example.com/image.jpg',
+                object_story_spec: {
+                  link_data: {
+                    link: 'https://example.com',
+                    call_to_action: { type: 'SIGN_UP' },
+                  },
+                },
+              },
+            },
+            {
+              id: 'ad-2',
+              name: 'Paused creative',
+              effective_status: 'PAUSED',
+            },
+          ],
+        }),
+    });
+
+    await expect(
+      listAds({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: 'ad-1',
+        name: 'Summer creative',
+        creative: expect.objectContaining({
+          id: 'creative-1',
+          thumbnail_url: 'https://example.com/thumb.jpg',
+        }),
+      }),
+    ]);
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/ads');
+    expect(fetch.mock.calls[0][0]).toContain('creative%7B');
+    expect(fetch.mock.calls[0][0]).toContain('thumbnail_url');
+    expect(fetch.mock.calls[0][0]).toContain('object_story_spec');
+  });
+
+  it('lists ad-level insights for the selected status period', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            {
+              ad_id: 'ad-1',
+              ad_name: 'Summer creative',
+              adset_id: 'adset-1',
+              campaign_id: 'campaign-1',
+              spend: '42.5',
+              impressions: '1000',
+              clicks: '38',
+              ctr: '3.8',
+            },
+          ],
+        }),
+    });
+
+    await expect(
+      listAdInsights({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        since: '2026-06-01',
+        until: '2026-06-07',
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        ad_id: 'ad-1',
+        adset_id: 'adset-1',
+        spend: '42.5',
+      }),
+    ]);
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
+    expect(fetch.mock.calls[0][0]).toContain('level=ad');
+    expect(fetch.mock.calls[0][0]).toContain('ad_id');
+    expect(fetch.mock.calls[0][0]).toContain('time_range=');
   });
 
   it('uses project graph version override before global default', async () => {

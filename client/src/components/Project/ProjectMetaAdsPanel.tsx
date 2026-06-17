@@ -1,8 +1,16 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToastContext } from '@librechat/client';
+import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
+import {
+  OGDialog,
+  OGDialogTitle,
+  OGDialogHeader,
+  OGDialogContent,
+  useToastContext,
+} from '@librechat/client';
 import type {
   TProject,
+  ProjectMetaAdsAdSummary,
   ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsCampaignDelta,
   ProjectMetaAdsBudgetChange,
@@ -38,15 +46,18 @@ type BudgetEditor = {
 };
 type RuleGroupDraft = {
   id?: string;
+  scope: 'global' | 'group';
   name: string;
   entityLevel: MetaAdsRuleGroup['entityLevel'];
   entityIds: string[];
   rules: Required<MetaAdsRules>;
+  creativeRules: Required<MetaAdsCreativeRules>;
 };
 type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
   currentBudget?: number;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
+type SelectedAdPreview = ProjectMetaAdsAdSummary | null;
 type RequestError = {
   message?: unknown;
   response?: {
@@ -55,6 +66,7 @@ type RequestError = {
     };
   };
 };
+type SettingsDrawer = 'account' | 'automation' | null;
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -77,8 +89,8 @@ const periodOptions = [
 const defaultRules: Required<MetaAdsRules> = {
   targetCpa: 45,
   minRoas: 2,
-  maxIncreasePct: 15,
-  maxDecreasePct: 20,
+  maxIncreasePct: 25,
+  maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 500,
   cooldownHours: 24,
@@ -105,6 +117,12 @@ const numberFields: Array<{
 
 function formatMetric(value?: number | null) {
   return value == null || Number.isNaN(value) ? '-' : value.toFixed(2);
+}
+
+function formatIntegerMetric(value?: number | null) {
+  return value == null || Number.isNaN(value)
+    ? '-'
+    : new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 }
 
 function formatMoney(value: number | null | undefined, currency = 'BRL') {
@@ -346,6 +364,14 @@ function getRecommendationLabel(
   return `${recommendation.action}: ${current} -> ${proposed}`;
 }
 
+function getAdThumbnailUrl(ad: ProjectMetaAdsAdSummary) {
+  return ad.thumbnailUrl || ad.imageUrl;
+}
+
+function getAdPreviewUrl(ad: ProjectMetaAdsAdSummary) {
+  return ad.imageUrl || ad.thumbnailUrl;
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -357,8 +383,9 @@ export default function ProjectMetaAdsPanel({
   const navigate = useNavigate();
   const { showToast } = useToastContext();
   const [settings, setSettings] = useState(() => normalizeSettings(project));
-  const [metaAccessToken, setMetaAccessToken] = useState('');
-  const [showMetaAccessToken, setShowMetaAccessToken] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
+  const [settingsDraftToken, setSettingsDraftToken] = useState('');
+  const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
   const [collapsedAboCampaignIds, setCollapsedAboCampaignIds] = useState<string[]>([]);
@@ -371,7 +398,10 @@ export default function ProjectMetaAdsPanel({
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [datePreset, setDatePreset] = useState<(typeof periodOptions)[number]['value']>('last_7d');
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
-  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
+  const [metricsFullscreen, setMetricsFullscreen] = useState(false);
+  const [selectedAdPreview, setSelectedAdPreview] = useState<SelectedAdPreview>(null);
+  const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId, { datePreset });
   const updateSettings = useUpdateProjectMetaAdsMutation();
@@ -383,7 +413,24 @@ export default function ProjectMetaAdsPanel({
 
   useEffect(() => {
     setSettings(normalizeSettings(project));
+    setSettingsDrawer(null);
+    setSettingsDraft(null);
+    setSettingsDraftToken('');
+    setShowSettingsDraftToken(false);
   }, [project]);
+
+  useEffect(() => {
+    if (!metricsFullscreen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMetricsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [metricsFullscreen]);
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -477,12 +524,20 @@ export default function ProjectMetaAdsPanel({
   const selectedAdSetIds = selectedEntityIds
     .filter((id) => id.startsWith('adset:'))
     .map((id) => id.replace('adset:', ''));
-  const canCreateRuleGroup =
-    canEdit && (selectedCampaignIds.length > 0 || selectedAdSetIds.length > 0);
+  const canCreateRuleGroup = canEdit;
   const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
     settings.ruleGroups?.find(
       (group) => group.entityLevel === entityLevel && group.entityIds?.includes(entityId),
     )?.name ?? '-';
+  const getCampaignName = (campaignId: string) =>
+    campaigns.find((campaign) => campaign.campaignId === campaignId)?.campaignName ?? campaignId;
+  const getAdSetName = (adSetId: string) =>
+    campaigns.flatMap((campaign) => campaign.adSets).find((adSet) => adSet.entityId === adSetId)
+      ?.entityName ?? adSetId;
+  const selectedRuleGroupLabels =
+    selectedCampaignIds.length > 0
+      ? selectedCampaignIds.map(getCampaignName)
+      : selectedAdSetIds.map(getAdSetName);
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
   const filteredCampaigns = campaigns
@@ -554,45 +609,32 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
-  const onRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
-    setSettings((current) => ({
-      ...current,
-      rules: {
-        ...current.rules,
-        [key]: Number(value),
-      },
-    }));
-  };
-
-  const onCreativeRuleChange = (key: keyof Required<MetaAdsCreativeRules>, value: string) => {
-    setSettings((current) => ({
-      ...current,
-      creativeRules: {
-        ...current.creativeRules,
-        [key]: Number(value),
-      },
-    }));
-  };
-
-  const onSave = () => {
-    const trimmedToken = metaAccessToken.trim();
+  const saveSettings = (
+    nextSettings: MetaAdsSettingsState,
+    token: string,
+    onSuccess?: () => void,
+  ) => {
+    const trimmedToken = token.trim();
     logger.debug('MetaAds', 'Saving project Meta Ads settings', {
       projectId: project.projectId,
       hasMetaAccessToken: trimmedToken.length > 0,
       tokenLength: trimmedToken.length,
-      tokenSecretName: settings.tokenSecretName,
+      tokenSecretName: nextSettings.tokenSecretName,
     });
+    setSettings(nextSettings);
     updateSettings.mutate(
       {
         projectId: project.projectId,
-        metaAds: settings,
+        metaAds: nextSettings,
         ...(trimmedToken ? { metaAccessToken: trimmedToken } : {}),
       },
       {
         onSuccess: () => {
-          setMetaAccessToken('');
           statusQuery.refetch();
+          setSettingsDraftToken('');
+          setShowSettingsDraftToken(false);
           showToast({ message: localize('com_ui_saved'), status: 'success' });
+          onSuccess?.();
           logger.debug('MetaAds', 'Saved project Meta Ads settings', {
             projectId: project.projectId,
             savedProjectToken: trimmedToken.length > 0,
@@ -611,13 +653,21 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
+  const onSave = () => {
+    saveSettings(settings, '');
+  };
+
   const onUseTenantToken = () => {
-    setMetaAccessToken('');
-    setSettings((current) => ({
-      ...current,
-      tokenSecretName: '',
-      credentialMode: 'tenant_default',
-    }));
+    setSettingsDraftToken('');
+    setSettingsDraft((current) =>
+      current
+        ? {
+            ...current,
+            tokenSecretName: '',
+            credentialMode: 'tenant_default',
+          }
+        : current,
+    );
   };
 
   const onApply = (recommendation: ProjectMetaAdsRecommendation) => {
@@ -721,23 +771,38 @@ export default function ProjectMetaAdsPanel({
     if (!canCreateRuleGroup) {
       return;
     }
+    if (selectedCampaignIds.length === 0 && selectedAdSetIds.length === 0) {
+      setRuleGroupDraft({
+        scope: 'global',
+        name: localize('com_ui_project_meta_ads_global_rules'),
+        entityLevel: 'campaign',
+        entityIds: [],
+        rules: { ...settings.rules },
+        creativeRules: { ...settings.creativeRules },
+      });
+      return;
+    }
     const entityLevel = selectedCampaignIds.length > 0 ? 'campaign' : 'adset';
     const entityIds = entityLevel === 'campaign' ? selectedCampaignIds : selectedAdSetIds;
     setRuleGroupDraft({
+      scope: 'group',
       name: '',
       entityLevel,
       entityIds,
       rules: { ...settings.rules },
+      creativeRules: { ...settings.creativeRules },
     });
   };
 
   const onEditRuleGroup = (group: MetaAdsRuleGroup) => {
     setRuleGroupDraft({
       id: group.id,
+      scope: 'group',
       name: group.name ?? '',
       entityLevel: group.entityLevel,
       entityIds: group.entityIds ?? [],
       rules: { ...defaultRules, ...(group.rules ?? {}) },
+      creativeRules: { ...settings.creativeRules },
     });
   };
 
@@ -780,8 +845,55 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
+  const onRuleGroupCreativeRuleChange = (
+    key: keyof Required<MetaAdsCreativeRules>,
+    value: string,
+  ) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            creativeRules: {
+              ...current.creativeRules,
+              [key]: Number(value),
+            },
+          }
+        : current,
+    );
+  };
+
   const onSaveRuleGroup = () => {
-    if (!ruleGroupDraft || ruleGroupDraft.entityIds.length === 0) {
+    if (!ruleGroupDraft) {
+      return;
+    }
+    if (ruleGroupDraft.scope === 'global') {
+      const nextSettings = {
+        ...settings,
+        rules: ruleGroupDraft.rules,
+        creativeRules: ruleGroupDraft.creativeRules,
+      };
+      setSettings(nextSettings);
+      updateSettings.mutate(
+        {
+          projectId: project.projectId,
+          metaAds: nextSettings,
+        },
+        {
+          onSuccess: () => {
+            setRuleGroupDraft(null);
+            statusQuery.refetch();
+            showToast({ message: localize('com_ui_saved'), status: 'success' });
+          },
+          onError: (error) => {
+            const message =
+              error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+            showToast({ message, status: 'error' });
+          },
+        },
+      );
+      return;
+    }
+    if (ruleGroupDraft.entityIds.length === 0) {
       return;
     }
     const nextGroup: MetaAdsRuleGroup = {
@@ -886,6 +998,12 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
+  const onToggleAdSetAds = (adSetId: string) => {
+    setCollapsedAdSetAdsIds((current) =>
+      current.includes(adSetId) ? current.filter((id) => id !== adSetId) : [...current, adSetId],
+    );
+  };
+
   const onOpenTrafficAgentChat = () => {
     if (!canOpenTrafficAgentChat || !statusQuery.data) {
       return;
@@ -910,6 +1028,106 @@ export default function ProjectMetaAdsPanel({
       params.set('agent_id', trafficAgentId);
     }
     navigate(`/c/new?${params.toString()}`);
+  };
+
+  const openSettingsDrawer = (drawer: Exclude<SettingsDrawer, null>) => {
+    setSettingsDrawer(drawer);
+    setSettingsDraft(settings);
+    setSettingsDraftToken('');
+    setShowSettingsDraftToken(false);
+  };
+
+  const closeSettingsDrawer = () => {
+    setSettingsDrawer(null);
+    setSettingsDraft(null);
+    setSettingsDraftToken('');
+    setShowSettingsDraftToken(false);
+  };
+
+  const onSaveSettingsDrawer = () => {
+    if (!settingsDraft) {
+      return;
+    }
+    saveSettings(settingsDraft, settingsDraftToken, closeSettingsDrawer);
+  };
+
+  const renderAdMetric = (labelKey: TranslationKeys, value: string) => (
+    <div className="border border-border-light bg-surface-primary p-3">
+      <div className="text-[11px] font-semibold uppercase text-text-tertiary">
+        {localize(labelKey)}
+      </div>
+      <div className="mt-1 font-mono text-sm text-text-primary">{value}</div>
+    </div>
+  );
+
+  const renderAdRow = (ad: ProjectMetaAdsAdSummary) => {
+    const mediaUrl = getAdThumbnailUrl(ad);
+    return (
+      <tr
+        key={ad.adId}
+        data-testid={`meta-ads-ad-card-${ad.adId}`}
+        onClick={() => setSelectedAdPreview(ad)}
+        className="group cursor-pointer border-b border-border-light bg-surface-primary transition duration-200 hover:bg-surface-secondary"
+      >
+        <td className="px-2 py-2 pl-10 align-middle" />
+        <td className="px-2 py-2 align-middle">
+          <span aria-hidden="true" className="block h-7 w-7" />
+        </td>
+        <td className="px-2 py-2 text-text-secondary">
+          {localize('com_ui_project_meta_ads_level_ad')}
+        </td>
+        <td className="px-2 py-2" title={ad.adName ?? ad.title ?? ad.adId}>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="h-9 w-16 shrink-0 overflow-hidden border border-border-light bg-surface-secondary">
+              {mediaUrl ? (
+                <img
+                  src={mediaUrl}
+                  alt={ad.adName ?? ad.title ?? ad.adId}
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-text-tertiary">
+                  {localize('com_ui_project_meta_ads_no_creative_media')}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium text-text-primary">
+                {ad.adName ?? ad.title ?? ad.adId}
+              </div>
+              <div className="truncate text-xs text-text-secondary">
+                {ad.title ?? ad.body ?? '-'}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-tertiary">-</td>
+        <td className="px-2 py-2 text-text-tertiary">-</td>
+        <td className="px-2 py-2 text-text-tertiary">-</td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMetric(ad.frequency)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMetric(ad.resultCount)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMoney(ad.cpa, ad.currency ?? currency)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMoney(ad.spend, ad.currency ?? currency)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMetric(ad.ctr)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+          {formatMetric(ad.clicks)}
+        </td>
+        <td className="px-2 py-2 text-right font-mono text-text-tertiary">-</td>
+        <td className="px-2 py-2 text-text-tertiary">-</td>
+        <td className="px-2 py-2 text-text-tertiary">-</td>
+        <td className="px-2 py-2" />
+      </tr>
+    );
   };
 
   return (
@@ -947,19 +1165,36 @@ export default function ProjectMetaAdsPanel({
             </button>
             <button
               type="button"
-              onClick={() => setShowSettingsPanel((current) => !current)}
+              onClick={() => openSettingsDrawer('account')}
               className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary"
             >
-              {localize('com_ui_project_meta_ads_settings')}
+              {localize('com_ui_project_meta_ads_account_credentials')}
             </button>
             <button
               type="button"
-              disabled={!canEdit || updateSettings.isLoading}
-              onClick={onSave}
-              className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => openSettingsDrawer('automation')}
+              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary"
             >
-              {localize('com_ui_save')}
+              {localize('com_ui_project_meta_ads_automation')}
             </button>
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={onOpenRuleGroupDraft}
+              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {localize('com_ui_project_meta_ads_rules')}
+            </button>
+            {!settingsDrawer && (
+              <button
+                type="button"
+                disabled={!canEdit || updateSettings.isLoading}
+                onClick={onSave}
+                className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize('com_ui_save')}
+              </button>
+            )}
           </div>
         </div>
         {runErrorMessage && (
@@ -971,912 +1206,1059 @@ export default function ProjectMetaAdsPanel({
           </div>
         )}
 
-        {showSettingsPanel && (
-          <div className="border-b border-border-light bg-surface-secondary p-3">
-            <div className="grid gap-3 md:grid-cols-5">
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_enabled')}
-                <select
-                  disabled={!canEdit}
-                  value={settings.enabled ? 'true' : 'false'}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      enabled: event.target.value === 'true',
-                    }))
-                  }
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
+        {settingsDrawer && settingsDraft && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="meta-ads-settings-drawer-title"
+            className="fixed inset-0 z-50 flex justify-end bg-black/30"
+          >
+            <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
+              <div className="border-b border-border-light p-4">
+                <h4
+                  id="meta-ads-settings-drawer-title"
+                  className="text-base font-semibold text-text-primary"
                 >
-                  <option value="false">{localize('com_ui_project_meta_ads_disabled')}</option>
-                  <option value="true">{localize('com_ui_project_meta_ads_enabled_state')}</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_account')}
-                <input
-                  disabled={!canEdit}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={getAdAccountDigits(settings.adAccountId)}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      adAccountId: toAdAccountId(event.target.value),
-                    }))
-                  }
-                  placeholder="123456789"
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_mode')}
-                <select
-                  disabled={!canEdit}
-                  value={settings.automationMode}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      automationMode: event.target.value as MetaAdsSettings['automationMode'],
-                    }))
-                  }
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                >
-                  <option value="recommend">
-                    {localize('com_ui_project_meta_ads_mode_recommend')}
-                  </option>
-                  <option value="auto_limited">
-                    {localize('com_ui_project_meta_ads_mode_auto_limited')}
-                  </option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_schedule')}
-                <select
-                  disabled={!canEdit}
-                  value={settings.scheduleIntervalMinutes}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      scheduleIntervalMinutes: Number(
-                        event.target.value,
-                      ) as ScheduleIntervalMinutes,
-                    }))
-                  }
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                >
-                  {scheduleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {localize(option.labelKey)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_graph_version')}
-                <select
-                  disabled={!canEdit}
-                  value={settings.graphVersion ?? ''}
-                  onChange={(event) =>
-                    setSettings((current) => ({ ...current, graphVersion: event.target.value }))
-                  }
-                  autoComplete="off"
-                  className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                >
-                  <option value="">
-                    {localize('com_ui_project_meta_ads_graph_version_global', {
-                      0: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
-                    })}
-                  </option>
-                  {graphVersionOptions.map((version) => (
-                    <option key={version} value={version}>
-                      {version}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_2fr]">
-              <div className="flex flex-col gap-2 text-xs text-text-secondary">
-                <span>{localize('com_ui_project_meta_ads_project_token')}</span>
-                <div className="flex h-9 overflow-hidden border border-border-light bg-surface-primary">
-                  <input
-                    disabled={!canEdit}
-                    type={showMetaAccessToken ? 'text' : 'password'}
-                    name="meta_ads_project_token_new"
-                    autoComplete="new-password"
-                    value={metaAccessToken}
-                    onChange={(event) => setMetaAccessToken(event.target.value)}
-                    placeholder={
-                      hasMaskedToken
-                        ? localize('com_ui_project_meta_ads_token_keep_existing')
-                        : localize('com_ui_project_meta_ads_token_placeholder')
-                    }
-                    className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
-                  />
-                  {metaAccessToken.length > 0 && (
-                    <button
-                      type="button"
-                      disabled={!canEdit}
-                      onClick={() => setShowMetaAccessToken((current) => !current)}
-                      className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {localize(
-                        showMetaAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password',
-                      )}
-                    </button>
+                  {localize(
+                    settingsDrawer === 'account'
+                      ? 'com_ui_project_meta_ads_account_credentials'
+                      : 'com_ui_project_meta_ads_automation',
                   )}
+                </h4>
+                <div className="mt-2 text-xs text-text-tertiary">
+                  {settingsDrawer === 'account'
+                    ? localize(tokenStatusKey)
+                    : localize('com_ui_project_meta_ads_schedule_minutes', {
+                        0: String(settingsDraft.scheduleIntervalMinutes),
+                      })}
                 </div>
-                <span className="text-xs leading-5 text-text-tertiary">
-                  {localize('com_ui_project_meta_ads_project_token_hint')}
-                </span>
-                {tokenCredentials && (
-                  <span className="inline-flex w-fit items-center gap-2 border border-border-light px-2 py-1 text-xs text-text-secondary">
-                    {localize(tokenStatusKey)}
-                  </span>
-                )}
-                {settings.tokenSecretName && (
-                  <button
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={onUseTenantToken}
-                    className="w-fit text-xs font-medium text-text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_use_tenant_token')}
-                  </button>
+              </div>
+              <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                {settingsDrawer === 'account' ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                        {localize('com_ui_project_meta_ads_enabled')}
+                        <select
+                          disabled={!canEdit}
+                          value={settingsDraft.enabled ? 'true' : 'false'}
+                          onChange={(event) =>
+                            setSettingsDraft((current) =>
+                              current
+                                ? { ...current, enabled: event.target.value === 'true' }
+                                : current,
+                            )
+                          }
+                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        >
+                          <option value="false">
+                            {localize('com_ui_project_meta_ads_disabled')}
+                          </option>
+                          <option value="true">
+                            {localize('com_ui_project_meta_ads_enabled_state')}
+                          </option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                        {localize('com_ui_project_meta_ads_account')}
+                        <input
+                          disabled={!canEdit}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={getAdAccountDigits(settingsDraft.adAccountId)}
+                          onChange={(event) =>
+                            setSettingsDraft((current) =>
+                              current
+                                ? { ...current, adAccountId: toAdAccountId(event.target.value) }
+                                : current,
+                            )
+                          }
+                          placeholder="123456789"
+                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        />
+                      </label>
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_graph_version')}
+                      <select
+                        disabled={!canEdit}
+                        value={settingsDraft.graphVersion ?? ''}
+                        onChange={(event) =>
+                          setSettingsDraft((current) =>
+                            current ? { ...current, graphVersion: event.target.value } : current,
+                          )
+                        }
+                        autoComplete="off"
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        <option value="">
+                          {localize('com_ui_project_meta_ads_graph_version_global', {
+                            0: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
+                          })}
+                        </option>
+                        {graphVersionOptions.map((version) => (
+                          <option key={version} value={version}>
+                            {version}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="flex flex-col gap-2 text-xs text-text-secondary">
+                      <span>{localize('com_ui_project_meta_ads_project_token')}</span>
+                      <div className="flex h-10 overflow-hidden border border-border-light bg-surface-secondary">
+                        <input
+                          disabled={!canEdit}
+                          type={showSettingsDraftToken ? 'text' : 'password'}
+                          name="meta_ads_project_token_new"
+                          autoComplete="new-password"
+                          value={settingsDraftToken}
+                          onChange={(event) => setSettingsDraftToken(event.target.value)}
+                          placeholder={
+                            hasMaskedToken
+                              ? localize('com_ui_project_meta_ads_token_keep_existing')
+                              : localize('com_ui_project_meta_ads_token_placeholder')
+                          }
+                          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
+                        />
+                        {settingsDraftToken.length > 0 && (
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => setShowSettingsDraftToken((current) => !current)}
+                            className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {localize(
+                              showSettingsDraftToken
+                                ? 'com_ui_hide_password'
+                                : 'com_ui_show_password',
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-xs leading-5 text-text-tertiary">
+                        {localize('com_ui_project_meta_ads_project_token_hint')}
+                      </span>
+                      {tokenCredentials && (
+                        <span className="inline-flex w-fit items-center gap-2 border border-border-light px-2 py-1 text-xs text-text-secondary">
+                          {localize(tokenStatusKey)}
+                        </span>
+                      )}
+                      {settingsDraft.tokenSecretName && (
+                        <button
+                          type="button"
+                          disabled={!canEdit}
+                          onClick={onUseTenantToken}
+                          className="w-fit text-xs font-medium text-text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {localize('com_ui_project_meta_ads_use_tenant_token')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="border border-border-light bg-surface-secondary p-3 text-sm text-text-secondary">
+                      <div className="font-medium text-text-primary">
+                        {localize(tokenStatusKey)}
+                      </div>
+                      <div className="mt-2 text-xs leading-5 text-text-tertiary">
+                        {localize('com_ui_project_meta_ads_graph_version_hint')}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-3">
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_mode')}
+                      <select
+                        disabled={!canEdit}
+                        value={settingsDraft.automationMode}
+                        onChange={(event) =>
+                          setSettingsDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  automationMode: event.target
+                                    .value as MetaAdsSettings['automationMode'],
+                                }
+                              : current,
+                          )
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        <option value="recommend">
+                          {localize('com_ui_project_meta_ads_mode_recommend')}
+                        </option>
+                        <option value="auto_limited">
+                          {localize('com_ui_project_meta_ads_mode_auto_limited')}
+                        </option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_schedule')}
+                      <select
+                        disabled={!canEdit}
+                        value={settingsDraft.scheduleIntervalMinutes}
+                        onChange={(event) =>
+                          setSettingsDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  scheduleIntervalMinutes: Number(
+                                    event.target.value,
+                                  ) as ScheduleIntervalMinutes,
+                                }
+                              : current,
+                          )
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        {scheduleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {localize(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 )}
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {numberFields.map((field) => (
-                  <label
-                    key={field.key}
-                    className="flex flex-col gap-1 text-xs text-text-secondary"
-                  >
-                    {localize(field.labelKey)}
-                    <input
-                      disabled={!canEdit}
-                      type="number"
-                      step={field.step}
-                      min={
-                        field.key === 'minRoas' || field.key === 'minSpend'
-                          ? '0'
-                          : field.key === 'cooldownHours'
-                            ? '1'
-                            : '0.01'
-                      }
-                      max={
-                        field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
-                          ? '100'
-                          : field.key === 'cooldownHours'
-                            ? '168'
-                            : undefined
-                      }
-                      value={settings.rules[field.key]}
-                      onChange={(event) => onRuleChange(field.key, event.target.value)}
-                      className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                    />
-                  </label>
-                ))}
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_max_frequency_alert')}
-                  <input
-                    disabled={!canEdit}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={settings.creativeRules.maxFrequency}
-                    onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
-                    className="h-9 border border-border-light bg-surface-primary px-3 text-sm text-text-primary"
-                  />
-                </label>
+              <div className="flex justify-end gap-2 border-t border-border-light p-4">
+                <button
+                  type="button"
+                  onClick={closeSettingsDrawer}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                >
+                  {localize('com_ui_cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canEdit || updateSettings.isLoading}
+                  onClick={onSaveSettingsDrawer}
+                  className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize('com_ui_save')}
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col gap-3 border-b border-border-light bg-surface-primary p-3 lg:sticky lg:top-0 lg:z-10">
-          {isStatusLoading && (
-            <div
-              role="status"
-              className="flex items-center gap-2 border border-border-light bg-surface-secondary px-3 py-2 text-xs text-text-secondary"
-            >
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
-              <span>{localize('com_ui_project_meta_ads_loading')}</span>
-            </div>
-          )}
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="grid gap-2 md:grid-cols-4 lg:flex lg:items-end">
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_period')}
-                <select
-                  value={datePreset}
-                  onChange={(event) =>
-                    setDatePreset(event.target.value as (typeof periodOptions)[number]['value'])
-                  }
-                  className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                >
-                  {periodOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {localize(option.labelKey)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_search')}
-                <input
-                  value={campaignSearch}
-                  onChange={(event) => setCampaignSearch(event.target.value)}
-                  className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_budget_mode_filter')}
-                <select
-                  value={budgetModeFilter}
-                  onChange={(event) => setBudgetModeFilter(event.target.value)}
-                  className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                >
-                  <option value="all">{localize('com_ui_all')}</option>
-                  <option value="CBO">CBO</option>
-                  <option value="ABO">ABO</option>
-                  <option value="UNKNOWN">UNKNOWN</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_sort')}
-                <select
-                  value={campaignSort}
-                  onChange={(event) => setCampaignSort(event.target.value)}
-                  className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                >
-                  <option value="name_asc">{localize('com_ui_name')}</option>
-                  <option value="budget_desc">
-                    {localize('com_ui_project_meta_ads_budget_defined')}
-                  </option>
-                  <option value="frequency_desc">
-                    {localize('com_ui_project_meta_ads_frequency')}
-                  </option>
-                  <option value="spend_desc">{localize('com_ui_project_meta_ads_spend')}</option>
-                  <option value="cpa_asc">{localize('com_ui_project_meta_ads_cost_result')}</option>
-                  <option value="result_desc">{localize('com_ui_project_meta_ads_result')}</option>
-                  <option value="ctr_desc">CTR</option>
-                  <option value="clicks_desc">{localize('com_ui_project_meta_ads_clicks')}</option>
-                </select>
-              </label>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="h-8 border border-border-light px-3 py-2 font-mono text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_selection_count', {
-                  0: String(selectedCount),
-                })}
-              </span>
-              <button
-                type="button"
-                disabled={selectedCount === 0}
-                onClick={() => setSelectedEntityIds([])}
-                className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+        <div
+          className={
+            metricsFullscreen
+              ? 'fixed inset-3 z-50 flex flex-col overflow-hidden border border-border-light bg-surface-primary shadow-2xl'
+              : ''
+          }
+          data-testid="meta-ads-metrics-workspace"
+        >
+          <div className="flex flex-col gap-3 border-b border-border-light bg-surface-primary p-3">
+            {isStatusLoading && (
+              <div
+                role="status"
+                className="flex items-center gap-2 border border-border-light bg-surface-secondary px-3 py-2 text-xs text-text-secondary"
               >
-                {localize('com_ui_project_meta_ads_clear_selection')}
-              </button>
-              <button
-                type="button"
-                disabled={!canCreateRuleGroup}
-                onClick={onOpenRuleGroupDraft}
-                className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {localize('com_ui_project_meta_ads_create_rule_group')}
-              </button>
-              <button
-                type="button"
-                disabled={!canOpenTrafficAgentChat}
-                onClick={onOpenTrafficAgentChat}
-                className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {localize('com_ui_project_meta_ads_chat_with_agent')}
-              </button>
-            </div>
-          </div>
-          <div className="grid border border-border-light sm:grid-cols-4">
-            {[
-              [
-                'com_ui_project_meta_ads_total_spend',
-                formatMoney(statusQuery.data?.summary?.totalSpend, currency),
-              ],
-              [
-                'com_ui_project_meta_ads_total_results',
-                formatMetric(statusQuery.data?.summary?.totalResults),
-              ],
-              [
-                'com_ui_project_meta_ads_average_cost',
-                formatMoney(statusQuery.data?.summary?.averageCostPerResult, currency),
-              ],
-              [
-                'com_ui_project_meta_ads_average_frequency',
-                formatMetric(statusQuery.data?.summary?.averageFrequency),
-              ],
-            ].map(([labelKey, value]) => (
-              <div key={labelKey} className="border-border-light p-3 last:border-r-0 sm:border-r">
-                <div className="text-[11px] uppercase text-text-tertiary">
-                  {localize(labelKey as TranslationKeys)}
-                </div>
-                {isInitialStatusLoading ? (
-                  <div
-                    data-testid="meta-ads-summary-skeleton"
-                    className="mt-2 h-6 w-24 animate-pulse bg-surface-secondary"
-                  />
-                ) : (
-                  <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
-                    {value}
-                  </div>
-                )}
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+                <span>{localize('com_ui_project_meta_ads_loading')}</span>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {pendingRecommendations.length > 0 && campaigns.length === 0 && (
-          <div className="border-b border-border-light bg-surface-secondary p-3">
-            <div className="space-y-2">
-              {pendingRecommendations.map((recommendation) => (
-                <div
-                  key={recommendation._id ?? recommendation.entityId}
-                  className="flex items-center justify-between gap-3 border border-border-light bg-surface-primary p-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-text-primary">
-                      {recommendation.entityName ?? recommendation.entityId}
-                    </div>
-                    <div className="text-text-secondary">
-                      {getRecommendationLabel(recommendation, currency)}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!canEdit || applyRecommendation.isLoading}
-                    onClick={() => onApply(recommendation)}
-                    className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+            )}
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="grid gap-2 md:grid-cols-4 lg:flex lg:items-end">
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_period')}
+                  <select
+                    value={datePreset}
+                    onChange={(event) =>
+                      setDatePreset(event.target.value as (typeof periodOptions)[number]['value'])
+                    }
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
                   >
-                    {localize('com_ui_project_meta_ads_apply')}
-                  </button>
+                    {periodOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {localize(option.labelKey)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_search')}
+                  <input
+                    value={campaignSearch}
+                    onChange={(event) => setCampaignSearch(event.target.value)}
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_budget_mode_filter')}
+                  <select
+                    value={budgetModeFilter}
+                    onChange={(event) => setBudgetModeFilter(event.target.value)}
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                  >
+                    <option value="all">{localize('com_ui_all')}</option>
+                    <option value="CBO">CBO</option>
+                    <option value="ABO">ABO</option>
+                    <option value="UNKNOWN">UNKNOWN</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_sort')}
+                  <select
+                    value={campaignSort}
+                    onChange={(event) => setCampaignSort(event.target.value)}
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                  >
+                    <option value="name_asc">{localize('com_ui_name')}</option>
+                    <option value="budget_desc">
+                      {localize('com_ui_project_meta_ads_budget_defined')}
+                    </option>
+                    <option value="frequency_desc">
+                      {localize('com_ui_project_meta_ads_frequency')}
+                    </option>
+                    <option value="spend_desc">{localize('com_ui_project_meta_ads_spend')}</option>
+                    <option value="cpa_asc">
+                      {localize('com_ui_project_meta_ads_cost_result')}
+                    </option>
+                    <option value="result_desc">
+                      {localize('com_ui_project_meta_ads_result')}
+                    </option>
+                    <option value="ctr_desc">CTR</option>
+                    <option value="clicks_desc">
+                      {localize('com_ui_project_meta_ads_clicks')}
+                    </option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="h-8 border border-border-light px-3 py-2 font-mono text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_selection_count', {
+                    0: String(selectedCount),
+                  })}
+                </span>
+                <button
+                  type="button"
+                  disabled={selectedCount === 0}
+                  onClick={() => setSelectedEntityIds([])}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {localize('com_ui_project_meta_ads_clear_selection')}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canCreateRuleGroup}
+                  onClick={onOpenRuleGroupDraft}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize('com_ui_project_meta_ads_create_rule_group')}
+                </button>
+                <button
+                  type="button"
+                  disabled={!canOpenTrafficAgentChat}
+                  onClick={onOpenTrafficAgentChat}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize('com_ui_project_meta_ads_chat_with_agent')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMetricsFullscreen((current) => !current)}
+                  aria-label={localize(
+                    metricsFullscreen
+                      ? 'com_ui_project_meta_ads_exit_fullscreen'
+                      : 'com_ui_project_meta_ads_enter_fullscreen',
+                  )}
+                  className="inline-flex h-8 items-center gap-2 border border-border-light px-3 text-xs font-medium text-text-primary"
+                >
+                  {metricsFullscreen ? (
+                    <ArrowsIn className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <ArrowsOut className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {localize(
+                    metricsFullscreen
+                      ? 'com_ui_project_meta_ads_exit_fullscreen'
+                      : 'com_ui_project_meta_ads_enter_fullscreen',
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="grid border border-border-light sm:grid-cols-4">
+              {[
+                [
+                  'com_ui_project_meta_ads_total_spend',
+                  formatMoney(statusQuery.data?.summary?.totalSpend, currency),
+                ],
+                [
+                  'com_ui_project_meta_ads_total_results',
+                  formatMetric(statusQuery.data?.summary?.totalResults),
+                ],
+                [
+                  'com_ui_project_meta_ads_average_cost',
+                  formatMoney(statusQuery.data?.summary?.averageCostPerResult, currency),
+                ],
+                [
+                  'com_ui_project_meta_ads_average_frequency',
+                  formatMetric(statusQuery.data?.summary?.averageFrequency),
+                ],
+              ].map(([labelKey, value]) => (
+                <div key={labelKey} className="border-border-light p-3 last:border-r-0 sm:border-r">
+                  <div className="text-[11px] uppercase text-text-tertiary">
+                    {localize(labelKey as TranslationKeys)}
+                  </div>
+                  {isInitialStatusLoading ? (
+                    <div
+                      data-testid="meta-ads-summary-skeleton"
+                      className="mt-2 h-6 w-24 animate-pulse bg-surface-secondary"
+                    />
+                  ) : (
+                    <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
+                      {value}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-        )}
 
-        {budgetEditor && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="meta-ads-budget-dialog-title"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          >
-            <div className="w-full max-w-md border border-border-light bg-surface-primary p-4 shadow-xl">
-              <div className="min-w-0">
-                <h4
-                  id="meta-ads-budget-dialog-title"
-                  className="truncate text-base font-semibold text-text-primary"
-                >
-                  {localize('com_ui_project_meta_ads_edit_budget')}
-                </h4>
-                <div className="mt-2 truncate text-sm font-medium text-text-primary">
-                  {budgetEditor.entityName ?? budgetEditor.entityId}
-                </div>
-                <div className="mt-1 text-xs uppercase text-text-tertiary">
-                  {budgetEditor.entityLevel === 'campaign'
-                    ? localize('com_ui_project_meta_ads_campaign')
-                    : localize('com_ui_project_meta_ads_select_ad_set')}
-                </div>
-                <div className="mt-2 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_manual_budget_hint')}
-                </div>
-                <div className="mt-3 text-sm text-text-secondary">
-                  {localize('com_ui_project_meta_ads_budget_defined')}:{' '}
-                  <span className="font-mono text-text-primary">
-                    {formatMoney(budgetEditor.currentBudget, currency)}
-                  </span>
-                </div>
-                {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
-                      (reference) => (
-                        <div
-                          key={reference.percent}
-                          className="border border-border-light bg-surface-secondary p-2 text-center font-mono text-xs text-text-secondary"
-                        >
-                          {reference.label}
-                        </div>
-                      ),
-                    )}
+          {pendingRecommendations.length > 0 && campaigns.length === 0 && (
+            <div className="border-b border-border-light bg-surface-secondary p-3">
+              <div className="space-y-2">
+                {pendingRecommendations.map((recommendation) => (
+                  <div
+                    key={recommendation._id ?? recommendation.entityId}
+                    className="flex items-center justify-between gap-3 border border-border-light bg-surface-primary p-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-text-primary">
+                        {recommendation.entityName ?? recommendation.entityId}
+                      </div>
+                      <div className="text-text-secondary">
+                        {getRecommendationLabel(recommendation, currency)}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!canEdit || applyRecommendation.isLoading}
+                      onClick={() => onApply(recommendation)}
+                      className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize('com_ui_project_meta_ads_apply')}
+                    </button>
                   </div>
-                )}
+                ))}
               </div>
-              <label className="mt-4 flex flex-col gap-1 text-xs text-text-secondary">
-                {localize('com_ui_project_meta_ads_new_budget')}
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={manualDailyBudget}
-                  onChange={(event) => setManualDailyBudget(event.target.value)}
-                  className="h-9 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                />
-              </label>
-              <div className="mt-4 flex justify-end gap-2">
+            </div>
+          )}
+
+          {budgetEditor && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="meta-ads-budget-dialog-title"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            >
+              <div className="w-full max-w-md border border-border-light bg-surface-primary p-4 shadow-xl">
+                <div className="min-w-0">
+                  <h4
+                    id="meta-ads-budget-dialog-title"
+                    className="truncate text-base font-semibold text-text-primary"
+                  >
+                    {localize('com_ui_project_meta_ads_edit_budget')}
+                  </h4>
+                  <div className="mt-2 truncate text-sm font-medium text-text-primary">
+                    {budgetEditor.entityName ?? budgetEditor.entityId}
+                  </div>
+                  <div className="mt-1 text-xs uppercase text-text-tertiary">
+                    {budgetEditor.entityLevel === 'campaign'
+                      ? localize('com_ui_project_meta_ads_campaign')
+                      : localize('com_ui_project_meta_ads_select_ad_set')}
+                  </div>
+                  <div className="mt-2 text-xs text-text-secondary">
+                    {localize('com_ui_project_meta_ads_manual_budget_hint')}
+                  </div>
+                  <div className="mt-3 text-sm text-text-secondary">
+                    {localize('com_ui_project_meta_ads_budget_defined')}:{' '}
+                    <span className="font-mono text-text-primary">
+                      {formatMoney(budgetEditor.currentBudget, currency)}
+                    </span>
+                  </div>
+                  {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
+                        (reference) => (
+                          <div
+                            key={reference.percent}
+                            className="border border-border-light bg-surface-secondary p-2 text-center font-mono text-xs text-text-secondary"
+                          >
+                            {reference.label}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+                <label className="mt-4 flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_new_budget')}
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={manualDailyBudget}
+                    onChange={(event) => setManualDailyBudget(event.target.value)}
+                    className="h-9 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                  />
+                </label>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBudgetEditor(null)}
+                    className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                  >
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateBudget.isLoading}
+                    onClick={onSaveManualBudget}
+                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_save_budget')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {budgetConfirmation && (
+            <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <div className="font-semibold">
+                {localize('com_ui_project_meta_ads_confirm_budget_title')}
+              </div>
+              <div className="mt-1">
+                {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
+                {formatMoney(budgetConfirmation.currentBudget, currency)}
+                {' -> '}
+                {formatMoney(budgetConfirmation.dailyBudget, currency)}
+              </div>
+              <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setBudgetEditor(null)}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                  onClick={() => setBudgetConfirmation(null)}
+                  className="h-8 border border-amber-300 px-3 text-xs font-medium"
                 >
                   {localize('com_ui_cancel')}
                 </button>
                 <button
                   type="button"
                   disabled={updateBudget.isLoading}
-                  onClick={onSaveManualBudget}
-                  className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={onConfirmManualBudget}
+                  className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {localize('com_ui_project_meta_ads_save_budget')}
+                  {localize('com_ui_project_meta_ads_confirm_budget')}
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {budgetConfirmation && (
-          <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            <div className="font-semibold">
-              {localize('com_ui_project_meta_ads_confirm_budget_title')}
-            </div>
-            <div className="mt-1">
-              {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
-              {formatMoney(budgetConfirmation.currentBudget, currency)}
-              {' -> '}
-              {formatMoney(budgetConfirmation.dailyBudget, currency)}
-            </div>
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setBudgetConfirmation(null)}
-                className="h-8 border border-amber-300 px-3 text-xs font-medium"
-              >
-                {localize('com_ui_cancel')}
-              </button>
-              <button
-                type="button"
-                disabled={updateBudget.isLoading}
-                onClick={onConfirmManualBudget}
-                className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {localize('com_ui_project_meta_ads_confirm_budget')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {ruleGroupDraft && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="meta-ads-rule-group-dialog-title"
-            className="fixed inset-0 z-50 flex justify-end bg-black/30"
-          >
-            <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
-              <div className="border-b border-border-light p-4">
-                <h4
-                  id="meta-ads-rule-group-dialog-title"
-                  className="text-base font-semibold text-text-primary"
-                >
-                  {localize(
-                    ruleGroupDraft.id
-                      ? 'com_ui_project_meta_ads_edit_rule_group'
-                      : 'com_ui_project_meta_ads_create_rule_group',
+          {ruleGroupDraft && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="meta-ads-rule-group-dialog-title"
+              className="fixed inset-0 z-50 flex justify-end bg-black/30"
+            >
+              <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
+                <div className="border-b border-border-light p-4">
+                  <h4
+                    id="meta-ads-rule-group-dialog-title"
+                    className="text-base font-semibold text-text-primary"
+                  >
+                    {localize(
+                      ruleGroupDraft.scope === 'global'
+                        ? 'com_ui_project_meta_ads_global_rules'
+                        : ruleGroupDraft.id
+                          ? 'com_ui_project_meta_ads_edit_rule_group'
+                          : 'com_ui_project_meta_ads_create_rule_group',
+                    )}
+                  </h4>
+                  {ruleGroupDraft.scope === 'global' ? (
+                    <div className="mt-2 text-xs text-text-tertiary">
+                      {localize('com_ui_project_meta_ads_global_rules_hint')}
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-2">
+                      <div className="text-xs uppercase text-text-tertiary">
+                        {ruleGroupDraft.entityLevel === 'campaign'
+                          ? localize('com_ui_project_meta_ads_campaign')
+                          : localize('com_ui_project_meta_ads_select_ad_set')}
+                        {' · '}
+                        {ruleGroupDraft.entityIds.length}{' '}
+                        {localize('com_ui_project_meta_ads_rule_group_selected')}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRuleGroupLabels.slice(0, 8).map((label) => (
+                          <span
+                            key={label}
+                            className="border border-border-light bg-surface-secondary px-2 py-1 text-xs text-text-secondary"
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </h4>
-                <div className="mt-2 text-xs uppercase text-text-tertiary">
-                  {ruleGroupDraft.entityLevel === 'campaign'
-                    ? localize('com_ui_project_meta_ads_campaign')
-                    : localize('com_ui_project_meta_ads_select_ad_set')}
-                  {' · '}
-                  {ruleGroupDraft.entityIds.length}{' '}
-                  {localize('com_ui_project_meta_ads_rule_group_selected')}
+                </div>
+                <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                  {ruleGroupDraft.scope === 'group' && (
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_rule_group_name')}
+                      <input
+                        value={ruleGroupDraft.name}
+                        onChange={(event) =>
+                          setRuleGroupDraft((current) =>
+                            current ? { ...current, name: event.target.value } : current,
+                          )
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      />
+                    </label>
+                  )}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {numberFields.map((field) => (
+                      <label
+                        key={field.key}
+                        className="flex flex-col gap-1 text-xs text-text-secondary"
+                      >
+                        {localize(field.labelKey)}
+                        <input
+                          type="number"
+                          step={field.step}
+                          min={
+                            field.key === 'minRoas' || field.key === 'minSpend'
+                              ? '0'
+                              : field.key === 'cooldownHours'
+                                ? '1'
+                                : '0.01'
+                          }
+                          max={
+                            field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
+                              ? '100'
+                              : field.key === 'cooldownHours'
+                                ? '168'
+                                : undefined
+                          }
+                          value={ruleGroupDraft.rules[field.key]}
+                          onChange={(event) => onRuleGroupRuleChange(field.key, event.target.value)}
+                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        />
+                      </label>
+                    ))}
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_max_frequency_alert')}
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={ruleGroupDraft.creativeRules.maxFrequency}
+                        onChange={(event) =>
+                          onRuleGroupCreativeRuleChange('maxFrequency', event.target.value)
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 border-t border-border-light p-4">
+                  <button
+                    type="button"
+                    onClick={() => setRuleGroupDraft(null)}
+                    className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                  >
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateSettings.isLoading}
+                    onClick={onSaveRuleGroup}
+                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_save_rule_group')}
+                  </button>
                 </div>
               </div>
-              <div className="flex-1 space-y-4 overflow-y-auto p-4">
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_rule_group_name')}
-                  <input
-                    value={ruleGroupDraft.name}
-                    onChange={(event) =>
-                      setRuleGroupDraft((current) =>
-                        current ? { ...current, name: event.target.value } : current,
-                      )
-                    }
-                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_rule_group_target_cpa')}
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={ruleGroupDraft.rules.targetCpa}
-                    onChange={(event) => onRuleGroupRuleChange('targetCpa', event.target.value)}
-                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_max_budget')}
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={ruleGroupDraft.rules.maxDailyBudget}
-                    onChange={(event) =>
-                      onRuleGroupRuleChange('maxDailyBudget', event.target.value)
-                    }
-                    className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                  />
-                </label>
-              </div>
-              <div className="flex justify-end gap-2 border-t border-border-light p-4">
-                <button
-                  type="button"
-                  onClick={() => setRuleGroupDraft(null)}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
-                >
-                  {localize('com_ui_cancel')}
-                </button>
-                <button
-                  type="button"
-                  disabled={updateSettings.isLoading}
-                  onClick={onSaveRuleGroup}
-                  className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {localize('com_ui_project_meta_ads_save_rule_group')}
-                </button>
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="max-w-full overflow-x-auto">
-          <table className="w-full min-w-[1520px] table-fixed text-left text-xs">
-            <thead className="border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
-              <tr>
-                <th className="w-10 px-2 py-2">
-                  <span className="sr-only">
-                    {localize('com_ui_project_meta_ads_select_ad_set')}
-                  </span>
-                </th>
-                <th className="w-10 px-2 py-2">
-                  <span className="sr-only">
-                    {localize('com_ui_project_meta_ads_expand_campaign')}
-                  </span>
-                </th>
-                <th className="w-28 px-2 py-2">{localize('com_ui_project_meta_ads_delivery')}</th>
-                <th className="w-64 px-2 py-2">
-                  {renderSortableHeader({
-                    key: 'name',
-                    label: localize('com_ui_project_meta_ads_campaign'),
-                    defaultDirection: 'asc',
-                  })}
-                </th>
-                <th className="w-28 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'budget',
-                    label: localize('com_ui_project_meta_ads_budget_defined'),
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_objective')}</th>
-                <th className="w-24 px-2 py-2">
-                  {localize('com_ui_project_meta_ads_budget_mode')}
-                </th>
-                <th className="w-24 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'frequency',
-                    label: localize('com_ui_project_meta_ads_frequency'),
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-24 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'result',
-                    label: localize('com_ui_project_meta_ads_results'),
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-28 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'cpa',
-                    label: localize('com_ui_project_meta_ads_cost_result'),
-                    className: 'justify-end text-right',
-                    defaultDirection: 'asc',
-                  })}
-                </th>
-                <th className="w-28 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'spend',
-                    label: localize('com_ui_project_meta_ads_spend'),
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-20 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'ctr',
-                    label: 'CTR',
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-20 px-2 py-2 text-right">
-                  {renderSortableHeader({
-                    key: 'clicks',
-                    label: localize('com_ui_project_meta_ads_clicks'),
-                    className: 'justify-end text-right',
-                  })}
-                </th>
-                <th className="w-24 px-2 py-2 text-right">
-                  {localize('com_ui_project_meta_ads_video_p75')}
-                </th>
-                <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_rule')}</th>
-                <th className="w-64 px-2 py-2">
-                  {localize('com_ui_project_meta_ads_recommendation')}
-                </th>
-                <th className="w-32 px-2 py-2">
-                  <span className="sr-only">{localize('com_ui_project_meta_ads_actions')}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {isInitialStatusLoading &&
-                Array.from({ length: 5 }).map((_, index) => (
-                  <tr
-                    key={`meta-ads-row-skeleton-${index}`}
-                    data-testid="meta-ads-row-skeleton"
-                    className="border-b border-border-light"
-                  >
-                    <td className="px-2 py-3" colSpan={17}>
-                      <div className="flex items-center gap-4">
-                        <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
-                        <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
-                        <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
-                        <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
-                        <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
-                        <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              {filteredCampaigns.map((campaign) => {
-                const expanded =
-                  campaign.budgetMode === 'ABO'
-                    ? !collapsedAboCampaignIds.includes(campaign.campaignId)
-                    : expandedCampaignIds.includes(campaign.campaignId);
-                const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
-                const recommendation = getEntityRecommendation(campaign.campaignId);
-                return (
-                  <Fragment key={campaign.campaignId}>
+          <div
+            className={
+              metricsFullscreen
+                ? 'min-h-0 max-w-full flex-1 overflow-auto'
+                : 'max-w-full overflow-x-auto'
+            }
+          >
+            <table className="w-full min-w-[1520px] table-fixed text-left text-xs">
+              <thead className="border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
+                <tr>
+                  <th className="w-10 px-2 py-2">
+                    <span className="sr-only">
+                      {localize('com_ui_project_meta_ads_select_ad_set')}
+                    </span>
+                  </th>
+                  <th className="w-10 px-2 py-2">
+                    <span className="sr-only">
+                      {localize('com_ui_project_meta_ads_expand_campaign')}
+                    </span>
+                  </th>
+                  <th className="w-28 px-2 py-2">{localize('com_ui_project_meta_ads_delivery')}</th>
+                  <th className="w-64 px-2 py-2">
+                    {renderSortableHeader({
+                      key: 'name',
+                      label: localize('com_ui_project_meta_ads_campaign'),
+                      defaultDirection: 'asc',
+                    })}
+                  </th>
+                  <th className="w-28 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'budget',
+                      label: localize('com_ui_project_meta_ads_budget_defined'),
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-40 px-2 py-2">
+                    {localize('com_ui_project_meta_ads_objective')}
+                  </th>
+                  <th className="w-24 px-2 py-2">
+                    {localize('com_ui_project_meta_ads_budget_mode')}
+                  </th>
+                  <th className="w-24 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'frequency',
+                      label: localize('com_ui_project_meta_ads_frequency'),
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-24 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'result',
+                      label: localize('com_ui_project_meta_ads_results'),
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-28 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'cpa',
+                      label: localize('com_ui_project_meta_ads_cost_result'),
+                      className: 'justify-end text-right',
+                      defaultDirection: 'asc',
+                    })}
+                  </th>
+                  <th className="w-28 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'spend',
+                      label: localize('com_ui_project_meta_ads_spend'),
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-20 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'ctr',
+                      label: 'CTR',
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-20 px-2 py-2 text-right">
+                    {renderSortableHeader({
+                      key: 'clicks',
+                      label: localize('com_ui_project_meta_ads_clicks'),
+                      className: 'justify-end text-right',
+                    })}
+                  </th>
+                  <th className="w-24 px-2 py-2 text-right">
+                    {localize('com_ui_project_meta_ads_video_p75')}
+                  </th>
+                  <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_rule')}</th>
+                  <th className="w-64 px-2 py-2">
+                    {localize('com_ui_project_meta_ads_recommendation')}
+                  </th>
+                  <th className="w-32 px-2 py-2">
+                    <span className="sr-only">{localize('com_ui_project_meta_ads_actions')}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isInitialStatusLoading &&
+                  Array.from({ length: 5 }).map((_, index) => (
                     <tr
-                      data-testid="meta-ads-campaign-row"
+                      key={`meta-ads-row-skeleton-${index}`}
+                      data-testid="meta-ads-row-skeleton"
                       className="border-b border-border-light"
                     >
-                      <td className="px-2 py-2 align-middle">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          aria-label={localize('com_ui_project_meta_ads_select_campaign')}
-                          onChange={() => onToggleCampaign(campaign)}
-                          className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                        />
-                      </td>
-                      <td className="px-2 py-2 align-middle">
-                        {campaign.adSets.length > 0 && (
-                          <button
-                            type="button"
-                            aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
-                            aria-expanded={expanded}
-                            onClick={() => onToggleCampaignExpanded(campaign)}
-                            className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                          >
-                            {expanded ? '-' : '+'}
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-text-secondary">
-                        {localize('com_ui_project_meta_ads_active')}
-                      </td>
-                      <td className="truncate px-2 py-2 font-medium text-text-primary">
-                        {campaign.campaignName ?? campaign.campaignId}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {campaign.editableBudgetLevel === 'campaign' ? (
-                          <button
-                            type="button"
-                            disabled={!canEdit}
-                            onClick={() =>
-                              onOpenBudgetEditor({
-                                entityLevel: 'campaign',
-                                entityId: campaign.campaignId,
-                                entityName: campaign.campaignName,
-                                currentBudget: campaign.dailyBudget,
-                              })
-                            }
-                            className="border border-border-light bg-surface-secondary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-                          >
-                            {formatMoney(campaign.dailyBudget, currency)}
-                          </button>
-                        ) : (
-                          formatMoney(campaign.dailyBudget, currency)
-                        )}
-                      </td>
-                      <td className="truncate px-2 py-2 text-text-secondary">
-                        {campaign.objective ?? '-'}
-                      </td>
-                      <td className="px-2 py-2 text-text-secondary">
-                        {campaign.budgetMode ?? '-'}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.frequency)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.resultCount)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMoney(campaign.cpa, currency)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMoney(campaign.spend, currency)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.ctr)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.clicks)}
-                      </td>
-                      <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                        {formatMetric(campaign.videoP75Watched)}
-                      </td>
-                      <td className="truncate px-2 py-2 text-text-secondary">
-                        {getEntityRuleLabel('campaign', campaign.campaignId)}
-                      </td>
-                      <td className="px-2 py-2 text-text-secondary">
-                        <div className="truncate">
-                          {getRecommendationLabel(recommendation, currency)}
-                        </div>
-                        {recommendation?.reason && (
-                          <div className="truncate text-text-tertiary">{recommendation.reason}</div>
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="flex gap-1">
-                          {recommendation && (
-                            <button
-                              type="button"
-                              disabled={!canEdit || applyRecommendation.isLoading}
-                              onClick={() => onApply(recommendation)}
-                              className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {localize('com_ui_project_meta_ads_apply')}
-                            </button>
-                          )}
+                      <td className="px-2 py-3" colSpan={17}>
+                        <div className="flex items-center gap-4">
+                          <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
+                          <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
+                          <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
+                          <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
+                          <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
+                          <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
                         </div>
                       </td>
                     </tr>
-                    {expanded &&
-                      campaign.adSets.map((adset) => {
-                        const adsetSelected = selectedEntityIds.includes(`adset:${adset.entityId}`);
-                        const adsetRecommendation = getEntityRecommendation(adset.entityId);
-                        return (
-                          <tr
-                            key={adset.entityId}
-                            className="bg-surface-secondary/40 border-b border-border-light"
-                          >
-                            <td className="px-2 py-2 pl-6 align-middle">
-                              <input
-                                type="checkbox"
-                                checked={adsetSelected}
-                                aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
-                                onChange={() => onToggleAdSet(adset.entityId)}
-                                className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                              />
-                            </td>
-                            <td className="px-2 py-2 align-middle">
-                              <span aria-hidden="true" className="block h-7 w-7" />
-                            </td>
-                            <td className="px-2 py-2 text-text-secondary">
-                              {localize('com_ui_project_meta_ads_active')}
-                            </td>
-                            <td className="truncate px-2 py-2 text-text-primary">
-                              {adset.entityName ?? adset.entityId}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {campaign.editableBudgetLevel === 'adset' ? (
-                                <button
-                                  type="button"
-                                  disabled={!canEdit}
-                                  onClick={() =>
-                                    onOpenBudgetEditor({
-                                      entityLevel: 'adset',
-                                      entityId: adset.entityId,
-                                      entityName: adset.entityName,
-                                      currentBudget: adset.dailyBudget,
-                                    })
-                                  }
-                                  className="border border-border-light bg-surface-primary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+                  ))}
+                {filteredCampaigns.map((campaign) => {
+                  const expanded =
+                    campaign.budgetMode === 'ABO'
+                      ? !collapsedAboCampaignIds.includes(campaign.campaignId)
+                      : expandedCampaignIds.includes(campaign.campaignId);
+                  const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
+                  const recommendation = getEntityRecommendation(campaign.campaignId);
+                  return (
+                    <Fragment key={campaign.campaignId}>
+                      <tr
+                        data-testid="meta-ads-campaign-row"
+                        className="border-b border-border-light"
+                      >
+                        <td className="px-2 py-2 align-middle">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            aria-label={localize('com_ui_project_meta_ads_select_campaign')}
+                            onChange={() => onToggleCampaign(campaign)}
+                            className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                          />
+                        </td>
+                        <td className="px-2 py-2 align-middle">
+                          {campaign.adSets.length > 0 && (
+                            <button
+                              type="button"
+                              aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                              aria-expanded={expanded}
+                              onClick={() => onToggleCampaignExpanded(campaign)}
+                              className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                            >
+                              {expanded ? '-' : '+'}
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-text-secondary">
+                          {localize('com_ui_project_meta_ads_level_campaign')}
+                        </td>
+                        <td
+                          className="truncate px-2 py-2 font-medium text-text-primary"
+                          title={campaign.campaignName ?? campaign.campaignId}
+                        >
+                          {campaign.campaignName ?? campaign.campaignId}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {campaign.editableBudgetLevel === 'campaign' ? (
+                            <button
+                              type="button"
+                              disabled={!canEdit}
+                              onClick={() =>
+                                onOpenBudgetEditor({
+                                  entityLevel: 'campaign',
+                                  entityId: campaign.campaignId,
+                                  entityName: campaign.campaignName,
+                                  currentBudget: campaign.dailyBudget,
+                                })
+                              }
+                              className="border border-border-light bg-surface-secondary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+                            >
+                              {formatMoney(campaign.dailyBudget, currency)}
+                            </button>
+                          ) : (
+                            formatMoney(campaign.dailyBudget, currency)
+                          )}
+                        </td>
+                        <td className="truncate px-2 py-2 text-text-secondary">
+                          {campaign.objective ?? '-'}
+                        </td>
+                        <td className="px-2 py-2 text-text-secondary">
+                          {campaign.budgetMode ?? '-'}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMetric(campaign.frequency)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMetric(campaign.resultCount)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMoney(campaign.cpa, currency)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMoney(campaign.spend, currency)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMetric(campaign.ctr)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMetric(campaign.clicks)}
+                        </td>
+                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                          {formatMetric(campaign.videoP75Watched)}
+                        </td>
+                        <td className="truncate px-2 py-2 text-text-secondary">
+                          {getEntityRuleLabel('campaign', campaign.campaignId)}
+                        </td>
+                        <td className="px-2 py-2 text-text-secondary">
+                          <div className="truncate">
+                            {getRecommendationLabel(recommendation, currency)}
+                          </div>
+                          {recommendation?.reason && (
+                            <div className="truncate text-text-tertiary">
+                              {recommendation.reason}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex gap-1">
+                            {recommendation && (
+                              <button
+                                type="button"
+                                disabled={!canEdit || applyRecommendation.isLoading}
+                                onClick={() => onApply(recommendation)}
+                                className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {localize('com_ui_project_meta_ads_apply')}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {expanded &&
+                        campaign.adSets.map((adset) => {
+                          const adsetSelected = selectedEntityIds.includes(
+                            `adset:${adset.entityId}`,
+                          );
+                          const adsetRecommendation = getEntityRecommendation(adset.entityId);
+                          const adsetAds = adset.ads ?? [];
+                          const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
+                          return (
+                            <Fragment key={adset.entityId}>
+                              <tr className="bg-surface-secondary/40 border-b border-border-light">
+                                <td className="px-2 py-2 pl-6 align-middle">
+                                  <input
+                                    type="checkbox"
+                                    checked={adsetSelected}
+                                    aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
+                                    onChange={() => onToggleAdSet(adset.entityId)}
+                                    className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                                  />
+                                </td>
+                                <td className="px-2 py-2 align-middle">
+                                  {adsetAds.length > 0 ? (
+                                    <button
+                                      type="button"
+                                      aria-expanded={!adsCollapsed}
+                                      aria-label={localize(
+                                        adsCollapsed
+                                          ? 'com_ui_project_meta_ads_show_ads'
+                                          : 'com_ui_project_meta_ads_hide_ads',
+                                      )}
+                                      onClick={() => onToggleAdSetAds(adset.entityId)}
+                                      className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                                    >
+                                      {adsCollapsed ? '+' : '-'}
+                                    </button>
+                                  ) : (
+                                    <span aria-hidden="true" className="block h-7 w-7" />
+                                  )}
+                                </td>
+                                <td className="px-2 py-2 text-text-secondary">
+                                  {localize('com_ui_project_meta_ads_level_ad_set')}
+                                </td>
+                                <td
+                                  className="truncate px-2 py-2 text-text-primary"
+                                  title={adset.entityName ?? adset.entityId}
                                 >
-                                  {formatMoney(adset.dailyBudget, currency)}
-                                </button>
-                              ) : (
-                                formatMoney(adset.dailyBudget, currency)
-                              )}
-                            </td>
-                            <td className="px-2 py-2 text-text-tertiary">-</td>
-                            <td className="px-2 py-2 text-text-secondary">
-                              {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.frequency)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.resultCount)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMoney(adset.cpa, currency)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMoney(adset.spend, currency)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.ctr)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.clicks)}
-                            </td>
-                            <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                              {formatMetric(adset.videoP75Watched)}
-                            </td>
-                            <td className="truncate px-2 py-2 text-text-secondary">
-                              {getEntityRuleLabel('adset', adset.entityId)}
-                            </td>
-                            <td className="px-2 py-2 text-text-secondary">
-                              <div className="truncate">
-                                {getRecommendationLabel(adsetRecommendation, currency)}
-                              </div>
-                              {adsetRecommendation?.reason && (
-                                <div className="truncate text-text-tertiary">
-                                  {adsetRecommendation.reason}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-2 py-2">
-                              <div className="flex gap-1">
-                                {adsetRecommendation && (
-                                  <button
-                                    type="button"
-                                    disabled={!canEdit || applyRecommendation.isLoading}
-                                    onClick={() => onApply(adsetRecommendation)}
-                                    className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
-                                    {localize('com_ui_project_meta_ads_apply')}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
-            <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
-              {localize('com_ui_project_meta_ads_no_snapshots')}
-            </div>
-          )}
+                                  {adset.entityName ?? adset.entityId}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {campaign.editableBudgetLevel === 'adset' ? (
+                                    <button
+                                      type="button"
+                                      disabled={!canEdit}
+                                      onClick={() =>
+                                        onOpenBudgetEditor({
+                                          entityLevel: 'adset',
+                                          entityId: adset.entityId,
+                                          entityName: adset.entityName,
+                                          currentBudget: adset.dailyBudget,
+                                        })
+                                      }
+                                      className="border border-border-light bg-surface-primary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+                                    >
+                                      {formatMoney(adset.dailyBudget, currency)}
+                                    </button>
+                                  ) : (
+                                    formatMoney(adset.dailyBudget, currency)
+                                  )}
+                                </td>
+                                <td className="px-2 py-2 text-text-tertiary">-</td>
+                                <td className="px-2 py-2 text-text-secondary">
+                                  {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMetric(adset.frequency)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMetric(adset.resultCount)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMoney(adset.cpa, currency)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMoney(adset.spend, currency)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMetric(adset.ctr)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMetric(adset.clicks)}
+                                </td>
+                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
+                                  {formatMetric(adset.videoP75Watched)}
+                                </td>
+                                <td className="truncate px-2 py-2 text-text-secondary">
+                                  {getEntityRuleLabel('adset', adset.entityId)}
+                                </td>
+                                <td className="px-2 py-2 text-text-secondary">
+                                  <div className="truncate">
+                                    {getRecommendationLabel(adsetRecommendation, currency)}
+                                  </div>
+                                  {adsetRecommendation?.reason && (
+                                    <div className="truncate text-text-tertiary">
+                                      {adsetRecommendation.reason}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-2 py-2">
+                                  <div className="flex gap-1">
+                                    {adsetRecommendation && (
+                                      <button
+                                        type="button"
+                                        disabled={!canEdit || applyRecommendation.isLoading}
+                                        onClick={() => onApply(adsetRecommendation)}
+                                        className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        {localize('com_ui_project_meta_ads_apply')}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                              {!adsCollapsed && adsetAds.map((ad) => renderAdRow(ad))}
+                            </Fragment>
+                          );
+                        })}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
+              <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
+                {localize('com_ui_project_meta_ads_no_snapshots')}
+              </div>
+            )}
+          </div>
         </div>
 
         {(settings.ruleGroups ?? []).length > 0 && (
@@ -2105,6 +2487,117 @@ export default function ProjectMetaAdsPanel({
           )}
         </div>
       </div>
+
+      <OGDialog
+        open={Boolean(selectedAdPreview)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedAdPreview(null);
+          }
+        }}
+      >
+        {selectedAdPreview && (
+          <OGDialogContent className="max-w-4xl overflow-hidden p-0">
+            <OGDialogHeader className="border-b border-border-light px-5 py-4 text-left">
+              <div className="text-xs font-semibold uppercase text-text-tertiary">
+                {localize('com_ui_project_meta_ads_ad_preview')}
+              </div>
+              <OGDialogTitle className="truncate text-base font-semibold text-text-primary">
+                {selectedAdPreview.adName ?? selectedAdPreview.title ?? selectedAdPreview.adId}
+              </OGDialogTitle>
+            </OGDialogHeader>
+            <div className="grid gap-0 md:grid-cols-[1.15fr_1fr]">
+              <div className="bg-surface-secondary p-5">
+                <div className="overflow-hidden border border-border-light bg-surface-primary">
+                  {getAdPreviewUrl(selectedAdPreview) ? (
+                    <img
+                      src={getAdPreviewUrl(selectedAdPreview)}
+                      alt={
+                        selectedAdPreview.adName ??
+                        selectedAdPreview.title ??
+                        selectedAdPreview.adId
+                      }
+                      className="aspect-video w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex aspect-video w-full items-center justify-center px-6 text-center text-sm text-text-secondary">
+                      {localize('com_ui_project_meta_ads_no_creative_media')}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 space-y-2 border border-border-light bg-surface-primary p-4">
+                  <h4 className="text-lg font-semibold text-text-primary">
+                    {selectedAdPreview.title ??
+                      selectedAdPreview.adName ??
+                      localize('com_ui_project_meta_ads_ad_preview')}
+                  </h4>
+                  {selectedAdPreview.body && (
+                    <p className="text-sm leading-6 text-text-secondary">
+                      {selectedAdPreview.body}
+                    </p>
+                  )}
+                  {selectedAdPreview.description && (
+                    <p className="text-xs leading-5 text-text-tertiary">
+                      {selectedAdPreview.description}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2 text-xs text-text-secondary">
+                    {selectedAdPreview.callToActionType && (
+                      <span className="border border-border-light px-2 py-1 font-medium text-text-primary">
+                        {selectedAdPreview.callToActionType}
+                      </span>
+                    )}
+                    {selectedAdPreview.linkUrl && (
+                      <span className="min-w-0 truncate border border-border-light px-2 py-1">
+                        {selectedAdPreview.linkUrl}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="p-5">
+                <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                  {localize('com_ui_project_meta_ads_ad_metrics')}
+                </h4>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_spend',
+                    formatMoney(selectedAdPreview.spend, selectedAdPreview.currency ?? currency),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_cost_result',
+                    formatMoney(selectedAdPreview.cpa, selectedAdPreview.currency ?? currency),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_results',
+                    formatMetric(selectedAdPreview.resultCount),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_impressions',
+                    formatIntegerMetric(selectedAdPreview.impressions),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_clicks',
+                    formatIntegerMetric(selectedAdPreview.clicks),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_frequency',
+                    formatMetric(selectedAdPreview.frequency),
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_ctr',
+                    `${formatMetric(selectedAdPreview.ctr)}%`,
+                  )}
+                  {renderAdMetric(
+                    'com_ui_project_meta_ads_video_p75',
+                    formatMetric(selectedAdPreview.videoP75Watched),
+                  )}
+                </div>
+              </div>
+            </div>
+          </OGDialogContent>
+        )}
+      </OGDialog>
     </div>
   );
 }

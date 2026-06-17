@@ -347,6 +347,84 @@ async function listCampaigns({ adAccountId, token, graphVersion }) {
   }
 }
 
+async function listAds({ adAccountId, token, graphVersion }) {
+  logger.debug('[MetaAdsGraph] listing ads', { adAccountId, graphVersion });
+  const path = `${encodeURIComponent(adAccountId)}/ads`;
+  const params = {
+    fields:
+      'id,name,effective_status,adset_id,campaign_id,creative{id,name,title,body,thumbnail_url,image_url,video_id,object_story_spec,asset_feed_spec}',
+    limit: DEFAULT_LIMIT,
+  };
+  try {
+    const payload = await metaGet({
+      path,
+      token,
+      params,
+      graphVersion,
+      resourceLabel: 'ads',
+    });
+    return Array.isArray(payload.data)
+      ? payload.data.filter((ad) => ad.effective_status === 'ACTIVE')
+      : [];
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'ads',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsGraph] ads request failed with context', {
+      adAccountId,
+      path,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
+}
+
+async function listAdInsights({ adAccountId, token, since, until, graphVersion }) {
+  logger.debug('[MetaAdsGraph] listing ad insights', { adAccountId, since, until, graphVersion });
+  const path = `${encodeURIComponent(adAccountId)}/insights`;
+  const params = {
+    level: 'ad',
+    fields:
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas',
+    time_range: JSON.stringify({ since, until }),
+    limit: DEFAULT_LIMIT,
+  };
+  try {
+    const payload = await metaGet({
+      path,
+      token,
+      params,
+      graphVersion,
+      resourceLabel: 'ad insights',
+    });
+    return Array.isArray(payload.data) ? payload.data : [];
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'ad insights',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsGraph] ad insights request failed with context', {
+      adAccountId,
+      path,
+      since,
+      until,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
+}
+
 async function listAdSetInsights({ adAccountId, token, since, until, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing insights', { adAccountId, since, until, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/insights`;
@@ -395,6 +473,8 @@ module.exports = {
   getEntityDailyBudget,
   getMetaGraphVersion,
   isSupportedMetaGraphVersion,
+  listAds,
+  listAdInsights,
   listCampaigns,
   listAdSetInsights,
   listAdSets,

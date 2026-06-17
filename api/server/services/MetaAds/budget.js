@@ -8,6 +8,8 @@ const {
   getEntityDailyBudget,
   getMetaGraphVersion,
   isSupportedMetaGraphVersion,
+  listAds,
+  listAdInsights,
   listCampaigns,
   listAdSetInsights,
   listAdSets,
@@ -524,14 +526,94 @@ function buildSnapshotsFromInsights({ insights = [], adsets = [], campaigns = []
     .filter(Boolean);
 }
 
+function getCreativeValue(creative, keys = []) {
+  for (const key of keys) {
+    const value = creative?.[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function getCreativeLinkData(creative = {}) {
+  const objectStorySpec = creative.object_story_spec ?? {};
+  return objectStorySpec.link_data ?? objectStorySpec.video_data ?? {};
+}
+
+function getAssetFeedValue(assetFeedSpec, key) {
+  const values = assetFeedSpec?.[key];
+  if (!Array.isArray(values)) {
+    return undefined;
+  }
+  const first = values.find((item) => typeof item?.text === 'string' && item.text.trim());
+  return first?.text?.trim();
+}
+
+function buildAdSummaries({ ads = [], adInsights = [], currency }) {
+  const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
+  return ads
+    .map((ad) => {
+      const adId = ad.id;
+      if (!adId) {
+        return null;
+      }
+      const creative = ad.creative ?? {};
+      const linkData = getCreativeLinkData(creative);
+      const assetFeedSpec = creative.asset_feed_spec;
+      const insight = insightByAdId.get(adId) ?? {};
+      const metrics = calculateMetrics(insight);
+      return {
+        adId,
+        adName: ad.name || insight.ad_name || adId,
+        adSetId: ad.adset_id || insight.adset_id,
+        campaignId: ad.campaign_id || insight.campaign_id,
+        campaignName: insight.campaign_name,
+        creativeId: creative.id,
+        title:
+          getCreativeValue(creative, ['title']) ||
+          getCreativeValue(linkData, ['name', 'title']) ||
+          getAssetFeedValue(assetFeedSpec, 'titles') ||
+          getAssetFeedValue(assetFeedSpec, 'bodies'),
+        body:
+          getCreativeValue(creative, ['body']) ||
+          getCreativeValue(linkData, ['message']) ||
+          getAssetFeedValue(assetFeedSpec, 'bodies'),
+        description:
+          getCreativeValue(linkData, ['description']) ||
+          getAssetFeedValue(assetFeedSpec, 'descriptions'),
+        thumbnailUrl:
+          getCreativeValue(creative, ['thumbnail_url']) ||
+          getCreativeValue(linkData, ['picture']),
+        imageUrl: getCreativeValue(creative, ['image_url']) || getCreativeValue(linkData, ['picture']),
+        videoId: getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
+        linkUrl: getCreativeValue(linkData, ['link']),
+        callToActionType: linkData.call_to_action?.type,
+        status: ad.effective_status,
+        currency,
+        ...metrics,
+      };
+    })
+    .filter(Boolean);
+}
+
 function buildCampaignSummaries({
   latestSnapshots = [],
   recommendations = [],
   campaignConfigs = [],
+  ads = [],
 }) {
   const recommendationByEntity = latestByEntity(recommendations);
   const snapshotByEntity = latestByEntity(latestSnapshots);
   const campaignConfigById = new Map(campaignConfigs.map((campaign) => [campaign.id, campaign]));
+  const adsByAdSetId = new Map();
+  for (const ad of ads) {
+    const adSetId = ad.adSetId;
+    if (!adSetId) {
+      continue;
+    }
+    adsByAdSetId.set(adSetId, [...(adsByAdSetId.get(adSetId) ?? []), ad]);
+  }
   const campaigns = new Map();
 
   for (const snapshot of snapshotByEntity.values()) {
@@ -605,6 +687,7 @@ function buildCampaignSummaries({
       videoP75Rate: snapshot.videoP75Rate,
       snapshotAt: snapshot.createdAt,
       latestRecommendation,
+      ads: adsByAdSetId.get(snapshot.entityId) ?? [],
     });
   }
 
@@ -1333,6 +1416,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     : undefined;
   let campaignConfigs = [];
   let adsetConfigs = [];
+  let adSummaries = [];
   let liveSnapshots;
   let currency;
   if (project?.metaAds?.adAccountId) {
@@ -1359,17 +1443,48 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
           token,
           graphVersion: getMetaGraphVersion(metaAds.graphVersion),
         });
-        const insights = await listAdSetInsights({
-          adAccountId: normalizeAdAccountId(metaAds.adAccountId),
-          token,
-          since,
-          until,
-          graphVersion: getMetaGraphVersion(metaAds.graphVersion),
-        });
+        const [insights, liveAds, liveAdInsights] = await Promise.all([
+          listAdSetInsights({
+            adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+            token,
+            since,
+            until,
+            graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+          }),
+          listAds({
+            adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+            token,
+            graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] ads status enrichment failed', {
+              projectId,
+              message: error.message,
+            });
+            return [];
+          }),
+          listAdInsights({
+            adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+            token,
+            since,
+            until,
+            graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] ad insights status enrichment failed', {
+              projectId,
+              message: error.message,
+            });
+            return [];
+          }),
+        ]);
         liveSnapshots = buildSnapshotsFromInsights({
           insights,
           adsets: adsetConfigs,
           campaigns: campaignConfigs,
+          currency,
+        });
+        adSummaries = buildAdSummaries({
+          ads: liveAds,
+          adInsights: liveAdInsights,
           currency,
         });
       }
@@ -1384,6 +1499,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     latestSnapshots: liveSnapshots ?? latestSnapshots,
     recommendations,
     campaignConfigs,
+    ads: adSummaries,
   });
   const period =
     options.datePreset || options.since || options.until

@@ -129,9 +129,43 @@ export type ProjectMetaAdsBudgetChange = {
   createdAt?: string;
 };
 
+export type ProjectMetaAdsAdSummary = {
+  adId: string;
+  adName?: string;
+  adSetId?: string;
+  campaignId?: string;
+  campaignName?: string;
+  creativeId?: string;
+  title?: string;
+  body?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  imageUrl?: string;
+  videoId?: string;
+  linkUrl?: string;
+  callToActionType?: string;
+  status?: string;
+  currency?: string;
+  spend?: number;
+  cpa?: number | null;
+  roas?: number | null;
+  resultCount?: number;
+  resultType?: string;
+  impressions?: number;
+  reach?: number;
+  frequency?: number;
+  clicks?: number;
+  ctr?: number;
+  cpc?: number;
+  cpm?: number;
+  videoP75Watched?: number;
+  videoP75Rate?: number;
+};
+
 export type ProjectMetaAdsAdSetSummary = ProjectMetaAdsSnapshot & {
   snapshotAt?: string;
   latestRecommendation?: ProjectMetaAdsRecommendation;
+  ads?: ProjectMetaAdsAdSummary[];
 };
 
 export type ProjectMetaAdsCampaignSummary = {

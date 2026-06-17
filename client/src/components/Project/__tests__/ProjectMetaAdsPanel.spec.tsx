@@ -38,6 +38,15 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('@librechat/client', () => ({
+  OGDialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
+    open === false ? null : <>{children}</>,
+  OGDialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div role="dialog" className={className}>
+      {children}
+    </div>
+  ),
+  OGDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   useToastContext: () => ({
     showToast: mockShowToast,
   }),
@@ -115,15 +124,21 @@ describe('ProjectMetaAdsPanel', () => {
   it('accepts numeric ad account input and saves a pasted project token outside metaAds', async () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
     const token = `EAA${'a'.repeat(48)}`;
-    fireEvent.change(screen.getByPlaceholderText('123456789'), {
+    fireEvent.change(within(accountDialog).getByPlaceholderText('123456789'), {
       target: { value: '123-456-789' },
     });
-    fireEvent.change(screen.getByPlaceholderText('com_ui_project_meta_ads_token_placeholder'), {
-      target: { value: token },
-    });
-    fireEvent.click(screen.getByText('com_ui_save'));
+    fireEvent.change(
+      within(accountDialog).getByPlaceholderText('com_ui_project_meta_ads_token_placeholder'),
+      {
+        target: { value: token },
+      },
+    );
+    fireEvent.click(within(accountDialog).getByText('com_ui_save'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -142,11 +157,13 @@ describe('ProjectMetaAdsPanel', () => {
       metaAds: Record<string, unknown>;
     };
     expect(savePayload.metaAds).not.toHaveProperty('metaAccessToken');
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('com_ui_project_meta_ads_token_placeholder')).toHaveValue(
-        '',
-      );
-    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', {
+          name: 'com_ui_project_meta_ads_account_credentials',
+        }),
+      ).not.toBeInTheDocument(),
+    );
     expect(mockRefetchStatus).toHaveBeenCalled();
     expect(mockShowToast).toHaveBeenCalledWith({
       message: 'com_ui_saved',
@@ -157,11 +174,17 @@ describe('ProjectMetaAdsPanel', () => {
   it('saves a selected schedule interval', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_schedule_180'), {
-      target: { value: '30' },
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_automation'));
+    const automationDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_automation',
     });
-    fireEvent.click(screen.getByText('com_ui_save'));
+    fireEvent.change(
+      within(automationDialog).getByDisplayValue('com_ui_project_meta_ads_schedule_180'),
+      {
+        target: { value: '30' },
+      },
+    );
+    fireEvent.click(within(automationDialog).getByText('com_ui_save'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -175,14 +198,50 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockMutateSettings.mock.calls[0][0]).not.toHaveProperty('metaAccessToken');
   });
 
+  it('discards account edits when closing the settings sidebar', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.change(within(accountDialog).getByPlaceholderText('123456789'), {
+      target: { value: '987654321' },
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_cancel'));
+    fireEvent.click(screen.getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          adAccountId: '',
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
   it('saves creative frequency alert rules separately from budget rules', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_max_frequency_alert'), {
-      target: { value: '5.5' },
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    const ruleDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
     });
-    fireEvent.click(screen.getByText('com_ui_save'));
+    expect(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_increase')).toHaveValue(
+      25,
+    );
+    expect(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_decrease')).toHaveValue(
+      25,
+    );
+    fireEvent.change(
+      within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_frequency_alert'),
+      {
+        target: { value: '5.5' },
+      },
+    );
+    fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -199,11 +258,17 @@ describe('ProjectMetaAdsPanel', () => {
   it('saves a supported project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_graph_version_global'), {
-      target: { value: 'v24.0' },
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
     });
-    fireEvent.click(screen.getByText('com_ui_save'));
+    fireEvent.change(
+      within(accountDialog).getByDisplayValue('com_ui_project_meta_ads_graph_version_global'),
+      {
+        target: { value: 'v24.0' },
+      },
+    );
+    fireEvent.click(within(accountDialog).getByText('com_ui_save'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -236,7 +301,7 @@ describe('ProjectMetaAdsPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
 
     expect(screen.queryByDisplayValue('guilherme@example.com')).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
@@ -429,6 +494,84 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
+  it('renders ad thumbnails and opens a complete ad preview modal with metrics', () => {
+    mockStatusData.currency = 'BRL';
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-ads',
+        campaignName: 'ABO Leads',
+        spend: 160,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-ads',
+            entityName: 'Warm leads',
+            campaignId: 'campaign-ads',
+            campaignName: 'ABO Leads',
+            dailyBudget: 70,
+            spend: 160,
+            ads: [
+              {
+                adId: 'ad-1',
+                adName: 'Visit schedule creative',
+                adSetId: 'adset-ads',
+                campaignId: 'campaign-ads',
+                creativeId: 'creative-1',
+                title: 'Book a private visit',
+                body: 'Pick an open time and tour the model unit.',
+                description: 'Limited slots this week',
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                imageUrl: 'https://example.com/image.jpg',
+                linkUrl: 'https://example.com/visit',
+                callToActionType: 'LEARN_MORE',
+                spend: 48,
+                cpa: 12,
+                resultCount: 4,
+                impressions: 1800,
+                clicks: 72,
+                ctr: 4,
+                frequency: 2.1,
+                currency: 'BRL',
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_level_campaign')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_level_ad_set')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_level_ad')).toBeInTheDocument();
+    expect(screen.getByText('Visit schedule creative')).toBeInTheDocument();
+    expect(screen.getByText('Book a private visit')).toBeInTheDocument();
+    expect(screen.getByAltText('Visit schedule creative')).toHaveAttribute(
+      'src',
+      'https://example.com/thumb.jpg',
+    );
+
+    fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_ad_preview')).toBeInTheDocument();
+    expect(screen.getByText('Pick an open time and tour the model unit.')).toBeInTheDocument();
+    expect(screen.getByText('Limited slots this week')).toBeInTheDocument();
+    expect(screen.getByText('LEARN_MORE')).toBeInTheDocument();
+    expect(screen.getByText('https://example.com/visit')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 48,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 12,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('4.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('1,800')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_hide_ads'));
+    expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_show_ads'));
+    expect(screen.getByTestId('meta-ads-ad-card-ad-1')).toBeInTheDocument();
+  });
+
   it('formats monetary metrics with the ad account currency and shows missing results as dash', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.summary = {
@@ -585,13 +728,12 @@ describe('ProjectMetaAdsPanel', () => {
         target: { value: 'Topo mensagens' },
       },
     );
-    fireEvent.change(
-      within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_rule_group_target_cpa'),
-      {
-        target: { value: '35' },
-      },
-    );
+    fireEvent.change(within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '35' },
+    });
     expect(ruleGroupDialog).toHaveTextContent('2 com_ui_project_meta_ads_rule_group_selected');
+    expect(ruleGroupDialog).toHaveTextContent('Messages Floripa');
+    expect(ruleGroupDialog).toHaveTextContent('Messages SP');
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
@@ -886,6 +1028,30 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeEnabled();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_clear_selection'));
     expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeDisabled();
+  });
+
+  it('expands the metrics workspace without using sticky filters', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    const workspace = screen.getByTestId('meta-ads-metrics-workspace');
+    expect(workspace.className).not.toContain('sticky');
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
+    expect(workspace.className).toContain('fixed');
+    expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(workspace.className).not.toContain('fixed');
   });
 
   it('selects and clears ad sets when selecting their campaign group', () => {
@@ -1195,7 +1361,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_tenant_token_configured')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
     expect(screen.queryByText('********')).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
   });
@@ -1232,9 +1398,12 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getByText('com_ui_project_meta_ads_project_token_configured'),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_settings'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_use_tenant_token'));
-    fireEvent.click(screen.getByText('com_ui_save'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_use_tenant_token'));
+    fireEvent.click(within(accountDialog).getByText('com_ui_save'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {

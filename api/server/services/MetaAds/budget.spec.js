@@ -376,6 +376,8 @@ describe('Meta Ads budget service persistence safety', () => {
     latestBudget,
     latestEntityBudget,
     insights = [],
+    ads = [],
+    adInsights = [],
     campaigns = [],
     adsets = [],
     snapshots = [],
@@ -497,6 +499,8 @@ describe('Meta Ads budget service persistence safety', () => {
     const getAdAccountCurrency = jest.fn(async () => 'BRL');
     const listCampaigns = jest.fn(async () => campaigns);
     const listAdSets = jest.fn(async () => adsets);
+    const listAds = jest.fn(async () => ads);
+    const listAdInsights = jest.fn(async () => adInsights);
     const listAdSetInsights = jest.fn(async () => insights);
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
@@ -506,6 +510,8 @@ describe('Meta Ads budget service persistence safety', () => {
       getEntityDailyBudget,
       getAdAccountCurrency,
       listCampaigns,
+      listAds,
+      listAdInsights,
       listAdSets,
       listAdSetInsights,
       metaPost,
@@ -521,6 +527,8 @@ describe('Meta Ads budget service persistence safety', () => {
       getAdSetDailyBudget,
       getEntityDailyBudget,
       getAdAccountCurrency,
+      listAdInsights,
+      listAds,
       listCampaigns,
       listAdSets,
       listAdSetInsights,
@@ -714,6 +722,107 @@ describe('Meta Ads budget service persistence safety', () => {
       bestCampaignByCost: expect.objectContaining({ campaignId: 'campaign-1' }),
       worstCampaignByCost: expect.objectContaining({ campaignId: 'campaign-2' }),
     });
+  });
+
+  it('attaches live ads with creative previews and metrics to their ad sets', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+      campaigns: [
+        {
+          id: 'campaign-1',
+          name: 'Messages Floripa',
+          objective: 'OUTCOME_ENGAGEMENT',
+          effective_status: 'ACTIVE',
+        },
+      ],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Topo',
+          campaign_id: 'campaign-1',
+          effective_status: 'ACTIVE',
+          daily_budget: '5000',
+        },
+      ],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Topo',
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages Floripa',
+          spend: '120',
+          actions: [{ action_type: 'lead', value: '6' }],
+        },
+      ],
+      ads: [
+        {
+          id: 'ad-1',
+          name: 'Lead form video',
+          effective_status: 'ACTIVE',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          creative: {
+            id: 'creative-1',
+            title: 'Reserve a visit',
+            body: 'See available units today.',
+            thumbnail_url: 'https://example.com/thumb.jpg',
+            image_url: 'https://example.com/image.jpg',
+            object_story_spec: {
+              link_data: {
+                description: 'Limited schedule',
+                link: 'https://example.com/visit',
+                call_to_action: { type: 'LEARN_MORE' },
+              },
+            },
+          },
+        },
+      ],
+      adInsights: [
+        {
+          ad_id: 'ad-1',
+          ad_name: 'Lead form video',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          spend: '48',
+          impressions: '1800',
+          clicks: '72',
+          ctr: '4',
+          actions: [{ action_type: 'lead', value: '4' }],
+          cost_per_action_type: [{ action_type: 'lead', value: '12' }],
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.campaigns?.[0]?.adSets?.[0]?.ads).toEqual([
+      expect.objectContaining({
+        adId: 'ad-1',
+        adName: 'Lead form video',
+        adSetId: 'adset-1',
+        campaignId: 'campaign-1',
+        creativeId: 'creative-1',
+        title: 'Reserve a visit',
+        body: 'See available units today.',
+        description: 'Limited schedule',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        imageUrl: 'https://example.com/image.jpg',
+        linkUrl: 'https://example.com/visit',
+        callToActionType: 'LEARN_MORE',
+        spend: 48,
+        resultCount: 4,
+        cpa: 12,
+        impressions: 1800,
+        clicks: 72,
+        ctr: 4,
+      }),
+    ]);
   });
 
   it('returns daily campaign trend and evolution deltas from historical snapshots', async () => {
