@@ -478,6 +478,7 @@ describe('ProjectMetaAdsPanel', () => {
                 cpa: 5,
                 resultCount: 6,
                 resultType: 'lead',
+                thumbnailUrl: 'https://example.com/ad-a-thumb.jpg',
               },
             ],
           },
@@ -513,6 +514,7 @@ describe('ProjectMetaAdsPanel', () => {
                 cpa: 4,
                 resultCount: 10,
                 resultType: 'lead',
+                thumbnailUrl: 'https://example.com/ad-b-thumb.jpg',
               },
             ],
           },
@@ -529,6 +531,42 @@ describe('ProjectMetaAdsPanel', () => {
         dailyBudget: 50,
         adSets: [],
       },
+      {
+        campaignId: 'campaign-low-spend',
+        campaignName: 'Low Spend Noise',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 0.75,
+        cpa: 0.01,
+        resultCount: 75,
+        resultType: 'lead',
+        dailyBudget: 50,
+        adSets: [
+          {
+            entityId: 'adset-low-spend',
+            entityName: 'Low Spend Ad Set',
+            campaignId: 'campaign-low-spend',
+            campaignName: 'Low Spend Noise',
+            spend: 0.75,
+            cpa: 0.01,
+            resultCount: 75,
+            resultType: 'lead',
+            ads: [
+              {
+                adId: 'ad-low-spend',
+                adName: 'Low Spend Ad',
+                adSetId: 'adset-low-spend',
+                campaignId: 'campaign-low-spend',
+                campaignName: 'Low Spend Noise',
+                spend: 0.75,
+                cpa: 0.01,
+                resultCount: 75,
+                resultType: 'lead',
+                thumbnailUrl: 'https://example.com/ad-low-spend-thumb.jpg',
+              },
+            ],
+          },
+        ],
+      },
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -540,6 +578,17 @@ describe('ProjectMetaAdsPanel', () => {
     );
     expect(screen.getByTestId('meta-ads-bi-adsets')).toHaveTextContent('Ad Set B');
     expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Ad B');
+    expect(screen.getByTestId('meta-ads-bi-campaigns')).not.toHaveTextContent('Low Spend Noise');
+    expect(screen.getByTestId('meta-ads-bi-adsets')).not.toHaveTextContent('Low Spend Ad Set');
+    expect(screen.getByTestId('meta-ads-bi-ads')).not.toHaveTextContent('Low Spend Ad');
+    expect(within(campaignRankings).getAllByTestId('meta-ads-rank-media').length).toBeGreaterThan(
+      0,
+    );
+
+    fireEvent.click(within(campaignRankings).getAllByRole('button')[0]);
+
+    expect(screen.getByText('com_ui_project_meta_ads_bi_rank_detail')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByTestId('meta-ads-bi-result-type-filter'), {
       target: { value: 'lead' },
@@ -717,6 +766,42 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('-'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /com_ui_project_meta_ads_total_results/ }));
+    const resultMetricDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_choose_result_metric',
+    });
+    fireEvent.click(
+      within(resultMetricDialog).getByRole('button', {
+        name: /com_ui_project_meta_ads_result_type_message/,
+      }),
+    );
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('2.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('R$ 25,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('com_ui_project_meta_ads_result_type_message'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /com_ui_project_meta_ads_total_results/ }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'com_ui_project_meta_ads_clear_result_metric' }),
+    );
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
       ).getByText('-'),
     ).toBeInTheDocument();
 
@@ -1301,6 +1386,31 @@ describe('ProjectMetaAdsPanel', () => {
           frequency: 4.5,
         },
       ],
+      series: [
+        {
+          level: 'campaign',
+          entityId: 'campaign-1',
+          entityName: 'Messages Floripa',
+          points: [
+            {
+              date: '2026-06-01',
+              campaignId: 'campaign-1',
+              campaignName: 'Messages Floripa',
+              spend: 100,
+              resultCount: 4,
+              cpa: 25,
+            },
+            {
+              date: '2026-06-02',
+              campaignId: 'campaign-1',
+              campaignName: 'Messages Floripa',
+              spend: 270,
+              resultCount: 11,
+              cpa: 24.55,
+            },
+          ],
+        },
+      ],
       campaignDeltas: [
         {
           campaignId: 'campaign-1',
@@ -1337,14 +1447,14 @@ describe('ProjectMetaAdsPanel', () => {
     const table = screen.getAllByRole('table')[0];
     const dashboard = screen.getByTestId('meta-ads-evolution-dashboard');
     expect(screen.getByText('com_ui_project_meta_ads_evolution_analysis')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_spend_trend')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_evolution_comparison')).toBeInTheDocument();
     expect(
       table.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.getByTestId('meta-ads-evolution-chart')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_budget_changes').length).toBeGreaterThan(0);
-    expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
+    expect(screen.getAllByText('Messages Floripa').length).toBeGreaterThan(0);
     expect(screen.getByText('+R$ 170,00')).toBeInTheDocument();
     expect(screen.getByText('+7.00')).toBeInTheDocument();
     expect(screen.getByText('-R$ 0,45')).toBeInTheDocument();

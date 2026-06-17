@@ -1130,16 +1130,18 @@ function buildCampaignTrend({ snapshots = [], changes = [] }) {
     campaignPoints.push(point);
     pointsByCampaign.set(point.campaignId, campaignPoints);
   }
-  const campaignSeries = Array.from(pointsByCampaign.entries()).map(([campaignId, campaignPoints]) => {
-    const sorted = [...campaignPoints].sort((left, right) => left.date.localeCompare(right.date));
-    const last = sorted[sorted.length - 1];
-    return {
-      level: 'campaign',
-      entityId: campaignId,
-      entityName: last?.campaignName || campaignId,
-      points: sorted,
-    };
-  });
+  const campaignSeries = Array.from(pointsByCampaign.entries()).map(
+    ([campaignId, campaignPoints]) => {
+      const sorted = [...campaignPoints].sort((left, right) => left.date.localeCompare(right.date));
+      const last = sorted[sorted.length - 1];
+      return {
+        level: 'campaign',
+        entityId: campaignId,
+        entityName: last?.campaignName || campaignId,
+        points: sorted,
+      };
+    },
+  );
   const pointsByAdSet = new Map();
   for (const snapshot of latestByDateEntity.values()) {
     const date = getSnapshotDateKey(snapshot);
