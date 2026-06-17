@@ -919,6 +919,24 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
       datePreset: 'last_30d',
     });
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
+      target: { value: 'custom' },
+    });
+    expect(screen.getByLabelText('com_ui_project_meta_ads_period_since')).toBeInTheDocument();
+    expect(screen.getByLabelText('com_ui_project_meta_ads_period_until')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period_since'), {
+      target: { value: '2026-06-01' },
+    });
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period_until'), {
+      target: { value: '2026-06-10' },
+    });
+
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
+      since: '2026-06-01',
+      until: '2026-06-10',
+    });
   });
 
   it('renders campaign evolution dashboard from historical trend data', () => {

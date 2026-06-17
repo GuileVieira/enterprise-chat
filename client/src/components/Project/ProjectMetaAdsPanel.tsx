@@ -70,6 +70,8 @@ type RequestError = {
 };
 type SettingsDrawer = 'account' | 'automation' | null;
 type TableView = 'summary' | 'performance' | 'creative' | 'rules';
+type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+type PeriodFilter = DatePreset | 'custom';
 type TableColumnKey =
   | 'level'
   | 'name'
@@ -112,7 +114,12 @@ const periodOptions = [
   { value: 'last_7d', labelKey: 'com_ui_project_meta_ads_period_last_7d' },
   { value: 'last_14d', labelKey: 'com_ui_project_meta_ads_period_last_14d' },
   { value: 'last_30d', labelKey: 'com_ui_project_meta_ads_period_last_30d' },
-] as const;
+] as const satisfies Array<{ value: DatePreset; labelKey: TranslationKeys }>;
+
+const periodFilterOptions: Array<{ value: PeriodFilter; labelKey: TranslationKeys }> = [
+  ...periodOptions,
+  { value: 'custom', labelKey: 'com_ui_project_meta_ads_period_custom' },
+];
 
 const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [
   { value: 'summary', labelKey: 'com_ui_project_meta_ads_view_summary' },
@@ -547,6 +554,17 @@ function getAdPreviewUrl(ad: ProjectMetaAdsAdSummary) {
   return ad.imageUrl || ad.thumbnailUrl;
 }
 
+function toDateInputValue(date: Date) {
+  const localTimestamp = date.getTime() - date.getTimezoneOffset() * 60 * 1000;
+  return new Date(localTimestamp).toISOString().slice(0, 10);
+}
+
+function getDateInputDaysAgo(daysAgo: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return toDateInputValue(date);
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -576,14 +594,23 @@ export default function ProjectMetaAdsPanel({
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [tableView, setTableView] = useState<TableView>('summary');
-  const [datePreset, setDatePreset] = useState<(typeof periodOptions)[number]['value']>('last_7d');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('last_7d');
+  const [customSince, setCustomSince] = useState(() => getDateInputDaysAgo(6));
+  const [customUntil, setCustomUntil] = useState(() => toDateInputValue(new Date()));
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedAdPreview, setSelectedAdPreview] = useState<SelectedAdPreview>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
-  const statusQuery = useProjectMetaAdsQuery(project.projectId, { datePreset });
+  const statusParams =
+    periodFilter === 'custom'
+      ? {
+          ...(customSince ? { since: customSince } : {}),
+          ...(customUntil ? { until: customUntil } : {}),
+        }
+      : { datePreset: periodFilter };
+  const statusQuery = useProjectMetaAdsQuery(project.projectId, statusParams);
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
@@ -1190,6 +1217,20 @@ export default function ProjectMetaAdsPanel({
     setCollapsedAdSetAdsIds((current) =>
       current.includes(adSetId) ? current.filter((id) => id !== adSetId) : [...current, adSetId],
     );
+  };
+
+  const onCustomSinceChange = (value: string) => {
+    setCustomSince(value);
+    if (value && customUntil && value > customUntil) {
+      setCustomUntil(value);
+    }
+  };
+
+  const onCustomUntilChange = (value: string) => {
+    setCustomUntil(value);
+    if (value && customSince && value < customSince) {
+      setCustomSince(value);
+    }
   };
 
   const onExpandAllRows = () => {
@@ -2278,19 +2319,41 @@ export default function ProjectMetaAdsPanel({
                 <label className="flex flex-col gap-1 text-xs text-text-secondary">
                   {localize('com_ui_project_meta_ads_period')}
                   <select
-                    value={datePreset}
-                    onChange={(event) =>
-                      setDatePreset(event.target.value as (typeof periodOptions)[number]['value'])
-                    }
+                    value={periodFilter}
+                    onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
                     className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
                   >
-                    {periodOptions.map((option) => (
+                    {periodFilterOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {localize(option.labelKey)}
                       </option>
                     ))}
                   </select>
                 </label>
+                {periodFilter === 'custom' && (
+                  <>
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_period_since')}
+                      <input
+                        type="date"
+                        value={customSince}
+                        max={customUntil || undefined}
+                        onChange={(event) => onCustomSinceChange(event.target.value)}
+                        className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_period_until')}
+                      <input
+                        type="date"
+                        value={customUntil}
+                        min={customSince || undefined}
+                        onChange={(event) => onCustomUntilChange(event.target.value)}
+                        className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                      />
+                    </label>
+                  </>
+                )}
                 <label className="flex flex-col gap-1 text-xs text-text-secondary">
                   {localize('com_ui_project_meta_ads_search')}
                   <input
