@@ -32,8 +32,8 @@ const USER_ID = 'viewer-user-id';
 const AGENT_ID = 'agent_test-abc123';
 const AGENT_MONGO_ID = 'mongo-agent-id';
 
-function makeFile(file_id, user) {
-  return { file_id, user, filename: `${file_id}.txt` };
+function makeFile(file_id, user, overrides = {}) {
+  return { file_id, user, filename: `${file_id}.txt`, ...overrides };
 }
 
 function makeAgent(overrides = {}) {
@@ -222,6 +222,39 @@ describe('filterFilesByAgentAccess', () => {
       expect(result).toEqual([ownedFile]);
       expect(logger.error).toHaveBeenCalled();
     });
+
+    it('should not use agent VIEW to expose files that belong to a project', async () => {
+      const projectFile = makeFile('attached-1', AUTHOR_ID, { projectId: 'project-dna' });
+      getAgent.mockResolvedValue(makeAgent());
+      checkPermission.mockResolvedValue(true);
+      findProjectForRequest.mockResolvedValue({ _id: 'project-mongo-id' });
+      getEffectivePermissions.mockResolvedValue(0);
+
+      const result = await filterFilesByAgentAccess({
+        files: [projectFile],
+        userId: USER_ID,
+        role: 'USER',
+        agentId: AGENT_ID,
+      });
+
+      expect(result).toEqual([]);
+    });
+
+    it('should allow project files when the user has project VIEW', async () => {
+      const projectFile = makeFile('attached-1', AUTHOR_ID, { projectId: 'project-dna' });
+      findProjectForRequest.mockResolvedValue({ _id: 'project-mongo-id' });
+      getEffectivePermissions.mockResolvedValue(PermissionBits.VIEW);
+
+      const result = await filterFilesByAgentAccess({
+        files: [projectFile],
+        userId: USER_ID,
+        role: 'USER',
+        agentId: AGENT_ID,
+      });
+
+      expect(result).toEqual([projectFile]);
+      expect(getAgent).not.toHaveBeenCalled();
+    });
   });
 
   describe('file with no user field', () => {
@@ -380,6 +413,21 @@ describe('hasAccessToFilesViaAgent', () => {
         userId: USER_ID,
         fileIds: ['attached-1'],
         agentId: AGENT_ID,
+      });
+
+      expect(result.get('attached-1')).toBe(false);
+    });
+
+    it('should not grant project files through AGENT VIEW alone', async () => {
+      getAgent.mockResolvedValue(makeAgent());
+      checkPermission.mockResolvedValue(true);
+
+      const result = await hasAccessToFilesViaAgent({
+        userId: USER_ID,
+        role: 'USER',
+        fileIds: ['attached-1'],
+        agentId: AGENT_ID,
+        files: [makeFile('attached-1', AUTHOR_ID, { projectId: 'project-dna' })],
       });
 
       expect(result.get('attached-1')).toBe(false);

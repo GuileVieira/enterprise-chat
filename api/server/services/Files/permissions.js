@@ -69,10 +69,16 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
       files != null
         ? getFilesById(files)
         : getFilesById(
-            await getFiles({ file_id: { $in: fileIds } }, null, { file_id: 1, user: 1 }),
+            await getFiles(
+              { file_id: { $in: fileIds } },
+              null,
+              { file_id: 1, user: 1, projectId: 1 },
+            ),
           );
     const canInheritFromAgent = (fileId) =>
-      attachedFileIds.has(fileId) && filesById.get(fileId)?.user?.toString() === agentAuthorId;
+      attachedFileIds.has(fileId) &&
+      !filesById.get(fileId)?.projectId &&
+      filesById.get(fileId)?.user?.toString() === agentAuthorId;
 
     if (agentAuthorId === userId.toString()) {
       fileIds.forEach((fileId) => {
@@ -169,8 +175,12 @@ const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
 
       if (hasProjectAccess) {
         projectAccessibleFiles.push(file);
-      } else {
+      } else if (!file.projectId) {
         filesToCheckAgent.push(file);
+      } else {
+        logger.warn(
+          `[filterFilesByAgentAccess] Denied project file ${file.file_id} without PROJECT VIEW`,
+        );
       }
     }
   }

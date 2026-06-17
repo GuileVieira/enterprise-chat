@@ -322,6 +322,56 @@ describe('fileAccess middleware', () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    test('should not use agent VIEW to expose a file that belongs to a project', async () => {
+      const project = await Project.create({
+        projectId: 'project_agent_file',
+        name: 'Agent File Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['project_agent_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'project_agent_file',
+        filepath: '/test/project-agent.txt',
+        filename: 'project-agent.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+        tenantId: 'tenant-a',
+      });
+
+      const agent = await createAgent({
+        id: `agent_project_file_${Date.now()}`,
+        name: 'Project File Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: otherUser._id,
+        tool_resources: {
+          file_search: {
+            file_ids: ['project_agent_file'],
+          },
+        },
+      });
+
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
+      });
+
+      req.params.file_id = 'project_agent_file';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
     test('should check file in ocr tool_resources', async () => {
       const agent = await createAgent({
         id: `agent_ocr_${Date.now()}`,

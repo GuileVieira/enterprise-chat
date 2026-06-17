@@ -103,36 +103,6 @@ const createAgentInRequestTenant = async (req, createAgent) => {
   return await runAsSystem(createAgent);
 };
 
-const grantProjectViewForAgentFileSearch = async ({ agent, tenantId, grantedBy }) => {
-  const fileIds = agent?.tool_resources?.[EToolResources.file_search]?.file_ids;
-  if (!tenantId || !Array.isArray(fileIds) || fileIds.length === 0) {
-    return;
-  }
-
-  const files = await runAsSystem(async () =>
-    db.getFiles({ file_id: { $in: fileIds } }, null, { projectId: 1 }),
-  );
-  const projectIds = [...new Set((files ?? []).map((file) => file?.projectId).filter(Boolean))];
-
-  await Promise.all(
-    projectIds.map(async (projectId) => {
-      const project = await runAsSystem(async () => db.getProjectById(projectId));
-      if (!project?._id) {
-        return;
-      }
-
-      await grantPermission({
-        principalType: PrincipalType.TENANT,
-        principalId: tenantId,
-        resourceType: ResourceType.PROJECT,
-        resourceId: project._id,
-        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
-        grantedBy,
-      });
-    }),
-  );
-};
-
 /**
  * Looks up each referenced agent id in Mongo, splits them into three
  * buckets the caller needs for validation: ids that don't exist at all,
@@ -970,11 +940,6 @@ const cloneAgentToTenantHandler = async (req, res) => {
       resourceType: ResourceType.AGENT,
       resourceId: sourceAgent._id,
       accessRoleId: AccessRoleIds.AGENT_VIEWER,
-      grantedBy: userId,
-    });
-    await grantProjectViewForAgentFileSearch({
-      agent: sourceAgent,
-      tenantId,
       grantedBy: userId,
     });
 

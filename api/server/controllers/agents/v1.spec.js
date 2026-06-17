@@ -625,10 +625,9 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       );
     });
 
-    test('should grant target tenant project view for shared agent file_search project files', async () => {
+    test('should not grant target tenant project view for shared agent file_search project files', async () => {
       const File = mongoose.models.File;
-      const Project = mongoose.models.Project;
-      const project = await Project.create({
+      await mongoose.models.Project.create({
         projectId: 'project-dna',
         name: 'DNA Project',
         user: mockReq.user.id,
@@ -679,16 +678,7 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
           grantedBy: mockReq.user.id,
         }),
       );
-      expect(grantPermission).toHaveBeenCalledWith(
-        expect.objectContaining({
-          principalType: PrincipalType.TENANT,
-          principalId: 'tenant-client',
-          resourceType: ResourceType.PROJECT,
-          resourceId: project._id,
-          accessRoleId: AccessRoleIds.PROJECT_VIEWER,
-          grantedBy: mockReq.user.id,
-        }),
-      );
+      expect(grantPermission).toHaveBeenCalledTimes(1);
     });
 
     test('should not grant project view when shared agent has no project file_search files', async () => {

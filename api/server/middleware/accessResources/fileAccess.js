@@ -151,6 +151,25 @@ const fileAccess = async (req, res, next) => {
       return next();
     }
 
+    /** Project files inherit project permissions only, not agent permissions. */
+    if (file.projectId) {
+      const hasProjectAccess = await checkProjectBasedFileAccess({
+        userId,
+        role: userRole,
+        file,
+        user: req.user,
+      });
+      if (hasProjectAccess) {
+        req.fileAccess = { file };
+        return next();
+      }
+
+      logger.warn(
+        `[fileAccess] User ${userId} denied project file ${fileId} without PROJECT VIEW`,
+      );
+      return denyFileAccess(res);
+    }
+
     /** Agent-based access (file inherits agent permissions) */
     const hasAgentAccess = await checkAgentBasedFileAccess({
       userId,
@@ -159,18 +178,6 @@ const fileAccess = async (req, res, next) => {
       fileOwner: file.user,
     });
     if (hasAgentAccess) {
-      req.fileAccess = { file };
-      return next();
-    }
-
-    /** Project-based access (files inherit project permissions; conversations remain separate) */
-    const hasProjectAccess = await checkProjectBasedFileAccess({
-      userId,
-      role: userRole,
-      file,
-      user: req.user,
-    });
-    if (hasProjectAccess) {
       req.fileAccess = { file };
       return next();
     }
