@@ -11,6 +11,7 @@ import {
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import { useGetFileConfig, useGetEndpointsQuery, useGetAgentByIdQuery } from '~/data-provider';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { useAgentsMapContext } from '~/Providers';
 import AttachFileMenu from './AttachFileMenu';
 import AttachFile from './AttachFile';
@@ -30,8 +31,10 @@ function AttachFileChat({
 }) {
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
+  const projectId = conversation?.projectId ?? undefined;
   const isAgents = useMemo(() => isAgentsEndpoint(endpoint), [endpoint]);
   const isAssistants = useMemo(() => isAssistantsEndpoint(endpoint), [endpoint]);
+  const { permissions: projectPermissions } = useProjectPermissions(projectId);
 
   const agentsMap = useAgentsMapContext();
 
@@ -96,6 +99,7 @@ function AttachFileChat({
     () => (disableInputs || endpointFileConfig?.disabled) ?? false,
     [disableInputs, endpointFileConfig?.disabled],
   );
+  const saveUploadsToProject = Boolean(projectId && projectPermissions.canEdit);
 
   if (isAssistants && endpointSupportsFiles && !isUploadDisabled) {
     return (
@@ -106,7 +110,7 @@ function AttachFileChat({
           setFiles={setFiles}
           setFilesLoading={setFilesLoading}
           conversation={conversation}
-          saveUploadsToProject={false}
+          saveUploadsToProject={saveUploadsToProject}
         />
       </div>
     );
@@ -125,7 +129,7 @@ function AttachFileChat({
           setFiles={setFiles}
           setFilesLoading={setFilesLoading}
           conversation={conversation}
-          saveUploadsToProject={false}
+          saveUploadsToProject={saveUploadsToProject}
         />
       </div>
     );

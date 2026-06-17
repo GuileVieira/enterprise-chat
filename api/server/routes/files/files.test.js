@@ -11,7 +11,6 @@ const {
   ResourceType,
   AccessRoleIds,
   PrincipalType,
-  FileSources,
 } = require('librechat-data-provider');
 const { createAgent, createFile } = require('~/models');
 

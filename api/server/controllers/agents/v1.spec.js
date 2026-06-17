@@ -4,7 +4,7 @@ jest.unmock('winston-daily-rotate-file');
 const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 const { v4: uuidv4 } = require('uuid');
-const { agentSchema, fileSchema } = require('@librechat/data-schemas');
+const { agentSchema, fileSchema, projectSchema } = require('@librechat/data-schemas');
 const {
   FileSources,
   PermissionBits,
@@ -118,6 +118,7 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
     // Register File so orphan-pruning tests (and the tool_resources validation
     // test, which now needs real File docs for its ids) have a working model.
     mongoose.models.File || mongoose.model('File', fileSchema);
+    mongoose.models.Project || mongoose.model('Project', projectSchema);
   }, 20000);
 
   afterAll(async () => {
@@ -128,6 +129,7 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
   beforeEach(async () => {
     await Agent.deleteMany({});
     await mongoose.models.File.deleteMany({});
+    await mongoose.models.Project.deleteMany({});
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -619,6 +621,98 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
           resourceId: agent._id,
           accessRoleId: AccessRoleIds.AGENT_VIEWER,
           grantedBy: mockReq.user.id,
+        }),
+      );
+    });
+
+    test('should grant target tenant project view for shared agent file_search project files', async () => {
+      const File = mongoose.models.File;
+      const Project = mongoose.models.Project;
+      const project = await Project.create({
+        projectId: 'project-dna',
+        name: 'DNA Project',
+        user: mockReq.user.id,
+        tenantId: 'orqest-admin',
+      });
+      const fileId = `file_${uuidv4()}`;
+      await File.create({
+        file_id: fileId,
+        user: mockReq.user.id,
+        filename: 'DNA.docx',
+        filepath: `/tmp/${fileId}`,
+        object: 'file',
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        bytes: 1,
+        source: FileSources.local,
+        embedded: true,
+        projectId: 'project-dna',
+        tenantId: 'orqest-admin',
+      });
+      const agent = await Agent.create({
+        id: 'agent_clone_with_project_files',
+        name: 'Shared DNA Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'orqest-admin',
+        tool_resources: {
+          file_search: {
+            file_ids: [fileId],
+          },
+        },
+      });
+
+      mockReq.user.role = SystemRoles.ADMIN;
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-client' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-client',
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-client',
+          resourceType: ResourceType.PROJECT,
+          resourceId: project._id,
+          accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+    });
+
+    test('should not grant project view when shared agent has no project file_search files', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_without_project_files',
+        name: 'Shared Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'orqest-admin',
+      });
+
+      mockReq.user.role = SystemRoles.ADMIN;
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-client' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledTimes(1);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceType: ResourceType.AGENT,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
         }),
       );
     });

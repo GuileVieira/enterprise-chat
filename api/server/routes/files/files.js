@@ -702,6 +702,17 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
+    if (metadata.projectId) {
+      const { allowed } = await hasProjectAccess({
+        req,
+        projectId: metadata.projectId,
+        requiredPermission: PermissionBits.EDIT,
+      });
+      if (!allowed) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+    }
+
     if (isAssistantsEndpoint(metadata.endpoint)) {
       return await processFileUpload({ req, res, metadata });
     }
@@ -713,16 +724,7 @@ router.post('/', async (req, res) => {
       logger.warn(`[/files] capability check failed, denying bypass: ${err.message}`);
     }
 
-    if (metadata.projectId) {
-      const { allowed } = await hasProjectAccess({
-        req,
-        projectId: metadata.projectId,
-        requiredPermission: PermissionBits.EDIT,
-      });
-      if (!allowed) {
-        return res.status(403).json({ message: 'Insufficient project permissions' });
-      }
-    } else if (!skipUploadAuth) {
+    if (!metadata.projectId && !skipUploadAuth) {
       const denied = await verifyAgentUploadPermission({
         req,
         res,

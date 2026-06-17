@@ -114,14 +114,14 @@ describe('AttachFileChat', () => {
       expect(container.innerHTML).toBe('');
     });
 
-    it('keeps project chat uploads local and hides project-save controls', () => {
+    it('saves project chat uploads to the project when the user can edit', () => {
       renderComponent({
         endpoint: EModelEndpoint.agents,
         agent_id: 'agent-1',
         projectId: 'project-1',
       });
 
-      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(true);
       expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('com_ui_upload_keep_local')).not.toBeInTheDocument();
     });
@@ -142,10 +142,10 @@ describe('AttachFileChat', () => {
       expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
     });
 
-    it('keeps assistants project chat uploads local', () => {
+    it('saves assistants project chat uploads to the project when the user can edit', () => {
       renderComponent({ endpoint: EModelEndpoint.assistants, projectId: 'project-1' });
 
-      expect(mockAttachFileProps.saveUploadsToProject).toBe(false);
+      expect(mockAttachFileProps.saveUploadsToProject).toBe(true);
       expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
     });
   });

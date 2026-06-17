@@ -288,11 +288,12 @@ describe('useFileHandling', () => {
       expect(formData.get('endpoint')).toBe('default');
     });
 
-    it('keeps chat uploads local by default when conversation has a projectId', async () => {
+    it('saves chat uploads to project file search by default when conversation has a projectId', async () => {
       mockConversation = {
         conversationId: 'convo-1',
         endpoint: 'openAI',
         projectId: 'project-123',
+        agent_id: 'agent-123',
       };
 
       const useFileHandling = await loadHook();
@@ -306,7 +307,34 @@ describe('useFileHandling', () => {
 
       expect(mockMutate).toHaveBeenCalledTimes(1);
       const formData: FormData = mockMutate.mock.calls[0][0];
+      expect(formData.get('projectId')).toBe('project-123');
+      expect(formData.get('tool_resource')).toBe('file_search');
+      expect(formData.get('agent_id')).toBeNull();
+      expect(formData.get('message_file')).toBeNull();
+    });
+
+    it('keeps chat uploads local when project saving is explicitly disabled', async () => {
+      mockConversation = {
+        conversationId: 'convo-1',
+        endpoint: 'openAI',
+        projectId: 'project-123',
+        agent_id: 'agent-123',
+      };
+
+      const useFileHandling = await loadHook();
+      const { result } = renderHook(() => useFileHandling({ saveUploadsToProject: false }));
+
+      const textFile = new File(['hello'], 'test.txt', { type: 'text/plain' });
+
+      await act(async () => {
+        await result.current.handleFiles([textFile]);
+      });
+
+      expect(mockMutate).toHaveBeenCalledTimes(1);
+      const formData: FormData = mockMutate.mock.calls[0][0];
       expect(formData.get('projectId')).toBeNull();
+      expect(formData.get('tool_resource')).toBeNull();
+      expect(formData.get('agent_id')).toBe('agent-123');
     });
 
     it('sends the conversation projectId when project saving is explicitly enabled', async () => {
@@ -328,6 +356,7 @@ describe('useFileHandling', () => {
       expect(mockMutate).toHaveBeenCalledTimes(1);
       const formData: FormData = mockMutate.mock.calls[0][0];
       expect(formData.get('projectId')).toBe('project-123');
+      expect(formData.get('tool_resource')).toBe('file_search');
     });
   });
 });
