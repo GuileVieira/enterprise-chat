@@ -61,6 +61,19 @@ Quirks:
 
 ---
 
+## Production User Operations
+
+- **Prefer the app script for prod users.** In Coolify, open the `api` service terminal and run from `/app`:
+  ```bash
+  npm run create-user -- <email> "<name>" <username> --tenant=<tenantId> --email-verified=true
+  ```
+- **Type the password in the script prompt.** Do not pass production passwords as CLI args; they can leak through shell history/process lists.
+- `config/create-user.js` uses `registerUser()`, app validation, bcrypt hashing, balance defaults, and email verification handling. On an already-populated prod DB, new users are created with role `USER`.
+- **Fallback `mongosh` path:** only use when the script cannot run. Never store plaintext passwords. Generate a bcrypt hash first (`cost 10`), then upsert the user with `tenantId`, `role: "USER"`, `provider: "local"`, and `emailVerified: true`.
+- After creating users, verify in Admin (`/admin/users` or `/admin/tenants/<tenantId>`) that `email`, `tenantId`, `role`, `provider`, and `emailVerified` are correct.
+
+---
+
 ## Lint & Format
 
 - **ESLint flat config:** `eslint.config.mjs`. Prettier config: `.prettierrc` (`printWidth: 100`, `singleQuote: true`, `trailingComma: all`).
