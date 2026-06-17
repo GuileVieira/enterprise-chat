@@ -1061,13 +1061,18 @@ export default function ProjectMetaAdsPanel({
     if (!metricsFullscreen) {
       return;
     }
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMetricsFullscreen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, [metricsFullscreen]);
 
   const releaseHorizontalScrollSync = () => {
@@ -2397,8 +2402,8 @@ export default function ProjectMetaAdsPanel({
     <>
       <div
         data-testid="meta-ads-metrics-workspace"
-        className={`relative ${
-          metricsFullscreen ? 'fixed inset-3 z-50 overflow-auto' : 'overflow-hidden'
+        className={`${
+          metricsFullscreen ? 'fixed inset-0 z-[9999] overflow-auto' : 'relative overflow-hidden'
         } ${metaAdsSurface}`}
       >
         <div className="relative flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -3649,11 +3654,7 @@ export default function ProjectMetaAdsPanel({
           <div
             ref={tableScrollRef}
             onScroll={onTableScroll}
-            className={
-              metricsFullscreen
-                ? 'max-w-full overflow-x-auto bg-[#0f0e0b]'
-                : 'max-w-full overflow-x-auto bg-[#0f0e0b]'
-            }
+            className="max-w-full overflow-x-auto bg-[#0f0e0b]"
           >
             <table
               className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-white/10`}
