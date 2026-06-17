@@ -1,4 +1,6 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import type { UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
@@ -177,14 +179,14 @@ const tableColumnMap: Record<TableColumnKey, TableColumn> = {
   frequency: {
     key: 'frequency',
     labelKey: 'com_ui_project_meta_ads_frequency',
-    widthClass: 'w-24',
+    widthClass: 'w-32',
     align: 'right',
     sortableKey: 'frequency',
   },
   result: {
     key: 'result',
     labelKey: 'com_ui_project_meta_ads_results',
-    widthClass: 'w-24',
+    widthClass: 'w-32',
     align: 'right',
     sortableKey: 'result',
   },
@@ -213,7 +215,7 @@ const tableColumnMap: Record<TableColumnKey, TableColumn> = {
   clicks: {
     key: 'clicks',
     labelKey: 'com_ui_project_meta_ads_clicks',
-    widthClass: 'w-20',
+    widthClass: 'w-24',
     align: 'right',
     sortableKey: 'clicks',
   },
@@ -328,6 +330,46 @@ const primaryMetricOptions = [
   { value: 'roas', labelKey: 'com_ui_project_meta_ads_primary_metric_roas' },
   { value: 'cpc', labelKey: 'com_ui_project_meta_ads_primary_metric_cpc' },
   { value: 'ctr', labelKey: 'com_ui_project_meta_ads_primary_metric_ctr' },
+] as const;
+
+const metaAdsSurface =
+  'border border-white/10 bg-[#10110f] text-[#f3efe6] dark:border-white/10 dark:bg-[#10110f]';
+const metaAdsPanel = 'border border-white/10 bg-[#151512] dark:border-white/10 dark:bg-[#151512]';
+const metaAdsMutedPanel =
+  'border border-white/10 bg-[#1f1d18] dark:border-white/10 dark:bg-[#1f1d18]';
+const metaAdsInput =
+  'h-9 w-full min-w-0 border border-white/10 bg-[#0f0e0b] px-3 text-xs text-[#f3efe6] outline-none transition duration-200 placeholder:text-[#81796b] hover:border-amber-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60';
+const metaAdsInputLg =
+  'h-10 w-full min-w-0 border border-white/10 bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition duration-200 placeholder:text-[#81796b] hover:border-amber-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60';
+const metaAdsButton =
+  'h-9 border border-white/10 bg-[#1d1a14] px-3 text-xs font-semibold text-[#f3efe6] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/50 hover:bg-[#292318] active:translate-y-0 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50';
+const metaAdsGhostButton =
+  'h-9 border border-white/10 px-3 text-xs font-semibold text-[#bdb5a6] transition duration-200 hover:border-amber-400/40 hover:bg-[#221f18] hover:text-[#f3efe6] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50';
+const metaAdsPrimaryButton =
+  'h-9 bg-[#f2eadb] px-4 text-xs font-semibold text-[#17130c] shadow-[0_16px_36px_-24px_rgba(242,234,219,0.75)] transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60';
+const metaAdsLabel =
+  'min-h-8 text-[11px] font-medium uppercase leading-tight tracking-[0.14em] text-[#948b7d]';
+const objectiveAccentClasses = [
+  {
+    shell: 'border-amber-400/20 bg-amber-500/5',
+    bar: 'bg-amber-300',
+    text: 'text-amber-200',
+  },
+  {
+    shell: 'border-emerald-400/20 bg-emerald-500/5',
+    bar: 'bg-emerald-300',
+    text: 'text-emerald-200',
+  },
+  {
+    shell: 'border-sky-400/20 bg-sky-500/5',
+    bar: 'bg-sky-300',
+    text: 'text-sky-200',
+  },
+  {
+    shell: 'border-rose-400/20 bg-rose-500/5',
+    bar: 'bg-rose-300',
+    text: 'text-rose-200',
+  },
 ] as const;
 
 const accountProfileRules: Record<
@@ -521,6 +563,48 @@ function formatSharePercent(value: number, total: number) {
   return total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '-';
 }
 
+function getShareWidth(value: number, total: number) {
+  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) {
+    return '0%';
+  }
+  return `${Math.min(100, Math.max(0, (value / total) * 100)).toFixed(2)}%`;
+}
+
+type FrequencyAccumulator = {
+  frequencyWeightedTotal: number;
+  frequencyWeight: number;
+  frequencyTotal: number;
+  frequencyCount: number;
+};
+
+function addFrequencySample(
+  target: FrequencyAccumulator,
+  frequency: number | null | undefined,
+  impressions: number | null | undefined,
+) {
+  const numericFrequency = Number(frequency);
+  if (!Number.isFinite(numericFrequency)) {
+    return;
+  }
+  const numericImpressions = Number(impressions);
+  if (Number.isFinite(numericImpressions) && numericImpressions > 0) {
+    target.frequencyWeightedTotal += numericFrequency * numericImpressions;
+    target.frequencyWeight += numericImpressions;
+    return;
+  }
+  target.frequencyTotal += numericFrequency;
+  target.frequencyCount += 1;
+}
+
+function resolveAverageFrequency(target: FrequencyAccumulator) {
+  if (target.frequencyWeight > 0) {
+    return Number((target.frequencyWeightedTotal / target.frequencyWeight).toFixed(2));
+  }
+  return target.frequencyCount > 0
+    ? Number((target.frequencyTotal / target.frequencyCount).toFixed(2))
+    : null;
+}
+
 function createObjectiveSummary(objective: string): ProjectMetaAdsObjectiveSummary {
   return {
     objective,
@@ -535,6 +619,52 @@ function createObjectiveSummary(objective: string): ProjectMetaAdsObjectiveSumma
   };
 }
 
+type ResultTypeSummary = NonNullable<ProjectMetaAdsObjectiveSummary['resultTypes']>[number];
+
+function addResultTypeSummary(
+  resultTypeMap: Map<string, ResultTypeSummary>,
+  resultType: string | undefined,
+  spend: number | null | undefined,
+  results: number | null | undefined,
+  clicks: number | null | undefined,
+  impressions: number | null | undefined,
+) {
+  const resultTypeKey = resultType || 'UNKNOWN';
+  const resultTypeSummary = resultTypeMap.get(resultTypeKey) ?? {
+    resultType: resultTypeKey,
+    label: resultTypeKey,
+    totalSpend: 0,
+    totalResults: 0,
+    averageCostPerResult: null,
+    clicks: 0,
+    impressions: 0,
+    averageCtr: null,
+  };
+  resultTypeMap.set(resultTypeKey, resultTypeSummary);
+  resultTypeSummary.totalSpend += Number(spend ?? 0);
+  resultTypeSummary.totalResults += Number(results ?? 0);
+  resultTypeSummary.clicks = Number(resultTypeSummary.clicks ?? 0) + Number(clicks ?? 0);
+  resultTypeSummary.impressions =
+    Number(resultTypeSummary.impressions ?? 0) + Number(impressions ?? 0);
+}
+
+function getCompatibleResultTotals(resultTypeMap: Map<string, ResultTypeSummary>) {
+  if (resultTypeMap.size !== 1) {
+    return {
+      totalResults: null,
+      averageCostPerResult: null,
+    };
+  }
+  const [resultType] = Array.from(resultTypeMap.values());
+  return {
+    totalResults: Number(resultType.totalResults.toFixed(2)),
+    averageCostPerResult:
+      resultType.totalResults > 0
+        ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
+        : null,
+  };
+}
+
 function buildObjectiveSummaries(
   campaigns: ProjectMetaAdsCampaignSummary[],
 ): ProjectMetaAdsObjectiveSummary[] {
@@ -543,6 +673,8 @@ function buildObjectiveSummaries(
     ProjectMetaAdsObjectiveSummary & {
       impressions: number;
       clicks: number;
+      frequencyWeightedTotal: number;
+      frequencyWeight: number;
       frequencyTotal: number;
       frequencyCount: number;
       resultTypeMap: Map<
@@ -560,12 +692,16 @@ function buildObjectiveSummaries(
         ...createObjectiveSummary(objective),
         impressions: 0,
         clicks: 0,
+        frequencyWeightedTotal: 0,
+        frequencyWeight: 0,
         frequencyTotal: 0,
         frequencyCount: 0,
         resultTypeMap: new Map(),
       } as ProjectMetaAdsObjectiveSummary & {
         impressions: number;
         clicks: number;
+        frequencyWeightedTotal: number;
+        frequencyWeight: number;
         frequencyTotal: number;
         frequencyCount: number;
         resultTypeMap: Map<
@@ -579,31 +715,24 @@ function buildObjectiveSummaries(
     const results = Number(campaign.resultCount ?? 0);
     const impressions = Number(campaign.impressions ?? 0);
     const clicks = Number(campaign.clicks ?? 0);
-    const frequency = Number(campaign.frequency);
 
     summary.campaignCount += 1;
     summary.totalSpend += Number.isFinite(spend) ? spend : 0;
     summary.totalResults += Number.isFinite(results) ? results : 0;
     summary.impressions += Number.isFinite(impressions) ? impressions : 0;
     summary.clicks += Number.isFinite(clicks) ? clicks : 0;
-    if (Number.isFinite(frequency)) {
-      summary.frequencyTotal += frequency;
-      summary.frequencyCount += 1;
-    }
+    addFrequencySample(summary, campaign.frequency, impressions);
 
     const sources = campaign.adSets.length > 0 ? campaign.adSets : [campaign];
     for (const source of sources) {
-      const resultType = source.resultType || campaign.resultType || 'UNKNOWN';
-      const resultTypeSummary = summary.resultTypeMap.get(resultType) ?? {
-        resultType,
-        label: resultType,
-        totalSpend: 0,
-        totalResults: 0,
-        averageCostPerResult: null,
-      };
-      summary.resultTypeMap.set(resultType, resultTypeSummary);
-      resultTypeSummary.totalSpend += Number(source.spend ?? 0);
-      resultTypeSummary.totalResults += Number(source.resultCount ?? 0);
+      addResultTypeSummary(
+        summary.resultTypeMap,
+        source.resultType || campaign.resultType || 'UNKNOWN',
+        source.spend,
+        source.resultCount,
+        source.clicks,
+        source.impressions,
+      );
     }
   }
 
@@ -617,21 +746,25 @@ function buildObjectiveSummaries(
           resultType.totalResults > 0
             ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
             : null,
+        averageCtr:
+          Number(resultType.impressions ?? 0) > 0
+            ? Number(
+                (
+                  (Number(resultType.clicks ?? 0) / Number(resultType.impressions ?? 0)) *
+                  100
+                ).toFixed(2),
+              )
+            : null,
       }));
+      const compatibleResults = getCompatibleResultTotals(summary.resultTypeMap);
       return {
         objective: summary.objective,
         label: summary.label,
         campaignCount: summary.campaignCount,
         totalSpend: Number(summary.totalSpend.toFixed(2)),
-        totalResults: Number(summary.totalResults.toFixed(2)),
-        averageCostPerResult:
-          summary.totalResults > 0
-            ? Number((summary.totalSpend / summary.totalResults).toFixed(2))
-            : null,
-        averageFrequency:
-          summary.frequencyCount > 0
-            ? Number((summary.frequencyTotal / summary.frequencyCount).toFixed(2))
-            : null,
+        totalResults: compatibleResults.totalResults,
+        averageCostPerResult: compatibleResults.averageCostPerResult,
+        averageFrequency: resolveAverageFrequency(summary),
         averageCtr:
           summary.impressions > 0
             ? Number(((summary.clicks / summary.impressions) * 100).toFixed(2))
@@ -649,10 +782,20 @@ function buildBudgetReferences(currentBudget: number | null | undefined, currenc
   if (!Number.isFinite(current) || current <= 0) {
     return [];
   }
-  return [15, 20, 30].map((percent) => ({
-    percent,
-    label: `${percent}% = ${formatMoney(current * (1 + percent / 100), currency)}`,
-  }));
+  return [-30, -20, -15, 15, 20, 30].map((percent) => {
+    const value = Number((current * (1 + percent / 100)).toFixed(2));
+    return {
+      percent,
+      value,
+      label: `${percent > 0 ? '+' : ''}${percent}%`,
+      formattedValue: formatMoney(value, currency),
+      accessibleLabel: `${percent > 0 ? '+' : ''}${percent}% ${formatMoney(value, currency).replace(/\u00a0/g, ' ')}`,
+      tone:
+        percent < 0
+          ? 'border-rose-300/25 bg-rose-500/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-500/15'
+          : 'border-emerald-300/25 bg-emerald-500/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-500/15',
+    };
+  });
 }
 
 function getBudgetChangeDelta(change: ProjectMetaAdsBudgetChange) {
@@ -855,6 +998,9 @@ export default function ProjectMetaAdsPanel({
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const stickyHorizontalScrollRef = useRef<HTMLDivElement | null>(null);
+  const isSyncingHorizontalScrollRef = useRef(false);
   const [settings, setSettings] = useState(() => normalizeSettings(project));
   const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
@@ -924,6 +1070,38 @@ export default function ProjectMetaAdsPanel({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [metricsFullscreen]);
 
+  const releaseHorizontalScrollSync = () => {
+    window.requestAnimationFrame(() => {
+      isSyncingHorizontalScrollRef.current = false;
+    });
+  };
+
+  const onTableScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (isSyncingHorizontalScrollRef.current) {
+      return;
+    }
+    const stickyScroll = stickyHorizontalScrollRef.current;
+    if (!stickyScroll || stickyScroll.scrollLeft === event.currentTarget.scrollLeft) {
+      return;
+    }
+    isSyncingHorizontalScrollRef.current = true;
+    stickyScroll.scrollLeft = event.currentTarget.scrollLeft;
+    releaseHorizontalScrollSync();
+  };
+
+  const onStickyHorizontalScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (isSyncingHorizontalScrollRef.current) {
+      return;
+    }
+    const tableScroll = tableScrollRef.current;
+    if (!tableScroll || tableScroll.scrollLeft === event.currentTarget.scrollLeft) {
+      return;
+    }
+    isSyncingHorizontalScrollRef.current = true;
+    tableScroll.scrollLeft = event.currentTarget.scrollLeft;
+    releaseHorizontalScrollSync();
+  };
+
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
   const latestSnapshots = statusQuery.data?.latestSnapshots.slice(0, 8) ?? [];
@@ -988,16 +1166,7 @@ export default function ProjectMetaAdsPanel({
         Number(delta.latestChange?.deltaDailyBudget ?? 0) !== 0,
     )
     .slice(0, 4);
-  const hasCompactEvolutionState =
-    trendPoints.length > 0 &&
-    !canRenderSpendChart &&
-    bestEvolution.length === 0 &&
-    evolutionAlerts.length === 0;
-  const hasEvolutionSection =
-    canRenderSpendChart ||
-    bestEvolution.length > 0 ||
-    evolutionAlerts.length > 0 ||
-    changesByDay.length > 0;
+  const hasEvolutionSection = Boolean(statusQuery.data?.trend);
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
@@ -1043,6 +1212,33 @@ export default function ProjectMetaAdsPanel({
     statusQuery.data?.summary?.objectives && statusQuery.data.summary.objectives.length > 0
       ? statusQuery.data.summary.objectives
       : buildObjectiveSummaries(campaigns);
+  const scopedObjectiveSummary =
+    objectiveFilter !== 'all'
+      ? objectiveSummaries.find((summary) => (summary.objective || 'UNKNOWN') === objectiveFilter)
+      : objectiveSummaries.length === 1
+        ? objectiveSummaries[0]
+        : undefined;
+  const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
+  const summaryResultType =
+    scopedObjectiveSummary?.resultTypes.length === 1
+      ? scopedObjectiveSummary.resultTypes[0].resultType
+      : undefined;
+  const summaryMetricContext = summaryResultType
+    ? getResultTypeLabel(summaryResultType, localize)
+    : scopedObjectiveSummary
+      ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
+      : undefined;
+  const summaryTotalSpend =
+    scopedObjectiveSummary?.totalSpend ?? statusQuery.data?.summary?.totalSpend;
+  const summaryTotalResults = hasMixedObjectiveSummary
+    ? null
+    : (scopedObjectiveSummary?.totalResults ?? statusQuery.data?.summary?.totalResults);
+  const summaryAverageCost = hasMixedObjectiveSummary
+    ? null
+    : (scopedObjectiveSummary?.averageCostPerResult ??
+      statusQuery.data?.summary?.averageCostPerResult);
+  const summaryAverageFrequency =
+    scopedObjectiveSummary?.averageFrequency ?? statusQuery.data?.summary?.averageFrequency;
   const filteredCampaigns = campaigns
     .filter((campaign) => {
       const query = campaignSearch.trim().toLowerCase();
@@ -1101,13 +1297,13 @@ export default function ProjectMetaAdsPanel({
       <button
         type="button"
         onClick={() => onSortColumn(key, defaultDirection)}
-        className={`inline-flex w-full items-center gap-1 text-xs font-semibold uppercase text-text-tertiary hover:text-text-primary ${
+        className={`inline-flex w-full min-w-0 flex-wrap items-center gap-0.5 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-[#8f8677] transition hover:text-[#f8f1e5] ${
           className ?? ''
         }`}
       >
-        <span>{label}</span>
+        <span className="min-w-0 break-words">{label}</span>
         {isActive && (
-          <span aria-hidden="true" className="text-text-primary">
+          <span aria-hidden="true" className="text-amber-200">
             {activeDirection === 'asc' ? '↑' : '↓'}
           </span>
         )}
@@ -1701,16 +1897,16 @@ export default function ProjectMetaAdsPanel({
     isClickable = false,
   ) => {
     const stripeClass =
-      rowIndex % 2 === 0 ? 'bg-white dark:bg-[#11110f]' : 'bg-slate-50 dark:bg-[#1f1e1a]';
+      rowIndex % 2 === 0 ? 'bg-[#11100d] dark:bg-[#11100d]' : 'bg-[#181611] dark:bg-[#181611]';
     const levelClass =
       level === 'campaign'
-        ? 'font-medium'
+        ? 'font-semibold text-[#f3efe6]'
         : level === 'adset'
-          ? 'text-text-secondary'
-          : 'text-text-secondary';
+          ? 'text-[#bdb5a6]'
+          : 'text-[#a69d8d]';
     const cursorClass = isClickable ? 'cursor-pointer' : '';
 
-    return `${cursorClass} ${stripeClass} ${levelClass} border-b border-border-light transition-colors hover:bg-amber-50 dark:hover:bg-[#2b271d]`;
+    return `${cursorClass} ${stripeClass} ${levelClass} border-b border-white/5 transition-colors duration-200 hover:bg-[#282115] dark:hover:bg-[#282115]`;
   };
 
   const renderEmptyCell = (column: TableColumn) => (
@@ -1718,15 +1914,17 @@ export default function ProjectMetaAdsPanel({
       key={column.key}
       className={`px-2 py-2 ${
         column.align === 'right' ? 'text-right font-mono tabular-nums' : ''
-      } text-text-tertiary`}
+      } text-[#6f675c]`}
     >
       -
     </td>
   );
 
   const renderLevelCell = (column: TableColumn, labelKey: TranslationKeys) => (
-    <td key={column.key} className="px-2 py-2 text-text-secondary">
-      {localize(labelKey)}
+    <td key={column.key} className="px-3 py-3 text-[#9b9284]">
+      <span className="inline-flex border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]">
+        {localize(labelKey)}
+      </span>
     </td>
   );
 
@@ -1734,14 +1932,42 @@ export default function ProjectMetaAdsPanel({
     <span
       aria-hidden="true"
       data-tooltip={value}
-      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400 bg-amber-100 px-2 py-1 text-xs font-medium leading-5 text-amber-950 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100"
+      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400/30 bg-[#2a2114] px-2 py-1 text-xs font-medium leading-5 text-amber-100 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block"
     />
   );
+
+  const renderBudgetBadge = (value: number | null | undefined, onClick?: () => void) => {
+    const content = (
+      <>
+        <span className="h-1.5 w-1.5 bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
+        <span>{formatMoney(value, currency)}</span>
+      </>
+    );
+
+    if (!onClick) {
+      return (
+        <span className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.035] px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-[#ded6c8]">
+          {content}
+        </span>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        disabled={!canEdit}
+        onClick={onClick}
+        className="inline-flex items-center gap-2 border border-amber-300/25 bg-amber-300/[0.08] px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-[#fff3d7] shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/60 hover:bg-amber-300/[0.14] focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        {content}
+      </button>
+    );
+  };
 
   const renderCampaignNameCell = (campaign: ProjectMetaAdsCampaignSummary) => (
     <td
       key="name"
-      className="sticky left-20 z-10 border-l-2 border-text-primary bg-inherit px-2 py-2 font-semibold text-text-primary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+      className="sticky left-20 z-10 border-l-2 border-amber-300 bg-inherit px-3 py-3 font-semibold text-[#f3efe6] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.65)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
         <div className="truncate">{campaign.campaignName ?? campaign.campaignId}</div>
@@ -1753,7 +1979,7 @@ export default function ProjectMetaAdsPanel({
   const renderAdSetNameCell = (adset: ProjectMetaAdsCampaignSummary['adSets'][number]) => (
     <td
       key="name"
-      className="sticky left-20 z-10 border-l-2 border-text-secondary bg-inherit px-2 py-2 pl-5 text-text-primary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+      className="sticky left-20 z-10 border-l-2 border-amber-500/35 bg-inherit px-3 py-3 pl-6 text-[#ddd5c8] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.45)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
         <div className="truncate">{adset.entityName ?? adset.entityId}</div>
@@ -1767,10 +1993,10 @@ export default function ProjectMetaAdsPanel({
     return (
       <td
         key="name"
-        className="sticky left-20 z-10 border-l-2 border-border-light bg-inherit px-2 py-2 pl-8 shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+        className="sticky left-20 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
       >
         <div className="group relative flex min-w-0 items-center gap-2">
-          <div className="h-9 w-16 shrink-0 overflow-hidden border border-border-light bg-surface-secondary">
+          <div className="h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)]">
             {mediaUrl ? (
               <img
                 src={mediaUrl}
@@ -1778,16 +2004,16 @@ export default function ProjectMetaAdsPanel({
                 className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-text-tertiary">
+              <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-[#8a8172]">
                 {localize('com_ui_project_meta_ads_no_creative_media')}
               </div>
             )}
           </div>
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-text-primary">
+            <div className="truncate text-sm font-medium text-[#f3efe6]">
               {ad.adName ?? ad.title ?? ad.adId}
             </div>
-            <div className="truncate text-xs text-text-secondary">{ad.title ?? ad.body ?? '-'}</div>
+            <div className="truncate text-xs text-[#9f9687]">{ad.title ?? ad.body ?? '-'}</div>
           </div>
           {renderNameTooltip(ad.adName ?? ad.title ?? ad.adId)}
         </div>
@@ -1806,7 +2032,7 @@ export default function ProjectMetaAdsPanel({
             type="button"
             disabled={!canEdit || applyRecommendation.isLoading}
             onClick={() => onApply(recommendation)}
-            className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            className="h-7 border border-emerald-400/25 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-100 transition duration-200 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {localize('com_ui_project_meta_ads_apply')}
           </button>
@@ -1832,25 +2058,16 @@ export default function ProjectMetaAdsPanel({
           key={column.key}
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
-          {campaign.editableBudgetLevel === 'campaign' ? (
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() =>
+          {campaign.editableBudgetLevel === 'campaign'
+            ? renderBudgetBadge(campaign.dailyBudget, () =>
                 onOpenBudgetEditor({
                   entityLevel: 'campaign',
                   entityId: campaign.campaignId,
                   entityName: campaign.campaignName,
                   currentBudget: campaign.dailyBudget,
-                })
-              }
-              className="border border-border-light bg-surface-secondary px-2 py-1 font-mono tabular-nums text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-            >
-              {formatMoney(campaign.dailyBudget, currency)}
-            </button>
-          ) : (
-            formatMoney(campaign.dailyBudget, currency)
-          )}
+                }),
+              )
+            : renderBudgetBadge(campaign.dailyBudget)}
         </td>
       );
     }
@@ -1976,25 +2193,16 @@ export default function ProjectMetaAdsPanel({
           key={column.key}
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
-          {campaign.editableBudgetLevel === 'adset' ? (
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() =>
+          {campaign.editableBudgetLevel === 'adset'
+            ? renderBudgetBadge(adset.dailyBudget, () =>
                 onOpenBudgetEditor({
                   entityLevel: 'adset',
                   entityId: adset.entityId,
                   entityName: adset.entityName,
                   currentBudget: adset.dailyBudget,
-                })
-              }
-              className="border border-border-light bg-surface-primary px-2 py-1 font-mono tabular-nums text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-            >
-              {formatMoney(adset.dailyBudget, currency)}
-            </button>
-          ) : (
-            formatMoney(adset.dailyBudget, currency)
-          )}
+                }),
+              )
+            : renderBudgetBadge(adset.dailyBudget)}
         </td>
       );
     }
@@ -2185,20 +2393,27 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
-  return (
-    <div className="space-y-3">
-      <div className="border border-border-light bg-surface-primary">
-        <div className="flex flex-col gap-3 border-b border-border-light p-3 sm:flex-row sm:items-center sm:justify-between">
+  const content = (
+    <>
+      <div
+        data-testid="meta-ads-metrics-workspace"
+        className={`relative ${
+          metricsFullscreen ? 'fixed inset-3 z-50 overflow-auto' : 'overflow-hidden'
+        } ${metaAdsSurface}`}
+      >
+        <div className="relative flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-base font-semibold text-text-primary">
+            <h3 className="text-xl font-semibold leading-tight text-[#f8f1e5]">
               {localize('com_ui_project_meta_ads_title')}
             </h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-              <span>{localize(tokenStatusKey)}</span>
-              <span className="text-text-tertiary">·</span>
-              <span>{settings.automationMode}</span>
-              <span className="text-text-tertiary">·</span>
-              <span>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#bdb5a6]">
+              <span className="border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-emerald-100">
+                {localize(tokenStatusKey)}
+              </span>
+              <span className="border border-white/10 bg-white/[0.03] px-2 py-1">
+                {settings.automationMode}
+              </span>
+              <span className="border border-white/10 bg-white/[0.03] px-2 py-1">
                 {localize('com_ui_project_meta_ads_schedule_minutes', {
                   0: String(settings.scheduleIntervalMinutes),
                 })}
@@ -2210,7 +2425,7 @@ export default function ProjectMetaAdsPanel({
               type="button"
               disabled={!canEdit || runAnalysis.isLoading}
               onClick={onRunAnalysis}
-              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className={metaAdsButton}
             >
               {localize(
                 runAnalysis.isLoading
@@ -2221,14 +2436,14 @@ export default function ProjectMetaAdsPanel({
             <button
               type="button"
               onClick={() => openSettingsDrawer('account')}
-              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary"
+              className={metaAdsButton}
             >
               {localize('com_ui_project_meta_ads_account_credentials')}
             </button>
             <button
               type="button"
               onClick={() => openSettingsDrawer('automation')}
-              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary"
+              className={metaAdsButton}
             >
               {localize('com_ui_project_meta_ads_automation')}
             </button>
@@ -2236,7 +2451,7 @@ export default function ProjectMetaAdsPanel({
               type="button"
               disabled={!canEdit}
               onClick={onOpenRuleGroupDraft}
-              className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+              className={metaAdsButton}
             >
               {localize('com_ui_project_meta_ads_rules')}
             </button>
@@ -2245,7 +2460,7 @@ export default function ProjectMetaAdsPanel({
                 type="button"
                 disabled={!canEdit || updateSettings.isLoading}
                 onClick={onSave}
-                className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className={metaAdsPrimaryButton}
               >
                 {localize('com_ui_save')}
               </button>
@@ -2255,7 +2470,7 @@ export default function ProjectMetaAdsPanel({
         {runErrorMessage && (
           <div
             role="alert"
-            className="m-3 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+            className="relative m-5 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100"
           >
             {runErrorMessage}
           </div>
@@ -2621,283 +2836,324 @@ export default function ProjectMetaAdsPanel({
           </OGDialogContent>
         </OGDialog>
 
-        <div
-          className={
-            metricsFullscreen
-              ? 'fixed inset-3 z-50 flex flex-col overflow-hidden border border-border-light bg-surface-primary shadow-2xl'
-              : ''
-          }
-          data-testid="meta-ads-metrics-workspace"
-        >
-          <div className="flex flex-col gap-3 border-b border-border-light bg-surface-primary p-3">
+        <div>
+          <div className="flex flex-col gap-4 border-b border-white/10 bg-[#11100d]/95 p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.85)]">
             {isStatusLoading && (
               <div
                 role="status"
-                className="flex items-center gap-2 border border-border-light bg-surface-secondary px-3 py-2 text-xs text-text-secondary"
+                className="flex items-center gap-2 border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
               >
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-border-light border-t-text-primary" />
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-amber-200" />
                 <span>{localize('com_ui_project_meta_ads_loading')}</span>
               </div>
             )}
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="grid gap-2 md:grid-cols-5 lg:flex lg:items-end">
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_period')}
-                  <select
-                    value={periodFilter}
-                    onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  >
-                    {periodFilterOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {localize(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {periodFilter === 'custom' && (
-                  <>
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_period_since')}
-                      <input
-                        type="date"
-                        value={customSince}
-                        max={customUntil || undefined}
-                        onChange={(event) => onCustomSinceChange(event.target.value)}
-                        className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_period_until')}
-                      <input
-                        type="date"
-                        value={customUntil}
-                        min={customSince || undefined}
-                        onChange={(event) => onCustomUntilChange(event.target.value)}
-                        className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                      />
-                    </label>
-                  </>
-                )}
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_search')}
-                  <input
-                    value={campaignSearch}
-                    onChange={(event) => setCampaignSearch(event.target.value)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_budget_mode_filter')}
-                  <select
-                    value={budgetModeFilter}
-                    onChange={(event) => setBudgetModeFilter(event.target.value)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  >
-                    <option value="all">{localize('com_ui_all')}</option>
-                    <option value="CBO">CBO</option>
-                    <option value="ABO">ABO</option>
-                    <option value="UNKNOWN">UNKNOWN</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_objective_filter')}
-                  <select
-                    value={objectiveFilter}
-                    onChange={(event) => setObjectiveFilter(event.target.value)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  >
-                    <option value="all">{localize('com_ui_all')}</option>
-                    {objectiveOptions.map((objective) => (
-                      <option key={objective} value={objective}>
-                        {getObjectiveLabel(objective, localize)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_sort')}
-                  <select
-                    value={campaignSort}
-                    onChange={(event) => setCampaignSort(event.target.value)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  >
-                    <option value="name_asc">{localize('com_ui_name')}</option>
-                    <option value="budget_desc">
-                      {localize('com_ui_project_meta_ads_budget_defined')}
-                    </option>
-                    <option value="frequency_desc">
-                      {localize('com_ui_project_meta_ads_frequency')}
-                    </option>
-                    <option value="spend_desc">{localize('com_ui_project_meta_ads_spend')}</option>
-                    <option value="cpa_asc">
-                      {localize('com_ui_project_meta_ads_cost_result')}
-                    </option>
-                    <option value="result_desc">
-                      {localize('com_ui_project_meta_ads_result')}
-                    </option>
-                    <option value="ctr_desc">CTR</option>
-                    <option value="clicks_desc">
-                      {localize('com_ui_project_meta_ads_clicks')}
-                    </option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_table_view')}
-                  <select
-                    value={tableView}
-                    onChange={(event) => setTableView(event.target.value as TableView)}
-                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
-                  >
-                    {tableViewOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {localize(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="h-8 border border-border-light px-3 py-2 font-mono text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_selection_count', {
-                    0: String(selectedCount),
-                  })}
-                </span>
-                <button
-                  type="button"
-                  disabled={selectedCount === 0}
-                  onClick={() => setSelectedEntityIds([])}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {localize('com_ui_project_meta_ads_clear_selection')}
-                </button>
-                <button
-                  type="button"
-                  disabled={campaigns.length === 0}
-                  onClick={onExpandAllRows}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {localize('com_ui_project_meta_ads_expand_all')}
-                </button>
-                <button
-                  type="button"
-                  disabled={campaigns.length === 0}
-                  onClick={onCollapseAllRows}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {localize('com_ui_project_meta_ads_collapse_all')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canCreateRuleGroup}
-                  onClick={onOpenRuleGroupDraft}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {localize('com_ui_project_meta_ads_create_rule_group')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canOpenTrafficAgentChat}
-                  onClick={onOpenTrafficAgentChat}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {localize('com_ui_project_meta_ads_chat_with_agent')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMetricsFullscreen((current) => !current)}
-                  aria-label={localize(
-                    metricsFullscreen
-                      ? 'com_ui_project_meta_ads_exit_fullscreen'
-                      : 'com_ui_project_meta_ads_enter_fullscreen',
+            <div className={`${metaAdsPanel} p-3`}>
+              <div className="flex min-w-0 flex-col gap-3">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_period')}
+                    </span>
+                    <select
+                      value={periodFilter}
+                      onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
+                      className={metaAdsInput}
+                    >
+                      {periodFilterOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {localize(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {periodFilter === 'custom' && (
+                    <>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <span className={metaAdsLabel}>
+                          {localize('com_ui_project_meta_ads_period_since')}
+                        </span>
+                        <input
+                          type="date"
+                          value={customSince}
+                          max={customUntil || undefined}
+                          onChange={(event) => onCustomSinceChange(event.target.value)}
+                          className={metaAdsInput}
+                        />
+                      </label>
+                      <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <span className={metaAdsLabel}>
+                          {localize('com_ui_project_meta_ads_period_until')}
+                        </span>
+                        <input
+                          type="date"
+                          value={customUntil}
+                          min={customSince || undefined}
+                          onChange={(event) => onCustomUntilChange(event.target.value)}
+                          className={metaAdsInput}
+                        />
+                      </label>
+                    </>
                   )}
-                  className="inline-flex h-8 items-center gap-2 border border-border-light px-3 text-xs font-medium text-text-primary"
-                >
-                  {metricsFullscreen ? (
-                    <ArrowsIn className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <ArrowsOut className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {localize(
-                    metricsFullscreen
-                      ? 'com_ui_project_meta_ads_exit_fullscreen'
-                      : 'com_ui_project_meta_ads_enter_fullscreen',
-                  )}
-                </button>
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_search')}
+                    </span>
+                    <input
+                      value={campaignSearch}
+                      onChange={(event) => setCampaignSearch(event.target.value)}
+                      className={metaAdsInput}
+                    />
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_budget_mode_filter')}
+                    </span>
+                    <select
+                      value={budgetModeFilter}
+                      onChange={(event) => setBudgetModeFilter(event.target.value)}
+                      className={metaAdsInput}
+                    >
+                      <option value="all">{localize('com_ui_all')}</option>
+                      <option value="CBO">CBO</option>
+                      <option value="ABO">ABO</option>
+                      <option value="UNKNOWN">UNKNOWN</option>
+                    </select>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_objective_filter')}
+                    </span>
+                    <select
+                      value={objectiveFilter}
+                      onChange={(event) => setObjectiveFilter(event.target.value)}
+                      className={metaAdsInput}
+                    >
+                      <option value="all">{localize('com_ui_all')}</option>
+                      {objectiveOptions.map((objective) => (
+                        <option key={objective} value={objective}>
+                          {getObjectiveLabel(objective, localize)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>{localize('com_ui_project_meta_ads_sort')}</span>
+                    <select
+                      value={campaignSort}
+                      onChange={(event) => setCampaignSort(event.target.value)}
+                      className={metaAdsInput}
+                    >
+                      <option value="name_asc">{localize('com_ui_name')}</option>
+                      <option value="budget_desc">
+                        {localize('com_ui_project_meta_ads_budget_defined')}
+                      </option>
+                      <option value="frequency_desc">
+                        {localize('com_ui_project_meta_ads_frequency')}
+                      </option>
+                      <option value="spend_desc">
+                        {localize('com_ui_project_meta_ads_spend')}
+                      </option>
+                      <option value="cpa_asc">
+                        {localize('com_ui_project_meta_ads_cost_result')}
+                      </option>
+                      <option value="result_desc">
+                        {localize('com_ui_project_meta_ads_result')}
+                      </option>
+                      <option value="ctr_desc">CTR</option>
+                      <option value="clicks_desc">
+                        {localize('com_ui_project_meta_ads_clicks')}
+                      </option>
+                    </select>
+                  </label>
+                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                    <span className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_table_view')}
+                    </span>
+                    <select
+                      value={tableView}
+                      onChange={(event) => setTableView(event.target.value as TableView)}
+                      className={metaAdsInput}
+                    >
+                      {tableViewOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {localize(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+                  <span className="h-9 border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-xs tabular-nums text-[#d7cdbd]">
+                    {localize('com_ui_project_meta_ads_selection_count', {
+                      0: String(selectedCount),
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={selectedCount === 0}
+                    onClick={() => setSelectedEntityIds([])}
+                    className={metaAdsGhostButton}
+                  >
+                    {localize('com_ui_project_meta_ads_clear_selection')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={campaigns.length === 0}
+                    onClick={onExpandAllRows}
+                    className={metaAdsGhostButton}
+                  >
+                    {localize('com_ui_project_meta_ads_expand_all')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={campaigns.length === 0}
+                    onClick={onCollapseAllRows}
+                    className={metaAdsGhostButton}
+                  >
+                    {localize('com_ui_project_meta_ads_collapse_all')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canCreateRuleGroup}
+                    onClick={onOpenRuleGroupDraft}
+                    className={metaAdsButton}
+                  >
+                    {localize('com_ui_project_meta_ads_create_rule_group')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canOpenTrafficAgentChat}
+                    onClick={onOpenTrafficAgentChat}
+                    className={metaAdsButton}
+                  >
+                    {localize('com_ui_project_meta_ads_chat_with_agent')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMetricsFullscreen((current) => !current)}
+                    aria-label={localize(
+                      metricsFullscreen
+                        ? 'com_ui_project_meta_ads_exit_fullscreen'
+                        : 'com_ui_project_meta_ads_enter_fullscreen',
+                    )}
+                    className={`inline-flex items-center gap-2 ${metaAdsButton}`}
+                  >
+                    {metricsFullscreen ? (
+                      <ArrowsIn className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <ArrowsOut className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {localize(
+                      metricsFullscreen
+                        ? 'com_ui_project_meta_ads_exit_fullscreen'
+                        : 'com_ui_project_meta_ads_enter_fullscreen',
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="grid border border-border-light sm:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 [
                   'com_ui_project_meta_ads_total_spend',
-                  formatMoney(statusQuery.data?.summary?.totalSpend, currency),
+                  formatMoney(summaryTotalSpend, currency),
+                  'border-l-amber-300/35',
+                  undefined,
                 ],
                 [
                   'com_ui_project_meta_ads_total_results',
-                  formatMetric(statusQuery.data?.summary?.totalResults),
+                  formatMetric(summaryTotalResults),
+                  'border-l-emerald-300/35',
+                  summaryMetricContext,
                 ],
                 [
                   'com_ui_project_meta_ads_average_cost',
-                  formatMoney(statusQuery.data?.summary?.averageCostPerResult, currency),
+                  formatMoney(summaryAverageCost, currency),
+                  'border-l-sky-300/30',
+                  summaryMetricContext,
                 ],
                 [
                   'com_ui_project_meta_ads_average_frequency',
-                  formatMetric(statusQuery.data?.summary?.averageFrequency),
+                  formatMetric(summaryAverageFrequency),
+                  'border-l-rose-300/30',
+                  scopedObjectiveSummary
+                    ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
+                    : undefined,
                 ],
-              ].map(([labelKey, value]) => (
-                <div key={labelKey} className="border-border-light p-3 last:border-r-0 sm:border-r">
-                  <div className="text-[11px] uppercase text-text-tertiary">
+              ].map(([labelKey, value, tone, context]) => (
+                <div
+                  key={labelKey}
+                  data-testid={`meta-ads-summary-card-${labelKey}`}
+                  className={`relative overflow-hidden border border-l-2 border-white/10 ${tone} bg-[#151512] p-4`}
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
                     {localize(labelKey as TranslationKeys)}
                   </div>
                   {isInitialStatusLoading ? (
                     <div
                       data-testid="meta-ads-summary-skeleton"
-                      className="mt-2 h-6 w-24 animate-pulse bg-surface-secondary"
+                      className="mt-3 h-7 w-28 animate-pulse bg-white/10"
                     />
                   ) : (
-                    <div className="mt-1 font-mono text-lg font-semibold text-text-primary">
+                    <div className="mt-3 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
                       {value}
+                    </div>
+                  )}
+                  {context && !isInitialStatusLoading && (
+                    <div className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8f8677]">
+                      {context}
                     </div>
                   )}
                 </div>
               ))}
             </div>
             {objectiveSummaries.length > 0 && !isInitialStatusLoading && (
-              <div
-                data-testid="meta-ads-objective-summary"
-                className="border border-border-light bg-surface-primary"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-3 py-2">
-                  <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_campaign_objectives')}
-                  </h4>
-                  <span className="font-mono text-xs text-text-tertiary">
-                    {formatCountLabel(
-                      objectiveSummaries.length,
-                      'com_ui_project_meta_ads_objective_count_one',
-                      'com_ui_project_meta_ads_objective_count_many',
-                      localize,
-                    )}
-                  </span>
+              <div data-testid="meta-ads-objective-summary" className={`${metaAdsPanel} p-4`}>
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#f8f1e5]">
+                      {localize('com_ui_project_meta_ads_campaign_objectives')}
+                    </h4>
+                    <div className="mt-1 text-xs text-[#9f9687]">
+                      {formatCountLabel(
+                        objectiveSummaries.length,
+                        'com_ui_project_meta_ads_objective_count_one',
+                        'com_ui_project_meta_ads_objective_count_many',
+                        localize,
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="divide-y divide-border-light">
-                  {objectiveSummaries.map((summary) => (
-                    <section key={summary.objective || 'UNKNOWN'} className="px-3 py-3">
-                      <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <div className="min-w-0">
-                          <h5 className="truncate text-sm font-semibold text-text-primary">
-                            {getObjectiveLabel(summary.objective, localize)}
-                          </h5>
-                          <div className="text-xs text-text-secondary">
-                            {formatCountLabel(
-                              summary.campaignCount,
-                              'com_ui_project_meta_ads_campaign_count_one',
-                              'com_ui_project_meta_ads_campaign_count_many',
-                              localize,
-                            )}
+                <div
+                  className={`mt-4 grid gap-3 ${
+                    objectiveSummaries.length > 1 ? '2xl:grid-cols-2' : ''
+                  }`}
+                >
+                  {objectiveSummaries.map((summary, index) => {
+                    const accent = objectiveAccentClasses[index % objectiveAccentClasses.length];
+                    const resultTypesTotal = summary.resultTypes.reduce(
+                      (total, resultType) => total + Number(resultType.totalResults ?? 0),
+                      0,
+                    );
+                    return (
+                      <section
+                        key={summary.objective || 'UNKNOWN'}
+                        className={`min-w-0 border p-4 ${accent.shell}`}
+                      >
+                        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] md:items-start">
+                          <div className="min-w-0 md:self-center">
+                            <h5 className={`truncate text-base font-semibold ${accent.text}`}>
+                              {getObjectiveLabel(summary.objective, localize)}
+                            </h5>
+                            <div className="mt-1 text-xs text-[#b8ae9f]">
+                              {formatCountLabel(
+                                summary.campaignCount,
+                                'com_ui_project_meta_ads_campaign_count_one',
+                                'com_ui_project_meta_ads_campaign_count_many',
+                                localize,
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-5">
                           {[
                             [
                               'com_ui_project_meta_ads_spend',
@@ -2908,75 +3164,113 @@ export default function ProjectMetaAdsPanel({
                               'com_ui_project_meta_ads_cost_result',
                               formatMoney(summary.averageCostPerResult, currency),
                             ],
+                            ['CTR', formatPercent(summary.averageCtr)],
                             [
                               'com_ui_project_meta_ads_frequency',
                               formatMetric(summary.averageFrequency),
                             ],
-                            ['CTR', formatPercent(summary.averageCtr)],
                           ].map(([label, value]) => (
-                            <div key={label} className="min-w-[82px] text-right">
-                              <div className="text-[10px] uppercase text-text-tertiary">
+                            <div
+                              key={label}
+                              className="flex items-baseline justify-between gap-3 md:block md:text-right"
+                            >
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d]">
                                 {label === 'CTR' ? label : localize(label as TranslationKeys)}
                               </div>
-                              <div className="font-mono text-sm font-semibold tabular-nums text-text-primary">
+                              <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
                                 {value}
                               </div>
                             </div>
                           ))}
                         </div>
-                      </div>
 
-                      {summary.resultTypes.length > 0 && (
-                        <div className="mt-3 overflow-x-auto border border-border-light">
-                          <table className="w-full min-w-[680px] text-left text-xs">
-                            <thead className="bg-surface-secondary text-[11px] uppercase text-text-tertiary">
-                              <tr>
-                                <th className="px-3 py-2 font-medium">
-                                  {localize('com_ui_project_meta_ads_result_type')}
-                                </th>
-                                <th className="px-3 py-2 text-right font-medium">
-                                  {localize('com_ui_project_meta_ads_results')}
-                                </th>
-                                <th className="px-3 py-2 text-right font-medium">
-                                  {localize('com_ui_project_meta_ads_result_share')}
-                                </th>
-                                <th className="px-3 py-2 text-right font-medium">
-                                  {localize('com_ui_project_meta_ads_spend')}
-                                </th>
-                                <th className="px-3 py-2 text-right font-medium">
-                                  {localize('com_ui_project_meta_ads_cost_result')}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-light">
-                              {summary.resultTypes.map((resultType) => (
-                                <tr key={resultType.resultType || 'UNKNOWN'}>
-                                  <td className="px-3 py-2 font-medium text-text-primary">
-                                    {getResultTypeLabel(resultType.resultType, localize)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
-                                    {formatMetric(resultType.totalResults)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
-                                    {formatSharePercent(
-                                      Number(resultType.totalResults ?? 0),
-                                      Number(summary.totalResults ?? 0),
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
-                                    {formatMoney(resultType.totalSpend, currency)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-mono tabular-nums text-text-secondary">
-                                    {formatMoney(resultType.averageCostPerResult, currency)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </section>
-                  ))}
+                        {summary.resultTypes.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <div className="hidden min-w-0 grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] gap-3 border-b border-white/10 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d] md:grid">
+                              <div>{localize('com_ui_project_meta_ads_result_type')}</div>
+                              <div className="text-right">
+                                {localize('com_ui_project_meta_ads_spend')}
+                              </div>
+                              <div className="text-right">
+                                {localize('com_ui_project_meta_ads_results')}
+                              </div>
+                              <div className="text-right">
+                                {localize('com_ui_project_meta_ads_cost_result')}
+                              </div>
+                              <div className="text-right">CTR</div>
+                              <div className="text-right">
+                                {localize('com_ui_project_meta_ads_result_share')}
+                              </div>
+                            </div>
+                            {summary.resultTypes.map((resultType) => {
+                              const shareWidth = getShareWidth(
+                                Number(resultType.totalResults ?? 0),
+                                resultTypesTotal,
+                              );
+                              return (
+                                <div
+                                  key={resultType.resultType || 'UNKNOWN'}
+                                  className="grid min-w-0 gap-3 border border-white/10 bg-black/10 px-3 py-3 text-xs md:grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] md:items-center md:py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="truncate font-semibold text-[#f3efe6]">
+                                      {getResultTypeLabel(resultType.resultType, localize)}
+                                    </div>
+                                    <div className="mt-1 h-1 overflow-hidden bg-white/10">
+                                      <div
+                                        className={`h-full ${accent.bar}`}
+                                        style={{ width: shareWidth }}
+                                      />
+                                    </div>
+                                  </div>
+                                  {[
+                                    [
+                                      'com_ui_project_meta_ads_spend',
+                                      formatMoney(resultType.totalSpend, currency),
+                                      'text-[#d8cfbf]',
+                                    ],
+                                    [
+                                      'com_ui_project_meta_ads_results',
+                                      formatMetric(resultType.totalResults),
+                                      'text-[#d8cfbf]',
+                                    ],
+                                    [
+                                      'com_ui_project_meta_ads_cost_result',
+                                      formatMoney(resultType.averageCostPerResult, currency),
+                                      'text-[#f3efe6]',
+                                    ],
+                                    ['CTR', formatPercent(resultType.averageCtr), 'text-[#d8cfbf]'],
+                                    [
+                                      'com_ui_project_meta_ads_result_share',
+                                      formatSharePercent(
+                                        Number(resultType.totalResults ?? 0),
+                                        resultTypesTotal,
+                                      ),
+                                      'text-[#d8cfbf]',
+                                    ],
+                                  ].map(([labelKey, value, colorClass]) => (
+                                    <div
+                                      key={labelKey}
+                                      className="flex items-baseline justify-between gap-3 md:block md:text-right"
+                                    >
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d] md:hidden">
+                                        {labelKey === 'CTR'
+                                          ? labelKey
+                                          : localize(labelKey as TranslationKeys)}
+                                      </span>
+                                      <span className={`font-mono tabular-nums ${colorClass}`}>
+                                        {value}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -3019,64 +3313,86 @@ export default function ProjectMetaAdsPanel({
               role="dialog"
               aria-modal="true"
               aria-labelledby="meta-ads-budget-dialog-title"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
             >
-              <div className="w-full max-w-md border border-border-light bg-surface-primary p-4 shadow-xl">
-                <div className="min-w-0">
+              <div className="relative w-full max-w-2xl overflow-hidden border border-white/10 bg-[#151411] p-5 text-[#f3efe6] shadow-[0_28px_90px_-60px_rgba(0,0,0,0.95)] sm:p-6">
+                <div className="relative min-w-0">
                   <h4
                     id="meta-ads-budget-dialog-title"
-                    className="truncate text-base font-semibold text-text-primary"
+                    className="text-2xl font-semibold leading-tight tracking-tight text-[#f8f1e5]"
                   >
                     {localize('com_ui_project_meta_ads_edit_budget')}
                   </h4>
-                  <div className="mt-2 truncate text-sm font-medium text-text-primary">
+                  <div className="mt-4 truncate text-lg font-semibold text-[#f3efe6]">
                     {budgetEditor.entityName ?? budgetEditor.entityId}
                   </div>
-                  <div className="mt-1 text-xs uppercase text-text-tertiary">
+                  <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f8677]">
                     {budgetEditor.entityLevel === 'campaign'
                       ? localize('com_ui_project_meta_ads_campaign')
                       : localize('com_ui_project_meta_ads_select_ad_set')}
                   </div>
-                  <div className="mt-2 text-xs text-text-secondary">
+                  <div className="mt-4 max-w-[56ch] text-sm leading-6 text-[#cfc6b7]">
                     {localize('com_ui_project_meta_ads_manual_budget_hint')}
                   </div>
-                  <div className="mt-3 text-sm text-text-secondary">
-                    {localize('com_ui_project_meta_ads_budget_defined')}:{' '}
-                    <span className="font-mono text-text-primary">
-                      {formatMoney(budgetEditor.currentBudget, currency)}
-                    </span>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
+                    <div className="border border-white/10 bg-white/[0.035] p-4">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                        {localize('com_ui_project_meta_ads_budget_defined')}
+                      </div>
+                      <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
+                        {formatMoney(budgetEditor.currentBudget, currency)}
+                      </div>
+                    </div>
+                    <label className="border border-amber-300/20 bg-amber-300/[0.06] p-4 text-xs text-[#cfc6b7]">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9a06a]">
+                        {localize('com_ui_project_meta_ads_new_budget')}
+                      </span>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={manualDailyBudget}
+                        onChange={(event) => setManualDailyBudget(event.target.value)}
+                        className="mt-2 h-11 w-full border border-white/10 bg-[#1f1b15] px-3 font-mono text-lg font-semibold tabular-nums text-[#f8f1e5] outline-none transition duration-200 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20"
+                      />
+                    </label>
                   </div>
+
                   {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
-                        (reference) => (
-                          <div
-                            key={reference.percent}
-                            className="border border-border-light bg-surface-secondary p-2 text-center font-mono text-xs text-text-secondary"
-                          >
-                            {reference.label}
-                          </div>
-                        ),
-                      )}
+                    <div className="mt-5">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                          {localize('com_ui_project_meta_ads_budget_quick_adjustments')}
+                        </div>
+                        <div className="h-px flex-1 bg-white/10" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
+                          (reference) => (
+                            <button
+                              key={reference.percent}
+                              type="button"
+                              aria-label={reference.accessibleLabel}
+                              onClick={() => setManualDailyBudget(reference.value.toFixed(2))}
+                              className={`group flex min-h-16 items-center justify-between gap-3 border px-3 py-2 text-left transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
+                            >
+                              <span className="text-sm font-semibold">{reference.label}</span>
+                              <span className="font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
+                                {reference.formattedValue}
+                              </span>
+                            </button>
+                          ),
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
-                <label className="mt-4 flex flex-col gap-1 text-xs text-text-secondary">
-                  {localize('com_ui_project_meta_ads_new_budget')}
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={manualDailyBudget}
-                    onChange={(event) => setManualDailyBudget(event.target.value)}
-                    className="h-9 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                  />
-                </label>
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="relative mt-6 flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setBudgetEditor(null)}
-                    className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                    className="h-10 border border-white/10 px-4 text-sm font-semibold text-[#d8cfbf] transition duration-200 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-white/15 active:translate-y-px"
                   >
                     {localize('com_ui_cancel')}
                   </button>
@@ -3084,7 +3400,7 @@ export default function ProjectMetaAdsPanel({
                     type="button"
                     disabled={updateBudget.isLoading}
                     onClick={onSaveManualBudget}
-                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    className="h-10 bg-[#f8f1e5] px-5 text-sm font-semibold text-[#14120f] shadow-[0_18px_42px_-28px_rgba(248,241,229,0.9)] transition duration-200 hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {localize('com_ui_project_meta_ads_save_budget')}
                   </button>
@@ -3331,23 +3647,25 @@ export default function ProjectMetaAdsPanel({
           )}
 
           <div
+            ref={tableScrollRef}
+            onScroll={onTableScroll}
             className={
               metricsFullscreen
-                ? 'min-h-0 max-w-full flex-1 overflow-auto'
-                : 'max-w-full overflow-x-auto'
+                ? 'max-w-full overflow-x-auto bg-[#0f0e0b]'
+                : 'max-w-full overflow-x-auto bg-[#0f0e0b]'
             }
           >
             <table
-              className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs`}
+              className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-white/10`}
             >
-              <thead className="sticky top-0 z-30 border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
+              <thead className="sticky top-0 z-30 border-b border-white/10 bg-[#1b1812] text-[11px] uppercase tracking-[0.12em] text-[#8f8677] shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
                 <tr>
-                  <th className="sticky left-0 z-40 w-10 border-b border-border-light bg-surface-secondary px-2 py-2">
+                  <th className="sticky left-0 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3">
                     <span className="sr-only">
                       {localize('com_ui_project_meta_ads_select_ad_set')}
                     </span>
                   </th>
-                  <th className="sticky left-10 z-40 w-10 border-b border-border-light bg-surface-secondary px-2 py-2">
+                  <th className="sticky left-10 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3 shadow-[10px_0_18px_-18px_rgba(245,158,11,0.8)]">
                     <span className="sr-only">
                       {localize('com_ui_project_meta_ads_expand_campaign')}
                     </span>
@@ -3358,12 +3676,12 @@ export default function ProjectMetaAdsPanel({
                     const alignClass = column.align === 'right' ? 'text-right' : '';
                     const stickyClass =
                       column.key === 'name'
-                        ? 'sticky left-20 z-40 bg-surface-secondary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)]'
+                        ? 'sticky left-20 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
                         : '';
                     return (
                       <th
                         key={column.key}
-                        className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-border-light px-2 py-2`}
+                        className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-white/10 px-3 py-3`}
                       >
                         {column.key === 'actions' ? (
                           <span className="sr-only">{label}</span>
@@ -3513,6 +3831,16 @@ export default function ProjectMetaAdsPanel({
               </div>
             )}
           </div>
+          <div className="sticky bottom-0 z-50 border-t border-white/10 bg-[#10110f] px-4 py-2">
+            <div
+              ref={stickyHorizontalScrollRef}
+              onScroll={onStickyHorizontalScroll}
+              className="max-w-full overflow-x-auto"
+              aria-hidden="true"
+            >
+              <div className={`h-2 w-full ${tableViewMinWidth[tableView]}`} />
+            </div>
+          </div>
         </div>
 
         {(settings.ruleGroups ?? []).length > 0 && (
@@ -3550,12 +3878,6 @@ export default function ProjectMetaAdsPanel({
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {hasCompactEvolutionState && (
-          <div className="border-t border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-secondary">
-            {localize('com_ui_project_meta_ads_insufficient_evolution')}
           </div>
         )}
 
@@ -3852,6 +4174,12 @@ export default function ProjectMetaAdsPanel({
           </OGDialogContent>
         )}
       </OGDialog>
-    </div>
+    </>
+  );
+
+  return metricsFullscreen ? (
+    createPortal(content, document.body)
+  ) : (
+    <div className="space-y-4">{content}</div>
   );
 }

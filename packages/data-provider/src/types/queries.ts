@@ -200,6 +200,9 @@ export type ProjectMetaAdsObjectiveResultTypeSummary = {
   totalSpend: number;
   totalResults: number;
   averageCostPerResult: number | null;
+  impressions?: number;
+  clicks?: number;
+  averageCtr?: number | null;
 };
 
 export type ProjectMetaAdsObjectiveSummary = {
@@ -207,7 +210,7 @@ export type ProjectMetaAdsObjectiveSummary = {
   label?: string;
   campaignCount: number;
   totalSpend: number;
-  totalResults: number;
+  totalResults: number | null;
   averageCostPerResult: number | null;
   averageFrequency: number | null;
   averageCtr: number | null;
@@ -278,7 +281,7 @@ export type ProjectMetaAdsStatus = {
   };
   summary?: {
     totalSpend: number;
-    totalResults: number;
+    totalResults: number | null;
     averageCostPerResult: number | null;
     averageFrequency: number | null;
     bestCampaignByCost?: ProjectMetaAdsCampaignSummary;

@@ -496,8 +496,8 @@ describe('ProjectMetaAdsPanel', () => {
     ];
     mockStatusData.summary = {
       totalSpend: 350,
-      totalResults: 14,
-      averageCostPerResult: 25,
+      totalResults: null,
+      averageCostPerResult: null,
       averageFrequency: 3.5,
       objectives: [
         {
@@ -563,11 +563,31 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_result_type_link_click')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_result_type_message')).toBeInTheDocument();
     expect(screen.getByText('83.3%')).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('-'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('-'),
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_objective_filter'), {
       target: { value: 'OUTCOME_SALES' },
     });
 
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('2.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('R$ 50,00'),
+    ).toBeInTheDocument();
     const rows = screen.getAllByTestId('meta-ads-campaign-row');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('Vendas SP');
@@ -660,10 +680,14 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getAllByText('com_ui_project_meta_ads_budget_defined').length).toBeGreaterThan(0);
     fireEvent.click(within(cboCampaignRow as HTMLElement).getByText('R$ 100,00'));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('15% = R$ 115,00')).toBeInTheDocument();
-    expect(screen.getByText('20% = R$ 120,00')).toBeInTheDocument();
-    expect(screen.getByText('30% = R$ 130,00')).toBeInTheDocument();
+    const budgetDialog = screen.getByRole('dialog');
+    expect(budgetDialog).toBeInTheDocument();
+    expect(within(budgetDialog).getByText('-15%')).toBeInTheDocument();
+    expect(within(budgetDialog).getByText('R$ 85,00')).toBeInTheDocument();
+    expect(within(budgetDialog).getByText('+15%')).toBeInTheDocument();
+    expect(within(budgetDialog).getByText('R$ 115,00')).toBeInTheDocument();
+    fireEvent.click(within(budgetDialog).getByRole('button', { name: /\+15%.*115,00/ }));
+    expect(screen.getByLabelText('com_ui_project_meta_ads_new_budget')).toHaveValue(115);
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });
@@ -1212,7 +1236,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    expect(screen.queryByTestId('meta-ads-evolution-dashboard')).not.toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-evolution-dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-evolution-chart')).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_insufficient_evolution')).toBeInTheDocument();
     expect(screen.queryByText('🔥 [MENSAGEM] Blumenau Remarketing')).not.toBeInTheDocument();
     expect(screen.queryByText('R$ 0,00')).not.toBeInTheDocument();
@@ -1263,10 +1288,10 @@ describe('ProjectMetaAdsPanel', () => {
     const workspace = screen.getByTestId('meta-ads-metrics-workspace');
     expect(workspace.className).not.toContain('sticky');
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
-    expect(workspace.className).toContain('fixed');
+    expect(screen.getByTestId('meta-ads-metrics-workspace').className).toContain('fixed');
     expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(workspace.className).not.toContain('fixed');
+    expect(screen.getByTestId('meta-ads-metrics-workspace').className).not.toContain('fixed');
   });
 
   it('selects and clears ad sets when selecting their campaign group', () => {

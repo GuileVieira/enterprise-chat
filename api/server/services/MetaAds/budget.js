@@ -690,6 +690,10 @@ function buildCampaignSummaries({
         impressions: 0,
         reach: 0,
         clicks: 0,
+        frequencyWeightedTotal: 0,
+        frequencyWeight: 0,
+        frequencyTotal: 0,
+        frequencyCount: 0,
         budgetLevel: budgetInfo.budgetLevel,
         editableBudgetLevel: budgetInfo.editableBudgetLevel,
         budgetMode: budgetInfo.budgetMode,
@@ -707,7 +711,8 @@ function buildCampaignSummaries({
     campaign.impressions += Number(snapshot.impressions ?? 0);
     campaign.reach += Number(snapshot.reach ?? 0);
     campaign.clicks += Number(snapshot.clicks ?? 0);
-    campaign.frequency = Math.max(Number(campaign.frequency ?? 0), Number(snapshot.frequency ?? 0));
+    addFrequencySample(campaign, snapshot.frequency, snapshot.impressions);
+    campaign.frequency = resolveAverageFrequency(campaign);
     campaign.ctr =
       campaign.impressions > 0
         ? Number(((campaign.clicks / campaign.impressions) * 100).toFixed(2))
@@ -753,6 +758,10 @@ function buildCampaignSummaries({
     if (budgetInfo.budgetLevel === 'campaign') {
       campaign.dailyBudget = centsToDailyBudget(campaignConfig?.daily_budget);
     }
+    delete campaign.frequencyWeightedTotal;
+    delete campaign.frequencyWeight;
+    delete campaign.frequencyTotal;
+    delete campaign.frequencyCount;
   }
 
   return Array.from(campaigns.values()).sort((left, right) => {
@@ -771,13 +780,25 @@ function buildCampaignSummaries({
 
 function buildDashboardSummary(campaigns = []) {
   const totalSpend = campaigns.reduce((sum, campaign) => sum + Number(campaign.spend ?? 0), 0);
-  const totalResults = campaigns.reduce(
-    (sum, campaign) => sum + Number(campaign.resultCount ?? 0),
-    0,
-  );
-  const frequencyValues = campaigns
-    .map((campaign) => campaign.frequency)
-    .filter((value) => Number.isFinite(Number(value)));
+  const resultTypes = new Map();
+  for (const campaign of campaigns) {
+    const sources = (campaign.adSets ?? []).length > 0 ? campaign.adSets : [campaign];
+    for (const source of sources) {
+      addResultTypeSummary(
+        resultTypes,
+        source.resultType || campaign.resultType || 'UNKNOWN',
+        source.spend,
+        source.resultCount,
+        source.clicks,
+        source.impressions,
+      );
+    }
+  }
+  const compatibleResults = getCompatibleResultTotals(resultTypes);
+  const frequencySummary = {};
+  for (const campaign of campaigns) {
+    addFrequencySample(frequencySummary, campaign.frequency, campaign.impressions);
+  }
   const campaignsWithCost = campaigns.filter((campaign) => Number.isFinite(Number(campaign.cpa)));
   const sortedByCost = [...campaignsWithCost].sort(
     (first, second) => Number(first.cpa) - Number(second.cpa),
@@ -785,17 +806,12 @@ function buildDashboardSummary(campaigns = []) {
 
   return {
     totalSpend: Number(totalSpend.toFixed(2)),
-    totalResults: Number(totalResults.toFixed(2)),
-    averageCostPerResult: totalResults > 0 ? Number((totalSpend / totalResults).toFixed(2)) : null,
-    averageFrequency:
-      frequencyValues.length > 0
-        ? Number(
-            (
-              frequencyValues.reduce((sum, value) => sum + Number(value), 0) /
-              frequencyValues.length
-            ).toFixed(2),
-          )
+    totalResults: compatibleResults.totalResults,
+    averageCostPerResult:
+      compatibleResults.totalResults != null && compatibleResults.totalResults > 0
+        ? Number((totalSpend / compatibleResults.totalResults).toFixed(2))
         : null,
+    averageFrequency: resolveAverageFrequency(frequencySummary),
     bestCampaignByCost: sortedByCost[0],
     worstCampaignByCost: sortedByCost[sortedByCost.length - 1],
     objectives: buildObjectiveSummary(campaigns),
@@ -811,6 +827,8 @@ function createObjectiveSummaryItem(objective) {
     totalResults: 0,
     impressions: 0,
     clicks: 0,
+    frequencyWeightedTotal: 0,
+    frequencyWeight: 0,
     frequencyTotal: 0,
     frequencyCount: 0,
     resultTypes: new Map(),
@@ -823,6 +841,36 @@ function createResultTypeSummaryItem(resultType) {
     label: resultType,
     totalSpend: 0,
     totalResults: 0,
+    clicks: 0,
+    impressions: 0,
+  };
+}
+
+function addResultTypeSummary(resultTypes, resultType, spend, results, clicks, impressions) {
+  const resultTypeKey = resultType || 'UNKNOWN';
+  const resultTypeSummary =
+    resultTypes.get(resultTypeKey) ?? createResultTypeSummaryItem(resultTypeKey);
+  resultTypes.set(resultTypeKey, resultTypeSummary);
+  resultTypeSummary.totalSpend += Number(spend ?? 0);
+  resultTypeSummary.totalResults += Number(results ?? 0);
+  resultTypeSummary.clicks += Number(clicks ?? 0);
+  resultTypeSummary.impressions += Number(impressions ?? 0);
+}
+
+function getCompatibleResultTotals(resultTypes) {
+  if (resultTypes.size !== 1) {
+    return {
+      totalResults: null,
+      averageCostPerResult: null,
+    };
+  }
+  const [resultType] = Array.from(resultTypes.values());
+  return {
+    totalResults: Number(resultType.totalResults.toFixed(2)),
+    averageCostPerResult:
+      resultType.totalResults > 0
+        ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
+        : null,
   };
 }
 
@@ -838,34 +886,34 @@ function buildObjectiveSummary(campaigns = []) {
     const results = Number(campaign.resultCount ?? 0);
     const impressions = Number(campaign.impressions ?? 0);
     const clicks = Number(campaign.clicks ?? 0);
-    const frequency = Number(campaign.frequency);
 
     summary.campaignCount += 1;
     summary.totalSpend += Number.isFinite(spend) ? spend : 0;
     summary.totalResults += Number.isFinite(results) ? results : 0;
     summary.impressions += Number.isFinite(impressions) ? impressions : 0;
     summary.clicks += Number.isFinite(clicks) ? clicks : 0;
-    if (Number.isFinite(frequency)) {
-      summary.frequencyTotal += frequency;
-      summary.frequencyCount += 1;
-    }
+    addFrequencySample(summary, campaign.frequency, impressions);
 
     for (const adset of campaign.adSets ?? []) {
-      const resultType = adset.resultType || campaign.resultType || 'UNKNOWN';
-      const resultTypeSummary =
-        summary.resultTypes.get(resultType) ?? createResultTypeSummaryItem(resultType);
-      summary.resultTypes.set(resultType, resultTypeSummary);
-      resultTypeSummary.totalSpend += Number(adset.spend ?? 0);
-      resultTypeSummary.totalResults += Number(adset.resultCount ?? 0);
+      addResultTypeSummary(
+        summary.resultTypes,
+        adset.resultType || campaign.resultType || 'UNKNOWN',
+        adset.spend,
+        adset.resultCount,
+        adset.clicks,
+        adset.impressions,
+      );
     }
 
     if ((campaign.adSets ?? []).length === 0) {
-      const resultType = campaign.resultType || 'UNKNOWN';
-      const resultTypeSummary =
-        summary.resultTypes.get(resultType) ?? createResultTypeSummaryItem(resultType);
-      summary.resultTypes.set(resultType, resultTypeSummary);
-      resultTypeSummary.totalSpend += spend;
-      resultTypeSummary.totalResults += results;
+      addResultTypeSummary(
+        summary.resultTypes,
+        campaign.resultType || 'UNKNOWN',
+        spend,
+        results,
+        clicks,
+        impressions,
+      );
     }
   }
 
@@ -879,21 +927,20 @@ function buildObjectiveSummary(campaigns = []) {
           resultType.totalResults > 0
             ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
             : null,
+        averageCtr:
+          resultType.impressions > 0
+            ? Number(((resultType.clicks / resultType.impressions) * 100).toFixed(2))
+            : null,
       }));
+      const compatibleResults = getCompatibleResultTotals(summary.resultTypes);
       return {
         objective: summary.objective,
         label: summary.label,
         campaignCount: summary.campaignCount,
         totalSpend: Number(summary.totalSpend.toFixed(2)),
-        totalResults: Number(summary.totalResults.toFixed(2)),
-        averageCostPerResult:
-          summary.totalResults > 0
-            ? Number((summary.totalSpend / summary.totalResults).toFixed(2))
-            : null,
-        averageFrequency:
-          summary.frequencyCount > 0
-            ? Number((summary.frequencyTotal / summary.frequencyCount).toFixed(2))
-            : null,
+        totalResults: compatibleResults.totalResults,
+        averageCostPerResult: compatibleResults.averageCostPerResult,
+        averageFrequency: resolveAverageFrequency(summary),
         averageCtr:
           summary.impressions > 0
             ? Number(((summary.clicks / summary.impressions) * 100).toFixed(2))
@@ -909,6 +956,31 @@ function buildObjectiveSummary(campaigns = []) {
 function roundMetric(value) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? Number(numeric.toFixed(2)) : null;
+}
+
+function addFrequencySample(target, frequency, impressions) {
+  const numericFrequency = Number(frequency);
+  if (!Number.isFinite(numericFrequency)) {
+    return;
+  }
+  const numericImpressions = Number(impressions);
+  if (Number.isFinite(numericImpressions) && numericImpressions > 0) {
+    target.frequencyWeightedTotal =
+      Number(target.frequencyWeightedTotal ?? 0) + numericFrequency * numericImpressions;
+    target.frequencyWeight = Number(target.frequencyWeight ?? 0) + numericImpressions;
+    return;
+  }
+  target.frequencyTotal = Number(target.frequencyTotal ?? 0) + numericFrequency;
+  target.frequencyCount = Number(target.frequencyCount ?? 0) + 1;
+}
+
+function resolveAverageFrequency(target) {
+  const weight = Number(target.frequencyWeight ?? 0);
+  if (weight > 0) {
+    return roundMetric(Number(target.frequencyWeightedTotal ?? 0) / weight);
+  }
+  const count = Number(target.frequencyCount ?? 0);
+  return count > 0 ? roundMetric(Number(target.frequencyTotal ?? 0) / count) : null;
 }
 
 function getSnapshotDateKey(snapshot) {
@@ -957,14 +1029,18 @@ function buildCampaignTrend({ snapshots = [], changes = [] }) {
       dailyBudget: 0,
       impressions: 0,
       clicks: 0,
-      frequency: 0,
+      frequencyWeightedTotal: 0,
+      frequencyWeight: 0,
+      frequencyTotal: 0,
+      frequencyCount: 0,
     };
     point.spend += Number(snapshot.spend ?? 0);
     point.resultCount += Number(snapshot.resultCount ?? 0);
     point.dailyBudget += Number(snapshot.dailyBudget ?? 0);
     point.impressions += Number(snapshot.impressions ?? 0);
     point.clicks += Number(snapshot.clicks ?? 0);
-    point.frequency = Math.max(Number(point.frequency ?? 0), Number(snapshot.frequency ?? 0));
+    addFrequencySample(point, snapshot.frequency, snapshot.impressions);
+    point.frequency = resolveAverageFrequency(point);
     point.cpa = point.resultCount > 0 ? roundMetric(point.spend / point.resultCount) : null;
     point.ctr =
       point.impressions > 0 ? roundMetric((point.clicks / point.impressions) * 100) : null;
@@ -972,15 +1048,22 @@ function buildCampaignTrend({ snapshots = [], changes = [] }) {
   }
 
   const points = Array.from(pointsByDateCampaign.values())
-    .map((point) => ({
-      ...point,
-      spend: roundMetric(point.spend) ?? 0,
-      resultCount: roundMetric(point.resultCount) ?? 0,
-      dailyBudget: roundMetric(point.dailyBudget) ?? 0,
-      frequency: roundMetric(point.frequency) ?? null,
-      impressions: roundMetric(point.impressions) ?? 0,
-      clicks: roundMetric(point.clicks) ?? 0,
-    }))
+    .map((point) => {
+      const publicPoint = { ...point };
+      delete publicPoint.frequencyWeightedTotal;
+      delete publicPoint.frequencyWeight;
+      delete publicPoint.frequencyTotal;
+      delete publicPoint.frequencyCount;
+      return {
+        ...publicPoint,
+        spend: roundMetric(point.spend) ?? 0,
+        resultCount: roundMetric(point.resultCount) ?? 0,
+        dailyBudget: roundMetric(point.dailyBudget) ?? 0,
+        frequency: roundMetric(point.frequency) ?? null,
+        impressions: roundMetric(point.impressions) ?? 0,
+        clicks: roundMetric(point.clicks) ?? 0,
+      };
+    })
     .sort((left, right) =>
       left.date === right.date
         ? String(left.campaignName ?? left.campaignId).localeCompare(
@@ -1747,7 +1830,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     period,
     summary: buildDashboardSummary(campaigns),
     trend: buildCampaignTrend({
-      snapshots: liveSnapshots ?? historicalSnapshots,
+      snapshots: historicalSnapshots,
       changes,
     }),
   };
