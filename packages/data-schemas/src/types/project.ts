@@ -10,7 +10,12 @@ export interface IProjectPromptSnippet {
 
 export interface IProjectMetaAdsRules {
   targetCpa?: number;
+  targetResultType?: string;
+  primaryMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr';
   minRoas?: number;
+  minCtr?: number;
+  maxCpc?: number;
+  maxCpm?: number;
   maxIncreasePct?: number;
   maxDecreasePct?: number;
   minDailyBudget?: number;
@@ -30,6 +35,7 @@ export interface IProjectMetaAds {
   graphVersion?: string;
   credentialMode?: 'project_secret' | 'tenant_default';
   automationMode?: 'recommend' | 'auto_limited';
+  accountProfile?: 'local_business' | 'ecommerce' | 'lead_gen' | 'traffic' | 'custom';
   budgetLevel?: 'campaign' | 'adset';
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;

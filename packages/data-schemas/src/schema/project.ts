@@ -32,7 +32,15 @@ const ProjectPromptSnippetSchema = new Schema(
 const ProjectMetaAdsRulesSchema = new Schema(
   {
     targetCpa: Number,
+    targetResultType: String,
+    primaryMetric: {
+      type: String,
+      enum: ['cpa', 'roas', 'cpc', 'ctr'],
+    },
     minRoas: Number,
+    minCtr: Number,
+    maxCpc: Number,
+    maxCpm: Number,
     maxIncreasePct: Number,
     maxDecreasePct: Number,
     minDailyBudget: Number,
@@ -131,6 +139,11 @@ const ProjectMetaAdsSchema = new Schema(
       type: String,
       enum: ['recommend', 'auto_limited'],
       default: 'recommend',
+    },
+    accountProfile: {
+      type: String,
+      enum: ['local_business', 'ecommerce', 'lead_gen', 'traffic', 'custom'],
+      default: 'custom',
     },
     budgetLevel: {
       type: String,

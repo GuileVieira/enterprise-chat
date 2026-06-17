@@ -33,7 +33,10 @@ const DEFAULT_RULES = {
   maxDailyBudget: 500,
   cooldownHours: 24,
   minSpend: 10,
+  primaryMetric: 'cpa',
 };
+const ACCOUNT_PROFILES = new Set(['local_business', 'ecommerce', 'lead_gen', 'traffic', 'custom']);
+const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const DEFAULT_CREATIVE_RULES = {
   maxFrequency: 5,
 };
@@ -46,6 +49,9 @@ const RULE_LIMITS = {
   maxDailyBudget: { min: 0.01 },
   cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
+  minCtr: { min: 0 },
+  maxCpc: { min: 0 },
+  maxCpm: { min: 0 },
 };
 const CREATIVE_RULE_LIMITS = {
   maxFrequency: { min: 0 },
@@ -64,6 +70,12 @@ function validateMetaAdsRules(rules = {}) {
   const validated = {};
   const errors = [];
   for (const [key, limits] of Object.entries(RULE_LIMITS)) {
+    if (
+      ['minCtr', 'maxCpc', 'maxCpm'].includes(key) &&
+      (merged[key] == null || merged[key] === '')
+    ) {
+      continue;
+    }
     const value = Number(merged[key]);
     validated[key] = value;
     if (
@@ -74,6 +86,18 @@ function validateMetaAdsRules(rules = {}) {
       errors.push(key);
     }
   }
+  const targetResultType =
+    typeof merged.targetResultType === 'string' ? merged.targetResultType.trim() : '';
+  if (targetResultType) {
+    validated.targetResultType = targetResultType;
+  }
+  const primaryMetric =
+    typeof merged.primaryMetric === 'string'
+      ? merged.primaryMetric.trim()
+      : DEFAULT_RULES.primaryMetric;
+  validated.primaryMetric = PRIMARY_METRICS.has(primaryMetric)
+    ? primaryMetric
+    : DEFAULT_RULES.primaryMetric;
   if (validated.minDailyBudget > validated.maxDailyBudget) {
     errors.push('minDailyBudget', 'maxDailyBudget');
   }
@@ -203,6 +227,9 @@ function normalizeMetaAds(metaAds = {}) {
     typeof rawGraphVersion === 'string' && isSupportedMetaGraphVersion(rawGraphVersion.trim())
       ? rawGraphVersion.trim()
       : undefined;
+  const accountProfile = ACCOUNT_PROFILES.has(safeMetaAds.accountProfile)
+    ? safeMetaAds.accountProfile
+    : 'custom';
   if (looksLikeMetaAccessToken(tokenSecretName)) {
     throw Object.assign(
       new Error('Token secret name must be a secret name, not the Meta access token value.'),
@@ -217,6 +244,7 @@ function normalizeMetaAds(metaAds = {}) {
     creativeRules: validateMetaAdsCreativeRules(safeMetaAds.creativeRules),
     ruleGroups: normalizeRuleGroups(safeMetaAds.ruleGroups),
     ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
+    accountProfile,
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
     scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(safeMetaAds.scheduleIntervalMinutes))

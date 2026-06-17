@@ -37,8 +37,22 @@ type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
 type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
 type MetaAdsSettings = NonNullable<TProject['metaAds']>;
 type MetaAdsRuleGroup = NonNullable<MetaAdsSettings['ruleGroups']>[number];
+type MetaAdsRulesState = Required<
+  Pick<
+    MetaAdsRules,
+    | 'targetCpa'
+    | 'minRoas'
+    | 'maxIncreasePct'
+    | 'maxDecreasePct'
+    | 'minDailyBudget'
+    | 'maxDailyBudget'
+    | 'cooldownHours'
+    | 'minSpend'
+  >
+> &
+  Pick<MetaAdsRules, 'targetResultType' | 'primaryMetric' | 'minCtr' | 'maxCpc' | 'maxCpm'>;
 type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules' | 'creativeRules'> & {
-  rules: Required<MetaAdsRules>;
+  rules: MetaAdsRulesState;
   creativeRules: Required<MetaAdsCreativeRules>;
 };
 type BudgetEditor = {
@@ -53,7 +67,7 @@ type RuleGroupDraft = {
   name: string;
   entityLevel: MetaAdsRuleGroup['entityLevel'];
   entityIds: string[];
-  rules: Required<MetaAdsRules>;
+  rules: MetaAdsRulesState;
   creativeRules: Required<MetaAdsCreativeRules>;
 };
 type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
@@ -270,8 +284,10 @@ const tableViewMinWidth: Record<TableView, string> = {
   rules: 'min-w-[1060px]',
 };
 
-const defaultRules: Required<MetaAdsRules> = {
+const defaultRules: MetaAdsRulesState = {
   targetCpa: 45,
+  targetResultType: '',
+  primaryMetric: 'cpa',
   minRoas: 2,
   maxIncreasePct: 25,
   maxDecreasePct: 25,
@@ -282,6 +298,64 @@ const defaultRules: Required<MetaAdsRules> = {
 };
 const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
   maxFrequency: 5,
+};
+
+const accountProfileOptions = [
+  { value: 'local_business', labelKey: 'com_ui_project_meta_ads_profile_local_business' },
+  { value: 'ecommerce', labelKey: 'com_ui_project_meta_ads_profile_ecommerce' },
+  { value: 'lead_gen', labelKey: 'com_ui_project_meta_ads_profile_lead_gen' },
+  { value: 'traffic', labelKey: 'com_ui_project_meta_ads_profile_traffic' },
+  { value: 'custom', labelKey: 'com_ui_project_meta_ads_profile_custom' },
+] as const;
+
+const resultTypeOptions = [
+  {
+    value: 'onsite_conversion.messaging_conversation_started_7d',
+    labelKey: 'com_ui_project_meta_ads_result_type_message',
+  },
+  { value: 'lead', labelKey: 'com_ui_project_meta_ads_result_type_lead' },
+  { value: 'purchase', labelKey: 'com_ui_project_meta_ads_result_type_purchase' },
+  { value: 'link_click', labelKey: 'com_ui_project_meta_ads_result_type_link_click' },
+  {
+    value: 'landing_page_view',
+    labelKey: 'com_ui_project_meta_ads_result_type_landing_page_view',
+  },
+  { value: 'post_engagement', labelKey: 'com_ui_project_meta_ads_result_type_post_engagement' },
+] as const;
+
+const primaryMetricOptions = [
+  { value: 'cpa', labelKey: 'com_ui_project_meta_ads_primary_metric_cpa' },
+  { value: 'roas', labelKey: 'com_ui_project_meta_ads_primary_metric_roas' },
+  { value: 'cpc', labelKey: 'com_ui_project_meta_ads_primary_metric_cpc' },
+  { value: 'ctr', labelKey: 'com_ui_project_meta_ads_primary_metric_ctr' },
+] as const;
+
+const accountProfileRules: Record<
+  (typeof accountProfileOptions)[number]['value'],
+  Partial<MetaAdsRulesState>
+> = {
+  local_business: {
+    targetResultType: 'onsite_conversion.messaging_conversation_started_7d',
+    primaryMetric: 'cpa',
+    targetCpa: 45,
+  },
+  ecommerce: {
+    targetResultType: 'purchase',
+    primaryMetric: 'roas',
+    minRoas: 2,
+  },
+  lead_gen: {
+    targetResultType: 'lead',
+    primaryMetric: 'cpa',
+    targetCpa: 45,
+  },
+  traffic: {
+    targetResultType: 'link_click',
+    primaryMetric: 'cpc',
+    maxCpc: 2,
+    minCtr: 1,
+  },
+  custom: {},
 };
 
 const objectiveLabelKeys: Record<string, TranslationKeys> = {
@@ -312,7 +386,7 @@ const resultTypeLabelKeys: Record<string, TranslationKeys> = {
 };
 
 const numberFields: Array<{
-  key: keyof Required<MetaAdsRules>;
+  key: keyof MetaAdsRulesState;
   labelKey: TranslationKeys;
   step: string;
 }> = [
@@ -324,6 +398,16 @@ const numberFields: Array<{
   { key: 'maxDailyBudget', labelKey: 'com_ui_project_meta_ads_max_budget', step: '0.01' },
   { key: 'cooldownHours', labelKey: 'com_ui_project_meta_ads_cooldown', step: '1' },
   { key: 'minSpend', labelKey: 'com_ui_project_meta_ads_min_spend', step: '0.01' },
+];
+
+const optionalNumberFields: Array<{
+  key: keyof MetaAdsRulesState;
+  labelKey: TranslationKeys;
+  step: string;
+}> = [
+  { key: 'minCtr', labelKey: 'com_ui_project_meta_ads_min_ctr', step: '0.01' },
+  { key: 'maxCpc', labelKey: 'com_ui_project_meta_ads_max_cpc', step: '0.01' },
+  { key: 'maxCpm', labelKey: 'com_ui_project_meta_ads_max_cpm', step: '0.01' },
 ];
 
 function formatMetric(value?: number | null) {
@@ -648,6 +732,7 @@ function normalizeSettings(project: TProject): MetaAdsSettingsState {
       ? project.metaAds?.graphVersion
       : '',
     credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
+    accountProfile: project.metaAds?.accountProfile ?? 'custom',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
     budgetLevel: 'adset',
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
@@ -1249,15 +1334,50 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
-  const onRuleGroupRuleChange = (key: keyof Required<MetaAdsRules>, value: string) => {
+  const onRuleGroupRuleChange = (key: keyof MetaAdsRulesState, value: string) => {
     setRuleGroupDraft((current) =>
       current
         ? {
             ...current,
             rules: {
               ...current.rules,
-              [key]: Number(value),
+              [key]: value === '' ? undefined : Number(value),
             },
+          }
+        : current,
+    );
+  };
+
+  const onRuleGroupRuleTextChange = (key: keyof MetaAdsRulesState, value: string) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              [key]: value,
+            },
+          }
+        : current,
+    );
+  };
+
+  const onAccountProfileChange = (value: MetaAdsSettingsState['accountProfile']) => {
+    const profile = value ?? 'custom';
+    const nextSettings = {
+      ...settings,
+      accountProfile: profile,
+      rules: {
+        ...settings.rules,
+        ...(accountProfileRules[profile] ?? {}),
+      },
+    };
+    setSettings(nextSettings);
+    setRuleGroupDraft((current) =>
+      current?.scope === 'global'
+        ? {
+            ...current,
+            rules: nextSettings.rules,
           }
         : current,
     );
@@ -3061,6 +3181,66 @@ export default function ProjectMetaAdsPanel({
                       />
                     </label>
                   )}
+                  {ruleGroupDraft.scope === 'global' && (
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_account_profile')}
+                      <select
+                        value={settings.accountProfile ?? 'custom'}
+                        onChange={(event) =>
+                          onAccountProfileChange(
+                            event.target.value as MetaAdsSettingsState['accountProfile'],
+                          )
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        {accountProfileOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {localize(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_target_result_type')}
+                      <select
+                        value={ruleGroupDraft.rules.targetResultType ?? ''}
+                        onChange={(event) =>
+                          onRuleGroupRuleTextChange('targetResultType', event.target.value)
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        <option value="">
+                          {localize('com_ui_project_meta_ads_result_type_legacy')}
+                        </option>
+                        {resultTypeOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {localize(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[11px] text-text-tertiary">
+                        {localize('com_ui_project_meta_ads_target_result_type_hint')}
+                      </span>
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_primary_metric')}
+                      <select
+                        value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
+                        onChange={(event) =>
+                          onRuleGroupRuleTextChange('primaryMetric', event.target.value)
+                        }
+                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                      >
+                        {primaryMetricOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {localize(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {numberFields.map((field) => (
                       <label
@@ -3086,6 +3266,23 @@ export default function ProjectMetaAdsPanel({
                                 : undefined
                           }
                           value={ruleGroupDraft.rules[field.key]}
+                          onChange={(event) => onRuleGroupRuleChange(field.key, event.target.value)}
+                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        />
+                      </label>
+                    ))}
+                    {optionalNumberFields.map((field) => (
+                      <label
+                        key={field.key}
+                        className="flex flex-col gap-1 text-xs text-text-secondary"
+                      >
+                        {localize(field.labelKey)}
+                        <input
+                          type="number"
+                          step={field.step}
+                          min="0"
+                          value={ruleGroupDraft.rules[field.key] ?? ''}
+                          placeholder={localize('com_ui_project_meta_ads_optional_rule')}
                           onChange={(event) => onRuleGroupRuleChange(field.key, event.target.value)}
                           className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
                         />

@@ -269,6 +269,39 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
+  it('pre-fills global rules from the ecommerce account profile', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    const ruleDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+
+    fireEvent.change(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_account_profile'), {
+      target: { value: 'ecommerce' },
+    });
+
+    const selects = within(ruleDialog).getAllByRole('combobox');
+    expect(selects[1]).toHaveValue('purchase');
+    expect(selects[2]).toHaveValue('roas');
+
+    fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          accountProfile: 'ecommerce',
+          rules: expect.objectContaining({
+            targetResultType: 'purchase',
+            primaryMetric: 'roas',
+          }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
   it('saves a supported project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 

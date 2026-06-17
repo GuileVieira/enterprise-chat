@@ -886,6 +886,9 @@ export const projectSchema = z.object({
       graphVersion: z.string().optional(),
       credentialMode: z.enum(['project_secret', 'tenant_default']).optional(),
       automationMode: z.enum(['recommend', 'auto_limited']).optional(),
+      accountProfile: z
+        .enum(['local_business', 'ecommerce', 'lead_gen', 'traffic', 'custom'])
+        .optional(),
       budgetLevel: z.enum(['campaign', 'adset']).optional(),
       scheduleIntervalMinutes: z
         .union([
@@ -902,7 +905,12 @@ export const projectSchema = z.object({
       rules: z
         .object({
           targetCpa: z.number().optional(),
+          targetResultType: z.string().optional(),
+          primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
           minRoas: z.number().optional(),
+          minCtr: z.number().optional(),
+          maxCpc: z.number().optional(),
+          maxCpm: z.number().optional(),
           maxIncreasePct: z.number().optional(),
           maxDecreasePct: z.number().optional(),
           minDailyBudget: z.number().optional(),
@@ -926,7 +934,12 @@ export const projectSchema = z.object({
             rules: z
               .object({
                 targetCpa: z.number().optional(),
+                targetResultType: z.string().optional(),
+                primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
                 minRoas: z.number().optional(),
+                minCtr: z.number().optional(),
+                maxCpc: z.number().optional(),
+                maxCpm: z.number().optional(),
                 maxIncreasePct: z.number().optional(),
                 maxDecreasePct: z.number().optional(),
                 minDailyBudget: z.number().optional(),
@@ -949,7 +962,12 @@ export const projectSchema = z.object({
             rules: z
               .object({
                 targetCpa: z.number().optional(),
+                targetResultType: z.string().optional(),
+                primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
                 minRoas: z.number().optional(),
+                minCtr: z.number().optional(),
+                maxCpc: z.number().optional(),
+                maxCpm: z.number().optional(),
                 maxIncreasePct: z.number().optional(),
                 maxDecreasePct: z.number().optional(),
                 minDailyBudget: z.number().optional(),

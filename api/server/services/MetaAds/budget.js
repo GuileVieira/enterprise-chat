@@ -32,7 +32,9 @@ const DEFAULT_RULES = {
   maxDailyBudget: 500,
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
+  primaryMetric: 'cpa',
 };
+const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const DEFAULT_CREATIVE_RULES = {
   maxFrequency: 5,
 };
@@ -45,6 +47,9 @@ const RULE_LIMITS = {
   maxDailyBudget: { min: 0.01 },
   cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
+  minCtr: { min: 0 },
+  maxCpc: { min: 0 },
+  maxCpm: { min: 0 },
 };
 const CREATIVE_RULE_LIMITS = {
   maxFrequency: { min: 0 },
@@ -259,13 +264,47 @@ function validateRuleNumber(rules, key, errors) {
   return value;
 }
 
+function validateOptionalRuleNumber(rules, key, validated, errors) {
+  if (rules[key] == null || rules[key] === '') {
+    return;
+  }
+  const value = validateRuleNumber(rules, key, errors);
+  if (Number.isFinite(value)) {
+    validated[key] = value;
+  }
+}
+
 function validateMetaAdsRules(rules = {}) {
   const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
   const errors = [];
   const validated = {};
-  for (const key of Object.keys(DEFAULT_RULES)) {
+  for (const key of [
+    'targetCpa',
+    'minRoas',
+    'maxIncreasePct',
+    'maxDecreasePct',
+    'minDailyBudget',
+    'maxDailyBudget',
+    'cooldownHours',
+    'minSpend',
+  ]) {
     validated[key] = validateRuleNumber(merged, key, errors);
   }
+  for (const key of ['minCtr', 'maxCpc', 'maxCpm']) {
+    validateOptionalRuleNumber(merged, key, validated, errors);
+  }
+  const targetResultType =
+    typeof merged.targetResultType === 'string' ? merged.targetResultType.trim() : '';
+  if (targetResultType) {
+    validated.targetResultType = targetResultType;
+  }
+  const primaryMetric =
+    typeof merged.primaryMetric === 'string'
+      ? merged.primaryMetric.trim()
+      : DEFAULT_RULES.primaryMetric;
+  validated.primaryMetric = PRIMARY_METRICS.has(primaryMetric)
+    ? primaryMetric
+    : DEFAULT_RULES.primaryMetric;
   if (validated.minDailyBudget > validated.maxDailyBudget) {
     errors.push('minDailyBudget');
     errors.push('maxDailyBudget');
@@ -390,7 +429,7 @@ async function isMetaAdsFeatureEnabled(tenantId) {
   return appConfig?.interfaceConfig?.metaAds !== false;
 }
 
-function calculateMetrics(row) {
+function calculateMetrics(row, targetResultType) {
   const spend = Number(row.spend ?? 0);
   const actionPriority = [
     'onsite_conversion.messaging_conversation_started_7d',
@@ -405,11 +444,18 @@ function calculateMetrics(row) {
   ];
   const actions = Array.isArray(row.actions) ? row.actions : [];
   const costPerAction = Array.isArray(row.cost_per_action_type) ? row.cost_per_action_type : [];
-  const resultAction =
-    actionPriority
-      .map((actionType) => actions.find((action) => action.action_type === actionType))
-      .find(Boolean) ?? actions[0];
-  const resultCount = resultAction ? Number(resultAction.value ?? 0) : undefined;
+  const normalizedTarget =
+    typeof targetResultType === 'string' && targetResultType.trim() ? targetResultType.trim() : '';
+  const resultAction = normalizedTarget
+    ? actions.find((action) => action.action_type === normalizedTarget)
+    : (actionPriority
+        .map((actionType) => actions.find((action) => action.action_type === actionType))
+        .find(Boolean) ?? actions[0]);
+  const resultCount = resultAction
+    ? Number(resultAction.value ?? 0)
+    : normalizedTarget
+      ? 0
+      : undefined;
   const resultCost = resultAction
     ? costPerAction.find((item) => item.action_type === resultAction.action_type)
     : null;
@@ -433,7 +479,7 @@ function calculateMetrics(row) {
     resultCount,
     cpa,
     roas,
-    resultType: resultAction?.action_type,
+    resultType: resultAction?.action_type ?? normalizedTarget,
     impressions,
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
@@ -495,7 +541,13 @@ function getSnapshotAdSetName(snapshot, campaignName) {
   return snapshot.entityName;
 }
 
-function buildSnapshotsFromInsights({ insights = [], adsets = [], campaigns = [], currency }) {
+function buildSnapshotsFromInsights({
+  insights = [],
+  adsets = [],
+  campaigns = [],
+  currency,
+  targetResultType,
+}) {
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
   return insights
@@ -508,7 +560,7 @@ function buildSnapshotsFromInsights({ insights = [], adsets = [], campaigns = []
       const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
       const campaign = campaignById.get(campaignId);
       const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
-      const metrics = calculateMetrics(row);
+      const metrics = calculateMetrics(row, targetResultType);
       return {
         level: 'adset',
         entityId,
@@ -550,7 +602,7 @@ function getAssetFeedValue(assetFeedSpec, key) {
   return first?.text?.trim();
 }
 
-function buildAdSummaries({ ads = [], adInsights = [], currency }) {
+function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType }) {
   const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
   return ads
     .map((ad) => {
@@ -562,7 +614,7 @@ function buildAdSummaries({ ads = [], adInsights = [], currency }) {
       const linkData = getCreativeLinkData(creative);
       const assetFeedSpec = creative.asset_feed_spec;
       const insight = insightByAdId.get(adId) ?? {};
-      const metrics = calculateMetrics(insight);
+      const metrics = calculateMetrics(insight, targetResultType);
       return {
         adId,
         adName: ad.name || insight.ad_name || adId,
@@ -1045,7 +1097,20 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   return {};
 }
 
-function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules, creativeRules }) {
+function proposeBudget({
+  currentDailyBudget,
+  cpa,
+  roas,
+  spend,
+  frequency,
+  resultCount,
+  resultType,
+  ctr,
+  cpc,
+  cpm,
+  rules,
+  creativeRules,
+}) {
   if (!currentDailyBudget || spend < rules.minSpend) {
     return {
       action: 'hold',
@@ -1054,10 +1119,22 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules,
     };
   }
 
+  const primaryMetric = PRIMARY_METRICS.has(rules.primaryMetric) ? rules.primaryMetric : 'cpa';
+  const targetResultType =
+    typeof rules.targetResultType === 'string' && rules.targetResultType.trim()
+      ? rules.targetResultType.trim()
+      : '';
+  const missingTargetResult =
+    targetResultType && resultType === targetResultType && Number(resultCount ?? 0) <= 0;
   const cpaGood = cpa != null && cpa <= rules.targetCpa;
   const roasGood = roas != null && roas >= rules.minRoas;
+  const cpcGood = rules.maxCpc != null && cpc != null && cpc <= rules.maxCpc;
+  const ctrGood = rules.minCtr != null && ctr != null && ctr >= rules.minCtr;
   const cpaBad = cpa != null && cpa > rules.targetCpa;
   const roasBad = roas != null && roas < rules.minRoas;
+  const cpcBad = rules.maxCpc != null && cpc != null && cpc > rules.maxCpc;
+  const ctrBad = rules.minCtr != null && ctr != null && ctr < rules.minCtr;
+  const cpmBad = rules.maxCpm != null && cpm != null && cpm > rules.maxCpm;
   const maxFrequency = Number(creativeRules?.maxFrequency);
   const hasHighFrequency =
     Number.isFinite(maxFrequency) &&
@@ -1065,17 +1142,53 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules,
     frequency != null &&
     Number.isFinite(Number(frequency)) &&
     Number(frequency) > maxFrequency;
+  const guardrailReasons = [];
+  if (hasHighFrequency) {
+    guardrailReasons.push(
+      `Frequência ${Number(frequency).toFixed(2)} acima do limite ${maxFrequency.toFixed(2)}`,
+    );
+  }
+  if (cpcBad) {
+    guardrailReasons.push(`CPC ${Number(cpc).toFixed(2)} acima do máximo ${rules.maxCpc}.`);
+  }
+  if (ctrBad) {
+    guardrailReasons.push(`CTR ${Number(ctr).toFixed(2)} abaixo do mínimo ${rules.minCtr}.`);
+  }
+  if (cpmBad) {
+    guardrailReasons.push(`CPM ${Number(cpm).toFixed(2)} acima do máximo ${rules.maxCpm}.`);
+  }
+  const hasBadGuardrail = guardrailReasons.length > 0;
+  const hasGoodGuardrails = !hasBadGuardrail;
 
-  if (cpaGood && roasGood) {
-    if (hasHighFrequency) {
-      return {
-        action: 'hold',
-        proposedDailyBudget: currentDailyBudget,
-        reason: `Frequência ${Number(frequency).toFixed(2)} acima do limite ${maxFrequency.toFixed(
-          2,
-        )}. Alerta criativo: revisar ou trocar criativo antes de aumentar orçamento.`,
-      };
-    }
+  let primaryGood = false;
+  let primaryBad = false;
+  let primaryLabel = 'CPA';
+  if (primaryMetric === 'roas') {
+    primaryGood = roasGood;
+    primaryBad = roasBad;
+    primaryLabel = 'ROAS';
+  } else if (primaryMetric === 'cpc') {
+    primaryGood = cpcGood;
+    primaryBad = cpcBad;
+    primaryLabel = 'CPC';
+  } else if (primaryMetric === 'ctr') {
+    primaryGood = ctrGood;
+    primaryBad = ctrBad;
+    primaryLabel = 'CTR';
+  } else {
+    primaryGood = cpaGood;
+    primaryBad = cpaBad || Boolean(missingTargetResult);
+  }
+
+  if (primaryGood && hasBadGuardrail && !missingTargetResult) {
+    return {
+      action: 'hold',
+      proposedDailyBudget: currentDailyBudget,
+      reason: `${guardrailReasons.join(' ')} Revisar antes de aumentar orçamento.`,
+    };
+  }
+
+  if (primaryGood && hasGoodGuardrails && !missingTargetResult) {
     const proposed = Math.min(
       rules.maxDailyBudget,
       currentDailyBudget * (1 + rules.maxIncreasePct / 100),
@@ -1083,11 +1196,13 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules,
     return {
       action: proposed > currentDailyBudget ? 'increase' : 'hold',
       proposedDailyBudget: Number(proposed.toFixed(2)),
-      reason: `CPA ${cpa.toFixed(2)} dentro do alvo e ROAS ${roas.toFixed(2)} acima do mínimo.`,
+      reason: `${primaryLabel} dentro da regra${
+        targetResultType ? ` para ${targetResultType}` : ''
+      }.`,
     };
   }
 
-  if (cpaBad || roasBad) {
+  if (primaryBad || hasBadGuardrail || missingTargetResult) {
     const proposed = Math.max(
       rules.minDailyBudget,
       currentDailyBudget * (1 - rules.maxDecreasePct / 100),
@@ -1095,9 +1210,13 @@ function proposeBudget({ currentDailyBudget, cpa, roas, spend, frequency, rules,
     return {
       action: proposed < currentDailyBudget ? 'decrease' : 'hold',
       proposedDailyBudget: Number(proposed.toFixed(2)),
-      reason: `Performance abaixo da regra: CPA ${cpa?.toFixed(2) ?? '-'} / ROAS ${
-        roas?.toFixed(2) ?? '-'
-      }.`,
+      reason: missingTargetResult
+        ? `Resultado alvo ${targetResultType} sem conversões no período.`
+        : `Performance abaixo da regra: CPA ${cpa?.toFixed(2) ?? '-'} / ROAS ${
+            roas?.toFixed(2) ?? '-'
+          } / CPC ${cpc?.toFixed(2) ?? '-'} / CTR ${ctr?.toFixed(2) ?? '-'}. ${
+            guardrailReasons.join(' ') || ''
+          }`.trim(),
     };
   }
 
@@ -1587,11 +1706,13 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
           adsets: adsetConfigs,
           campaigns: campaignConfigs,
           currency,
+          targetResultType: metaAds.rules?.targetResultType,
         });
         adSummaries = buildAdSummaries({
           ads: liveAds,
           adInsights: liveAdInsights,
           currency,
+          targetResultType: metaAds.rules?.targetResultType,
         });
       }
     } catch (error) {

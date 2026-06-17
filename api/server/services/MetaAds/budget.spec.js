@@ -57,6 +57,63 @@ describe('Meta Ads budget service', () => {
     expect(result.proposedDailyBudget).toBe(75);
   });
 
+  it('decreases when the configured target result type has no conversions', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: null,
+      roas: 3,
+      spend: 200,
+      resultCount: 0,
+      resultType: 'onsite_conversion.messaging_conversation_started_7d',
+      rules: {
+        ...DEFAULT_RULES,
+        targetResultType: 'onsite_conversion.messaging_conversation_started_7d',
+      },
+    });
+
+    expect(result.action).toBe('decrease');
+    expect(result.proposedDailyBudget).toBe(75);
+    expect(result.reason).toContain('Resultado alvo');
+  });
+
+  it('uses ROAS as the primary metric for ecommerce-style rules', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: 120,
+      roas: 3,
+      spend: 200,
+      resultCount: 2,
+      resultType: 'purchase',
+      rules: {
+        ...DEFAULT_RULES,
+        primaryMetric: 'roas',
+        targetResultType: 'purchase',
+        minRoas: 2,
+      },
+    });
+
+    expect(result.action).toBe('increase');
+    expect(result.proposedDailyBudget).toBe(125);
+  });
+
+  it('holds budget when the primary metric is healthy but CPC guardrail is high', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: 20,
+      roas: 3,
+      spend: 200,
+      cpc: 2,
+      rules: {
+        ...DEFAULT_RULES,
+        maxCpc: 1,
+      },
+    });
+
+    expect(result.action).toBe('hold');
+    expect(result.proposedDailyBudget).toBe(100);
+    expect(result.reason).toContain('CPC 2.00 acima do máximo 1');
+  });
+
   it('creates a creative alert instead of increasing when frequency is high', () => {
     const result = proposeBudget({
       currentDailyBudget: 100,
