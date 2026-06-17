@@ -10,6 +10,7 @@ const {
   listCampaigns,
   listAdSets,
   listAdInsights,
+  listCampaignInsights,
   listAdSetInsights,
   metaGet,
 } = require('./graph');
@@ -211,6 +212,45 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('level=ad');
     expect(fetch.mock.calls[0][0]).toContain('ad_id');
     expect(fetch.mock.calls[0][0]).toContain('time_range=');
+  });
+
+  it('lists campaign-level insights for the selected status period', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            {
+              campaign_id: 'campaign-1',
+              campaign_name: 'Messages',
+              spend: '202.01',
+              impressions: '4020',
+              reach: '1000',
+              frequency: '4.02',
+            },
+          ],
+        }),
+    });
+
+    await expect(
+      listCampaignInsights({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        since: '2026-06-01',
+        until: '2026-06-07',
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        campaign_id: 'campaign-1',
+        frequency: '4.02',
+      }),
+    ]);
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
+    expect(fetch.mock.calls[0][0]).toContain('level=campaign');
+    expect(fetch.mock.calls[0][0]).toContain('frequency');
   });
 
   it('uses project graph version override before global default', async () => {

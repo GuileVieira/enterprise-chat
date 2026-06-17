@@ -231,6 +231,14 @@ export type ProjectMetaAdsTrendPoint = {
   ctr?: number | null;
 };
 
+export type ProjectMetaAdsTrendSeries = {
+  level: 'campaign' | 'adset';
+  entityId: string;
+  entityName?: string;
+  parentCampaignName?: string;
+  points: ProjectMetaAdsTrendPoint[];
+};
+
 export type ProjectMetaAdsCampaignDelta = {
   campaignId: string;
   campaignName?: string;
@@ -252,6 +260,7 @@ export type ProjectMetaAdsChangesByDay = {
 
 export type ProjectMetaAdsTrend = {
   points: ProjectMetaAdsTrendPoint[];
+  series?: ProjectMetaAdsTrendSeries[];
   campaignDeltas: ProjectMetaAdsCampaignDelta[];
   changesByDay: ProjectMetaAdsChangesByDay[];
 };

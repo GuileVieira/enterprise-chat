@@ -435,6 +435,7 @@ describe('Meta Ads budget service persistence safety', () => {
     insights = [],
     ads = [],
     adInsights = [],
+    campaignInsights = [],
     campaigns = [],
     adsets = [],
     snapshots = [],
@@ -558,6 +559,7 @@ describe('Meta Ads budget service persistence safety', () => {
     const listAdSets = jest.fn(async () => adsets);
     const listAds = jest.fn(async () => ads);
     const listAdInsights = jest.fn(async () => adInsights);
+    const listCampaignInsights = jest.fn(async () => campaignInsights);
     const listAdSetInsights = jest.fn(async () => insights);
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
@@ -569,6 +571,7 @@ describe('Meta Ads budget service persistence safety', () => {
       listCampaigns,
       listAds,
       listAdInsights,
+      listCampaignInsights,
       listAdSets,
       listAdSetInsights,
       metaPost,
@@ -585,6 +588,7 @@ describe('Meta Ads budget service persistence safety', () => {
       getEntityDailyBudget,
       getAdAccountCurrency,
       listAdInsights,
+      listCampaignInsights,
       listAds,
       listCampaigns,
       listAdSets,
@@ -698,6 +702,26 @@ describe('Meta Ads budget service persistence safety', () => {
           cpa: 20,
           resultCount: 10,
           resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          impressions: 1000,
+          frequency: 2,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+        {
+          _id: 's2',
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          entityId: 'adset-2',
+          entityName: 'Retarget',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          campaignObjective: 'OUTCOME_ENGAGEMENT',
+          dailyBudget: 15,
+          spend: 50,
+          cpa: 25,
+          resultCount: 2,
+          resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          impressions: 100,
+          frequency: 3,
           createdAt: '2026-06-03T12:00:00.000Z',
         },
       ],
@@ -721,9 +745,10 @@ describe('Meta Ads budget service persistence safety', () => {
         campaignId: 'campaign-1',
         campaignName: 'Messages Floripa',
         objective: 'OUTCOME_ENGAGEMENT',
-        spend: 200,
-        resultCount: 10,
-        adSets: [
+        spend: 250,
+        resultCount: 12,
+        frequency: 2.09,
+        adSets: expect.arrayContaining([
           expect.objectContaining({
             entityId: 'adset-1',
             entityName: 'Topo',
@@ -732,7 +757,11 @@ describe('Meta Ads budget service persistence safety', () => {
               proposedDailyBudget: 60,
             }),
           }),
-        ],
+          expect.objectContaining({
+            entityId: 'adset-2',
+            entityName: 'Retarget',
+          }),
+        ]),
       }),
     ]);
   });
@@ -1053,7 +1082,8 @@ describe('Meta Ads budget service persistence safety', () => {
   });
 
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
-    const { budget, getAdAccountCurrency, listAdSetInsights } = loadBudgetWithMocks({
+    const { budget, getAdAccountCurrency, listCampaignInsights, listAdSetInsights } =
+      loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
       snapshots: [
         {
@@ -1067,6 +1097,28 @@ describe('Meta Ads budget service persistence safety', () => {
         },
       ],
       campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      campaignInsights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          spend: '85.76',
+          impressions: '4020',
+          reach: '1000',
+          frequency: '4.02',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '8',
+            },
+          ],
+          cost_per_action_type: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '10.72',
+            },
+          ],
+        },
+      ],
       adsets: [
         {
           id: 'adset-1',
@@ -1082,6 +1134,9 @@ describe('Meta Ads budget service persistence safety', () => {
           adset_id: 'adset-1',
           adset_name: 'Audience real',
           spend: '85.76',
+          impressions: '1000',
+          reach: '204',
+          frequency: '4.90',
           actions: [
             {
               action_type: 'onsite_conversion.messaging_conversation_started_7d',
@@ -1103,6 +1158,9 @@ describe('Meta Ads budget service persistence safety', () => {
       until: '2026-06-15',
     });
 
+    expect(listCampaignInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ since: '2026-06-10', until: '2026-06-15' }),
+    );
     expect(listAdSetInsights).toHaveBeenCalledWith(
       expect.objectContaining({ since: '2026-06-10', until: '2026-06-15' }),
     );
@@ -1122,6 +1180,16 @@ describe('Meta Ads budget service persistence safety', () => {
         entityName: 'Audience real',
         resultCount: 8,
         cpa: 10.72,
+        frequency: 4.9,
+      }),
+    );
+    expect(status.campaigns[0]).toEqual(
+      expect.objectContaining({
+        resultCount: 8,
+        cpa: 10.72,
+        impressions: 4020,
+        reach: 1000,
+        frequency: 4.02,
       }),
     );
   });

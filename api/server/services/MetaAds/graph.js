@@ -385,13 +385,19 @@ async function listAds({ adAccountId, token, graphVersion }) {
   }
 }
 
+const AD_INSIGHT_FIELDS =
+  'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+const ADSET_INSIGHT_FIELDS =
+  'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+const CAMPAIGN_INSIGHT_FIELDS =
+  'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+
 async function listAdInsights({ adAccountId, token, since, until, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing ad insights', { adAccountId, since, until, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level: 'ad',
-    fields:
-      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas',
+    fields: AD_INSIGHT_FIELDS,
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
@@ -425,13 +431,56 @@ async function listAdInsights({ adAccountId, token, since, until, graphVersion }
   }
 }
 
+async function listCampaignInsights({ adAccountId, token, since, until, graphVersion }) {
+  logger.debug('[MetaAdsGraph] listing campaign insights', {
+    adAccountId,
+    since,
+    until,
+    graphVersion,
+  });
+  const path = `${encodeURIComponent(adAccountId)}/insights`;
+  const params = {
+    level: 'campaign',
+    fields: CAMPAIGN_INSIGHT_FIELDS,
+    time_range: JSON.stringify({ since, until }),
+    limit: DEFAULT_LIMIT,
+  };
+  try {
+    const payload = await metaGet({
+      path,
+      token,
+      params,
+      graphVersion,
+      resourceLabel: 'campaign insights',
+    });
+    return Array.isArray(payload.data) ? payload.data : [];
+  } catch (error) {
+    const message = formatMetaFetchError({
+      resource: 'campaign insights',
+      adAccountId,
+      path,
+      params,
+      error,
+    });
+    logger.error('[MetaAdsGraph] campaign insights request failed with context', {
+      adAccountId,
+      path,
+      since,
+      until,
+      params: Object.keys(params),
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error(message);
+  }
+}
+
 async function listAdSetInsights({ adAccountId, token, since, until, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing insights', { adAccountId, since, until, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level: 'adset',
-    fields:
-      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas',
+    fields: ADSET_INSIGHT_FIELDS,
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
@@ -475,6 +524,7 @@ module.exports = {
   isSupportedMetaGraphVersion,
   listAds,
   listAdInsights,
+  listCampaignInsights,
   listCampaigns,
   listAdSetInsights,
   listAdSets,

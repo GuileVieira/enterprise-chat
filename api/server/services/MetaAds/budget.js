@@ -10,6 +10,7 @@ const {
   isSupportedMetaGraphVersion,
   listAds,
   listAdInsights,
+  listCampaignInsights,
   listCampaigns,
   listAdSetInsights,
   listAdSets,
@@ -654,11 +655,14 @@ function buildCampaignSummaries({
   latestSnapshots = [],
   recommendations = [],
   campaignConfigs = [],
+  campaignInsights = [],
   ads = [],
+  targetResultType,
 }) {
   const recommendationByEntity = latestByEntity(recommendations);
   const snapshotByEntity = latestByEntity(latestSnapshots);
   const campaignConfigById = new Map(campaignConfigs.map((campaign) => [campaign.id, campaign]));
+  const campaignInsightById = new Map(campaignInsights.map((row) => [row.campaign_id, row]));
   const adsByAdSetId = new Map();
   for (const ad of ads) {
     const adSetId = ad.adSetId;
@@ -752,11 +756,30 @@ function buildCampaignSummaries({
   for (const campaign of campaigns.values()) {
     const campaignConfig = campaignConfigById.get(campaign.campaignId);
     const budgetInfo = detectBudgetMode({ campaign: campaignConfig, adsets: campaign.adSets });
+    const campaignInsight = campaignInsightById.get(campaign.campaignId);
     campaign.budgetLevel = budgetInfo.budgetLevel;
     campaign.editableBudgetLevel = budgetInfo.editableBudgetLevel;
     campaign.budgetMode = budgetInfo.budgetMode;
     if (budgetInfo.budgetLevel === 'campaign') {
       campaign.dailyBudget = centsToDailyBudget(campaignConfig?.daily_budget);
+    }
+    if (campaignInsight) {
+      const metrics = calculateMetrics(campaignInsight, targetResultType);
+      campaign.campaignName = campaignInsight.campaign_name || campaign.campaignName;
+      campaign.spend = metrics.spend;
+      campaign.resultCount = metrics.resultCount;
+      campaign.cpa = metrics.cpa;
+      campaign.roas = metrics.roas;
+      campaign.resultType = metrics.resultType;
+      campaign.impressions = metrics.impressions;
+      campaign.reach = metrics.reach;
+      campaign.frequency = metrics.frequency;
+      campaign.clicks = metrics.clicks;
+      campaign.ctr = metrics.ctr;
+      campaign.cpc = metrics.cpc;
+      campaign.cpm = metrics.cpm;
+      campaign.videoP75Watched = metrics.videoP75Watched;
+      campaign.videoP75Rate = metrics.videoP75Rate;
     }
     delete campaign.frequencyWeightedTotal;
     delete campaign.frequencyWeight;
@@ -1107,6 +1130,55 @@ function buildCampaignTrend({ snapshots = [], changes = [] }) {
     campaignPoints.push(point);
     pointsByCampaign.set(point.campaignId, campaignPoints);
   }
+  const campaignSeries = Array.from(pointsByCampaign.entries()).map(([campaignId, campaignPoints]) => {
+    const sorted = [...campaignPoints].sort((left, right) => left.date.localeCompare(right.date));
+    const last = sorted[sorted.length - 1];
+    return {
+      level: 'campaign',
+      entityId: campaignId,
+      entityName: last?.campaignName || campaignId,
+      points: sorted,
+    };
+  });
+  const pointsByAdSet = new Map();
+  for (const snapshot of latestByDateEntity.values()) {
+    const date = getSnapshotDateKey(snapshot);
+    const entityId = snapshot.entityId;
+    const campaignId = snapshot.campaignId || snapshot.entityId;
+    if (!date || !entityId) {
+      continue;
+    }
+    const resultCount = Number(snapshot.resultCount ?? 0);
+    const spend = Number(snapshot.spend ?? 0);
+    const impressions = Number(snapshot.impressions ?? 0);
+    const clicks = Number(snapshot.clicks ?? 0);
+    const point = {
+      date,
+      campaignId,
+      campaignName: snapshot.campaignName || campaignId,
+      spend: roundMetric(spend) ?? 0,
+      resultCount: roundMetric(resultCount) ?? 0,
+      cpa: resultCount > 0 ? roundMetric(spend / resultCount) : null,
+      dailyBudget: roundMetric(Number(snapshot.dailyBudget ?? 0)) ?? 0,
+      frequency: roundMetric(snapshot.frequency) ?? null,
+      impressions: roundMetric(impressions) ?? 0,
+      clicks: roundMetric(clicks) ?? 0,
+      ctr: impressions > 0 ? roundMetric((clicks / impressions) * 100) : null,
+    };
+    const current = pointsByAdSet.get(entityId) || {
+      level: 'adset',
+      entityId,
+      entityName: snapshot.entityName || entityId,
+      parentCampaignName: snapshot.campaignName || campaignId,
+      points: [],
+    };
+    current.points.push(point);
+    pointsByAdSet.set(entityId, current);
+  }
+  const adSetSeries = Array.from(pointsByAdSet.values()).map((series) => ({
+    ...series,
+    points: series.points.sort((left, right) => left.date.localeCompare(right.date)),
+  }));
 
   const campaignDeltas = Array.from(pointsByCampaign.entries())
     .map(([campaignId, campaignPoints]) => {
@@ -1145,6 +1217,7 @@ function buildCampaignTrend({ snapshots = [], changes = [] }) {
 
   return {
     points,
+    series: [...campaignSeries, ...adSetSeries],
     campaignDeltas,
     changesByDay,
   };
@@ -1725,6 +1798,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let campaignConfigs = [];
   let adsetConfigs = [];
   let adSummaries = [];
+  let campaignInsights = [];
   let liveSnapshots;
   let currency;
   if (project?.metaAds?.adAccountId) {
@@ -1751,7 +1825,20 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
           token,
           graphVersion: getMetaGraphVersion(metaAds.graphVersion),
         });
-        const [insights, liveAds, liveAdInsights] = await Promise.all([
+        const [liveCampaignInsights, insights, liveAds, liveAdInsights] = await Promise.all([
+          listCampaignInsights({
+            adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+            token,
+            since,
+            until,
+            graphVersion: getMetaGraphVersion(metaAds.graphVersion),
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] campaign insights status enrichment failed', {
+              projectId,
+              message: error.message,
+            });
+            return [];
+          }),
           listAdSetInsights({
             adAccountId: normalizeAdAccountId(metaAds.adAccountId),
             token,
@@ -1784,6 +1871,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             return [];
           }),
         ]);
+        campaignInsights = liveCampaignInsights;
         liveSnapshots = buildSnapshotsFromInsights({
           insights,
           adsets: adsetConfigs,
@@ -1809,7 +1897,9 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     latestSnapshots: liveSnapshots ?? latestSnapshots,
     recommendations,
     campaignConfigs,
+    campaignInsights,
     ads: adSummaries,
+    targetResultType: project?.metaAds?.rules?.targetResultType,
   });
   const period =
     options.datePreset || options.since || options.until

@@ -13,7 +13,9 @@ import {
 } from '@librechat/client';
 import type {
   TProject,
+  ProjectMetaAdsSnapshot,
   ProjectMetaAdsAdSummary,
+  ProjectMetaAdsAdSetSummary,
   ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsObjectiveSummary,
   ProjectMetaAdsCampaignDelta,
@@ -89,6 +91,24 @@ type SettingsDrawer = 'account' | 'automation' | null;
 type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
 type PeriodFilter = DatePreset | 'custom';
+type MetaAdsBiRankLevel = 'campaign' | 'adset' | 'ad';
+type MetaAdsBiRankItem = {
+  id: string;
+  level: MetaAdsBiRankLevel;
+  name: string;
+  parentName?: string;
+  objective?: string;
+  resultType?: string;
+  resultCount?: number | null;
+  cpa?: number | null;
+  spend?: number | null;
+  ctr?: number | null;
+};
+type MetaAdsBiRankings = {
+  campaigns: MetaAdsBiRankItem[];
+  adSets: MetaAdsBiRankItem[];
+  ads: MetaAdsBiRankItem[];
+};
 type TableColumnKey =
   | 'level'
   | 'name'
@@ -324,6 +344,7 @@ const resultTypeOptions = [
   },
   { value: 'post_engagement', labelKey: 'com_ui_project_meta_ads_result_type_post_engagement' },
 ] as const;
+const BI_TOP_LIMIT = 5;
 
 const primaryMetricOptions = [
   { value: 'cpa', labelKey: 'com_ui_project_meta_ads_primary_metric_cpa' },
@@ -501,8 +522,23 @@ function formatSignedMetric(value: number | null | undefined) {
 }
 
 function formatTrendDate(value: string) {
+  const [, yearOnly, monthOnly] = value.match(/^(\d{4})-(\d{2})$/) ?? [];
+  if (yearOnly && monthOnly) {
+    return `${monthOnly}/${yearOnly}`;
+  }
   const [, month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
   return month && day ? `${day}/${month}` : value;
+}
+
+function shouldShowTrendLabel(index: number, total: number) {
+  if (total <= 4) {
+    return true;
+  }
+  if (index === 0 || index === total - 1) {
+    return true;
+  }
+  const interval = Math.ceil((total - 2) / 2);
+  return (index - 1) % interval === 0;
 }
 
 function buildChartPath(points: Array<{ x: number; y: number }>) {
@@ -534,7 +570,7 @@ function toMetaAdsLabelKey(value?: string | null) {
 }
 
 function formatMetaAdsCode(value?: string | null) {
-  const normalized = (value || 'UNKNOWN').replace(/^OUTCOME_/, '').replace(/[_\.]+/g, ' ');
+  const normalized = (value || 'UNKNOWN').replace(/^OUTCOME_/, '').replace(/[_.]+/g, ' ');
   return normalized
     .toLowerCase()
     .replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase('pt-BR'));
@@ -568,6 +604,154 @@ function getShareWidth(value: number, total: number) {
     return '0%';
   }
   return `${Math.min(100, Math.max(0, (value / total) * 100)).toFixed(2)}%`;
+}
+
+function getRankEfficiency(item: MetaAdsBiRankItem) {
+  const cpa = Number(item.cpa);
+  if (Number.isFinite(cpa) && cpa > 0) {
+    return cpa;
+  }
+  const spend = Number(item.spend);
+  const resultCount = Number(item.resultCount);
+  if (Number.isFinite(spend) && spend > 0 && Number.isFinite(resultCount) && resultCount > 0) {
+    return spend / resultCount;
+  }
+  return null;
+}
+
+function hasValidRankMetric(item: MetaAdsBiRankItem) {
+  const resultCount = Number(item.resultCount);
+  return Number.isFinite(resultCount) && resultCount > 0 && getRankEfficiency(item) != null;
+}
+
+function sortBiRankItems(items: MetaAdsBiRankItem[]) {
+  return [...items]
+    .filter(hasValidRankMetric)
+    .sort((left, right) => {
+      const leftEfficiency = getRankEfficiency(left) ?? Number.POSITIVE_INFINITY;
+      const rightEfficiency = getRankEfficiency(right) ?? Number.POSITIVE_INFINITY;
+      const efficiencyDiff = leftEfficiency - rightEfficiency;
+      if (Math.abs(efficiencyDiff) > 0.005) {
+        return efficiencyDiff;
+      }
+      const resultDiff = Number(right.resultCount ?? 0) - Number(left.resultCount ?? 0);
+      if (Math.abs(resultDiff) > 0.005) {
+        return resultDiff;
+      }
+      return Number(right.spend ?? 0) - Number(left.spend ?? 0);
+    })
+    .slice(0, BI_TOP_LIMIT);
+}
+
+function matchesBiFilters(
+  item: MetaAdsBiRankItem,
+  objectiveFilter: string,
+  resultTypeFilter: string,
+) {
+  const objective = item.objective || 'UNKNOWN';
+  const resultType = item.resultType || 'UNKNOWN';
+  return (
+    (objectiveFilter === 'all' || objective === objectiveFilter) &&
+    (resultTypeFilter === 'all' || resultType === resultTypeFilter)
+  );
+}
+
+function toAdSetRankItem(
+  campaign: ProjectMetaAdsCampaignSummary,
+  adSet: ProjectMetaAdsAdSetSummary,
+): MetaAdsBiRankItem {
+  return {
+    id: adSet.entityId,
+    level: 'adset',
+    name: adSet.entityName ?? adSet.entityId,
+    parentName: campaign.campaignName ?? campaign.campaignId,
+    objective: campaign.objective || 'UNKNOWN',
+    resultType: adSet.resultType || campaign.resultType || 'UNKNOWN',
+    resultCount: adSet.resultCount,
+    cpa: adSet.cpa,
+    spend: adSet.spend,
+    ctr: adSet.ctr,
+  };
+}
+
+function toAdRankItem(
+  campaign: ProjectMetaAdsCampaignSummary,
+  adSet: ProjectMetaAdsAdSetSummary,
+  ad: ProjectMetaAdsAdSummary,
+): MetaAdsBiRankItem {
+  return {
+    id: ad.adId,
+    level: 'ad',
+    name: ad.adName ?? ad.adId,
+    parentName: adSet.entityName ?? campaign.campaignName ?? campaign.campaignId,
+    objective: campaign.objective || 'UNKNOWN',
+    resultType: ad.resultType || adSet.resultType || campaign.resultType || 'UNKNOWN',
+    resultCount: ad.resultCount,
+    cpa: ad.cpa,
+    spend: ad.spend,
+    ctr: ad.ctr,
+  };
+}
+
+function buildMetaAdsBiRankings(
+  campaigns: ProjectMetaAdsCampaignSummary[],
+  objectiveFilter: string,
+  resultTypeFilter: string,
+): MetaAdsBiRankings {
+  const campaignItems: MetaAdsBiRankItem[] = [];
+  const adSetItems: MetaAdsBiRankItem[] = [];
+  const adItems: MetaAdsBiRankItem[] = [];
+
+  for (const campaign of campaigns) {
+    const campaignItem: MetaAdsBiRankItem = {
+      id: campaign.campaignId,
+      level: 'campaign',
+      name: campaign.campaignName ?? campaign.campaignId,
+      objective: campaign.objective || 'UNKNOWN',
+      resultType: campaign.resultType || 'UNKNOWN',
+      resultCount: campaign.resultCount,
+      cpa: campaign.cpa,
+      spend: campaign.spend,
+      ctr: campaign.ctr,
+    };
+    if (matchesBiFilters(campaignItem, objectiveFilter, resultTypeFilter)) {
+      campaignItems.push(campaignItem);
+    }
+
+    for (const adSet of campaign.adSets ?? []) {
+      const adSetItem = toAdSetRankItem(campaign, adSet);
+      if (matchesBiFilters(adSetItem, objectiveFilter, resultTypeFilter)) {
+        adSetItems.push(adSetItem);
+      }
+
+      for (const ad of adSet.ads ?? []) {
+        const adItem = toAdRankItem(campaign, adSet, ad);
+        if (matchesBiFilters(adItem, objectiveFilter, resultTypeFilter)) {
+          adItems.push(adItem);
+        }
+      }
+    }
+  }
+
+  return {
+    campaigns: sortBiRankItems(campaignItems),
+    adSets: sortBiRankItems(adSetItems),
+    ads: sortBiRankItems(adItems),
+  };
+}
+
+function collectBiResultTypes(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  const resultTypes = new Set<string>();
+  for (const campaign of campaigns) {
+    resultTypes.add(campaign.resultType || 'UNKNOWN');
+    for (const adSet of campaign.adSets ?? []) {
+      resultTypes.add(adSet.resultType || campaign.resultType || 'UNKNOWN');
+      for (const ad of adSet.ads ?? []) {
+        resultTypes.add(ad.resultType || adSet.resultType || campaign.resultType || 'UNKNOWN');
+      }
+    }
+  }
+  return Array.from(resultTypes);
 }
 
 type FrequencyAccumulator = {
@@ -824,22 +1008,104 @@ function getBudgetChangeDelta(change: ProjectMetaAdsBudgetChange) {
   };
 }
 
+type CampaignFallbackAccumulator = ProjectMetaAdsCampaignSummary &
+  FrequencyAccumulator & {
+    cpaSpendTotal: number;
+    cpaResultTotal: number;
+  };
+
+function addFiniteMetric(
+  target: ProjectMetaAdsCampaignSummary,
+  key: keyof Pick<
+    ProjectMetaAdsCampaignSummary,
+    'spend' | 'resultCount' | 'dailyBudget' | 'impressions' | 'reach' | 'clicks' | 'videoP75Watched'
+  >,
+  value: number | null | undefined,
+) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return;
+  }
+  target[key] = Number(target[key] ?? 0) + numericValue;
+}
+
 function buildCampaignFallback(
-  snapshots: NonNullable<ProjectMetaAdsCampaignSummary['adSets']>,
+  snapshots: ProjectMetaAdsSnapshot[],
 ): ProjectMetaAdsCampaignSummary[] {
-  return snapshots.map((snapshot) => ({
-    campaignId: snapshot.campaignId ?? snapshot.entityId,
-    campaignName: snapshot.campaignName ?? snapshot.entityName,
-    spend: snapshot.spend,
-    cpa: snapshot.cpa,
-    roas: snapshot.roas,
-    resultCount: snapshot.resultCount,
-    resultType: snapshot.resultType,
-    dailyBudget: snapshot.dailyBudget,
-    budgetLevel: 'adset',
-    editableBudgetLevel: 'adset',
-    adSets: [snapshot],
-  }));
+  const campaigns = new Map<string, CampaignFallbackAccumulator>();
+
+  for (const snapshot of snapshots) {
+    const campaignId = snapshot.campaignId ?? snapshot.entityId;
+    const campaign =
+      campaigns.get(campaignId) ??
+      ({
+        campaignId,
+        campaignName: snapshot.campaignName ?? snapshot.entityName,
+        objective: snapshot.campaignObjective,
+        resultType: snapshot.resultType,
+        budgetLevel: 'adset',
+        editableBudgetLevel: 'adset',
+        adSets: [],
+        cpaSpendTotal: 0,
+        cpaResultTotal: 0,
+        frequencyWeightedTotal: 0,
+        frequencyWeight: 0,
+        frequencyTotal: 0,
+        frequencyCount: 0,
+      } as CampaignFallbackAccumulator);
+    campaigns.set(campaignId, campaign);
+
+    campaign.campaignName ??= snapshot.campaignName ?? snapshot.entityName;
+    campaign.objective ??= snapshot.campaignObjective;
+    campaign.resultType ??= snapshot.resultType;
+    addFiniteMetric(campaign, 'spend', snapshot.spend);
+    addFiniteMetric(campaign, 'resultCount', snapshot.resultCount);
+    addFiniteMetric(campaign, 'dailyBudget', snapshot.dailyBudget);
+    addFiniteMetric(campaign, 'impressions', snapshot.impressions);
+    addFiniteMetric(campaign, 'reach', snapshot.reach);
+    addFiniteMetric(campaign, 'clicks', snapshot.clicks);
+    addFiniteMetric(campaign, 'videoP75Watched', snapshot.videoP75Watched);
+    addFrequencySample(campaign, snapshot.frequency, snapshot.impressions);
+    campaign.frequency = resolveAverageFrequency(campaign) ?? undefined;
+    if (Number(snapshot.resultCount ?? 0) > 0) {
+      campaign.cpaSpendTotal += Number(snapshot.spend ?? 0);
+      campaign.cpaResultTotal += Number(snapshot.resultCount ?? 0);
+    }
+    campaign.adSets.push(snapshot);
+  }
+
+  return Array.from(campaigns.values()).map((campaign) => {
+    const cpa =
+      campaign.cpaResultTotal > 0
+        ? Number((campaign.cpaSpendTotal / campaign.cpaResultTotal).toFixed(2))
+        : null;
+    const ctr =
+      Number(campaign.impressions ?? 0) > 0
+        ? Number(
+            ((Number(campaign.clicks ?? 0) / Number(campaign.impressions ?? 0)) * 100).toFixed(2),
+          )
+        : undefined;
+    return {
+      campaignId: campaign.campaignId,
+      campaignName: campaign.campaignName,
+      objective: campaign.objective,
+      spend: campaign.spend,
+      cpa,
+      resultCount: campaign.resultCount,
+      resultType: campaign.resultType,
+      dailyBudget: campaign.dailyBudget,
+      impressions: campaign.impressions,
+      reach: campaign.reach,
+      frequency: campaign.frequency,
+      clicks: campaign.clicks,
+      ctr,
+      videoP75Watched: campaign.videoP75Watched,
+      budgetLevel: campaign.budgetLevel,
+      editableBudgetLevel: campaign.editableBudgetLevel,
+      budgetMode: campaign.budgetMode,
+      adSets: campaign.adSets,
+    };
+  });
 }
 
 function getAdAccountDigits(value?: string) {
@@ -1020,6 +1286,8 @@ export default function ProjectMetaAdsPanel({
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [tableView, setTableView] = useState<TableView>('summary');
+  const [biObjectiveFilter, setBiObjectiveFilter] = useState('all');
+  const [biResultTypeFilter, setBiResultTypeFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('last_7d');
   const [customSince, setCustomSince] = useState(() => getDateInputDaysAgo(6));
   const [customUntil, setCustomUntil] = useState(() => toDateInputValue(new Date()));
@@ -1027,6 +1295,7 @@ export default function ProjectMetaAdsPanel({
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedAdPreview, setSelectedAdPreview] = useState<SelectedAdPreview>(null);
+  const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
   const statusParams =
@@ -1132,6 +1401,16 @@ export default function ProjectMetaAdsPanel({
     }, [])
     .sort((left, right) => left.date.localeCompare(right.date));
   const maxDailySpend = Math.max(...dailySpendTrend.map((point) => point.spend), 0);
+  const totalTrendSpend = dailySpendTrend.reduce((sum, point) => sum + point.spend, 0);
+  const latestDailySpend = dailySpendTrend[dailySpendTrend.length - 1]?.spend;
+  const peakDailySpend = dailySpendTrend.reduce<{ date: string; spend: number } | null>(
+    (peak, point) => (!peak || point.spend > peak.spend ? point : peak),
+    null,
+  );
+  const totalBudgetChangeCount = changesByDay.reduce(
+    (sum, point) => sum + Number(point.changeCount ?? 0),
+    0,
+  );
   const meaningfulDeltas = campaignDeltas.filter(hasMeaningfulDelta);
   const chartWidth = 480;
   const chartHeight = 160;
@@ -1213,6 +1492,10 @@ export default function ProjectMetaAdsPanel({
   ).sort((left, right) =>
     getObjectiveLabel(left, localize).localeCompare(getObjectiveLabel(right, localize), 'pt-BR'),
   );
+  const biResultTypeOptions = collectBiResultTypes(campaigns).sort((left, right) =>
+    getResultTypeLabel(left, localize).localeCompare(getResultTypeLabel(right, localize), 'pt-BR'),
+  );
+  const biRankings = buildMetaAdsBiRankings(campaigns, biObjectiveFilter, biResultTypeFilter);
   const objectiveSummaries =
     statusQuery.data?.summary?.objectives && statusQuery.data.summary.objectives.length > 0
       ? statusQuery.data.summary.objectives
@@ -1896,6 +2179,77 @@ export default function ProjectMetaAdsPanel({
 
   const tableColumns = tableViewColumns[tableView].map((key) => tableColumnMap[key]);
   const tableColumnCount = tableColumns.length + 2;
+  const renderEvolutionDeltaClass = (
+    value: number | null | undefined,
+    improvesWhenNegative = false,
+  ) => {
+    if (value == null || Number.isNaN(value) || Math.abs(value) <= 0.005) {
+      return 'text-[#d8d0c2]';
+    }
+    return value < 0 === improvesWhenNegative ? 'text-emerald-200' : 'text-rose-200';
+  };
+  const renderBiRankingCard = (
+    titleKey: TranslationKeys,
+    items: MetaAdsBiRankItem[],
+    testId: string,
+  ) => (
+    <div className="border border-white/10 bg-[#12120f]">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
+        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+          {localize(titleKey)}
+        </h5>
+        <span className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+          {localize('com_ui_project_meta_ads_bi_rank_by')}
+        </span>
+      </div>
+      <div data-testid={testId} className="divide-y divide-white/10">
+        {items.length > 0 ? (
+          items.map((item, index) => {
+            const efficiency = getRankEfficiency(item);
+            const displayName = cleanDashboardName(item.name, item.id);
+            return (
+              <button
+                type="button"
+                key={`${item.level}:${item.id}`}
+                onClick={() => setSelectedBiRankItem(item)}
+                className="grid w-full grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-3 px-3 py-3 text-left transition duration-200 odd:bg-white/[0.025] hover:bg-white/[0.06] focus:outline-none focus:ring-1 focus:ring-[#f3efe6]/40"
+              >
+                <span className="mt-0.5 font-mono text-xs text-[#81796b]">#{index + 1}</span>
+                <div className="min-w-0">
+                  <div
+                    className="truncate text-sm font-semibold text-[#f3efe6]"
+                    title={displayName}
+                  >
+                    {displayName}
+                  </div>
+                  <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px] text-[#a39a8c]">
+                    <span className="truncate">
+                      {getResultTypeLabel(item.resultType, localize)}
+                    </span>
+                    <span className="text-[#5f574d]">/</span>
+                    <span className="font-mono">{formatMetric(item.resultCount)}</span>
+                    <span>{localize('com_ui_project_meta_ads_results')}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-sm font-semibold tabular-nums text-[#f3efe6]">
+                    {formatMoney(efficiency, currency)}
+                  </div>
+                  <div className="mt-1 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                    {localize('com_ui_project_meta_ads_average_cost')}
+                  </div>
+                </div>
+              </button>
+            );
+          })
+        ) : (
+          <div className="px-3 py-5 text-sm text-[#a39a8c]">
+            {localize('com_ui_project_meta_ads_bi_no_rankings')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
   const getTableRowClass = (
     rowIndex: number,
     level: 'campaign' | 'adset' | 'ad',
@@ -1924,6 +2278,20 @@ export default function ProjectMetaAdsPanel({
       -
     </td>
   );
+
+  const renderFrequencyValue = (source: {
+    frequency?: number | null;
+    impressions?: number | null;
+    reach?: number | null;
+  }) => {
+    const hasAuditMetrics = source.impressions != null && source.reach != null;
+    const title = hasAuditMetrics
+      ? `${localize('com_ui_project_meta_ads_impressions')}: ${formatIntegerMetric(
+          source.impressions,
+        )} / ${localize('com_ui_project_meta_ads_reach')}: ${formatIntegerMetric(source.reach)}`
+      : undefined;
+    return <span title={title}>{formatMetric(source.frequency)}</span>;
+  };
 
   const renderLevelCell = (column: TableColumn, labelKey: TranslationKeys) => (
     <td key={column.key} className="px-3 py-3 text-[#9b9284]">
@@ -2096,7 +2464,7 @@ export default function ProjectMetaAdsPanel({
           key={column.key}
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
-          {formatMetric(campaign.frequency)}
+          {renderFrequencyValue(campaign)}
         </td>
       );
     }
@@ -2227,7 +2595,7 @@ export default function ProjectMetaAdsPanel({
           key={column.key}
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
-          {formatMetric(adset.frequency)}
+          {renderFrequencyValue(adset)}
         </td>
       );
     }
@@ -2324,7 +2692,7 @@ export default function ProjectMetaAdsPanel({
           key={column.key}
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
-          {formatMetric(ad.frequency)}
+          {renderFrequencyValue(ad)}
         </td>
       );
     }
@@ -3778,7 +4146,10 @@ export default function ProjectMetaAdsPanel({
 
                             return (
                               <Fragment key={adset.entityId}>
-                                <tr className={getTableRowClass(adsetRowIndex, 'adset')}>
+                                <tr
+                                  data-testid="meta-ads-adset-row"
+                                  className={getTableRowClass(adsetRowIndex, 'adset')}
+                                >
                                   <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
                                     <input
                                       type="checkbox"
@@ -3882,32 +4253,132 @@ export default function ProjectMetaAdsPanel({
           </div>
         )}
 
+        <div className="border-t border-white/10 p-3">
+          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                {localize('com_ui_project_meta_ads_bi_rankings')}
+              </h4>
+              <p className="mt-1 text-xs text-[#81796b]">
+                {localize('com_ui_project_meta_ads_bi_rankings_hint')}
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                {localize('com_ui_project_meta_ads_objective')}
+                <select
+                  data-testid="meta-ads-bi-objective-filter"
+                  value={biObjectiveFilter}
+                  onChange={(event) => setBiObjectiveFilter(event.target.value)}
+                  className={metaAdsInput}
+                >
+                  <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
+                  {objectiveOptions.map((objective) => (
+                    <option key={objective} value={objective}>
+                      {getObjectiveLabel(objective, localize)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                {localize('com_ui_project_meta_ads_target_result_type')}
+                <select
+                  data-testid="meta-ads-bi-result-type-filter"
+                  value={biResultTypeFilter}
+                  onChange={(event) => setBiResultTypeFilter(event.target.value)}
+                  className={metaAdsInput}
+                >
+                  <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
+                  {biResultTypeOptions.map((resultType) => (
+                    <option key={resultType} value={resultType}>
+                      {getResultTypeLabel(resultType, localize)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-3">
+            {renderBiRankingCard(
+              'com_ui_project_meta_ads_bi_top_campaigns',
+              biRankings.campaigns,
+              'meta-ads-bi-campaigns',
+            )}
+            {renderBiRankingCard(
+              'com_ui_project_meta_ads_bi_top_adsets',
+              biRankings.adSets,
+              'meta-ads-bi-adsets',
+            )}
+            {renderBiRankingCard(
+              'com_ui_project_meta_ads_bi_top_ads',
+              biRankings.ads,
+              'meta-ads-bi-ads',
+            )}
+          </div>
+        </div>
+
         {hasEvolutionSection && (
-          <div className="border-t border-border-light p-3">
-            <h4 className="mb-3 text-xs font-semibold uppercase text-text-tertiary">
+          <div className="border-t border-white/10 p-3">
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
               {localize('com_ui_project_meta_ads_evolution_analysis')}
             </h4>
             <div
               data-testid="meta-ads-evolution-dashboard"
               className="grid gap-3 xl:grid-cols-[1.4fr_1fr]"
             >
-              <div className="border border-border-light bg-surface-primary p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_evolution')}
-                  </h5>
-                  <span className="font-mono text-[11px] text-text-tertiary">
+              <div className="border border-white/10 bg-[#12120f] p-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                      {localize('com_ui_project_meta_ads_spend_trend')}
+                    </h5>
+                    <p className="mt-1 text-xs text-[#81796b]">
+                      {localize('com_ui_project_meta_ads_spend_trend_hint')}
+                    </p>
+                  </div>
+                  <span className="font-mono text-[11px] text-[#81796b]">
                     {trendPoints.length} {localize('com_ui_project_meta_ads_trend_points')}
                   </span>
                 </div>
-                <div className="mt-3 h-44 border-b border-border-light">
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  {[
+                    [
+                      'com_ui_project_meta_ads_total_spend' as TranslationKeys,
+                      formatMoney(totalTrendSpend, currency),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_latest_spend' as TranslationKeys,
+                      formatMoney(latestDailySpend, currency),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_peak_day' as TranslationKeys,
+                      peakDailySpend
+                        ? `${formatTrendDate(peakDailySpend.date)} · ${formatMoney(peakDailySpend.spend, currency)}`
+                        : '-',
+                    ],
+                    [
+                      'com_ui_project_meta_ads_budget_changes' as TranslationKeys,
+                      formatIntegerMetric(totalBudgetChangeCount),
+                    ],
+                  ].map(([labelKey, value]) => (
+                    <div key={labelKey} className="border border-white/10 bg-white/[0.025] p-2">
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                        {localize(labelKey)}
+                      </div>
+                      <div className="mt-1 truncate font-mono text-xs text-[#f3efe6]" title={value}>
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 h-48 border-b border-white/10">
                   {canRenderSpendChart ? (
                     <svg
                       data-testid="meta-ads-evolution-chart"
                       viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                       role="img"
-                      aria-label={localize('com_ui_project_meta_ads_evolution')}
-                      className="h-full w-full text-text-primary"
+                      aria-label={localize('com_ui_project_meta_ads_spend_trend')}
+                      className="h-full w-full text-[#f3efe6]"
                       preserveAspectRatio="none"
                     >
                       <path d={spendChartAreaPath} fill="currentColor" opacity="0.08" />
@@ -3936,83 +4407,163 @@ export default function ProjectMetaAdsPanel({
                       ))}
                     </svg>
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm text-text-secondary">
+                    <div className="flex h-full w-full items-center justify-center text-sm text-[#a39a8c]">
                       {localize('com_ui_project_meta_ads_insufficient_evolution')}
                     </div>
                   )}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-text-tertiary">
-                  {dailySpendTrend.slice(-8).map((point) => (
-                    <span key={point.date} className="font-mono">
-                      {formatTrendDate(point.date)} {formatMoney(point.spend, currency)}
-                    </span>
-                  ))}
+                <div className="mt-2 flex justify-between gap-3 text-[11px] text-[#81796b]">
+                  {dailySpendTrend.map((point, index) =>
+                    shouldShowTrendLabel(index, dailySpendTrend.length) ? (
+                      <span key={point.date} className="font-mono">
+                        {formatTrendDate(point.date)}
+                      </span>
+                    ) : null,
+                  )}
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
-                <div className="border border-border-light bg-surface-primary p-3">
-                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_best_evolution')}
-                  </h5>
-                  <div className="mt-3 divide-y divide-border-light">
-                    {bestEvolution.length > 0 ? (
-                      bestEvolution.map((delta) => (
-                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
-                          <div className="truncate text-sm font-medium text-text-primary">
-                            {cleanDashboardName(delta.campaignName, delta.campaignId)}
-                          </div>
-                          <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs text-text-secondary">
-                            <span>{formatSignedMoney(delta.spendDelta, currency)}</span>
-                            <span>{formatSignedMetric(delta.resultDelta)}</span>
-                            <span>{formatSignedMoney(delta.cpaDelta, currency)}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="py-4 text-sm text-text-secondary">
-                        {localize('com_ui_project_meta_ads_no_evolution')}
-                      </div>
-                    )}
+                <div className="border border-white/10 bg-[#12120f]">
+                  <div className="border-b border-white/10 px-3 py-2">
+                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                      {localize('com_ui_project_meta_ads_best_evolution')}
+                    </h5>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[34rem] text-left text-xs">
+                      <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                        <tr>
+                          <th className="px-3 py-2">
+                            {localize('com_ui_project_meta_ads_campaign')}
+                          </th>
+                          <th className="px-3 py-2 text-right">
+                            {localize('com_ui_project_meta_ads_spend_delta')}
+                          </th>
+                          <th className="px-3 py-2 text-right">
+                            {localize('com_ui_project_meta_ads_results_delta')}
+                          </th>
+                          <th className="px-3 py-2 text-right">
+                            {localize('com_ui_project_meta_ads_cpa_delta')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {bestEvolution.length > 0 ? (
+                          bestEvolution.map((delta) => {
+                            const name = cleanDashboardName(delta.campaignName, delta.campaignId);
+                            return (
+                              <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
+                                <td
+                                  className="max-w-64 truncate px-3 py-2.5 text-sm font-medium text-[#f3efe6]"
+                                  title={name}
+                                >
+                                  {name}
+                                </td>
+                                <td
+                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                    delta.spendDelta,
+                                  )}`}
+                                >
+                                  {formatSignedMoney(delta.spendDelta, currency)}
+                                </td>
+                                <td
+                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                    delta.resultDelta,
+                                  )}`}
+                                >
+                                  {formatSignedMetric(delta.resultDelta)}
+                                </td>
+                                <td
+                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                    delta.cpaDelta,
+                                    true,
+                                  )}`}
+                                >
+                                  {formatSignedMoney(delta.cpaDelta, currency)}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                              {localize('com_ui_project_meta_ads_no_evolution')}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                <div className="border border-border-light bg-surface-primary p-3">
-                  <h5 className="text-xs font-semibold uppercase text-text-tertiary">
-                    {localize('com_ui_project_meta_ads_budget_changes')}
-                  </h5>
-                  <div className="mt-3 divide-y divide-border-light">
-                    {evolutionAlerts.length > 0 ? (
-                      evolutionAlerts.map((delta) => (
-                        <div key={delta.campaignId} className="py-2 first:pt-0 last:pb-0">
-                          <div className="truncate text-sm font-medium text-text-primary">
-                            {cleanDashboardName(
+                <div className="border border-white/10 bg-[#12120f]">
+                  <div className="border-b border-white/10 px-3 py-2">
+                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                      {localize('com_ui_project_meta_ads_budget_changes')}
+                    </h5>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[34rem] text-left text-xs">
+                      <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                        <tr>
+                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_name')}</th>
+                          <th className="px-3 py-2 text-right">
+                            {localize('com_ui_project_meta_ads_budget_delta')}
+                          </th>
+                          <th className="px-3 py-2 text-right">
+                            {localize('com_ui_project_meta_ads_frequency_delta')}
+                          </th>
+                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_actor')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {evolutionAlerts.length > 0 ? (
+                          evolutionAlerts.map((delta) => {
+                            const name = cleanDashboardName(
                               delta.latestChange?.entityName ?? delta.campaignName,
                               delta.campaignId,
-                            )}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-2 font-mono text-xs text-text-secondary">
-                            <span>
-                              {formatSignedMoney(
-                                delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta,
-                                currency,
-                              )}
-                            </span>
-                            {delta.frequencyDelta != null && (
-                              <span>
-                                {formatSignedMetric(delta.frequencyDelta)}{' '}
-                                {localize('com_ui_project_meta_ads_frequency')}
-                              </span>
-                            )}
-                            {delta.latestChange?.actor && <span>{delta.latestChange.actor}</span>}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="py-4 text-sm text-text-secondary">
-                        {localize('com_ui_project_meta_ads_no_history')}
-                      </div>
-                    )}
+                            );
+                            const budgetDelta =
+                              delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
+                            return (
+                              <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
+                                <td
+                                  className="max-w-64 truncate px-3 py-2.5 text-sm font-medium text-[#f3efe6]"
+                                  title={name}
+                                >
+                                  {name}
+                                </td>
+                                <td
+                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                    budgetDelta,
+                                  )}`}
+                                >
+                                  {formatSignedMoney(budgetDelta, currency)}
+                                </td>
+                                <td
+                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                    delta.frequencyDelta,
+                                    true,
+                                  )}`}
+                                >
+                                  {formatSignedMetric(delta.frequencyDelta)}
+                                </td>
+                                <td className="px-3 py-2.5 text-[#a39a8c]">
+                                  {delta.latestChange?.actor ?? '-'}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                              {localize('com_ui_project_meta_ads_no_history')}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -4064,6 +4615,94 @@ export default function ProjectMetaAdsPanel({
           )}
         </div>
       </div>
+
+      <OGDialog
+        open={Boolean(selectedBiRankItem)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedBiRankItem(null);
+          }
+        }}
+      >
+        {selectedBiRankItem && (
+          <OGDialogContent className="max-w-2xl overflow-hidden p-0">
+            <OGDialogHeader className="border-b border-white/10 bg-[#12120f] px-5 py-4 text-left">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                {localize('com_ui_project_meta_ads_bi_rank_detail')}
+              </div>
+              <OGDialogTitle className="mt-1 text-base font-semibold text-[#f3efe6]">
+                {cleanDashboardName(selectedBiRankItem.name, selectedBiRankItem.id)}
+              </OGDialogTitle>
+              {selectedBiRankItem.parentName && (
+                <div className="truncate text-xs text-[#81796b]">
+                  {cleanDashboardName(selectedBiRankItem.parentName, selectedBiRankItem.parentName)}
+                </div>
+              )}
+            </OGDialogHeader>
+            <div className="bg-[#0f0e0b] p-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  [
+                    'com_ui_project_meta_ads_average_cost' as TranslationKeys,
+                    formatMoney(getRankEfficiency(selectedBiRankItem), currency),
+                  ],
+                  [
+                    'com_ui_project_meta_ads_results' as TranslationKeys,
+                    formatMetric(selectedBiRankItem.resultCount),
+                  ],
+                  [
+                    'com_ui_project_meta_ads_spend' as TranslationKeys,
+                    formatMoney(selectedBiRankItem.spend, currency),
+                  ],
+                ].map(([labelKey, value]) => (
+                  <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
+                    <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                      {localize(labelKey)}
+                    </div>
+                    <div className="mt-2 font-mono text-lg font-semibold text-[#f3efe6]">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 text-sm text-[#d8d0c2] sm:grid-cols-2">
+                {[
+                  [
+                    'com_ui_project_meta_ads_level' as TranslationKeys,
+                    selectedBiRankItem.level === 'campaign'
+                      ? localize('com_ui_project_meta_ads_level_campaign')
+                      : selectedBiRankItem.level === 'adset'
+                        ? localize('com_ui_project_meta_ads_level_ad_set')
+                        : localize('com_ui_project_meta_ads_level_ad'),
+                  ],
+                  [
+                    'com_ui_project_meta_ads_objective' as TranslationKeys,
+                    getObjectiveLabel(selectedBiRankItem.objective, localize),
+                  ],
+                  [
+                    'com_ui_project_meta_ads_target_result_type' as TranslationKeys,
+                    getResultTypeLabel(selectedBiRankItem.resultType, localize),
+                  ],
+                  [
+                    'com_ui_project_meta_ads_ctr' as TranslationKeys,
+                    formatPercent(selectedBiRankItem.ctr),
+                  ],
+                ].map(([labelKey, value]) => (
+                  <div
+                    key={labelKey}
+                    className="flex items-center justify-between gap-3 border-b border-white/10 py-2"
+                  >
+                    <span className="text-xs uppercase tracking-[0.12em] text-[#81796b]">
+                      {localize(labelKey)}
+                    </span>
+                    <span className="text-right font-medium text-[#f3efe6]">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </OGDialogContent>
+        )}
+      </OGDialog>
 
       <OGDialog
         open={Boolean(selectedAdPreview)}
