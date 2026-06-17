@@ -1527,6 +1527,25 @@ describe('ProjectMetaAdsPanel', () => {
     });
   });
 
+  it('does not show an apply button for hold recommendations', () => {
+    mockStatusData.recommendations = [
+      {
+        _id: 'r1',
+        entityId: 'adset-1',
+        entityName: 'Prospecting',
+        action: 'hold',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 100,
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('Prospecting')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_project_meta_ads_apply')).not.toBeInTheDocument();
+  });
+
   it('shows apply errors to the user', () => {
     mockStatusData.recommendations = [
       {

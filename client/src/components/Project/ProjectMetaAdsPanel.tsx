@@ -821,6 +821,10 @@ function getRecommendationLabel(
   return `${recommendation.action}: ${current} -> ${proposed}`;
 }
 
+function canApplyRecommendation(recommendation: ProjectMetaAdsRecommendation | undefined) {
+  return Boolean(recommendation && recommendation.action !== 'hold');
+}
+
 function getAdThumbnailUrl(ad: ProjectMetaAdsAdSummary) {
   return ad.thumbnailUrl || ad.imageUrl;
 }
@@ -1797,7 +1801,7 @@ export default function ProjectMetaAdsPanel({
   ) => (
     <td key={column.key} className="px-2 py-2">
       <div className="flex gap-1">
-        {recommendation && (
+        {canApplyRecommendation(recommendation) && (
           <button
             type="button"
             disabled={!canEdit || applyRecommendation.isLoading}
@@ -2994,14 +2998,16 @@ export default function ProjectMetaAdsPanel({
                         {getRecommendationLabel(recommendation, currency)}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      disabled={!canEdit || applyRecommendation.isLoading}
-                      onClick={() => onApply(recommendation)}
-                      className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {localize('com_ui_project_meta_ads_apply')}
-                    </button>
+                    {canApplyRecommendation(recommendation) && (
+                      <button
+                        type="button"
+                        disabled={!canEdit || applyRecommendation.isLoading}
+                        onClick={() => onApply(recommendation)}
+                        className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {localize('com_ui_project_meta_ads_apply')}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
