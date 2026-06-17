@@ -137,6 +137,7 @@ export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent
 export const archiveProject = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}/archive`;
 export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
+export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
 export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
 export const projectMetaAdsApply = (id: string, recommendationId: string) =>

@@ -278,6 +278,13 @@ export type ProjectMetaAdsStatus = {
   };
 };
 
+export type ProjectMetaAdsTenantTokenResponse = {
+  credentials: {
+    tenantConfigured: boolean;
+    secretName?: string;
+  };
+};
+
 export type ProjectMetaAdsStatusParams = {
   datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
   since?: string;

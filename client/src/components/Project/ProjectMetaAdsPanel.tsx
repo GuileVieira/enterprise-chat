@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
+import { SystemRoles } from 'librechat-data-provider';
 import {
   OGDialog,
   OGDialogTitle,
@@ -24,8 +25,9 @@ import {
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsBudgetMutation,
   useUpdateProjectMetaAdsMutation,
+  useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
-import { useLocalize } from '~/hooks';
+import { useAuthContext, useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
@@ -67,6 +69,32 @@ type RequestError = {
   };
 };
 type SettingsDrawer = 'account' | 'automation' | null;
+type TableView = 'summary' | 'performance' | 'creative' | 'rules';
+type TableColumnKey =
+  | 'level'
+  | 'name'
+  | 'budget'
+  | 'objective'
+  | 'budgetMode'
+  | 'frequency'
+  | 'result'
+  | 'cpa'
+  | 'spend'
+  | 'ctr'
+  | 'clicks'
+  | 'video'
+  | 'rule'
+  | 'recommendation'
+  | 'actions';
+type TableColumn = {
+  key: TableColumnKey;
+  labelKey?: TranslationKeys;
+  label?: string;
+  widthClass: string;
+  align?: 'left' | 'right';
+  sortableKey?: string;
+  defaultDirection?: 'asc' | 'desc';
+};
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -85,6 +113,153 @@ const periodOptions = [
   { value: 'last_14d', labelKey: 'com_ui_project_meta_ads_period_last_14d' },
   { value: 'last_30d', labelKey: 'com_ui_project_meta_ads_period_last_30d' },
 ] as const;
+
+const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [
+  { value: 'summary', labelKey: 'com_ui_project_meta_ads_view_summary' },
+  { value: 'performance', labelKey: 'com_ui_project_meta_ads_view_performance' },
+  { value: 'creative', labelKey: 'com_ui_project_meta_ads_view_creative' },
+  { value: 'rules', labelKey: 'com_ui_project_meta_ads_view_rules' },
+];
+
+const tableColumnMap: Record<TableColumnKey, TableColumn> = {
+  level: {
+    key: 'level',
+    labelKey: 'com_ui_project_meta_ads_delivery',
+    widthClass: 'w-28',
+  },
+  name: {
+    key: 'name',
+    labelKey: 'com_ui_project_meta_ads_campaign',
+    widthClass: 'w-80',
+    sortableKey: 'name',
+    defaultDirection: 'asc',
+  },
+  budget: {
+    key: 'budget',
+    labelKey: 'com_ui_project_meta_ads_budget_defined',
+    widthClass: 'w-28',
+    align: 'right',
+    sortableKey: 'budget',
+  },
+  objective: {
+    key: 'objective',
+    labelKey: 'com_ui_project_meta_ads_objective',
+    widthClass: 'w-40',
+  },
+  budgetMode: {
+    key: 'budgetMode',
+    labelKey: 'com_ui_project_meta_ads_budget_mode',
+    widthClass: 'w-24',
+  },
+  frequency: {
+    key: 'frequency',
+    labelKey: 'com_ui_project_meta_ads_frequency',
+    widthClass: 'w-24',
+    align: 'right',
+    sortableKey: 'frequency',
+  },
+  result: {
+    key: 'result',
+    labelKey: 'com_ui_project_meta_ads_results',
+    widthClass: 'w-24',
+    align: 'right',
+    sortableKey: 'result',
+  },
+  cpa: {
+    key: 'cpa',
+    labelKey: 'com_ui_project_meta_ads_cost_result',
+    widthClass: 'w-28',
+    align: 'right',
+    sortableKey: 'cpa',
+    defaultDirection: 'asc',
+  },
+  spend: {
+    key: 'spend',
+    labelKey: 'com_ui_project_meta_ads_spend',
+    widthClass: 'w-28',
+    align: 'right',
+    sortableKey: 'spend',
+  },
+  ctr: {
+    key: 'ctr',
+    label: 'CTR',
+    widthClass: 'w-20',
+    align: 'right',
+    sortableKey: 'ctr',
+  },
+  clicks: {
+    key: 'clicks',
+    labelKey: 'com_ui_project_meta_ads_clicks',
+    widthClass: 'w-20',
+    align: 'right',
+    sortableKey: 'clicks',
+  },
+  video: {
+    key: 'video',
+    labelKey: 'com_ui_project_meta_ads_video_p75',
+    widthClass: 'w-24',
+    align: 'right',
+  },
+  rule: {
+    key: 'rule',
+    labelKey: 'com_ui_project_meta_ads_rule',
+    widthClass: 'w-40',
+  },
+  recommendation: {
+    key: 'recommendation',
+    labelKey: 'com_ui_project_meta_ads_recommendation',
+    widthClass: 'w-64',
+  },
+  actions: {
+    key: 'actions',
+    labelKey: 'com_ui_project_meta_ads_actions',
+    widthClass: 'w-32',
+  },
+};
+
+const tableViewColumns: Record<TableView, TableColumnKey[]> = {
+  summary: [
+    'level',
+    'name',
+    'budget',
+    'objective',
+    'budgetMode',
+    'spend',
+    'result',
+    'cpa',
+    'frequency',
+    'ctr',
+    'clicks',
+    'video',
+    'rule',
+    'recommendation',
+    'actions',
+  ],
+  performance: [
+    'level',
+    'name',
+    'budget',
+    'objective',
+    'budgetMode',
+    'spend',
+    'result',
+    'cpa',
+    'frequency',
+    'ctr',
+    'clicks',
+    'video',
+    'actions',
+  ],
+  creative: ['level', 'name', 'spend', 'ctr', 'cpa', 'frequency', 'result', 'clicks', 'actions'],
+  rules: ['level', 'name', 'budget', 'rule', 'recommendation', 'actions'],
+};
+
+const tableViewMinWidth: Record<TableView, string> = {
+  summary: 'min-w-[1900px]',
+  performance: 'min-w-[1540px]',
+  creative: 'min-w-[1160px]',
+  rules: 'min-w-[1060px]',
+};
 
 const defaultRules: Required<MetaAdsRules> = {
   targetCpa: 45,
@@ -381,11 +556,15 @@ export default function ProjectMetaAdsPanel({
 }) {
   const localize = useLocalize();
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const { showToast } = useToastContext();
   const [settings, setSettings] = useState(() => normalizeSettings(project));
   const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
   const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [tenantAccessToken, setTenantAccessToken] = useState('');
+  const [showTenantAccessToken, setShowTenantAccessToken] = useState(false);
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
   const [collapsedAboCampaignIds, setCollapsedAboCampaignIds] = useState<string[]>([]);
@@ -396,6 +575,7 @@ export default function ProjectMetaAdsPanel({
   const [campaignSearch, setCampaignSearch] = useState('');
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
+  const [tableView, setTableView] = useState<TableView>('summary');
   const [datePreset, setDatePreset] = useState<(typeof periodOptions)[number]['value']>('last_7d');
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
@@ -405,11 +585,13 @@ export default function ProjectMetaAdsPanel({
   const startupConfigQuery = useGetStartupConfig();
   const statusQuery = useProjectMetaAdsQuery(project.projectId, { datePreset });
   const updateSettings = useUpdateProjectMetaAdsMutation();
+  const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
+  const canManageTenantToken = user?.role === SystemRoles.ADMIN;
 
   useEffect(() => {
     setSettings(normalizeSettings(project));
@@ -417,6 +599,9 @@ export default function ProjectMetaAdsPanel({
     setSettingsDraft(null);
     setSettingsDraftToken('');
     setShowSettingsDraftToken(false);
+    setCredentialsDialogOpen(false);
+    setTenantAccessToken('');
+    setShowTenantAccessToken(false);
   }, [project]);
 
   useEffect(() => {
@@ -518,6 +703,8 @@ export default function ProjectMetaAdsPanel({
   const hasMaskedToken =
     tokenCredentials?.effectiveSource === 'project' ||
     tokenCredentials?.effectiveSource === 'tenant';
+  const hasProjectToken =
+    tokenCredentials?.effectiveSource === 'project' || Boolean(settingsDraft?.tokenSecretName);
   const selectedCampaignIds = selectedEntityIds
     .filter((id) => id.startsWith('campaign:'))
     .map((id) => id.replace('campaign:', ''));
@@ -657,17 +844,18 @@ export default function ProjectMetaAdsPanel({
     saveSettings(settings, '');
   };
 
-  const onUseTenantToken = () => {
+  const onClearProjectToken = () => {
+    if (!settingsDraft) {
+      return;
+    }
+    const nextSettings = {
+      ...settingsDraft,
+      tokenSecretName: '',
+      credentialMode: 'tenant_default',
+    };
+    setSettingsDraft(nextSettings);
     setSettingsDraftToken('');
-    setSettingsDraft((current) =>
-      current
-        ? {
-            ...current,
-            tokenSecretName: '',
-            credentialMode: 'tenant_default',
-          }
-        : current,
-    );
+    saveSettings(nextSettings, '', closeCredentialsDialog);
   };
 
   const onApply = (recommendation: ProjectMetaAdsRecommendation) => {
@@ -1004,6 +1192,28 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
+  const onExpandAllRows = () => {
+    setCollapsedAboCampaignIds([]);
+    setExpandedCampaignIds(
+      campaigns
+        .filter((campaign) => campaign.budgetMode !== 'ABO')
+        .map((campaign) => campaign.campaignId),
+    );
+    setCollapsedAdSetAdsIds([]);
+  };
+
+  const onCollapseAllRows = () => {
+    setCollapsedAboCampaignIds(
+      campaigns
+        .filter((campaign) => campaign.budgetMode === 'ABO')
+        .map((campaign) => campaign.campaignId),
+    );
+    setExpandedCampaignIds([]);
+    setCollapsedAdSetAdsIds(
+      campaigns.flatMap((campaign) => campaign.adSets.map((adset) => adset.entityId)),
+    );
+  };
+
   const onOpenTrafficAgentChat = () => {
     if (!canOpenTrafficAgentChat || !statusQuery.data) {
       return;
@@ -1035,6 +1245,9 @@ export default function ProjectMetaAdsPanel({
     setSettingsDraft(settings);
     setSettingsDraftToken('');
     setShowSettingsDraftToken(false);
+    setCredentialsDialogOpen(false);
+    setTenantAccessToken('');
+    setShowTenantAccessToken(false);
   };
 
   const closeSettingsDrawer = () => {
@@ -1042,6 +1255,25 @@ export default function ProjectMetaAdsPanel({
     setSettingsDraft(null);
     setSettingsDraftToken('');
     setShowSettingsDraftToken(false);
+    setCredentialsDialogOpen(false);
+    setTenantAccessToken('');
+    setShowTenantAccessToken(false);
+  };
+
+  const openCredentialsDialog = () => {
+    setCredentialsDialogOpen(true);
+    setSettingsDraftToken('');
+    setTenantAccessToken('');
+    setShowSettingsDraftToken(false);
+    setShowTenantAccessToken(false);
+  };
+
+  const closeCredentialsDialog = () => {
+    setCredentialsDialogOpen(false);
+    setSettingsDraftToken('');
+    setTenantAccessToken('');
+    setShowSettingsDraftToken(false);
+    setShowTenantAccessToken(false);
   };
 
   const onSaveSettingsDrawer = () => {
@@ -1049,6 +1281,39 @@ export default function ProjectMetaAdsPanel({
       return;
     }
     saveSettings(settingsDraft, settingsDraftToken, closeSettingsDrawer);
+  };
+
+  const onSaveProjectToken = () => {
+    if (!settingsDraft) {
+      return;
+    }
+    saveSettings(settingsDraft, settingsDraftToken, closeCredentialsDialog);
+  };
+
+  const onSaveTenantToken = () => {
+    const trimmedToken = tenantAccessToken.trim();
+    if (!trimmedToken) {
+      return;
+    }
+    updateTenantToken.mutate(
+      {
+        projectId: project.projectId,
+        metaAccessToken: trimmedToken,
+      },
+      {
+        onSuccess: () => {
+          setTenantAccessToken('');
+          setShowTenantAccessToken(false);
+          statusQuery.refetch();
+          showToast({ message: localize('com_ui_saved'), status: 'success' });
+        },
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+          showToast({ message, status: 'error' });
+        },
+      },
+    );
   };
 
   const renderAdMetric = (labelKey: TranslationKeys, value: string) => (
@@ -1060,72 +1325,476 @@ export default function ProjectMetaAdsPanel({
     </div>
   );
 
-  const renderAdRow = (ad: ProjectMetaAdsAdSummary) => {
+  const tableColumns = tableViewColumns[tableView].map((key) => tableColumnMap[key]);
+  const tableColumnCount = tableColumns.length + 2;
+  const renderEmptyCell = (column: TableColumn) => (
+    <td
+      key={column.key}
+      className={`px-2 py-2 ${
+        column.align === 'right' ? 'text-right font-mono tabular-nums' : ''
+      } text-text-tertiary`}
+    >
+      -
+    </td>
+  );
+
+  const renderLevelCell = (column: TableColumn, labelKey: TranslationKeys) => (
+    <td key={column.key} className="px-2 py-2 text-text-secondary">
+      {localize(labelKey)}
+    </td>
+  );
+
+  const renderNameTooltip = (value: string) => (
+    <span
+      aria-hidden="true"
+      data-tooltip={value}
+      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400 bg-amber-100 px-2 py-1 text-xs font-medium leading-5 text-amber-950 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-amber-500 dark:bg-amber-950 dark:text-amber-100"
+    />
+  );
+
+  const renderCampaignNameCell = (campaign: ProjectMetaAdsCampaignSummary) => (
+    <td
+      key="name"
+      className="sticky left-20 z-10 border-l-2 border-text-primary bg-inherit px-2 py-2 font-semibold text-text-primary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+    >
+      <div className="group relative min-w-0">
+        <div className="truncate">{campaign.campaignName ?? campaign.campaignId}</div>
+        {renderNameTooltip(campaign.campaignName ?? campaign.campaignId)}
+      </div>
+    </td>
+  );
+
+  const renderAdSetNameCell = (adset: ProjectMetaAdsCampaignSummary['adSets'][number]) => (
+    <td
+      key="name"
+      className="sticky left-20 z-10 border-l-2 border-text-secondary bg-inherit px-2 py-2 pl-5 text-text-primary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+    >
+      <div className="group relative min-w-0">
+        <div className="truncate">{adset.entityName ?? adset.entityId}</div>
+        {renderNameTooltip(adset.entityName ?? adset.entityId)}
+      </div>
+    </td>
+  );
+
+  const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
     const mediaUrl = getAdThumbnailUrl(ad);
+    return (
+      <td
+        key="name"
+        className="sticky left-20 z-10 border-l-2 border-border-light bg-inherit px-2 py-2 pl-8 shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)] focus-within:z-50 hover:z-50"
+      >
+        <div className="group relative flex min-w-0 items-center gap-2">
+          <div className="h-9 w-16 shrink-0 overflow-hidden border border-border-light bg-surface-secondary">
+            {mediaUrl ? (
+              <img
+                src={mediaUrl}
+                alt={ad.adName ?? ad.title ?? ad.adId}
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-text-tertiary">
+                {localize('com_ui_project_meta_ads_no_creative_media')}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-text-primary">
+              {ad.adName ?? ad.title ?? ad.adId}
+            </div>
+            <div className="truncate text-xs text-text-secondary">{ad.title ?? ad.body ?? '-'}</div>
+          </div>
+          {renderNameTooltip(ad.adName ?? ad.title ?? ad.adId)}
+        </div>
+      </td>
+    );
+  };
+
+  const renderCampaignActionCell = (
+    column: TableColumn,
+    recommendation: ProjectMetaAdsRecommendation | undefined,
+  ) => (
+    <td key={column.key} className="px-2 py-2">
+      <div className="flex gap-1">
+        {recommendation && (
+          <button
+            type="button"
+            disabled={!canEdit || applyRecommendation.isLoading}
+            onClick={() => onApply(recommendation)}
+            className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {localize('com_ui_project_meta_ads_apply')}
+          </button>
+        )}
+      </div>
+    </td>
+  );
+
+  const renderCampaignCell = (
+    column: TableColumn,
+    campaign: ProjectMetaAdsCampaignSummary,
+    recommendation: ProjectMetaAdsRecommendation | undefined,
+  ) => {
+    if (column.key === 'level') {
+      return renderLevelCell(column, 'com_ui_project_meta_ads_level_campaign');
+    }
+    if (column.key === 'name') {
+      return renderCampaignNameCell(campaign);
+    }
+    if (column.key === 'budget') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {campaign.editableBudgetLevel === 'campaign' ? (
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={() =>
+                onOpenBudgetEditor({
+                  entityLevel: 'campaign',
+                  entityId: campaign.campaignId,
+                  entityName: campaign.campaignName,
+                  currentBudget: campaign.dailyBudget,
+                })
+              }
+              className="border border-border-light bg-surface-secondary px-2 py-1 font-mono tabular-nums text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+            >
+              {formatMoney(campaign.dailyBudget, currency)}
+            </button>
+          ) : (
+            formatMoney(campaign.dailyBudget, currency)
+          )}
+        </td>
+      );
+    }
+    if (column.key === 'objective') {
+      return (
+        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
+          {campaign.objective ?? '-'}
+        </td>
+      );
+    }
+    if (column.key === 'budgetMode') {
+      return (
+        <td key={column.key} className="px-2 py-2 text-text-secondary">
+          {campaign.budgetMode ?? '-'}
+        </td>
+      );
+    }
+    if (column.key === 'frequency') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.frequency)}
+        </td>
+      );
+    }
+    if (column.key === 'result') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.resultCount)}
+        </td>
+      );
+    }
+    if (column.key === 'cpa') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(campaign.cpa, currency)}
+        </td>
+      );
+    }
+    if (column.key === 'spend') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(campaign.spend, currency)}
+        </td>
+      );
+    }
+    if (column.key === 'ctr') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.ctr)}
+        </td>
+      );
+    }
+    if (column.key === 'clicks') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.clicks)}
+        </td>
+      );
+    }
+    if (column.key === 'video') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.videoP75Watched)}
+        </td>
+      );
+    }
+    if (column.key === 'rule') {
+      return (
+        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
+          {getEntityRuleLabel('campaign', campaign.campaignId)}
+        </td>
+      );
+    }
+    if (column.key === 'recommendation') {
+      return (
+        <td key={column.key} className="px-2 py-2 text-text-secondary">
+          <div className="truncate">{getRecommendationLabel(recommendation, currency)}</div>
+          {recommendation?.reason && (
+            <div className="truncate text-text-tertiary">{recommendation.reason}</div>
+          )}
+        </td>
+      );
+    }
+    return renderCampaignActionCell(column, recommendation);
+  };
+
+  const renderAdSetCell = (
+    column: TableColumn,
+    campaign: ProjectMetaAdsCampaignSummary,
+    adset: ProjectMetaAdsCampaignSummary['adSets'][number],
+    recommendation: ProjectMetaAdsRecommendation | undefined,
+  ) => {
+    if (column.key === 'level') {
+      return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad_set');
+    }
+    if (column.key === 'name') {
+      return renderAdSetNameCell(adset);
+    }
+    if (column.key === 'budget') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {campaign.editableBudgetLevel === 'adset' ? (
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={() =>
+                onOpenBudgetEditor({
+                  entityLevel: 'adset',
+                  entityId: adset.entityId,
+                  entityName: adset.entityName,
+                  currentBudget: adset.dailyBudget,
+                })
+              }
+              className="border border-border-light bg-surface-primary px-2 py-1 font-mono tabular-nums text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
+            >
+              {formatMoney(adset.dailyBudget, currency)}
+            </button>
+          ) : (
+            formatMoney(adset.dailyBudget, currency)
+          )}
+        </td>
+      );
+    }
+    if (column.key === 'objective') {
+      return renderEmptyCell(column);
+    }
+    if (column.key === 'budgetMode') {
+      return (
+        <td key={column.key} className="px-2 py-2 text-text-secondary">
+          {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
+        </td>
+      );
+    }
+    if (column.key === 'frequency') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.frequency)}
+        </td>
+      );
+    }
+    if (column.key === 'result') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.resultCount)}
+        </td>
+      );
+    }
+    if (column.key === 'cpa') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(adset.cpa, currency)}
+        </td>
+      );
+    }
+    if (column.key === 'spend') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(adset.spend, currency)}
+        </td>
+      );
+    }
+    if (column.key === 'ctr') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.ctr)}
+        </td>
+      );
+    }
+    if (column.key === 'clicks') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.clicks)}
+        </td>
+      );
+    }
+    if (column.key === 'video') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.videoP75Watched)}
+        </td>
+      );
+    }
+    if (column.key === 'rule') {
+      return (
+        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
+          {getEntityRuleLabel('adset', adset.entityId)}
+        </td>
+      );
+    }
+    if (column.key === 'recommendation') {
+      return (
+        <td key={column.key} className="px-2 py-2 text-text-secondary">
+          <div className="truncate">{getRecommendationLabel(recommendation, currency)}</div>
+          {recommendation?.reason && (
+            <div className="truncate text-text-tertiary">{recommendation.reason}</div>
+          )}
+        </td>
+      );
+    }
+    return renderCampaignActionCell(column, recommendation);
+  };
+
+  const renderAdCell = (column: TableColumn, ad: ProjectMetaAdsAdSummary) => {
+    if (column.key === 'level') {
+      return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad');
+    }
+    if (column.key === 'name') {
+      return renderAdNameCell(ad);
+    }
+    if (column.key === 'frequency') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(ad.frequency)}
+        </td>
+      );
+    }
+    if (column.key === 'result') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(ad.resultCount)}
+        </td>
+      );
+    }
+    if (column.key === 'cpa') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(ad.cpa, ad.currency ?? currency)}
+        </td>
+      );
+    }
+    if (column.key === 'spend') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMoney(ad.spend, ad.currency ?? currency)}
+        </td>
+      );
+    }
+    if (column.key === 'ctr') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(ad.ctr)}
+        </td>
+      );
+    }
+    if (column.key === 'clicks') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(ad.clicks)}
+        </td>
+      );
+    }
+    return renderEmptyCell(column);
+  };
+
+  const renderAdRow = (ad: ProjectMetaAdsAdSummary) => {
     return (
       <tr
         key={ad.adId}
         data-testid={`meta-ads-ad-card-${ad.adId}`}
         onClick={() => setSelectedAdPreview(ad)}
-        className="group cursor-pointer border-b border-border-light bg-surface-primary transition duration-200 hover:bg-surface-secondary"
+        className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 group cursor-pointer border-b border-border-light transition duration-200 odd:bg-surface-primary"
       >
-        <td className="px-2 py-2 pl-10 align-middle" />
-        <td className="px-2 py-2 align-middle">
+        <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-10 align-middle" />
+        <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
           <span aria-hidden="true" className="block h-7 w-7" />
         </td>
-        <td className="px-2 py-2 text-text-secondary">
-          {localize('com_ui_project_meta_ads_level_ad')}
-        </td>
-        <td className="px-2 py-2" title={ad.adName ?? ad.title ?? ad.adId}>
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="h-9 w-16 shrink-0 overflow-hidden border border-border-light bg-surface-secondary">
-              {mediaUrl ? (
-                <img
-                  src={mediaUrl}
-                  alt={ad.adName ?? ad.title ?? ad.adId}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-text-tertiary">
-                  {localize('com_ui_project_meta_ads_no_creative_media')}
-                </div>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-text-primary">
-                {ad.adName ?? ad.title ?? ad.adId}
-              </div>
-              <div className="truncate text-xs text-text-secondary">
-                {ad.title ?? ad.body ?? '-'}
-              </div>
-            </div>
-          </div>
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-tertiary">-</td>
-        <td className="px-2 py-2 text-text-tertiary">-</td>
-        <td className="px-2 py-2 text-text-tertiary">-</td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMetric(ad.frequency)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMetric(ad.resultCount)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMoney(ad.cpa, ad.currency ?? currency)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMoney(ad.spend, ad.currency ?? currency)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMetric(ad.ctr)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-          {formatMetric(ad.clicks)}
-        </td>
-        <td className="px-2 py-2 text-right font-mono text-text-tertiary">-</td>
-        <td className="px-2 py-2 text-text-tertiary">-</td>
-        <td className="px-2 py-2 text-text-tertiary">-</td>
-        <td className="px-2 py-2" />
+        {tableColumns.map((column) => renderAdCell(column, ad))}
       </tr>
     );
   };
@@ -1303,56 +1972,30 @@ export default function ProjectMetaAdsPanel({
                         ))}
                       </select>
                     </label>
-                    <div className="flex flex-col gap-2 text-xs text-text-secondary">
-                      <span>{localize('com_ui_project_meta_ads_project_token')}</span>
-                      <div className="flex h-10 overflow-hidden border border-border-light bg-surface-secondary">
-                        <input
-                          disabled={!canEdit}
-                          type={showSettingsDraftToken ? 'text' : 'password'}
-                          name="meta_ads_project_token_new"
-                          autoComplete="new-password"
-                          value={settingsDraftToken}
-                          onChange={(event) => setSettingsDraftToken(event.target.value)}
-                          placeholder={
-                            hasMaskedToken
-                              ? localize('com_ui_project_meta_ads_token_keep_existing')
-                              : localize('com_ui_project_meta_ads_token_placeholder')
-                          }
-                          className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
-                        />
-                        {settingsDraftToken.length > 0 && (
-                          <button
-                            type="button"
-                            disabled={!canEdit}
-                            onClick={() => setShowSettingsDraftToken((current) => !current)}
-                            className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {localize(
-                              showSettingsDraftToken
-                                ? 'com_ui_hide_password'
-                                : 'com_ui_show_password',
-                            )}
-                          </button>
-                        )}
-                      </div>
-                      <span className="text-xs leading-5 text-text-tertiary">
-                        {localize('com_ui_project_meta_ads_project_token_hint')}
-                      </span>
-                      {tokenCredentials && (
-                        <span className="inline-flex w-fit items-center gap-2 border border-border-light px-2 py-1 text-xs text-text-secondary">
-                          {localize(tokenStatusKey)}
-                        </span>
-                      )}
-                      {settingsDraft.tokenSecretName && (
+                    <div className="border border-border-light bg-surface-secondary p-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <div className="text-sm font-medium text-text-primary">
+                            {localize('com_ui_project_meta_ads_credentials')}
+                          </div>
+                          <div className="mt-1 text-xs leading-5 text-text-tertiary">
+                            {localize('com_ui_project_meta_ads_credentials_hint')}
+                          </div>
+                          {tokenCredentials && (
+                            <span className="mt-2 inline-flex w-fit items-center gap-2 border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                              {localize(tokenStatusKey)}
+                            </span>
+                          )}
+                        </div>
                         <button
                           type="button"
                           disabled={!canEdit}
-                          onClick={onUseTenantToken}
-                          className="w-fit text-xs font-medium text-text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={openCredentialsDialog}
+                          className="h-8 shrink-0 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {localize('com_ui_project_meta_ads_use_tenant_token')}
+                          {localize('com_ui_project_meta_ads_manage_tokens')}
                         </button>
-                      )}
+                      </div>
                     </div>
                     <div className="border border-border-light bg-surface-secondary p-3 text-sm text-text-secondary">
                       <div className="font-medium text-text-primary">
@@ -1441,6 +2084,157 @@ export default function ProjectMetaAdsPanel({
           </div>
         )}
 
+        <OGDialog
+          open={credentialsDialogOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setCredentialsDialogOpen(true);
+              return;
+            }
+            closeCredentialsDialog();
+          }}
+        >
+          <OGDialogContent className="max-w-2xl border border-border-light bg-surface-primary p-0 text-text-primary">
+            <OGDialogHeader>
+              <div className="border-b border-border-light p-4">
+                <OGDialogTitle>{localize('com_ui_project_meta_ads_manage_tokens')}</OGDialogTitle>
+                <div className="mt-2 text-xs text-text-tertiary">
+                  {localize('com_ui_project_meta_ads_manage_tokens_hint')}
+                </div>
+              </div>
+            </OGDialogHeader>
+            <div className="space-y-4 p-4">
+              <div className="border border-border-light bg-surface-secondary p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-sm font-medium text-text-primary">
+                    {localize('com_ui_project_meta_ads_tenant_token')}
+                  </div>
+                  <div className="text-xs leading-5 text-text-tertiary">
+                    {localize(
+                      canManageTenantToken
+                        ? 'com_ui_project_meta_ads_tenant_token_hint'
+                        : 'com_ui_project_meta_ads_tenant_token_admin_hint',
+                    )}
+                  </div>
+                  <span className="mt-1 inline-flex w-fit border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                    {statusQuery.data?.credentials?.tenantConfigured
+                      ? localize('com_ui_project_meta_ads_tenant_token_configured')
+                      : localize('com_ui_project_meta_ads_token_missing')}
+                  </span>
+                </div>
+                {canManageTenantToken && (
+                  <div className="mt-3 flex h-10 overflow-hidden border border-border-light bg-surface-primary">
+                    <input
+                      type={showTenantAccessToken ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={tenantAccessToken}
+                      onChange={(event) => setTenantAccessToken(event.target.value)}
+                      placeholder={localize('com_ui_project_meta_ads_token_placeholder')}
+                      className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none"
+                    />
+                    {tenantAccessToken.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowTenantAccessToken((current) => !current)}
+                        className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary"
+                      >
+                        {localize(
+                          showTenantAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password',
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {canManageTenantToken && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={!tenantAccessToken.trim() || updateTenantToken.isLoading}
+                      onClick={onSaveTenantToken}
+                      className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize('com_ui_project_meta_ads_save_tenant_token')}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="border border-border-light bg-surface-secondary p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-sm font-medium text-text-primary">
+                    {localize('com_ui_project_meta_ads_project_token')}
+                  </div>
+                  <div className="text-xs leading-5 text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_project_token_hint')}
+                  </div>
+                  <span className="mt-1 inline-flex w-fit border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                    {hasProjectToken
+                      ? localize('com_ui_project_meta_ads_project_token_configured')
+                      : localize('com_ui_project_meta_ads_project_token_not_configured')}
+                  </span>
+                </div>
+                <div className="mt-3 flex h-10 overflow-hidden border border-border-light bg-surface-primary">
+                  <input
+                    disabled={!canEdit}
+                    type={showSettingsDraftToken ? 'text' : 'password'}
+                    name="meta_ads_project_token_new"
+                    autoComplete="new-password"
+                    value={settingsDraftToken}
+                    onChange={(event) => setSettingsDraftToken(event.target.value)}
+                    placeholder={
+                      hasProjectToken
+                        ? localize('com_ui_project_meta_ads_token_keep_existing')
+                        : localize('com_ui_project_meta_ads_token_placeholder')
+                    }
+                    className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
+                  />
+                  {settingsDraftToken.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={!canEdit}
+                      onClick={() => setShowSettingsDraftToken((current) => !current)}
+                      className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize(
+                        showSettingsDraftToken ? 'com_ui_hide_password' : 'com_ui_show_password',
+                      )}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  {hasProjectToken && (
+                    <button
+                      type="button"
+                      disabled={!canEdit || updateSettings.isLoading}
+                      onClick={onClearProjectToken}
+                      className="h-8 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize('com_ui_project_meta_ads_use_tenant_token')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={!canEdit || !settingsDraftToken.trim() || updateSettings.isLoading}
+                    onClick={onSaveProjectToken}
+                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_save_project_token')}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end border-t border-border-light p-4">
+              <button
+                type="button"
+                onClick={closeCredentialsDialog}
+                className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+              >
+                {localize('com_ui_close')}
+              </button>
+            </div>
+          </OGDialogContent>
+        </OGDialog>
+
         <div
           className={
             metricsFullscreen
@@ -1525,6 +2319,20 @@ export default function ProjectMetaAdsPanel({
                     </option>
                   </select>
                 </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_table_view')}
+                  <select
+                    value={tableView}
+                    onChange={(event) => setTableView(event.target.value as TableView)}
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                  >
+                    {tableViewOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {localize(option.labelKey)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="h-8 border border-border-light px-3 py-2 font-mono text-xs text-text-secondary">
@@ -1539,6 +2347,22 @@ export default function ProjectMetaAdsPanel({
                   className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {localize('com_ui_project_meta_ads_clear_selection')}
+                </button>
+                <button
+                  type="button"
+                  disabled={campaigns.length === 0}
+                  onClick={onExpandAllRows}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {localize('com_ui_project_meta_ads_expand_all')}
+                </button>
+                <button
+                  type="button"
+                  disabled={campaigns.length === 0}
+                  onClick={onCollapseAllRows}
+                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary transition hover:bg-surface-secondary disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {localize('com_ui_project_meta_ads_collapse_all')}
                 </button>
                 <button
                   type="button"
@@ -1893,93 +2717,49 @@ export default function ProjectMetaAdsPanel({
                 : 'max-w-full overflow-x-auto'
             }
           >
-            <table className="w-full min-w-[1520px] table-fixed text-left text-xs">
-              <thead className="border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
+            <table
+              className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs`}
+            >
+              <thead className="sticky top-0 z-30 border-b border-border-light bg-surface-secondary text-[11px] uppercase text-text-tertiary">
                 <tr>
-                  <th className="w-10 px-2 py-2">
+                  <th className="sticky left-0 z-40 w-10 border-b border-border-light bg-surface-secondary px-2 py-2">
                     <span className="sr-only">
                       {localize('com_ui_project_meta_ads_select_ad_set')}
                     </span>
                   </th>
-                  <th className="w-10 px-2 py-2">
+                  <th className="sticky left-10 z-40 w-10 border-b border-border-light bg-surface-secondary px-2 py-2">
                     <span className="sr-only">
                       {localize('com_ui_project_meta_ads_expand_campaign')}
                     </span>
                   </th>
-                  <th className="w-28 px-2 py-2">{localize('com_ui_project_meta_ads_delivery')}</th>
-                  <th className="w-64 px-2 py-2">
-                    {renderSortableHeader({
-                      key: 'name',
-                      label: localize('com_ui_project_meta_ads_campaign'),
-                      defaultDirection: 'asc',
-                    })}
-                  </th>
-                  <th className="w-28 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'budget',
-                      label: localize('com_ui_project_meta_ads_budget_defined'),
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-40 px-2 py-2">
-                    {localize('com_ui_project_meta_ads_objective')}
-                  </th>
-                  <th className="w-24 px-2 py-2">
-                    {localize('com_ui_project_meta_ads_budget_mode')}
-                  </th>
-                  <th className="w-24 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'frequency',
-                      label: localize('com_ui_project_meta_ads_frequency'),
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-24 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'result',
-                      label: localize('com_ui_project_meta_ads_results'),
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-28 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'cpa',
-                      label: localize('com_ui_project_meta_ads_cost_result'),
-                      className: 'justify-end text-right',
-                      defaultDirection: 'asc',
-                    })}
-                  </th>
-                  <th className="w-28 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'spend',
-                      label: localize('com_ui_project_meta_ads_spend'),
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-20 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'ctr',
-                      label: 'CTR',
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-20 px-2 py-2 text-right">
-                    {renderSortableHeader({
-                      key: 'clicks',
-                      label: localize('com_ui_project_meta_ads_clicks'),
-                      className: 'justify-end text-right',
-                    })}
-                  </th>
-                  <th className="w-24 px-2 py-2 text-right">
-                    {localize('com_ui_project_meta_ads_video_p75')}
-                  </th>
-                  <th className="w-40 px-2 py-2">{localize('com_ui_project_meta_ads_rule')}</th>
-                  <th className="w-64 px-2 py-2">
-                    {localize('com_ui_project_meta_ads_recommendation')}
-                  </th>
-                  <th className="w-32 px-2 py-2">
-                    <span className="sr-only">{localize('com_ui_project_meta_ads_actions')}</span>
-                  </th>
+                  {tableColumns.map((column) => {
+                    const label =
+                      column.label ?? (column.labelKey ? localize(column.labelKey) : '');
+                    const alignClass = column.align === 'right' ? 'text-right' : '';
+                    const stickyClass =
+                      column.key === 'name'
+                        ? 'sticky left-20 z-40 bg-surface-secondary shadow-[8px_0_12px_-12px_rgba(0,0,0,0.65)]'
+                        : '';
+                    return (
+                      <th
+                        key={column.key}
+                        className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-border-light px-2 py-2`}
+                      >
+                        {column.key === 'actions' ? (
+                          <span className="sr-only">{label}</span>
+                        ) : column.sortableKey ? (
+                          renderSortableHeader({
+                            key: column.sortableKey,
+                            label,
+                            className: column.align === 'right' ? 'justify-end text-right' : '',
+                            defaultDirection: column.defaultDirection,
+                          })
+                        ) : (
+                          label
+                        )}
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -1990,7 +2770,7 @@ export default function ProjectMetaAdsPanel({
                       data-testid="meta-ads-row-skeleton"
                       className="border-b border-border-light"
                     >
-                      <td className="px-2 py-3" colSpan={17}>
+                      <td className="px-2 py-3" colSpan={tableColumnCount}>
                         <div className="flex items-center gap-4">
                           <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
                           <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
@@ -2013,9 +2793,9 @@ export default function ProjectMetaAdsPanel({
                     <Fragment key={campaign.campaignId}>
                       <tr
                         data-testid="meta-ads-campaign-row"
-                        className="border-b border-border-light"
+                        className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 border-b border-border-light transition odd:bg-surface-primary"
                       >
-                        <td className="px-2 py-2 align-middle">
+                        <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
                           <input
                             type="checkbox"
                             checked={selected}
@@ -2024,7 +2804,7 @@ export default function ProjectMetaAdsPanel({
                             className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                           />
                         </td>
-                        <td className="px-2 py-2 align-middle">
+                        <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
                           {campaign.adSets.length > 0 && (
                             <button
                               type="button"
@@ -2037,90 +2817,9 @@ export default function ProjectMetaAdsPanel({
                             </button>
                           )}
                         </td>
-                        <td className="px-2 py-2 text-text-secondary">
-                          {localize('com_ui_project_meta_ads_level_campaign')}
-                        </td>
-                        <td
-                          className="truncate px-2 py-2 font-medium text-text-primary"
-                          title={campaign.campaignName ?? campaign.campaignId}
-                        >
-                          {campaign.campaignName ?? campaign.campaignId}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {campaign.editableBudgetLevel === 'campaign' ? (
-                            <button
-                              type="button"
-                              disabled={!canEdit}
-                              onClick={() =>
-                                onOpenBudgetEditor({
-                                  entityLevel: 'campaign',
-                                  entityId: campaign.campaignId,
-                                  entityName: campaign.campaignName,
-                                  currentBudget: campaign.dailyBudget,
-                                })
-                              }
-                              className="border border-border-light bg-surface-secondary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-                            >
-                              {formatMoney(campaign.dailyBudget, currency)}
-                            </button>
-                          ) : (
-                            formatMoney(campaign.dailyBudget, currency)
-                          )}
-                        </td>
-                        <td className="truncate px-2 py-2 text-text-secondary">
-                          {campaign.objective ?? '-'}
-                        </td>
-                        <td className="px-2 py-2 text-text-secondary">
-                          {campaign.budgetMode ?? '-'}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMetric(campaign.frequency)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMetric(campaign.resultCount)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMoney(campaign.cpa, currency)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMoney(campaign.spend, currency)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMetric(campaign.ctr)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMetric(campaign.clicks)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                          {formatMetric(campaign.videoP75Watched)}
-                        </td>
-                        <td className="truncate px-2 py-2 text-text-secondary">
-                          {getEntityRuleLabel('campaign', campaign.campaignId)}
-                        </td>
-                        <td className="px-2 py-2 text-text-secondary">
-                          <div className="truncate">
-                            {getRecommendationLabel(recommendation, currency)}
-                          </div>
-                          {recommendation?.reason && (
-                            <div className="truncate text-text-tertiary">
-                              {recommendation.reason}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="flex gap-1">
-                            {recommendation && (
-                              <button
-                                type="button"
-                                disabled={!canEdit || applyRecommendation.isLoading}
-                                onClick={() => onApply(recommendation)}
-                                className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                {localize('com_ui_project_meta_ads_apply')}
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                        {tableColumns.map((column) =>
+                          renderCampaignCell(column, campaign, recommendation),
+                        )}
                       </tr>
                       {expanded &&
                         campaign.adSets.map((adset) => {
@@ -2132,8 +2831,8 @@ export default function ProjectMetaAdsPanel({
                           const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
                           return (
                             <Fragment key={adset.entityId}>
-                              <tr className="bg-surface-secondary/40 border-b border-border-light">
-                                <td className="px-2 py-2 pl-6 align-middle">
+                              <tr className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 border-b border-border-light transition odd:bg-surface-primary">
+                                <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
                                   <input
                                     type="checkbox"
                                     checked={adsetSelected}
@@ -2142,7 +2841,7 @@ export default function ProjectMetaAdsPanel({
                                     className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                                   />
                                 </td>
-                                <td className="px-2 py-2 align-middle">
+                                <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
                                   {adsetAds.length > 0 ? (
                                     <button
                                       type="button"
@@ -2161,88 +2860,9 @@ export default function ProjectMetaAdsPanel({
                                     <span aria-hidden="true" className="block h-7 w-7" />
                                   )}
                                 </td>
-                                <td className="px-2 py-2 text-text-secondary">
-                                  {localize('com_ui_project_meta_ads_level_ad_set')}
-                                </td>
-                                <td
-                                  className="truncate px-2 py-2 text-text-primary"
-                                  title={adset.entityName ?? adset.entityId}
-                                >
-                                  {adset.entityName ?? adset.entityId}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {campaign.editableBudgetLevel === 'adset' ? (
-                                    <button
-                                      type="button"
-                                      disabled={!canEdit}
-                                      onClick={() =>
-                                        onOpenBudgetEditor({
-                                          entityLevel: 'adset',
-                                          entityId: adset.entityId,
-                                          entityName: adset.entityName,
-                                          currentBudget: adset.dailyBudget,
-                                        })
-                                      }
-                                      className="border border-border-light bg-surface-primary px-2 py-1 font-mono text-text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-secondary"
-                                    >
-                                      {formatMoney(adset.dailyBudget, currency)}
-                                    </button>
-                                  ) : (
-                                    formatMoney(adset.dailyBudget, currency)
-                                  )}
-                                </td>
-                                <td className="px-2 py-2 text-text-tertiary">-</td>
-                                <td className="px-2 py-2 text-text-secondary">
-                                  {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMetric(adset.frequency)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMetric(adset.resultCount)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMoney(adset.cpa, currency)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMoney(adset.spend, currency)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMetric(adset.ctr)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMetric(adset.clicks)}
-                                </td>
-                                <td className="px-2 py-2 text-right font-mono text-text-secondary">
-                                  {formatMetric(adset.videoP75Watched)}
-                                </td>
-                                <td className="truncate px-2 py-2 text-text-secondary">
-                                  {getEntityRuleLabel('adset', adset.entityId)}
-                                </td>
-                                <td className="px-2 py-2 text-text-secondary">
-                                  <div className="truncate">
-                                    {getRecommendationLabel(adsetRecommendation, currency)}
-                                  </div>
-                                  {adsetRecommendation?.reason && (
-                                    <div className="truncate text-text-tertiary">
-                                      {adsetRecommendation.reason}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="px-2 py-2">
-                                  <div className="flex gap-1">
-                                    {adsetRecommendation && (
-                                      <button
-                                        type="button"
-                                        disabled={!canEdit || applyRecommendation.isLoading}
-                                        onClick={() => onApply(adsetRecommendation)}
-                                        className="h-7 border border-border-light px-2 text-[11px] font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                                      >
-                                        {localize('com_ui_project_meta_ads_apply')}
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
+                                {tableColumns.map((column) =>
+                                  renderAdSetCell(column, campaign, adset, adsetRecommendation),
+                                )}
                               </tr>
                               {!adsCollapsed && adsetAds.map((ad) => renderAdRow(ad))}
                             </Fragment>

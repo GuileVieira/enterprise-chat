@@ -886,6 +886,13 @@ export const updateProjectMetaAdsSettings = (
   return request.put(endpoints.projectMetaAdsSettings(id), { metaAds, metaAccessToken });
 };
 
+export const updateProjectMetaAdsTenantToken = (
+  id: string,
+  metaAccessToken: string,
+): Promise<q.ProjectMetaAdsTenantTokenResponse> => {
+  return request.put(endpoints.projectMetaAdsTenantToken(id), { metaAccessToken });
+};
+
 export const runProjectMetaAdsAnalysis = (id: string): Promise<q.ProjectMetaAdsRunResponse> => {
   return request.post(endpoints.projectMetaAdsRun(id), {});
 };

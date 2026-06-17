@@ -6,6 +6,9 @@ import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
 const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
   options?.onSuccess?.(),
 );
+const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
+  options?.onSuccess?.(),
+);
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
 const mockMutateBudget = jest.fn();
@@ -13,6 +16,7 @@ const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
 let mockStatusQueryState = {};
+let mockUserRole = 'USER';
 const mockUseProjectMetaAdsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
   data: mockStatusData,
   refetch: mockRefetchStatus,
@@ -54,6 +58,7 @@ jest.mock('@librechat/client', () => ({
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
+  useAuthContext: () => ({ user: { role: mockUserRole } }),
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -64,6 +69,10 @@ jest.mock('~/data-provider', () => ({
     mockUseProjectMetaAdsQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
+    isLoading: false,
+  }),
+  useUpdateProjectMetaAdsTenantTokenMutation: () => ({
+    mutate: mockMutateTenantToken,
     isLoading: false,
   }),
   useRunProjectMetaAdsMutation: () => ({
@@ -97,6 +106,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.changes = [];
     mockStatusData.summary = undefined;
     mockStatusQueryState = {};
+    mockUserRole = 'USER';
     mockUseProjectMetaAdsQuery.mockClear();
     delete mockStatusData.campaigns;
     delete mockStatusData.credentials;
@@ -132,13 +142,19 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.change(within(accountDialog).getByPlaceholderText('123456789'), {
       target: { value: '123-456-789' },
     });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
     fireEvent.change(
-      within(accountDialog).getByPlaceholderText('com_ui_project_meta_ads_token_placeholder'),
+      within(credentialsDialog).getAllByPlaceholderText(
+        'com_ui_project_meta_ads_token_placeholder',
+      )[0],
       {
         target: { value: token },
       },
     );
-    fireEvent.click(within(accountDialog).getByText('com_ui_save'));
+    fireEvent.click(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_save_project_token'),
+    );
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -159,9 +175,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(savePayload.metaAds).not.toHaveProperty('metaAccessToken');
     await waitFor(() =>
       expect(
-        screen.queryByRole('dialog', {
-          name: 'com_ui_project_meta_ads_account_credentials',
-        }),
+        screen.queryByText('com_ui_project_meta_ads_manage_tokens_hint'),
       ).not.toBeInTheDocument(),
     );
     expect(mockRefetchStatus).toHaveBeenCalled();
@@ -302,12 +316,17 @@ describe('ProjectMetaAdsPanel', () => {
     );
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
 
     expect(screen.queryByDisplayValue('guilherme@example.com')).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText('com_ui_project_meta_ads_token_keep_existing')).toHaveValue(
-      '',
-    );
+    expect(
+      within(credentialsDialog).getByPlaceholderText('com_ui_project_meta_ads_token_keep_existing'),
+    ).toHaveValue('');
   });
 
   it('opens a project chat with selected Meta Ads data and the configured traffic agent', () => {
@@ -453,12 +472,23 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_delivery')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_campaign')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_results')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_table_view')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('com_ui_project_meta_ads_view_summary')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_objective')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_budget_mode')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_rule')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_recommendation')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_budget_mode')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_table_view'), {
+      target: { value: 'rules' },
+    });
+    expect(screen.getByText('com_ui_project_meta_ads_rule')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_recommendation')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_table_view'), {
+      target: { value: 'performance' },
+    });
     expect(screen.getByText('com_ui_project_meta_ads_video_p75')).toBeInTheDocument();
-    expect(screen.getAllByText('CBO').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('ABO').length).toBeGreaterThan(0);
     expect(screen.getByText('800.00')).toBeInTheDocument();
 
     const cboCampaignRow = screen
@@ -552,6 +582,11 @@ describe('ProjectMetaAdsPanel', () => {
       'src',
       'https://example.com/thumb.jpg',
     );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_collapse_all'));
+    expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_expand_all'));
+    expect(screen.getByTestId('meta-ads-ad-card-ad-1')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
 
@@ -1366,6 +1401,63 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
   });
 
+  it('lets admins save the tenant global Meta Ads token from the credentials modal', () => {
+    mockUserRole = 'ADMIN';
+    mockStatusData.credentials = {
+      effectiveSource: 'tenant',
+      projectConfigured: false,
+      tenantConfigured: true,
+      secretName: 'meta_graph_access_token',
+    };
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
+    const token = `EAA${'b'.repeat(48)}`;
+
+    fireEvent.change(
+      within(credentialsDialog).getAllByPlaceholderText(
+        'com_ui_project_meta_ads_token_placeholder',
+      )[0],
+      {
+        target: { value: token },
+      },
+    );
+    fireEvent.click(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_save_tenant_token'),
+    );
+
+    expect(mockMutateTenantToken).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAccessToken: token,
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('keeps tenant global token editing hidden from regular project editors', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
+
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_tenant_token_admin_hint'),
+    ).toBeInTheDocument();
+    expect(
+      within(credentialsDialog).queryByText('com_ui_project_meta_ads_save_tenant_token'),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows a missing token status when the configured Meta Ads secret is absent', () => {
     mockStatusData.credentials = {
       effectiveSource: 'missing',
@@ -1402,8 +1494,11 @@ describe('ProjectMetaAdsPanel', () => {
     const accountDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_account_credentials',
     });
-    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_use_tenant_token'));
-    fireEvent.click(within(accountDialog).getByText('com_ui_save'));
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
+    fireEvent.click(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_use_tenant_token'),
+    );
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -1415,5 +1510,27 @@ describe('ProjectMetaAdsPanel', () => {
       },
       expect.any(Object),
     );
+  });
+
+  it('shows the global token fallback action when status reports a project token', () => {
+    mockStatusData.credentials = {
+      effectiveSource: 'project',
+      projectConfigured: true,
+      tenantConfigured: true,
+      secretName: 'meta_graph_access_token_project_p1',
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
+
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_use_tenant_token'),
+    ).toBeInTheDocument();
   });
 });

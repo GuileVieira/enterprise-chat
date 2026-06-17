@@ -77,6 +77,7 @@ function renderPage() {
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    window.localStorage.clear();
     (useGetStartupConfig as jest.Mock).mockReturnValue({
       data: { interface: { metaAds: true } },
     });
@@ -197,6 +198,27 @@ describe('ProjectDetailPage', () => {
     });
     renderPage();
     expect(screen.getByText('com_ui_project_tab_metaAds')).toBeInTheDocument();
+  });
+
+  it('restores the last opened project tab after reload', () => {
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+
+    const firstRender = renderPage();
+    fireEvent.click(screen.getByText('com_ui_project_tab_metaAds'));
+    expect(screen.getByTestId('project-meta-ads-panel')).toBeInTheDocument();
+    firstRender.unmount();
+
+    renderPage();
+    expect(screen.getByTestId('project-meta-ads-panel')).toBeInTheDocument();
   });
 
   it('switches to prompts tab', () => {

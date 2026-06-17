@@ -1229,6 +1229,24 @@ export const useUpdateProjectMetaAdsMutation = (): UseMutationResult<
   );
 };
 
+export const useUpdateProjectMetaAdsTenantTokenMutation = (): UseMutationResult<
+  t.ProjectMetaAdsTenantTokenResponse,
+  unknown,
+  { projectId: string; metaAccessToken: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, metaAccessToken }) =>
+      dataService.updateProjectMetaAdsTenantToken(projectId, metaAccessToken),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
 export const useRunProjectMetaAdsMutation = (): UseMutationResult<
   t.ProjectMetaAdsRunResponse,
   unknown,

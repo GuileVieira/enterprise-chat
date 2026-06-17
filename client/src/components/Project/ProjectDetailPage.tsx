@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   ChatCircle,
@@ -30,6 +30,9 @@ import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 const tabs = ['conversations', 'prompts', 'memories', 'files', 'metaAds', 'settings'] as const;
 type Tab = (typeof tabs)[number];
 
+const isProjectTab = (value: string | null): value is Tab =>
+  value !== null && tabs.includes(value as Tab);
+
 const tabIcons: Record<Tab, typeof ChatCircle> = {
   conversations: ChatCircle,
   prompts: Sparkle,
@@ -42,7 +45,18 @@ const tabIcons: Record<Tab, typeof ChatCircle> = {
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const localize = useLocalize();
-  const [activeTab, setActiveTab] = useState<Tab>('conversations');
+  const tabStorageKey = projectId ? `orqest.project.${projectId}.activeTab` : null;
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (!tabStorageKey) {
+      return 'conversations';
+    }
+    try {
+      const storedTab = window.localStorage.getItem(tabStorageKey);
+      return isProjectTab(storedTab) ? storedTab : 'conversations';
+    } catch {
+      return 'conversations';
+    }
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   useTitleGeneration(true);
@@ -56,6 +70,24 @@ export default function ProjectDetailPage() {
     startupConfigQuery.data?.interface?.metaAds !== false
       ? tabs
       : tabs.filter((tab) => tab !== 'metaAds');
+
+  useEffect(() => {
+    if (visibleTabs.includes(activeTab)) {
+      return;
+    }
+    setActiveTab('conversations');
+  }, [activeTab, visibleTabs]);
+
+  useEffect(() => {
+    if (!tabStorageKey || !visibleTabs.includes(activeTab)) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(tabStorageKey, activeTab);
+    } catch {
+      // Storage can be unavailable in private or restricted browser contexts.
+    }
+  }, [activeTab, tabStorageKey, visibleTabs]);
 
   if (projectQuery.isLoading) {
     return (

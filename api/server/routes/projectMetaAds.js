@@ -1,8 +1,9 @@
 const express = require('express');
 const { PermissionBits } = require('librechat-data-provider');
-const { logger, getTenantId } = require('@librechat/data-schemas');
+const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { findProjectById, getProjectById, updateProject, upsertTenantSecret } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
+const { requireCapability } = require('~/server/middleware/roles/capabilities');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
@@ -20,7 +21,9 @@ const router = express.Router({ mergeParams: true });
 router.use(requireJwtAuth);
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
+const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
+const requireManageConfigs = requireCapability(SystemCapabilities.MANAGE_CONFIGS);
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
@@ -321,6 +324,35 @@ router.put(
     }
   },
 );
+
+router.put('/tenant-token', requireManageConfigs, async (req, res) => {
+  try {
+    const token = typeof req.body.metaAccessToken === 'string' ? req.body.metaAccessToken.trim() : '';
+    if (!token) {
+      return res.status(400).json({ message: 'metaAccessToken is required' });
+    }
+    const tenantId = req.user.tenantId || getTenantId();
+    await upsertTenantSecret(
+      tenantId,
+      META_ACCESS_TOKEN_SECRET_NAME,
+      token,
+      META_ACCESS_TOKEN_SECRET_TYPE,
+    );
+    logger.debug('[projectMetaAds] tenant Meta token secret saved', {
+      tenantId,
+      tokenLength: token.length,
+    });
+    return res.json({
+      credentials: {
+        tenantConfigured: true,
+        secretName: META_ACCESS_TOKEN_SECRET_NAME,
+      },
+    });
+  } catch (error) {
+    logger.error('[projectMetaAds] tenant token failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
 
 router.post(
   '/run',
