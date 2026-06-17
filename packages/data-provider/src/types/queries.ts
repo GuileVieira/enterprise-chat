@@ -194,6 +194,26 @@ export type ProjectMetaAdsCampaignSummary = {
   adSets: ProjectMetaAdsAdSetSummary[];
 };
 
+export type ProjectMetaAdsObjectiveResultTypeSummary = {
+  resultType?: string;
+  label?: string;
+  totalSpend: number;
+  totalResults: number;
+  averageCostPerResult: number | null;
+};
+
+export type ProjectMetaAdsObjectiveSummary = {
+  objective?: string;
+  label?: string;
+  campaignCount: number;
+  totalSpend: number;
+  totalResults: number;
+  averageCostPerResult: number | null;
+  averageFrequency: number | null;
+  averageCtr: number | null;
+  resultTypes: ProjectMetaAdsObjectiveResultTypeSummary[];
+};
+
 export type ProjectMetaAdsTrendPoint = {
   date: string;
   campaignId: string;
@@ -263,6 +283,7 @@ export type ProjectMetaAdsStatus = {
     averageFrequency: number | null;
     bestCampaignByCost?: ProjectMetaAdsCampaignSummary;
     worstCampaignByCost?: ProjectMetaAdsCampaignSummary;
+    objectives?: ProjectMetaAdsObjectiveSummary[];
   };
   trend?: ProjectMetaAdsTrend;
   credentials?: {

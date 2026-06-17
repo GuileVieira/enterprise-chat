@@ -412,6 +412,126 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('Topo')).toBeInTheDocument();
   });
 
+  it('filters campaigns by localized campaign objective and shows objective metrics', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-engagement',
+        campaignName: 'Mensagens Floripa',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 250,
+        cpa: 20.83,
+        resultCount: 12,
+        resultType: 'lead',
+        dailyBudget: 100,
+        impressions: 10000,
+        clicks: 500,
+        frequency: 3,
+        budgetMode: 'CBO',
+        adSets: [
+          {
+            entityId: 'adset-message',
+            entityName: 'Conversas',
+            campaignId: 'campaign-engagement',
+            campaignName: 'Mensagens Floripa',
+            spend: 200,
+            resultCount: 10,
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          },
+          {
+            entityId: 'adset-lead',
+            entityName: 'Lead form',
+            campaignId: 'campaign-engagement',
+            campaignName: 'Mensagens Floripa',
+            spend: 50,
+            resultCount: 2,
+            resultType: 'lead',
+          },
+        ],
+      },
+      {
+        campaignId: 'campaign-sales',
+        campaignName: 'Vendas SP',
+        objective: 'OUTCOME_SALES',
+        spend: 100,
+        cpa: 50,
+        resultCount: 2,
+        resultType: 'purchase',
+        dailyBudget: 80,
+        budgetMode: 'ABO',
+        adSets: [],
+      },
+    ];
+    mockStatusData.summary = {
+      totalSpend: 350,
+      totalResults: 14,
+      averageCostPerResult: 25,
+      averageFrequency: 3.5,
+      objectives: [
+        {
+          objective: 'OUTCOME_ENGAGEMENT',
+          campaignCount: 1,
+          totalSpend: 250,
+          totalResults: 12,
+          averageCostPerResult: 20.83,
+          averageFrequency: 3,
+          averageCtr: 5,
+          resultTypes: [
+            {
+              resultType: 'onsite_conversion.messaging_conversation_started_7d',
+              totalSpend: 200,
+              totalResults: 10,
+              averageCostPerResult: 20,
+            },
+            {
+              resultType: 'lead',
+              totalSpend: 50,
+              totalResults: 2,
+              averageCostPerResult: 25,
+            },
+          ],
+        },
+        {
+          objective: 'OUTCOME_SALES',
+          campaignCount: 1,
+          totalSpend: 100,
+          totalResults: 2,
+          averageCostPerResult: 50,
+          averageFrequency: 4,
+          averageCtr: null,
+          resultTypes: [
+            {
+              resultType: 'purchase',
+              totalSpend: 100,
+              totalResults: 2,
+              averageCostPerResult: 50,
+            },
+          ],
+        },
+      ],
+    };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_objective_engagement').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_objective_sales').length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByTestId('meta-ads-objective-summary')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_result_type_message')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_result_type_lead')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_objective_filter'), {
+      target: { value: 'OUTCOME_SALES' },
+    });
+
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Vendas SP');
+    expect(screen.queryByText('Mensagens Floripa')).not.toBeInTheDocument();
+  });
+
   it('shows Ads Manager metrics, CBO/ABO budget modes, and sends manual budget changes', () => {
     mockStatusData.campaigns = [
       {
@@ -471,7 +591,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_delivery')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_campaign')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_results')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_results').length).toBeGreaterThan(0);
     expect(screen.getByText('com_ui_project_meta_ads_table_view')).toBeInTheDocument();
     expect(screen.getByDisplayValue('com_ui_project_meta_ads_view_summary')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_objective')).toBeInTheDocument();

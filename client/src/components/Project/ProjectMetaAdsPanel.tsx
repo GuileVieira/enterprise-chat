@@ -13,6 +13,7 @@ import type {
   TProject,
   ProjectMetaAdsAdSummary,
   ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsObjectiveSummary,
   ProjectMetaAdsCampaignDelta,
   ProjectMetaAdsBudgetChange,
   ProjectMetaAdsManualBudgetPayload,
@@ -97,6 +98,7 @@ type TableColumn = {
   sortableKey?: string;
   defaultDirection?: 'asc' | 'desc';
 };
+type Localize = ReturnType<typeof useLocalize>;
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -282,6 +284,30 @@ const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
   maxFrequency: 5,
 };
 
+const objectiveLabelKeys: Record<string, TranslationKeys> = {
+  OUTCOME_APP_PROMOTION: 'com_ui_project_meta_ads_objective_app_promotion',
+  OUTCOME_AWARENESS: 'com_ui_project_meta_ads_objective_awareness',
+  OUTCOME_ENGAGEMENT: 'com_ui_project_meta_ads_objective_engagement',
+  OUTCOME_LEADS: 'com_ui_project_meta_ads_objective_leads',
+  OUTCOME_SALES: 'com_ui_project_meta_ads_objective_sales',
+  OUTCOME_TRAFFIC: 'com_ui_project_meta_ads_objective_traffic',
+  UNKNOWN: 'com_ui_project_meta_ads_objective_unknown',
+};
+
+const resultTypeLabelKeys: Record<string, TranslationKeys> = {
+  lead: 'com_ui_project_meta_ads_result_type_lead',
+  leadgen_grouped: 'com_ui_project_meta_ads_result_type_lead',
+  onsite_conversion_lead_grouped: 'com_ui_project_meta_ads_result_type_lead',
+  onsite_conversion_messaging_conversation_started_7d:
+    'com_ui_project_meta_ads_result_type_message',
+  onsite_conversion_messaging_first_reply: 'com_ui_project_meta_ads_result_type_message',
+  offsite_conversion_fb_pixel_lead: 'com_ui_project_meta_ads_result_type_lead',
+  offsite_conversion_fb_pixel_purchase: 'com_ui_project_meta_ads_result_type_purchase',
+  omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',
+  purchase: 'com_ui_project_meta_ads_result_type_purchase',
+  UNKNOWN: 'com_ui_project_meta_ads_result_type_unknown',
+};
+
 const numberFields: Array<{
   key: keyof Required<MetaAdsRules>;
   labelKey: TranslationKeys;
@@ -333,6 +359,10 @@ function formatSignedPercent(value: number | null | undefined) {
   return `${sign}${Math.abs(value).toFixed(2)}%`;
 }
 
+function formatPercent(value: number | null | undefined) {
+  return value == null || Number.isNaN(value) ? '-' : `${value.toFixed(2)}%`;
+}
+
 function formatSignedMetric(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) {
     return '-';
@@ -368,6 +398,150 @@ function hasMeaningfulDelta(delta: ProjectMetaAdsCampaignDelta) {
 function cleanDashboardName(value: string | undefined, fallback: string) {
   const cleanedValue = (value ?? '').replace(/^[^\w[]+\s*/u, '').trim();
   return cleanedValue || value || fallback;
+}
+
+function toMetaAdsLabelKey(value?: string | null) {
+  return (value || 'UNKNOWN').replace(/\./g, '_');
+}
+
+function formatMetaAdsCode(value?: string | null) {
+  const normalized = (value || 'UNKNOWN').replace(/^OUTCOME_/, '').replace(/[_\.]+/g, ' ');
+  return normalized
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase('pt-BR'));
+}
+
+function getObjectiveLabel(objective: string | undefined, localize: Localize) {
+  const key = objectiveLabelKeys[objective || 'UNKNOWN'];
+  return key ? localize(key) : formatMetaAdsCode(objective);
+}
+
+function getResultTypeLabel(resultType: string | undefined, localize: Localize) {
+  const key = resultTypeLabelKeys[toMetaAdsLabelKey(resultType)];
+  return key ? localize(key) : formatMetaAdsCode(resultType);
+}
+
+function createObjectiveSummary(objective: string): ProjectMetaAdsObjectiveSummary {
+  return {
+    objective,
+    label: objective,
+    campaignCount: 0,
+    totalSpend: 0,
+    totalResults: 0,
+    averageCostPerResult: null,
+    averageFrequency: null,
+    averageCtr: null,
+    resultTypes: [],
+  };
+}
+
+function buildObjectiveSummaries(
+  campaigns: ProjectMetaAdsCampaignSummary[],
+): ProjectMetaAdsObjectiveSummary[] {
+  const objectives = new Map<
+    string,
+    ProjectMetaAdsObjectiveSummary & {
+      impressions: number;
+      clicks: number;
+      frequencyTotal: number;
+      frequencyCount: number;
+      resultTypeMap: Map<
+        string,
+        NonNullable<ProjectMetaAdsObjectiveSummary['resultTypes']>[number]
+      >;
+    }
+  >();
+
+  for (const campaign of campaigns) {
+    const objective = campaign.objective || 'UNKNOWN';
+    const summary =
+      objectives.get(objective) ??
+      ({
+        ...createObjectiveSummary(objective),
+        impressions: 0,
+        clicks: 0,
+        frequencyTotal: 0,
+        frequencyCount: 0,
+        resultTypeMap: new Map(),
+      } as ProjectMetaAdsObjectiveSummary & {
+        impressions: number;
+        clicks: number;
+        frequencyTotal: number;
+        frequencyCount: number;
+        resultTypeMap: Map<
+          string,
+          NonNullable<ProjectMetaAdsObjectiveSummary['resultTypes']>[number]
+        >;
+      });
+    objectives.set(objective, summary);
+
+    const spend = Number(campaign.spend ?? 0);
+    const results = Number(campaign.resultCount ?? 0);
+    const impressions = Number(campaign.impressions ?? 0);
+    const clicks = Number(campaign.clicks ?? 0);
+    const frequency = Number(campaign.frequency);
+
+    summary.campaignCount += 1;
+    summary.totalSpend += Number.isFinite(spend) ? spend : 0;
+    summary.totalResults += Number.isFinite(results) ? results : 0;
+    summary.impressions += Number.isFinite(impressions) ? impressions : 0;
+    summary.clicks += Number.isFinite(clicks) ? clicks : 0;
+    if (Number.isFinite(frequency)) {
+      summary.frequencyTotal += frequency;
+      summary.frequencyCount += 1;
+    }
+
+    const sources = campaign.adSets.length > 0 ? campaign.adSets : [campaign];
+    for (const source of sources) {
+      const resultType = source.resultType || campaign.resultType || 'UNKNOWN';
+      const resultTypeSummary = summary.resultTypeMap.get(resultType) ?? {
+        resultType,
+        label: resultType,
+        totalSpend: 0,
+        totalResults: 0,
+        averageCostPerResult: null,
+      };
+      summary.resultTypeMap.set(resultType, resultTypeSummary);
+      resultTypeSummary.totalSpend += Number(source.spend ?? 0);
+      resultTypeSummary.totalResults += Number(source.resultCount ?? 0);
+    }
+  }
+
+  return Array.from(objectives.values())
+    .map((summary) => {
+      const resultTypes = Array.from(summary.resultTypeMap.values()).map((resultType) => ({
+        ...resultType,
+        totalSpend: Number(resultType.totalSpend.toFixed(2)),
+        totalResults: Number(resultType.totalResults.toFixed(2)),
+        averageCostPerResult:
+          resultType.totalResults > 0
+            ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
+            : null,
+      }));
+      return {
+        objective: summary.objective,
+        label: summary.label,
+        campaignCount: summary.campaignCount,
+        totalSpend: Number(summary.totalSpend.toFixed(2)),
+        totalResults: Number(summary.totalResults.toFixed(2)),
+        averageCostPerResult:
+          summary.totalResults > 0
+            ? Number((summary.totalSpend / summary.totalResults).toFixed(2))
+            : null,
+        averageFrequency:
+          summary.frequencyCount > 0
+            ? Number((summary.frequencyTotal / summary.frequencyCount).toFixed(2))
+            : null,
+        averageCtr:
+          summary.impressions > 0
+            ? Number(((summary.clicks / summary.impressions) * 100).toFixed(2))
+            : null,
+        resultTypes: resultTypes.sort(
+          (left, right) => Number(right.totalResults ?? 0) - Number(left.totalResults ?? 0),
+        ),
+      };
+    })
+    .sort((left, right) => Number(right.totalSpend ?? 0) - Number(left.totalSpend ?? 0));
 }
 
 function buildBudgetReferences(currentBudget: number | null | undefined, currency = 'BRL') {
@@ -591,6 +765,7 @@ export default function ProjectMetaAdsPanel({
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
+  const [objectiveFilter, setObjectiveFilter] = useState('all');
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [tableView, setTableView] = useState<TableView>('summary');
@@ -754,18 +929,30 @@ export default function ProjectMetaAdsPanel({
       : selectedAdSetIds.map(getAdSetName);
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
+  const objectiveOptions = Array.from(
+    new Set(campaigns.map((campaign) => campaign.objective || 'UNKNOWN')),
+  ).sort((left, right) =>
+    getObjectiveLabel(left, localize).localeCompare(getObjectiveLabel(right, localize), 'pt-BR'),
+  );
+  const objectiveSummaries =
+    statusQuery.data?.summary?.objectives && statusQuery.data.summary.objectives.length > 0
+      ? statusQuery.data.summary.objectives
+      : buildObjectiveSummaries(campaigns);
   const filteredCampaigns = campaigns
     .filter((campaign) => {
       const query = campaignSearch.trim().toLowerCase();
       const matchesSearch =
         !query ||
         (campaign.campaignName ?? campaign.campaignId).toLowerCase().includes(query) ||
+        getObjectiveLabel(campaign.objective, localize).toLowerCase().includes(query) ||
         campaign.adSets.some((adset) =>
           (adset.entityName ?? adset.entityId).toLowerCase().includes(query),
         );
+      const matchesObjective =
+        objectiveFilter === 'all' || (campaign.objective || 'UNKNOWN') === objectiveFilter;
       const matchesMode =
         budgetModeFilter === 'all' || (campaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
-      return matchesSearch && matchesMode;
+      return matchesSearch && matchesObjective && matchesMode;
     })
     .sort((first, second) => {
       const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
@@ -1374,9 +1561,7 @@ export default function ProjectMetaAdsPanel({
     isClickable = false,
   ) => {
     const stripeClass =
-      rowIndex % 2 === 0
-        ? 'bg-white dark:bg-[#11110f]'
-        : 'bg-slate-50 dark:bg-[#1f1e1a]';
+      rowIndex % 2 === 0 ? 'bg-white dark:bg-[#11110f]' : 'bg-slate-50 dark:bg-[#1f1e1a]';
     const levelClass =
       level === 'campaign'
         ? 'font-medium'
@@ -1532,7 +1717,7 @@ export default function ProjectMetaAdsPanel({
     if (column.key === 'objective') {
       return (
         <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {campaign.objective ?? '-'}
+          {getObjectiveLabel(campaign.objective, localize)}
         </td>
       );
     }
@@ -2315,7 +2500,7 @@ export default function ProjectMetaAdsPanel({
               </div>
             )}
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="grid gap-2 md:grid-cols-4 lg:flex lg:items-end">
+              <div className="grid gap-2 md:grid-cols-5 lg:flex lg:items-end">
                 <label className="flex flex-col gap-1 text-xs text-text-secondary">
                   {localize('com_ui_project_meta_ads_period')}
                   <select
@@ -2373,6 +2558,21 @@ export default function ProjectMetaAdsPanel({
                     <option value="CBO">CBO</option>
                     <option value="ABO">ABO</option>
                     <option value="UNKNOWN">UNKNOWN</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {localize('com_ui_project_meta_ads_objective_filter')}
+                  <select
+                    value={objectiveFilter}
+                    onChange={(event) => setObjectiveFilter(event.target.value)}
+                    className="h-8 border border-border-light bg-surface-primary px-2 text-xs text-text-primary"
+                  >
+                    <option value="all">{localize('com_ui_all')}</option>
+                    {objectiveOptions.map((objective) => (
+                      <option key={objective} value={objective}>
+                        {getObjectiveLabel(objective, localize)}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-xs text-text-secondary">
@@ -2522,6 +2722,95 @@ export default function ProjectMetaAdsPanel({
                 </div>
               ))}
             </div>
+            {objectiveSummaries.length > 0 && !isInitialStatusLoading && (
+              <div
+                data-testid="meta-ads-objective-summary"
+                className="border border-border-light bg-surface-primary"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-light px-3 py-2">
+                  <div>
+                    <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+                      {localize('com_ui_project_meta_ads_metrics_by_objective')}
+                    </h4>
+                    <p className="text-xs text-text-secondary">
+                      {localize('com_ui_project_meta_ads_metrics_by_objective_hint')}
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs text-text-tertiary">
+                    {localize('com_ui_project_meta_ads_objective_count', {
+                      0: String(objectiveSummaries.length),
+                    })}
+                  </span>
+                </div>
+                <div className="divide-y divide-border-light">
+                  {objectiveSummaries.map((summary) => (
+                    <div
+                      key={summary.objective || 'UNKNOWN'}
+                      className="grid gap-3 px-3 py-3 lg:grid-cols-[minmax(180px,1fr)_repeat(5,minmax(96px,auto))]"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-text-primary">
+                          {getObjectiveLabel(summary.objective, localize)}
+                        </div>
+                        <div className="text-xs text-text-secondary">
+                          {localize('com_ui_project_meta_ads_campaign_count', {
+                            0: String(summary.campaignCount),
+                          })}
+                        </div>
+                      </div>
+                      {[
+                        [
+                          'com_ui_project_meta_ads_spend',
+                          formatMoney(summary.totalSpend, currency),
+                        ],
+                        ['com_ui_project_meta_ads_results', formatMetric(summary.totalResults)],
+                        [
+                          'com_ui_project_meta_ads_cost_result',
+                          formatMoney(summary.averageCostPerResult, currency),
+                        ],
+                        [
+                          'com_ui_project_meta_ads_frequency',
+                          formatMetric(summary.averageFrequency),
+                        ],
+                        ['CTR', formatPercent(summary.averageCtr)],
+                      ].map(([label, value]) => (
+                        <div key={label} className="min-w-0 lg:text-right">
+                          <div className="text-[11px] uppercase text-text-tertiary">
+                            {label === 'CTR' ? label : localize(label as TranslationKeys)}
+                          </div>
+                          <div className="font-mono text-sm font-semibold text-text-primary">
+                            {value}
+                          </div>
+                        </div>
+                      ))}
+                      {summary.resultTypes.length > 1 && (
+                        <div className="lg:col-span-6">
+                          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                            {summary.resultTypes.map((resultType) => (
+                              <div
+                                key={resultType.resultType || 'UNKNOWN'}
+                                className="border border-border-light bg-surface-secondary px-3 py-2"
+                              >
+                                <div className="truncate text-xs font-medium text-text-primary">
+                                  {getResultTypeLabel(resultType.resultType, localize)}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-text-secondary">
+                                  <span>{formatMetric(resultType.totalResults)}</span>
+                                  <span>{formatMoney(resultType.totalSpend, currency)}</span>
+                                  <span>
+                                    {formatMoney(resultType.averageCostPerResult, currency)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {pendingRecommendations.length > 0 && campaigns.length === 0 && (

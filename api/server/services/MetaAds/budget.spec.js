@@ -689,10 +689,25 @@ describe('Meta Ads budget service persistence safety', () => {
           entityName: 'Topo',
           campaignId: 'campaign-1',
           campaignName: 'Messages Floripa',
+          campaignObjective: 'OUTCOME_ENGAGEMENT',
           spend: 200,
           cpa: 20,
           resultCount: 10,
+          resultType: 'onsite_conversion.messaging_conversation_started_7d',
           frequency: 2,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+        {
+          entityId: 'adset-3',
+          entityName: 'Lead form',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          campaignObjective: 'OUTCOME_ENGAGEMENT',
+          spend: 50,
+          cpa: 25,
+          resultCount: 2,
+          resultType: 'lead',
+          frequency: 3,
           createdAt: '2026-06-03T12:00:00.000Z',
         },
         {
@@ -700,9 +715,11 @@ describe('Meta Ads budget service persistence safety', () => {
           entityName: 'Retarget',
           campaignId: 'campaign-2',
           campaignName: 'Sales SP',
+          campaignObjective: 'OUTCOME_SALES',
           spend: 100,
           cpa: 50,
           resultCount: 2,
+          resultType: 'purchase',
           frequency: 4,
           createdAt: '2026-06-03T12:00:00.000Z',
         },
@@ -715,12 +732,38 @@ describe('Meta Ads budget service persistence safety', () => {
 
     expect(status.period).toEqual({ datePreset: 'last_7d' });
     expect(status.summary).toEqual({
-      totalSpend: 300,
-      totalResults: 12,
+      totalSpend: 350,
+      totalResults: 14,
       averageCostPerResult: 25,
-      averageFrequency: 3,
+      averageFrequency: 3.5,
       bestCampaignByCost: expect.objectContaining({ campaignId: 'campaign-1' }),
       worstCampaignByCost: expect.objectContaining({ campaignId: 'campaign-2' }),
+      objectives: [
+        expect.objectContaining({
+          objective: 'OUTCOME_ENGAGEMENT',
+          campaignCount: 1,
+          totalSpend: 250,
+          totalResults: 12,
+          averageCostPerResult: 20.83,
+          resultTypes: expect.arrayContaining([
+            expect.objectContaining({
+              resultType: 'onsite_conversion.messaging_conversation_started_7d',
+              totalResults: 10,
+            }),
+            expect.objectContaining({
+              resultType: 'lead',
+              totalResults: 2,
+            }),
+          ]),
+        }),
+        expect.objectContaining({
+          objective: 'OUTCOME_SALES',
+          campaignCount: 1,
+          totalSpend: 100,
+          totalResults: 2,
+          averageCostPerResult: 50,
+        }),
+      ],
     });
   });
 

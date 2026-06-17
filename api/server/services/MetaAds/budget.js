@@ -746,7 +746,112 @@ function buildDashboardSummary(campaigns = []) {
         : null,
     bestCampaignByCost: sortedByCost[0],
     worstCampaignByCost: sortedByCost[sortedByCost.length - 1],
+    objectives: buildObjectiveSummary(campaigns),
   };
+}
+
+function createObjectiveSummaryItem(objective) {
+  return {
+    objective,
+    label: objective,
+    campaignCount: 0,
+    totalSpend: 0,
+    totalResults: 0,
+    impressions: 0,
+    clicks: 0,
+    frequencyTotal: 0,
+    frequencyCount: 0,
+    resultTypes: new Map(),
+  };
+}
+
+function createResultTypeSummaryItem(resultType) {
+  return {
+    resultType,
+    label: resultType,
+    totalSpend: 0,
+    totalResults: 0,
+  };
+}
+
+function buildObjectiveSummary(campaigns = []) {
+  const objectives = new Map();
+
+  for (const campaign of campaigns) {
+    const objective = campaign.objective || 'UNKNOWN';
+    const summary = objectives.get(objective) ?? createObjectiveSummaryItem(objective);
+    objectives.set(objective, summary);
+
+    const spend = Number(campaign.spend ?? 0);
+    const results = Number(campaign.resultCount ?? 0);
+    const impressions = Number(campaign.impressions ?? 0);
+    const clicks = Number(campaign.clicks ?? 0);
+    const frequency = Number(campaign.frequency);
+
+    summary.campaignCount += 1;
+    summary.totalSpend += Number.isFinite(spend) ? spend : 0;
+    summary.totalResults += Number.isFinite(results) ? results : 0;
+    summary.impressions += Number.isFinite(impressions) ? impressions : 0;
+    summary.clicks += Number.isFinite(clicks) ? clicks : 0;
+    if (Number.isFinite(frequency)) {
+      summary.frequencyTotal += frequency;
+      summary.frequencyCount += 1;
+    }
+
+    for (const adset of campaign.adSets ?? []) {
+      const resultType = adset.resultType || campaign.resultType || 'UNKNOWN';
+      const resultTypeSummary =
+        summary.resultTypes.get(resultType) ?? createResultTypeSummaryItem(resultType);
+      summary.resultTypes.set(resultType, resultTypeSummary);
+      resultTypeSummary.totalSpend += Number(adset.spend ?? 0);
+      resultTypeSummary.totalResults += Number(adset.resultCount ?? 0);
+    }
+
+    if ((campaign.adSets ?? []).length === 0) {
+      const resultType = campaign.resultType || 'UNKNOWN';
+      const resultTypeSummary =
+        summary.resultTypes.get(resultType) ?? createResultTypeSummaryItem(resultType);
+      summary.resultTypes.set(resultType, resultTypeSummary);
+      resultTypeSummary.totalSpend += spend;
+      resultTypeSummary.totalResults += results;
+    }
+  }
+
+  return Array.from(objectives.values())
+    .map((summary) => {
+      const resultTypes = Array.from(summary.resultTypes.values()).map((resultType) => ({
+        ...resultType,
+        totalSpend: Number(resultType.totalSpend.toFixed(2)),
+        totalResults: Number(resultType.totalResults.toFixed(2)),
+        averageCostPerResult:
+          resultType.totalResults > 0
+            ? Number((resultType.totalSpend / resultType.totalResults).toFixed(2))
+            : null,
+      }));
+      return {
+        objective: summary.objective,
+        label: summary.label,
+        campaignCount: summary.campaignCount,
+        totalSpend: Number(summary.totalSpend.toFixed(2)),
+        totalResults: Number(summary.totalResults.toFixed(2)),
+        averageCostPerResult:
+          summary.totalResults > 0
+            ? Number((summary.totalSpend / summary.totalResults).toFixed(2))
+            : null,
+        averageFrequency:
+          summary.frequencyCount > 0
+            ? Number((summary.frequencyTotal / summary.frequencyCount).toFixed(2))
+            : null,
+        averageCtr:
+          summary.impressions > 0
+            ? Number(((summary.clicks / summary.impressions) * 100).toFixed(2))
+            : null,
+        resultTypes: resultTypes.sort(
+          (left, right) => Number(right.totalResults ?? 0) - Number(left.totalResults ?? 0),
+        ),
+      };
+    })
+    .sort((left, right) => Number(right.totalSpend ?? 0) - Number(left.totalSpend ?? 0));
 }
 
 function roundMetric(value) {
