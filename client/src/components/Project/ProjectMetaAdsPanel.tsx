@@ -1327,6 +1327,26 @@ export default function ProjectMetaAdsPanel({
 
   const tableColumns = tableViewColumns[tableView].map((key) => tableColumnMap[key]);
   const tableColumnCount = tableColumns.length + 2;
+  const getTableRowClass = (
+    rowIndex: number,
+    level: 'campaign' | 'adset' | 'ad',
+    isClickable = false,
+  ) => {
+    const stripeClass =
+      rowIndex % 2 === 0
+        ? 'bg-white dark:bg-[#11110f]'
+        : 'bg-slate-50 dark:bg-[#1f1e1a]';
+    const levelClass =
+      level === 'campaign'
+        ? 'font-medium'
+        : level === 'adset'
+          ? 'text-text-secondary'
+          : 'text-text-secondary';
+    const cursorClass = isClickable ? 'cursor-pointer' : '';
+
+    return `${cursorClass} ${stripeClass} ${levelClass} border-b border-border-light transition-colors hover:bg-amber-50 dark:hover:bg-[#2b271d]`;
+  };
+
   const renderEmptyCell = (column: TableColumn) => (
     <td
       key={column.key}
@@ -1782,13 +1802,13 @@ export default function ProjectMetaAdsPanel({
     return renderEmptyCell(column);
   };
 
-  const renderAdRow = (ad: ProjectMetaAdsAdSummary) => {
+  const renderAdRow = (ad: ProjectMetaAdsAdSummary, rowIndex: number) => {
     return (
       <tr
         key={ad.adId}
         data-testid={`meta-ads-ad-card-${ad.adId}`}
         onClick={() => setSelectedAdPreview(ad)}
-        className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 group cursor-pointer border-b border-border-light transition duration-200 odd:bg-surface-primary"
+        className={`group ${getTableRowClass(rowIndex, 'ad', true)}`}
       >
         <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-10 align-middle" />
         <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
@@ -2782,95 +2802,109 @@ export default function ProjectMetaAdsPanel({
                       </td>
                     </tr>
                   ))}
-                {filteredCampaigns.map((campaign) => {
-                  const expanded =
-                    campaign.budgetMode === 'ABO'
-                      ? !collapsedAboCampaignIds.includes(campaign.campaignId)
-                      : expandedCampaignIds.includes(campaign.campaignId);
-                  const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
-                  const recommendation = getEntityRecommendation(campaign.campaignId);
-                  return (
-                    <Fragment key={campaign.campaignId}>
-                      <tr
-                        data-testid="meta-ads-campaign-row"
-                        className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 border-b border-border-light transition odd:bg-surface-primary"
-                      >
-                        <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            aria-label={localize('com_ui_project_meta_ads_select_campaign')}
-                            onChange={() => onToggleCampaign(campaign)}
-                            className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                          />
-                        </td>
-                        <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
-                          {campaign.adSets.length > 0 && (
-                            <button
-                              type="button"
-                              aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
-                              aria-expanded={expanded}
-                              onClick={() => onToggleCampaignExpanded(campaign)}
-                              className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                            >
-                              {expanded ? '-' : '+'}
-                            </button>
+                {(() => {
+                  let rowIndex = 0;
+                  return filteredCampaigns.map((campaign) => {
+                    const expanded =
+                      campaign.budgetMode === 'ABO'
+                        ? !collapsedAboCampaignIds.includes(campaign.campaignId)
+                        : expandedCampaignIds.includes(campaign.campaignId);
+                    const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
+                    const recommendation = getEntityRecommendation(campaign.campaignId);
+                    const campaignRowIndex = rowIndex;
+                    rowIndex += 1;
+
+                    return (
+                      <Fragment key={campaign.campaignId}>
+                        <tr
+                          data-testid="meta-ads-campaign-row"
+                          className={getTableRowClass(campaignRowIndex, 'campaign')}
+                        >
+                          <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              aria-label={localize('com_ui_project_meta_ads_select_campaign')}
+                              onChange={() => onToggleCampaign(campaign)}
+                              className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                            />
+                          </td>
+                          <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                            {campaign.adSets.length > 0 && (
+                              <button
+                                type="button"
+                                aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                                aria-expanded={expanded}
+                                onClick={() => onToggleCampaignExpanded(campaign)}
+                                className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                              >
+                                {expanded ? '-' : '+'}
+                              </button>
+                            )}
+                          </td>
+                          {tableColumns.map((column) =>
+                            renderCampaignCell(column, campaign, recommendation),
                           )}
-                        </td>
-                        {tableColumns.map((column) =>
-                          renderCampaignCell(column, campaign, recommendation),
-                        )}
-                      </tr>
-                      {expanded &&
-                        campaign.adSets.map((adset) => {
-                          const adsetSelected = selectedEntityIds.includes(
-                            `adset:${adset.entityId}`,
-                          );
-                          const adsetRecommendation = getEntityRecommendation(adset.entityId);
-                          const adsetAds = adset.ads ?? [];
-                          const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
-                          return (
-                            <Fragment key={adset.entityId}>
-                              <tr className="even:bg-surface-secondary/40 hover:bg-surface-secondary/70 border-b border-border-light transition odd:bg-surface-primary">
-                                <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
-                                  <input
-                                    type="checkbox"
-                                    checked={adsetSelected}
-                                    aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
-                                    onChange={() => onToggleAdSet(adset.entityId)}
-                                    className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                                  />
-                                </td>
-                                <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
-                                  {adsetAds.length > 0 ? (
-                                    <button
-                                      type="button"
-                                      aria-expanded={!adsCollapsed}
-                                      aria-label={localize(
-                                        adsCollapsed
-                                          ? 'com_ui_project_meta_ads_show_ads'
-                                          : 'com_ui_project_meta_ads_hide_ads',
-                                      )}
-                                      onClick={() => onToggleAdSetAds(adset.entityId)}
-                                      className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                                    >
-                                      {adsCollapsed ? '+' : '-'}
-                                    </button>
-                                  ) : (
-                                    <span aria-hidden="true" className="block h-7 w-7" />
+                        </tr>
+                        {expanded &&
+                          campaign.adSets.map((adset) => {
+                            const adsetSelected = selectedEntityIds.includes(
+                              `adset:${adset.entityId}`,
+                            );
+                            const adsetRecommendation = getEntityRecommendation(adset.entityId);
+                            const adsetAds = adset.ads ?? [];
+                            const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
+                            const adsetRowIndex = rowIndex;
+                            rowIndex += 1;
+
+                            return (
+                              <Fragment key={adset.entityId}>
+                                <tr className={getTableRowClass(adsetRowIndex, 'adset')}>
+                                  <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
+                                    <input
+                                      type="checkbox"
+                                      checked={adsetSelected}
+                                      aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
+                                      onChange={() => onToggleAdSet(adset.entityId)}
+                                      className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                                    />
+                                  </td>
+                                  <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                                    {adsetAds.length > 0 ? (
+                                      <button
+                                        type="button"
+                                        aria-expanded={!adsCollapsed}
+                                        aria-label={localize(
+                                          adsCollapsed
+                                            ? 'com_ui_project_meta_ads_show_ads'
+                                            : 'com_ui_project_meta_ads_hide_ads',
+                                        )}
+                                        onClick={() => onToggleAdSetAds(adset.entityId)}
+                                        className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                                      >
+                                        {adsCollapsed ? '+' : '-'}
+                                      </button>
+                                    ) : (
+                                      <span aria-hidden="true" className="block h-7 w-7" />
+                                    )}
+                                  </td>
+                                  {tableColumns.map((column) =>
+                                    renderAdSetCell(column, campaign, adset, adsetRecommendation),
                                   )}
-                                </td>
-                                {tableColumns.map((column) =>
-                                  renderAdSetCell(column, campaign, adset, adsetRecommendation),
-                                )}
-                              </tr>
-                              {!adsCollapsed && adsetAds.map((ad) => renderAdRow(ad))}
-                            </Fragment>
-                          );
-                        })}
-                    </Fragment>
-                  );
-                })}
+                                </tr>
+                                {!adsCollapsed &&
+                                  adsetAds.map((ad) => {
+                                    const adRowIndex = rowIndex;
+                                    rowIndex += 1;
+                                    return renderAdRow(ad, adRowIndex);
+                                  })}
+                              </Fragment>
+                            );
+                          })}
+                      </Fragment>
+                    );
+                  });
+                })()}
               </tbody>
             </table>
             {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
