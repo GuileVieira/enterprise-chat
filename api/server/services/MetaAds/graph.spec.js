@@ -1,7 +1,20 @@
 jest.mock('node-fetch', () => jest.fn());
 
+const mockCacheMap = new Map();
+
+jest.mock('@librechat/api', () => ({
+  standardCache: jest.fn(() => ({
+    get: jest.fn(async (key) => mockCacheMap.get(key)),
+    set: jest.fn(async (key, value) => {
+      mockCacheMap.set(key, value);
+      return true;
+    }),
+  })),
+}));
+
 const fetch = require('node-fetch');
 const {
+  clearMetaGraphReadCacheForTests,
   getAdSetDailyBudget,
   getAdAccountCurrency,
   getEntityDailyBudget,
@@ -18,6 +31,8 @@ const {
 describe('Meta Ads Graph client', () => {
   beforeEach(() => {
     fetch.mockReset();
+    mockCacheMap.clear();
+    clearMetaGraphReadCacheForTests();
     delete process.env.META_GRAPH_API_VERSION;
     delete process.env.META_ADS_GRAPH_TIMEOUT_MS;
     jest.useRealTimers();
@@ -150,6 +165,24 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[1][0]).toBe(
       'https://graph.facebook.com/v24.0/act_123/campaigns?after=cursor',
     );
+  });
+
+  it('caches paged Meta reads by path, params, and graph version', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [{ id: 'campaign-1', name: 'Cached', effective_status: 'ACTIVE' }],
+        }),
+    });
+
+    await listCampaigns({ adAccountId: 'act_123', token: 'token-a', graphVersion: 'v24.0' });
+    await expect(
+      listCampaigns({ adAccountId: 'act_123', token: 'token-b', graphVersion: 'v24.0' }),
+    ).resolves.toEqual([expect.objectContaining({ id: 'campaign-1' })]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('lists active ad sets with their parent campaign fields', async () => {
@@ -338,6 +371,88 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
     expect(fetch.mock.calls[0][0]).toContain('level=campaign');
     expect(fetch.mock.calls[0][0]).toContain('frequency');
+  });
+
+  it('retries heavy insight periods in date chunks and aggregates rows', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () =>
+          JSON.stringify({
+            error: {
+              message: 'Please reduce the amount of data you are asking for, then retry your request',
+            },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [
+              {
+                adset_id: 'adset-1',
+                adset_name: 'Audience',
+                campaign_id: 'campaign-1',
+                campaign_name: 'Messages',
+                spend: '10',
+                impressions: '100',
+                reach: '50',
+                clicks: '5',
+                actions: [{ action_type: 'link_click', value: '5' }],
+              },
+            ],
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [
+              {
+                adset_id: 'adset-1',
+                adset_name: 'Audience',
+                campaign_id: 'campaign-1',
+                campaign_name: 'Messages',
+                spend: '20',
+                impressions: '200',
+                reach: '100',
+                clicks: '10',
+                actions: [{ action_type: 'link_click', value: '10' }],
+              },
+            ],
+          }),
+      });
+
+    await expect(
+      listAdSetInsights({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        since: '2026-06-01',
+        until: '2026-06-14',
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        adset_id: 'adset-1',
+        spend: 30,
+        impressions: 300,
+        reach: 150,
+        frequency: 2,
+        clicks: 15,
+        cost_per_action_type: [expect.objectContaining({ action_type: 'link_click', value: 2 })],
+      }),
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(fetch.mock.calls[1][0]).toContain(
+      encodeURIComponent(JSON.stringify({ since: '2026-06-01', until: '2026-06-07' })),
+    );
+    expect(fetch.mock.calls[2][0]).toContain(
+      encodeURIComponent(JSON.stringify({ since: '2026-06-08', until: '2026-06-14' })),
+    );
   });
 
   it('uses project graph version override before global default', async () => {
