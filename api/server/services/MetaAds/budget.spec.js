@@ -1037,47 +1037,47 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(status.trend).toEqual(
       expect.objectContaining({
         points: [
-        expect.objectContaining({
-          date: '2026-06-01',
-          campaignId: 'campaign-1',
-          campaignName: 'Messages Floripa',
-          spend: 100,
-          resultCount: 4,
-          cpa: 25,
-          dailyBudget: 50,
-          frequency: 2,
-        }),
-        expect.objectContaining({
-          date: '2026-06-02',
-          campaignId: 'campaign-1',
-          campaignName: 'Messages Floripa',
-          spend: 270,
-          resultCount: 11,
-          cpa: 24.55,
-          dailyBudget: 100,
-          frequency: 3.5,
-        }),
+          expect.objectContaining({
+            date: '2026-06-01',
+            campaignId: 'campaign-1',
+            campaignName: 'Messages Floripa',
+            spend: 100,
+            resultCount: 4,
+            cpa: 25,
+            dailyBudget: 50,
+            frequency: 2,
+          }),
+          expect.objectContaining({
+            date: '2026-06-02',
+            campaignId: 'campaign-1',
+            campaignName: 'Messages Floripa',
+            spend: 270,
+            resultCount: 11,
+            cpa: 24.55,
+            dailyBudget: 100,
+            frequency: 3.5,
+          }),
         ],
         campaignDeltas: [
-        expect.objectContaining({
-          campaignId: 'campaign-1',
-          campaignName: 'Messages Floripa',
-          spendDelta: 170,
-          resultDelta: 7,
-          cpaDelta: -0.45,
-          budgetDelta: 50,
-          latestChange: expect.objectContaining({
-            entityId: 'adset-1',
-            deltaDailyBudget: 10,
+          expect.objectContaining({
+            campaignId: 'campaign-1',
+            campaignName: 'Messages Floripa',
+            spendDelta: 170,
+            resultDelta: 7,
+            cpaDelta: -0.45,
+            budgetDelta: 50,
+            latestChange: expect.objectContaining({
+              entityId: 'adset-1',
+              deltaDailyBudget: 10,
+            }),
           }),
-        }),
         ],
         changesByDay: [
-        expect.objectContaining({
-          date: '2026-06-02',
-          totalDeltaDailyBudget: 10,
-          changeCount: 1,
-        }),
+          expect.objectContaining({
+            date: '2026-06-02',
+            totalDeltaDailyBudget: 10,
+            changeCount: 1,
+          }),
         ],
       }),
     );
@@ -1086,82 +1086,82 @@ describe('Meta Ads budget service persistence safety', () => {
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
     const { budget, getAdAccountCurrency, listCampaignInsights, listAdSetInsights } =
       loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
-      snapshots: [
-        {
-          entityId: 'adset-old',
-          entityName: 'Old',
-          campaignId: 'campaign-old',
-          campaignName: 'Old Campaign',
-          spend: 999,
-          resultCount: 99,
-          createdAt: '2026-06-01T12:00:00.000Z',
-        },
-      ],
-      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
-      campaignInsights: [
-        {
-          campaign_id: 'campaign-1',
-          campaign_name: 'Messages',
-          spend: '85.76',
-          impressions: '4020',
-          reach: '1000',
-          frequency: '4.02',
-          actions: [
-            {
-              action_type: 'onsite_conversion.messaging_conversation_started_7d',
-              value: '8',
-            },
-            {
-              action_type: 'link_click',
-              value: '16',
-            },
-          ],
-          cost_per_action_type: [
-            {
-              action_type: 'onsite_conversion.messaging_conversation_started_7d',
-              value: '10.72',
-            },
-          ],
-        },
-      ],
-      adsets: [
-        {
-          id: 'adset-1',
-          name: 'Audience real',
-          daily_budget: '5000',
-          campaign_id: 'campaign-1',
-        },
-      ],
-      insights: [
-        {
-          campaign_id: 'campaign-1',
-          campaign_name: 'Messages',
-          adset_id: 'adset-1',
-          adset_name: 'Audience real',
-          spend: '85.76',
-          impressions: '1000',
-          reach: '204',
-          frequency: '4.90',
-          actions: [
-            {
-              action_type: 'onsite_conversion.messaging_conversation_started_7d',
-              value: '8',
-            },
-            {
-              action_type: 'link_click',
-              value: '16',
-            },
-          ],
-          cost_per_action_type: [
-            {
-              action_type: 'onsite_conversion.messaging_conversation_started_7d',
-              value: '10.72',
-            },
-          ],
-        },
-      ],
-    });
+        project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+        snapshots: [
+          {
+            entityId: 'adset-old',
+            entityName: 'Old',
+            campaignId: 'campaign-old',
+            campaignName: 'Old Campaign',
+            spend: 999,
+            resultCount: 99,
+            createdAt: '2026-06-01T12:00:00.000Z',
+          },
+        ],
+        campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+        campaignInsights: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Messages',
+            spend: '85.76',
+            impressions: '4020',
+            reach: '1000',
+            frequency: '4.02',
+            actions: [
+              {
+                action_type: 'onsite_conversion.messaging_conversation_started_7d',
+                value: '8',
+              },
+              {
+                action_type: 'link_click',
+                value: '16',
+              },
+            ],
+            cost_per_action_type: [
+              {
+                action_type: 'onsite_conversion.messaging_conversation_started_7d',
+                value: '10.72',
+              },
+            ],
+          },
+        ],
+        adsets: [
+          {
+            id: 'adset-1',
+            name: 'Audience real',
+            daily_budget: '5000',
+            campaign_id: 'campaign-1',
+          },
+        ],
+        insights: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Messages',
+            adset_id: 'adset-1',
+            adset_name: 'Audience real',
+            spend: '85.76',
+            impressions: '1000',
+            reach: '204',
+            frequency: '4.90',
+            actions: [
+              {
+                action_type: 'onsite_conversion.messaging_conversation_started_7d',
+                value: '8',
+              },
+              {
+                action_type: 'link_click',
+                value: '16',
+              },
+            ],
+            cost_per_action_type: [
+              {
+                action_type: 'onsite_conversion.messaging_conversation_started_7d',
+                value: '10.72',
+              },
+            ],
+          },
+        ],
+      });
 
     const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
       since: '2026-06-10',
@@ -1224,6 +1224,83 @@ describe('Meta Ads budget service persistence safety', () => {
         frequency: 4.02,
       }),
     );
+  });
+
+  it('keeps ad-level insights even when the Meta ads listing does not return the ad creative', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Audience real',
+          daily_budget: '5000',
+          campaign_id: 'campaign-1',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          adset_id: 'adset-1',
+          adset_name: 'Audience real',
+          spend: '85.76',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '8',
+            },
+          ],
+        },
+      ],
+      ads: [],
+      adInsights: [
+        {
+          ad_id: 'ad-1',
+          ad_name: 'Message creative from insights',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          spend: '50',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '5',
+            },
+          ],
+          cost_per_action_type: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '10',
+            },
+          ],
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-10',
+      until: '2026-06-15',
+    });
+
+    expect(status.campaigns[0].adSets[0].ads).toEqual([
+      expect.objectContaining({
+        adId: 'ad-1',
+        adName: 'Message creative from insights',
+        adSetId: 'adset-1',
+        spend: 50,
+        resultCount: 5,
+        cpa: 10,
+        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+      }),
+    ]);
+    expect(status.adDiagnostics).toEqual({
+      adsFetched: 0,
+      adInsightsFetched: 1,
+      adsWithInsights: 0,
+      insightOnlyAds: 1,
+      adsAttachedToAdSets: 1,
+    });
   });
 
   it('keeps period insights when historical ad set config is rate limited', async () => {

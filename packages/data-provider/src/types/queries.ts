@@ -289,11 +289,20 @@ export type ProjectMetaAdsManualBudgetResponse = {
   change: ProjectMetaAdsBudgetChange;
 };
 
+export type ProjectMetaAdsAdDiagnostics = {
+  adsFetched: number;
+  adInsightsFetched: number;
+  adsWithInsights: number;
+  insightOnlyAds: number;
+  adsAttachedToAdSets: number;
+};
+
 export type ProjectMetaAdsStatus = {
   latestSnapshots: ProjectMetaAdsSnapshot[];
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
   campaigns?: ProjectMetaAdsCampaignSummary[];
+  adDiagnostics?: ProjectMetaAdsAdDiagnostics;
   currency?: string;
   period?: {
     datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';

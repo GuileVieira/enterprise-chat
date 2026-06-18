@@ -1102,6 +1102,8 @@
   "com_ui_project_meta_ads_bi_rank_by": "menor custo",
   "com_ui_project_meta_ads_bi_rank_detail": "Detalhe do ranking",
   "com_ui_project_meta_ads_bi_no_rankings": "Sem dados válidos para estes filtros.",
+  "com_ui_project_meta_ads_bi_no_ad_insights": "A Meta não retornou métricas por anúncio para estes filtros.",
+  "com_ui_project_meta_ads_bi_no_attached_ads": "A Meta retornou métricas por anúncio, mas não foi possível anexá-las aos conjuntos deste período.",
   "com_ui_project_meta_ads_spend_delta": "Δ gasto",
   "com_ui_project_meta_ads_results_delta": "Δ resultados",
   "com_ui_project_meta_ads_cpa_delta": "Δ CPA",

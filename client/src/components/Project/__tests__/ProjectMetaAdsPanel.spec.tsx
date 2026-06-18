@@ -109,6 +109,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockUserRole = 'USER';
     mockUseProjectMetaAdsQuery.mockClear();
     delete mockStatusData.campaigns;
+    delete mockStatusData.adDiagnostics;
     delete mockStatusData.credentials;
     delete mockStatusData.trend;
     mockStatusData.graphVersion = {
@@ -596,6 +597,116 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByTestId('meta-ads-bi-campaigns')).not.toHaveTextContent('Traffic C');
     expect(screen.getByTestId('meta-ads-bi-campaigns')).toHaveTextContent('Campaign B');
+  });
+
+  it('ranks ads using result type breakdown when the selected result is not the primary metric', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-message',
+        campaignName: 'Message Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        cpa: null,
+        resultCount: 0,
+        resultType: 'UNKNOWN',
+        resultTypeBreakdown: [
+          {
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+            totalSpend: 100,
+            totalResults: 10,
+            averageCostPerResult: 10,
+          },
+        ],
+        adSets: [
+          {
+            entityId: 'adset-message',
+            entityName: 'Message Ad Set',
+            campaignId: 'campaign-message',
+            campaignName: 'Message Campaign',
+            spend: 100,
+            cpa: null,
+            resultCount: 0,
+            resultType: 'UNKNOWN',
+            resultTypeBreakdown: [
+              {
+                resultType: 'onsite_conversion.messaging_conversation_started_7d',
+                totalSpend: 100,
+                totalResults: 10,
+                averageCostPerResult: 10,
+              },
+            ],
+            ads: [
+              {
+                adId: 'ad-message',
+                adName: 'Message Creative',
+                adSetId: 'adset-message',
+                campaignId: 'campaign-message',
+                spend: 100,
+                cpa: null,
+                resultCount: 0,
+                resultType: 'UNKNOWN',
+                resultTypeBreakdown: [
+                  {
+                    resultType: 'onsite_conversion.messaging_conversation_started_7d',
+                    totalSpend: 100,
+                    totalResults: 10,
+                    averageCostPerResult: 10,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-result-type-filter'), {
+      target: { value: 'onsite_conversion.messaging_conversation_started_7d' },
+    });
+
+    expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Message Creative');
+  });
+
+  it('explains when Meta returns no ad-level metrics for top ads', () => {
+    mockStatusData.adDiagnostics = {
+      adsFetched: 3,
+      adInsightsFetched: 0,
+      adsWithInsights: 0,
+      insightOnlyAds: 0,
+      adsAttachedToAdSets: 0,
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-message',
+        campaignName: 'Message Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        cpa: 10,
+        resultCount: 10,
+        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+        adSets: [
+          {
+            entityId: 'adset-message',
+            entityName: 'Message Ad Set',
+            campaignId: 'campaign-message',
+            campaignName: 'Message Campaign',
+            spend: 100,
+            cpa: 10,
+            resultCount: 10,
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+            ads: [],
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent(
+      'com_ui_project_meta_ads_bi_no_ad_insights',
+    );
   });
 
   it('averages fallback campaign frequency instead of summing ad set frequencies', () => {

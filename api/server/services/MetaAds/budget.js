@@ -532,11 +532,7 @@ function calculateMetrics(row, targetResultType) {
     const rawResultType = action?.action_type;
     const resultType = canonicalResultTypes[rawResultType] ?? rawResultType;
     const totalResults = Number(action?.value ?? 0);
-    if (
-      !resultType ||
-      !Number.isFinite(totalResults) ||
-      totalResults <= 0
-    ) {
+    if (!resultType || !Number.isFinite(totalResults) || totalResults <= 0) {
       continue;
     }
     const current = resultTypeBreakdownByType.get(resultType) ?? {
@@ -823,7 +819,8 @@ function getAssetFeedValue(assetFeedSpec, key) {
 
 function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType }) {
   const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
-  return ads
+  const adIds = new Set(ads.map((ad) => ad.id).filter(Boolean));
+  const listedAdSummaries = ads
     .map((ad) => {
       const adId = ad.id;
       if (!adId) {
@@ -867,6 +864,42 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
       };
     })
     .filter(Boolean);
+  const insightOnlySummaries = adInsights
+    .filter((insight) => insight.ad_id && !adIds.has(insight.ad_id))
+    .map((insight) => ({
+      adId: insight.ad_id,
+      adName: insight.ad_name || insight.ad_id,
+      adSetId: insight.adset_id,
+      campaignId: insight.campaign_id,
+      campaignName: insight.campaign_name,
+      currency,
+      ...calculateMetrics(insight, targetResultType),
+    }));
+  return [...listedAdSummaries, ...insightOnlySummaries];
+}
+
+function buildAdDiagnostics({ ads = [], adInsights = [], adSummaries = [], campaigns = [] }) {
+  const listedAdIds = new Set(ads.map((ad) => ad.id).filter(Boolean));
+  const insightAdIds = new Set(adInsights.map((insight) => insight.ad_id).filter(Boolean));
+  return {
+    adsFetched: ads.length,
+    adInsightsFetched: adInsights.length,
+    adsWithInsights: [...listedAdIds].filter((adId) => insightAdIds.has(adId)).length,
+    insightOnlyAds: adSummaries.filter((ad) => ad.adId && !listedAdIds.has(ad.adId)).length,
+    adsAttachedToAdSets: countAttachedAds(campaigns),
+  };
+}
+
+function countAttachedAds(campaigns = []) {
+  return campaigns.reduce(
+    (total, campaign) =>
+      total +
+      (campaign.adSets ?? []).reduce(
+        (adSetTotal, adSet) => adSetTotal + (adSet.ads ?? []).length,
+        0,
+      ),
+    0,
+  );
 }
 
 function buildCampaignSummaries({
@@ -2134,6 +2167,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let campaignConfigs = [];
   let adsetConfigs = [];
   let adSummaries = [];
+  let adDiagnostics;
   let campaignInsights = [];
   let liveSnapshots;
   let currency;
@@ -2164,6 +2198,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
         campaignConfigs = cached.campaignConfigs;
         adsetConfigs = cached.adsetConfigs;
         adSummaries = cached.adSummaries;
+        adDiagnostics = cached.adDiagnostics;
         campaignInsights = cached.campaignInsights;
         liveSnapshots = cached.liveSnapshots;
         currency = cached.currency;
@@ -2271,10 +2306,16 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               currency,
               targetResultType,
             });
+            adDiagnostics = buildAdDiagnostics({
+              ads: liveAds,
+              adInsights: liveAdInsights,
+              adSummaries,
+            });
             setCachedStatusPeriod(cacheKey, {
               campaignConfigs,
               adsetConfigs,
               adSummaries,
+              adDiagnostics,
               campaignInsights,
               liveSnapshots,
               currency,
@@ -2309,6 +2350,12 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     ads: adSummaries,
     targetResultType: project?.metaAds?.rules?.targetResultType,
   });
+  if (adDiagnostics) {
+    adDiagnostics = {
+      ...adDiagnostics,
+      adsAttachedToAdSets: countAttachedAds(campaigns),
+    };
+  }
   const period =
     options.datePreset || options.since || options.until
       ? {
@@ -2322,6 +2369,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     recommendations,
     changes,
     campaigns,
+    adDiagnostics,
     currency: currency || 'BRL',
     credentials,
     graphVersion,

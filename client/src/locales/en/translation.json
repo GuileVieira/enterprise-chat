@@ -2079,6 +2079,8 @@
   "com_ui_project_meta_ads_bi_rank_by": "lowest cost",
   "com_ui_project_meta_ads_bi_rank_detail": "Ranking detail",
   "com_ui_project_meta_ads_bi_no_rankings": "No valid ranking data for these filters.",
+  "com_ui_project_meta_ads_bi_no_ad_insights": "Meta did not return ad-level metrics for these filters.",
+  "com_ui_project_meta_ads_bi_no_attached_ads": "Meta returned ad-level metrics, but they could not be attached to ad sets for this period.",
   "com_ui_project_meta_ads_spend_delta": "Spend Δ",
   "com_ui_project_meta_ads_results_delta": "Results Δ",
   "com_ui_project_meta_ads_cpa_delta": "CPA Δ",

@@ -106,6 +106,7 @@ type MetaAdsBiRankItem = {
   cpa?: number | null;
   spend?: number | null;
   ctr?: number | null;
+  resultTypeBreakdown?: ProjectMetaAdsCampaignSummary['resultTypeBreakdown'];
   thumbnailUrls?: string[];
 };
 type MetaAdsBiRankings = {
@@ -686,6 +687,29 @@ function getRankEfficiency(item: MetaAdsBiRankItem) {
   return null;
 }
 
+function getRankMetricForResultType(item: MetaAdsBiRankItem, resultTypeFilter: string) {
+  if (resultTypeFilter === 'all') {
+    return item;
+  }
+  const resultType = item.resultType || 'UNKNOWN';
+  if (resultType === resultTypeFilter) {
+    return item;
+  }
+  const breakdown = item.resultTypeBreakdown?.find(
+    (resultTypeItem) => (resultTypeItem.resultType || 'UNKNOWN') === resultTypeFilter,
+  );
+  if (!breakdown) {
+    return item;
+  }
+  return {
+    ...item,
+    resultType: breakdown.resultType,
+    resultCount: breakdown.totalResults,
+    spend: breakdown.totalSpend,
+    cpa: breakdown.averageCostPerResult,
+  };
+}
+
 function hasValidRankMetric(item: MetaAdsBiRankItem) {
   const resultCount = Number(item.resultCount);
   return Number.isFinite(resultCount) && resultCount > 0 && getRankEfficiency(item) != null;
@@ -746,6 +770,7 @@ function toAdSetRankItem(
     cpa: adSet.cpa,
     spend: adSet.spend,
     ctr: adSet.ctr,
+    resultTypeBreakdown: adSet.resultTypeBreakdown,
     thumbnailUrls: collectAdThumbnails(adSet.ads ?? []),
   };
 }
@@ -766,6 +791,7 @@ function toAdRankItem(
     cpa: ad.cpa,
     spend: ad.spend,
     ctr: ad.ctr,
+    resultTypeBreakdown: ad.resultTypeBreakdown,
     thumbnailUrls: collectAdThumbnails([ad]),
   };
 }
@@ -791,24 +817,28 @@ function buildMetaAdsBiRankings(
       cpa: campaign.cpa,
       spend: campaign.spend,
       ctr: campaign.ctr,
+      resultTypeBreakdown: campaign.resultTypeBreakdown,
       thumbnailUrls: collectAdThumbnails(
         (campaign.adSets ?? []).flatMap((adSet) => adSet.ads ?? []),
       ),
     };
-    if (matchesBiFilters(campaignItem, objectiveFilter, resultTypeFilter)) {
-      campaignItems.push(campaignItem);
+    const filteredCampaignItem = getRankMetricForResultType(campaignItem, resultTypeFilter);
+    if (matchesBiFilters(filteredCampaignItem, objectiveFilter, resultTypeFilter)) {
+      campaignItems.push(filteredCampaignItem);
     }
 
     for (const adSet of campaign.adSets ?? []) {
       const adSetItem = toAdSetRankItem(campaign, adSet);
-      if (matchesBiFilters(adSetItem, objectiveFilter, resultTypeFilter)) {
-        adSetItems.push(adSetItem);
+      const filteredAdSetItem = getRankMetricForResultType(adSetItem, resultTypeFilter);
+      if (matchesBiFilters(filteredAdSetItem, objectiveFilter, resultTypeFilter)) {
+        adSetItems.push(filteredAdSetItem);
       }
 
       for (const ad of adSet.ads ?? []) {
         const adItem = toAdRankItem(campaign, adSet, ad);
-        if (matchesBiFilters(adItem, objectiveFilter, resultTypeFilter)) {
-          adItems.push(adItem);
+        const filteredAdItem = getRankMetricForResultType(adItem, resultTypeFilter);
+        if (matchesBiFilters(filteredAdItem, objectiveFilter, resultTypeFilter)) {
+          adItems.push(filteredAdItem);
         }
       }
     }
@@ -825,10 +855,19 @@ function collectBiResultTypes(campaigns: ProjectMetaAdsCampaignSummary[]) {
   const resultTypes = new Set<string>();
   for (const campaign of campaigns) {
     resultTypes.add(campaign.resultType || 'UNKNOWN');
+    for (const resultType of campaign.resultTypeBreakdown ?? []) {
+      resultTypes.add(resultType.resultType || 'UNKNOWN');
+    }
     for (const adSet of campaign.adSets ?? []) {
       resultTypes.add(adSet.resultType || campaign.resultType || 'UNKNOWN');
+      for (const resultType of adSet.resultTypeBreakdown ?? []) {
+        resultTypes.add(resultType.resultType || 'UNKNOWN');
+      }
       for (const ad of adSet.ads ?? []) {
         resultTypes.add(ad.resultType || adSet.resultType || campaign.resultType || 'UNKNOWN');
+        for (const resultType of ad.resultTypeBreakdown ?? []) {
+          resultTypes.add(resultType.resultType || 'UNKNOWN');
+        }
       }
     }
   }
@@ -944,7 +983,8 @@ function buildSummaryResultTypeOptions(
     offsite_conversion_fb_pixel_purchase: 'purchase',
     'offsite_conversion.fb_pixel_purchase': 'purchase',
     onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
-    'onsite_conversion.messaging_first_reply': 'onsite_conversion.messaging_conversation_started_7d',
+    'onsite_conversion.messaging_first_reply':
+      'onsite_conversion.messaging_conversation_started_7d',
   };
   const allowedResultTypes = new Set([
     'lead',
@@ -1754,6 +1794,14 @@ export default function ProjectMetaAdsPanel({
     biResultTypeFilter,
     Number.isFinite(biMinSpend) && biMinSpend > 0 ? biMinSpend : defaultRules.minSpend,
   );
+  const adRankingEmptyMessageKey: TranslationKeys =
+    statusQuery.data?.adDiagnostics?.adInsightsFetched === 0
+      ? 'com_ui_project_meta_ads_bi_no_ad_insights'
+      : statusQuery.data?.adDiagnostics &&
+          statusQuery.data.adDiagnostics.adInsightsFetched > 0 &&
+          statusQuery.data.adDiagnostics.adsAttachedToAdSets === 0
+        ? 'com_ui_project_meta_ads_bi_no_attached_ads'
+        : 'com_ui_project_meta_ads_bi_no_rankings';
   const objectiveSummaries =
     statusQuery.data?.summary?.objectives && statusQuery.data.summary.objectives.length > 0
       ? statusQuery.data.summary.objectives
@@ -2518,6 +2566,7 @@ export default function ProjectMetaAdsPanel({
     titleKey: TranslationKeys,
     items: MetaAdsBiRankItem[],
     testId: string,
+    emptyMessageKey: TranslationKeys = 'com_ui_project_meta_ads_bi_no_rankings',
   ) => (
     <div className="border border-white/10 bg-[#12120f]">
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
@@ -2573,9 +2622,7 @@ export default function ProjectMetaAdsPanel({
             );
           })
         ) : (
-          <div className="px-3 py-5 text-sm text-[#a39a8c]">
-            {localize('com_ui_project_meta_ads_bi_no_rankings')}
-          </div>
+          <div className="px-3 py-5 text-sm text-[#a39a8c]">{localize(emptyMessageKey)}</div>
         )}
       </div>
     </div>
@@ -4779,6 +4826,7 @@ export default function ProjectMetaAdsPanel({
               'com_ui_project_meta_ads_bi_top_ads',
               biRankings.ads,
               'meta-ads-bi-ads',
+              adRankingEmptyMessageKey,
             )}
           </div>
         </div>
