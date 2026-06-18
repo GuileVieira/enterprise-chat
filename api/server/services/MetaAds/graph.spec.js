@@ -42,6 +42,7 @@ describe('Meta Ads Graph client', () => {
     delete process.env.META_ADS_GRAPH_TODAY_CACHE_TTL_MS;
     delete process.env.META_ADS_GRAPH_HISTORICAL_CACHE_TTL_MS;
     delete process.env.META_ADS_GRAPH_ACCOUNT_CONCURRENCY;
+    delete process.env.META_ADS_GRAPH_READ_CACHE_VERSION;
     jest.useRealTimers();
   });
 
@@ -190,6 +191,38 @@ describe('Meta Ads Graph client', () => {
     ).resolves.toEqual([expect.objectContaining({ id: 'campaign-1' })]);
 
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('separates read cache entries by cache version', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'campaign-old', name: 'Old', effective_status: 'ACTIVE' }],
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'campaign-new', name: 'New', effective_status: 'ACTIVE' }],
+          }),
+      });
+
+    process.env.META_ADS_GRAPH_READ_CACHE_VERSION = 'old-version';
+    await expect(
+      listCampaigns({ adAccountId: 'act_123', token: 'token-a', graphVersion: 'v24.0' }),
+    ).resolves.toEqual([expect.objectContaining({ id: 'campaign-old' })]);
+
+    process.env.META_ADS_GRAPH_READ_CACHE_VERSION = 'new-version';
+    await expect(
+      listCampaigns({ adAccountId: 'act_123', token: 'token-b', graphVersion: 'v24.0' }),
+    ).resolves.toEqual([expect.objectContaining({ id: 'campaign-new' })]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('uses a short cache TTL for insight ranges that include today', async () => {

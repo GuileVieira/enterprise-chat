@@ -15,6 +15,7 @@ const DEFAULT_META_GRAPH_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_META_GRAPH_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_META_GRAPH_READ_CACHE_MAX_ENTRIES = 250;
 const DEFAULT_META_GRAPH_ACCOUNT_CONCURRENCY = 1;
+const DEFAULT_META_GRAPH_READ_CACHE_VERSION = '2026-06-18-ad-creative-media-v2';
 const metaGraphReadCache = new Map();
 const metaGraphInflightReads = new Map();
 const metaGraphAccountQueues = new Map();
@@ -106,6 +107,10 @@ function getMetaGraphReadCacheMaxEntries() {
   );
 }
 
+function getMetaGraphReadCacheVersion() {
+  return process.env.META_ADS_GRAPH_READ_CACHE_VERSION || DEFAULT_META_GRAPH_READ_CACHE_VERSION;
+}
+
 function getMetaGraphReadCacheKey({ path, params, graphVersion }) {
   const normalizedParams = Object.entries(params ?? {})
     .filter(([, value]) => value != null && value !== '')
@@ -114,6 +119,7 @@ function getMetaGraphReadCacheKey({ path, params, graphVersion }) {
     graphVersion: getMetaGraphVersion(graphVersion),
     path,
     params: normalizedParams,
+    version: getMetaGraphReadCacheVersion(),
   });
   return crypto.createHash('sha256').update(rawKey).digest('hex');
 }
