@@ -857,8 +857,8 @@ describe('Meta Ads budget service persistence safety', () => {
     });
   });
 
-  it('lazy-loads ads with creative previews and metrics by ad set', async () => {
-    const { budget, listAds } = loadBudgetWithMocks({
+  it('attaches live ads with creative previews and metrics to their ad sets', async () => {
+    const { budget } = loadBudgetWithMocks({
       project: {
         projectId: 'p1',
         tenantId: 'tenant-a',
@@ -934,8 +934,22 @@ describe('Meta Ads budget service persistence safety', () => {
       datePreset: 'last_7d',
     });
 
-    expect(status.campaigns?.[0]?.adSets?.[0]?.ads).toEqual([]);
-    expect(listAds).not.toHaveBeenCalled();
+    expect(status.campaigns?.[0]?.adSets?.[0]?.ads).toEqual([
+      expect.objectContaining({
+        adId: 'ad-1',
+        adName: 'Lead form video',
+        adSetId: 'adset-1',
+        campaignId: 'campaign-1',
+        creativeId: 'creative-1',
+        title: 'Reserve a visit',
+        body: 'See available units today.',
+        description: 'Limited schedule',
+        thumbnailUrl: 'https://example.com/thumb.jpg',
+        imageUrl: 'https://example.com/image.jpg',
+        linkUrl: 'https://example.com/visit',
+        callToActionType: 'LEARN_MORE',
+      }),
+    ]);
 
     const ads = await budget.getProjectMetaAdsAdSetAds('p1', 'request-tenant', {
       adSetId: 'adset-1',
@@ -1291,7 +1305,12 @@ describe('Meta Ads budget service persistence safety', () => {
       until: '2026-06-15',
     });
 
-    expect(listAds).not.toHaveBeenCalled();
+    expect(listAds).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adAccountId: 'act_123',
+        includeInactive: true,
+      }),
+    );
     expect(listAdInsights).not.toHaveBeenCalled();
     expect(status.campaigns[0].adSets[0].ads).toEqual([]);
     expect(status.adDiagnostics).toEqual({

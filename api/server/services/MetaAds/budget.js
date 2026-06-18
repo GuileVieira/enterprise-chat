@@ -2245,7 +2245,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             return [];
           });
           try {
-            const [liveCampaignInsights, insights] = await Promise.all([
+            const [liveCampaignInsights, insights, liveAds] = await Promise.all([
               listCampaignInsights({
                 adAccountId,
                 token,
@@ -2266,6 +2266,18 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                 until,
                 graphVersion: effectiveGraphVersion,
               }),
+              listAds({
+                adAccountId,
+                token,
+                graphVersion: effectiveGraphVersion,
+                includeInactive: true,
+              }).catch((error) => {
+                logger.error('[MetaAdsBudget] ads creative listing failed', {
+                  projectId,
+                  message: error.message,
+                });
+                return [];
+              }),
             ]);
             campaignInsights = liveCampaignInsights;
             liveSnapshots = buildSnapshotsFromInsights({
@@ -2275,9 +2287,14 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               currency,
               targetResultType,
             });
-            adSummaries = [];
+            adSummaries = buildAdSummaries({
+              ads: liveAds,
+              adInsights: [],
+              currency,
+              targetResultType,
+            });
             adDiagnostics = {
-              adsFetched: 0,
+              adsFetched: liveAds.length,
               adInsightsFetched: 0,
               adsWithInsights: 0,
               insightOnlyAds: 0,
