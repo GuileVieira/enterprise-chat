@@ -975,6 +975,16 @@ describe('Meta Ads budget service persistence safety', () => {
           spend: '20',
         },
       ],
+      adInsights: [
+        {
+          ad_id: 'ad-1',
+          ad_name: 'Dynamic creative',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          spend: '20',
+          impressions: '100',
+        },
+      ],
       ads: [
         {
           id: 'ad-1',
@@ -1003,7 +1013,7 @@ describe('Meta Ads budget service persistence safety', () => {
 
     expect(listAds).toHaveBeenCalledWith(
       expect.objectContaining({
-        adSetIds: ['adset-1'],
+        adIds: ['ad-1'],
       }),
     );
     expect(status.campaigns?.[0]?.adSets?.[0]?.ads?.[0]).toEqual(

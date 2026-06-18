@@ -2277,7 +2277,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             return [];
           });
           try {
-            const [liveCampaignInsights, insights, liveAds, liveAdInsights] = await Promise.all([
+            const [liveCampaignInsights, insights, liveAdInsights] = await Promise.all([
               listCampaignInsights({
                 adAccountId,
                 token,
@@ -2298,19 +2298,6 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                 until,
                 graphVersion: effectiveGraphVersion,
               }),
-              listAds({
-                adAccountId,
-                adSetIds: adsetConfigs.map((adset) => adset.id).filter(Boolean),
-                token,
-                graphVersion: effectiveGraphVersion,
-                includeInactive: true,
-              }).catch((error) => {
-                logger.error('[MetaAdsBudget] ads status enrichment failed', {
-                  projectId,
-                  message: error.message,
-                });
-                return [];
-              }),
               listAdInsights({
                 adAccountId,
                 token,
@@ -2325,6 +2312,24 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                 return [];
               }),
             ]);
+            const insightAdIds = [
+              ...new Set(liveAdInsights.map((row) => row.ad_id).filter(Boolean)),
+            ];
+            const liveAds = insightAdIds.length
+              ? await listAds({
+                  adAccountId,
+                  adIds: insightAdIds,
+                  token,
+                  graphVersion: effectiveGraphVersion,
+                  includeInactive: true,
+                }).catch((error) => {
+                  logger.error('[MetaAdsBudget] ads status enrichment failed', {
+                    projectId,
+                    message: error.message,
+                  });
+                  return [];
+                })
+              : [];
             campaignInsights = liveCampaignInsights;
             liveSnapshots = buildSnapshotsFromInsights({
               insights,

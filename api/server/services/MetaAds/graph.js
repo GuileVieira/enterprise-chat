@@ -829,21 +829,32 @@ async function listCampaigns({ adAccountId, token, graphVersion, includeInactive
   }
 }
 
-async function listAds({ adAccountId, adSetIds = [], token, graphVersion, includeInactive = false }) {
+async function listAds({
+  adAccountId,
+  adIds = [],
+  adSetIds = [],
+  token,
+  graphVersion,
+  includeInactive = false,
+}) {
   logger.debug('[MetaAdsGraph] listing ads', {
     adAccountId,
+    adCount: Array.isArray(adIds) ? adIds.length : 0,
     adSetCount: Array.isArray(adSetIds) ? adSetIds.length : 0,
     graphVersion,
   });
-  const paths =
-    Array.isArray(adSetIds) && adSetIds.length > 0
-      ? adSetIds.filter(Boolean).map((adSetId) => `${encodeURIComponent(adSetId)}/ads`)
-      : [`${encodeURIComponent(adAccountId)}/ads`];
   const params = {
     fields:
       'id,name,effective_status,adset_id,campaign_id,creative{id,name,title,body,thumbnail_url,image_url,image_hash,video_id,object_story_spec,asset_feed_spec}',
     limit: DEFAULT_LIMIT,
   };
+  const normalizedAdIds = Array.isArray(adIds) ? [...new Set(adIds.filter(Boolean))] : [];
+  const paths =
+    normalizedAdIds.length > 0
+      ? normalizedAdIds.map((adId) => encodeURIComponent(adId))
+      : Array.isArray(adSetIds) && adSetIds.length > 0
+        ? adSetIds.filter(Boolean).map((adSetId) => `${encodeURIComponent(adSetId)}/ads`)
+        : [`${encodeURIComponent(adAccountId)}/ads`];
   try {
     const ads = [];
     for (const path of paths) {
@@ -856,6 +867,8 @@ async function listAds({ adAccountId, adSetIds = [], token, graphVersion, includ
       });
       if (Array.isArray(payload.data)) {
         ads.push(...payload.data);
+      } else if (payload?.id) {
+        ads.push(payload);
       }
     }
     return includeInactive
