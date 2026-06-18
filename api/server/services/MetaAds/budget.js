@@ -808,6 +808,20 @@ function getCreativeLinkData(creative = {}) {
   return objectStorySpec.link_data ?? objectStorySpec.video_data ?? {};
 }
 
+function getCreativeStoryMediaUrl(creative = {}) {
+  const objectStorySpec = creative.object_story_spec ?? {};
+  const linkData = objectStorySpec.link_data ?? {};
+  const videoData = objectStorySpec.video_data ?? {};
+  const childAttachment = Array.isArray(linkData.child_attachments)
+    ? linkData.child_attachments.find((attachment) => typeof attachment?.picture === 'string')
+    : null;
+  return (
+    getCreativeValue(videoData, ['image_url', 'thumbnail_url']) ||
+    getCreativeValue(linkData, ['picture']) ||
+    getCreativeValue(childAttachment, ['picture'])
+  );
+}
+
 function getAssetFeedValue(assetFeedSpec, key) {
   const values = assetFeedSpec?.[key];
   if (!Array.isArray(values)) {
@@ -815,6 +829,22 @@ function getAssetFeedValue(assetFeedSpec, key) {
   }
   const first = values.find((item) => typeof item?.text === 'string' && item.text.trim());
   return first?.text?.trim();
+}
+
+function getAssetFeedMediaUrl(assetFeedSpec) {
+  const images = Array.isArray(assetFeedSpec?.images) ? assetFeedSpec.images : [];
+  const image = images.find((item) => typeof item?.url === 'string' && item.url.trim());
+  if (image?.url) {
+    return image.url.trim();
+  }
+  const videos = Array.isArray(assetFeedSpec?.videos) ? assetFeedSpec.videos : [];
+  const video = videos.find(
+    (item) =>
+      typeof item?.thumbnail_url === 'string' ||
+      typeof item?.image_url === 'string' ||
+      typeof item?.url === 'string',
+  );
+  return getCreativeValue(video, ['thumbnail_url', 'image_url', 'url']);
 }
 
 function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType }) {
@@ -829,6 +859,8 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
       const creative = ad.creative ?? {};
       const linkData = getCreativeLinkData(creative);
       const assetFeedSpec = creative.asset_feed_spec;
+      const storyMediaUrl = getCreativeStoryMediaUrl(creative);
+      const assetFeedMediaUrl = getAssetFeedMediaUrl(assetFeedSpec);
       const insight = insightByAdId.get(adId) ?? {};
       const metrics = calculateMetrics(insight, targetResultType);
       return {
@@ -851,9 +883,9 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
           getCreativeValue(linkData, ['description']) ||
           getAssetFeedValue(assetFeedSpec, 'descriptions'),
         thumbnailUrl:
-          getCreativeValue(creative, ['thumbnail_url']) || getCreativeValue(linkData, ['picture']),
+          getCreativeValue(creative, ['thumbnail_url']) || storyMediaUrl || assetFeedMediaUrl,
         imageUrl:
-          getCreativeValue(creative, ['image_url']) || getCreativeValue(linkData, ['picture']),
+          getCreativeValue(creative, ['image_url']) || storyMediaUrl || assetFeedMediaUrl,
         videoId:
           getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
         linkUrl: getCreativeValue(linkData, ['link']),
@@ -2268,6 +2300,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               }),
               listAds({
                 adAccountId,
+                adSetIds: adsetConfigs.map((adset) => adset.id).filter(Boolean),
                 token,
                 graphVersion: effectiveGraphVersion,
                 includeInactive: true,

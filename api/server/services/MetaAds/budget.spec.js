@@ -958,6 +958,62 @@ describe('Meta Ads budget service persistence safety', () => {
     ]);
   });
 
+  it('uses nested creative media fallbacks when Meta omits direct media fields', async () => {
+    const { budget, listAds } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [{ id: 'adset-1', name: 'Topo', campaign_id: 'campaign-1' }],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Topo',
+          campaign_id: 'campaign-1',
+          spend: '20',
+        },
+      ],
+      ads: [
+        {
+          id: 'ad-1',
+          name: 'Dynamic creative',
+          effective_status: 'ACTIVE',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          creative: {
+            id: 'creative-1',
+            object_story_spec: {
+              link_data: {
+                child_attachments: [{ picture: 'https://example.com/child.jpg' }],
+              },
+            },
+            asset_feed_spec: {
+              images: [{ url: 'https://example.com/asset.jpg' }],
+            },
+          },
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(listAds).toHaveBeenCalledWith(
+      expect.objectContaining({
+        adSetIds: ['adset-1'],
+      }),
+    );
+    expect(status.campaigns?.[0]?.adSets?.[0]?.ads?.[0]).toEqual(
+      expect.objectContaining({
+        thumbnailUrl: 'https://example.com/child.jpg',
+        imageUrl: 'https://example.com/child.jpg',
+      }),
+    );
+  });
+
   it('returns daily campaign trend and evolution deltas from historical snapshots', async () => {
     const { budget } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },

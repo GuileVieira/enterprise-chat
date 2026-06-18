@@ -829,39 +829,49 @@ async function listCampaigns({ adAccountId, token, graphVersion, includeInactive
   }
 }
 
-async function listAds({ adAccountId, token, graphVersion, includeInactive = false }) {
-  logger.debug('[MetaAdsGraph] listing ads', { adAccountId, graphVersion });
-  const path = `${encodeURIComponent(adAccountId)}/ads`;
+async function listAds({ adAccountId, adSetIds = [], token, graphVersion, includeInactive = false }) {
+  logger.debug('[MetaAdsGraph] listing ads', {
+    adAccountId,
+    adSetCount: Array.isArray(adSetIds) ? adSetIds.length : 0,
+    graphVersion,
+  });
+  const paths =
+    Array.isArray(adSetIds) && adSetIds.length > 0
+      ? adSetIds.filter(Boolean).map((adSetId) => `${encodeURIComponent(adSetId)}/ads`)
+      : [`${encodeURIComponent(adAccountId)}/ads`];
   const params = {
     fields:
-      'id,name,effective_status,adset_id,campaign_id,creative{id,name,title,body,thumbnail_url,image_url,video_id,object_story_spec,asset_feed_spec}',
+      'id,name,effective_status,adset_id,campaign_id,creative{id,name,title,body,thumbnail_url,image_url,image_hash,video_id,object_story_spec,asset_feed_spec}',
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGetPaged({
-      path,
-      token,
-      params,
-      graphVersion,
-      resourceLabel: 'ads',
-    });
-    if (!Array.isArray(payload.data)) {
-      return [];
+    const ads = [];
+    for (const path of paths) {
+      const payload = await metaGetPaged({
+        path,
+        token,
+        params,
+        graphVersion,
+        resourceLabel: 'ads',
+      });
+      if (Array.isArray(payload.data)) {
+        ads.push(...payload.data);
+      }
     }
     return includeInactive
-      ? payload.data
-      : payload.data.filter((ad) => ad.effective_status === 'ACTIVE');
+      ? ads
+      : ads.filter((ad) => ad.effective_status === 'ACTIVE');
   } catch (error) {
     const message = formatMetaFetchError({
       resource: 'ads',
       adAccountId,
-      path,
+      path: paths.join(','),
       params,
       error,
     });
     logger.error('[MetaAdsGraph] ads request failed with context', {
       adAccountId,
-      path,
+      paths,
       params: Object.keys(params),
       message: error.message,
       stack: error.stack,

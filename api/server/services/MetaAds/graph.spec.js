@@ -336,6 +336,43 @@ describe('Meta Ads Graph client', () => {
     ]);
   });
 
+  it('can list ads scoped by ad set ids to avoid account-wide payloads', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'ad-1', effective_status: 'ACTIVE', adset_id: 'adset-1' }],
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'ad-2', effective_status: 'ACTIVE', adset_id: 'adset-2' }],
+          }),
+      });
+
+    await expect(
+      listAds({
+        adAccountId: 'act_123',
+        adSetIds: ['adset-1', 'adset-2'],
+        token: 'token',
+        graphVersion: 'v24.0',
+        includeInactive: true,
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: 'ad-1', adset_id: 'adset-1' }),
+      expect.objectContaining({ id: 'ad-2', adset_id: 'adset-2' }),
+    ]);
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/adset-1/ads');
+    expect(fetch.mock.calls[1][0]).toContain('/v24.0/adset-2/ads');
+    expect(fetch.mock.calls[0][0]).toContain('image_hash');
+  });
+
   it('lists ad-level insights for the selected status period', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
