@@ -2245,7 +2245,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             return [];
           });
           try {
-            const [liveCampaignInsights, insights, liveAds, liveAdInsights] = await Promise.all([
+            const [liveCampaignInsights, insights, liveAds] = await Promise.all([
               listCampaignInsights({
                 adAccountId,
                 token,
@@ -2272,20 +2272,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                 graphVersion: effectiveGraphVersion,
                 includeInactive: true,
               }).catch((error) => {
-                logger.error('[MetaAdsBudget] ads status enrichment failed', {
-                  projectId,
-                  message: error.message,
-                });
-                return [];
-              }),
-              listAdInsights({
-                adAccountId,
-                token,
-                since,
-                until,
-                graphVersion: effectiveGraphVersion,
-              }).catch((error) => {
-                logger.error('[MetaAdsBudget] ad insights status enrichment failed', {
+                logger.error('[MetaAdsBudget] ads creative listing failed', {
                   projectId,
                   message: error.message,
                 });
@@ -2302,15 +2289,18 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             });
             adSummaries = buildAdSummaries({
               ads: liveAds,
-              adInsights: liveAdInsights,
+              adInsights: [],
               currency,
               targetResultType,
             });
-            adDiagnostics = buildAdDiagnostics({
-              ads: liveAds,
-              adInsights: liveAdInsights,
-              adSummaries,
-            });
+            adDiagnostics = {
+              adsFetched: liveAds.length,
+              adInsightsFetched: 0,
+              adsWithInsights: 0,
+              insightOnlyAds: 0,
+              adsAttachedToAdSets: 0,
+              lazyLoaded: true,
+            };
             setCachedStatusPeriod(cacheKey, {
               campaignConfigs,
               adsetConfigs,
@@ -2379,6 +2369,65 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       snapshots: historicalSnapshots,
       changes,
     }),
+  };
+}
+
+async function getProjectMetaAdsAdSetAds(projectId, fallbackTenantId, options = {}) {
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw new Error('Project not found.');
+  }
+  const tenantId = getProjectTenantId(project, fallbackTenantId);
+  const metaAds = withImplicitProjectTokenSecret(project.projectId || projectId, project.metaAds ?? {});
+  const adAccountId = normalizeAdAccountId(metaAds.adAccountId);
+  const adSetId = typeof options.adSetId === 'string' ? options.adSetId.trim() : '';
+  if (!adAccountId) {
+    throw new Error('Project Meta Ads account is not configured.');
+  }
+  if (!adSetId) {
+    throw new Error('Meta Ads ad set id is required.');
+  }
+  const token = await getAccessToken(tenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const periodRange = resolveStatusPeriod(options);
+  if (!periodRange.since || !periodRange.until) {
+    throw new Error('Meta Ads period is required.');
+  }
+  const [ads, adInsights] = await Promise.all([
+    listAds({
+      adAccountId,
+      adSetId,
+      token,
+      graphVersion,
+      includeInactive: true,
+    }),
+    listAdInsights({
+      adAccountId,
+      token,
+      since: periodRange.since,
+      until: periodRange.until,
+      graphVersion,
+      filtering: [{ field: 'adset.id', operator: 'IN', value: [adSetId] }],
+    }),
+  ]);
+  const currency = await getAdAccountCurrency({
+    adAccountId,
+    token,
+    graphVersion,
+  }).catch(() => undefined);
+  const adSummaries = buildAdSummaries({
+    ads,
+    adInsights,
+    currency,
+    targetResultType: metaAds.rules?.targetResultType,
+  }).filter((ad) => ad.adSetId === adSetId);
+  return {
+    adSetId,
+    currency: currency || 'BRL',
+    ads: adSummaries,
+    diagnostics: buildAdDiagnostics({ ads, adInsights, adSummaries }),
   };
 }
 
@@ -2532,6 +2581,7 @@ module.exports = {
   getEffectiveRules,
   getMetaGraphVersion,
   getProjectMetaTokenSecretName,
+  getProjectMetaAdsAdSetAds,
   getProjectMetaAdsStatus,
   withImplicitProjectTokenSecret,
   getProjectTenantId,

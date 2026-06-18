@@ -27,6 +27,7 @@ import type {
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
+  useProjectMetaAdsAdsQuery,
   useProjectMetaAdsQuery,
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsBudgetMutation,
@@ -1055,7 +1056,8 @@ function buildVisibleObjectiveResultTypes(
   for (const resultType of resultTypes) {
     const results = Number(resultType.totalResults ?? 0);
     const share = totalResults > 0 ? results / totalResults : 0;
-    if (share >= 0.1) {
+    const resultTypeKey = resultType.resultType || 'UNKNOWN';
+    if (share >= 0.1 && resultTypeKey !== 'UNKNOWN') {
       visible.push(resultType);
       continue;
     }
@@ -1471,6 +1473,36 @@ function getAdThumbnailUrl(ad: ProjectMetaAdsAdSummary) {
   return ad.thumbnailUrl || ad.imageUrl;
 }
 
+function canProxyMetaAdsMediaUrl(value: string | undefined) {
+  if (!value) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      (hostname === 'graph.facebook.com' ||
+        hostname === 'lookaside.facebook.com' ||
+        hostname === 'fbcdn.net' ||
+        hostname.endsWith('.fbcdn.net') ||
+        hostname === 'fbsbx.com' ||
+        hostname.endsWith('.fbsbx.com'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getMetaAdsMediaUrl(projectId: string, mediaUrl: string | undefined) {
+  if (!mediaUrl || !canProxyMetaAdsMediaUrl(mediaUrl)) {
+    return mediaUrl;
+  }
+  return `/api/projects/${encodeURIComponent(projectId)}/meta-ads/media?url=${encodeURIComponent(
+    mediaUrl,
+  )}`;
+}
+
 function collectAdThumbnails(ads: ProjectMetaAdsAdSummary[]) {
   const urls = new Set<string>();
   for (const ad of ads) {
@@ -1548,6 +1580,8 @@ export default function ProjectMetaAdsPanel({
   const [selectedAdPreview, setSelectedAdPreview] = useState<SelectedAdPreview>(null);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
+  const [adSetAdsRequestId, setAdSetAdsRequestId] = useState<string | null>(null);
+  const [adSetAdsById, setAdSetAdsById] = useState<Record<string, ProjectMetaAdsAdSummary[]>>({});
   const startupConfigQuery = useGetStartupConfig();
   const statusParams =
     periodFilter === 'custom'
@@ -1557,6 +1591,13 @@ export default function ProjectMetaAdsPanel({
         }
       : { datePreset: periodFilter };
   const statusQuery = useProjectMetaAdsQuery(project.projectId, statusParams);
+  const adSetAdsQuery = useProjectMetaAdsAdsQuery(
+    project.projectId,
+    adSetAdsRequestId ? { ...statusParams, adSetId: adSetAdsRequestId } : undefined,
+    {
+      keepPreviousData: true,
+    },
+  );
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
@@ -1576,6 +1617,27 @@ export default function ProjectMetaAdsPanel({
     setTenantAccessToken('');
     setShowTenantAccessToken(false);
   }, [project]);
+
+  useEffect(() => {
+    setAdSetAdsById({});
+    setAdSetAdsRequestId(null);
+  }, [project.projectId, periodFilter, customSince, customUntil]);
+
+  useEffect(() => {
+    if (!adSetAdsRequestId || !adSetAdsQuery.data) {
+      return;
+    }
+    const ads = adSetAdsQuery.data.ads ?? [];
+    setAdSetAdsById((current) => {
+      if (current[adSetAdsRequestId] === ads) {
+        return current;
+      }
+      return {
+        ...current,
+        [adSetAdsRequestId]: ads,
+      };
+    });
+  }, [adSetAdsRequestId, adSetAdsQuery.data]);
 
   useEffect(() => {
     if (!metricsFullscreen) {
@@ -2343,9 +2405,14 @@ export default function ProjectMetaAdsPanel({
   };
 
   const onToggleAdSetAds = (adSetId: string) => {
-    setCollapsedAdSetAdsIds((current) =>
-      current.includes(adSetId) ? current.filter((id) => id !== adSetId) : [...current, adSetId],
-    );
+    const hasLoadedAds = Object.prototype.hasOwnProperty.call(adSetAdsById, adSetId);
+    if (!hasLoadedAds) {
+      setAdSetAdsRequestId(adSetId);
+    }
+    setCollapsedAdSetAdsIds((current) => {
+      const isCollapsed = !hasLoadedAds || current.includes(adSetId);
+      return isCollapsed ? current.filter((id) => id !== adSetId) : [...current, adSetId];
+    });
   };
 
   const onCustomSinceChange = (value: string) => {
@@ -2369,7 +2436,13 @@ export default function ProjectMetaAdsPanel({
         .filter((campaign) => campaign.budgetMode !== 'ABO')
         .map((campaign) => campaign.campaignId),
     );
-    setCollapsedAdSetAdsIds([]);
+    setCollapsedAdSetAdsIds(
+      campaigns.flatMap((campaign) =>
+        campaign.adSets
+          .filter((adset) => !Object.prototype.hasOwnProperty.call(adSetAdsById, adset.entityId))
+          .map((adset) => adset.entityId),
+      ),
+    );
   };
 
   const onCollapseAllRows = () => {
@@ -2528,7 +2601,7 @@ export default function ProjectMetaAdsPanel({
           className={`${frameClass} shrink-0 overflow-hidden border border-white/10 bg-[#1a1712]`}
         >
           <img
-            src={thumbnails[0]}
+            src={getMetaAdsMediaUrl(project.projectId, thumbnails[0])}
             alt=""
             className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
           />
@@ -2552,7 +2625,7 @@ export default function ProjectMetaAdsPanel({
               style={{ left: offset, right: Math.max(0, (thumbnails.length - 1 - index) * offset) }}
             >
               <img
-                src={thumbnailUrl}
+                src={getMetaAdsMediaUrl(project.projectId, thumbnailUrl)}
                 alt=""
                 className="h-full w-full object-cover transition duration-300 ease-out group-hover:scale-105"
               />
@@ -2756,7 +2829,7 @@ export default function ProjectMetaAdsPanel({
   );
 
   const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
-    const mediaUrl = getAdThumbnailUrl(ad);
+    const mediaUrl = getMetaAdsMediaUrl(project.projectId, getAdThumbnailUrl(ad));
     return (
       <td
         key="name"
@@ -4652,8 +4725,17 @@ export default function ProjectMetaAdsPanel({
                               `adset:${adset.entityId}`,
                             );
                             const adsetRecommendation = getEntityRecommendation(adset.entityId);
-                            const adsetAds = adset.ads ?? [];
-                            const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
+                            const cachedAdSetAds = adSetAdsById[adset.entityId];
+                            const hasLazyAdSetAds = Object.prototype.hasOwnProperty.call(
+                              adSetAdsById,
+                              adset.entityId,
+                            );
+                            const adsetAds = cachedAdSetAds ?? adset.ads ?? [];
+                            const isAdSetAdsLoading =
+                              adSetAdsRequestId === adset.entityId && adSetAdsQuery.isFetching;
+                            const adsCollapsed =
+                              (!hasLazyAdSetAds && !isAdSetAdsLoading) ||
+                              collapsedAdSetAdsIds.includes(adset.entityId);
                             const adsetRowIndex = rowIndex;
                             rowIndex += 1;
 
@@ -4673,28 +4755,33 @@ export default function ProjectMetaAdsPanel({
                                     />
                                   </td>
                                   <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
-                                    {adsetAds.length > 0 ? (
-                                      <button
-                                        type="button"
-                                        aria-expanded={!adsCollapsed}
-                                        aria-label={localize(
-                                          adsCollapsed
-                                            ? 'com_ui_project_meta_ads_show_ads'
-                                            : 'com_ui_project_meta_ads_hide_ads',
-                                        )}
-                                        onClick={() => onToggleAdSetAds(adset.entityId)}
-                                        className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                                      >
-                                        {adsCollapsed ? '+' : '-'}
-                                      </button>
-                                    ) : (
-                                      <span aria-hidden="true" className="block h-7 w-7" />
-                                    )}
+                                    <button
+                                      type="button"
+                                      aria-expanded={!adsCollapsed}
+                                      aria-label={localize(
+                                        adsCollapsed
+                                          ? 'com_ui_project_meta_ads_show_ads'
+                                          : 'com_ui_project_meta_ads_hide_ads',
+                                      )}
+                                      onClick={() => onToggleAdSetAds(adset.entityId)}
+                                      className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                                    >
+                                      {adsCollapsed ? '+' : '-'}
+                                    </button>
                                   </td>
                                   {tableColumns.map((column) =>
                                     renderAdSetCell(column, campaign, adset, adsetRecommendation),
                                   )}
                                 </tr>
+                                {!adsCollapsed && isAdSetAdsLoading && (
+                                  <tr className={getTableRowClass(rowIndex, 'ad')}>
+                                    <td className="px-2 py-3" colSpan={tableColumnCount}>
+                                      <div className="pl-20 text-xs uppercase tracking-[0.16em] text-text-tertiary">
+                                        {localize('com_ui_loading')}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
                                 {!adsCollapsed &&
                                   adsetAds.map((ad) => {
                                     const adRowIndex = rowIndex;
@@ -5336,7 +5423,10 @@ export default function ProjectMetaAdsPanel({
                 <div className="overflow-hidden border border-border-light bg-surface-primary">
                   {getAdPreviewUrl(selectedAdPreview) ? (
                     <img
-                      src={getAdPreviewUrl(selectedAdPreview)}
+                      src={getMetaAdsMediaUrl(
+                        project.projectId,
+                        getAdPreviewUrl(selectedAdPreview),
+                      )}
                       alt={
                         selectedAdPreview.adName ??
                         selectedAdPreview.title ??

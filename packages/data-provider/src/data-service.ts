@@ -878,6 +878,13 @@ export const getProjectMetaAdsStatus = (
   return request.get(endpoints.projectMetaAds(id), { params });
 };
 
+export const getProjectMetaAdsAds = (
+  id: string,
+  params: q.ProjectMetaAdsAdsParams,
+): Promise<q.ProjectMetaAdsAdsResponse> => {
+  return request.get(endpoints.projectMetaAdsAds(id), { params });
+};
+
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],

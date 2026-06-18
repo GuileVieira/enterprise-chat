@@ -304,6 +304,23 @@ export const useProjectMetaAdsQuery = (
   );
 };
 
+export const useProjectMetaAdsAdsQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsAdsParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsAdsResponse>,
+): QueryObserverResult<t.ProjectMetaAdsAdsResponse> => {
+  return useQuery<t.ProjectMetaAdsAdsResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'ads', params],
+    () => dataService.getProjectMetaAdsAds(projectId, params as t.ProjectMetaAdsAdsParams),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: Boolean(projectId && params?.adSetId),
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

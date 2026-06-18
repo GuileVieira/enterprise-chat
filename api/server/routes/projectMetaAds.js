@@ -12,6 +12,7 @@ const {
   analyzeProject,
   applyManualBudgetChange,
   applyRecommendation,
+  getProjectMetaAdsAdSetAds,
   getProjectMetaAdsStatus,
 } = require('~/server/services/MetaAds/budget');
 const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
@@ -40,6 +41,12 @@ const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const DEFAULT_CREATIVE_RULES = {
   maxFrequency: 5,
 };
+const META_ADS_MEDIA_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const META_ADS_MEDIA_CACHE_MAX_ENTRIES = 300;
+const META_ADS_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+const META_ADS_MEDIA_ALLOWED_HOSTS = new Set(['graph.facebook.com', 'lookaside.facebook.com']);
+const META_ADS_MEDIA_ALLOWED_SUFFIXES = ['.fbcdn.net', '.fbsbx.com'];
+const metaAdsMediaCache = new Map();
 const RULE_LIMITS = {
   targetCpa: { min: 0.01 },
   minRoas: { min: 0 },
@@ -63,6 +70,45 @@ function getProjectMetaTokenSecretName(projectId) {
 
 function looksLikeMetaAccessToken(value) {
   return typeof value === 'string' && /^EAA[a-zA-Z0-9_-]{40,}$/.test(value.trim());
+}
+
+function isAllowedMetaAdsMediaUrl(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      url.protocol === 'https:' &&
+      (META_ADS_MEDIA_ALLOWED_HOSTS.has(hostname) ||
+        META_ADS_MEDIA_ALLOWED_SUFFIXES.some(
+          (suffix) => hostname.endsWith(suffix) || hostname === suffix.slice(1),
+        ))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getCachedMetaAdsMedia(url) {
+  const cached = metaAdsMediaCache.get(url);
+  if (!cached) {
+    return null;
+  }
+  if (Date.now() - cached.cachedAt > META_ADS_MEDIA_CACHE_TTL_MS) {
+    metaAdsMediaCache.delete(url);
+    return null;
+  }
+  return cached;
+}
+
+function setCachedMetaAdsMedia(url, media) {
+  metaAdsMediaCache.set(url, { ...media, cachedAt: Date.now() });
+  while (metaAdsMediaCache.size > META_ADS_MEDIA_CACHE_MAX_ENTRIES) {
+    const oldestKey = metaAdsMediaCache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+    metaAdsMediaCache.delete(oldestKey);
+  }
 }
 
 function validateMetaAdsRules(rules = {}) {
@@ -318,6 +364,84 @@ router.get(
       );
     } catch (error) {
       logger.error('[projectMetaAds] status failed', error);
+      return res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+router.get(
+  '/media',
+  canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
+  async (req, res) => {
+    const mediaUrl = typeof req.query.url === 'string' ? req.query.url.trim() : '';
+    if (!isAllowedMetaAdsMediaUrl(mediaUrl)) {
+      return res.status(400).json({ message: 'Invalid Meta Ads media URL.' });
+    }
+    try {
+      const cached = getCachedMetaAdsMedia(mediaUrl);
+      if (cached) {
+        res.set({
+          'Content-Type': cached.contentType,
+          'Content-Length': cached.buffer.length,
+          'Cache-Control': 'private, max-age=3600',
+          'X-Orqest-Media-Cache': 'HIT',
+        });
+        return res.send(cached.buffer);
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const response = await fetch(mediaUrl, { signal: controller.signal }).finally(() =>
+        clearTimeout(timeout),
+      );
+      if (!response.ok) {
+        return res.status(502).json({ message: 'Meta Ads media fetch failed.' });
+      }
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      if (!contentType.toLowerCase().startsWith('image/')) {
+        return res.status(415).json({ message: 'Meta Ads media is not an image.' });
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length > META_ADS_MEDIA_MAX_BYTES) {
+        return res.status(413).json({ message: 'Meta Ads media is too large.' });
+      }
+      setCachedMetaAdsMedia(mediaUrl, { buffer, contentType });
+      res.set({
+        'Content-Type': contentType,
+        'Content-Length': buffer.length,
+        'Cache-Control': 'private, max-age=3600',
+        'X-Orqest-Media-Cache': 'MISS',
+      });
+      return res.send(buffer);
+    } catch (error) {
+      logger.error('[projectMetaAds] media proxy failed', {
+        projectId: req.params.projectId,
+        message: error.message,
+      });
+      return res.status(502).json({ message: 'Meta Ads media fetch failed.' });
+    }
+  },
+);
+
+router.get(
+  '/ads',
+  canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
+  async (req, res) => {
+    try {
+      const tenantId = req.user.tenantId || getTenantId();
+      return res.json(
+        await getProjectMetaAdsAdSetAds(req.params.projectId, tenantId, {
+          adSetId: req.query.adSetId,
+          datePreset: req.query.datePreset,
+          since: req.query.since,
+          until: req.query.until,
+        }),
+      );
+    } catch (error) {
+      logger.error('[projectMetaAds] ads failed', {
+        projectId: req.params.projectId,
+        message: error.message,
+      });
       return res.status(500).json({ message: error.message });
     }
   },

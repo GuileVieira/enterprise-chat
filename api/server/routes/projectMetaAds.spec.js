@@ -31,11 +31,13 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   analyzeProject: jest.fn(),
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
+  getProjectMetaAdsAdSetAds: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
 }));
 
 const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
+const { getProjectMetaAdsAdSetAds } = require('~/server/services/MetaAds/budget');
 
 function createApp() {
   const app = express();
@@ -306,5 +308,82 @@ describe('projectMetaAds tenant token route', () => {
       .expect(400);
 
     expect(upsertTenantSecret).not.toHaveBeenCalled();
+  });
+});
+
+describe('projectMetaAds ads route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getProjectMetaAdsAdSetAds.mockResolvedValue({
+      adSetId: 'adset-1',
+      currency: 'BRL',
+      ads: [{ adId: 'ad-1', adName: 'Creative 1' }],
+    });
+  });
+
+  it('loads ads for one ad set and selected period', async () => {
+    const response = await request(createApp())
+      .get('/projects/p1/meta-ads/ads')
+      .query({ adSetId: 'adset-1', datePreset: 'last_7d' })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      adSetId: 'adset-1',
+      currency: 'BRL',
+      ads: [{ adId: 'ad-1', adName: 'Creative 1' }],
+    });
+    expect(getProjectMetaAdsAdSetAds).toHaveBeenCalledWith('p1', 'tenant-x', {
+      adSetId: 'adset-1',
+      datePreset: 'last_7d',
+      since: undefined,
+      until: undefined,
+    });
+  });
+});
+
+describe('projectMetaAds media proxy route', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('caches allowed Meta media responses after the first fetch', async () => {
+    const mediaUrl = 'https://scontent.xx.fbcdn.net/thumb-cache-test.jpg';
+    const body = new Uint8Array([1, 2, 3]).buffer;
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (name) => (name.toLowerCase() === 'content-type' ? 'image/jpeg' : null),
+      },
+      arrayBuffer: async () => body,
+    }));
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/media')
+      .query({ url: mediaUrl })
+      .expect(200)
+      .expect('Content-Type', /image\/jpeg/)
+      .expect('X-Orqest-Media-Cache', 'MISS');
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/media')
+      .query({ url: mediaUrl })
+      .expect(200)
+      .expect('X-Orqest-Media-Cache', 'HIT');
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects non-Meta media URLs', async () => {
+    global.fetch = jest.fn();
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/media')
+      .query({ url: 'https://example.com/thumb.jpg' })
+      .expect(400);
+
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
