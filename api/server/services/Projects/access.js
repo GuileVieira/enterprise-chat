@@ -24,7 +24,7 @@ const tenantMatches = (project, tenantId) => {
   if (!project?.tenantId) {
     return true;
   }
-  return Boolean(tenantId && project.tenantId === tenantId);
+  return Boolean(tenantId && project.tenantId.toString() === tenantId.toString());
 };
 
 const findProjectForRequest = async ({ projectId, user }) => {
@@ -96,5 +96,6 @@ module.exports = {
   ensureTenantProjectAccess,
   findProjectForRequest,
   projectIdentityFilter,
+  tenantMatches,
   userCanAccessProject,
 };
