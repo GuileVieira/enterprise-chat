@@ -10,9 +10,12 @@ import {
 import { debounce } from 'lodash';
 import { useRecoilState, useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   apiBaseUrl,
+  QueryKeys,
   SystemRoles,
+  roleDefaults,
   setTokenHeader,
   isSystemRoleName,
   buildLoginRedirectUrl,
@@ -51,6 +54,8 @@ const AuthContextProvider = ({
   const [error, setError] = useState<string | undefined>(undefined);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const setQueriesEnabled = useSetRecoilState<boolean>(store.queriesEnabled);
+  const queryClient = useQueryClient();
+  const previousRolesRef = useRef<Record<string, t.TRole | null | undefined>>({});
 
   const userRoleName = user?.role ?? '';
   const isCustomRole = isAuthenticated && !!user?.role && !isSystemRoleName(user.role);
@@ -67,6 +72,16 @@ const AuthContextProvider = ({
   const { data: customRole = null } = useGetRole(isCustomRole ? userRoleName : '_', {
     enabled: isCustomRole,
   });
+  const isRoleLoading =
+    isAuthenticated &&
+    !!user?.role &&
+    (isCustomRole
+      ? customRole == null && previousRolesRef.current[user.role] == null
+      : user.role === SystemRoles.OWNER
+        ? ownerRole == null && previousRolesRef.current[user.role] == null
+        : user.role === SystemRoles.ADMIN
+          ? adminRole == null && previousRolesRef.current[user.role] == null
+          : userRole == null && previousRolesRef.current[user.role] == null);
 
   const navigate = useNavigate();
 
@@ -80,6 +95,9 @@ const AuthContextProvider = ({
         setIsAuthenticated(isAuthenticated);
         if (isAuthenticated) {
           setQueriesEnabled(true);
+          queryClient.invalidateQueries([QueryKeys.projects]);
+        } else {
+          queryClient.removeQueries([QueryKeys.projects]);
         }
 
         const searchParams = new URLSearchParams(window.location.search);
@@ -99,7 +117,7 @@ const AuthContextProvider = ({
 
         navigate(finalRedirect, { replace: true });
       }, 50),
-    [navigate, setUser, setQueriesEnabled],
+    [navigate, setUser, setQueriesEnabled, queryClient],
   );
   const doSetError = useTimeout({ callback: (error) => setError(error as string | undefined) });
 
@@ -270,35 +288,42 @@ const AuthContextProvider = ({
     };
   }, [setUserContext, user]);
 
-  const memoedValue = useMemo(
-    () => ({
+  const memoedValue = useMemo(() => {
+    const roles = {
+      ...previousRolesRef.current,
+      [SystemRoles.USER]: userRole ?? previousRolesRef.current[SystemRoles.USER] ?? null,
+      [SystemRoles.ADMIN]: adminRole ?? previousRolesRef.current[SystemRoles.ADMIN] ?? null,
+      [SystemRoles.OWNER]:
+        ownerRole ?? previousRolesRef.current[SystemRoles.OWNER] ?? roleDefaults[SystemRoles.OWNER],
+      ...(isCustomRole
+        ? { [userRoleName]: customRole ?? previousRolesRef.current[userRoleName] ?? null }
+        : {}),
+    };
+    previousRolesRef.current = roles;
+    return {
       user,
       token,
       error,
       login,
       logout,
       setError,
-      roles: {
-        [SystemRoles.USER]: userRole,
-        [SystemRoles.ADMIN]: adminRole,
-        [SystemRoles.OWNER]: ownerRole,
-        ...(isCustomRole && customRole ? { [userRoleName]: customRole } : {}),
-      },
+      roles,
+      isRoleLoading,
       isAuthenticated,
-    }),
-
-    [
-      user,
-      error,
-      isAuthenticated,
-      token,
-      userRole,
-      adminRole,
-      isCustomRole,
-      userRoleName,
-      customRole,
-    ],
-  );
+    };
+  }, [
+    user,
+    error,
+    isAuthenticated,
+    token,
+    userRole,
+    adminRole,
+    ownerRole,
+    isCustomRole,
+    userRoleName,
+    customRole,
+    isRoleLoading,
+  ]);
 
   return <AuthContext.Provider value={memoedValue}>{children}</AuthContext.Provider>;
 };

@@ -67,6 +67,7 @@ const AGGREGATE_RESULT_TYPES = new Set([
   'post_interaction',
   'onsite_conversion.post_interaction_gross',
 ]);
+const VIDEO_RESULT_TYPES = new Set(['video_view']);
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -553,11 +554,18 @@ function calculateMetrics(row, targetResultType) {
   );
   const normalizedTarget =
     typeof targetResultType === 'string' && targetResultType.trim() ? targetResultType.trim() : '';
+  const prioritizedAction = actionPriority
+    .map((actionType) => actions.find((action) => action.action_type === actionType))
+    .find(Boolean);
+  const nonAggregateAction = actions.find(
+    (action) =>
+      !VIDEO_RESULT_TYPES.has(action.action_type) &&
+      !AGGREGATE_RESULT_TYPES.has(action.action_type),
+  );
+  const nonVideoAction = actions.find((action) => !VIDEO_RESULT_TYPES.has(action.action_type));
   const resultAction = normalizedTarget
     ? actions.find((action) => action.action_type === normalizedTarget)
-    : (actionPriority
-        .map((actionType) => actions.find((action) => action.action_type === actionType))
-        .find(Boolean) ?? actions[0]);
+    : (prioritizedAction ?? nonAggregateAction ?? nonVideoAction ?? actions[0]);
   const resultCount = resultAction
     ? Number(resultAction.value ?? 0)
     : normalizedTarget
@@ -847,7 +855,17 @@ function getAssetFeedMediaUrl(assetFeedSpec) {
   return getCreativeValue(video, ['thumbnail_url', 'image_url', 'url']);
 }
 
-function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType }) {
+function buildAdsManagerUrl(adAccountId, adId) {
+  const accountDigits = String(adAccountId ?? '').replace(/^act_/, '');
+  if (!accountDigits || !adId) {
+    return undefined;
+  }
+  return `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${encodeURIComponent(
+    accountDigits,
+  )}&selected_ad_ids=${encodeURIComponent(adId)}`;
+}
+
+function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType, adAccountId }) {
   const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
   const adIds = new Set(ads.map((ad) => ad.id).filter(Boolean));
   const listedAdSummaries = ads
@@ -884,10 +902,10 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
           getAssetFeedValue(assetFeedSpec, 'descriptions'),
         thumbnailUrl:
           getCreativeValue(creative, ['thumbnail_url']) || storyMediaUrl || assetFeedMediaUrl,
-        imageUrl:
-          getCreativeValue(creative, ['image_url']) || storyMediaUrl || assetFeedMediaUrl,
+        imageUrl: getCreativeValue(creative, ['image_url']) || storyMediaUrl || assetFeedMediaUrl,
         videoId:
           getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
+        adsManagerUrl: buildAdsManagerUrl(adAccountId, adId),
         linkUrl: getCreativeValue(linkData, ['link']),
         callToActionType: linkData.call_to_action?.type,
         status: ad.effective_status,
@@ -904,6 +922,7 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
       adSetId: insight.adset_id,
       campaignId: insight.campaign_id,
       campaignName: insight.campaign_name,
+      adsManagerUrl: buildAdsManagerUrl(adAccountId, insight.ad_id),
       currency,
       ...calculateMetrics(insight, targetResultType),
     }));
@@ -2343,6 +2362,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               adInsights: liveAdInsights,
               currency,
               targetResultType,
+              adAccountId,
             });
             adDiagnostics = buildAdDiagnostics({
               ads: liveAds,

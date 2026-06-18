@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
+import { ArrowSquareOut, ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
 import {
   OGDialog,
@@ -79,7 +79,6 @@ type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
   currentBudget?: number;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
-type SelectedAdPreview = ProjectMetaAdsAdSummary | null;
 type RequestError = {
   message?: unknown;
   response?: {
@@ -1485,10 +1484,6 @@ function collectAdThumbnails(ads: ProjectMetaAdsAdSummary[]) {
   return Array.from(urls);
 }
 
-function getAdPreviewUrl(ad: ProjectMetaAdsAdSummary) {
-  return ad.imageUrl || ad.thumbnailUrl;
-}
-
 function toDateInputValue(date: Date) {
   const localTimestamp = date.getTime() - date.getTimezoneOffset() * 60 * 1000;
   return new Date(localTimestamp).toISOString().slice(0, 10);
@@ -1545,7 +1540,6 @@ export default function ProjectMetaAdsPanel({
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
-  const [selectedAdPreview, setSelectedAdPreview] = useState<SelectedAdPreview>(null);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
@@ -2486,15 +2480,6 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
-  const renderAdMetric = (labelKey: TranslationKeys, value: string) => (
-    <div className="border border-border-light bg-surface-primary p-3">
-      <div className="text-[11px] font-semibold uppercase text-text-tertiary">
-        {localize(labelKey)}
-      </div>
-      <div className="mt-1 font-mono text-sm text-text-primary">{value}</div>
-    </div>
-  );
-
   const tableColumns = tableViewColumns[tableView].map((key) => tableColumnMap[key]);
   const tableColumnCount = tableColumns.length + 2;
   const renderEvolutionDeltaClass = (
@@ -2757,13 +2742,20 @@ export default function ProjectMetaAdsPanel({
 
   const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
     const mediaUrl = getAdThumbnailUrl(ad);
+    const openAdsManager = (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (!ad.adsManagerUrl) {
+        return;
+      }
+      window.open(ad.adsManagerUrl, '_blank', 'noopener,noreferrer');
+    };
     return (
       <td
         key="name"
         className="sticky left-20 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
       >
         <div className="group relative flex min-w-0 items-center gap-2">
-          <div className="h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)]">
+          <div className="relative h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)]">
             {mediaUrl ? (
               <img
                 src={mediaUrl}
@@ -2775,6 +2767,18 @@ export default function ProjectMetaAdsPanel({
                 {localize('com_ui_project_meta_ads_no_creative_media')}
               </div>
             )}
+            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/70 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+              <button
+                type="button"
+                aria-label={localize('com_ui_project_meta_ads_open_meta_ads')}
+                title={localize('com_ui_project_meta_ads_open_meta_ads')}
+                disabled={!ad.adsManagerUrl}
+                onClick={openAdsManager}
+                className="flex h-7 w-7 items-center justify-center border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ArrowSquareOut className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
           </div>
           <div className="min-w-0">
             <div className="truncate text-sm font-medium text-[#f3efe6]">
@@ -3148,7 +3152,11 @@ export default function ProjectMetaAdsPanel({
       <tr
         key={ad.adId}
         data-testid={`meta-ads-ad-card-${ad.adId}`}
-        onClick={() => setSelectedAdPreview(ad)}
+        onClick={() => {
+          if (ad.adsManagerUrl) {
+            window.open(ad.adsManagerUrl, '_blank', 'noopener,noreferrer');
+          }
+        }}
         className={`group ${getTableRowClass(rowIndex, 'ad', true)}`}
       >
         <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-10 align-middle" />
@@ -5307,117 +5315,6 @@ export default function ProjectMetaAdsPanel({
                     <span className="text-right font-medium text-[#f3efe6]">{value}</span>
                   </div>
                 ))}
-              </div>
-            </div>
-          </OGDialogContent>
-        )}
-      </OGDialog>
-
-      <OGDialog
-        open={Boolean(selectedAdPreview)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedAdPreview(null);
-          }
-        }}
-      >
-        {selectedAdPreview && (
-          <OGDialogContent className="max-w-4xl overflow-hidden p-0">
-            <OGDialogHeader className="border-b border-border-light px-5 py-4 text-left">
-              <div className="text-xs font-semibold uppercase text-text-tertiary">
-                {localize('com_ui_project_meta_ads_ad_preview')}
-              </div>
-              <OGDialogTitle className="truncate text-base font-semibold text-text-primary">
-                {selectedAdPreview.adName ?? selectedAdPreview.title ?? selectedAdPreview.adId}
-              </OGDialogTitle>
-            </OGDialogHeader>
-            <div className="grid gap-0 md:grid-cols-[1.15fr_1fr]">
-              <div className="bg-surface-secondary p-5">
-                <div className="overflow-hidden border border-border-light bg-surface-primary">
-                  {getAdPreviewUrl(selectedAdPreview) ? (
-                    <img
-                      src={getAdPreviewUrl(selectedAdPreview)}
-                      alt={
-                        selectedAdPreview.adName ??
-                        selectedAdPreview.title ??
-                        selectedAdPreview.adId
-                      }
-                      className="aspect-video w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex aspect-video w-full items-center justify-center px-6 text-center text-sm text-text-secondary">
-                      {localize('com_ui_project_meta_ads_no_creative_media')}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 space-y-2 border border-border-light bg-surface-primary p-4">
-                  <h4 className="text-lg font-semibold text-text-primary">
-                    {selectedAdPreview.title ??
-                      selectedAdPreview.adName ??
-                      localize('com_ui_project_meta_ads_ad_preview')}
-                  </h4>
-                  {selectedAdPreview.body && (
-                    <p className="text-sm leading-6 text-text-secondary">
-                      {selectedAdPreview.body}
-                    </p>
-                  )}
-                  {selectedAdPreview.description && (
-                    <p className="text-xs leading-5 text-text-tertiary">
-                      {selectedAdPreview.description}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2 text-xs text-text-secondary">
-                    {selectedAdPreview.callToActionType && (
-                      <span className="border border-border-light px-2 py-1 font-medium text-text-primary">
-                        {selectedAdPreview.callToActionType}
-                      </span>
-                    )}
-                    {selectedAdPreview.linkUrl && (
-                      <span className="min-w-0 truncate border border-border-light px-2 py-1">
-                        {selectedAdPreview.linkUrl}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="p-5">
-                <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-                  {localize('com_ui_project_meta_ads_ad_metrics')}
-                </h4>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_spend',
-                    formatMoney(selectedAdPreview.spend, selectedAdPreview.currency ?? currency),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_cost_result',
-                    formatMoney(selectedAdPreview.cpa, selectedAdPreview.currency ?? currency),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_results',
-                    formatMetric(selectedAdPreview.resultCount),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_impressions',
-                    formatIntegerMetric(selectedAdPreview.impressions),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_clicks',
-                    formatIntegerMetric(selectedAdPreview.clicks),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_frequency',
-                    formatMetric(selectedAdPreview.frequency),
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_ctr',
-                    `${formatMetric(selectedAdPreview.ctr)}%`,
-                  )}
-                  {renderAdMetric(
-                    'com_ui_project_meta_ads_video_p75',
-                    formatMetric(selectedAdPreview.videoP75Watched),
-                  )}
-                </div>
               </div>
             </div>
           </OGDialogContent>

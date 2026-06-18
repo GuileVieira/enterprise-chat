@@ -61,6 +61,7 @@ describe('AdminLayout', () => {
       login: jest.fn(),
       logout: jest.fn(),
       roles: {},
+      isRoleLoading: false,
       setToken: jest.fn(),
       error: undefined,
       ...overrides,
@@ -88,6 +89,20 @@ describe('AdminLayout', () => {
     mockUseAuthContext.mockReturnValue(
       createAuthContext({
         user: { role: SystemRoles.USER, name: 'John', email: 'john@test.com' },
+        isAuthenticated: true,
+        token: 'mock-token',
+        error: null,
+      }),
+    );
+
+    const { container } = render(<AdminLayout />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders null for owner users (redirects)', () => {
+    mockUseAuthContext.mockReturnValue(
+      createAuthContext({
+        user: { role: SystemRoles.OWNER, name: 'Owner', email: 'owner@test.com' },
         isAuthenticated: true,
         token: 'mock-token',
         error: null,

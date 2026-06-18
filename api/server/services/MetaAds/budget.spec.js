@@ -1467,6 +1467,10 @@ describe('Meta Ads budget service persistence safety', () => {
 
     expect(resultTypes).toEqual(expect.arrayContaining(['video_view', 'post_reaction']));
     expect(resultTypes).not.toEqual(expect.arrayContaining(['page_engagement', 'post_engagement']));
+    expect(status.campaigns[0].resultType).toBe('post_reaction');
+    expect(status.campaigns[0].resultCount).toBe(49);
+    expect(status.campaigns[0].adSets[0].resultType).toBe('post_reaction');
+    expect(status.campaigns[0].adSets[0].videoP75Watched).toBe(0);
   });
 
   it('caches live period status to avoid repeated Meta reads for the same period', async () => {

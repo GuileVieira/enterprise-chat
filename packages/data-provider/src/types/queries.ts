@@ -151,6 +151,7 @@ export type ProjectMetaAdsAdSummary = {
   thumbnailUrl?: string;
   imageUrl?: string;
   videoId?: string;
+  adsManagerUrl?: string;
   linkUrl?: string;
   callToActionType?: string;
   status?: string;

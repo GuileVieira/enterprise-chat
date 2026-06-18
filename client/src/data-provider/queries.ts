@@ -254,9 +254,9 @@ export const useProjectsQuery = (
   config?: UseQueryOptions<t.TProject[]>,
 ): QueryObserverResult<t.TProject[]> => {
   return useQuery<t.TProject[]>([QueryKeys.projects], () => dataService.getProjects(), {
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
     ...config,
   });
 };

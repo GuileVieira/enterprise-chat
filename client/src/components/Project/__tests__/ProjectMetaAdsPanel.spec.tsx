@@ -1052,7 +1052,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('renders ad thumbnails and opens a complete ad preview modal with metrics', () => {
+  it('renders ad thumbnails and redirects ad creative interactions to Meta Ads Manager', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -1082,6 +1082,8 @@ describe('ProjectMetaAdsPanel', () => {
                 description: 'Limited slots this week',
                 thumbnailUrl: 'https://example.com/thumb.jpg',
                 imageUrl: 'https://example.com/image.jpg',
+                adsManagerUrl:
+                  'https://adsmanager.facebook.com/adsmanager/manage/ads?act=123&selected_ad_ids=ad-1',
                 linkUrl: 'https://example.com/visit',
                 callToActionType: 'LEARN_MORE',
                 spend: 48,
@@ -1111,6 +1113,15 @@ describe('ProjectMetaAdsPanel', () => {
       'https://example.com/thumb.jpg',
     );
 
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_open_meta_ads'));
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://adsmanager.facebook.com/adsmanager/manage/ads?act=123&selected_ad_ids=ad-1',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_collapse_all'));
     expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_expand_all'));
@@ -1118,16 +1129,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_ad_preview')).toBeInTheDocument();
-    expect(screen.getByText('Pick an open time and tour the model unit.')).toBeInTheDocument();
-    expect(screen.getByText('Limited slots this week')).toBeInTheDocument();
-    expect(screen.getByText('LEARN_MORE')).toBeInTheDocument();
-    expect(screen.getByText('https://example.com/visit')).toBeInTheDocument();
-    expect(screen.getAllByText('R$ 48,00').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('R$ 12,00').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('4.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('1,800')).toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_hide_ads'));
     expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
