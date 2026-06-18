@@ -79,15 +79,18 @@ export const useImprovePromptMutation = (): UseMutationResult<
 export const useTagConversationMutation = (
   conversationId: string,
   options?: t.updateTagsInConvoOptions,
+  enabled = true,
 ): UseMutationResult<t.TTagConversationResponse, unknown, t.TTagConversationRequest, unknown> => {
-  const query = useConversationTagsQuery();
+  const query = useConversationTagsQuery({ enabled });
   const { updateTagsInConversation } = useUpdateTagsInConvo();
   return useMutation(
     (payload: t.TTagConversationRequest) =>
       dataService.addTagToConversation(conversationId, payload),
     {
       onSuccess: (updatedTags, ...rest) => {
-        query.refetch();
+        if (enabled) {
+          query.refetch();
+        }
         updateTagsInConversation(conversationId, updatedTags);
         options?.onSuccess?.(updatedTags, ...rest);
       },

@@ -90,9 +90,7 @@ router.get('/gen_title/:conversationId', async (req, res) => {
     await titleCache.delete(key);
     res.status(200).json({ title });
   } else {
-    res.status(404).json({
-      message: "Title not found or method not implemented for the conversation's endpoint",
-    });
+    res.status(204).end();
   }
 });
 

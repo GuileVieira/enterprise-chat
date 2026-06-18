@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import {
   AlertDialog,
@@ -37,6 +37,18 @@ export default function ProjectFileUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateProject = useUpdateProjectMutation();
+  const filesSignature = useMemo(
+    () =>
+      files
+        .map((file) => `${file.file_id}:${file.embedded ? '1' : '0'}`)
+        .sort()
+        .join('|'),
+    [files],
+  );
+
+  useEffect(() => {
+    setUploadError((currentError) => (currentError ? null : currentError));
+  }, [filesSignature]);
 
   const uploadFile = useUploadFileMutation({
     onSuccess: (data) => {
