@@ -11,6 +11,8 @@ const DEFAULT_META_GRAPH_TIMEOUT_MS = 30000;
 const DEFAULT_META_GRAPH_MAX_PAGES = 20;
 const DEFAULT_META_INSIGHTS_CHUNK_DAYS = 7;
 const DEFAULT_META_GRAPH_READ_CACHE_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_META_GRAPH_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_META_GRAPH_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_META_GRAPH_READ_CACHE_MAX_ENTRIES = 250;
 const metaGraphReadCache = new Map();
 let metaGraphReadStore;
@@ -37,6 +39,54 @@ function getMetaGraphReadCacheTtlMs() {
     process.env.META_ADS_GRAPH_READ_CACHE_TTL_MS,
     DEFAULT_META_GRAPH_READ_CACHE_TTL_MS,
   );
+}
+
+function getMetaGraphTodayCacheTtlMs() {
+  return getPositiveInteger(
+    process.env.META_ADS_GRAPH_TODAY_CACHE_TTL_MS,
+    DEFAULT_META_GRAPH_TODAY_CACHE_TTL_MS,
+  );
+}
+
+function getMetaGraphHistoricalCacheTtlMs() {
+  return getPositiveInteger(
+    process.env.META_ADS_GRAPH_HISTORICAL_CACHE_TTL_MS,
+    DEFAULT_META_GRAPH_HISTORICAL_CACHE_TTL_MS,
+  );
+}
+
+function getMetaAdsDateKey(date = new Date()) {
+  const timeZone = process.env.META_ADS_TIME_ZONE || process.env.TZ || 'America/Sao_Paulo';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone,
+    year: 'numeric',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getTimeRangeParam(params) {
+  if (typeof params?.time_range !== 'string') {
+    return null;
+  }
+  try {
+    return JSON.parse(params.time_range);
+  } catch {
+    return null;
+  }
+}
+
+function getMetaGraphReadCacheTtlForParams(params) {
+  const timeRange = getTimeRangeParam(params);
+  if (!timeRange?.until) {
+    return getMetaGraphReadCacheTtlMs();
+  }
+  const today = getMetaAdsDateKey();
+  return String(timeRange.until) >= today
+    ? getMetaGraphTodayCacheTtlMs()
+    : getMetaGraphHistoricalCacheTtlMs();
 }
 
 function getMetaGraphReadCacheMaxEntries() {
@@ -77,7 +127,7 @@ function getMetaGraphReadStore() {
   return metaGraphReadStore;
 }
 
-async function getCachedMetaGraphRead(cacheKey, { allowStale = false } = {}) {
+async function getCachedMetaGraphRead(cacheKey, ttlMs, { allowStale = false } = {}) {
   const store = getMetaGraphReadStore();
   if (store) {
     try {
@@ -95,18 +145,18 @@ async function getCachedMetaGraphRead(cacheKey, { allowStale = false } = {}) {
   if (!cached) {
     return null;
   }
-  if (allowStale || Date.now() - cached.createdAt <= getMetaGraphReadCacheTtlMs()) {
+  if (allowStale || Date.now() - cached.createdAt <= ttlMs) {
     return cached.value;
   }
   metaGraphReadCache.delete(cacheKey);
   return null;
 }
 
-async function setCachedMetaGraphRead(cacheKey, value) {
+async function setCachedMetaGraphRead(cacheKey, value, ttlMs) {
   const store = getMetaGraphReadStore();
   if (store) {
     try {
-      await store.set(cacheKey, value, getMetaGraphReadCacheTtlMs());
+      await store.set(cacheKey, value, ttlMs);
     } catch (error) {
       logger.error('[MetaAdsGraph] Meta read cache set failed', {
         message: error.message,
@@ -129,6 +179,7 @@ async function setCachedMetaGraphRead(cacheKey, value) {
 
 function clearMetaGraphReadCacheForTests() {
   metaGraphReadCache.clear();
+  metaGraphReadStore = undefined;
 }
 
 function createMetaGraphTimeoutError(resourceLabel, timeoutMs) {
@@ -481,13 +532,14 @@ async function metaGetUrl({ url, token, path, graphVersion, resourceLabel }) {
 
 async function metaGetPaged({ path, token, params = {}, graphVersion, resourceLabel }) {
   const cacheKey = getMetaGraphReadCacheKey({ path, params, graphVersion });
-  const cached = await getCachedMetaGraphRead(cacheKey);
+  const ttlMs = getMetaGraphReadCacheTtlForParams(params);
+  const cached = await getCachedMetaGraphRead(cacheKey, ttlMs);
   if (cached) {
     return cached;
   }
   const firstPage = await metaGet({ path, token, params, graphVersion, resourceLabel });
   if (!Array.isArray(firstPage.data)) {
-    await setCachedMetaGraphRead(cacheKey, firstPage);
+    await setCachedMetaGraphRead(cacheKey, firstPage, ttlMs);
     return firstPage;
   }
   const data = [...firstPage.data];
@@ -511,7 +563,7 @@ async function metaGetPaged({ path, token, params = {}, graphVersion, resourceLa
     data,
     paging: nextUrl ? { ...(firstPage.paging ?? {}), next: nextUrl } : firstPage.paging,
   };
-  await setCachedMetaGraphRead(cacheKey, payload);
+  await setCachedMetaGraphRead(cacheKey, payload, ttlMs);
   return payload;
 }
 

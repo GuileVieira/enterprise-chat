@@ -1,14 +1,16 @@
 jest.mock('node-fetch', () => jest.fn());
 
 const mockCacheMap = new Map();
+const mockCacheGet = jest.fn(async (key) => mockCacheMap.get(key));
+const mockCacheSet = jest.fn(async (key, value) => {
+  mockCacheMap.set(key, value);
+  return true;
+});
 
 jest.mock('@librechat/api', () => ({
   standardCache: jest.fn(() => ({
-    get: jest.fn(async (key) => mockCacheMap.get(key)),
-    set: jest.fn(async (key, value) => {
-      mockCacheMap.set(key, value);
-      return true;
-    }),
+    get: mockCacheGet,
+    set: mockCacheSet,
   })),
 }));
 
@@ -32,9 +34,13 @@ describe('Meta Ads Graph client', () => {
   beforeEach(() => {
     fetch.mockReset();
     mockCacheMap.clear();
+    mockCacheGet.mockClear();
+    mockCacheSet.mockClear();
     clearMetaGraphReadCacheForTests();
     delete process.env.META_GRAPH_API_VERSION;
     delete process.env.META_ADS_GRAPH_TIMEOUT_MS;
+    delete process.env.META_ADS_GRAPH_TODAY_CACHE_TTL_MS;
+    delete process.env.META_ADS_GRAPH_HISTORICAL_CACHE_TTL_MS;
     jest.useRealTimers();
   });
 
@@ -183,6 +189,44 @@ describe('Meta Ads Graph client', () => {
     ).resolves.toEqual([expect.objectContaining({ id: 'campaign-1' })]);
 
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a short cache TTL for insight ranges that include today', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-18T15:00:00.000Z'));
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: [] }),
+    });
+
+    await listAdSetInsights({
+      adAccountId: 'act_123',
+      token: 'token',
+      graphVersion: 'v24.0',
+      since: '2026-06-18',
+      until: '2026-06-18',
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 600000);
+  });
+
+  it('uses a long cache TTL for closed historical insight ranges', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-18T15:00:00.000Z'));
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: [] }),
+    });
+
+    await listAdSetInsights({
+      adAccountId: 'act_123',
+      token: 'token',
+      graphVersion: 'v24.0',
+      since: '2026-06-01',
+      until: '2026-06-17',
+    });
+
+    expect(mockCacheSet).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 604800000);
   });
 
   it('lists active ad sets with their parent campaign fields', async () => {

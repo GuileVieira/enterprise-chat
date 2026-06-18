@@ -26,6 +26,8 @@ const DEFAULT_META_ADS_TIME_ZONE = 'America/Sao_Paulo';
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const MIN_SAMPLE_SPEND = 10;
 const STATUS_PERIOD_CACHE_TTL_MS = 10 * 60 * 1000;
+const STATUS_PERIOD_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
+const STATUS_PERIOD_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const statusPeriodCache = new Map();
 const DEFAULT_RULES = {
   targetCpa: 45,
@@ -1506,12 +1508,22 @@ function getStatusPeriodCacheKey({
   });
 }
 
-function getCachedStatusPeriod(cacheKey, { allowStale = false } = {}) {
+function getStatusPeriodCacheTtlMs(period) {
+  if (!period?.until) {
+    return STATUS_PERIOD_CACHE_TTL_MS;
+  }
+  const today = getMetaAdsDateKey();
+  return String(period.until) >= today
+    ? STATUS_PERIOD_TODAY_CACHE_TTL_MS
+    : STATUS_PERIOD_HISTORICAL_CACHE_TTL_MS;
+}
+
+function getCachedStatusPeriod(cacheKey, period, { allowStale = false } = {}) {
   const cached = statusPeriodCache.get(cacheKey);
   if (!cached) {
     return null;
   }
-  if (allowStale || Date.now() - cached.createdAt <= STATUS_PERIOD_CACHE_TTL_MS) {
+  if (allowStale || Date.now() - cached.createdAt <= getStatusPeriodCacheTtlMs(period)) {
     return cached.value;
   }
   statusPeriodCache.delete(cacheKey);
@@ -2147,7 +2159,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             targetResultType,
           })
         : '';
-      const cachedPeriod = cacheKey ? getCachedStatusPeriod(cacheKey) : null;
+      const cachedPeriod = cacheKey ? getCachedStatusPeriod(cacheKey, periodRange) : null;
       const applyCachedPeriod = (cached) => {
         campaignConfigs = cached.campaignConfigs;
         adsetConfigs = cached.adsetConfigs;
@@ -2269,7 +2281,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             });
           } catch (error) {
             const stalePeriod = cacheKey
-              ? getCachedStatusPeriod(cacheKey, { allowStale: true })
+              ? getCachedStatusPeriod(cacheKey, periodRange, { allowStale: true })
               : null;
             if (!stalePeriod) {
               throw error;
