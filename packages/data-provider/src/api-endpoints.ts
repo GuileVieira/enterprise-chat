@@ -140,7 +140,6 @@ export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/set
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
 export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
-export const projectMetaAdsAds = (id: string) => `${projectMetaAds(id)}/ads`;
 export const projectMetaAdsApply = (id: string, recommendationId: string) =>
   `${projectMetaAds(id)}/recommendations/${encodeURIComponent(recommendationId)}/apply`;
 

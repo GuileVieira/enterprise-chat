@@ -948,28 +948,6 @@ describe('Meta Ads budget service persistence safety', () => {
         imageUrl: 'https://example.com/image.jpg',
         linkUrl: 'https://example.com/visit',
         callToActionType: 'LEARN_MORE',
-      }),
-    ]);
-
-    const ads = await budget.getProjectMetaAdsAdSetAds('p1', 'request-tenant', {
-      adSetId: 'adset-1',
-      datePreset: 'last_7d',
-    });
-
-    expect(ads.ads).toEqual([
-      expect.objectContaining({
-        adId: 'ad-1',
-        adName: 'Lead form video',
-        adSetId: 'adset-1',
-        campaignId: 'campaign-1',
-        creativeId: 'creative-1',
-        title: 'Reserve a visit',
-        body: 'See available units today.',
-        description: 'Limited schedule',
-        thumbnailUrl: 'https://example.com/thumb.jpg',
-        imageUrl: 'https://example.com/image.jpg',
-        linkUrl: 'https://example.com/visit',
-        callToActionType: 'LEARN_MORE',
         spend: 48,
         resultCount: 4,
         cpa: 12,
@@ -1248,8 +1226,8 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
-  it('keeps status lightweight and lazy-loads ad-level insights by ad set', async () => {
-    const { budget, listAds, listAdInsights } = loadBudgetWithMocks({
+  it('keeps ad-level insights even when the Meta ads listing does not return the ad creative', async () => {
+    const { budget } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
       campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
       adsets: [
@@ -1305,43 +1283,7 @@ describe('Meta Ads budget service persistence safety', () => {
       until: '2026-06-15',
     });
 
-    expect(listAds).toHaveBeenCalledWith(
-      expect.objectContaining({
-        adAccountId: 'act_123',
-        includeInactive: true,
-      }),
-    );
-    expect(listAdInsights).not.toHaveBeenCalled();
-    expect(status.campaigns[0].adSets[0].ads).toEqual([]);
-    expect(status.adDiagnostics).toEqual({
-      adsFetched: 0,
-      adInsightsFetched: 0,
-      adsWithInsights: 0,
-      insightOnlyAds: 0,
-      adsAttachedToAdSets: 0,
-      lazyLoaded: true,
-    });
-
-    listAds.mockClear();
-
-    const ads = await budget.getProjectMetaAdsAdSetAds('p1', 'request-tenant', {
-      adSetId: 'adset-1',
-      since: '2026-06-10',
-      until: '2026-06-15',
-    });
-
-    expect(listAds).toHaveBeenCalledWith(
-      expect.objectContaining({
-        adSetId: 'adset-1',
-        includeInactive: true,
-      }),
-    );
-    expect(listAdInsights).toHaveBeenCalledWith(
-      expect.objectContaining({
-        filtering: [{ field: 'adset.id', operator: 'IN', value: ['adset-1'] }],
-      }),
-    );
-    expect(ads.ads).toEqual([
+    expect(status.campaigns[0].adSets[0].ads).toEqual([
       expect.objectContaining({
         adId: 'ad-1',
         adName: 'Message creative from insights',
@@ -1352,12 +1294,12 @@ describe('Meta Ads budget service persistence safety', () => {
         resultType: 'onsite_conversion.messaging_conversation_started_7d',
       }),
     ]);
-    expect(ads.diagnostics).toEqual({
+    expect(status.adDiagnostics).toEqual({
       adsFetched: 0,
       adInsightsFetched: 1,
       adsWithInsights: 0,
       insightOnlyAds: 1,
-      adsAttachedToAdSets: 0,
+      adsAttachedToAdSets: 1,
     });
   });
 

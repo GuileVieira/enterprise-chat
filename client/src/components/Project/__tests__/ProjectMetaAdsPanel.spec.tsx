@@ -22,10 +22,6 @@ const mockUseProjectMetaAdsQuery = jest.fn((_projectId?: string, _params?: unkno
   refetch: mockRefetchStatus,
   ...mockStatusQueryState,
 }));
-const mockUseProjectMetaAdsAdsQuery = jest.fn(() => ({
-  data: undefined,
-  isFetching: false,
-}));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
@@ -71,8 +67,6 @@ jest.mock('~/data-provider', () => ({
   }),
   useProjectMetaAdsQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsQuery(projectId, params),
-  useProjectMetaAdsAdsQuery: (projectId: string, params?: unknown) =>
-    mockUseProjectMetaAdsAdsQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -114,11 +108,6 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusQueryState = {};
     mockUserRole = 'USER';
     mockUseProjectMetaAdsQuery.mockClear();
-    mockUseProjectMetaAdsAdsQuery.mockReset();
-    mockUseProjectMetaAdsAdsQuery.mockImplementation(() => ({
-      data: undefined,
-      isFetching: false,
-    }));
     delete mockStatusData.campaigns;
     delete mockStatusData.adDiagnostics;
     delete mockStatusData.credentials;
@@ -1063,7 +1052,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('renders ad thumbnails and opens a complete ad preview modal with metrics', async () => {
+  it('renders ad thumbnails and opens a complete ad preview modal with metrics', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -1091,8 +1080,8 @@ describe('ProjectMetaAdsPanel', () => {
                 title: 'Book a private visit',
                 body: 'Pick an open time and tour the model unit.',
                 description: 'Limited slots this week',
-                thumbnailUrl: 'https://scontent.xx.fbcdn.net/thumb.jpg',
-                imageUrl: 'https://scontent.xx.fbcdn.net/image.jpg',
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                imageUrl: 'https://example.com/image.jpg',
                 linkUrl: 'https://example.com/visit',
                 callToActionType: 'LEARN_MORE',
                 spend: 48,
@@ -1109,40 +1098,17 @@ describe('ProjectMetaAdsPanel', () => {
         ],
       },
     ];
-    mockUseProjectMetaAdsAdsQuery.mockImplementation((_projectId?: string, params?: unknown) => {
-      const adSetId =
-        typeof params === 'object' && params !== null && 'adSetId' in params
-          ? String(params.adSetId)
-          : '';
-      return {
-        data:
-          adSetId === 'adset-ads'
-            ? {
-                adSetId: 'adset-ads',
-                currency: 'BRL',
-                ads: mockStatusData.campaigns?.[0]?.adSets?.[0]?.ads ?? [],
-              }
-            : undefined,
-        isFetching: false,
-      };
-    });
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_level_campaign')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_level_ad_set')).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_show_ads'));
-    await waitFor(() =>
-      expect(screen.getByText('com_ui_project_meta_ads_level_ad')).toBeInTheDocument(),
-    );
     expect(screen.getByText('com_ui_project_meta_ads_level_ad')).toBeInTheDocument();
     expect(screen.getAllByText('Visit schedule creative').length).toBeGreaterThan(0);
     expect(screen.getByText('Book a private visit')).toBeInTheDocument();
     expect(screen.getByAltText('Visit schedule creative')).toHaveAttribute(
       'src',
-      `/api/projects/p1/meta-ads/media?url=${encodeURIComponent(
-        'https://scontent.xx.fbcdn.net/thumb.jpg',
-      )}`,
+      'https://example.com/thumb.jpg',
     );
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_collapse_all'));

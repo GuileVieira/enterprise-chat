@@ -728,11 +728,9 @@ async function listCampaigns({ adAccountId, token, graphVersion, includeInactive
   }
 }
 
-async function listAds({ adAccountId, adSetId, token, graphVersion, includeInactive = false }) {
-  logger.debug('[MetaAdsGraph] listing ads', { adAccountId, adSetId, graphVersion });
-  const path = adSetId
-    ? `${encodeURIComponent(adSetId)}/ads`
-    : `${encodeURIComponent(adAccountId)}/ads`;
+async function listAds({ adAccountId, token, graphVersion, includeInactive = false }) {
+  logger.debug('[MetaAdsGraph] listing ads', { adAccountId, graphVersion });
+  const path = `${encodeURIComponent(adAccountId)}/ads`;
   const params = {
     fields:
       'id,name,effective_status,adset_id,campaign_id,creative{id,name,title,body,thumbnail_url,image_url,video_id,object_story_spec,asset_feed_spec}',
@@ -778,22 +776,12 @@ const ADSET_INSIGHT_FIELDS =
 const CAMPAIGN_INSIGHT_FIELDS =
   'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
 
-async function fetchInsightsPage({
-  adAccountId,
-  token,
-  since,
-  until,
-  graphVersion,
-  level,
-  fields,
-  filtering,
-}) {
+async function fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields }) {
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level,
     fields,
     time_range: JSON.stringify({ since, until }),
-    filtering: Array.isArray(filtering) && filtering.length > 0 ? JSON.stringify(filtering) : '',
     limit: DEFAULT_LIMIT,
   };
   const payload = await metaGetPaged({
@@ -806,28 +794,10 @@ async function fetchInsightsPage({
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
-async function fetchChunkedInsights({
-  adAccountId,
-  token,
-  since,
-  until,
-  graphVersion,
-  level,
-  fields,
-  filtering,
-}) {
+async function fetchChunkedInsights({ adAccountId, token, since, until, graphVersion, level, fields }) {
   const chunks = getInsightDateChunks({ since, until });
   if (chunks.length <= 1) {
-    return fetchInsightsPage({
-      adAccountId,
-      token,
-      since,
-      until,
-      graphVersion,
-      level,
-      fields,
-      filtering,
-    });
+    return fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields });
   }
   const rows = [];
   for (const chunk of chunks) {
@@ -841,7 +811,6 @@ async function fetchChunkedInsights({
           graphVersion,
           level,
           fields,
-          filtering,
         })),
       );
     } catch (error) {
@@ -858,7 +827,6 @@ async function fetchChunkedInsights({
             graphVersion,
             level,
             fields,
-            filtering,
           })),
         );
       }
@@ -867,35 +835,16 @@ async function fetchChunkedInsights({
   return aggregateInsightRows(rows, level);
 }
 
-async function listInsights({
-  adAccountId,
-  token,
-  since,
-  until,
-  graphVersion,
-  level,
-  fields,
-  filtering,
-}) {
+async function listInsights({ adAccountId, token, since, until, graphVersion, level, fields }) {
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level,
     fields,
     time_range: JSON.stringify({ since, until }),
-    filtering: Array.isArray(filtering) && filtering.length > 0 ? JSON.stringify(filtering) : '',
     limit: DEFAULT_LIMIT,
   };
   try {
-    return await fetchInsightsPage({
-      adAccountId,
-      token,
-      since,
-      until,
-      graphVersion,
-      level,
-      fields,
-      filtering,
-    });
+    return await fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields });
   } catch (error) {
     if (isReduceAmountError(error)) {
       logger.error('[MetaAdsGraph] retrying insights request in date chunks', {
@@ -914,7 +863,6 @@ async function listInsights({
           graphVersion,
           level,
           fields,
-          filtering,
         });
       } catch (chunkError) {
         error = chunkError;
@@ -941,7 +889,7 @@ async function listInsights({
   }
 }
 
-async function listAdInsights({ adAccountId, token, since, until, graphVersion, filtering }) {
+async function listAdInsights({ adAccountId, token, since, until, graphVersion }) {
   logger.debug('[MetaAdsGraph] listing ad insights', { adAccountId, since, until, graphVersion });
   return listInsights({
     adAccountId,
@@ -951,7 +899,6 @@ async function listAdInsights({ adAccountId, token, since, until, graphVersion, 
     graphVersion,
     level: 'ad',
     fields: AD_INSIGHT_FIELDS,
-    filtering,
   });
 }
 

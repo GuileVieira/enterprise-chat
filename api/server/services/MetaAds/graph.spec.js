@@ -335,25 +335,6 @@ describe('Meta Ads Graph client', () => {
     ]);
   });
 
-  it('can list ads scoped to one ad set', async () => {
-    fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ data: [{ id: 'ad-1', effective_status: 'ACTIVE' }] }),
-    });
-
-    await expect(
-      listAds({
-        adAccountId: 'act_123',
-        adSetId: 'adset-1',
-        token: 'token',
-        graphVersion: 'v24.0',
-      }),
-    ).resolves.toEqual([expect.objectContaining({ id: 'ad-1' })]);
-
-    expect(fetch.mock.calls[0][0]).toContain('/v24.0/adset-1/ads');
-  });
-
   it('lists ad-level insights for the selected status period', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -382,7 +363,6 @@ describe('Meta Ads Graph client', () => {
         graphVersion: 'v24.0',
         since: '2026-06-01',
         until: '2026-06-07',
-        filtering: [{ field: 'adset.id', operator: 'IN', value: ['adset-1'] }],
       }),
     ).resolves.toEqual([
       expect.objectContaining({
@@ -395,8 +375,6 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
     expect(fetch.mock.calls[0][0]).toContain('level=ad');
     expect(fetch.mock.calls[0][0]).toContain('ad_id');
-    expect(fetch.mock.calls[0][0]).toContain('filtering=');
-    expect(decodeURIComponent(fetch.mock.calls[0][0])).toContain('"field":"adset.id"');
     expect(fetch.mock.calls[0][0]).toContain('time_range=');
   });
 

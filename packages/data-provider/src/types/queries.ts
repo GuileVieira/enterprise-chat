@@ -295,7 +295,6 @@ export type ProjectMetaAdsAdDiagnostics = {
   adsWithInsights: number;
   insightOnlyAds: number;
   adsAttachedToAdSets: number;
-  lazyLoaded?: boolean;
 };
 
 export type ProjectMetaAdsStatus = {
@@ -344,17 +343,6 @@ export type ProjectMetaAdsStatusParams = {
   datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
   since?: string;
   until?: string;
-};
-
-export type ProjectMetaAdsAdsParams = ProjectMetaAdsStatusParams & {
-  adSetId: string;
-};
-
-export type ProjectMetaAdsAdsResponse = {
-  adSetId: string;
-  currency?: string;
-  ads: ProjectMetaAdsAdSummary[];
-  diagnostics?: ProjectMetaAdsAdDiagnostics;
 };
 
 export type ProjectMetaAdsRunResponse = {
