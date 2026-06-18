@@ -212,8 +212,9 @@ describe('VirtualizedAgentGrid', () => {
       data: undefined,
     }));
 
-    const useMarketplaceAgentsInfiniteQuery =
-      jest.requireMock('~/data-provider/Agents').useMarketplaceAgentsInfiniteQuery;
+    const { useMarketplaceAgentsInfiniteQuery } = jest.requireMock('~/data-provider/Agents') as {
+      useMarketplaceAgentsInfiniteQuery: jest.Mock;
+    };
     useMarketplaceAgentsInfiniteQuery.mockImplementation(mockQuery);
 
     renderComponent();
@@ -226,8 +227,9 @@ describe('VirtualizedAgentGrid', () => {
 
   it('has proper accessibility attributes', async () => {
     // Reset the mock to ensure we have data
-    const useMarketplaceAgentsInfiniteQuery =
-      jest.requireMock('~/data-provider/Agents').useMarketplaceAgentsInfiniteQuery;
+    const { useMarketplaceAgentsInfiniteQuery } = jest.requireMock('~/data-provider/Agents') as {
+      useMarketplaceAgentsInfiniteQuery: jest.Mock;
+    };
     useMarketplaceAgentsInfiniteQuery.mockImplementation(() => mockInfiniteQuery);
 
     renderComponent({ category: 'productivity' });

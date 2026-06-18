@@ -275,7 +275,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     </label>
                     <select
                       value={role}
-                      onChange={(e) => setRole(e.target.value)}
+                      onChange={(e) => setRole(e.target.value as SystemRoles)}
                       className={selectClassName}
                     >
                       <option value={SystemRoles.USER}>{localize('com_admin_role_user')}</option>

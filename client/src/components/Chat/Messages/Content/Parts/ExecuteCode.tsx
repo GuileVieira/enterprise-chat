@@ -160,12 +160,14 @@ export default function ExecuteCode({
   args,
   output = '',
   attachments,
+  hideAttachments = false,
 }: {
   initialProgress: number;
   isSubmitting: boolean;
   args?: string | Record<string, unknown>;
   output?: string;
   attachments?: TAttachment[];
+  hideAttachments?: boolean;
 }) {
   const localize = useLocalize();
   const hasOutput = output.length > 0;
@@ -247,7 +249,9 @@ export default function ExecuteCode({
           </div>
         </div>
       </div>
-      {attachments && attachments.length > 0 && <AttachmentGroup attachments={attachments} />}
+      {!hideAttachments && attachments && attachments.length > 0 && (
+        <AttachmentGroup attachments={attachments} />
+      )}
     </>
   );
 }

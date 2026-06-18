@@ -1,5 +1,6 @@
 import type { AxiosResponse } from 'axios';
 import type * as t from './types';
+import type { TFileConfig } from './file-config';
 import * as endpoints from './api-endpoints';
 import * as a from './types/assistants';
 import * as ag from './types/agents';
@@ -454,7 +455,7 @@ export const getAgentFiles = (agentId: string): Promise<f.TFile[]> => {
   return request.get(endpoints.agentFiles(agentId));
 };
 
-export const getFileConfig = (): Promise<f.FileConfig> => {
+export const getFileConfig = (): Promise<TFileConfig> => {
   return request.get(`${endpoints.files()}/config`);
 };
 

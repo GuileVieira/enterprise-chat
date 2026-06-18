@@ -55,7 +55,7 @@ const MCPSubMenu = React.forwardRef<HTMLDivElement, MCPSubMenuProps>(
             hideOnClick={false}
             render={
               <Ariakit.MenuButton
-                type="button"
+                render={<button type="button" />}
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   menuStore.toggle();
