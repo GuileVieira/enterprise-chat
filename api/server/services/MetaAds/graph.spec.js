@@ -41,6 +41,7 @@ describe('Meta Ads Graph client', () => {
     delete process.env.META_ADS_GRAPH_TIMEOUT_MS;
     delete process.env.META_ADS_GRAPH_TODAY_CACHE_TTL_MS;
     delete process.env.META_ADS_GRAPH_HISTORICAL_CACHE_TTL_MS;
+    delete process.env.META_ADS_GRAPH_ACCOUNT_CONCURRENCY;
     jest.useRealTimers();
   });
 
@@ -415,6 +416,110 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
     expect(fetch.mock.calls[0][0]).toContain('level=campaign');
     expect(fetch.mock.calls[0][0]).toContain('frequency');
+  });
+
+  it('shares concurrent identical paged reads through a single inflight request', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [{ id: 'adset-1', name: 'Audience', effective_status: 'ACTIVE' }],
+        }),
+    });
+
+    await expect(
+      Promise.all([
+        listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
+        listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
+      ]),
+    ).resolves.toEqual([
+      [expect.objectContaining({ id: 'adset-1' })],
+      [expect.objectContaining({ id: 'adset-1' })],
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(mockCacheSet).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues different Meta reads for the same ad account', async () => {
+    let resolveFirst;
+    const firstResponse = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    fetch
+      .mockReturnValueOnce(firstResponse)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'campaign-1', effective_status: 'ACTIVE' }],
+          }),
+      });
+
+    const adsetsPromise = listAdSets({
+      adAccountId: 'act_123',
+      token: 'token',
+      graphVersion: 'v24.0',
+    });
+    const campaignsPromise = listCampaigns({
+      adAccountId: 'act_123',
+      token: 'token',
+      graphVersion: 'v24.0',
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    resolveFirst({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [{ id: 'adset-1', effective_status: 'ACTIVE' }],
+        }),
+    });
+
+    await expect(Promise.all([adsetsPromise, campaignsPromise])).resolves.toEqual([
+      [expect.objectContaining({ id: 'adset-1' })],
+      [expect.objectContaining({ id: 'campaign-1' })],
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('requests a long insight period once before falling back to chunks', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            {
+              adset_id: 'adset-1',
+              adset_name: 'Audience',
+              campaign_id: 'campaign-1',
+              spend: '30',
+            },
+          ],
+        }),
+    });
+
+    await expect(
+      listAdSetInsights({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        since: '2026-06-01',
+        until: '2026-06-30',
+      }),
+    ).resolves.toEqual([expect.objectContaining({ adset_id: 'adset-1', spend: '30' })]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).toContain(
+      encodeURIComponent(JSON.stringify({ since: '2026-06-01', until: '2026-06-30' })),
+    );
   });
 
   it('retries heavy insight periods in date chunks and aggregates rows', async () => {

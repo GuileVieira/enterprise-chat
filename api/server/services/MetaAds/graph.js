@@ -14,7 +14,10 @@ const DEFAULT_META_GRAPH_READ_CACHE_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_META_GRAPH_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_META_GRAPH_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_META_GRAPH_READ_CACHE_MAX_ENTRIES = 250;
+const DEFAULT_META_GRAPH_ACCOUNT_CONCURRENCY = 1;
 const metaGraphReadCache = new Map();
+const metaGraphInflightReads = new Map();
+const metaGraphAccountQueues = new Map();
 let metaGraphReadStore;
 
 function getPositiveInteger(value, fallback) {
@@ -28,6 +31,13 @@ function getMetaGraphTimeoutMs() {
 
 function getMetaGraphMaxPages() {
   return getPositiveInteger(process.env.META_ADS_GRAPH_MAX_PAGES, DEFAULT_META_GRAPH_MAX_PAGES);
+}
+
+function getMetaGraphAccountConcurrency() {
+  return getPositiveInteger(
+    process.env.META_ADS_GRAPH_ACCOUNT_CONCURRENCY,
+    DEFAULT_META_GRAPH_ACCOUNT_CONCURRENCY,
+  );
 }
 
 function getMetaInsightsChunkDays() {
@@ -179,7 +189,64 @@ async function setCachedMetaGraphRead(cacheKey, value, ttlMs) {
 
 function clearMetaGraphReadCacheForTests() {
   metaGraphReadCache.clear();
+  metaGraphInflightReads.clear();
+  metaGraphAccountQueues.clear();
   metaGraphReadStore = undefined;
+}
+
+function drainMetaGraphAccountQueue(accountKey) {
+  const queue = metaGraphAccountQueues.get(accountKey);
+  if (!queue) {
+    return;
+  }
+  const concurrency = getMetaGraphAccountConcurrency();
+  while (queue.active < concurrency && queue.pending.length > 0) {
+    const item = queue.pending.shift();
+    queue.active += 1;
+    logger.debug('[MetaAdsGraph] dequeued Meta request', {
+      accountKey,
+      resourceLabel: item.resourceLabel,
+      pending: queue.pending.length,
+      active: queue.active,
+    });
+    item
+      .run()
+      .then(item.resolve, item.reject)
+      .finally(() => {
+        queue.active -= 1;
+        if (queue.active === 0 && queue.pending.length === 0) {
+          metaGraphAccountQueues.delete(accountKey);
+          return;
+        }
+        drainMetaGraphAccountQueue(accountKey);
+      });
+  }
+}
+
+function runQueuedMetaGraphRead({ path, resourceLabel }, run) {
+  const accountKey = getAdAccountIdFromPath(path);
+  const queue =
+    metaGraphAccountQueues.get(accountKey) ??
+    {
+      active: 0,
+      pending: [],
+    };
+  metaGraphAccountQueues.set(accountKey, queue);
+  return new Promise((resolve, reject) => {
+    queue.pending.push({
+      resolve,
+      reject,
+      resourceLabel,
+      run,
+    });
+    logger.debug('[MetaAdsGraph] queued Meta request', {
+      accountKey,
+      resourceLabel,
+      pending: queue.pending.length,
+      active: queue.active,
+    });
+    drainMetaGraphAccountQueue(accountKey);
+  });
 }
 
 function createMetaGraphTimeoutError(resourceLabel, timeoutMs) {
@@ -476,12 +543,16 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
   const paramKeys = Object.keys(params);
   let response;
   try {
-    response = await fetchWithTimeout(
-      url.toString(),
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-      resourceLabel,
+    response = await runQueuedMetaGraphRead(
+      { path, resourceLabel },
+      () =>
+        fetchWithTimeout(
+          url.toString(),
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+          resourceLabel,
+        ),
     );
   } catch (error) {
     logger.error('[MetaAdsGraph] Meta fetch threw', {
@@ -505,12 +576,16 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
 async function metaGetUrl({ url, token, path, graphVersion, resourceLabel }) {
   let response;
   try {
-    response = await fetchWithTimeout(
-      url,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-      resourceLabel,
+    response = await runQueuedMetaGraphRead(
+      { path, resourceLabel },
+      () =>
+        fetchWithTimeout(
+          url,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+          resourceLabel,
+        ),
     );
   } catch (error) {
     logger.error('[MetaAdsGraph] Meta paged fetch threw', {
@@ -535,36 +610,62 @@ async function metaGetPaged({ path, token, params = {}, graphVersion, resourceLa
   const ttlMs = getMetaGraphReadCacheTtlForParams(params);
   const cached = await getCachedMetaGraphRead(cacheKey, ttlMs);
   if (cached) {
-    return cached;
-  }
-  const firstPage = await metaGet({ path, token, params, graphVersion, resourceLabel });
-  if (!Array.isArray(firstPage.data)) {
-    await setCachedMetaGraphRead(cacheKey, firstPage, ttlMs);
-    return firstPage;
-  }
-  const data = [...firstPage.data];
-  let nextUrl = firstPage.paging?.next;
-  const maxPages = getMetaGraphMaxPages();
-  for (let page = 2; nextUrl && page <= maxPages; page += 1) {
-    const pagePayload = await metaGetUrl({
-      url: nextUrl,
-      token,
+    logger.debug('[MetaAdsGraph] Meta read cache hit', {
       path,
-      graphVersion: getMetaGraphVersion(graphVersion),
       resourceLabel,
     });
-    if (Array.isArray(pagePayload.data)) {
-      data.push(...pagePayload.data);
-    }
-    nextUrl = pagePayload.paging?.next;
+    return cached;
   }
-  const payload = {
-    ...firstPage,
-    data,
-    paging: nextUrl ? { ...(firstPage.paging ?? {}), next: nextUrl } : firstPage.paging,
-  };
-  await setCachedMetaGraphRead(cacheKey, payload, ttlMs);
-  return payload;
+
+  const inflight = metaGraphInflightReads.get(cacheKey);
+  if (inflight) {
+    logger.debug('[MetaAdsGraph] Meta read joined inflight request', {
+      path,
+      resourceLabel,
+    });
+    return inflight;
+  }
+
+  logger.debug('[MetaAdsGraph] Meta read cache miss', {
+    path,
+    resourceLabel,
+  });
+  const request = (async () => {
+    const firstPage = await metaGet({ path, token, params, graphVersion, resourceLabel });
+    if (!Array.isArray(firstPage.data)) {
+      await setCachedMetaGraphRead(cacheKey, firstPage, ttlMs);
+      return firstPage;
+    }
+    const data = [...firstPage.data];
+    let nextUrl = firstPage.paging?.next;
+    const maxPages = getMetaGraphMaxPages();
+    for (let page = 2; nextUrl && page <= maxPages; page += 1) {
+      const pagePayload = await metaGetUrl({
+        url: nextUrl,
+        token,
+        path,
+        graphVersion: getMetaGraphVersion(graphVersion),
+        resourceLabel,
+      });
+      if (Array.isArray(pagePayload.data)) {
+        data.push(...pagePayload.data);
+      }
+      nextUrl = pagePayload.paging?.next;
+    }
+    const payload = {
+      ...firstPage,
+      data,
+      paging: nextUrl ? { ...(firstPage.paging ?? {}), next: nextUrl } : firstPage.paging,
+    };
+    await setCachedMetaGraphRead(cacheKey, payload, ttlMs);
+    return payload;
+  })();
+  metaGraphInflightReads.set(cacheKey, request);
+  try {
+    return await request;
+  } finally {
+    metaGraphInflightReads.delete(cacheKey);
+  }
 }
 
 async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 'Meta API' }) {
