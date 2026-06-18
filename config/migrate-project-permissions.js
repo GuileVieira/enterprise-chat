@@ -1,4 +1,5 @@
 const path = require('path');
+const mongoose = require('mongoose');
 const { logger } = require('@librechat/data-schemas');
 const { ensureRequiredCollectionsExist } = require('@librechat/api');
 const { AccessRoleIds, ResourceType, PrincipalType } = require('librechat-data-provider');
@@ -9,6 +10,31 @@ const connect = require('./connect');
 const { grantPermission } = require('~/server/services/PermissionService');
 const { findRoleByIdentifier } = require('~/models');
 const { Project, AclEntry } = require('~/db/models');
+
+const principalIdFilter = ({ principalType, principalId }) => {
+  if (
+    principalType === PrincipalType.USER &&
+    typeof principalId === 'string' &&
+    mongoose.Types.ObjectId.isValid(principalId)
+  ) {
+    return { $in: [principalId, new mongoose.Types.ObjectId(principalId)] };
+  }
+  return principalId;
+};
+
+const hasProjectAcl = async ({ principalType, principalId, resourceId }) => {
+  if (!principalId || !resourceId) {
+    return false;
+  }
+  return Boolean(
+    await AclEntry.exists({
+      resourceType: ResourceType.PROJECT,
+      principalType,
+      principalId: principalIdFilter({ principalType, principalId }),
+      resourceId,
+    }),
+  );
+};
 
 async function migrateProjectPermissions({ dryRun = true, batchSize = 100 } = {}) {
   await connect();
@@ -22,58 +48,100 @@ async function migrateProjectPermissions({ dryRun = true, batchSize = 100 } = {}
   }
 
   const ownerRole = await findRoleByIdentifier(AccessRoleIds.PROJECT_OWNER);
-  if (!ownerRole) {
-    throw new Error('Required project owner role not found. Run role seeding first.');
+  const editorRole = await findRoleByIdentifier(AccessRoleIds.PROJECT_EDITOR);
+  if (!ownerRole || !editorRole) {
+    throw new Error('Required project roles not found. Run role seeding first.');
   }
 
-  const migratedProjectIds = await AclEntry.distinct('resourceId', {
-    resourceType: ResourceType.PROJECT,
-    principalType: PrincipalType.USER,
-  });
-
-  const projectsToMigrate = await Project.find({
-    _id: { $nin: migratedProjectIds },
-    user: { $exists: true, $ne: null },
+  const projects = await Project.find({
+    $or: [
+      { user: { $exists: true, $ne: null } },
+      { tenantId: { $exists: true, $ne: null, $ne: '' } },
+    ],
   })
-    .select('_id projectId name user')
+    .select('_id projectId name user tenantId')
     .lean();
 
-  if (dryRun) {
-    return {
-      migrated: 0,
-      errors: 0,
-      dryRun: true,
-      total: projectsToMigrate.length,
-      projects: projectsToMigrate.map((project) => ({
-        _id: project._id,
-        projectId: project.projectId,
-        name: project.name,
-        user: project.user,
-      })),
-    };
-  }
-
   const results = {
+    dryRun,
+    checked: projects.length,
     migrated: 0,
     errors: 0,
     ownerGrants: 0,
+    tenantGrants: 0,
+    alreadyOk: 0,
+    projects: [],
   };
 
-  for (let i = 0; i < projectsToMigrate.length; i += batchSize) {
-    const batch = projectsToMigrate.slice(i, i + batchSize);
+  for (let i = 0; i < projects.length; i += batchSize) {
+    const batch = projects.slice(i, i + batchSize);
 
     for (const project of batch) {
       try {
-        await grantPermission({
-          principalType: PrincipalType.USER,
-          principalId: project.user,
-          resourceType: ResourceType.PROJECT,
-          resourceId: project._id,
-          accessRoleId: AccessRoleIds.PROJECT_OWNER,
-          grantedBy: project.user,
+        const ownerMissing =
+          project.user &&
+          !(await hasProjectAcl({
+            principalType: PrincipalType.USER,
+            principalId: project.user,
+            resourceId: project._id,
+          }));
+        const tenantMissing =
+          project.tenantId &&
+          !(await hasProjectAcl({
+            principalType: PrincipalType.TENANT,
+            principalId: project.tenantId,
+            resourceId: project._id,
+          }));
+
+        if (!ownerMissing && !tenantMissing) {
+          results.alreadyOk++;
+          continue;
+        }
+
+        results.projects.push({
+          _id: project._id,
+          projectId: project.projectId,
+          name: project.name,
+          ...(ownerMissing ? { missingOwnerAcl: true } : {}),
+          ...(tenantMissing ? { missingTenantAcl: true } : {}),
         });
-        results.ownerGrants++;
-        results.migrated++;
+
+        if (dryRun) {
+          if (ownerMissing) {
+            results.ownerGrants++;
+          }
+          if (tenantMissing) {
+            results.tenantGrants++;
+          }
+          results.migrated = results.ownerGrants + results.tenantGrants;
+          continue;
+        }
+
+        if (ownerMissing) {
+          await grantPermission({
+            principalType: PrincipalType.USER,
+            principalId: project.user,
+            resourceType: ResourceType.PROJECT,
+            resourceId: project._id,
+            accessRoleId: AccessRoleIds.PROJECT_OWNER,
+            grantedBy: project.user,
+          });
+          results.ownerGrants++;
+        }
+
+        if (tenantMissing) {
+          await grantPermission({
+            principalType: PrincipalType.TENANT,
+            principalId: project.tenantId,
+            resourceType: ResourceType.PROJECT,
+            resourceId: project._id,
+            accessRoleId: AccessRoleIds.PROJECT_EDITOR,
+            grantedBy: project.user,
+          });
+          results.tenantGrants++;
+        }
+
+        results.migrated = results.ownerGrants + results.tenantGrants;
       } catch (error) {
         results.errors++;
         logger.error(`Failed to migrate project "${project.name}"`, {
@@ -91,10 +159,11 @@ async function migrateProjectPermissions({ dryRun = true, batchSize = 100 } = {}
 
 if (require.main === module) {
   const dryRun = process.argv.includes('--dry-run');
+  const apply = process.argv.includes('--apply');
   const batchSize =
     parseInt(process.argv.find((arg) => arg.startsWith('--batch-size='))?.split('=')[1]) || 100;
 
-  migrateProjectPermissions({ dryRun, batchSize })
+  migrateProjectPermissions({ dryRun: !apply || dryRun, batchSize })
     .then((result) => {
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);

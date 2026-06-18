@@ -108,4 +108,50 @@ describe('loadProjectContext', () => {
     expect(result.projectMemories).toBe('');
     expect(result.projectFileIds).toEqual([]);
   });
+
+  it('loads project context for same-tenant legacy projects without ACL entries', async () => {
+    mockCheckPermission.mockResolvedValue(false);
+    mockGetProjectById.mockResolvedValue({
+      _id: 'mongo-project',
+      projectId: 'proj-123',
+      tenantId: 'tenant-1',
+      instructions: 'Project instructions',
+      fileIds: ['linked-file'],
+    });
+    mockGetFiles.mockResolvedValue([{ file_id: 'project-file' }, { file_id: 'linked-file' }]);
+
+    const result = await loadProjectContext({
+      req: { user: { id: 'user-1', role: 'USER', tenantId: 'tenant-1' } },
+      conversationId: 'new',
+      projectId: 'proj-123',
+    });
+
+    expect(result).toEqual({
+      projectId: 'proj-123',
+      projectInstructions: 'Project instructions',
+      projectMemories: '## Project Memories\n\n- key: value',
+      projectFileIds: ['project-file', 'linked-file'],
+    });
+  });
+
+  it('does not load project context for cross-tenant projects without ACL entries', async () => {
+    mockCheckPermission.mockResolvedValue(false);
+    mockGetProjectById.mockResolvedValue({
+      _id: 'mongo-project',
+      projectId: 'proj-123',
+      tenantId: 'tenant-2',
+      instructions: 'Private project instructions',
+    });
+
+    const result = await loadProjectContext({
+      req: { user: { id: 'user-1', role: 'USER', tenantId: 'tenant-1' } },
+      conversationId: 'new',
+      projectId: 'proj-123',
+    });
+
+    expect(result.projectId).toBeUndefined();
+    expect(result.projectInstructions).toBe('');
+    expect(result.projectMemories).toBe('');
+    expect(result.projectFileIds).toEqual([]);
+  });
 });
