@@ -118,6 +118,7 @@ type SummaryResultTypeOption = {
   totalSpend: number;
   totalResults: number;
   averageCostPerResult: number | null;
+  spendKeys?: Set<string>;
 };
 type TableColumnKey =
   | 'level'
@@ -933,6 +934,30 @@ function buildSummaryResultTypeOptions(
   objectiveSummaries: ProjectMetaAdsObjectiveSummary[],
   objectiveFilter: string,
 ): SummaryResultTypeOption[] {
+  const canonicalResultTypes: Record<string, string> = {
+    leadgen_grouped: 'lead',
+    offsite_conversion_fb_pixel_lead: 'lead',
+    'offsite_conversion.fb_pixel_lead': 'lead',
+    onsite_conversion_lead_grouped: 'lead',
+    'onsite_conversion.lead_grouped': 'lead',
+    omni_purchase: 'purchase',
+    offsite_conversion_fb_pixel_purchase: 'purchase',
+    'offsite_conversion.fb_pixel_purchase': 'purchase',
+    onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
+    'onsite_conversion.messaging_first_reply': 'onsite_conversion.messaging_conversation_started_7d',
+  };
+  const allowedResultTypes = new Set([
+    'lead',
+    'leadgen_grouped',
+    'link_click',
+    'omni_purchase',
+    'offsite_conversion.fb_pixel_lead',
+    'offsite_conversion.fb_pixel_purchase',
+    'onsite_conversion.lead_grouped',
+    'onsite_conversion.messaging_conversation_started_7d',
+    'onsite_conversion.messaging_first_reply',
+    'purchase',
+  ]);
   const options = new Map<string, SummaryResultTypeOption>();
   const summaries =
     objectiveFilter === 'all'
@@ -943,7 +968,11 @@ function buildSummaryResultTypeOptions(
 
   for (const summary of summaries) {
     for (const resultType of summary.resultTypes) {
-      const resultTypeKey = resultType.resultType || 'UNKNOWN';
+      const rawResultTypeKey = resultType.resultType || 'UNKNOWN';
+      const resultTypeKey = canonicalResultTypes[rawResultTypeKey] ?? rawResultTypeKey;
+      if (!allowedResultTypes.has(resultTypeKey)) {
+        continue;
+      }
       const option =
         options.get(resultTypeKey) ??
         ({
@@ -951,8 +980,13 @@ function buildSummaryResultTypeOptions(
           totalSpend: 0,
           totalResults: 0,
           averageCostPerResult: null,
+          spendKeys: new Set<string>(),
         } satisfies SummaryResultTypeOption);
-      option.totalSpend += Number(resultType.totalSpend ?? 0);
+      const spendKey = `${summary.objective || 'UNKNOWN'}:${Number(resultType.totalSpend ?? 0)}`;
+      if (!option.spendKeys?.has(spendKey)) {
+        option.totalSpend += Number(resultType.totalSpend ?? 0);
+        option.spendKeys?.add(spendKey);
+      }
       option.totalResults += Number(resultType.totalResults ?? 0);
       options.set(resultTypeKey, option);
     }
@@ -960,7 +994,7 @@ function buildSummaryResultTypeOptions(
 
   return Array.from(options.values())
     .map((option) => ({
-      ...option,
+      resultType: option.resultType,
       totalSpend: Number(option.totalSpend.toFixed(2)),
       totalResults: Number(option.totalResults.toFixed(2)),
       averageCostPerResult:
@@ -969,6 +1003,43 @@ function buildSummaryResultTypeOptions(
           : null,
     }))
     .sort((left, right) => Number(right.totalResults ?? 0) - Number(left.totalResults ?? 0));
+}
+
+function buildVisibleObjectiveResultTypes(
+  resultTypes: ResultTypeSummary[],
+  totalResults: number,
+): ResultTypeSummary[] {
+  const visible: ResultTypeSummary[] = [];
+  let otherResults = 0;
+
+  for (const resultType of resultTypes) {
+    const results = Number(resultType.totalResults ?? 0);
+    const share = totalResults > 0 ? results / totalResults : 0;
+    if (share >= 0.1) {
+      visible.push(resultType);
+      continue;
+    }
+    otherResults += Number.isFinite(results) ? results : 0;
+  }
+
+  if (otherResults > 0) {
+    visible.push({
+      resultType: 'OTHER_EVENTS',
+      label: 'OTHER_EVENTS',
+      totalSpend: 0,
+      totalResults: Number(otherResults.toFixed(2)),
+      averageCostPerResult: null,
+      clicks: 0,
+      impressions: 0,
+      averageCtr: null,
+    });
+  }
+
+  return visible;
+}
+
+function isOtherEventsResultType(resultType: string | undefined) {
+  return resultType === 'OTHER_EVENTS';
 }
 
 function buildObjectiveSummaries(
@@ -2567,6 +2638,17 @@ export default function ProjectMetaAdsPanel({
       className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400/30 bg-[#2a2114] px-2 py-1 text-xs font-medium leading-5 text-amber-100 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block"
     />
   );
+  const renderStatusBadge = (status: string | undefined) => {
+    const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
+    if (!normalizedStatus || normalizedStatus === 'ACTIVE') {
+      return null;
+    }
+    return (
+      <span className="ml-2 inline-flex shrink-0 border border-rose-300/30 bg-rose-500/10 px-1.5 py-0.5 align-middle text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-100">
+        {normalizedStatus}
+      </span>
+    );
+  };
 
   const renderBudgetBadge = (value: number | null | undefined, onClick?: () => void) => {
     const content = (
@@ -2602,7 +2684,10 @@ export default function ProjectMetaAdsPanel({
       className="sticky left-20 z-10 border-l-2 border-amber-300 bg-inherit px-3 py-3 font-semibold text-[#f3efe6] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.65)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
-        <div className="truncate">{campaign.campaignName ?? campaign.campaignId}</div>
+        <div className="truncate">
+          {campaign.campaignName ?? campaign.campaignId}
+          {renderStatusBadge(campaign.status)}
+        </div>
         {renderNameTooltip(campaign.campaignName ?? campaign.campaignId)}
       </div>
     </td>
@@ -2614,7 +2699,10 @@ export default function ProjectMetaAdsPanel({
       className="sticky left-20 z-10 border-l-2 border-amber-500/35 bg-inherit px-3 py-3 pl-6 text-[#ddd5c8] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.45)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
-        <div className="truncate">{adset.entityName ?? adset.entityId}</div>
+        <div className="truncate">
+          {adset.entityName ?? adset.entityId}
+          {renderStatusBadge(adset.status)}
+        </div>
         {renderNameTooltip(adset.entityName ?? adset.entityId)}
       </div>
     </td>
@@ -3765,7 +3853,7 @@ export default function ProjectMetaAdsPanel({
                 aria-labelledby="meta-ads-result-type-selector-title"
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
               >
-                <div className="w-full max-w-xl border border-white/15 bg-[#151512] p-4 shadow-2xl">
+                <div className="flex max-h-[82vh] w-full max-w-xl flex-col border border-white/15 bg-[#151512] p-4 shadow-2xl">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h4
@@ -3786,7 +3874,7 @@ export default function ProjectMetaAdsPanel({
                       {localize('com_ui_close')}
                     </button>
                   </div>
-                  <div className="mt-4 space-y-2">
+                  <div className="mt-4 min-h-0 space-y-2 overflow-y-auto pr-1">
                     {summaryResultTypeOptions.map((option) => (
                       <button
                         key={option.resultType}
@@ -3871,6 +3959,10 @@ export default function ProjectMetaAdsPanel({
                       (total, resultType) => total + Number(resultType.totalResults ?? 0),
                       0,
                     );
+                    const visibleResultTypes = buildVisibleObjectiveResultTypes(
+                      summary.resultTypes,
+                      resultTypesTotal,
+                    );
                     return (
                       <section
                         key={summary.objective || 'UNKNOWN'}
@@ -3920,7 +4012,7 @@ export default function ProjectMetaAdsPanel({
                           ))}
                         </div>
 
-                        {summary.resultTypes.length > 0 && (
+                        {visibleResultTypes.length > 0 && (
                           <div className="mt-4 space-y-2">
                             <div className="hidden min-w-0 grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] gap-3 border-b border-white/10 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d] md:grid">
                               <div>{localize('com_ui_project_meta_ads_result_type')}</div>
@@ -3938,7 +4030,8 @@ export default function ProjectMetaAdsPanel({
                                 {localize('com_ui_project_meta_ads_result_share')}
                               </div>
                             </div>
-                            {summary.resultTypes.map((resultType) => {
+                            {visibleResultTypes.map((resultType) => {
+                              const isOtherEvents = isOtherEventsResultType(resultType.resultType);
                               const shareWidth = getShareWidth(
                                 Number(resultType.totalResults ?? 0),
                                 resultTypesTotal,
@@ -3950,7 +4043,9 @@ export default function ProjectMetaAdsPanel({
                                 >
                                   <div className="min-w-0">
                                     <div className="truncate font-semibold text-[#f3efe6]">
-                                      {getResultTypeLabel(resultType.resultType, localize)}
+                                      {isOtherEvents
+                                        ? localize('com_ui_project_meta_ads_other_events')
+                                        : getResultTypeLabel(resultType.resultType, localize)}
                                     </div>
                                     <div className="mt-1 h-1 overflow-hidden bg-white/10">
                                       <div
@@ -3962,7 +4057,9 @@ export default function ProjectMetaAdsPanel({
                                   {[
                                     [
                                       'com_ui_project_meta_ads_spend',
-                                      formatMoney(resultType.totalSpend, currency),
+                                      isOtherEvents
+                                        ? '-'
+                                        : formatMoney(resultType.totalSpend, currency),
                                       'text-[#d8cfbf]',
                                     ],
                                     [
@@ -3972,10 +4069,16 @@ export default function ProjectMetaAdsPanel({
                                     ],
                                     [
                                       'com_ui_project_meta_ads_cost_result',
-                                      formatMoney(resultType.averageCostPerResult, currency),
+                                      isOtherEvents
+                                        ? '-'
+                                        : formatMoney(resultType.averageCostPerResult, currency),
                                       'text-[#f3efe6]',
                                     ],
-                                    ['CTR', formatPercent(resultType.averageCtr), 'text-[#d8cfbf]'],
+                                    [
+                                      'CTR',
+                                      isOtherEvents ? '-' : formatPercent(resultType.averageCtr),
+                                      'text-[#d8cfbf]',
+                                    ],
                                     [
                                       'com_ui_project_meta_ads_result_share',
                                       formatSharePercent(

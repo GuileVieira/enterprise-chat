@@ -7,6 +7,7 @@ const MIN_META_GRAPH_VERSION = 24;
 const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 const DEFAULT_LIMIT = 100;
 const DEFAULT_META_GRAPH_TIMEOUT_MS = 30000;
+const DEFAULT_META_GRAPH_MAX_PAGES = 20;
 
 function getPositiveInteger(value, fallback) {
   const parsed = Number(value);
@@ -15,6 +16,10 @@ function getPositiveInteger(value, fallback) {
 
 function getMetaGraphTimeoutMs() {
   return getPositiveInteger(process.env.META_ADS_GRAPH_TIMEOUT_MS, DEFAULT_META_GRAPH_TIMEOUT_MS);
+}
+
+function getMetaGraphMaxPages() {
+  return getPositiveInteger(process.env.META_ADS_GRAPH_MAX_PAGES, DEFAULT_META_GRAPH_MAX_PAGES);
 }
 
 function createMetaGraphTimeoutError(resourceLabel, timeoutMs) {
@@ -192,6 +197,62 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
   });
 }
 
+async function metaGetUrl({ url, token, path, graphVersion, resourceLabel }) {
+  let response;
+  try {
+    response = await fetchWithTimeout(
+      url,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      resourceLabel,
+    );
+  } catch (error) {
+    logger.error('[MetaAdsGraph] Meta paged fetch threw', {
+      path,
+      graphVersion,
+      message: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  }
+  return readMetaResponse({
+    response,
+    path,
+    graphVersion,
+    params: ['paging.next'],
+    resourceLabel,
+  });
+}
+
+async function metaGetPaged({ path, token, params = {}, graphVersion, resourceLabel }) {
+  const firstPage = await metaGet({ path, token, params, graphVersion, resourceLabel });
+  if (!Array.isArray(firstPage.data)) {
+    return firstPage;
+  }
+  const data = [...firstPage.data];
+  let nextUrl = firstPage.paging?.next;
+  const maxPages = getMetaGraphMaxPages();
+  for (let page = 2; nextUrl && page <= maxPages; page += 1) {
+    const pagePayload = await metaGetUrl({
+      url: nextUrl,
+      token,
+      path,
+      graphVersion: getMetaGraphVersion(graphVersion),
+      resourceLabel,
+    });
+    if (Array.isArray(pagePayload.data)) {
+      data.push(...pagePayload.data);
+    }
+    nextUrl = pagePayload.paging?.next;
+  }
+  return {
+    ...firstPage,
+    data,
+    paging: nextUrl ? { ...(firstPage.paging ?? {}), next: nextUrl } : firstPage.paging,
+  };
+}
+
 async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 'Meta API' }) {
   const resolvedGraphVersion = getMetaGraphVersion(graphVersion);
   let response;
@@ -273,7 +334,7 @@ async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
     : undefined;
 }
 
-async function listAdSets({ adAccountId, token, graphVersion }) {
+async function listAdSets({ adAccountId, token, graphVersion, includeInactive = false }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
   const params = {
@@ -281,16 +342,19 @@ async function listAdSets({ adAccountId, token, graphVersion }) {
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,
       graphVersion,
       resourceLabel: 'ad sets',
     });
-    return Array.isArray(payload.data)
-      ? payload.data.filter((adset) => adset.effective_status === 'ACTIVE')
-      : [];
+    if (!Array.isArray(payload.data)) {
+      return [];
+    }
+    return includeInactive
+      ? payload.data
+      : payload.data.filter((adset) => adset.effective_status === 'ACTIVE');
   } catch (error) {
     const message = formatMetaFetchError({
       resource: 'ad sets',
@@ -310,7 +374,7 @@ async function listAdSets({ adAccountId, token, graphVersion }) {
   }
 }
 
-async function listCampaigns({ adAccountId, token, graphVersion }) {
+async function listCampaigns({ adAccountId, token, graphVersion, includeInactive = false }) {
   logger.debug('[MetaAdsGraph] listing campaigns', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/campaigns`;
   const params = {
@@ -318,16 +382,19 @@ async function listCampaigns({ adAccountId, token, graphVersion }) {
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,
       graphVersion,
       resourceLabel: 'campaigns',
     });
-    return Array.isArray(payload.data)
-      ? payload.data.filter((campaign) => campaign.effective_status === 'ACTIVE')
-      : [];
+    if (!Array.isArray(payload.data)) {
+      return [];
+    }
+    return includeInactive
+      ? payload.data
+      : payload.data.filter((campaign) => campaign.effective_status === 'ACTIVE');
   } catch (error) {
     const message = formatMetaFetchError({
       resource: 'campaigns',
@@ -347,7 +414,7 @@ async function listCampaigns({ adAccountId, token, graphVersion }) {
   }
 }
 
-async function listAds({ adAccountId, token, graphVersion }) {
+async function listAds({ adAccountId, token, graphVersion, includeInactive = false }) {
   logger.debug('[MetaAdsGraph] listing ads', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/ads`;
   const params = {
@@ -356,16 +423,19 @@ async function listAds({ adAccountId, token, graphVersion }) {
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,
       graphVersion,
       resourceLabel: 'ads',
     });
-    return Array.isArray(payload.data)
-      ? payload.data.filter((ad) => ad.effective_status === 'ACTIVE')
-      : [];
+    if (!Array.isArray(payload.data)) {
+      return [];
+    }
+    return includeInactive
+      ? payload.data
+      : payload.data.filter((ad) => ad.effective_status === 'ACTIVE');
   } catch (error) {
     const message = formatMetaFetchError({
       resource: 'ads',
@@ -402,7 +472,7 @@ async function listAdInsights({ adAccountId, token, since, until, graphVersion }
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,
@@ -446,7 +516,7 @@ async function listCampaignInsights({ adAccountId, token, since, until, graphVer
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,
@@ -485,7 +555,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
     limit: DEFAULT_LIMIT,
   };
   try {
-    const payload = await metaGet({
+    const payload = await metaGetPaged({
       path,
       token,
       params,

@@ -91,6 +91,67 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('daily_budget');
   });
 
+  it('can include inactive campaigns for historical period dashboards', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            { id: 'campaign-1', name: 'Active', effective_status: 'ACTIVE' },
+            { id: 'campaign-2', name: 'Paused', effective_status: 'PAUSED' },
+          ],
+        }),
+    });
+
+    await expect(
+      listCampaigns({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        includeInactive: true,
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: 'campaign-1', effective_status: 'ACTIVE' }),
+      expect.objectContaining({ id: 'campaign-2', effective_status: 'PAUSED' }),
+    ]);
+  });
+
+  it('follows Meta paging links when listing campaigns', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'campaign-1', name: 'First page', effective_status: 'ACTIVE' }],
+            paging: {
+              next: 'https://graph.facebook.com/v24.0/act_123/campaigns?after=cursor',
+            },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [{ id: 'campaign-2', name: 'Second page', effective_status: 'ACTIVE' }],
+          }),
+      });
+
+    await expect(
+      listCampaigns({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: 'campaign-1' }),
+      expect.objectContaining({ id: 'campaign-2' }),
+    ]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[1][0]).toBe(
+      'https://graph.facebook.com/v24.0/act_123/campaigns?after=cursor',
+    );
+  });
+
   it('lists active ad sets with their parent campaign fields', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -169,6 +230,32 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('creative%7B');
     expect(fetch.mock.calls[0][0]).toContain('thumbnail_url');
     expect(fetch.mock.calls[0][0]).toContain('object_story_spec');
+  });
+
+  it('can include inactive ads for historical period previews', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            { id: 'ad-1', effective_status: 'ACTIVE' },
+            { id: 'ad-2', effective_status: 'PAUSED' },
+          ],
+        }),
+    });
+
+    await expect(
+      listAds({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        includeInactive: true,
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: 'ad-1', effective_status: 'ACTIVE' }),
+      expect.objectContaining({ id: 'ad-2', effective_status: 'PAUSED' }),
+    ]);
   });
 
   it('lists ad-level insights for the selected status period', async () => {

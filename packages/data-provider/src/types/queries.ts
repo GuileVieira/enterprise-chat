@@ -76,12 +76,14 @@ export type ProjectMetaAdsSnapshot = {
   campaignName?: string;
   campaignObjective?: string;
   dailyBudget?: number;
+  status?: string;
   currency?: string;
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
   resultCount?: number;
   resultType?: string;
+  resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;
   frequency?: number;
@@ -92,6 +94,13 @@ export type ProjectMetaAdsSnapshot = {
   videoP75Watched?: number;
   videoP75Rate?: number;
   createdAt?: string;
+};
+
+export type ProjectMetaAdsResultTypeBreakdown = {
+  resultType: string;
+  totalSpend: number;
+  totalResults: number;
+  averageCostPerResult: number | null;
 };
 
 export type ProjectMetaAdsRecommendation = {
@@ -151,6 +160,7 @@ export type ProjectMetaAdsAdSummary = {
   roas?: number | null;
   resultCount?: number;
   resultType?: string;
+  resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;
   frequency?: number;
@@ -173,12 +183,14 @@ export type ProjectMetaAdsCampaignSummary = {
   campaignName?: string;
   objective?: string;
   dailyBudget?: number;
+  status?: string;
   currency?: string;
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
   resultCount?: number;
   resultType?: string;
+  resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;
   frequency?: number;

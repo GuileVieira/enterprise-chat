@@ -1034,8 +1034,9 @@ describe('Meta Ads budget service persistence safety', () => {
 
     const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant');
 
-    expect(status.trend).toEqual({
-      points: [
+    expect(status.trend).toEqual(
+      expect.objectContaining({
+        points: [
         expect.objectContaining({
           date: '2026-06-01',
           campaignId: 'campaign-1',
@@ -1056,8 +1057,8 @@ describe('Meta Ads budget service persistence safety', () => {
           dailyBudget: 100,
           frequency: 3.5,
         }),
-      ],
-      campaignDeltas: [
+        ],
+        campaignDeltas: [
         expect.objectContaining({
           campaignId: 'campaign-1',
           campaignName: 'Messages Floripa',
@@ -1070,15 +1071,16 @@ describe('Meta Ads budget service persistence safety', () => {
             deltaDailyBudget: 10,
           }),
         }),
-      ],
-      changesByDay: [
+        ],
+        changesByDay: [
         expect.objectContaining({
           date: '2026-06-02',
           totalDeltaDailyBudget: 10,
           changeCount: 1,
         }),
-      ],
-    });
+        ],
+      }),
+    );
   });
 
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
@@ -1109,6 +1111,10 @@ describe('Meta Ads budget service persistence safety', () => {
             {
               action_type: 'onsite_conversion.messaging_conversation_started_7d',
               value: '8',
+            },
+            {
+              action_type: 'link_click',
+              value: '16',
             },
           ],
           cost_per_action_type: [
@@ -1142,6 +1148,10 @@ describe('Meta Ads budget service persistence safety', () => {
               action_type: 'onsite_conversion.messaging_conversation_started_7d',
               value: '8',
             },
+            {
+              action_type: 'link_click',
+              value: '16',
+            },
           ],
           cost_per_action_type: [
             {
@@ -1171,8 +1181,26 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(status.summary).toEqual(
       expect.objectContaining({
         totalSpend: 85.76,
-        totalResults: 8,
-        averageCostPerResult: 10.72,
+        totalResults: null,
+        averageCostPerResult: null,
+        objectives: [
+          expect.objectContaining({
+            resultTypes: expect.arrayContaining([
+              expect.objectContaining({
+                resultType: 'onsite_conversion.messaging_conversation_started_7d',
+                totalSpend: 85.76,
+                totalResults: 8,
+                averageCostPerResult: 10.72,
+              }),
+              expect.objectContaining({
+                resultType: 'link_click',
+                totalSpend: 85.76,
+                totalResults: 16,
+                averageCostPerResult: 5.36,
+              }),
+            ]),
+          }),
+        ],
       }),
     );
     expect(status.campaigns[0].adSets[0]).toEqual(
@@ -1180,6 +1208,10 @@ describe('Meta Ads budget service persistence safety', () => {
         entityName: 'Audience real',
         resultCount: 8,
         cpa: 10.72,
+        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+        resultTypeBreakdown: expect.arrayContaining([
+          expect.objectContaining({ resultType: 'link_click', totalResults: 16 }),
+        ]),
         frequency: 4.9,
       }),
     );
@@ -1191,6 +1223,129 @@ describe('Meta Ads budget service persistence safety', () => {
         reach: 1000,
         frequency: 4.02,
       }),
+    );
+  });
+
+  it('keeps period insights when historical ad set config is rate limited', async () => {
+    const { budget, listAdSets, listAdSetInsights } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          adset_id: 'adset-1',
+          adset_name: 'Audience from insight',
+          spend: '170.00',
+          impressions: '1000',
+          reach: '300',
+          frequency: '3.33',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '10',
+            },
+          ],
+          cost_per_action_type: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '17',
+            },
+          ],
+        },
+      ],
+    });
+    listAdSets.mockRejectedValueOnce(new Error('User request limit reached'));
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-10',
+      until: '2026-06-15',
+    });
+
+    expect(listAdSets).toHaveBeenCalledWith(expect.objectContaining({ includeInactive: true }));
+    expect(listAdSetInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ since: '2026-06-10', until: '2026-06-15' }),
+    );
+    expect(status.summary.totalSpend).toBe(170);
+    expect(status.campaigns[0].adSets[0]).toEqual(
+      expect.objectContaining({
+        entityName: 'Audience from insight',
+        resultCount: 10,
+        cpa: 17,
+      }),
+    );
+  });
+
+  it('caches live period status to avoid repeated Meta reads for the same period', async () => {
+    const { budget, listCampaigns, listAdSets, listAdSetInsights, listCampaignInsights } =
+      loadBudgetWithMocks({
+        project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+        campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+        adsets: [
+          {
+            id: 'adset-1',
+            name: 'Audience real',
+            campaign_id: 'campaign-1',
+          },
+        ],
+        campaignInsights: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Messages',
+            spend: '30.00',
+            impressions: '100',
+            reach: '90',
+            frequency: '1.11',
+          },
+        ],
+        insights: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Messages',
+            adset_id: 'adset-1',
+            adset_name: 'Audience real',
+            spend: '30.00',
+            impressions: '100',
+            reach: '90',
+            frequency: '1.11',
+            actions: [
+              {
+                action_type: 'link_click',
+                value: '6',
+              },
+            ],
+            cost_per_action_type: [
+              {
+                action_type: 'link_click',
+                value: '5',
+              },
+            ],
+          },
+        ],
+      });
+
+    await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-10',
+      until: '2026-06-15',
+    });
+    const cachedStatus = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-10',
+      until: '2026-06-15',
+    });
+
+    expect(listCampaigns).toHaveBeenCalledTimes(1);
+    expect(listAdSets).toHaveBeenCalledTimes(1);
+    expect(listCampaignInsights).toHaveBeenCalledTimes(1);
+    expect(listAdSetInsights).toHaveBeenCalledTimes(1);
+    expect(cachedStatus.summary.totalSpend).toBe(30);
+    expect(cachedStatus.summary.objectives[0].resultTypes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          resultType: 'link_click',
+          totalResults: 6,
+          averageCostPerResult: 5,
+        }),
+      ]),
     );
   });
 
@@ -1553,6 +1708,142 @@ describe('Meta Ads budget service persistence safety', () => {
         proposedDailyBudget: 87.5,
       }),
     );
+  });
+
+  it('uses the configured target result type when creating cron recommendations', async () => {
+    const { budget, createRecommendation } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          rules: {
+            ...DEFAULT_RULES,
+            targetResultType: 'lead',
+            targetCpa: 45,
+          },
+        },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Messages set',
+          campaign_id: 'campaign-1',
+          daily_budget: '10000',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          adset_id: 'adset-1',
+          adset_name: 'Messages set',
+          spend: '200',
+          actions: [
+            { action_type: 'onsite_conversion.messaging_conversation_started_7d', value: '20' },
+          ],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityId: 'adset-1',
+        action: 'decrease',
+        proposedDailyBudget: 75,
+        reason: 'Resultado alvo lead sem conversões no período.',
+      }),
+    );
+  });
+
+  it('uses the configured Meta Ads timezone for cron insight date ranges', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-18T02:30:00.000Z'));
+    process.env.META_ADS_TIME_ZONE = 'America/Sao_Paulo';
+    try {
+      const { budget, listAdSetInsights } = loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: { adAccountId: 'act_123' },
+        },
+        campaigns: [],
+        adsets: [],
+        insights: [],
+      });
+
+      await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+      expect(listAdSetInsights).toHaveBeenCalledWith(
+        expect.objectContaining({
+          since: '2026-06-16',
+          until: '2026-06-17',
+        }),
+      );
+    } finally {
+      delete process.env.META_ADS_TIME_ZONE;
+      jest.useRealTimers();
+    }
+  });
+
+  it('uses campaign-level metrics for CBO recommendations when campaign insights are available', async () => {
+    const { budget, createRecommendation } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, targetCpa: 45 },
+        },
+      },
+      campaigns: [{ id: 'campaign-cbo', name: 'CBO Campaign', daily_budget: '10000' }],
+      adsets: [
+        { id: 'adset-good', name: 'Good child', campaign_id: 'campaign-cbo', daily_budget: '0' },
+        { id: 'adset-bad', name: 'Bad child', campaign_id: 'campaign-cbo', daily_budget: '0' },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-cbo',
+          campaign_name: 'CBO Campaign',
+          adset_id: 'adset-good',
+          adset_name: 'Good child',
+          spend: '100',
+          actions: [{ action_type: 'lead', value: '10' }],
+        },
+        {
+          campaign_id: 'campaign-cbo',
+          campaign_name: 'CBO Campaign',
+          adset_id: 'adset-bad',
+          adset_name: 'Bad child',
+          spend: '900',
+          actions: [{ action_type: 'lead', value: '5' }],
+        },
+      ],
+      campaignInsights: [
+        {
+          campaign_id: 'campaign-cbo',
+          campaign_name: 'CBO Campaign',
+          spend: '1000',
+          actions: [{ action_type: 'lead', value: '15' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityLevel: 'campaign',
+        entityId: 'campaign-cbo',
+        spend: 1000,
+        cpa: 66.66666666666667,
+        action: 'decrease',
+        proposedDailyBudget: 75,
+      }),
+    );
+    expect(createRecommendation).toHaveBeenCalledTimes(1);
   });
 
   it('fails a slow project by timeout and continues the cron run', async () => {
