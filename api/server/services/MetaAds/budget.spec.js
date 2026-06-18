@@ -1276,6 +1276,56 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('removes overlapping Meta engagement rollups from objective result breakdowns', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      campaigns: [{ id: 'campaign-1', name: 'Engagement', objective: 'OUTCOME_ENGAGEMENT' }],
+      campaignInsights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Engagement',
+          spend: '105.48',
+          impressions: '10000',
+          reach: '6500',
+          clicks: '61',
+          ctr: '0.61',
+          actions: [
+            { action_type: 'page_engagement', value: '2727' },
+            { action_type: 'post_engagement', value: '2727' },
+            { action_type: 'video_view', value: '2678' },
+            { action_type: 'post_reaction', value: '49' },
+          ],
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Engagement',
+          adset_id: 'adset-1',
+          adset_name: 'Audience',
+          spend: '105.48',
+          actions: [
+            { action_type: 'page_engagement', value: '2727' },
+            { action_type: 'post_engagement', value: '2727' },
+            { action_type: 'video_view', value: '2678' },
+            { action_type: 'post_reaction', value: '49' },
+          ],
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-01',
+      until: '2026-06-07',
+    });
+    const resultTypes = status.summary.objectives[0].resultTypes.map(
+      (resultType) => resultType.resultType,
+    );
+
+    expect(resultTypes).toEqual(expect.arrayContaining(['video_view', 'post_reaction']));
+    expect(resultTypes).not.toEqual(expect.arrayContaining(['page_engagement', 'post_engagement']));
+  });
+
   it('caches live period status to avoid repeated Meta reads for the same period', async () => {
     const { budget, listCampaigns, listAdSets, listAdSetInsights, listCampaignInsights } =
       loadBudgetWithMocks({

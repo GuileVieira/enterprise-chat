@@ -58,6 +58,13 @@ const RULE_LIMITS = {
 const CREATIVE_RULE_LIMITS = {
   maxFrequency: { min: 0 },
 };
+const AGGREGATE_RESULT_TYPES = new Set([
+  'page_engagement',
+  'post',
+  'post_engagement',
+  'post_interaction',
+  'onsite_conversion.post_interaction_gross',
+]);
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -543,7 +550,9 @@ function calculateMetrics(row, targetResultType) {
         : null;
     resultTypeBreakdownByType.set(resultType, current);
   }
-  const resultTypeBreakdown = Array.from(resultTypeBreakdownByType.values());
+  const resultTypeBreakdown = filterAggregateResultTypes(
+    Array.from(resultTypeBreakdownByType.values()),
+  );
   const normalizedTarget =
     typeof targetResultType === 'string' && targetResultType.trim() ? targetResultType.trim() : '';
   const resultAction = normalizedTarget
@@ -592,6 +601,24 @@ function calculateMetrics(row, targetResultType) {
       impressions > 0 ? Number(((Number(videoP75Watched) / impressions) * 100).toFixed(2)) : 0,
     resultTypeBreakdown,
   };
+}
+
+function filterAggregateResultTypes(resultTypeBreakdown) {
+  if (!Array.isArray(resultTypeBreakdown) || resultTypeBreakdown.length <= 1) {
+    return resultTypeBreakdown;
+  }
+  const hasLeafResultType = resultTypeBreakdown.some(
+    (resultType) => !AGGREGATE_RESULT_TYPES.has(resultType.resultType),
+  );
+  if (hasLeafResultType) {
+    return resultTypeBreakdown.filter(
+      (resultType) => !AGGREGATE_RESULT_TYPES.has(resultType.resultType),
+    );
+  }
+  if (resultTypeBreakdown.some((resultType) => resultType.resultType === 'post_engagement')) {
+    return resultTypeBreakdown.filter((resultType) => resultType.resultType !== 'page_engagement');
+  }
+  return resultTypeBreakdown;
 }
 
 function aggregateInsightRows(rows = []) {
