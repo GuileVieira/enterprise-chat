@@ -3,6 +3,7 @@ const request = require('supertest');
 
 const mockProjectFind = jest.fn();
 const mockFindProjectForRequest = jest.fn();
+const mockEnsureTenantUsersProjectViewAccess = jest.fn();
 
 jest.mock('~/models', () => ({
   getProjects: jest.fn(),
@@ -46,6 +47,7 @@ jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
 
 jest.mock('~/server/services/Projects/access', () => ({
   findProjectForRequest: (...args) => mockFindProjectForRequest(...args),
+  ensureTenantUsersProjectViewAccess: (...args) => mockEnsureTenantUsersProjectViewAccess(...args),
 }));
 
 jest.mock('~/server/middleware/roles/capabilities', () => ({
@@ -143,6 +145,10 @@ describe('Projects Routes', () => {
       expect(response.status).toBe(201);
       expect(response.body).toEqual(mockProject);
       expect(createProject).toHaveBeenCalledWith('test-user-123', { name: 'New Project' });
+      expect(mockEnsureTenantUsersProjectViewAccess).toHaveBeenCalledWith({
+        project: mockProject,
+        grantedBy: 'test-user-123',
+      });
     });
 
     it('should return 500 on error', async () => {

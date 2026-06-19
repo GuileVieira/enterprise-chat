@@ -23,7 +23,10 @@ const {
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { findProjectForRequest } = require('~/server/services/Projects/access');
+const {
+  findProjectForRequest,
+  ensureTenantUsersProjectViewAccess,
+} = require('~/server/services/Projects/access');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
@@ -145,6 +148,7 @@ router.get('/', async (req, res) => {
 router.post('/', checkProjectCreate, async (req, res) => {
   try {
     const project = await createProject(req.user.id, req.body);
+    await ensureTenantUsersProjectViewAccess({ project, grantedBy: req.user.id });
     res.status(201).json(project);
   } catch (error) {
     logger.error('Error creating project:', error);

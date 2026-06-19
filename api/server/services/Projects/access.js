@@ -74,6 +74,72 @@ const ensureTenantProjectAccess = async ({ project, grantedBy }) => {
   });
 };
 
+const ensureTenantUsersProjectViewAccess = async ({ project, grantedBy }) => {
+  if (!project?.tenantId || !project?._id) {
+    return { checked: 0, granted: 0 };
+  }
+
+  const User = mongoose.models.User;
+  const { grantPermission } = require('~/server/services/PermissionService');
+  const users = await runAsSystem(async () =>
+    User.find({ tenantId: project.tenantId }).select('_id').lean(),
+  );
+  const ownerId = project.user?.toString?.() ?? project.user;
+  let granted = 0;
+
+  for (const user of users) {
+    const userId = user._id?.toString?.() ?? user._id;
+    if (!userId || userId === ownerId) {
+      continue;
+    }
+
+    await grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: user._id,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+      accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+      grantedBy: grantedBy ?? project.user ?? user._id,
+    });
+    granted++;
+  }
+
+  return { checked: users.length, granted };
+};
+
+const ensureUserTenantProjectsViewAccess = async ({ user, grantedBy }) => {
+  if (!user?._id || !user?.tenantId) {
+    return { checked: 0, granted: 0 };
+  }
+
+  const Project = mongoose.models.Project;
+  const { grantPermission } = require('~/server/services/PermissionService');
+  const projects = await runAsSystem(async () =>
+    Project.find({ tenantId: user.tenantId }).select('_id user tenantId').lean(),
+  );
+  const userId = user._id?.toString?.() ?? user._id;
+  let granted = 0;
+
+  for (const project of projects) {
+    const ownerId = project.user?.toString?.() ?? project.user;
+    if (ownerId === userId) {
+      continue;
+    }
+
+    await grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: user._id,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+      accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+      grantedBy: grantedBy ?? project.user ?? user._id,
+    });
+    granted++;
+  }
+
+  return { checked: projects.length, granted };
+};
+
 const ensureOwnerProjectAccess = async ({ project }) => {
   if (!project?.user || !project?._id) {
     return null;
@@ -94,6 +160,8 @@ module.exports = {
   PROJECT_TENANT_PERMISSIONS,
   ensureOwnerProjectAccess,
   ensureTenantProjectAccess,
+  ensureTenantUsersProjectViewAccess,
+  ensureUserTenantProjectsViewAccess,
   findProjectForRequest,
   projectIdentityFilter,
   tenantMatches,

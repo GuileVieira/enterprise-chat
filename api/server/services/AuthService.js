@@ -253,6 +253,14 @@ const registerUser = async (user, additionalData = {}) => {
 
     const newUser = await createUser(newUserData, appConfig.balance, disableTTL, true);
     newUserId = newUser._id;
+    const tenantId = newUser.tenantId || newUserData.tenantId;
+    if (tenantId) {
+      const { ensureUserTenantProjectsViewAccess } = require('~/server/services/Projects/access');
+      await ensureUserTenantProjectsViewAccess({
+        user: { _id: newUserId, tenantId },
+        grantedBy: newUserId,
+      });
+    }
     if (emailEnabled && !newUser.emailVerified) {
       await sendVerificationEmail({
         _id: newUserId,
