@@ -109,7 +109,7 @@ describe('loadProjectContext', () => {
     expect(result.projectFileIds).toEqual([]);
   });
 
-  it('loads project context for same-tenant legacy projects without ACL entries', async () => {
+  it('does not load same-tenant legacy projects without PROJECT VIEW', async () => {
     mockCheckPermission.mockResolvedValue(false);
     mockGetProjectById.mockResolvedValue({
       _id: 'mongo-project',
@@ -126,12 +126,12 @@ describe('loadProjectContext', () => {
       projectId: 'proj-123',
     });
 
-    expect(result).toEqual({
-      projectId: 'proj-123',
-      projectInstructions: 'Project instructions',
-      projectMemories: '## Project Memories\n\n- key: value',
-      projectFileIds: ['project-file', 'linked-file'],
-    });
+    expect(result.projectId).toBeUndefined();
+    expect(result.projectInstructions).toBe('');
+    expect(result.projectMemories).toBe('');
+    expect(result.projectFileIds).toEqual([]);
+    expect(mockGetFiles).not.toHaveBeenCalled();
+    expect(mockLoadProjectMemories).not.toHaveBeenCalled();
   });
 
   it('does not load project context for cross-tenant projects without ACL entries', async () => {

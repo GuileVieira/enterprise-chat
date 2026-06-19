@@ -11,20 +11,6 @@ const emptyProjectContext = () => ({
   projectFileIds: [],
 });
 
-const sameTenant = (project, user) => {
-  if (!project?.tenantId || !user?.tenantId) {
-    return false;
-  }
-  return project.tenantId.toString() === user.tenantId.toString();
-};
-
-const isProjectOwner = (project, user) => {
-  if (!project?.user || !user?.id) {
-    return false;
-  }
-  return project.user.toString() === user.id.toString();
-};
-
 /**
  * Loads project instructions, memories, and file ids after checking PROJECT VIEW.
  *
@@ -61,18 +47,14 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
         requiredPermission: PermissionBits.VIEW,
       });
       if (!hasProjectAccess) {
-        const fallbackUsed = isProjectOwner(project, req.user) || sameTenant(project, req.user);
         logger.warn('[loadProjectContext] Project context ACL missing', {
           projectId,
           projectMongoId: project._id,
           tenantId: project.tenantId,
           userTenantId: req.user.tenantId,
           userId: req.user.id,
-          fallbackUsed,
         });
-        if (!fallbackUsed) {
-          return emptyProjectContext();
-        }
+        return emptyProjectContext();
       }
     }
 
