@@ -1052,7 +1052,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('renders ad thumbnails and redirects ad creative interactions to Meta Ads Manager', () => {
+  it('opens an ad preview modal before redirecting thumbnail clicks to Meta Ads Manager', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -1115,12 +1115,21 @@ describe('ProjectMetaAdsPanel', () => {
 
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_open_meta_ads'));
+    expect(openSpy).not.toHaveBeenCalled();
+    let previewDialog = screen.getByRole('dialog');
+    expect(previewDialog).toHaveTextContent('Visit schedule creative');
+    expect(previewDialog).toHaveTextContent('Book a private visit');
+    expect(previewDialog).toHaveTextContent('Pick an open time and tour the model unit.');
+    expect(previewDialog).toHaveTextContent('Limited slots this week');
+    expect(previewDialog).toHaveTextContent('R$ 48,00');
+    expect(previewDialog).toHaveTextContent('R$ 12,00');
+
+    fireEvent.click(within(previewDialog).getByLabelText('com_ui_project_meta_ads_open_meta_ads'));
     expect(openSpy).toHaveBeenCalledWith(
       'https://adsmanager.facebook.com/adsmanager/manage/ads?act=123&selected_ad_ids=ad-1',
       '_blank',
       'noopener,noreferrer',
     );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_collapse_all'));
     expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
@@ -1129,13 +1138,71 @@ describe('ProjectMetaAdsPanel', () => {
 
     fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
 
-    expect(openSpy).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    previewDialog = screen.getByRole('dialog');
+    expect(previewDialog).toHaveTextContent('Visit schedule creative');
 
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_hide_ads'));
     expect(screen.queryByTestId('meta-ads-ad-card-ad-1')).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_show_ads'));
     expect(screen.getByTestId('meta-ads-ad-card-ad-1')).toBeInTheDocument();
+  });
+
+  it('opens ad preview without redirecting when Ads Manager URL is missing', () => {
+    mockStatusData.currency = 'BRL';
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-ads',
+        campaignName: 'ABO Leads',
+        spend: 160,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-ads',
+            entityName: 'Warm leads',
+            campaignId: 'campaign-ads',
+            campaignName: 'ABO Leads',
+            dailyBudget: 70,
+            spend: 160,
+            ads: [
+              {
+                adId: 'ad-1',
+                adName: 'Visit schedule creative',
+                adSetId: 'adset-ads',
+                campaignId: 'campaign-ads',
+                title: 'Book a private visit',
+                body: 'Pick an open time and tour the model unit.',
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                spend: 48,
+                cpa: 12,
+                resultCount: 4,
+                impressions: 1800,
+                clicks: 72,
+                ctr: 4,
+                frequency: 2.1,
+                currency: 'BRL',
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
+
+    const previewDialog = screen.getByRole('dialog');
+    expect(previewDialog).toHaveTextContent('Visit schedule creative');
+    expect(previewDialog).toHaveTextContent('com_ui_project_meta_ads_manager_unavailable');
+
+    fireEvent.click(
+      within(previewDialog).getByLabelText('com_ui_project_meta_ads_manager_unavailable'),
+    );
+    expect(openSpy).not.toHaveBeenCalled();
   });
 
   it('formats monetary metrics with the ad account currency and shows missing results as dash', () => {

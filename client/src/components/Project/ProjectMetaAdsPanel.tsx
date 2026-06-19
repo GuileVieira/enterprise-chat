@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { UIEvent } from 'react';
+import type { MouseEvent, UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowSquareOut, ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
@@ -1541,6 +1541,7 @@ export default function ProjectMetaAdsPanel({
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
+  const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
   const statusParams =
@@ -1569,6 +1570,7 @@ export default function ProjectMetaAdsPanel({
     setCredentialsDialogOpen(false);
     setTenantAccessToken('');
     setShowTenantAccessToken(false);
+    setSelectedAdPreview(null);
   }, [project]);
 
   useEffect(() => {
@@ -2742,12 +2744,9 @@ export default function ProjectMetaAdsPanel({
 
   const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
     const mediaUrl = getAdThumbnailUrl(ad);
-    const openAdsManager = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const openAdPreview = (event: MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-      if (!ad.adsManagerUrl) {
-        return;
-      }
-      window.open(ad.adsManagerUrl, '_blank', 'noopener,noreferrer');
+      setSelectedAdPreview(ad);
     };
     return (
       <td
@@ -2772,8 +2771,7 @@ export default function ProjectMetaAdsPanel({
                 type="button"
                 aria-label={localize('com_ui_project_meta_ads_open_meta_ads')}
                 title={localize('com_ui_project_meta_ads_open_meta_ads')}
-                disabled={!ad.adsManagerUrl}
-                onClick={openAdsManager}
+                onClick={openAdPreview}
                 className="flex h-7 w-7 items-center justify-center border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowSquareOut className="h-3.5 w-3.5" aria-hidden="true" />
@@ -3152,11 +3150,7 @@ export default function ProjectMetaAdsPanel({
       <tr
         key={ad.adId}
         data-testid={`meta-ads-ad-card-${ad.adId}`}
-        onClick={() => {
-          if (ad.adsManagerUrl) {
-            window.open(ad.adsManagerUrl, '_blank', 'noopener,noreferrer');
-          }
-        }}
+        onClick={() => setSelectedAdPreview(ad)}
         className={`group ${getTableRowClass(rowIndex, 'ad', true)}`}
       >
         <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-10 align-middle" />
@@ -5224,6 +5218,158 @@ export default function ProjectMetaAdsPanel({
           )}
         </div>
       </div>
+
+      <OGDialog
+        open={Boolean(selectedAdPreview)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedAdPreview(null);
+          }
+        }}
+      >
+        {selectedAdPreview && (
+          <OGDialogContent className="max-w-3xl overflow-hidden p-0">
+            <OGDialogHeader className="border-b border-white/10 bg-[#12120f] px-5 py-4 text-left">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                {localize('com_ui_project_meta_ads_ad_preview')}
+              </div>
+              <OGDialogTitle className="mt-1 text-base font-semibold text-[#f3efe6]">
+                {selectedAdPreview.adName ?? selectedAdPreview.title ?? selectedAdPreview.adId}
+              </OGDialogTitle>
+              <div className="mt-1 truncate text-xs text-[#81796b]">{selectedAdPreview.adId}</div>
+            </OGDialogHeader>
+            <div className="grid gap-0 bg-[#0f0e0b] sm:grid-cols-[minmax(220px,280px)_1fr]">
+              <div className="border-b border-white/10 bg-[#151512] p-5 sm:border-b-0 sm:border-r">
+                <button
+                  type="button"
+                  aria-label={localize(
+                    selectedAdPreview.adsManagerUrl
+                      ? 'com_ui_project_meta_ads_open_meta_ads'
+                      : 'com_ui_project_meta_ads_manager_unavailable',
+                  )}
+                  title={localize(
+                    selectedAdPreview.adsManagerUrl
+                      ? 'com_ui_project_meta_ads_open_meta_ads'
+                      : 'com_ui_project_meta_ads_manager_unavailable',
+                  )}
+                  disabled={!selectedAdPreview.adsManagerUrl}
+                  onClick={() => {
+                    if (!selectedAdPreview.adsManagerUrl) {
+                      return;
+                    }
+                    window.open(selectedAdPreview.adsManagerUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="group relative aspect-[4/3] w-full overflow-hidden border border-white/10 bg-[#242016] text-left transition hover:border-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:hover:border-white/10"
+                >
+                  {getAdThumbnailUrl(selectedAdPreview) ? (
+                    <img
+                      src={getAdThumbnailUrl(selectedAdPreview)}
+                      alt={
+                        selectedAdPreview.adName ??
+                        selectedAdPreview.title ??
+                        selectedAdPreview.adId
+                      }
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-[#8a8172]">
+                      {localize('com_ui_project_meta_ads_no_creative_media')}
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-black/75 px-3 py-2 text-xs font-semibold text-white">
+                    {localize(
+                      selectedAdPreview.adsManagerUrl
+                        ? 'com_ui_project_meta_ads_open_meta_ads'
+                        : 'com_ui_project_meta_ads_manager_unavailable',
+                    )}
+                  </div>
+                </button>
+              </div>
+              <div className="space-y-5 p-5">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    [
+                      'com_ui_project_meta_ads_spend' as TranslationKeys,
+                      formatMoney(selectedAdPreview.spend, selectedAdPreview.currency ?? currency),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_cpa' as TranslationKeys,
+                      formatMoney(selectedAdPreview.cpa, selectedAdPreview.currency ?? currency),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_results' as TranslationKeys,
+                      formatMetric(selectedAdPreview.resultCount),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_ctr' as TranslationKeys,
+                      formatPercent(selectedAdPreview.ctr),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_clicks' as TranslationKeys,
+                      formatIntegerMetric(selectedAdPreview.clicks),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_frequency' as TranslationKeys,
+                      formatMetric(selectedAdPreview.frequency),
+                    ],
+                    [
+                      'com_ui_project_meta_ads_impressions' as TranslationKeys,
+                      formatIntegerMetric(selectedAdPreview.impressions),
+                    ],
+                  ].map(([labelKey, value]) => (
+                    <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                        {localize(labelKey)}
+                      </div>
+                      <div className="mt-2 font-mono text-base font-semibold text-[#f3efe6]">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2 text-sm text-[#d8d0c2]">
+                  {[
+                    [
+                      'com_ui_project_meta_ads_title_text' as TranslationKeys,
+                      selectedAdPreview.title,
+                    ],
+                    [
+                      'com_ui_project_meta_ads_body_text' as TranslationKeys,
+                      selectedAdPreview.body,
+                    ],
+                    [
+                      'com_ui_project_meta_ads_description_text' as TranslationKeys,
+                      selectedAdPreview.description,
+                    ],
+                    [
+                      'com_ui_project_meta_ads_link_url' as TranslationKeys,
+                      selectedAdPreview.linkUrl,
+                    ],
+                    [
+                      'com_ui_project_meta_ads_call_to_action' as TranslationKeys,
+                      selectedAdPreview.callToActionType,
+                    ],
+                  ]
+                    .filter(([, value]) => Boolean(value))
+                    .map(([labelKey, value]) => (
+                      <div
+                        key={labelKey}
+                        className="flex items-start justify-between gap-3 border-b border-white/10 py-2"
+                      >
+                        <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-[#81796b]">
+                          {localize(labelKey)}
+                        </span>
+                        <span className="min-w-0 text-right font-medium text-[#f3efe6]">
+                          {value}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </OGDialogContent>
+        )}
+      </OGDialog>
 
       <OGDialog
         open={Boolean(selectedBiRankItem)}
