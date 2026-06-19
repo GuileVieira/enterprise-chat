@@ -159,12 +159,12 @@ const filterFilesByAgentAccess = async ({
       ownedFiles.push(file);
     } else {
       let hasProjectAccess = false;
-      const effectiveProjectId =
-        file.projectId ||
-        (projectId && activeProjectFileIds.has(file.file_id) ? projectId : undefined);
-      if (effectiveProjectId) {
+      const isActiveProjectFile = projectId && activeProjectFileIds.has(file.file_id);
+      if (isActiveProjectFile) {
+        hasProjectAccess = true;
+      } else if (file.projectId) {
         try {
-          const project = await findProjectForRequest({ projectId: effectiveProjectId, user });
+          const project = await findProjectForRequest({ projectId: file.projectId, user });
           if (project?._id) {
             const permissions = await getEffectivePermissions({
               userId,

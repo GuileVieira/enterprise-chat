@@ -253,10 +253,8 @@ describe('filterFilesByAgentAccess', () => {
       expect(getAgent).not.toHaveBeenCalled();
     });
 
-    it('should allow legacy project files declared by active project after project VIEW', async () => {
+    it('should allow legacy project files declared by active project context', async () => {
       const legacyProjectFile = makeFile('legacy-project-file', AUTHOR_ID);
-      findProjectForRequest.mockResolvedValue({ _id: 'project-mongo-id' });
-      getEffectivePermissions.mockResolvedValue(PermissionBits.VIEW);
 
       const result = await filterFilesByAgentAccess({
         files: [legacyProjectFile],
@@ -267,11 +265,27 @@ describe('filterFilesByAgentAccess', () => {
         projectFileIds: ['legacy-project-file'],
       });
 
-      expect(findProjectForRequest).toHaveBeenCalledWith({
-        projectId: 'project-dna',
-        user: { _id: USER_ID, tenantId: 'tenant-1' },
-      });
       expect(result).toEqual([legacyProjectFile]);
+      expect(findProjectForRequest).not.toHaveBeenCalled();
+      expect(getEffectivePermissions).not.toHaveBeenCalled();
+      expect(getAgent).not.toHaveBeenCalled();
+    });
+
+    it('does not require a second PROJECT VIEW check for active legacy project file ids', async () => {
+      const legacyProjectFile = makeFile('legacy-project-file', AUTHOR_ID);
+
+      const result = await filterFilesByAgentAccess({
+        files: [legacyProjectFile],
+        userId: USER_ID,
+        role: 'USER',
+        agentId: AGENT_ID,
+        projectId: 'project-dna',
+        projectFileIds: ['legacy-project-file'],
+      });
+
+      expect(result).toEqual([legacyProjectFile]);
+      expect(findProjectForRequest).not.toHaveBeenCalled();
+      expect(getEffectivePermissions).not.toHaveBeenCalled();
       expect(getAgent).not.toHaveBeenCalled();
     });
   });
