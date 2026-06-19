@@ -105,15 +105,15 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
 
       /**
        * @param {import('librechat-data-provider').TFile} file
+       * @param {string | undefined} queryEntityId
        * @returns {{ file_id: string, query: string, k: number, entity_id?: string }}
        */
-      const createQueryBody = (file) => {
+      const createQueryBody = (file, queryEntityId) => {
         const body = {
           file_id: file.file_id,
           query,
           k: 5,
         };
-        const queryEntityId = file.projectId || entity_id;
         if (!queryEntityId) {
           return body;
         }
@@ -122,21 +122,41 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         return body;
       };
 
-      const queryPromises = files.map((file) =>
-        axios
-          .post(`${process.env.RAG_API_URL}/query`, createQueryBody(file), {
-            headers: {
-              Authorization: `Bearer ${jwtToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          .catch((error) => {
-            logger.error('Error encountered in `file_search` while querying file:', error);
-            return null;
-          }),
-      );
+      const queryFile = async (file) => {
+        const queryEntityIds = [
+          ...new Set([
+            ...(file.projectId ? [file.projectId] : []),
+            ...(entity_id ? [entity_id] : []),
+            undefined,
+          ]),
+        ];
+        let emptyResponse = null;
 
-      const results = await Promise.all(queryPromises);
+        for (const queryEntityId of queryEntityIds) {
+          try {
+            const response = await axios.post(
+              `${process.env.RAG_API_URL}/query`,
+              createQueryBody(file, queryEntityId),
+              {
+                headers: {
+                  Authorization: `Bearer ${jwtToken}`,
+                  'Content-Type': 'application/json',
+                },
+              },
+            );
+            if (Array.isArray(response.data) && response.data.length > 0) {
+              return { file, response };
+            }
+            emptyResponse = response;
+          } catch (error) {
+            logger.error('Error encountered in `file_search` while querying file:', error);
+          }
+        }
+
+        return emptyResponse ? { file, response: emptyResponse } : null;
+      };
+
+      const results = await Promise.all(files.map((file) => queryFile(file)));
       const validResults = results.filter((result) => result !== null);
 
       if (validResults.length === 0) {
@@ -144,15 +164,15 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
       }
 
       const formattedResults = validResults
-        .flatMap((result, fileIndex) =>
-          result.data.map(([docInfo, distance]) => ({
+        .flatMap(({ file, response }) =>
+          response.data.map(([docInfo, distance]) => ({
             filename:
-              files[fileIndex]?.metadata?.imageRag?.sourceImageFileName ??
+              file?.metadata?.imageRag?.sourceImageFileName ??
               docInfo.metadata.source.split('/').pop(),
             content: docInfo.page_content,
             distance,
-            file_id: files[fileIndex]?.file_id,
-            file_metadata: files[fileIndex]?.metadata,
+            file_id: file?.file_id,
+            file_metadata: file?.metadata,
             page: docInfo.metadata.page || null,
           })),
         )

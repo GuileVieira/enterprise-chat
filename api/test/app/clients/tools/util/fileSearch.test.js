@@ -27,6 +27,7 @@ const { generateShortLivedToken } = require('@librechat/api');
 describe('fileSearch.js - tuple return validation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    axios.post.mockReset();
     process.env.RAG_API_URL = 'http://localhost:8000';
   });
 
@@ -264,6 +265,54 @@ describe('fileSearch.js - tuple return validation', () => {
       );
     });
 
+    it('falls back to the agent entity id when a project file has no project results', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValueOnce({ data: [] }).mockResolvedValueOnce({
+        data: [
+          [
+            {
+              page_content: 'Legacy agent-indexed content',
+              metadata: { source: '/path/to/project.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-project', filename: 'project.docx', projectId: 'project-123' }],
+        entity_id: 'agent-456',
+      });
+
+      const [formattedString] = await fileSearchTool.func({ query: 'project query' });
+
+      expect(formattedString).toContain('Legacy agent-indexed content');
+      expect(axios.post).toHaveBeenNthCalledWith(
+        1,
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+      expect(axios.post).toHaveBeenNthCalledWith(
+        2,
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'agent-456',
+        },
+        expect.any(Object),
+      );
+    });
+
     it('should query non-project files with the agent entity id', async () => {
       generateShortLivedToken.mockReturnValue('mock-jwt-token');
 
@@ -297,6 +346,40 @@ describe('fileSearch.js - tuple return validation', () => {
         },
         expect.any(Object),
       );
+    });
+
+    it('keeps file metadata aligned when another file query fails', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockImplementation((_url, body) => {
+        if (body.file_id === 'file-1') {
+          return Promise.reject(new Error('API Error'));
+        }
+        return Promise.resolve({
+          data: [
+            [
+              {
+                page_content: 'Content from file 2',
+                metadata: { source: '/path/to/file2.pdf', page: 1 },
+              },
+              0.15,
+            ],
+          ],
+        });
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [
+          { file_id: 'file-1', filename: 'file1.pdf', projectId: 'project-1' },
+          { file_id: 'file-2', filename: 'file2.pdf', projectId: 'project-2' },
+        ],
+      });
+
+      const [, artifact] = await fileSearchTool.func({ query: 'test query' });
+
+      expect(artifact.file_search.sources).toHaveLength(1);
+      expect(artifact.file_search.sources[0].fileId).toBe('file-2');
     });
 
     it('should query legacy project files with the active project entity id', async () => {

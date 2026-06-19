@@ -110,6 +110,9 @@
     "migrate:project-permissions:dry-run": "node config/migrate-project-permissions.js --dry-run",
     "migrate:project-permissions": "node config/migrate-project-permissions.js --apply",
     "migrate:project-permissions:batch": "node config/migrate-project-permissions.js --apply --batch-size=50",
+    "migrate:project-files:dry-run": "node config/migrate-project-files.js --dry-run",
+    "migrate:project-files": "node config/migrate-project-files.js --apply",
+    "migrate:project-files:batch": "node config/migrate-project-files.js --apply --batch-size=50",
     "migrate:orphaned-agent-files:dry-run": "node config/migrate-orphaned-agent-files.js --dry-run",
     "migrate:orphaned-agent-files": "node config/migrate-orphaned-agent-files.js",
     "migrate:orphaned-agent-files:batch": "node config/migrate-orphaned-agent-files.js --batch-size=50"
