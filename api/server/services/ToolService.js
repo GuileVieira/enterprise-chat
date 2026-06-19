@@ -584,7 +584,15 @@ const isBuiltInTool = (toolName) =>
  *   hasDeferredTools?: boolean;
  * }>}
  */
-async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, tool_resources }) {
+async function loadToolDefinitionsWrapper({
+  req,
+  res,
+  agent,
+  streamId = null,
+  tool_resources,
+  projectId,
+  projectFileIds,
+}) {
   if (!agent.tools || agent.tools.length === 0) {
     return { toolDefinitions: [] };
   }
@@ -893,6 +901,8 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
         req,
         tool_resources,
         agentId: agent.id,
+        projectId,
+        projectFileIds,
       });
       if (toolContext) {
         dynamicToolContextMap[Tools.execute_code] = toolContext;
@@ -911,6 +921,8 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
         req,
         tool_resources,
         agentId: agent.id,
+        projectId,
+        projectFileIds,
       });
       if (toolContext) {
         dynamicToolContextMap[Tools.file_search] = toolContext;
@@ -995,9 +1007,19 @@ async function loadAgentTools({
   openAIApiKey,
   streamId = null,
   definitionsOnly = true,
+  projectId,
+  projectFileIds,
 }) {
   if (definitionsOnly) {
-    return loadToolDefinitionsWrapper({ req, res, agent, streamId, tool_resources });
+    return loadToolDefinitionsWrapper({
+      req,
+      res,
+      agent,
+      streamId,
+      tool_resources,
+      projectId,
+      projectFileIds,
+    });
   }
 
   if (!agent.tools || agent.tools.length === 0) {
@@ -1085,6 +1107,8 @@ async function loadAgentTools({
       uploadImageBuffer,
       returnMetadata: true,
       [Tools.web_search]: webSearchCallbacks,
+      projectId,
+      projectFileIds,
     },
     webSearch: appConfig.webSearch,
     fileStrategy: appConfig.fileStrategy,
@@ -1347,6 +1371,8 @@ async function loadToolsForExecution({
   tool_resources,
   streamId = null,
   actionsEnabled,
+  projectId,
+  projectFileIds,
 }) {
   const appConfig = req.config;
   const allLoadedTools = [];
@@ -1476,6 +1502,8 @@ async function loadToolsForExecution({
         uploadImageBuffer,
         returnMetadata: true,
         [Tools.web_search]: webSearchCallbacks,
+        projectId,
+        projectFileIds,
       },
       webSearch: appConfig?.webSearch,
       fileStrategy: appConfig?.fileStrategy,

@@ -30,9 +30,10 @@ const fileSearchJsonSchema = {
  * }>}
  */
 const primeFiles = async (options) => {
-  const { tool_resources, req, agentId } = options;
+  const { tool_resources, req, agentId, projectId, projectFileIds } = options;
   const file_ids = tool_resources?.[EToolResources.file_search]?.file_ids ?? [];
   const agentResourceIds = new Set(file_ids);
+  const projectResourceIds = new Set(projectFileIds ?? []);
   const resourceFiles = tool_resources?.[EToolResources.file_search]?.files ?? [];
 
   // Get all files first
@@ -46,6 +47,8 @@ const primeFiles = async (options) => {
       userId: req.user.id,
       role: req.user.role,
       agentId,
+      projectId,
+      projectFileIds,
     });
   } else {
     dbFiles = allFiles;
@@ -72,7 +75,7 @@ const primeFiles = async (options) => {
     files.push({
       file_id: file.file_id,
       filename: file.filename,
-      projectId: file.projectId,
+      projectId: file.projectId || (projectResourceIds.has(file.file_id) ? projectId : undefined),
       metadata: file.metadata,
     });
   }

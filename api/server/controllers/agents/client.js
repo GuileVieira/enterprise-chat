@@ -615,6 +615,7 @@ class AgentClient extends BaseClient {
         },
         codeEnvAvailable: memoryCapabilities.has(AgentCapabilities.execute_code),
         projectFileIds: projectContext.projectFileIds,
+        projectId: projectContext.projectId,
       },
       {
         getFiles: db.getFiles,

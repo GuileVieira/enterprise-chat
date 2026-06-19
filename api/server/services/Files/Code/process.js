@@ -761,7 +761,7 @@ const appendVisibleCodeFileContext = (toolContext, contextLine) => {
  * }>}
  */
 const primeFiles = async (options) => {
-  const { tool_resources, req, agentId } = options;
+  const { tool_resources, req, agentId, projectId, projectFileIds } = options;
   const file_ids = tool_resources?.[EToolResources.execute_code]?.file_ids ?? [];
   const agentResourceIds = new Set(file_ids);
   const resourceFiles = tool_resources?.[EToolResources.execute_code]?.files ?? [];
@@ -786,6 +786,8 @@ const primeFiles = async (options) => {
       userId: req.user.id,
       role: req.user.role,
       agentId,
+      projectId,
+      projectFileIds,
     });
   } else {
     dbFiles = allFiles;

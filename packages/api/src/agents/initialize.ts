@@ -226,6 +226,8 @@ export interface InitializeAgentParams {
     model: string | null;
     tool_options: AgentToolOptions | undefined;
     tool_resources: AgentToolResources | undefined;
+    projectId?: string;
+    projectFileIds?: string[];
   }) => Promise<{
     /** Full tool instances (only present when definitionsOnly=false) */
     tools?: GenericTool[];
@@ -269,6 +271,8 @@ export interface InitializeAgentParams {
   manualSkills?: string[];
   /** File IDs inherited from the active project after the caller has checked PROJECT VIEW. */
   projectFileIds?: string[];
+  /** Active project id after the caller has checked PROJECT VIEW. */
+  projectId?: string;
 }
 
 /**
@@ -456,6 +460,7 @@ export async function initializeAgent(
   agent.endpoint = provider;
 
   const projectFileIds = params.projectFileIds ?? [];
+  const projectId = params.projectId;
   const hasProjectFiles = projectFileIds.length > 0;
 
   /**
@@ -466,9 +471,7 @@ export async function initializeAgent(
    */
   if ((conversationId != null && resendFiles) || hasProjectFiles) {
     const convoFileIds =
-      conversationId != null && resendFiles
-        ? ((await db.getConvoFiles(conversationId)) ?? [])
-        : [];
+      conversationId != null && resendFiles ? ((await db.getConvoFiles(conversationId)) ?? []) : [];
     const toolResourceSet = new Set<EToolResources>();
     for (const tool of agent.tools ?? []) {
       if (EToolResources[tool as keyof typeof EToolResources]) {
@@ -751,6 +754,8 @@ export async function initializeAgent(
       model: agent.model,
       tool_options: agent.tool_options,
       tool_resources,
+      projectId,
+      projectFileIds,
     });
 
   let loadToolsResult;

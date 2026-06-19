@@ -76,6 +76,8 @@ function createToolLoader(signal, streamId = null, definitionsOnly = false) {
     provider,
     tool_options,
     tool_resources,
+    projectId,
+    projectFileIds,
   }) {
     const agent = { id: agentId, tools, provider, model, tool_options };
     try {
@@ -87,6 +89,8 @@ function createToolLoader(signal, streamId = null, definitionsOnly = false) {
         streamId,
         tool_resources,
         definitionsOnly,
+        projectId,
+        projectFileIds,
       });
     } catch (error) {
       logger.error('Error loading tools for agent ' + agentId, error);
@@ -188,6 +192,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
         userMCPAuthMap: ctx.userMCPAuthMap,
         tool_resources: ctx.tool_resources,
         actionsEnabled: ctx.actionsEnabled,
+        projectId: ctx.projectId,
+        projectFileIds: ctx.projectFileIds,
       });
 
       logger.debug(`[ON_TOOL_EXECUTE] loaded ${result.loadedTools?.length ?? 0} tools`);
@@ -337,6 +343,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       defaultActiveOnShare,
       manualSkills,
       projectFileIds,
+      projectId,
     },
     {
       getFiles: db.getFiles,
@@ -386,6 +393,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     activeSkillNames: primaryConfig.activeSkillNames,
     codeEnvAvailable: primaryConfig.codeEnvAvailable,
     skillPrimedIdsByName,
+    projectId,
+    projectFileIds,
   });
 
   const {
@@ -417,6 +426,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       defaultActiveOnShare,
       codeEnvAvailable,
       projectFileIds,
+      projectId,
     },
     {
       getAgent: db.getAgent,
@@ -464,6 +474,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
             config.manualSkillPrimes,
             config.alwaysApplySkillPrimes,
           ),
+          projectId,
+          projectFileIds,
         });
       },
       // Pass through the `@librechat/api` exports so that tests which
@@ -502,6 +514,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     primaryAgentId: primaryConfig.id,
     codeEnvAvailable,
     projectFileIds,
+    projectId,
   });
 
   if (updatedMCPAuthMap) {
@@ -521,6 +534,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       accessibleSkillIds: config.accessibleSkillIds,
       activeSkillNames: config.activeSkillNames,
       codeEnvAvailable: config.codeEnvAvailable,
+      projectId,
+      projectFileIds,
     });
   }
 
@@ -636,6 +651,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
            *  silently gated off even though the seed walk found it. */
           codeEnvAvailable,
           projectFileIds,
+          projectId,
           skillStates,
           defaultActiveOnShare,
         },
@@ -669,6 +685,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
           config.manualSkillPrimes,
           config.alwaysApplySkillPrimes,
         ),
+        projectId,
+        projectFileIds,
       });
       return config;
     } catch (err) {

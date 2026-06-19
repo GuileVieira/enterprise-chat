@@ -60,4 +60,39 @@ describe('file_search primeFiles', () => {
     expect(result.toolContext).toContain('arquivo');
     expect(result.toolContext).toContain('documento');
   });
+
+  it('tags legacy project files with the active project id', async () => {
+    mockGetFiles.mockResolvedValue([
+      {
+        file_id: 'legacy-project-file',
+        filename: 'DNA legado.docx',
+      },
+    ]);
+
+    const result = await primeFiles({
+      req: { user: { id: 'user-1', role: 'USER' } },
+      agentId: 'agent-1',
+      projectId: 'proj-123',
+      projectFileIds: ['legacy-project-file'],
+      tool_resources: {
+        [EToolResources.file_search]: {
+          file_ids: ['legacy-project-file'],
+        },
+      },
+    });
+
+    expect(mockFilterFilesByAgentAccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'proj-123',
+        projectFileIds: ['legacy-project-file'],
+      }),
+    );
+    expect(result.files).toEqual([
+      {
+        file_id: 'legacy-project-file',
+        filename: 'DNA legado.docx',
+        projectId: 'proj-123',
+      },
+    ]);
+  });
 });

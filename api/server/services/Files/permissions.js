@@ -5,10 +5,7 @@ const {
   hasPermissions,
   isEphemeralAgentId,
 } = require('librechat-data-provider');
-const {
-  checkPermission,
-  getEffectivePermissions,
-} = require('~/server/services/PermissionService');
+const { checkPermission, getEffectivePermissions } = require('~/server/services/PermissionService');
 const { getAgent, getFiles, getUserById } = require('~/models');
 const { findProjectForRequest } = require('~/server/services/Projects/access');
 /**
@@ -69,11 +66,11 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
       files != null
         ? getFilesById(files)
         : getFilesById(
-            await getFiles(
-              { file_id: { $in: fileIds } },
-              null,
-              { file_id: 1, user: 1, projectId: 1 },
-            ),
+            await getFiles({ file_id: { $in: fileIds } }, null, {
+              file_id: 1,
+              user: 1,
+              projectId: 1,
+            }),
           );
     const canInheritFromAgent = (fileId) =>
       attachedFileIds.has(fileId) &&
@@ -137,7 +134,14 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
  * @param {string} params.agentId - Agent ID that might grant access to files
  * @returns {Promise<Array<MongoFile>>} Filtered array of accessible files
  */
-const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
+const filterFilesByAgentAccess = async ({
+  files,
+  userId,
+  role,
+  agentId,
+  projectId,
+  projectFileIds,
+}) => {
   if (!userId || !agentId || !files || files.length === 0 || isEphemeralAgentId(agentId)) {
     return files;
   }
@@ -146,6 +150,7 @@ const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
   const filesToCheckAgent = [];
   const ownedFiles = [];
   const projectAccessibleFiles = [];
+  const activeProjectFileIds = new Set(projectFileIds ?? []);
 
   const user = await getUserById(userId);
 
@@ -154,9 +159,12 @@ const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
       ownedFiles.push(file);
     } else {
       let hasProjectAccess = false;
-      if (file.projectId) {
+      const effectiveProjectId =
+        file.projectId ||
+        (projectId && activeProjectFileIds.has(file.file_id) ? projectId : undefined);
+      if (effectiveProjectId) {
         try {
-          const project = await findProjectForRequest({ projectId: file.projectId, user });
+          const project = await findProjectForRequest({ projectId: effectiveProjectId, user });
           if (project?._id) {
             const permissions = await getEffectivePermissions({
               userId,
@@ -169,7 +177,10 @@ const filterFilesByAgentAccess = async ({ files, userId, role, agentId }) => {
             }
           }
         } catch (err) {
-          logger.warn(`[filterFilesByAgentAccess] Project check failed for file ${file.file_id}:`, err);
+          logger.warn(
+            `[filterFilesByAgentAccess] Project check failed for file ${file.file_id}:`,
+            err,
+          );
         }
       }
 

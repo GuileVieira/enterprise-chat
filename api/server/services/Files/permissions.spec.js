@@ -19,10 +19,7 @@ jest.mock('~/models', () => ({
 
 const { logger } = require('@librechat/data-schemas');
 const { Constants, PermissionBits, ResourceType } = require('librechat-data-provider');
-const {
-  checkPermission,
-  getEffectivePermissions,
-} = require('~/server/services/PermissionService');
+const { checkPermission, getEffectivePermissions } = require('~/server/services/PermissionService');
 const { findProjectForRequest } = require('~/server/services/Projects/access');
 const { getAgent, getFiles, getUserById } = require('~/models');
 const { filterFilesByAgentAccess, hasAccessToFilesViaAgent } = require('./permissions');
@@ -253,6 +250,28 @@ describe('filterFilesByAgentAccess', () => {
       });
 
       expect(result).toEqual([projectFile]);
+      expect(getAgent).not.toHaveBeenCalled();
+    });
+
+    it('should allow legacy project files declared by active project after project VIEW', async () => {
+      const legacyProjectFile = makeFile('legacy-project-file', AUTHOR_ID);
+      findProjectForRequest.mockResolvedValue({ _id: 'project-mongo-id' });
+      getEffectivePermissions.mockResolvedValue(PermissionBits.VIEW);
+
+      const result = await filterFilesByAgentAccess({
+        files: [legacyProjectFile],
+        userId: USER_ID,
+        role: 'USER',
+        agentId: AGENT_ID,
+        projectId: 'project-dna',
+        projectFileIds: ['legacy-project-file'],
+      });
+
+      expect(findProjectForRequest).toHaveBeenCalledWith({
+        projectId: 'project-dna',
+        user: { _id: USER_ID, tenantId: 'tenant-1' },
+      });
+      expect(result).toEqual([legacyProjectFile]);
       expect(getAgent).not.toHaveBeenCalled();
     });
   });

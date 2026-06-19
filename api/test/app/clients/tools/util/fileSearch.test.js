@@ -299,6 +299,41 @@ describe('fileSearch.js - tuple return validation', () => {
       );
     });
 
+    it('should query legacy project files with the active project entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Legacy project file content',
+              metadata: { source: '/path/to/legacy.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'legacy-file', filename: 'legacy.docx' }],
+        entity_id: 'project-123',
+      });
+
+      await fileSearchTool.func({ query: 'legacy query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'legacy-file',
+          query: 'legacy query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+    });
+
     it('should expose source image metadata for derived image RAG files', async () => {
       generateShortLivedToken.mockReturnValue('mock-jwt-token');
 

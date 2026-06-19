@@ -80,6 +80,8 @@ function createToolLoader(signal, definitionsOnly = true) {
     provider,
     tool_options,
     tool_resources,
+    projectId,
+    projectFileIds,
   }) {
     const agent = { id: agentId, tools, provider, model, tool_options };
     try {
@@ -91,6 +93,8 @@ function createToolLoader(signal, definitionsOnly = true) {
         tool_resources,
         definitionsOnly,
         streamId: null,
+        projectId,
+        projectFileIds,
       });
     } catch (error) {
       logger.error('Error loading tools for agent ' + agentId, error);
@@ -363,9 +367,10 @@ const createResponse = async (req, res) => {
       projectId: req.body.projectId,
     });
     const projectFileIds = projectContext.projectFileIds;
-    const contextParts = [projectContext.projectInstructions, projectContext.projectMemories].filter(
-      Boolean,
-    );
+    const contextParts = [
+      projectContext.projectInstructions,
+      projectContext.projectMemories,
+    ].filter(Boolean);
     if (contextParts.length > 0) {
       agent.instructions = `${contextParts.join('\n\n')}\n\n${agent.instructions ?? ''}`;
     }
@@ -437,6 +442,7 @@ const createResponse = async (req, res) => {
         defaultActiveOnShare,
         manualSkills,
         projectFileIds,
+        projectId: projectContext.projectId,
       },
       dbMethods,
     );
@@ -461,6 +467,8 @@ const createResponse = async (req, res) => {
       tool_resources: primaryConfig.tool_resources,
       actionsEnabled: primaryConfig.actionsEnabled,
       codeEnvAvailable: primaryConfig.codeEnvAvailable,
+      projectId: projectContext.projectId,
+      projectFileIds,
     });
 
     // Only run BFS discovery (and pay `getModelsConfig` upfront) when the
@@ -492,6 +500,8 @@ const createResponse = async (req, res) => {
           resourceType: ResourceType.REMOTE_AGENT,
           /** @see DiscoverConnectedAgentsParams.codeEnvAvailable */
           codeEnvAvailable: enabledCapabilities.has(AgentCapabilities.execute_code),
+          projectId: projectContext.projectId,
+          projectFileIds,
         },
         {
           getAgent: db.getAgent,
@@ -519,6 +529,8 @@ const createResponse = async (req, res) => {
               tool_resources: config.tool_resources,
               actionsEnabled: config.actionsEnabled,
               codeEnvAvailable: config.codeEnvAvailable,
+              projectId: projectContext.projectId,
+              projectFileIds,
             });
           },
           initializeAgent,
@@ -652,6 +664,8 @@ const createResponse = async (req, res) => {
             userMCPAuthMap: ctx.userMCPAuthMap,
             tool_resources: ctx.tool_resources,
             actionsEnabled: ctx.actionsEnabled,
+            projectId: ctx.projectId,
+            projectFileIds: ctx.projectFileIds,
           });
           return enrichWithSkillConfigurable(
             result,
@@ -828,6 +842,8 @@ const createResponse = async (req, res) => {
             userMCPAuthMap: ctx.userMCPAuthMap,
             tool_resources: ctx.tool_resources,
             actionsEnabled: ctx.actionsEnabled,
+            projectId: ctx.projectId,
+            projectFileIds: ctx.projectFileIds,
           });
           return enrichWithSkillConfigurable(
             result,
