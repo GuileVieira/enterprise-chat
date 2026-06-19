@@ -21,6 +21,7 @@ describe('Project Permission Migration Script', () => {
   let Project, AclEntry, AccessRole, User;
   let migrateProjectPermissions;
   let ownerUser;
+  let tenantUser;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -36,6 +37,14 @@ describe('Project Permission Migration Script', () => {
       name: 'Project Owner',
       email: 'owner@test.com',
       role: 'USER',
+      tenantId: 'tenant-1',
+    });
+
+    tenantUser = await User.create({
+      name: 'Tenant User',
+      email: 'user@test.com',
+      role: 'USER',
+      tenantId: 'tenant-1',
     });
 
     await AccessRole.create({
@@ -50,6 +59,12 @@ describe('Project Permission Migration Script', () => {
       name: 'Project Editor',
       resourceType: ResourceType.PROJECT,
       permBits: PermissionBits.VIEW | PermissionBits.EDIT,
+    });
+    await AccessRole.create({
+      accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+      name: 'Project Viewer',
+      resourceType: ResourceType.PROJECT,
+      permBits: PermissionBits.VIEW,
     });
 
     jest.doMock('~/db/models', () => dbModels, { virtual: true });
@@ -118,7 +133,7 @@ describe('Project Permission Migration Script', () => {
     await AclEntry.deleteMany({});
   });
 
-  it('reports missing user and tenant project ACLs in dry run without writing', async () => {
+  it('reports missing owner, tenant, and tenant user project ACLs in dry run without writing', async () => {
     await Project.create({
       projectId: 'proj-1',
       name: 'Legacy Project',
@@ -134,13 +149,15 @@ describe('Project Permission Migration Script', () => {
         checked: 1,
         ownerGrants: 1,
         tenantGrants: 1,
+        tenantUserGrants: 1,
+        migrated: 3,
         errors: 0,
       }),
     );
     expect(await AclEntry.countDocuments({})).toBe(0);
   });
 
-  it('grants missing owner and tenant project ACLs when applied', async () => {
+  it('grants missing owner, tenant, and tenant user project ACLs when applied', async () => {
     const project = await Project.create({
       projectId: 'proj-1',
       name: 'Legacy Project',
@@ -156,6 +173,8 @@ describe('Project Permission Migration Script', () => {
         checked: 1,
         ownerGrants: 1,
         tenantGrants: 1,
+        tenantUserGrants: 1,
+        migrated: 3,
         errors: 0,
       }),
     );
@@ -176,6 +195,15 @@ describe('Project Permission Migration Script', () => {
         resourceId: project._id,
       }).lean(),
     ).resolves.toEqual(expect.objectContaining({ permBits: 3 }));
+    await expect(
+      AclEntry.findOne({
+        principalType: PrincipalType.USER,
+        principalId: tenantUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+      }).lean(),
+    ).resolves.toEqual(expect.objectContaining({ permBits: 1 }));
   });
 
   it('is idempotent when project ACLs already exist', async () => {
@@ -194,9 +222,45 @@ describe('Project Permission Migration Script', () => {
         checked: 1,
         ownerGrants: 0,
         tenantGrants: 0,
+        tenantUserGrants: 0,
         errors: 0,
       }),
     );
-    expect(await AclEntry.countDocuments({ resourceType: ResourceType.PROJECT })).toBe(2);
+    expect(await AclEntry.countDocuments({ resourceType: ResourceType.PROJECT })).toBe(3);
+  });
+
+  it('repairs an existing tenant user ACL that lacks project view', async () => {
+    const project = await Project.create({
+      projectId: 'proj-1',
+      name: 'Legacy Project',
+      user: ownerUser._id.toString(),
+      tenantId: 'tenant-1',
+    });
+
+    await AclEntry.create({
+      principalType: PrincipalType.USER,
+      principalId: tenantUser._id,
+      principalModel: PrincipalModel.USER,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+      permBits: 0,
+    });
+
+    const result = await migrateProjectPermissions({ dryRun: false });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        tenantUserGrants: 1,
+        errors: 0,
+      }),
+    );
+    await expect(
+      AclEntry.findOne({
+        principalType: PrincipalType.USER,
+        principalId: tenantUser._id,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+      }).lean(),
+    ).resolves.toEqual(expect.objectContaining({ permBits: 1 }));
   });
 });
