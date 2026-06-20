@@ -360,6 +360,9 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
     if (!token) {
       return res.status(400).json({ message: 'metaAccessToken is required' });
     }
+    if (!looksLikeMetaAccessToken(token)) {
+      return res.status(400).json({ message: 'Invalid metaAccessToken format' });
+    }
     const tenantId = req.user.tenantId || getTenantId();
     await upsertTenantSecret(
       tenantId,

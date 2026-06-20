@@ -286,7 +286,7 @@ describe('projectMetaAds tenant token route', () => {
   it('saves the tenant global Meta token using the canonical secret name', async () => {
     const token = `EAA${'g'.repeat(48)}`;
 
-    await request(createApp())
+    const response = await request(createApp())
       .put('/projects/p1/meta-ads/tenant-token')
       .send({ metaAccessToken: token })
       .expect(200);
@@ -297,12 +297,28 @@ describe('projectMetaAds tenant token route', () => {
       token,
       'meta_access_token',
     );
+    expect(response.body).toEqual({
+      credentials: {
+        tenantConfigured: true,
+        secretName: 'meta_graph_access_token',
+      },
+    });
+    expect(JSON.stringify(response.body)).not.toContain(token);
   });
 
   it('rejects empty tenant global Meta tokens', async () => {
     await request(createApp())
       .put('/projects/p1/meta-ads/tenant-token')
       .send({ metaAccessToken: '   ' })
+      .expect(400);
+
+    expect(upsertTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid tenant global Meta token formats', async () => {
+    await request(createApp())
+      .put('/projects/p1/meta-ads/tenant-token')
+      .send({ metaAccessToken: 'not-a-meta-token' })
       .expect(400);
 
     expect(upsertTenantSecret).not.toHaveBeenCalled();

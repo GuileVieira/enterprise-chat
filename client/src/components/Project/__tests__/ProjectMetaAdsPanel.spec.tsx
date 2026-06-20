@@ -2080,6 +2080,13 @@ describe('ProjectMetaAdsPanel', () => {
     const credentialsDialog = screen.getAllByRole('dialog')[1];
     const token = `EAA${'b'.repeat(48)}`;
 
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_global_token_title'),
+    ).toBeInTheDocument();
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_local_token_title'),
+    ).toBeInTheDocument();
+
     fireEvent.change(
       within(credentialsDialog).getAllByPlaceholderText(
         'com_ui_project_meta_ads_token_placeholder',
@@ -2099,6 +2106,16 @@ describe('ProjectMetaAdsPanel', () => {
       },
       expect.any(Object),
     );
+    expect(
+      within(credentialsDialog).getAllByPlaceholderText(
+        'com_ui_project_meta_ads_token_placeholder',
+      )[0],
+    ).toHaveValue('');
+    expect(mockRefetchStatus).toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_saved',
+      status: 'success',
+    });
   });
 
   it('keeps tenant global token editing hidden from regular project editors', () => {
@@ -2111,6 +2128,12 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
     const credentialsDialog = screen.getAllByRole('dialog')[1];
 
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_global_token_title'),
+    ).toBeInTheDocument();
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_local_token_title'),
+    ).toBeInTheDocument();
     expect(
       within(credentialsDialog).getByText('com_ui_project_meta_ads_tenant_token_admin_hint'),
     ).toBeInTheDocument();

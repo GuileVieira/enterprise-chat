@@ -3477,7 +3477,7 @@ export default function ProjectMetaAdsPanel({
               <div className="border border-border-light bg-surface-secondary p-3">
                 <div className="flex flex-col gap-1">
                   <div className="text-sm font-medium text-text-primary">
-                    {localize('com_ui_project_meta_ads_tenant_token')}
+                    {localize('com_ui_project_meta_ads_global_token_title')}
                   </div>
                   <div className="text-xs leading-5 text-text-tertiary">
                     {localize(
@@ -3532,7 +3532,7 @@ export default function ProjectMetaAdsPanel({
               <div className="border border-border-light bg-surface-secondary p-3">
                 <div className="flex flex-col gap-1">
                   <div className="text-sm font-medium text-text-primary">
-                    {localize('com_ui_project_meta_ads_project_token')}
+                    {localize('com_ui_project_meta_ads_local_token_title')}
                   </div>
                   <div className="text-xs leading-5 text-text-tertiary">
                     {localize('com_ui_project_meta_ads_project_token_hint')}
