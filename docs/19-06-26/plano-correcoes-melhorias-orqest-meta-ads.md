@@ -64,21 +64,21 @@ Codigo relevante:
 
 **Tarefas:**
 
-- [ ] Exportar helper interno para teste, por exemplo `_calculateMetricsForTest`.
-- [ ] Criar `canonicalizeMetaActionType(actionType)`.
-- [ ] Mapear equivalencias de compra, lead e conversa.
-- [ ] Quando `targetResultType` existir, procurar apenas action canonica equivalente.
-- [ ] Se action alvo nao existir, retornar `resultCount: 0`, `cpa: null`, `resultType` alvo.
-- [ ] Proibir `link_click`, `landing_page_view`, `post_engagement`, `page_engagement`, `video_view` como fallback para `purchase`, `lead` ou conversa.
-- [ ] Manter `resultTypeBreakdown` para diagnostico sem afetar `resultCount`.
+- [x] Exportar helper interno para teste, por exemplo `_calculateMetricsForTest`.
+- [x] Criar `canonicalizeMetaActionType(actionType)`.
+- [x] Mapear equivalencias de compra, lead e conversa.
+- [x] Quando `targetResultType` existir, procurar apenas action canonica equivalente.
+- [x] Se action alvo nao existir, retornar `resultCount: 0`, `cpa: null`, `resultType` alvo.
+- [x] Proibir `link_click`, `landing_page_view`, `post_engagement`, `page_engagement`, `video_view` como fallback para `purchase`, `lead` ou conversa.
+- [x] Manter `resultTypeBreakdown` para diagnostico sem afetar `resultCount`.
 
 **Testes:**
 
-- [ ] `purchase=23` e `link_click=38`, alvo `purchase`, retorna 23.
-- [ ] so `link_click=38`, alvo `purchase`, retorna 0.
-- [ ] `omni_purchase=23`, alvo `purchase`, retorna 23.
-- [ ] `leadgen_grouped=6`, alvo `lead`, retorna 6.
-- [ ] sem alvo, video nao vira compra.
+- [x] `purchase=23` e `link_click=38`, alvo `purchase`, retorna 23.
+- [x] so `link_click=38`, alvo `purchase`, retorna 0.
+- [x] `omni_purchase=23`, alvo `purchase`, retorna 23.
+- [x] `leadgen_grouped=6`, alvo `lead`, retorna 6.
+- [x] sem alvo, video nao vira compra.
 
 **Comando:**
 
@@ -99,12 +99,12 @@ cd api && npm run test:ci -- MetaAds/budget.spec.js
 
 **Tarefas:**
 
-- [ ] Criar `resolveTargetResultType({ rules, accountProfile, campaignObjective })`.
-- [ ] Usar `rules.targetResultType` quando existir.
-- [ ] Usar `purchase` quando `accountProfile === 'ecommerce'`.
-- [ ] Usar `purchase` quando `campaignObjective === 'OUTCOME_SALES'`.
-- [ ] Aplicar helper em snapshots, ads e campanhas.
-- [ ] UI deve salvar `targetResultType='purchase'` e `primaryMetric='roas'` ao escolher e-commerce.
+- [x] Criar `resolveTargetResultType({ rules, accountProfile, campaignObjective })`.
+- [x] Usar `rules.targetResultType` quando existir.
+- [x] Usar `purchase` quando `accountProfile === 'ecommerce'`.
+- [x] Usar `purchase` quando `campaignObjective === 'OUTCOME_SALES'`.
+- [x] Aplicar helper em snapshots, ads e campanhas.
+- [x] UI deve salvar `targetResultType='purchase'` e `primaryMetric='roas'` ao escolher e-commerce.
 
 #### PR 1.3 - Corrigir ROAS/ROI com `action_values`
 
@@ -119,10 +119,10 @@ cd api && npm run test:ci -- MetaAds/budget.spec.js
 
 **Tarefas:**
 
-- [ ] Adicionar `action_values` aos insights de campaign/adset/ad.
-- [ ] Agregar `action_values` em leituras chunked.
-- [ ] Calcular `purchaseValue` por action value canonica de compra.
-- [ ] Usar `purchase_roas` quando valido; senao `purchaseValue / spend`.
+- [x] Adicionar `action_values` aos insights de campaign/adset/ad.
+- [x] Agregar `action_values` em leituras chunked.
+- [x] Calcular `purchaseValue` por action value canonica de compra.
+- [x] Usar `purchase_roas` quando valido; senao `purchaseValue / spend`.
 
 ### Epic 2 - Credenciais e Token Global
 
