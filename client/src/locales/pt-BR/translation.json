@@ -1079,6 +1079,8 @@
   "com_ui_project_meta_ads_period_until": "Data final",
   "com_ui_project_meta_ads_loading": "Carregando dados do Meta Ads...",
   "com_ui_project_meta_ads_total_spend": "Gasto total",
+  "com_ui_project_meta_ads_roas": "ROAS",
+  "com_ui_project_meta_ads_average_roas": "ROAS médio",
   "com_ui_project_meta_ads_total_results": "Resultados totais",
   "com_ui_project_meta_ads_average_cost": "Custo médio",
   "com_ui_project_meta_ads_cost_per_result": "Custo por resultado",

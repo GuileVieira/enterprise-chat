@@ -127,6 +127,7 @@ type TableColumnKey =
   | 'objective'
   | 'budgetMode'
   | 'frequency'
+  | 'roas'
   | 'result'
   | 'cpa'
   | 'spend'
@@ -213,6 +214,13 @@ const tableColumnMap: Record<TableColumnKey, TableColumn> = {
     widthClass: 'w-32',
     align: 'right',
     sortableKey: 'frequency',
+  },
+  roas: {
+    key: 'roas',
+    labelKey: 'com_ui_project_meta_ads_roas',
+    widthClass: 'w-24',
+    align: 'right',
+    sortableKey: 'roas',
   },
   result: {
     key: 'result',
@@ -308,6 +316,41 @@ const tableViewColumns: Record<TableView, TableColumnKey[]> = {
   ],
   creative: ['level', 'name', 'spend', 'ctr', 'cpa', 'frequency', 'result', 'clicks', 'actions'],
   rules: ['level', 'name', 'budget', 'rule', 'recommendation', 'actions'],
+};
+
+const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
+  summary: [
+    'level',
+    'name',
+    'budget',
+    'objective',
+    'budgetMode',
+    'roas',
+    'spend',
+    'result',
+    'cpa',
+    'ctr',
+    'clicks',
+    'rule',
+    'recommendation',
+    'actions',
+  ],
+  performance: [
+    'level',
+    'name',
+    'budget',
+    'objective',
+    'budgetMode',
+    'roas',
+    'spend',
+    'result',
+    'cpa',
+    'ctr',
+    'clicks',
+    'actions',
+  ],
+  creative: ['level', 'name', 'roas', 'spend', 'ctr', 'cpa', 'result', 'clicks', 'actions'],
+  rules: tableViewColumns.rules,
 };
 
 const tableViewMinWidth: Record<TableView, string> = {
@@ -666,6 +709,46 @@ function formatSharePercent(value: number, total: number) {
   return total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '-';
 }
 
+function isEcommerceContext(
+  settings: MetaAdsSettingsState,
+  objectiveFilter: string,
+  campaigns: ProjectMetaAdsCampaignSummary[],
+) {
+  if (settings.accountProfile === 'ecommerce' || settings.rules.targetResultType === 'purchase') {
+    return true;
+  }
+  if (objectiveFilter === 'OUTCOME_SALES') {
+    return true;
+  }
+  const visibleCampaigns =
+    objectiveFilter === 'all'
+      ? campaigns
+      : campaigns.filter((campaign) => (campaign.objective || 'UNKNOWN') === objectiveFilter);
+  return (
+    visibleCampaigns.length > 0 &&
+    visibleCampaigns.every((campaign) => campaign.objective === 'OUTCOME_SALES')
+  );
+}
+
+function calculateWeightedRoas(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  let weightedRoas = 0;
+  let spendWeight = 0;
+  for (const campaign of campaigns) {
+    const roas = Number(campaign.roas);
+    const spend = Number(campaign.spend);
+    if (!Number.isFinite(roas) || !Number.isFinite(spend) || spend <= 0) {
+      continue;
+    }
+    weightedRoas += roas * spend;
+    spendWeight += spend;
+  }
+  return spendWeight > 0 ? Number((weightedRoas / spendWeight).toFixed(2)) : null;
+}
+
+function getTableViewColumns(tableView: TableView, isEcommerce: boolean) {
+  return isEcommerce ? ecommerceTableViewColumns[tableView] : tableViewColumns[tableView];
+}
+
 function getShareWidth(value: number, total: number) {
   if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) {
     return '0%';
@@ -971,6 +1054,7 @@ function getCompatibleResultTotals(resultTypeMap: Map<string, ResultTypeSummary>
 function buildSummaryResultTypeOptions(
   objectiveSummaries: ProjectMetaAdsObjectiveSummary[],
   objectiveFilter: string,
+  isEcommerce: boolean,
 ): SummaryResultTypeOption[] {
   const canonicalResultTypes: Record<string, string> = {
     leadgen_grouped: 'lead',
@@ -1009,6 +1093,9 @@ function buildSummaryResultTypeOptions(
     for (const resultType of summary.resultTypes) {
       const rawResultTypeKey = resultType.resultType || 'UNKNOWN';
       const resultTypeKey = canonicalResultTypes[rawResultTypeKey] ?? rawResultTypeKey;
+      if (isEcommerce && resultTypeKey !== 'purchase') {
+        continue;
+      }
       if (!allowedResultTypes.has(resultTypeKey)) {
         continue;
       }
@@ -1420,6 +1507,9 @@ function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: string) {
   if (key === 'spend') {
     return campaign.spend ?? 0;
   }
+  if (key === 'roas') {
+    return campaign.roas ?? 0;
+  }
   if (key === 'cpa') {
     return campaign.cpa;
   }
@@ -1809,15 +1899,22 @@ export default function ProjectMetaAdsPanel({
         ? objectiveSummaries[0]
         : undefined;
   const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
+  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, campaigns);
   const summaryResultTypeOptions = buildSummaryResultTypeOptions(
     objectiveSummaries,
     objectiveFilter,
+    isEcommerceDashboard,
   );
   const selectedSummaryResultTypeOption = selectedSummaryResultType
     ? summaryResultTypeOptions.find((option) => option.resultType === selectedSummaryResultType)
     : undefined;
+  const ecommercePurchaseResultTypeOption = isEcommerceDashboard
+    ? summaryResultTypeOptions.find((option) => option.resultType === 'purchase')
+    : undefined;
+  const effectiveSummaryResultTypeOption =
+    selectedSummaryResultTypeOption ?? ecommercePurchaseResultTypeOption;
   const summaryResultType =
-    selectedSummaryResultTypeOption?.resultType ??
+    effectiveSummaryResultTypeOption?.resultType ??
     (scopedObjectiveSummary?.resultTypes.length === 1
       ? scopedObjectiveSummary.resultTypes[0].resultType
       : undefined);
@@ -1829,12 +1926,12 @@ export default function ProjectMetaAdsPanel({
   const summaryTotalSpend =
     scopedObjectiveSummary?.totalSpend ?? statusQuery.data?.summary?.totalSpend;
   const summaryTotalResults =
-    selectedSummaryResultTypeOption?.totalResults ??
+    effectiveSummaryResultTypeOption?.totalResults ??
     (hasMixedObjectiveSummary
       ? null
       : (scopedObjectiveSummary?.totalResults ?? statusQuery.data?.summary?.totalResults));
   const summaryAverageCost =
-    selectedSummaryResultTypeOption?.averageCostPerResult ??
+    effectiveSummaryResultTypeOption?.averageCostPerResult ??
     (hasMixedObjectiveSummary
       ? null
       : (scopedObjectiveSummary?.averageCostPerResult ??
@@ -1867,6 +1964,7 @@ export default function ProjectMetaAdsPanel({
       }
       return compareNumberSort(first, second, key, direction);
     });
+  const summaryAverageRoas = isEcommerceDashboard ? calculateWeightedRoas(filteredCampaigns) : null;
 
   const onSortColumn = (key: string, defaultDirection: 'asc' | 'desc') => {
     const [activeKey, activeDirection = defaultDirection] = campaignSort.split('_') as [
@@ -2482,8 +2580,64 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
-  const tableColumns = tableViewColumns[tableView].map((key) => tableColumnMap[key]);
+  const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
+    (key) => tableColumnMap[key],
+  );
   const tableColumnCount = tableColumns.length + 2;
+  const summaryCards = isEcommerceDashboard
+    ? [
+        {
+          labelKey: 'com_ui_project_meta_ads_average_roas' as TranslationKeys,
+          value: formatMetric(summaryAverageRoas),
+          tone: 'border-l-emerald-300/35',
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_total_spend' as TranslationKeys,
+          value: formatMoney(summaryTotalSpend, currency),
+          tone: 'border-l-amber-300/35',
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_total_results' as TranslationKeys,
+          value: formatMetric(summaryTotalResults),
+          tone: 'border-l-sky-300/30',
+          context: summaryMetricContext,
+          clickable: summaryResultTypeOptions.length > 0,
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_average_cost' as TranslationKeys,
+          value: formatMoney(summaryAverageCost, currency),
+          tone: 'border-l-rose-300/30',
+          context: summaryMetricContext,
+        },
+      ]
+    : [
+        {
+          labelKey: 'com_ui_project_meta_ads_total_spend' as TranslationKeys,
+          value: formatMoney(summaryTotalSpend, currency),
+          tone: 'border-l-amber-300/35',
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_total_results' as TranslationKeys,
+          value: formatMetric(summaryTotalResults),
+          tone: 'border-l-emerald-300/35',
+          context: summaryMetricContext,
+          clickable: summaryResultTypeOptions.length > 0,
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_average_cost' as TranslationKeys,
+          value: formatMoney(summaryAverageCost, currency),
+          tone: 'border-l-sky-300/30',
+          context: summaryMetricContext,
+        },
+        {
+          labelKey: 'com_ui_project_meta_ads_average_frequency' as TranslationKeys,
+          value: formatMetric(summaryAverageFrequency),
+          tone: 'border-l-rose-300/30',
+          context: scopedObjectiveSummary
+            ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
+            : undefined,
+        },
+      ];
   const renderEvolutionDeltaClass = (
     value: number | null | undefined,
     improvesWhenNegative = false,
@@ -2884,6 +3038,16 @@ export default function ProjectMetaAdsPanel({
         </td>
       );
     }
+    if (column.key === 'roas') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(campaign.roas)}
+        </td>
+      );
+    }
     if (column.key === 'spend') {
       return (
         <td
@@ -3015,6 +3179,16 @@ export default function ProjectMetaAdsPanel({
         </td>
       );
     }
+    if (column.key === 'roas') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(adset.roas)}
+        </td>
+      );
+    }
     if (column.key === 'spend') {
       return (
         <td
@@ -3109,6 +3283,16 @@ export default function ProjectMetaAdsPanel({
           className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
         >
           {formatMoney(ad.cpa, ad.currency ?? currency)}
+        </td>
+      );
+    }
+    if (column.key === 'roas') {
+      return (
+        <td
+          key={column.key}
+          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
+        >
+          {formatMetric(ad.roas)}
         </td>
       );
     }
@@ -3722,6 +3906,7 @@ export default function ProjectMetaAdsPanel({
                       <option value="spend_desc">
                         {localize('com_ui_project_meta_ads_spend')}
                       </option>
+                      <option value="roas_desc">{localize('com_ui_project_meta_ads_roas')}</option>
                       <option value="cpa_asc">
                         {localize('com_ui_project_meta_ads_cost_result')}
                       </option>
@@ -3822,34 +4007,7 @@ export default function ProjectMetaAdsPanel({
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                {
-                  labelKey: 'com_ui_project_meta_ads_total_spend' as TranslationKeys,
-                  value: formatMoney(summaryTotalSpend, currency),
-                  tone: 'border-l-amber-300/35',
-                },
-                {
-                  labelKey: 'com_ui_project_meta_ads_total_results' as TranslationKeys,
-                  value: formatMetric(summaryTotalResults),
-                  tone: 'border-l-emerald-300/35',
-                  context: summaryMetricContext,
-                  clickable: summaryResultTypeOptions.length > 0,
-                },
-                {
-                  labelKey: 'com_ui_project_meta_ads_average_cost' as TranslationKeys,
-                  value: formatMoney(summaryAverageCost, currency),
-                  tone: 'border-l-sky-300/30',
-                  context: summaryMetricContext,
-                },
-                {
-                  labelKey: 'com_ui_project_meta_ads_average_frequency' as TranslationKeys,
-                  value: formatMetric(summaryAverageFrequency),
-                  tone: 'border-l-rose-300/30',
-                  context: scopedObjectiveSummary
-                    ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
-                    : undefined,
-                },
-              ].map(({ labelKey, value, tone, context, clickable }) => {
+              {summaryCards.map(({ labelKey, value, tone, context, clickable }) => {
                 const content = (
                   <>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">

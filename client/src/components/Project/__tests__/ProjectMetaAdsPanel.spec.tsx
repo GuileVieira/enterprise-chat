@@ -1250,6 +1250,228 @@ describe('ProjectMetaAdsPanel', () => {
     expect(adSetRow).toHaveTextContent('-');
   });
 
+  it('renders ecommerce summary cards with weighted ROAS and purchase metrics', () => {
+    const ecommerceProject = {
+      ...project,
+      metaAds: {
+        accountProfile: 'ecommerce',
+        rules: {
+          targetResultType: 'purchase',
+          primaryMetric: 'roas',
+        },
+      },
+    } as TProject;
+    mockStatusData.currency = 'BRL';
+    mockStatusData.summary = {
+      totalSpend: 300,
+      totalResults: 43,
+      averageCostPerResult: 6.98,
+      averageFrequency: 4.2,
+      objectives: [
+        {
+          objective: 'OUTCOME_SALES',
+          campaignCount: 2,
+          totalSpend: 300,
+          totalResults: 43,
+          averageCostPerResult: 6.98,
+          averageFrequency: 4.2,
+          averageCtr: 2,
+          resultTypes: [
+            {
+              resultType: 'purchase',
+              totalSpend: 300,
+              totalResults: 3,
+              averageCostPerResult: 100,
+            },
+            {
+              resultType: 'link_click',
+              totalSpend: 300,
+              totalResults: 40,
+              averageCostPerResult: 7.5,
+            },
+          ],
+        },
+      ],
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-roas-high',
+        campaignName: 'Sales High ROAS',
+        objective: 'OUTCOME_SALES',
+        spend: 100,
+        roas: 4,
+        cpa: 50,
+        resultCount: 2,
+        resultType: 'purchase',
+        frequency: 6,
+        videoP75Watched: 900,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-roas-low',
+        campaignName: 'Sales Low ROAS',
+        objective: 'OUTCOME_SALES',
+        spend: 200,
+        roas: 1,
+        cpa: 200,
+        resultCount: 1,
+        resultType: 'purchase',
+        frequency: 8,
+        videoP75Watched: 1200,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_roas'),
+      ).getByText('2.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getByText('R$ 300,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('3.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('R$ 100,00'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'com_ui_project_meta_ads_roas' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_project_meta_ads_frequency' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('com_ui_project_meta_ads_video_p75')).not.toBeInTheDocument();
+  });
+
+  it('sorts ecommerce campaigns by ROAS from the table header', () => {
+    const ecommerceProject = {
+      ...project,
+      metaAds: {
+        accountProfile: 'ecommerce',
+        rules: { targetResultType: 'purchase', primaryMetric: 'roas' },
+      },
+    } as TProject;
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-low-roas',
+        campaignName: 'Low ROAS',
+        objective: 'OUTCOME_SALES',
+        spend: 200,
+        roas: 1.2,
+        resultCount: 2,
+        cpa: 100,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-high-roas',
+        campaignName: 'High ROAS',
+        objective: 'OUTCOME_SALES',
+        spend: 100,
+        roas: 5.5,
+        resultCount: 3,
+        cpa: 33.33,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_project_meta_ads_roas' }));
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows[0]).toHaveTextContent('High ROAS');
+    expect(rows[1]).toHaveTextContent('Low ROAS');
+  });
+
+  it('prioritizes purchase and hides mixed traffic events in ecommerce result selector', () => {
+    const ecommerceProject = {
+      ...project,
+      metaAds: {
+        accountProfile: 'ecommerce',
+        rules: { targetResultType: 'purchase', primaryMetric: 'roas' },
+      },
+    } as TProject;
+    mockStatusData.summary = {
+      totalSpend: 150,
+      totalResults: 99,
+      averageCostPerResult: 1.52,
+      averageFrequency: 3,
+      objectives: [
+        {
+          objective: 'OUTCOME_SALES',
+          campaignCount: 1,
+          totalSpend: 150,
+          totalResults: 99,
+          averageCostPerResult: 1.52,
+          averageFrequency: 3,
+          averageCtr: 2,
+          resultTypes: [
+            {
+              resultType: 'purchase',
+              totalSpend: 150,
+              totalResults: 4,
+              averageCostPerResult: 37.5,
+            },
+            {
+              resultType: 'link_click',
+              totalSpend: 150,
+              totalResults: 80,
+              averageCostPerResult: 1.88,
+            },
+            {
+              resultType: 'video_view',
+              totalSpend: 150,
+              totalResults: 15,
+              averageCostPerResult: 10,
+            },
+          ],
+        },
+      ],
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-sales',
+        campaignName: 'Sales',
+        objective: 'OUTCOME_SALES',
+        spend: 150,
+        roas: 3,
+        resultCount: 4,
+        resultType: 'purchase',
+        cpa: 37.5,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('4.00'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /com_ui_project_meta_ads_total_results/ }));
+    const resultMetricDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_choose_result_metric',
+    });
+    expect(
+      within(resultMetricDialog).getByText('com_ui_project_meta_ads_result_type_purchase'),
+    ).toBeInTheDocument();
+    expect(
+      within(resultMetricDialog).queryByText('com_ui_project_meta_ads_result_type_link_click'),
+    ).not.toBeInTheDocument();
+    expect(within(resultMetricDialog).queryByText(/Video View/)).not.toBeInTheDocument();
+  });
+
   it('auto-expands ABO campaigns by campaign group and keeps CBO ad sets collapsed', () => {
     mockStatusData.campaigns = [
       {

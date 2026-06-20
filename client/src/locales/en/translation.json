@@ -2055,6 +2055,8 @@
   "com_ui_project_meta_ads_period_until": "End date",
   "com_ui_project_meta_ads_loading": "Loading Meta Ads data...",
   "com_ui_project_meta_ads_total_spend": "Total spend",
+  "com_ui_project_meta_ads_roas": "ROAS",
+  "com_ui_project_meta_ads_average_roas": "Avg. ROAS",
   "com_ui_project_meta_ads_total_results": "Total results",
   "com_ui_project_meta_ads_average_cost": "Avg. cost",
   "com_ui_project_meta_ads_cost_per_result": "Cost per result",
