@@ -77,8 +77,7 @@ const CANONICAL_RESULT_TYPES = {
   omni_purchase: 'purchase',
   'offsite_conversion.fb_pixel_purchase': 'purchase',
   offsite_conversion_fb_pixel_purchase: 'purchase',
-  'onsite_conversion.messaging_first_reply':
-    'onsite_conversion.messaging_conversation_started_7d',
+  'onsite_conversion.messaging_first_reply': 'onsite_conversion.messaging_conversation_started_7d',
   onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
 };
 const RESULT_ACTION_PRIORITY = [
@@ -619,9 +618,9 @@ function calculateMetrics(row, targetResultType) {
     Array.from(resultTypeBreakdownByType.values()),
   );
   const normalizedTarget = canonicalizeMetaActionType(targetResultType);
-  const prioritizedAction = RESULT_ACTION_PRIORITY
-    .map((actionType) => actions.find((action) => action.action_type === actionType))
-    .find(Boolean);
+  const prioritizedAction = RESULT_ACTION_PRIORITY.map((actionType) =>
+    actions.find((action) => action.action_type === actionType),
+  ).find(Boolean);
   const nonAggregateAction = actions.find(
     (action) =>
       !VIDEO_RESULT_TYPES.has(canonicalizeMetaActionType(action.action_type)) &&
@@ -899,18 +898,22 @@ function getCreativeValue(creative, keys = []) {
 
 function getCreativeLinkData(creative = {}) {
   const objectStorySpec = creative.object_story_spec ?? {};
-  return objectStorySpec.link_data ?? objectStorySpec.video_data ?? {};
+  return (
+    objectStorySpec.link_data ?? objectStorySpec.video_data ?? objectStorySpec.template_data ?? {}
+  );
 }
 
 function getCreativeStoryMediaUrl(creative = {}) {
   const objectStorySpec = creative.object_story_spec ?? {};
   const linkData = objectStorySpec.link_data ?? {};
   const videoData = objectStorySpec.video_data ?? {};
+  const templateData = objectStorySpec.template_data ?? {};
   const childAttachment = Array.isArray(linkData.child_attachments)
     ? linkData.child_attachments.find((attachment) => typeof attachment?.picture === 'string')
     : null;
   return (
     getCreativeValue(videoData, ['image_url', 'thumbnail_url']) ||
+    getCreativeValue(templateData, ['image_url', 'thumbnail_url', 'picture']) ||
     getCreativeValue(linkData, ['picture']) ||
     getCreativeValue(childAttachment, ['picture'])
   );
@@ -939,6 +942,37 @@ function getAssetFeedMediaUrl(assetFeedSpec) {
       typeof item?.url === 'string',
   );
   return getCreativeValue(video, ['thumbnail_url', 'image_url', 'url']);
+}
+
+function getAssetFeedVideoId(assetFeedSpec) {
+  const videos = Array.isArray(assetFeedSpec?.videos) ? assetFeedSpec.videos : [];
+  const video = videos.find((item) => typeof item?.video_id === 'string' && item.video_id.trim());
+  return getCreativeValue(video, ['video_id']);
+}
+
+function getAssetFeedLinkUrl(assetFeedSpec) {
+  const linkUrls = Array.isArray(assetFeedSpec?.link_urls) ? assetFeedSpec.link_urls : [];
+  const linkUrl = linkUrls.find(
+    (item) =>
+      typeof item?.website_url === 'string' ||
+      typeof item?.url === 'string' ||
+      typeof item?.display_url === 'string' ||
+      typeof item?.deeplink_url === 'string',
+  );
+  return getCreativeValue(linkUrl, ['website_url', 'url', 'display_url', 'deeplink_url']);
+}
+
+function getAssetFeedCallToActionType(assetFeedSpec) {
+  const callToActionTypes = Array.isArray(assetFeedSpec?.call_to_action_types)
+    ? assetFeedSpec.call_to_action_types
+    : [];
+  const callToActionType = callToActionTypes.find(
+    (item) => typeof item === 'string' || typeof item?.type === 'string',
+  );
+  if (typeof callToActionType === 'string' && callToActionType.trim()) {
+    return callToActionType.trim();
+  }
+  return getCreativeValue(callToActionType, ['type']);
 }
 
 function buildAdsManagerUrl(adAccountId, adId) {
@@ -1001,10 +1035,13 @@ function buildAdSummaries({
           getCreativeValue(creative, ['thumbnail_url']) || storyMediaUrl || assetFeedMediaUrl,
         imageUrl: getCreativeValue(creative, ['image_url']) || storyMediaUrl || assetFeedMediaUrl,
         videoId:
-          getCreativeValue(creative, ['video_id']) || getCreativeValue(linkData, ['video_id']),
+          getCreativeValue(creative, ['video_id']) ||
+          getCreativeValue(linkData, ['video_id']) ||
+          getAssetFeedVideoId(assetFeedSpec),
         adsManagerUrl: buildAdsManagerUrl(adAccountId, adId),
-        linkUrl: getCreativeValue(linkData, ['link']),
-        callToActionType: linkData.call_to_action?.type,
+        linkUrl: getCreativeValue(linkData, ['link']) || getAssetFeedLinkUrl(assetFeedSpec),
+        callToActionType:
+          linkData.call_to_action?.type || getAssetFeedCallToActionType(assetFeedSpec),
         status: ad.effective_status,
         currency,
         ...metrics,

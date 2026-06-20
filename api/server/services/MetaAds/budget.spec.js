@@ -1123,6 +1123,144 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('extracts template creative fields when Meta omits direct and link data fields', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Templates', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [{ id: 'adset-1', name: 'Retargeting', campaign_id: 'campaign-1' }],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Retargeting',
+          campaign_id: 'campaign-1',
+          spend: '32',
+        },
+      ],
+      adInsights: [
+        {
+          ad_id: 'ad-template',
+          ad_name: 'Template creative',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          spend: '32',
+        },
+      ],
+      ads: [
+        {
+          id: 'ad-template',
+          name: 'Template creative',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          creative: {
+            id: 'creative-template',
+            object_story_spec: {
+              template_data: {
+                name: 'Template headline',
+                message: 'Template body',
+                description: 'Template description',
+                link: 'https://example.com/template',
+                picture: 'https://example.com/template.jpg',
+                call_to_action: { type: 'SHOP_NOW' },
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.campaigns?.[0]?.adSets?.[0]?.ads?.[0]).toEqual(
+      expect.objectContaining({
+        creativeId: 'creative-template',
+        title: 'Template headline',
+        body: 'Template body',
+        description: 'Template description',
+        thumbnailUrl: 'https://example.com/template.jpg',
+        imageUrl: 'https://example.com/template.jpg',
+        linkUrl: 'https://example.com/template',
+        callToActionType: 'SHOP_NOW',
+      }),
+    );
+  });
+
+  it('extracts asset feed text, link, CTA, and video thumbnail fallbacks', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Dynamic', objective: 'OUTCOME_SALES' }],
+      adsets: [{ id: 'adset-1', name: 'Products', campaign_id: 'campaign-1' }],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Products',
+          campaign_id: 'campaign-1',
+          spend: '64',
+        },
+      ],
+      adInsights: [
+        {
+          ad_id: 'ad-feed',
+          ad_name: 'Feed creative',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          spend: '64',
+        },
+      ],
+      ads: [
+        {
+          id: 'ad-feed',
+          name: 'Feed creative',
+          adset_id: 'adset-1',
+          campaign_id: 'campaign-1',
+          creative: {
+            id: 'creative-feed',
+            asset_feed_spec: {
+              titles: [{ text: 'Feed headline' }],
+              bodies: [{ text: 'Feed body' }],
+              descriptions: [{ text: 'Feed description' }],
+              link_urls: [{ website_url: 'https://example.com/feed' }],
+              call_to_action_types: ['BUY_NOW'],
+              videos: [
+                {
+                  thumbnail_url: 'https://example.com/feed-video.jpg',
+                  video_id: 'v-1',
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.campaigns?.[0]?.adSets?.[0]?.ads?.[0]).toEqual(
+      expect.objectContaining({
+        creativeId: 'creative-feed',
+        title: 'Feed headline',
+        body: 'Feed body',
+        description: 'Feed description',
+        thumbnailUrl: 'https://example.com/feed-video.jpg',
+        imageUrl: 'https://example.com/feed-video.jpg',
+        videoId: 'v-1',
+        linkUrl: 'https://example.com/feed',
+        callToActionType: 'BUY_NOW',
+      }),
+    );
+  });
+
   it('returns daily campaign trend and evolution deltas from historical snapshots', async () => {
     const { budget } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },
