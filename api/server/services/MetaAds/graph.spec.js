@@ -490,6 +490,7 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/insights');
     expect(fetch.mock.calls[0][0]).toContain('level=ad');
     expect(fetch.mock.calls[0][0]).toContain('ad_id');
+    expect(fetch.mock.calls[0][0]).toContain('action_values');
     expect(fetch.mock.calls[0][0]).toContain('time_range=');
   });
 
@@ -664,6 +665,7 @@ describe('Meta Ads Graph client', () => {
                 reach: '50',
                 clicks: '5',
                 actions: [{ action_type: 'link_click', value: '5' }],
+                action_values: [{ action_type: 'purchase', value: '100' }],
               },
             ],
           }),
@@ -684,6 +686,7 @@ describe('Meta Ads Graph client', () => {
                 reach: '100',
                 clicks: '10',
                 actions: [{ action_type: 'link_click', value: '10' }],
+                action_values: [{ action_type: 'purchase', value: '250' }],
               },
             ],
           }),
@@ -705,6 +708,7 @@ describe('Meta Ads Graph client', () => {
         reach: 150,
         frequency: 2,
         clicks: 15,
+        action_values: [expect.objectContaining({ action_type: 'purchase', value: 350 })],
         cost_per_action_type: [expect.objectContaining({ action_type: 'link_click', value: 2 })],
       }),
     ]);

@@ -11,6 +11,8 @@ const {
   isProjectDueForMetaAdsRun,
   resolveMetaAccessToken,
   resolveMetaCredentialStatus,
+  _calculateMetricsForTest,
+  _resolveTargetResultTypeForTest,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
@@ -94,6 +96,103 @@ describe('Meta Ads budget service', () => {
 
     expect(result.action).toBe('increase');
     expect(result.proposedDailyBudget).toBe(125);
+  });
+
+  it('uses only purchase actions for purchase target results', () => {
+    const result = _calculateMetricsForTest(
+      {
+        spend: '230',
+        actions: [
+          { action_type: 'purchase', value: '23' },
+          { action_type: 'link_click', value: '38' },
+        ],
+        cost_per_action_type: [
+          { action_type: 'purchase', value: '10' },
+          { action_type: 'link_click', value: '6.05' },
+        ],
+      },
+      'purchase',
+    );
+
+    expect(result.resultType).toBe('purchase');
+    expect(result.resultCount).toBe(23);
+    expect(result.cpa).toBe(10);
+    expect(result.resultTypeBreakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ resultType: 'purchase', totalResults: 23 }),
+        expect.objectContaining({ resultType: 'link_click', totalResults: 38 }),
+      ]),
+    );
+  });
+
+  it('does not use link clicks as purchase fallback when purchases are missing', () => {
+    const result = _calculateMetricsForTest(
+      {
+        spend: '120',
+        actions: [{ action_type: 'link_click', value: '38' }],
+        cost_per_action_type: [{ action_type: 'link_click', value: '3.16' }],
+      },
+      'purchase',
+    );
+
+    expect(result.resultType).toBe('purchase');
+    expect(result.resultCount).toBe(0);
+    expect(result.cpa).toBeNull();
+  });
+
+  it('canonicalizes equivalent purchase and lead actions for target results', () => {
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '230',
+          actions: [{ action_type: 'omni_purchase', value: '23' }],
+        },
+        'purchase',
+      ),
+    ).toEqual(expect.objectContaining({ resultType: 'purchase', resultCount: 23 }));
+
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '60',
+          actions: [{ action_type: 'leadgen_grouped', value: '6' }],
+        },
+        'lead',
+      ),
+    ).toEqual(expect.objectContaining({ resultType: 'lead', resultCount: 6 }));
+  });
+
+  it('resolves purchase as the default target for ecommerce and sales campaigns', () => {
+    expect(_resolveTargetResultTypeForTest({ accountProfile: 'ecommerce' })).toBe('purchase');
+    expect(_resolveTargetResultTypeForTest({ campaignObjective: 'OUTCOME_SALES' })).toBe(
+      'purchase',
+    );
+    expect(
+      _resolveTargetResultTypeForTest({
+        accountProfile: 'ecommerce',
+        rules: { targetResultType: 'lead' },
+      }),
+    ).toBe('lead');
+  });
+
+  it('uses purchase action values as ROAS fallback', () => {
+    expect(
+      _calculateMetricsForTest({
+        spend: '100',
+        actions: [{ action_type: 'purchase', value: '5' }],
+        action_values: [{ action_type: 'purchase', value: '250' }],
+      }),
+    ).toEqual(expect.objectContaining({ roas: 2.5 }));
+  });
+
+  it('prefers Meta purchase_roas over action value ROAS fallback', () => {
+    expect(
+      _calculateMetricsForTest({
+        spend: '100',
+        purchase_roas: [{ value: '3.1' }],
+        action_values: [{ action_type: 'purchase', value: '250' }],
+      }),
+    ).toEqual(expect.objectContaining({ roas: 3.1 }));
   });
 
   it('holds budget when the primary metric is healthy but CPC guardrail is high', () => {

@@ -68,6 +68,30 @@ const AGGREGATE_RESULT_TYPES = new Set([
   'onsite_conversion.post_interaction_gross',
 ]);
 const VIDEO_RESULT_TYPES = new Set(['video_view']);
+const CANONICAL_RESULT_TYPES = {
+  leadgen_grouped: 'lead',
+  'offsite_conversion.fb_pixel_lead': 'lead',
+  offsite_conversion_fb_pixel_lead: 'lead',
+  'onsite_conversion.lead_grouped': 'lead',
+  onsite_conversion_lead_grouped: 'lead',
+  omni_purchase: 'purchase',
+  'offsite_conversion.fb_pixel_purchase': 'purchase',
+  offsite_conversion_fb_pixel_purchase: 'purchase',
+  'onsite_conversion.messaging_first_reply':
+    'onsite_conversion.messaging_conversation_started_7d',
+  onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
+};
+const RESULT_ACTION_PRIORITY = [
+  'onsite_conversion.messaging_conversation_started_7d',
+  'onsite_conversion.messaging_first_reply',
+  'onsite_conversion.lead_grouped',
+  'offsite_conversion.fb_pixel_lead',
+  'leadgen_grouped',
+  'lead',
+  'omni_purchase',
+  'offsite_conversion.fb_pixel_purchase',
+  'purchase',
+];
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -504,34 +528,76 @@ async function isMetaAdsFeatureEnabled(tenantId) {
   return appConfig?.interfaceConfig?.metaAds !== false;
 }
 
+function canonicalizeMetaActionType(actionType) {
+  if (typeof actionType !== 'string' || !actionType.trim()) {
+    return '';
+  }
+  const normalized = actionType.trim();
+  return CANONICAL_RESULT_TYPES[normalized] ?? normalized;
+}
+
+function resolveTargetResultType({
+  targetResultType,
+  rules,
+  accountProfile,
+  campaignObjective,
+} = {}) {
+  const configuredTarget =
+    typeof targetResultType === 'string' && targetResultType.trim()
+      ? targetResultType.trim()
+      : typeof rules?.targetResultType === 'string' && rules.targetResultType.trim()
+        ? rules.targetResultType.trim()
+        : '';
+  if (configuredTarget) {
+    return canonicalizeMetaActionType(configuredTarget);
+  }
+  if (accountProfile === 'ecommerce' || campaignObjective === 'OUTCOME_SALES') {
+    return 'purchase';
+  }
+  return '';
+}
+
+function findCanonicalAction(items, targetActionType) {
+  const canonicalTarget = canonicalizeMetaActionType(targetActionType);
+  return (Array.isArray(items) ? items : []).find(
+    (item) => canonicalizeMetaActionType(item?.action_type) === canonicalTarget,
+  );
+}
+
+function getActionValue(items, targetActionType) {
+  const canonicalTarget = canonicalizeMetaActionType(targetActionType);
+  return (Array.isArray(items) ? items : []).reduce((total, item) => {
+    if (canonicalizeMetaActionType(item?.action_type) !== canonicalTarget) {
+      return total;
+    }
+    const value = Number(item?.value ?? 0);
+    return Number.isFinite(value) ? total + value : total;
+  }, 0);
+}
+
+function getPurchaseValue(row) {
+  return getActionValue(row?.action_values, 'purchase');
+}
+
+function calculateRoas(row, spend) {
+  const roasValue = Array.isArray(row.purchase_roas)
+    ? Number(row.purchase_roas[0]?.value ?? 0)
+    : Number(row.purchase_roas ?? 0);
+  if (Number.isFinite(roasValue) && roasValue > 0) {
+    return Number(roasValue.toFixed(2));
+  }
+  const purchaseValue = getPurchaseValue(row);
+  return purchaseValue > 0 && spend > 0 ? Number((purchaseValue / spend).toFixed(2)) : null;
+}
+
 function calculateMetrics(row, targetResultType) {
   const spend = Number(row.spend ?? 0);
-  const canonicalResultTypes = {
-    leadgen_grouped: 'lead',
-    'offsite_conversion.fb_pixel_lead': 'lead',
-    'onsite_conversion.lead_grouped': 'lead',
-    omni_purchase: 'purchase',
-    'offsite_conversion.fb_pixel_purchase': 'purchase',
-    'onsite_conversion.messaging_first_reply':
-      'onsite_conversion.messaging_conversation_started_7d',
-  };
-  const actionPriority = [
-    'onsite_conversion.messaging_conversation_started_7d',
-    'onsite_conversion.messaging_first_reply',
-    'onsite_conversion.lead_grouped',
-    'offsite_conversion.fb_pixel_lead',
-    'leadgen_grouped',
-    'lead',
-    'omni_purchase',
-    'offsite_conversion.fb_pixel_purchase',
-    'purchase',
-  ];
   const actions = Array.isArray(row.actions) ? row.actions : [];
   const costPerAction = Array.isArray(row.cost_per_action_type) ? row.cost_per_action_type : [];
   const resultTypeBreakdownByType = new Map();
   for (const action of actions) {
     const rawResultType = action?.action_type;
-    const resultType = canonicalResultTypes[rawResultType] ?? rawResultType;
+    const resultType = canonicalizeMetaActionType(rawResultType);
     const totalResults = Number(action?.value ?? 0);
     if (!resultType || !Number.isFinite(totalResults) || totalResults <= 0) {
       continue;
@@ -552,19 +618,20 @@ function calculateMetrics(row, targetResultType) {
   const resultTypeBreakdown = filterAggregateResultTypes(
     Array.from(resultTypeBreakdownByType.values()),
   );
-  const normalizedTarget =
-    typeof targetResultType === 'string' && targetResultType.trim() ? targetResultType.trim() : '';
-  const prioritizedAction = actionPriority
+  const normalizedTarget = canonicalizeMetaActionType(targetResultType);
+  const prioritizedAction = RESULT_ACTION_PRIORITY
     .map((actionType) => actions.find((action) => action.action_type === actionType))
     .find(Boolean);
   const nonAggregateAction = actions.find(
     (action) =>
-      !VIDEO_RESULT_TYPES.has(action.action_type) &&
-      !AGGREGATE_RESULT_TYPES.has(action.action_type),
+      !VIDEO_RESULT_TYPES.has(canonicalizeMetaActionType(action.action_type)) &&
+      !AGGREGATE_RESULT_TYPES.has(canonicalizeMetaActionType(action.action_type)),
   );
-  const nonVideoAction = actions.find((action) => !VIDEO_RESULT_TYPES.has(action.action_type));
+  const nonVideoAction = actions.find(
+    (action) => !VIDEO_RESULT_TYPES.has(canonicalizeMetaActionType(action.action_type)),
+  );
   const resultAction = normalizedTarget
-    ? actions.find((action) => action.action_type === normalizedTarget)
+    ? findCanonicalAction(actions, normalizedTarget)
     : (prioritizedAction ?? nonAggregateAction ?? nonVideoAction ?? actions[0]);
   const resultCount = resultAction
     ? Number(resultAction.value ?? 0)
@@ -572,7 +639,7 @@ function calculateMetrics(row, targetResultType) {
       ? 0
       : undefined;
   const resultCost = resultAction
-    ? costPerAction.find((item) => item.action_type === resultAction.action_type)
+    ? findCanonicalAction(costPerAction, resultAction.action_type)
     : null;
   const cpaFromMeta = Number(resultCost?.value);
   const cpa =
@@ -581,10 +648,7 @@ function calculateMetrics(row, targetResultType) {
       : Number(resultCount) > 0
         ? spend / resultCount
         : null;
-  const roasValue = Array.isArray(row.purchase_roas)
-    ? Number(row.purchase_roas[0]?.value ?? 0)
-    : Number(row.purchase_roas ?? 0);
-  const roas = Number.isFinite(roasValue) && roasValue > 0 ? roasValue : null;
+  const roas = calculateRoas(row, spend);
   const videoP75Watched = Array.isArray(row.video_p75_watched_actions)
     ? Number(row.video_p75_watched_actions[0]?.value ?? 0)
     : Number(row.video_p75_watched_actions ?? 0);
@@ -594,7 +658,9 @@ function calculateMetrics(row, targetResultType) {
     resultCount,
     cpa,
     roas,
-    resultType: resultAction?.action_type ?? normalizedTarget,
+    resultType: resultAction
+      ? canonicalizeMetaActionType(resultAction.action_type)
+      : normalizedTarget,
     impressions,
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
@@ -634,10 +700,12 @@ function aggregateInsightRows(rows = []) {
     reach: 0,
     clicks: 0,
     actions: [],
+    action_values: [],
     purchase_roas: [],
     video_p75_watched_actions: [],
   };
   const actions = new Map();
+  const actionValues = new Map();
   let frequencyWeightedTotal = 0;
   let frequencyWeight = 0;
   let frequencyTotal = 0;
@@ -675,6 +743,14 @@ function aggregateInsightRows(rows = []) {
       }
     }
 
+    for (const actionValue of Array.isArray(row.action_values) ? row.action_values : []) {
+      const actionType = actionValue?.action_type;
+      const value = Number(actionValue?.value ?? 0);
+      if (actionType && Number.isFinite(value)) {
+        actionValues.set(actionType, Number(actionValues.get(actionType) ?? 0) + value);
+      }
+    }
+
     const rowRoas = Array.isArray(row.purchase_roas)
       ? Number(row.purchase_roas[0]?.value ?? 0)
       : Number(row.purchase_roas ?? 0);
@@ -706,6 +782,10 @@ function aggregateInsightRows(rows = []) {
         ? Number((frequencyTotal / frequencyCount).toFixed(2))
         : 0;
   aggregate.actions = Array.from(actions.entries()).map(([action_type, value]) => ({
+    action_type,
+    value,
+  }));
+  aggregate.action_values = Array.from(actionValues.entries()).map(([action_type, value]) => ({
     action_type,
     value,
   }));
@@ -768,6 +848,7 @@ function buildSnapshotsFromInsights({
   adsets = [],
   campaigns = [],
   currency,
+  accountProfile,
   targetResultType,
 }) {
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
@@ -782,7 +863,12 @@ function buildSnapshotsFromInsights({
       const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
       const campaign = campaignById.get(campaignId);
       const campaignName = row.campaign_name || campaign?.name || adset?.campaign?.name;
-      const metrics = calculateMetrics(row, targetResultType);
+      const resolvedTargetResultType = resolveTargetResultType({
+        targetResultType,
+        accountProfile,
+        campaignObjective: campaign?.objective,
+      });
+      const metrics = calculateMetrics(row, resolvedTargetResultType);
       return {
         level: 'adset',
         entityId,
@@ -865,7 +951,14 @@ function buildAdsManagerUrl(adAccountId, adId) {
   )}&selected_ad_ids=${encodeURIComponent(adId)}`;
 }
 
-function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultType, adAccountId }) {
+function buildAdSummaries({
+  ads = [],
+  adInsights = [],
+  currency,
+  accountProfile,
+  targetResultType,
+  adAccountId,
+}) {
   const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
   const adIds = new Set(ads.map((ad) => ad.id).filter(Boolean));
   const listedAdSummaries = ads
@@ -880,7 +973,11 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
       const storyMediaUrl = getCreativeStoryMediaUrl(creative);
       const assetFeedMediaUrl = getAssetFeedMediaUrl(assetFeedSpec);
       const insight = insightByAdId.get(adId) ?? {};
-      const metrics = calculateMetrics(insight, targetResultType);
+      const resolvedTargetResultType = resolveTargetResultType({
+        targetResultType,
+        accountProfile,
+      });
+      const metrics = calculateMetrics(insight, resolvedTargetResultType);
       return {
         adId,
         adName: ad.name || insight.ad_name || adId,
@@ -924,7 +1021,13 @@ function buildAdSummaries({ ads = [], adInsights = [], currency, targetResultTyp
       campaignName: insight.campaign_name,
       adsManagerUrl: buildAdsManagerUrl(adAccountId, insight.ad_id),
       currency,
-      ...calculateMetrics(insight, targetResultType),
+      ...calculateMetrics(
+        insight,
+        resolveTargetResultType({
+          targetResultType,
+          accountProfile,
+        }),
+      ),
     }));
   return [...listedAdSummaries, ...insightOnlySummaries];
 }
@@ -959,6 +1062,7 @@ function buildCampaignSummaries({
   campaignConfigs = [],
   campaignInsights = [],
   ads = [],
+  accountProfile,
   targetResultType,
 }) {
   const recommendationByEntity = latestByEntity(recommendations);
@@ -1069,7 +1173,14 @@ function buildCampaignSummaries({
       campaign.dailyBudget = centsToDailyBudget(campaignConfig?.daily_budget);
     }
     if (campaignInsight) {
-      const metrics = calculateMetrics(campaignInsight, targetResultType);
+      const metrics = calculateMetrics(
+        campaignInsight,
+        resolveTargetResultType({
+          targetResultType,
+          accountProfile,
+          campaignObjective: campaignConfig?.objective || campaign.objective,
+        }),
+      );
       campaign.campaignName = campaignInsight.campaign_name || campaign.campaignName;
       campaign.status = campaignConfig?.effective_status || campaign.status;
       campaign.spend = metrics.spend;
@@ -1579,6 +1690,7 @@ function getStatusPeriodCacheKey({
   adAccountId,
   graphVersion,
   period,
+  accountProfile,
   targetResultType,
 }) {
   return JSON.stringify({
@@ -1588,6 +1700,7 @@ function getStatusPeriodCacheKey({
     graphVersion,
     since: period?.since || '',
     until: period?.until || '',
+    accountProfile: accountProfile || '',
     targetResultType: targetResultType || '',
   });
 }
@@ -2063,13 +2176,18 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         recommendationEntityLevel === 'campaign'
           ? centsToDailyBudget(campaign?.daily_budget)
           : centsToDailyBudget(adset.daily_budget);
-      const metrics = calculateMetrics(row, rules.targetResultType);
+      const resolvedTargetResultType = resolveTargetResultType({
+        rules,
+        accountProfile: metaAds.accountProfile,
+        campaignObjective: campaign?.objective,
+      });
+      const metrics = calculateMetrics(row, resolvedTargetResultType);
       const recommendationMetrics =
         recommendationEntityLevel === 'campaign'
           ? calculateMetrics(
               campaignInsightById.get(campaignId) ||
                 aggregateInsightRows(insightRowsByCampaignId.get(campaignId) ?? [row]),
-              rules.targetResultType,
+              resolvedTargetResultType,
             )
           : metrics;
 
@@ -2234,6 +2352,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       const hasPeriod = Boolean(options.datePreset || options.since || options.until);
       const periodRange = hasPeriod ? resolveStatusPeriod(options) : undefined;
       const targetResultType = metaAds.rules?.targetResultType;
+      const accountProfile = metaAds.accountProfile;
       const cacheKey = hasPeriod
         ? getStatusPeriodCacheKey({
             projectId,
@@ -2241,6 +2360,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
             adAccountId,
             graphVersion: effectiveGraphVersion,
             period: periodRange,
+            accountProfile,
             targetResultType,
           })
         : '';
@@ -2355,12 +2475,14 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               adsets: adsetConfigs,
               campaigns: campaignConfigs,
               currency,
+              accountProfile,
               targetResultType,
             });
             adSummaries = buildAdSummaries({
               ads: liveAds,
               adInsights: liveAdInsights,
               currency,
+              accountProfile,
               targetResultType,
               adAccountId,
             });
@@ -2406,6 +2528,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     campaignConfigs,
     campaignInsights,
     ads: adSummaries,
+    accountProfile: project?.metaAds?.accountProfile,
     targetResultType: project?.metaAds?.rules?.targetResultType,
   });
   if (adDiagnostics) {
@@ -2581,6 +2704,9 @@ async function runCron(options = {}) {
 
 module.exports = {
   DEFAULT_RULES,
+  _calculateMetricsForTest: calculateMetrics,
+  _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
+  _resolveTargetResultTypeForTest: resolveTargetResultType,
   analyzeProject,
   applyManualBudgetChange,
   applyRecommendation,

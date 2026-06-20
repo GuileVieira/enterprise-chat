@@ -397,6 +397,7 @@ function aggregateInsightRows(rows, level) {
         reach: 0,
         clicks: 0,
         actions: new Map(),
+        actionValues: new Map(),
         videoP75Watched: 0,
         roasWeightedTotal: 0,
         roasWeight: 0,
@@ -410,6 +411,7 @@ function aggregateInsightRows(rows, level) {
     current.reach += Number.isFinite(reach) ? reach : 0;
     current.clicks += Number.isFinite(clicks) ? clicks : 0;
     addActionValues(current.actions, row.actions);
+    addActionValues(current.actionValues, row.action_values);
 
     const videoP75 = Array.isArray(row.video_p75_watched_actions)
       ? Number(row.video_p75_watched_actions[0]?.value ?? 0)
@@ -433,6 +435,10 @@ function aggregateInsightRows(rows, level) {
       action_type,
       value,
     }));
+    const action_values = Array.from(row.actionValues.entries()).map(([action_type, value]) => ({
+      action_type,
+      value,
+    }));
     const cost_per_action_type = actions
       .filter((action) => Number(action.value) > 0)
       .map((action) => ({
@@ -451,6 +457,7 @@ function aggregateInsightRows(rows, level) {
       cpc: row.clicks > 0 ? Number((row.spend / row.clicks).toFixed(2)) : 0,
       cpm: row.impressions > 0 ? Number(((row.spend / row.impressions) * 1000).toFixed(2)) : 0,
       actions,
+      action_values,
       cost_per_action_type,
       video_p75_watched_actions: [{ value: row.videoP75Watched }],
       purchase_roas:
@@ -900,11 +907,11 @@ async function listAds({
 }
 
 const AD_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
 const ADSET_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
 const CAMPAIGN_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
 
 async function fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields }) {
   const path = `${encodeURIComponent(adAccountId)}/insights`;
