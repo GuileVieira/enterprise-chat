@@ -1851,6 +1851,10 @@ describe('ProjectMetaAdsPanel', () => {
         node.getAttribute('data-tooltip'),
       ),
     ).toEqual(expect.arrayContaining(['Messages Floripa', 'Topo']));
+    expect(
+      dashboard.querySelectorAll('[data-tooltip="Messages Floripa"]').length,
+    ).toBeGreaterThan(1);
+    expect(dashboard.querySelector('div[title="Messages Floripa"]')).not.toBeInTheDocument();
     expect(dashboard.querySelector('td[title="Messages Floripa"]')).not.toBeInTheDocument();
     expect(dashboard.querySelector('td[title="Topo"]')).not.toBeInTheDocument();
     expect(screen.getByText('+R$ 170,00')).toBeInTheDocument();

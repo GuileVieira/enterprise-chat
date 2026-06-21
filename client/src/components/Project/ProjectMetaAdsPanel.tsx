@@ -4896,48 +4896,48 @@ export default function ProjectMetaAdsPanel({
                   )}
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  {evolutionSeriesPaths.map((seriesPath) => (
-                    <div
-                      key={seriesPath.series.entityId}
-                      className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2 py-2"
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0"
-                          style={{ backgroundColor: seriesPath.color }}
-                        />
-                        <div className="min-w-0">
-                          <div
-                            className="truncate text-xs font-semibold text-[#f3efe6]"
-                            title={cleanDashboardName(
-                              seriesPath.series.entityName,
-                              seriesPath.series.entityId,
-                            )}
-                          >
-                            {cleanDashboardName(
-                              seriesPath.series.entityName,
-                              seriesPath.series.entityId,
+                  {evolutionSeriesPaths.map((seriesPath) => {
+                    const name = cleanDashboardName(
+                      seriesPath.series.entityName,
+                      seriesPath.series.entityId,
+                    );
+                    return (
+                      <div
+                        key={seriesPath.series.entityId}
+                        className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2 py-2"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0"
+                            style={{ backgroundColor: seriesPath.color }}
+                          />
+                          <div className="min-w-0">
+                            <div className="group relative min-w-0">
+                              <div className="truncate text-xs font-semibold text-[#f3efe6]">
+                                {name}
+                              </div>
+                              {renderNameTooltip(name)}
+                            </div>
+                            {seriesPath.series.parentCampaignName && (
+                              <div className="truncate text-[10px] text-[#81796b]">
+                                {cleanDashboardName(
+                                  seriesPath.series.parentCampaignName,
+                                  seriesPath.series.parentCampaignName,
+                                )}
+                              </div>
                             )}
                           </div>
-                          {seriesPath.series.parentCampaignName && (
-                            <div className="truncate text-[10px] text-[#81796b]">
-                              {cleanDashboardName(
-                                seriesPath.series.parentCampaignName,
-                                seriesPath.series.parentCampaignName,
-                              )}
-                            </div>
+                        </div>
+                        <div className="font-mono text-xs text-[#f3efe6]">
+                          {formatEvolutionMetricValue(
+                            seriesPath.series.total,
+                            evolutionMetric,
+                            currency,
                           )}
                         </div>
                       </div>
-                      <div className="font-mono text-xs text-[#f3efe6]">
-                        {formatEvolutionMetricValue(
-                          seriesPath.series.total,
-                          evolutionMetric,
-                          currency,
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
