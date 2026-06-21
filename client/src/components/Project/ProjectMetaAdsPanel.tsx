@@ -314,7 +314,18 @@ const tableViewColumns: Record<TableView, TableColumnKey[]> = {
     'video',
     'actions',
   ],
-  creative: ['level', 'name', 'spend', 'ctr', 'cpa', 'frequency', 'result', 'clicks', 'actions'],
+  creative: [
+    'level',
+    'name',
+    'budget',
+    'spend',
+    'ctr',
+    'cpa',
+    'frequency',
+    'result',
+    'clicks',
+    'actions',
+  ],
   rules: ['level', 'name', 'budget', 'rule', 'recommendation', 'actions'],
 };
 
@@ -349,7 +360,18 @@ const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
     'clicks',
     'actions',
   ],
-  creative: ['level', 'name', 'roas', 'spend', 'ctr', 'cpa', 'result', 'clicks', 'actions'],
+  creative: [
+    'level',
+    'name',
+    'budget',
+    'roas',
+    'spend',
+    'ctr',
+    'cpa',
+    'result',
+    'clicks',
+    'actions',
+  ],
   rules: tableViewColumns.rules,
 };
 

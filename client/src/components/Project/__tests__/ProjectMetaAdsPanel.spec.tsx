@@ -1003,12 +1003,16 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_video_p75')).toBeInTheDocument();
     expect(screen.getByText('800.00')).toBeInTheDocument();
 
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_table_view'), {
+      target: { value: 'creative' },
+    });
+    expect(screen.getAllByText('com_ui_project_meta_ads_budget_defined').length).toBeGreaterThan(0);
+
     const cboCampaignRow = screen
       .getAllByTestId('meta-ads-campaign-row')
       .find((row) => row.textContent?.includes('CBO Messages'));
     expect(cboCampaignRow).not.toBeNull();
 
-    expect(screen.getAllByText('com_ui_project_meta_ads_budget_defined').length).toBeGreaterThan(0);
     fireEvent.click(within(cboCampaignRow as HTMLElement).getByText('R$ 100,00'));
     const budgetDialog = screen.getByRole('dialog');
     expect(budgetDialog).toBeInTheDocument();
