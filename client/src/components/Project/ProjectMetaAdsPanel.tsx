@@ -2755,6 +2755,16 @@ export default function ProjectMetaAdsPanel({
       className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400/30 bg-[#2a2114] px-2 py-1 text-xs font-medium leading-5 text-amber-100 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block"
     />
   );
+
+  const renderEvolutionNameCell = (name: string) => (
+    <td className="max-w-64 px-3 py-2.5 text-sm font-medium text-[#f3efe6] focus-within:z-50 hover:z-50">
+      <div className="group relative min-w-0">
+        <div className="truncate">{name}</div>
+        {renderNameTooltip(name)}
+      </div>
+    </td>
+  );
+
   const renderStatusBadge = (status: string | undefined) => {
     const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
     if (!normalizedStatus || normalizedStatus === 'ACTIVE') {
@@ -4962,12 +4972,7 @@ export default function ProjectMetaAdsPanel({
                             const name = cleanDashboardName(delta.campaignName, delta.campaignId);
                             return (
                               <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
-                                <td
-                                  className="max-w-64 truncate px-3 py-2.5 text-sm font-medium text-[#f3efe6]"
-                                  title={name}
-                                >
-                                  {name}
-                                </td>
+                                {renderEvolutionNameCell(name)}
                                 <td
                                   className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
                                     delta.spendDelta,
@@ -5036,12 +5041,7 @@ export default function ProjectMetaAdsPanel({
                               delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
                             return (
                               <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
-                                <td
-                                  className="max-w-64 truncate px-3 py-2.5 text-sm font-medium text-[#f3efe6]"
-                                  title={name}
-                                >
-                                  {name}
-                                </td>
+                                {renderEvolutionNameCell(name)}
                                 <td
                                   className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
                                     budgetDelta,

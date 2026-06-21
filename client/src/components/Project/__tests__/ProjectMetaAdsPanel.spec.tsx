@@ -1846,6 +1846,13 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_budget_changes').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Messages Floripa').length).toBeGreaterThan(0);
+    expect(
+      Array.from(dashboard.querySelectorAll('[data-tooltip]')).map((node) =>
+        node.getAttribute('data-tooltip'),
+      ),
+    ).toEqual(expect.arrayContaining(['Messages Floripa', 'Topo']));
+    expect(dashboard.querySelector('td[title="Messages Floripa"]')).not.toBeInTheDocument();
+    expect(dashboard.querySelector('td[title="Topo"]')).not.toBeInTheDocument();
     expect(screen.getByText('+R$ 170,00')).toBeInTheDocument();
     expect(screen.getByText('+7.00')).toBeInTheDocument();
     expect(screen.getByText('-R$ 0,45')).toBeInTheDocument();
