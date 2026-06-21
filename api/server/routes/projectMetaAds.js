@@ -12,6 +12,7 @@ const {
   analyzeProject,
   applyManualBudgetChange,
   applyRecommendation,
+  duplicateProjectMetaAdsEntity,
   getProjectMetaAdsStatus,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
@@ -419,6 +420,29 @@ router.post(
       return res.json(change);
     } catch (error) {
       logger.error('[projectMetaAds] manual budget failed', error);
+      return res.status(error.statusCode ?? 500).json({ message: error.message });
+    }
+  },
+);
+
+router.post(
+  '/duplicates',
+  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  async (req, res) => {
+    try {
+      const result = await duplicateProjectMetaAdsEntity({
+        projectId: req.params.projectId,
+        tenantId: req.user.tenantId || getTenantId(),
+        entityLevel: req.body.entityLevel,
+        entityId: req.body.entityId,
+        entityName: req.body.entityName,
+        targetName: req.body.targetName,
+        actor: 'user',
+        actorUserId: req.user.id,
+      });
+      return res.json(result);
+    } catch (error) {
+      logger.error('[projectMetaAds] duplicate failed', error);
       return res.status(error.statusCode ?? 500).json({ message: error.message });
     }
   },

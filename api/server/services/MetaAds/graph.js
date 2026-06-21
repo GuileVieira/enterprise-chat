@@ -769,6 +769,41 @@ async function updateMetaAdStatus({ adId, status, token, graphVersion }) {
   });
 }
 
+async function copyMetaEntity({
+  entityId,
+  entityLevel,
+  statusOption = 'INHERITED_FROM_SOURCE',
+  deepCopy = true,
+  token,
+  graphVersion,
+}) {
+  return metaPost({
+    path: `${encodeURIComponent(entityId)}/copies`,
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} copy`,
+    body: {
+      deep_copy: deepCopy,
+      status_option: statusOption,
+      rename_options: {
+        rename_strategy: 'ONLY_TOP_LEVEL',
+        rename_prefix: '',
+        rename_suffix: ' - cópia',
+      },
+    },
+  });
+}
+
+async function updateMetaEntityName({ entityId, entityLevel, name, token, graphVersion }) {
+  return metaPost({
+    path: encodeURIComponent(entityId),
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} name update`,
+    body: { name },
+  });
+}
+
 async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
   const payload = await metaGet({
     path: encodeURIComponent(adAccountId),
@@ -1106,6 +1141,8 @@ module.exports = {
   listAdSets,
   metaGet,
   metaPost,
+  copyMetaEntity,
+  updateMetaEntityName,
   updateMetaEntityStatus,
   updateMetaAdStatus,
   clearMetaGraphReadCacheForTests,

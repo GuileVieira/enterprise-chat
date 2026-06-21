@@ -12,6 +12,7 @@ const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
 const mockMutateBudget = jest.fn();
+const mockMutateDuplicate = jest.fn();
 const mockMutateEntityStatus = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
@@ -86,6 +87,10 @@ jest.mock('~/data-provider', () => ({
   }),
   useUpdateProjectMetaAdsBudgetMutation: () => ({
     mutate: mockMutateBudget,
+    isLoading: false,
+  }),
+  useDuplicateProjectMetaAdsEntityMutation: () => ({
+    mutate: mockMutateDuplicate,
     isLoading: false,
   }),
   useUpdateProjectMetaAdsEntityStatusMutation: () => ({
@@ -1146,6 +1151,52 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByAltText('Visit schedule creative')).toHaveAttribute(
       'src',
       'https://example.com/thumb.jpg',
+    );
+
+    mockMutateDuplicate.mockImplementationOnce((_payload, options?: { onSuccess?: () => void }) =>
+      options?.onSuccess?.(),
+    );
+    fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_actions')[0]);
+    expect(screen.getByText('com_ui_project_meta_ads_duplicate_campaign')).toBeInTheDocument();
+    fireEvent.click(document.body);
+    expect(screen.queryByText('com_ui_project_meta_ads_duplicate_campaign')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_actions')[0]);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_campaign'));
+    expect(screen.getByRole('dialog')).toHaveTextContent('com_ui_project_meta_ads_duplicate_title');
+    expect(screen.getByDisplayValue('ABO Leads - cópia')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_duplicate_active_warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_confirm'));
+    expect(mockMutateDuplicate).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: {
+          entityLevel: 'campaign',
+          entityId: 'campaign-ads',
+          entityName: 'ABO Leads',
+          targetName: 'ABO Leads - cópia',
+        },
+      },
+      expect.any(Object),
+    );
+
+    mockMutateDuplicate.mockImplementationOnce((_payload, options?: { onSuccess?: () => void }) =>
+      options?.onSuccess?.(),
+    );
+    fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_actions')[1]);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_adset'));
+    expect(screen.getByDisplayValue('Warm leads - cópia')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_confirm'));
+    expect(mockMutateDuplicate).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: {
+          entityLevel: 'adset',
+          entityId: 'adset-ads',
+          entityName: 'Warm leads',
+          targetName: 'Warm leads - cópia',
+        },
+      },
+      expect.any(Object),
     );
 
     mockMutateEntityStatus.mockImplementation((_payload, options?: { onSuccess?: () => void }) =>

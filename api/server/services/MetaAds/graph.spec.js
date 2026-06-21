@@ -28,6 +28,8 @@ const {
   listCampaignInsights,
   listAdSetInsights,
   metaGet,
+  copyMetaEntity,
+  updateMetaEntityName,
   updateMetaAdStatus,
 } = require('./graph');
 
@@ -859,6 +861,49 @@ describe('Meta Ads Graph client', () => {
       method: 'POST',
       body: JSON.stringify({ status: 'PAUSED' }),
     });
+  });
+
+  it('duplicates and renames a Meta entity through Meta Graph', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ copied_campaign_id: 'campaign-copy' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ success: true }),
+      });
+
+    await expect(
+      copyMetaEntity({
+        entityId: 'campaign-1',
+        entityLevel: 'campaign',
+        token: 'token',
+        graphVersion: 'v24.0',
+      }),
+    ).resolves.toEqual({ copied_campaign_id: 'campaign-copy' });
+    await updateMetaEntityName({
+      entityId: 'campaign-copy',
+      entityLevel: 'campaign',
+      name: 'Campaign copy',
+      token: 'token',
+      graphVersion: 'v24.0',
+    });
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/campaign-1/copies');
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      deep_copy: true,
+      status_option: 'INHERITED_FROM_SOURCE',
+      rename_options: {
+        rename_strategy: 'ONLY_TOP_LEVEL',
+        rename_prefix: '',
+        rename_suffix: ' - cópia',
+      },
+    });
+    expect(fetch.mock.calls[1][0]).toContain('/v24.0/campaign-copy');
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ name: 'Campaign copy' });
   });
 
   it('fetches ad account currency', async () => {

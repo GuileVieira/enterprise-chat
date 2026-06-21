@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent, UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowSquareOut, ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
+import { ArrowSquareOut, ArrowsIn, ArrowsOut, Copy, DotsThreeVertical } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
 import {
   OGDialog,
@@ -25,10 +25,12 @@ import type {
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsEntityStatusLevel,
   ProjectMetaAdsEntityStatusPayload,
+  ProjectMetaAdsDuplicatePayload,
 } from 'librechat-data-provider';
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
+  useDuplicateProjectMetaAdsEntityMutation,
   useProjectMetaAdsQuery,
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
@@ -87,6 +89,10 @@ type EntityStatusConfirmation = {
   entityName?: string;
   currentStatus: string;
   nextStatus: ProjectMetaAdsEntityStatusPayload['status'];
+};
+type DuplicateDraft = ProjectMetaAdsDuplicatePayload & {
+  status?: string;
+  budget?: number | null;
 };
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
 type RequestError = {
@@ -1587,6 +1593,9 @@ export default function ProjectMetaAdsPanel({
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
   const [entityStatusConfirmation, setEntityStatusConfirmation] =
     useState<EntityStatusConfirmation | null>(null);
+  const [duplicateDraft, setDuplicateDraft] = useState<DuplicateDraft | null>(null);
+  const [duplicateTargetName, setDuplicateTargetName] = useState('');
+  const [actionMenuKey, setActionMenuKey] = useState<string | null>(null);
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -1620,6 +1629,7 @@ export default function ProjectMetaAdsPanel({
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
+  const duplicateEntity = useDuplicateProjectMetaAdsEntityMutation();
   const updateEntityStatus = useUpdateProjectMetaAdsEntityStatusMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
@@ -1638,6 +1648,9 @@ export default function ProjectMetaAdsPanel({
     setShowTenantAccessToken(false);
     setSelectedAdPreview(null);
     setEntityStatusConfirmation(null);
+    setDuplicateDraft(null);
+    setDuplicateTargetName('');
+    setActionMenuKey(null);
   }, [project]);
 
   useEffect(() => {
@@ -1657,6 +1670,24 @@ export default function ProjectMetaAdsPanel({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [metricsFullscreen]);
+
+  useEffect(() => {
+    if (!actionMenuKey) {
+      return;
+    }
+    const closeMenu = () => setActionMenuKey(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    };
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [actionMenuKey]);
 
   const releaseHorizontalScrollSync = () => {
     window.requestAnimationFrame(() => {
@@ -2196,6 +2227,56 @@ export default function ProjectMetaAdsPanel({
           const message = getRequestErrorMessage(
             error,
             localize('com_ui_project_meta_ads_ad_status_failed'),
+          );
+          showToast({ message, status: 'error' });
+        },
+      },
+    );
+  };
+
+  const getDuplicateName = (name?: string) => {
+    const baseName = typeof name === 'string' && name.trim() ? name.trim() : 'Meta Ads';
+    return `${baseName} - cópia`;
+  };
+
+  const onOpenDuplicateDraft = (draft: DuplicateDraft) => {
+    setActionMenuKey(null);
+    setDuplicateDraft(draft);
+    setDuplicateTargetName(getDuplicateName(draft.entityName ?? draft.entityId));
+  };
+
+  const onCloseDuplicateDraft = () => {
+    setDuplicateDraft(null);
+    setDuplicateTargetName('');
+  };
+
+  const onConfirmDuplicate = () => {
+    if (!duplicateDraft) {
+      return;
+    }
+    duplicateEntity.mutate(
+      {
+        projectId: project.projectId,
+        payload: {
+          entityLevel: duplicateDraft.entityLevel,
+          entityId: duplicateDraft.entityId,
+          entityName: duplicateDraft.entityName,
+          targetName: duplicateTargetName.trim(),
+        },
+      },
+      {
+        onSuccess: () => {
+          onCloseDuplicateDraft();
+          statusQuery.refetch();
+          showToast({
+            message: localize('com_ui_project_meta_ads_duplicate_success'),
+            status: 'success',
+          });
+        },
+        onError: (error) => {
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_project_meta_ads_duplicate_failed'),
           );
           showToast({ message, status: 'error' });
         },
@@ -3044,26 +3125,69 @@ export default function ProjectMetaAdsPanel({
   const renderCampaignActionCell = (
     column: TableColumn,
     recommendation: ProjectMetaAdsRecommendation | undefined,
-  ) => (
-    <td key={column.key} className="px-2 py-2">
-      <div className="flex gap-1">
-        {canApplyRecommendation(recommendation) && (
-          <button
-            type="button"
-            disabled={!canEdit || applyRecommendation.isLoading}
-            onClick={() => {
-              if (recommendation) {
-                onApply(recommendation);
-              }
-            }}
-            className="h-7 border border-emerald-400/25 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-100 transition duration-200 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {localize('com_ui_project_meta_ads_apply')}
-          </button>
-        )}
-      </div>
-    </td>
-  );
+    duplicate?: DuplicateDraft,
+  ) => {
+    const menuKey = duplicate ? `${duplicate.entityLevel}:${duplicate.entityId}` : '';
+    const duplicateLabelKey: TranslationKeys =
+      duplicate?.entityLevel === 'campaign'
+        ? 'com_ui_project_meta_ads_duplicate_campaign'
+        : 'com_ui_project_meta_ads_duplicate_adset';
+    return (
+      <td
+        key={column.key}
+        className={`px-2 py-2 ${actionMenuKey === menuKey ? 'relative z-[1000]' : ''}`}
+      >
+        <div className="relative flex items-center gap-1">
+          {canApplyRecommendation(recommendation) && (
+            <button
+              type="button"
+              disabled={!canEdit || applyRecommendation.isLoading}
+              onClick={() => {
+                if (recommendation) {
+                  onApply(recommendation);
+                }
+              }}
+              className="h-7 border border-emerald-400/25 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-100 transition duration-200 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {localize('com_ui_project_meta_ads_apply')}
+            </button>
+          )}
+          {duplicate && (
+            <>
+              <button
+                type="button"
+                aria-label={localize('com_ui_project_meta_ads_actions')}
+                aria-expanded={actionMenuKey === menuKey}
+                disabled={!canEdit}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActionMenuKey((current) => (current === menuKey ? null : menuKey));
+                }}
+                className="flex h-7 w-7 items-center justify-center border border-white/10 bg-white/[0.035] text-[#bdb5a6] transition duration-200 hover:border-amber-300/40 hover:bg-amber-300/10 hover:text-[#f8f1e5] focus:outline-none focus:ring-2 focus:ring-amber-300/35 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <DotsThreeVertical className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {actionMenuKey === menuKey && (
+                <div className="absolute right-0 top-8 z-[1100] min-w-52 border border-white/12 bg-[#151512] p-1 shadow-2xl">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenDuplicateDraft(duplicate);
+                    }}
+                    className="flex w-full items-center gap-2 whitespace-nowrap px-2 py-2 text-left text-xs font-medium text-[#f3efe6] transition hover:bg-amber-300/10"
+                  >
+                    <Copy className="h-3.5 w-3.5 text-amber-200" aria-hidden="true" />
+                    {localize(duplicateLabelKey)}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </td>
+    );
+  };
 
   const renderCampaignCell = (
     column: TableColumn,
@@ -3214,7 +3338,14 @@ export default function ProjectMetaAdsPanel({
         </td>
       );
     }
-    return renderCampaignActionCell(column, recommendation);
+    return renderCampaignActionCell(column, recommendation, {
+      entityLevel: 'campaign',
+      entityId: campaign.campaignId,
+      entityName: campaign.campaignName,
+      targetName: getDuplicateName(campaign.campaignName ?? campaign.campaignId),
+      status: campaign.status,
+      budget: campaign.dailyBudget,
+    });
   };
 
   const renderAdSetCell = (
@@ -3363,7 +3494,14 @@ export default function ProjectMetaAdsPanel({
         </td>
       );
     }
-    return renderCampaignActionCell(column, recommendation);
+    return renderCampaignActionCell(column, recommendation, {
+      entityLevel: 'adset',
+      entityId: adset.entityId,
+      entityName: adset.entityName,
+      targetName: getDuplicateName(adset.entityName ?? adset.entityId),
+      status: adset.status,
+      budget: adset.dailyBudget,
+    });
   };
 
   const renderAdCell = (column: TableColumn, ad: ProjectMetaAdsAdSummary) => {
@@ -4460,6 +4598,87 @@ export default function ProjectMetaAdsPanel({
                       : 'com_ui_project_meta_ads_confirm_deactivate_ad',
                   )}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {duplicateDraft && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="meta-ads-duplicate-title"
+              className="fixed inset-0 z-50 flex justify-end bg-black/45"
+            >
+              <div className="flex h-full w-full max-w-md flex-col border-l border-white/12 bg-[#12120f] shadow-2xl">
+                <div className="border-b border-white/10 px-5 py-4">
+                  <div className="text-[10px] uppercase tracking-[0.16em] text-[#8f8677]">
+                    {duplicateDraft.entityLevel === 'campaign'
+                      ? localize('com_ui_project_meta_ads_level_campaign')
+                      : localize('com_ui_project_meta_ads_level_ad_set')}
+                  </div>
+                  <h4
+                    id="meta-ads-duplicate-title"
+                    className="mt-1 text-base font-semibold text-[#f3efe6]"
+                  >
+                    {localize('com_ui_project_meta_ads_duplicate_title')}
+                  </h4>
+                </div>
+                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                      {localize('com_ui_project_meta_ads_original')}
+                    </div>
+                    <div className="mt-1 truncate text-sm font-medium text-[#f3efe6]">
+                      {duplicateDraft.entityName ?? duplicateDraft.entityId}
+                    </div>
+                  </div>
+                  <label className="block">
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                      {localize('com_ui_project_meta_ads_duplicate_name')}
+                    </span>
+                    <input
+                      value={duplicateTargetName}
+                      onChange={(event) => setDuplicateTargetName(event.target.value)}
+                      className="mt-2 h-10 w-full border border-white/12 bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
+                    />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                        {localize('com_ui_project_meta_ads_status')}
+                      </div>
+                      <div className="mt-2 font-mono text-[#f3efe6]">
+                        {duplicateDraft.status || '-'}
+                      </div>
+                    </div>
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                        {localize('com_ui_project_meta_ads_budget_defined')}
+                      </div>
+                      <div className="mt-2 font-mono text-[#f3efe6]">
+                        {formatMoney(duplicateDraft.budget, currency)}
+                      </div>
+                    </div>
+                  </div>
+                  {duplicateDraft.status?.toUpperCase() === 'ACTIVE' && (
+                    <div className="border border-amber-300/25 bg-amber-300/[0.08] p-3 text-xs leading-5 text-amber-100">
+                      {localize('com_ui_project_meta_ads_duplicate_active_warning')}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2 border-t border-white/10 p-4">
+                  <button type="button" onClick={onCloseDuplicateDraft} className={metaAdsGhostButton}>
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={duplicateEntity.isLoading || !duplicateTargetName.trim()}
+                    onClick={onConfirmDuplicate}
+                    className="h-9 bg-amber-300 px-4 text-xs font-semibold text-[#15120b] transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {localize('com_ui_project_meta_ads_duplicate_confirm')}
+                  </button>
+                </div>
               </div>
             </div>
           )}

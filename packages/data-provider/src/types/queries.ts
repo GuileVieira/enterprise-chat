@@ -290,6 +290,21 @@ export type ProjectMetaAdsManualBudgetResponse = {
   change: ProjectMetaAdsBudgetChange;
 };
 
+export type ProjectMetaAdsDuplicatePayload = {
+  entityLevel: 'campaign' | 'adset';
+  entityId: string;
+  entityName?: string;
+  targetName: string;
+};
+
+export type ProjectMetaAdsDuplicateResponse = {
+  entityLevel: 'campaign' | 'adset';
+  sourceEntityId: string;
+  duplicatedEntityId?: string;
+  duplicatedEntityName: string;
+  status: string;
+};
+
 export type ProjectMetaAdsEntityStatusLevel = 'campaign' | 'adset' | 'ad';
 
 export type ProjectMetaAdsEntityStatusPayload = {

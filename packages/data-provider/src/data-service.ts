@@ -905,6 +905,13 @@ export const updateProjectMetaAdsBudget = (
   return request.post(endpoints.projectMetaAdsBudget(id), payload);
 };
 
+export const duplicateProjectMetaAdsEntity = (
+  id: string,
+  payload: q.ProjectMetaAdsDuplicatePayload,
+): Promise<q.ProjectMetaAdsDuplicateResponse> => {
+  return request.post(endpoints.projectMetaAdsDuplicate(id), payload);
+};
+
 export const updateProjectMetaAdsEntityStatus = (
   id: string,
   entityLevel: q.ProjectMetaAdsEntityStatusLevel,

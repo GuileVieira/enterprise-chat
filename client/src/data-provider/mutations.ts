@@ -1281,6 +1281,23 @@ export const useUpdateProjectMetaAdsBudgetMutation = (): UseMutationResult<
   );
 };
 
+export const useDuplicateProjectMetaAdsEntityMutation = (): UseMutationResult<
+  t.ProjectMetaAdsDuplicateResponse,
+  unknown,
+  { projectId: string; payload: t.ProjectMetaAdsDuplicatePayload },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, payload }) => dataService.duplicateProjectMetaAdsEntity(projectId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
 export const useUpdateProjectMetaAdsEntityStatusMutation = (): UseMutationResult<
   t.ProjectMetaAdsEntityStatusResponse,
   unknown,

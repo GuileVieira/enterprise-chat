@@ -31,13 +31,17 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   analyzeProject: jest.fn(),
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
+  duplicateProjectMetaAdsEntity: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
   updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
 
 const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
-const { updateProjectMetaAdsEntityStatus } = require('~/server/services/MetaAds/budget');
+const {
+  duplicateProjectMetaAdsEntity,
+  updateProjectMetaAdsEntityStatus,
+} = require('~/server/services/MetaAds/budget');
 
 function createApp() {
   const app = express();
@@ -371,5 +375,64 @@ describe('projectMetaAds entity status route', () => {
       .expect(400);
 
     expect(response.body).toEqual({ message: 'Invalid Meta Ads status.' });
+  });
+});
+
+describe('projectMetaAds duplicate route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    duplicateProjectMetaAdsEntity.mockImplementation(async ({ entityLevel, entityId, targetName }) => ({
+      entityLevel,
+      sourceEntityId: entityId,
+      duplicatedEntityId: `${entityId}-copy`,
+      duplicatedEntityName: targetName,
+      status: 'INHERITED_FROM_SOURCE',
+    }));
+  });
+
+  it.each([
+    ['campaign', 'campaign-1'],
+    ['adset', 'adset-1'],
+  ])('duplicates a Meta %s with project edit access', async (entityLevel, entityId) => {
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/duplicates')
+      .send({
+        entityLevel,
+        entityId,
+        entityName: 'Original',
+        targetName: 'Original - cópia',
+      })
+      .expect(200);
+
+    expect(duplicateProjectMetaAdsEntity).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      entityLevel,
+      entityId,
+      entityName: 'Original',
+      targetName: 'Original - cópia',
+      actor: 'user',
+      actorUserId: 'user-1',
+    });
+    expect(response.body).toEqual({
+      entityLevel,
+      sourceEntityId: entityId,
+      duplicatedEntityId: `${entityId}-copy`,
+      duplicatedEntityName: 'Original - cópia',
+      status: 'INHERITED_FROM_SOURCE',
+    });
+  });
+
+  it('returns service validation errors for invalid duplicate payloads', async () => {
+    duplicateProjectMetaAdsEntity.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid Meta Ads duplicate entity level.'), { statusCode: 400 }),
+    );
+
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/duplicates')
+      .send({ entityLevel: 'ad', entityId: 'ad-1', targetName: 'Copy' })
+      .expect(400);
+
+    expect(response.body).toEqual({ message: 'Invalid Meta Ads duplicate entity level.' });
   });
 });

@@ -3,6 +3,7 @@ const { logger, runAsSystem, getTenantId } = require('@librechat/data-schemas');
 const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
+  copyMetaEntity,
   getAdSetDailyBudget,
   getAdAccountCurrency,
   getEntityDailyBudget,
@@ -15,6 +16,7 @@ const {
   listAdSetInsights,
   listAdSets,
   metaPost,
+  updateMetaEntityName,
   updateMetaEntityStatus,
 } = require('~/server/services/MetaAds/graph');
 
@@ -2742,6 +2744,88 @@ async function updateProjectMetaAdStatus({ adId, adName, ...options }) {
   });
 }
 
+function getCopiedMetaEntityId(entityLevel, payload) {
+  const key = entityLevel === 'campaign' ? 'copied_campaign_id' : 'copied_adset_id';
+  const copiedId = payload?.[key] ?? payload?.id;
+  return typeof copiedId === 'string' && copiedId.trim() ? copiedId.trim() : '';
+}
+
+async function duplicateProjectMetaAdsEntity({
+  projectId,
+  tenantId,
+  entityLevel,
+  entityId,
+  entityName,
+  targetName,
+  actor,
+  actorUserId,
+}) {
+  if (!['campaign', 'adset'].includes(entityLevel)) {
+    throw Object.assign(new Error('Invalid Meta Ads duplicate entity level.'), { statusCode: 400 });
+  }
+  const normalizedEntityId = typeof entityId === 'string' ? entityId.trim() : '';
+  if (!normalizedEntityId) {
+    throw Object.assign(new Error('Meta Ads entity id is required.'), { statusCode: 400 });
+  }
+  const normalizedTargetName = typeof targetName === 'string' ? targetName.trim() : '';
+  if (!normalizedTargetName) {
+    throw Object.assign(new Error('Meta Ads duplicate name is required.'), { statusCode: 400 });
+  }
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw Object.assign(new Error('Project not found.'), { statusCode: 404 });
+  }
+  const projectTenantId = getProjectTenantId(project, tenantId);
+  if (tenantId && projectTenantId !== tenantId) {
+    throw Object.assign(new Error('Project does not belong to this tenant.'), { statusCode: 403 });
+  }
+
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const payload = await copyMetaEntity({
+    entityId: normalizedEntityId,
+    entityLevel,
+    statusOption: 'INHERITED_FROM_SOURCE',
+    deepCopy: true,
+    token,
+    graphVersion,
+  });
+  const duplicatedEntityId = getCopiedMetaEntityId(entityLevel, payload);
+  if (duplicatedEntityId) {
+    await updateMetaEntityName({
+      entityId: duplicatedEntityId,
+      entityLevel,
+      name: normalizedTargetName,
+      token,
+      graphVersion,
+    });
+  }
+  logger.info('[MetaAdsBudget] entity duplicated', {
+    projectId,
+    tenantId: projectTenantId,
+    entityLevel,
+    entityId: normalizedEntityId,
+    entityName,
+    duplicatedEntityId,
+    duplicatedEntityName: normalizedTargetName,
+    actor,
+    actorUserId,
+  });
+  return {
+    entityLevel,
+    sourceEntityId: normalizedEntityId,
+    duplicatedEntityId,
+    duplicatedEntityName: normalizedTargetName,
+    status: 'INHERITED_FROM_SOURCE',
+  };
+}
+
 async function runCron(options = {}) {
   const Project = mongoose.models.Project;
   if (!Project) {
@@ -2816,6 +2900,7 @@ module.exports = {
   applyRecommendation,
   buildCampaignSummaries,
   detectBudgetMode,
+  duplicateProjectMetaAdsEntity,
   getModels,
   getEffectiveRules,
   getMetaGraphVersion,

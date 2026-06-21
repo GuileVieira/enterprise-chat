@@ -140,6 +140,7 @@ export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/set
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
 export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
+export const projectMetaAdsDuplicate = (id: string) => `${projectMetaAds(id)}/duplicates`;
 export const projectMetaAdsEntityStatus = (
   id: string,
   entityLevel: 'campaign' | 'adset' | 'ad',
