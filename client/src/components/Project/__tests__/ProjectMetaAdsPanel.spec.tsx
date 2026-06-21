@@ -1077,6 +1077,7 @@ describe('ProjectMetaAdsPanel', () => {
       {
         campaignId: 'campaign-ads',
         campaignName: 'ABO Leads',
+        objective: 'OUTCOME_LEADS',
         spend: 160,
         dailyBudget: 70,
         editableBudgetLevel: 'adset',
@@ -1145,6 +1146,14 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('com_ui_project_meta_ads_level_ad').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Visit schedule creative').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Paused creative').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('meta-ads-adset-row')).toHaveTextContent(
+      'com_ui_project_meta_ads_objective_leads',
+    );
+    expect(screen.getByTestId('meta-ads-adset-row')).toHaveTextContent('ABO');
+    expect(screen.getByTestId('meta-ads-ad-card-ad-1')).toHaveTextContent(
+      'com_ui_project_meta_ads_objective_leads',
+    );
+    expect(screen.getByTestId('meta-ads-ad-card-ad-1')).toHaveTextContent('ABO');
     const campaignSwitch = screen.getAllByRole('switch', {
       name: 'com_ui_project_meta_ads_deactivate_ad',
     })[0];

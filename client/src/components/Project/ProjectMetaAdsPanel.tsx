@@ -3454,12 +3454,16 @@ export default function ProjectMetaAdsPanel({
       );
     }
     if (column.key === 'objective') {
-      return renderEmptyCell(column);
+      return (
+        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
+          {getObjectiveLabel(campaign.objective, localize)}
+        </td>
+      );
     }
     if (column.key === 'budgetMode') {
       return (
         <td key={column.key} className="px-2 py-2 text-text-secondary">
-          {campaign.budgetMode === 'ABO' ? 'ABO' : '-'}
+          {campaign.budgetMode ?? '-'}
         </td>
       );
     }
@@ -3570,7 +3574,11 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
-  const renderAdCell = (column: TableColumn, ad: ProjectMetaAdsAdSummary) => {
+  const renderAdCell = (
+    column: TableColumn,
+    campaign: ProjectMetaAdsCampaignSummary,
+    ad: ProjectMetaAdsAdSummary,
+  ) => {
     if (column.key === 'level') {
       return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad');
     }
@@ -3584,6 +3592,20 @@ export default function ProjectMetaAdsPanel({
     }
     if (column.key === 'name') {
       return renderAdNameCell(ad);
+    }
+    if (column.key === 'objective') {
+      return (
+        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
+          {getObjectiveLabel(campaign.objective, localize)}
+        </td>
+      );
+    }
+    if (column.key === 'budgetMode') {
+      return (
+        <td key={column.key} className="px-2 py-2 text-text-secondary">
+          {campaign.budgetMode ?? '-'}
+        </td>
+      );
     }
     if (column.key === 'frequency') {
       return (
@@ -3658,7 +3680,11 @@ export default function ProjectMetaAdsPanel({
     return renderEmptyCell(column);
   };
 
-  const renderAdRow = (ad: ProjectMetaAdsAdSummary, rowIndex: number) => {
+  const renderAdRow = (
+    campaign: ProjectMetaAdsCampaignSummary,
+    ad: ProjectMetaAdsAdSummary,
+    rowIndex: number,
+  ) => {
     return (
       <tr
         key={ad.adId}
@@ -3670,7 +3696,7 @@ export default function ProjectMetaAdsPanel({
         <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
           <span aria-hidden="true" className="block h-7 w-7" />
         </td>
-        {tableColumns.map((column) => renderAdCell(column, ad))}
+        {tableColumns.map((column) => renderAdCell(column, campaign, ad))}
       </tr>
     );
   };
@@ -5128,7 +5154,7 @@ export default function ProjectMetaAdsPanel({
                                   adsetAds.map((ad) => {
                                     const adRowIndex = rowIndex;
                                     rowIndex += 1;
-                                    return renderAdRow(ad, adRowIndex);
+                                    return renderAdRow(campaign, ad, adRowIndex);
                                   })}
                               </Fragment>
                             );
