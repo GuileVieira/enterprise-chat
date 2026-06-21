@@ -426,29 +426,6 @@ const metaAdsPrimaryButton =
   'h-9 bg-[#f2eadb] px-4 text-xs font-semibold text-[#17130c] shadow-[0_16px_36px_-24px_rgba(242,234,219,0.75)] transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60';
 const metaAdsLabel =
   'min-h-8 text-[11px] font-medium uppercase leading-tight tracking-[0.14em] text-[#948b7d]';
-const objectiveAccentClasses = [
-  {
-    shell: 'border-amber-400/20 bg-amber-500/5',
-    bar: 'bg-amber-300',
-    text: 'text-amber-200',
-  },
-  {
-    shell: 'border-emerald-400/20 bg-emerald-500/5',
-    bar: 'bg-emerald-300',
-    text: 'text-emerald-200',
-  },
-  {
-    shell: 'border-sky-400/20 bg-sky-500/5',
-    bar: 'bg-sky-300',
-    text: 'text-sky-200',
-  },
-  {
-    shell: 'border-rose-400/20 bg-rose-500/5',
-    bar: 'bg-rose-300',
-    text: 'text-rose-200',
-  },
-] as const;
-
 const accountProfileRules: Record<
   (typeof accountProfileOptions)[number]['value'],
   Partial<MetaAdsRulesState>
@@ -705,10 +682,6 @@ function formatCountLabel(
   return localize(count === 1 ? singularKey : pluralKey, { 0: String(count) });
 }
 
-function formatSharePercent(value: number, total: number) {
-  return total > 0 ? `${((value / total) * 100).toFixed(1)}%` : '-';
-}
-
 function isEcommerceContext(
   settings: MetaAdsSettingsState,
   objectiveFilter: string,
@@ -747,13 +720,6 @@ function calculateWeightedRoas(campaigns: ProjectMetaAdsCampaignSummary[]) {
 
 function getTableViewColumns(tableView: TableView, isEcommerce: boolean) {
   return isEcommerce ? ecommerceTableViewColumns[tableView] : tableViewColumns[tableView];
-}
-
-function getShareWidth(value: number, total: number) {
-  if (!Number.isFinite(value) || !Number.isFinite(total) || total <= 0) {
-    return '0%';
-  }
-  return `${Math.min(100, Math.max(0, (value / total) * 100)).toFixed(2)}%`;
 }
 
 function getRankEfficiency(item: MetaAdsBiRankItem) {
@@ -1129,43 +1095,6 @@ function buildSummaryResultTypeOptions(
           : null,
     }))
     .sort((left, right) => Number(right.totalResults ?? 0) - Number(left.totalResults ?? 0));
-}
-
-function buildVisibleObjectiveResultTypes(
-  resultTypes: ResultTypeSummary[],
-  totalResults: number,
-): ResultTypeSummary[] {
-  const visible: ResultTypeSummary[] = [];
-  let otherResults = 0;
-
-  for (const resultType of resultTypes) {
-    const results = Number(resultType.totalResults ?? 0);
-    const share = totalResults > 0 ? results / totalResults : 0;
-    if (share >= 0.1) {
-      visible.push(resultType);
-      continue;
-    }
-    otherResults += Number.isFinite(results) ? results : 0;
-  }
-
-  if (otherResults > 0) {
-    visible.push({
-      resultType: 'OTHER_EVENTS',
-      label: 'OTHER_EVENTS',
-      totalSpend: 0,
-      totalResults: Number(otherResults.toFixed(2)),
-      averageCostPerResult: null,
-      clicks: 0,
-      impressions: 0,
-      averageCtr: null,
-    });
-  }
-
-  return visible;
-}
-
-function isOtherEventsResultType(resultType: string | undefined) {
-  return resultType === 'OTHER_EVENTS';
 }
 
 function buildObjectiveSummaries(
@@ -4135,188 +4064,6 @@ export default function ProjectMetaAdsPanel({
                       {localize('com_ui_cancel')}
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-            {objectiveSummaries.length > 0 && !isInitialStatusLoading && (
-              <div data-testid="meta-ads-objective-summary" className={`${metaAdsPanel} p-4`}>
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-semibold text-[#f8f1e5]">
-                      {localize('com_ui_project_meta_ads_campaign_objectives')}
-                    </h4>
-                    <div className="mt-1 text-xs text-[#9f9687]">
-                      {formatCountLabel(
-                        objectiveSummaries.length,
-                        'com_ui_project_meta_ads_objective_count_one',
-                        'com_ui_project_meta_ads_objective_count_many',
-                        localize,
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  className={`mt-4 grid gap-3 ${
-                    objectiveSummaries.length > 1 ? '2xl:grid-cols-2' : ''
-                  }`}
-                >
-                  {objectiveSummaries.map((summary, index) => {
-                    const accent = objectiveAccentClasses[index % objectiveAccentClasses.length];
-                    const resultTypesTotal = summary.resultTypes.reduce(
-                      (total, resultType) => total + Number(resultType.totalResults ?? 0),
-                      0,
-                    );
-                    const visibleResultTypes = buildVisibleObjectiveResultTypes(
-                      summary.resultTypes,
-                      resultTypesTotal,
-                    );
-                    return (
-                      <section
-                        key={summary.objective || 'UNKNOWN'}
-                        className={`min-w-0 border p-4 ${accent.shell}`}
-                      >
-                        <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] md:items-start">
-                          <div className="min-w-0 md:self-center">
-                            <h5 className={`truncate text-base font-semibold ${accent.text}`}>
-                              {getObjectiveLabel(summary.objective, localize)}
-                            </h5>
-                            <div className="mt-1 text-xs text-[#b8ae9f]">
-                              {formatCountLabel(
-                                summary.campaignCount,
-                                'com_ui_project_meta_ads_campaign_count_one',
-                                'com_ui_project_meta_ads_campaign_count_many',
-                                localize,
-                              )}
-                            </div>
-                          </div>
-                          {[
-                            [
-                              'com_ui_project_meta_ads_spend',
-                              formatMoney(summary.totalSpend, currency),
-                            ],
-                            ['com_ui_project_meta_ads_results', formatMetric(summary.totalResults)],
-                            [
-                              'com_ui_project_meta_ads_cost_result',
-                              formatMoney(summary.averageCostPerResult, currency),
-                            ],
-                            ['CTR', formatPercent(summary.averageCtr)],
-                            [
-                              'com_ui_project_meta_ads_frequency',
-                              formatMetric(summary.averageFrequency),
-                            ],
-                          ].map(([label, value]) => (
-                            <div
-                              key={label}
-                              className="flex items-baseline justify-between gap-3 md:block md:text-right"
-                            >
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d]">
-                                {label === 'CTR' ? label : localize(label as TranslationKeys)}
-                              </div>
-                              <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
-                                {value}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {visibleResultTypes.length > 0 && (
-                          <div className="mt-4 space-y-2">
-                            <div className="hidden min-w-0 grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] gap-3 border-b border-white/10 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d] md:grid">
-                              <div>{localize('com_ui_project_meta_ads_result_type')}</div>
-                              <div className="text-right">
-                                {localize('com_ui_project_meta_ads_spend')}
-                              </div>
-                              <div className="text-right">
-                                {localize('com_ui_project_meta_ads_results')}
-                              </div>
-                              <div className="text-right">
-                                {localize('com_ui_project_meta_ads_cost_result')}
-                              </div>
-                              <div className="text-right">CTR</div>
-                              <div className="text-right">
-                                {localize('com_ui_project_meta_ads_result_share')}
-                              </div>
-                            </div>
-                            {visibleResultTypes.map((resultType) => {
-                              const isOtherEvents = isOtherEventsResultType(resultType.resultType);
-                              const shareWidth = getShareWidth(
-                                Number(resultType.totalResults ?? 0),
-                                resultTypesTotal,
-                              );
-                              return (
-                                <div
-                                  key={resultType.resultType || 'UNKNOWN'}
-                                  className="grid min-w-0 gap-3 border border-white/10 bg-black/10 px-3 py-3 text-xs md:grid-cols-[minmax(0,1fr)_minmax(74px,90px)_minmax(74px,90px)_minmax(88px,110px)_minmax(72px,90px)_minmax(88px,110px)] md:items-center md:py-2"
-                                >
-                                  <div className="min-w-0">
-                                    <div className="truncate font-semibold text-[#f3efe6]">
-                                      {isOtherEvents
-                                        ? localize('com_ui_project_meta_ads_other_events')
-                                        : getResultTypeLabel(resultType.resultType, localize)}
-                                    </div>
-                                    <div className="mt-1 h-1 overflow-hidden bg-white/10">
-                                      <div
-                                        className={`h-full ${accent.bar}`}
-                                        style={{ width: shareWidth }}
-                                      />
-                                    </div>
-                                  </div>
-                                  {[
-                                    [
-                                      'com_ui_project_meta_ads_spend',
-                                      isOtherEvents
-                                        ? '-'
-                                        : formatMoney(resultType.totalSpend, currency),
-                                      'text-[#d8cfbf]',
-                                    ],
-                                    [
-                                      'com_ui_project_meta_ads_results',
-                                      formatMetric(resultType.totalResults),
-                                      'text-[#d8cfbf]',
-                                    ],
-                                    [
-                                      'com_ui_project_meta_ads_cost_result',
-                                      isOtherEvents
-                                        ? '-'
-                                        : formatMoney(resultType.averageCostPerResult, currency),
-                                      'text-[#f3efe6]',
-                                    ],
-                                    [
-                                      'CTR',
-                                      isOtherEvents ? '-' : formatPercent(resultType.averageCtr),
-                                      'text-[#d8cfbf]',
-                                    ],
-                                    [
-                                      'com_ui_project_meta_ads_result_share',
-                                      formatSharePercent(
-                                        Number(resultType.totalResults ?? 0),
-                                        resultTypesTotal,
-                                      ),
-                                      'text-[#d8cfbf]',
-                                    ],
-                                  ].map(([labelKey, value, colorClass]) => (
-                                    <div
-                                      key={labelKey}
-                                      className="flex items-baseline justify-between gap-3 md:block md:text-right"
-                                    >
-                                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#847b6d] md:hidden">
-                                        {labelKey === 'CTR'
-                                          ? labelKey
-                                          : localize(labelKey as TranslationKeys)}
-                                      </span>
-                                      <span className={`font-mono tabular-nums ${colorClass}`}>
-                                        {value}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </section>
-                    );
-                  })}
                 </div>
               </div>
             )}

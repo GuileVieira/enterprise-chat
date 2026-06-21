@@ -747,7 +747,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(rows[0]).queryByText('6.00')).not.toBeInTheDocument();
   });
 
-  it('filters campaigns by localized campaign objective and shows objective metrics', () => {
+  it('filters campaigns by localized campaign objective without showing the objective summary panel', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-engagement',
@@ -853,22 +853,10 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('com_ui_project_meta_ads_objective_sales').length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByTestId('meta-ads-objective-summary')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_campaign_objectives')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_objective_count_many')).toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-objective-summary')).not.toBeInTheDocument();
     expect(
-      screen.getAllByText('com_ui_project_meta_ads_campaign_count_one').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText('com_ui_project_meta_ads_result_type').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('com_ui_project_meta_ads_results').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('com_ui_project_meta_ads_result_share').length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('com_ui_project_meta_ads_result_type_link_click').length,
-    ).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText('com_ui_project_meta_ads_result_type_message').length,
-    ).toBeGreaterThan(0);
-    expect(screen.getByText('83.3%')).toBeInTheDocument();
+      screen.queryByText('com_ui_project_meta_ads_campaign_objectives'),
+    ).not.toBeInTheDocument();
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
