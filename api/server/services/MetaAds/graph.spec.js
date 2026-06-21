@@ -565,16 +565,14 @@ describe('Meta Ads Graph client', () => {
     const firstResponse = new Promise((resolve) => {
       resolveFirst = resolve;
     });
-    fetch
-      .mockReturnValueOnce(firstResponse)
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () =>
-          JSON.stringify({
-            data: [{ id: 'campaign-1', effective_status: 'ACTIVE' }],
-          }),
-      });
+    fetch.mockReturnValueOnce(firstResponse).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [{ id: 'campaign-1', effective_status: 'ACTIVE' }],
+        }),
+    });
 
     const adsetsPromise = listAdSets({
       adAccountId: 'act_123',
@@ -640,6 +638,41 @@ describe('Meta Ads Graph client', () => {
     );
   });
 
+  it('requests daily ad insights when time increment is enabled', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: [
+            {
+              date_start: '2026-06-01',
+              ad_id: 'ad-1',
+              ad_name: 'Creative',
+              adset_id: 'adset-1',
+              campaign_id: 'campaign-1',
+              spend: '12',
+            },
+          ],
+        }),
+    });
+
+    await expect(
+      listAdInsights({
+        adAccountId: 'act_123',
+        token: 'token',
+        graphVersion: 'v24.0',
+        since: '2026-06-01',
+        until: '2026-06-02',
+        timeIncrement: 1,
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({ date_start: '2026-06-01', ad_id: 'ad-1', spend: '12' }),
+    ]);
+
+    expect(fetch.mock.calls[0][0]).toContain('time_increment=1');
+  });
+
   it('retries heavy insight periods in date chunks and aggregates rows', async () => {
     fetch
       .mockResolvedValueOnce({
@@ -648,7 +681,8 @@ describe('Meta Ads Graph client', () => {
         text: async () =>
           JSON.stringify({
             error: {
-              message: 'Please reduce the amount of data you are asking for, then retry your request',
+              message:
+                'Please reduce the amount of data you are asking for, then retry your request',
             },
           }),
       })

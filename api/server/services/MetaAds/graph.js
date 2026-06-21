@@ -42,7 +42,10 @@ function getMetaGraphAccountConcurrency() {
 }
 
 function getMetaInsightsChunkDays() {
-  return getPositiveInteger(process.env.META_ADS_INSIGHTS_CHUNK_DAYS, DEFAULT_META_INSIGHTS_CHUNK_DAYS);
+  return getPositiveInteger(
+    process.env.META_ADS_INSIGHTS_CHUNK_DAYS,
+    DEFAULT_META_INSIGHTS_CHUNK_DAYS,
+  );
 }
 
 function getMetaGraphReadCacheTtlMs() {
@@ -130,10 +133,7 @@ function getMetaGraphReadStore() {
   }
   try {
     const { standardCache } = require('@librechat/api');
-    metaGraphReadStore = standardCache(
-      'META_ADS_GRAPH_READS',
-      getMetaGraphReadCacheTtlMs(),
-    );
+    metaGraphReadStore = standardCache('META_ADS_GRAPH_READS', getMetaGraphReadCacheTtlMs());
   } catch (error) {
     logger.error('[MetaAdsGraph] Redis/shared cache unavailable for Meta reads', {
       message: error.message,
@@ -231,12 +231,10 @@ function drainMetaGraphAccountQueue(accountKey) {
 
 function runQueuedMetaGraphRead({ path, resourceLabel }, run) {
   const accountKey = getAdAccountIdFromPath(path);
-  const queue =
-    metaGraphAccountQueues.get(accountKey) ??
-    {
-      active: 0,
-      pending: [],
-    };
+  const queue = metaGraphAccountQueues.get(accountKey) ?? {
+    active: 0,
+    pending: [],
+  };
   metaGraphAccountQueues.set(accountKey, queue);
   return new Promise((resolve, reject) => {
     queue.pending.push({
@@ -349,9 +347,7 @@ function getInsightDateChunks({ since, until, chunkDays = getMetaInsightsChunkDa
   const chunks = [];
   let cursor = start;
   while (cursor <= end) {
-    const chunkEnd = new Date(
-      Math.min(addUtcDays(cursor, chunkDays - 1).getTime(), end.getTime()),
-    );
+    const chunkEnd = new Date(Math.min(addUtcDays(cursor, chunkDays - 1).getTime(), end.getTime()));
     chunks.push({
       since: formatDateKey(cursor),
       until: formatDateKey(chunkEnd),
@@ -362,13 +358,18 @@ function getInsightDateChunks({ since, until, chunkDays = getMetaInsightsChunkDa
 }
 
 function getInsightRowKey(row, level) {
+  const dateKey = row.date_start || row.date_stop || '';
   if (level === 'ad') {
-    return row.ad_id || `${row.campaign_id || ''}:${row.adset_id || ''}:${row.ad_name || ''}`;
+    const entityKey =
+      row.ad_id || `${row.campaign_id || ''}:${row.adset_id || ''}:${row.ad_name || ''}`;
+    return dateKey ? `${dateKey}:${entityKey}` : entityKey;
   }
   if (level === 'adset') {
-    return row.adset_id || `${row.campaign_id || ''}:${row.adset_name || ''}`;
+    const entityKey = row.adset_id || `${row.campaign_id || ''}:${row.adset_name || ''}`;
+    return dateKey ? `${dateKey}:${entityKey}` : entityKey;
   }
-  return row.campaign_id || row.campaign_name || '';
+  const entityKey = row.campaign_id || row.campaign_name || '';
+  return dateKey ? `${dateKey}:${entityKey}` : entityKey;
 }
 
 function addActionValues(target, values = []) {
@@ -388,20 +389,18 @@ function aggregateInsightRows(rows, level) {
     if (!key) {
       continue;
     }
-    const current =
-      rowsByKey.get(key) ??
-      {
-        ...row,
-        spend: 0,
-        impressions: 0,
-        reach: 0,
-        clicks: 0,
-        actions: new Map(),
-        actionValues: new Map(),
-        videoP75Watched: 0,
-        roasWeightedTotal: 0,
-        roasWeight: 0,
-      };
+    const current = rowsByKey.get(key) ?? {
+      ...row,
+      spend: 0,
+      impressions: 0,
+      reach: 0,
+      clicks: 0,
+      actions: new Map(),
+      actionValues: new Map(),
+      videoP75Watched: 0,
+      roasWeightedTotal: 0,
+      roasWeight: 0,
+    };
     const spend = Number(row.spend ?? 0);
     const impressions = Number(row.impressions ?? 0);
     const reach = Number(row.reach ?? 0);
@@ -450,8 +449,7 @@ function aggregateInsightRows(rows, level) {
       spend: Number(row.spend.toFixed(2)),
       impressions: Number(row.impressions.toFixed(2)),
       reach: Number(row.reach.toFixed(2)),
-      frequency:
-        row.reach > 0 ? Number((row.impressions / row.reach).toFixed(2)) : row.frequency,
+      frequency: row.reach > 0 ? Number((row.impressions / row.reach).toFixed(2)) : row.frequency,
       clicks: Number(row.clicks.toFixed(2)),
       ctr: row.impressions > 0 ? Number(((row.clicks / row.impressions) * 100).toFixed(2)) : 0,
       cpc: row.clicks > 0 ? Number((row.spend / row.clicks).toFixed(2)) : 0,
@@ -556,16 +554,14 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
   const paramKeys = Object.keys(params);
   let response;
   try {
-    response = await runQueuedMetaGraphRead(
-      { path, resourceLabel },
-      () =>
-        fetchWithTimeout(
-          url.toString(),
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-          resourceLabel,
-        ),
+    response = await runQueuedMetaGraphRead({ path, resourceLabel }, () =>
+      fetchWithTimeout(
+        url.toString(),
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        resourceLabel,
+      ),
     );
   } catch (error) {
     logger.error('[MetaAdsGraph] Meta fetch threw', {
@@ -589,16 +585,14 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
 async function metaGetUrl({ url, token, path, graphVersion, resourceLabel }) {
   let response;
   try {
-    response = await runQueuedMetaGraphRead(
-      { path, resourceLabel },
-      () =>
-        fetchWithTimeout(
-          url,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
-          resourceLabel,
-        ),
+    response = await runQueuedMetaGraphRead({ path, resourceLabel }, () =>
+      fetchWithTimeout(
+        url,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        resourceLabel,
+      ),
     );
   } catch (error) {
     logger.error('[MetaAdsGraph] Meta paged fetch threw', {
@@ -749,7 +743,13 @@ async function getEntityDailyBudget({ entityId, token, graphVersion }) {
   };
 }
 
-async function updateMetaEntityStatus({ entityId, entityLevel = 'ad', status, token, graphVersion }) {
+async function updateMetaEntityStatus({
+  entityId,
+  entityLevel = 'ad',
+  status,
+  token,
+  graphVersion,
+}) {
   return metaPost({
     path: encodeURIComponent(entityId),
     token,
@@ -939,9 +939,7 @@ async function listAds({
         ads.push(payload);
       }
     }
-    return includeInactive
-      ? ads
-      : ads.filter((ad) => ad.effective_status === 'ACTIVE');
+    return includeInactive ? ads : ads.filter((ad) => ad.effective_status === 'ACTIVE');
   } catch (error) {
     const message = formatMetaFetchError({
       resource: 'ads',
@@ -968,7 +966,16 @@ const ADSET_INSIGHT_FIELDS =
 const CAMPAIGN_INSIGHT_FIELDS =
   'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
 
-async function fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields }) {
+async function fetchInsightsPage({
+  adAccountId,
+  token,
+  since,
+  until,
+  graphVersion,
+  level,
+  fields,
+  timeIncrement,
+}) {
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level,
@@ -976,6 +983,9 @@ async function fetchInsightsPage({ adAccountId, token, since, until, graphVersio
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
+  if (timeIncrement) {
+    params.time_increment = timeIncrement;
+  }
   const payload = await metaGetPaged({
     path,
     token,
@@ -986,10 +996,28 @@ async function fetchInsightsPage({ adAccountId, token, since, until, graphVersio
   return Array.isArray(payload.data) ? payload.data : [];
 }
 
-async function fetchChunkedInsights({ adAccountId, token, since, until, graphVersion, level, fields }) {
+async function fetchChunkedInsights({
+  adAccountId,
+  token,
+  since,
+  until,
+  graphVersion,
+  level,
+  fields,
+  timeIncrement,
+}) {
   const chunks = getInsightDateChunks({ since, until });
   if (chunks.length <= 1) {
-    return fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields });
+    return fetchInsightsPage({
+      adAccountId,
+      token,
+      since,
+      until,
+      graphVersion,
+      level,
+      fields,
+      timeIncrement,
+    });
   }
   const rows = [];
   for (const chunk of chunks) {
@@ -1003,6 +1031,7 @@ async function fetchChunkedInsights({ adAccountId, token, since, until, graphVer
           graphVersion,
           level,
           fields,
+          timeIncrement,
         })),
       );
     } catch (error) {
@@ -1019,6 +1048,7 @@ async function fetchChunkedInsights({ adAccountId, token, since, until, graphVer
             graphVersion,
             level,
             fields,
+            timeIncrement,
           })),
         );
       }
@@ -1027,7 +1057,16 @@ async function fetchChunkedInsights({ adAccountId, token, since, until, graphVer
   return aggregateInsightRows(rows, level);
 }
 
-async function listInsights({ adAccountId, token, since, until, graphVersion, level, fields }) {
+async function listInsights({
+  adAccountId,
+  token,
+  since,
+  until,
+  graphVersion,
+  level,
+  fields,
+  timeIncrement,
+}) {
   const path = `${encodeURIComponent(adAccountId)}/insights`;
   const params = {
     level,
@@ -1035,8 +1074,20 @@ async function listInsights({ adAccountId, token, since, until, graphVersion, le
     time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
+  if (timeIncrement) {
+    params.time_increment = timeIncrement;
+  }
   try {
-    return await fetchInsightsPage({ adAccountId, token, since, until, graphVersion, level, fields });
+    return await fetchInsightsPage({
+      adAccountId,
+      token,
+      since,
+      until,
+      graphVersion,
+      level,
+      fields,
+      timeIncrement,
+    });
   } catch (error) {
     if (isReduceAmountError(error)) {
       logger.error('[MetaAdsGraph] retrying insights request in date chunks', {
@@ -1055,6 +1106,7 @@ async function listInsights({ adAccountId, token, since, until, graphVersion, le
           graphVersion,
           level,
           fields,
+          timeIncrement,
         });
       } catch (chunkError) {
         error = chunkError;
@@ -1081,7 +1133,7 @@ async function listInsights({ adAccountId, token, since, until, graphVersion, le
   }
 }
 
-async function listAdInsights({ adAccountId, token, since, until, graphVersion }) {
+async function listAdInsights({ adAccountId, token, since, until, graphVersion, timeIncrement }) {
   logger.debug('[MetaAdsGraph] listing ad insights', { adAccountId, since, until, graphVersion });
   return listInsights({
     adAccountId,
@@ -1091,10 +1143,18 @@ async function listAdInsights({ adAccountId, token, since, until, graphVersion }
     graphVersion,
     level: 'ad',
     fields: AD_INSIGHT_FIELDS,
+    timeIncrement,
   });
 }
 
-async function listCampaignInsights({ adAccountId, token, since, until, graphVersion }) {
+async function listCampaignInsights({
+  adAccountId,
+  token,
+  since,
+  until,
+  graphVersion,
+  timeIncrement,
+}) {
   logger.debug('[MetaAdsGraph] listing campaign insights', {
     adAccountId,
     since,
@@ -1109,10 +1169,18 @@ async function listCampaignInsights({ adAccountId, token, since, until, graphVer
     graphVersion,
     level: 'campaign',
     fields: CAMPAIGN_INSIGHT_FIELDS,
+    timeIncrement,
   });
 }
 
-async function listAdSetInsights({ adAccountId, token, since, until, graphVersion }) {
+async function listAdSetInsights({
+  adAccountId,
+  token,
+  since,
+  until,
+  graphVersion,
+  timeIncrement,
+}) {
   logger.debug('[MetaAdsGraph] listing insights', { adAccountId, since, until, graphVersion });
   return listInsights({
     adAccountId,
@@ -1122,6 +1190,7 @@ async function listAdSetInsights({ adAccountId, token, since, until, graphVersio
     graphVersion,
     level: 'adset',
     fields: ADSET_INSIGHT_FIELDS,
+    timeIncrement,
   });
 }
 

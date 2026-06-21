@@ -2,7 +2,13 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent, UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowSquareOut, ArrowsIn, ArrowsOut, Copy, DotsThreeVertical } from '@phosphor-icons/react';
+import {
+  ArrowSquareOut,
+  ArrowsIn,
+  ArrowsOut,
+  Copy,
+  DotsThreeVertical,
+} from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
 import {
   OGDialog,
@@ -19,6 +25,7 @@ import type {
   ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsObjectiveSummary,
   ProjectMetaAdsCampaignDelta,
+  ProjectMetaAdsEvolutionDelta,
   ProjectMetaAdsBudgetChange,
   ProjectMetaAdsTrendSeries,
   ProjectMetaAdsManualBudgetPayload,
@@ -107,9 +114,14 @@ type SettingsDrawer = 'account' | 'automation' | null;
 type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
 type PeriodFilter = DatePreset | 'custom';
-type EvolutionLevel = 'campaign' | 'adset';
 type EvolutionMetric = 'spend' | 'resultCount' | 'cpa';
 type MetaAdsBiRankLevel = 'campaign' | 'adset' | 'ad';
+type MetaAdsBiControls = {
+  level: MetaAdsBiRankLevel;
+  objective: string;
+  resultType: string;
+  metric: EvolutionMetric;
+};
 type MetaAdsBiRankItem = {
   id: string;
   level: MetaAdsBiRankLevel;
@@ -684,7 +696,7 @@ function getEvolutionSeriesTotal(series: ProjectMetaAdsTrendSeries, metric: Evol
   );
 }
 
-function hasMeaningfulDelta(delta: ProjectMetaAdsCampaignDelta) {
+function hasMeaningfulDelta(delta: ProjectMetaAdsEvolutionDelta) {
   return [
     delta.spendDelta,
     delta.resultDelta,
@@ -695,6 +707,25 @@ function hasMeaningfulDelta(delta: ProjectMetaAdsCampaignDelta) {
     const numericValue = Number(value ?? 0);
     return Number.isFinite(numericValue) && Math.abs(numericValue) > 0.005;
   });
+}
+
+function matchesBiSeriesFilters(
+  series: ProjectMetaAdsTrendSeries,
+  objectiveFilter: string,
+  resultTypeFilter: string,
+) {
+  return (
+    (objectiveFilter === 'all' || !series.objective || series.objective === objectiveFilter) &&
+    (resultTypeFilter === 'all' || !series.resultType || series.resultType === resultTypeFilter)
+  );
+}
+
+function getDeltaEntityId(delta: ProjectMetaAdsEvolutionDelta) {
+  return delta.entityId || delta.campaignId || '';
+}
+
+function getDeltaEntityName(delta: ProjectMetaAdsEvolutionDelta) {
+  return delta.entityName || delta.campaignName;
 }
 
 function cleanDashboardName(value: string | undefined, fallback: string) {
@@ -1604,10 +1635,12 @@ export default function ProjectMetaAdsPanel({
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [tableView, setTableView] = useState<TableView>('summary');
-  const [biObjectiveFilter, setBiObjectiveFilter] = useState('all');
-  const [biResultTypeFilter, setBiResultTypeFilter] = useState('all');
-  const [evolutionLevel, setEvolutionLevel] = useState<EvolutionLevel>('campaign');
-  const [evolutionMetric, setEvolutionMetric] = useState<EvolutionMetric>('spend');
+  const [biControls, setBiControls] = useState<MetaAdsBiControls>({
+    level: 'campaign',
+    objective: 'all',
+    resultType: 'all',
+    metric: 'spend',
+  });
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('last_7d');
   const [customSince, setCustomSince] = useState(() => getDateInputDaysAgo(6));
   const [customUntil, setCustomUntil] = useState(() => toDateInputValue(new Date()));
@@ -1756,7 +1789,6 @@ export default function ProjectMetaAdsPanel({
     (sum, point) => sum + Number(point.changeCount ?? 0),
     0,
   );
-  const meaningfulDeltas = campaignDeltas.filter(hasMeaningfulDelta);
   const chartWidth = 480;
   const chartHeight = 160;
   const chartPadding = 18;
@@ -1779,11 +1811,15 @@ export default function ProjectMetaAdsPanel({
         )} ${chartBottom} L ${spendChartPoints[0].x.toFixed(2)} ${chartBottom} Z`
       : '';
   const evolutionSeries = (trend?.series ?? [])
-    .filter((series) => series.level === evolutionLevel)
+    .filter(
+      (series) =>
+        series.level === biControls.level &&
+        matchesBiSeriesFilters(series, biControls.objective, biControls.resultType),
+    )
     .map((series) => ({
       ...series,
       points: [...series.points].sort((left, right) => left.date.localeCompare(right.date)),
-      total: getEvolutionSeriesTotal(series, evolutionMetric),
+      total: getEvolutionSeriesTotal(series, biControls.metric),
     }))
     .filter((series) => Number.isFinite(series.total) && Math.abs(series.total) > 0)
     .sort((left, right) => Number(right.total) - Number(left.total))
@@ -1793,7 +1829,7 @@ export default function ProjectMetaAdsPanel({
   ).sort((left, right) => left.localeCompare(right));
   const maxEvolutionValue = Math.max(
     ...evolutionSeries.flatMap((series) =>
-      series.points.map((point) => Number(getEvolutionMetricValue(point, evolutionMetric) ?? 0)),
+      series.points.map((point) => Number(getEvolutionMetricValue(point, biControls.metric) ?? 0)),
     ),
     0,
   );
@@ -1803,7 +1839,7 @@ export default function ProjectMetaAdsPanel({
     const points = evolutionDates.map((date, index) => {
       const rawPoint = series.points.find((point) => point.date === date);
       const value = Number(
-        getEvolutionMetricValue(rawPoint ?? series.points[0], evolutionMetric) ?? 0,
+        getEvolutionMetricValue(rawPoint ?? series.points[0], biControls.metric) ?? 0,
       );
       const x =
         chartPadding +
@@ -1819,6 +1855,17 @@ export default function ProjectMetaAdsPanel({
       path: buildChartPath(points),
     };
   });
+  const evolutionSeriesIds = new Set(evolutionSeries.map((series) => series.entityId));
+  const evolutionDeltas =
+    trend?.entityDeltas && trend.entityDeltas.length > 0
+      ? trend.entityDeltas
+      : (campaignDeltas as ProjectMetaAdsEvolutionDelta[]);
+  const meaningfulDeltas = evolutionDeltas
+    .filter((delta) => (delta.level ?? 'campaign') === biControls.level)
+    .filter(
+      (delta) => evolutionSeriesIds.size === 0 || evolutionSeriesIds.has(getDeltaEntityId(delta)),
+    )
+    .filter(hasMeaningfulDelta);
   const bestEvolution = [...meaningfulDeltas]
     .sort((left, right) => {
       const resultDiff = Number(right.resultDelta ?? 0) - Number(left.resultDelta ?? 0);
@@ -1831,9 +1878,10 @@ export default function ProjectMetaAdsPanel({
   const evolutionAlerts = meaningfulDeltas
     .filter(
       (delta) =>
-        Number(delta.cpaDelta ?? 0) > 0 ||
-        Number(delta.frequencyDelta ?? 0) > 0 ||
-        Number(delta.latestChange?.deltaDailyBudget ?? 0) !== 0,
+        biControls.level !== 'ad' &&
+        (Number(delta.cpaDelta ?? 0) > 0 ||
+          Number(delta.frequencyDelta ?? 0) > 0 ||
+          Number(delta.latestChange?.deltaDailyBudget ?? 0) !== 0),
     )
     .slice(0, 4);
   const hasEvolutionSection = Boolean(statusQuery.data?.trend);
@@ -1884,10 +1932,28 @@ export default function ProjectMetaAdsPanel({
   const biMinSpend = Number(settings.rules.minSpend || defaultRules.minSpend);
   const biRankings = buildMetaAdsBiRankings(
     campaigns,
-    biObjectiveFilter,
-    biResultTypeFilter,
+    biControls.objective,
+    biControls.resultType,
     Number.isFinite(biMinSpend) && biMinSpend > 0 ? biMinSpend : defaultRules.minSpend,
   );
+  const selectedBiRankingItems =
+    biControls.level === 'campaign'
+      ? biRankings.campaigns
+      : biControls.level === 'adset'
+        ? biRankings.adSets
+        : biRankings.ads;
+  const selectedBiRankingTitleKey: TranslationKeys =
+    biControls.level === 'campaign'
+      ? 'com_ui_project_meta_ads_bi_top_campaigns'
+      : biControls.level === 'adset'
+        ? 'com_ui_project_meta_ads_bi_top_adsets'
+        : 'com_ui_project_meta_ads_bi_top_ads';
+  const selectedBiRankingTestId =
+    biControls.level === 'campaign'
+      ? 'meta-ads-bi-campaigns'
+      : biControls.level === 'adset'
+        ? 'meta-ads-bi-adsets'
+        : 'meta-ads-bi-ads';
   const adRankingEmptyMessageKey: TranslationKeys =
     statusQuery.data?.adDiagnostics?.adInsightsFetched === 0
       ? 'com_ui_project_meta_ads_bi_no_ad_insights'
@@ -3168,7 +3234,7 @@ export default function ProjectMetaAdsPanel({
                 <DotsThreeVertical className="h-4 w-4" aria-hidden="true" />
               </button>
               {actionMenuKey === menuKey && (
-                <div className="absolute right-0 top-8 z-[1100] min-w-52 border border-white/12 bg-[#151512] p-1 shadow-2xl">
+                <div className="border-white/12 absolute right-0 top-8 z-[1100] min-w-52 border bg-[#151512] p-1 shadow-2xl">
                   <button
                     type="button"
                     onClick={(event) => {
@@ -4609,7 +4675,7 @@ export default function ProjectMetaAdsPanel({
               aria-labelledby="meta-ads-duplicate-title"
               className="fixed inset-0 z-50 flex justify-end bg-black/45"
             >
-              <div className="flex h-full w-full max-w-md flex-col border-l border-white/12 bg-[#12120f] shadow-2xl">
+              <div className="border-white/12 flex h-full w-full max-w-md flex-col border-l bg-[#12120f] shadow-2xl">
                 <div className="border-b border-white/10 px-5 py-4">
                   <div className="text-[10px] uppercase tracking-[0.16em] text-[#8f8677]">
                     {duplicateDraft.entityLevel === 'campaign'
@@ -4639,7 +4705,7 @@ export default function ProjectMetaAdsPanel({
                     <input
                       value={duplicateTargetName}
                       onChange={(event) => setDuplicateTargetName(event.target.value)}
-                      className="mt-2 h-10 w-full border border-white/12 bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
+                      className="border-white/12 mt-2 h-10 w-full border bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -4667,7 +4733,11 @@ export default function ProjectMetaAdsPanel({
                   )}
                 </div>
                 <div className="flex justify-end gap-2 border-t border-white/10 p-4">
-                  <button type="button" onClick={onCloseDuplicateDraft} className={metaAdsGhostButton}>
+                  <button
+                    type="button"
+                    onClick={onCloseDuplicateDraft}
+                    className={metaAdsGhostButton}
+                  >
                     {localize('com_ui_cancel')}
                   </button>
                   <button
@@ -4918,7 +4988,7 @@ export default function ProjectMetaAdsPanel({
                         ? 'sticky left-20 z-40 bg-[#1b1812]'
                         : column.key === 'name'
                           ? 'sticky left-32 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
-                        : '';
+                          : '';
                     return (
                       <th
                         key={column.key}
@@ -5135,13 +5205,35 @@ export default function ProjectMetaAdsPanel({
                 {localize('com_ui_project_meta_ads_bi_rankings_hint')}
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                {localize('com_ui_project_meta_ads_level')}
+                <select
+                  data-testid="meta-ads-bi-level-filter"
+                  value={biControls.level}
+                  onChange={(event) =>
+                    setBiControls((current) => ({
+                      ...current,
+                      level: event.target.value as MetaAdsBiRankLevel,
+                    }))
+                  }
+                  className={metaAdsInput}
+                >
+                  <option value="campaign">
+                    {localize('com_ui_project_meta_ads_level_campaign')}
+                  </option>
+                  <option value="adset">{localize('com_ui_project_meta_ads_level_ad_set')}</option>
+                  <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
+                </select>
+              </label>
               <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
                 {localize('com_ui_project_meta_ads_objective')}
                 <select
                   data-testid="meta-ads-bi-objective-filter"
-                  value={biObjectiveFilter}
-                  onChange={(event) => setBiObjectiveFilter(event.target.value)}
+                  value={biControls.objective}
+                  onChange={(event) =>
+                    setBiControls((current) => ({ ...current, objective: event.target.value }))
+                  }
                   className={metaAdsInput}
                 >
                   <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
@@ -5156,8 +5248,10 @@ export default function ProjectMetaAdsPanel({
                 {localize('com_ui_project_meta_ads_target_result_type')}
                 <select
                   data-testid="meta-ads-bi-result-type-filter"
-                  value={biResultTypeFilter}
-                  onChange={(event) => setBiResultTypeFilter(event.target.value)}
+                  value={biControls.resultType}
+                  onChange={(event) =>
+                    setBiControls((current) => ({ ...current, resultType: event.target.value }))
+                  }
                   className={metaAdsInput}
                 >
                   <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
@@ -5168,26 +5262,34 @@ export default function ProjectMetaAdsPanel({
                   ))}
                 </select>
               </label>
+              <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                {localize('com_ui_project_meta_ads_metric')}
+                <select
+                  data-testid="meta-ads-bi-metric-filter"
+                  value={biControls.metric}
+                  onChange={(event) =>
+                    setBiControls((current) => ({
+                      ...current,
+                      metric: event.target.value as EvolutionMetric,
+                    }))
+                  }
+                  className={metaAdsInput}
+                >
+                  <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
+                  <option value="resultCount">{localize('com_ui_project_meta_ads_results')}</option>
+                  <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
+                </select>
+              </label>
             </div>
           </div>
-          <div className="grid gap-3 xl:grid-cols-3">
-            {renderBiRankingCard(
-              'com_ui_project_meta_ads_bi_top_campaigns',
-              biRankings.campaigns,
-              'meta-ads-bi-campaigns',
-            )}
-            {renderBiRankingCard(
-              'com_ui_project_meta_ads_bi_top_adsets',
-              biRankings.adSets,
-              'meta-ads-bi-adsets',
-            )}
-            {renderBiRankingCard(
-              'com_ui_project_meta_ads_bi_top_ads',
-              biRankings.ads,
-              'meta-ads-bi-ads',
-              adRankingEmptyMessageKey,
-            )}
-          </div>
+          {renderBiRankingCard(
+            selectedBiRankingTitleKey,
+            selectedBiRankingItems,
+            selectedBiRankingTestId,
+            biControls.level === 'ad'
+              ? adRankingEmptyMessageKey
+              : 'com_ui_project_meta_ads_bi_no_rankings',
+          )}
         </div>
 
         {hasEvolutionSection && (
@@ -5195,10 +5297,7 @@ export default function ProjectMetaAdsPanel({
             <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
               {localize('com_ui_project_meta_ads_evolution_analysis')}
             </h4>
-            <div
-              data-testid="meta-ads-evolution-dashboard"
-              className="grid gap-3 xl:grid-cols-[1.4fr_1fr]"
-            >
+            <div data-testid="meta-ads-evolution-dashboard" className="grid gap-3">
               <div className="border border-white/10 bg-[#12120f] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -5209,39 +5308,12 @@ export default function ProjectMetaAdsPanel({
                       {localize('com_ui_project_meta_ads_evolution_comparison_hint')}
                     </p>
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <select
-                      className={metaAdsInput}
-                      value={evolutionLevel}
-                      onChange={(event) => setEvolutionLevel(event.target.value as EvolutionLevel)}
-                    >
-                      <option value="campaign">
-                        {localize('com_ui_project_meta_ads_level_campaign')}
-                      </option>
-                      <option value="adset">
-                        {localize('com_ui_project_meta_ads_level_ad_set')}
-                      </option>
-                    </select>
-                    <select
-                      className={metaAdsInput}
-                      value={evolutionMetric}
-                      onChange={(event) =>
-                        setEvolutionMetric(event.target.value as EvolutionMetric)
-                      }
-                    >
-                      <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
-                      <option value="resultCount">
-                        {localize('com_ui_project_meta_ads_results')}
-                      </option>
-                      <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
-                    </select>
-                  </div>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-4">
                   {[
                     [
                       'com_ui_project_meta_ads_metric' as TranslationKeys,
-                      getEvolutionMetricLabel(evolutionMetric, localize),
+                      getEvolutionMetricLabel(biControls.metric, localize),
                     ],
                     [
                       'com_ui_project_meta_ads_series' as TranslationKeys,
@@ -5249,22 +5321,31 @@ export default function ProjectMetaAdsPanel({
                     ],
                     [
                       'com_ui_project_meta_ads_peak_value' as TranslationKeys,
-                      formatEvolutionMetricValue(maxEvolutionValue, evolutionMetric, currency),
+                      formatEvolutionMetricValue(maxEvolutionValue, biControls.metric, currency),
                     ],
                     [
                       'com_ui_project_meta_ads_budget_changes' as TranslationKeys,
                       formatIntegerMetric(totalBudgetChangeCount),
                     ],
-                  ].map(([labelKey, value]) => (
-                    <div key={labelKey} className="border border-white/10 bg-white/[0.025] p-2">
-                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        {localize(labelKey as TranslationKeys)}
+                  ]
+                    .filter(
+                      ([labelKey]) =>
+                        biControls.level !== 'ad' ||
+                        labelKey !== 'com_ui_project_meta_ads_budget_changes',
+                    )
+                    .map(([labelKey, value]) => (
+                      <div key={labelKey} className="border border-white/10 bg-white/[0.025] p-2">
+                        <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                          {localize(labelKey as TranslationKeys)}
+                        </div>
+                        <div
+                          className="mt-1 truncate font-mono text-xs text-[#f3efe6]"
+                          title={value}
+                        >
+                          {value}
+                        </div>
                       </div>
-                      <div className="mt-1 truncate font-mono text-xs text-[#f3efe6]" title={value}>
-                        {value}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
                 <div className="mt-3 h-48 border-b border-white/10">
                   {canRenderEvolutionSeries ? (
@@ -5313,7 +5394,7 @@ export default function ProjectMetaAdsPanel({
                                   seriesPath.series.entityId,
                                 )} · ${formatTrendDate(point.date)} · ${formatEvolutionMetricValue(
                                   point.value,
-                                  evolutionMetric,
+                                  biControls.metric,
                                   currency,
                                 )}`}
                               </title>
@@ -5373,7 +5454,7 @@ export default function ProjectMetaAdsPanel({
                         <div className="font-mono text-xs text-[#f3efe6]">
                           {formatEvolutionMetricValue(
                             seriesPath.series.total,
-                            evolutionMetric,
+                            biControls.metric,
                             currency,
                           )}
                         </div>
@@ -5383,7 +5464,7 @@ export default function ProjectMetaAdsPanel({
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+              <div className={`grid gap-3 ${biControls.level === 'ad' ? '' : 'md:grid-cols-2'}`}>
                 <div className="border border-white/10 bg-[#12120f]">
                   <div className="border-b border-white/10 px-3 py-2">
                     <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
@@ -5411,9 +5492,10 @@ export default function ProjectMetaAdsPanel({
                       <tbody className="divide-y divide-white/10">
                         {bestEvolution.length > 0 ? (
                           bestEvolution.map((delta) => {
-                            const name = cleanDashboardName(delta.campaignName, delta.campaignId);
+                            const entityId = getDeltaEntityId(delta);
+                            const name = cleanDashboardName(getDeltaEntityName(delta), entityId);
                             return (
-                              <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
+                              <tr key={entityId} className="odd:bg-white/[0.025]">
                                 {renderEvolutionNameCell(name)}
                                 <td
                                   className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
@@ -5452,70 +5534,77 @@ export default function ProjectMetaAdsPanel({
                   </div>
                 </div>
 
-                <div className="border border-white/10 bg-[#12120f]">
-                  <div className="border-b border-white/10 px-3 py-2">
-                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                      {localize('com_ui_project_meta_ads_budget_changes')}
-                    </h5>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[34rem] text-left text-xs">
-                      <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        <tr>
-                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_name')}</th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_budget_delta')}
-                          </th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_frequency_delta')}
-                          </th>
-                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_actor')}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {evolutionAlerts.length > 0 ? (
-                          evolutionAlerts.map((delta) => {
-                            const name = cleanDashboardName(
-                              delta.latestChange?.entityName ?? delta.campaignName,
-                              delta.campaignId,
-                            );
-                            const budgetDelta =
-                              delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
-                            return (
-                              <tr key={delta.campaignId} className="odd:bg-white/[0.025]">
-                                {renderEvolutionNameCell(name)}
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    budgetDelta,
-                                  )}`}
-                                >
-                                  {formatSignedMoney(budgetDelta, currency)}
-                                </td>
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    delta.frequencyDelta,
-                                    true,
-                                  )}`}
-                                >
-                                  {formatSignedMetric(delta.frequencyDelta)}
-                                </td>
-                                <td className="px-3 py-2.5 text-[#a39a8c]">
-                                  {delta.latestChange?.actor ?? '-'}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
+                {biControls.level !== 'ad' && (
+                  <div className="border border-white/10 bg-[#12120f]">
+                    <div className="border-b border-white/10 px-3 py-2">
+                      <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                        {localize('com_ui_project_meta_ads_budget_changes')}
+                      </h5>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[34rem] text-left text-xs">
+                        <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
                           <tr>
-                            <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
-                              {localize('com_ui_project_meta_ads_no_history')}
-                            </td>
+                            <th className="px-3 py-2">
+                              {localize('com_ui_project_meta_ads_name')}
+                            </th>
+                            <th className="px-3 py-2 text-right">
+                              {localize('com_ui_project_meta_ads_budget_delta')}
+                            </th>
+                            <th className="px-3 py-2 text-right">
+                              {localize('com_ui_project_meta_ads_frequency_delta')}
+                            </th>
+                            <th className="px-3 py-2">
+                              {localize('com_ui_project_meta_ads_actor')}
+                            </th>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-white/10">
+                          {evolutionAlerts.length > 0 ? (
+                            evolutionAlerts.map((delta) => {
+                              const entityId = getDeltaEntityId(delta);
+                              const name = cleanDashboardName(
+                                delta.latestChange?.entityName ?? getDeltaEntityName(delta),
+                                entityId,
+                              );
+                              const budgetDelta =
+                                delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
+                              return (
+                                <tr key={entityId} className="odd:bg-white/[0.025]">
+                                  {renderEvolutionNameCell(name)}
+                                  <td
+                                    className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                      budgetDelta,
+                                    )}`}
+                                  >
+                                    {formatSignedMoney(budgetDelta, currency)}
+                                  </td>
+                                  <td
+                                    className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                      delta.frequencyDelta,
+                                      true,
+                                    )}`}
+                                  >
+                                    {formatSignedMetric(delta.frequencyDelta)}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-[#a39a8c]">
+                                    {delta.latestChange?.actor ?? '-'}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                                {localize('com_ui_project_meta_ads_no_history')}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>

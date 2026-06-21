@@ -657,7 +657,9 @@ describe('Meta Ads budget service persistence safety', () => {
     const listCampaigns = jest.fn(async () => campaigns);
     const listAdSets = jest.fn(async () => adsets);
     const listAds = jest.fn(async () => ads);
-    const listAdInsights = jest.fn(async () => adInsights);
+    const listAdInsights = jest.fn(async (options) =>
+      typeof adInsights === 'function' ? adInsights(options) : adInsights,
+    );
     const listCampaignInsights = jest.fn(async () => campaignInsights);
     const listAdSetInsights = jest.fn(async () => insights);
 
@@ -1383,6 +1385,102 @@ describe('Meta Ads budget service persistence safety', () => {
           }),
         ],
       }),
+    );
+  });
+
+  it('returns daily ad trend series from period ad insights', async () => {
+    const { budget, listAdInsights } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Messages', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [{ id: 'adset-1', name: 'Audience', campaign_id: 'campaign-1' }],
+      ads: [{ id: 'ad-1', name: 'Creative A', adset_id: 'adset-1', campaign_id: 'campaign-1' }],
+      insights: [
+        {
+          adset_id: 'adset-1',
+          adset_name: 'Audience',
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages',
+          spend: '30',
+          actions: [{ action_type: 'lead', value: '3' }],
+        },
+      ],
+      adInsights: (options) =>
+        options.timeIncrement
+          ? [
+              {
+                date_start: '2026-06-01',
+                ad_id: 'ad-1',
+                ad_name: 'Creative A',
+                adset_id: 'adset-1',
+                adset_name: 'Audience',
+                campaign_id: 'campaign-1',
+                campaign_name: 'Messages',
+                spend: '10',
+                impressions: '100',
+                clicks: '5',
+                actions: [{ action_type: 'lead', value: '1' }],
+              },
+              {
+                date_start: '2026-06-02',
+                ad_id: 'ad-1',
+                ad_name: 'Creative A',
+                adset_id: 'adset-1',
+                adset_name: 'Audience',
+                campaign_id: 'campaign-1',
+                campaign_name: 'Messages',
+                spend: '20',
+                impressions: '200',
+                clicks: '8',
+                actions: [{ action_type: 'lead', value: '2' }],
+              },
+            ]
+          : [
+              {
+                ad_id: 'ad-1',
+                ad_name: 'Creative A',
+                adset_id: 'adset-1',
+                campaign_id: 'campaign-1',
+                campaign_name: 'Messages',
+                spend: '30',
+                actions: [{ action_type: 'lead', value: '3' }],
+              },
+            ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      since: '2026-06-01',
+      until: '2026-06-02',
+    });
+
+    expect(listAdInsights).toHaveBeenCalledWith(expect.objectContaining({ timeIncrement: 1 }));
+    expect(status.trend.series).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          parentCampaignName: 'Audience',
+          objective: 'OUTCOME_ENGAGEMENT',
+          points: [
+            expect.objectContaining({ date: '2026-06-01', spend: 10, resultCount: 1, cpa: 10 }),
+            expect.objectContaining({ date: '2026-06-02', spend: 20, resultCount: 2, cpa: 10 }),
+          ],
+        }),
+      ]),
+    );
+    expect(status.trend.entityDeltas).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: 'ad',
+          entityId: 'ad-1',
+          spendDelta: 10,
+          resultDelta: 1,
+        }),
+      ]),
     );
   });
 

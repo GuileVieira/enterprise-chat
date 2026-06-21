@@ -587,11 +587,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(campaignRankingsText.indexOf('Traffic C')).toBeLessThan(
       campaignRankingsText.indexOf('Campaign B'),
     );
-    expect(screen.getByTestId('meta-ads-bi-adsets')).toHaveTextContent('Ad Set B');
-    expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Ad B');
     expect(screen.getByTestId('meta-ads-bi-campaigns')).not.toHaveTextContent('Low Spend Noise');
-    expect(screen.getByTestId('meta-ads-bi-adsets')).not.toHaveTextContent('Low Spend Ad Set');
-    expect(screen.getByTestId('meta-ads-bi-ads')).not.toHaveTextContent('Low Spend Ad');
     expect(within(campaignRankings).getAllByTestId('meta-ads-rank-media').length).toBeGreaterThan(
       0,
     );
@@ -607,6 +603,20 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByTestId('meta-ads-bi-campaigns')).not.toHaveTextContent('Traffic C');
     expect(screen.getByTestId('meta-ads-bi-campaigns')).toHaveTextContent('Campaign B');
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
+      target: { value: 'adset' },
+    });
+
+    expect(screen.getByTestId('meta-ads-bi-adsets')).toHaveTextContent('Ad Set B');
+    expect(screen.getByTestId('meta-ads-bi-adsets')).not.toHaveTextContent('Low Spend Ad Set');
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
+      target: { value: 'ad' },
+    });
+
+    expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Ad B');
+    expect(screen.getByTestId('meta-ads-bi-ads')).not.toHaveTextContent('Low Spend Ad');
   });
 
   it('ranks ads using result type breakdown when the selected result is not the primary metric', () => {
@@ -675,6 +685,9 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.change(screen.getByTestId('meta-ads-bi-result-type-filter'), {
       target: { value: 'onsite_conversion.messaging_conversation_started_7d' },
     });
+    fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
+      target: { value: 'ad' },
+    });
 
     expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Message Creative');
   });
@@ -713,6 +726,10 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
+      target: { value: 'ad' },
+    });
 
     expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent(
       'com_ui_project_meta_ads_bi_no_ad_insights',
@@ -1123,8 +1140,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    expect(screen.getByText('com_ui_project_meta_ads_level_campaign')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_level_ad_set')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_level_ad_set').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_level_ad').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Visit schedule creative').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Paused creative').length).toBeGreaterThan(0);
@@ -1159,12 +1176,16 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_actions')[0]);
     expect(screen.getByText('com_ui_project_meta_ads_duplicate_campaign')).toBeInTheDocument();
     fireEvent.click(document.body);
-    expect(screen.queryByText('com_ui_project_meta_ads_duplicate_campaign')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_duplicate_campaign'),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_actions')[0]);
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_campaign'));
     expect(screen.getByRole('dialog')).toHaveTextContent('com_ui_project_meta_ads_duplicate_title');
     expect(screen.getByDisplayValue('ABO Leads - cópia')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_duplicate_active_warning')).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_duplicate_active_warning'),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_duplicate_confirm'));
     expect(mockMutateDuplicate).toHaveBeenCalledWith(
       {
@@ -1939,6 +1960,68 @@ describe('ProjectMetaAdsPanel', () => {
             },
           ],
         },
+        {
+          level: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          parentCampaignName: 'Topo',
+          objective: 'OUTCOME_ENGAGEMENT',
+          resultType: 'lead',
+          points: [
+            {
+              date: '2026-06-01',
+              campaignId: 'campaign-1',
+              campaignName: 'Messages Floripa',
+              spend: 10,
+              resultCount: 1,
+              cpa: 10,
+            },
+            {
+              date: '2026-06-02',
+              campaignId: 'campaign-1',
+              campaignName: 'Messages Floripa',
+              spend: 20,
+              resultCount: 2,
+              cpa: 10,
+            },
+          ],
+        },
+      ],
+      entityDeltas: [
+        {
+          level: 'campaign',
+          entityId: 'campaign-1',
+          entityName: 'Messages Floripa',
+          firstDate: '2026-06-01',
+          lastDate: '2026-06-02',
+          spendDelta: 170,
+          resultDelta: 7,
+          cpaDelta: -0.45,
+          budgetDelta: 50,
+          frequencyDelta: 2.5,
+          latestChange: {
+            entityId: 'adset-1',
+            entityName: 'Topo',
+            previousDailyBudget: 50,
+            newDailyBudget: 60,
+            deltaDailyBudget: 10,
+            actor: 'cron',
+            createdAt: '2026-06-02T09:00:00.000Z',
+          },
+        },
+        {
+          level: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          parentCampaignName: 'Topo',
+          firstDate: '2026-06-01',
+          lastDate: '2026-06-02',
+          spendDelta: 10,
+          resultDelta: 1,
+          cpaDelta: 0,
+          budgetDelta: 0,
+          frequencyDelta: 0,
+        },
       ],
       campaignDeltas: [
         {
@@ -1989,9 +2072,9 @@ describe('ProjectMetaAdsPanel', () => {
         node.getAttribute('data-tooltip'),
       ),
     ).toEqual(expect.arrayContaining(['Messages Floripa', 'Topo']));
-    expect(
-      dashboard.querySelectorAll('[data-tooltip="Messages Floripa"]').length,
-    ).toBeGreaterThan(1);
+    expect(dashboard.querySelectorAll('[data-tooltip="Messages Floripa"]').length).toBeGreaterThan(
+      1,
+    );
     expect(dashboard.querySelector('div[title="Messages Floripa"]')).not.toBeInTheDocument();
     expect(dashboard.querySelector('td[title="Messages Floripa"]')).not.toBeInTheDocument();
     expect(dashboard.querySelector('td[title="Topo"]')).not.toBeInTheDocument();
@@ -1999,6 +2082,13 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('+7.00')).toBeInTheDocument();
     expect(screen.getByText('-R$ 0,45')).toBeInTheDocument();
     expect(screen.getByText('+R$ 10,00')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
+      target: { value: 'ad' },
+    });
+
+    expect(dashboard).toHaveTextContent('Creative A');
+    expect(within(dashboard).queryByText('com_ui_project_meta_ads_budget_changes')).toBeNull();
   });
 
   it('shows a clean empty dashboard when trend has one point and zero deltas', () => {

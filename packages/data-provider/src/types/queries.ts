@@ -234,6 +234,10 @@ export type ProjectMetaAdsTrendPoint = {
   date: string;
   campaignId: string;
   campaignName?: string;
+  adSetId?: string;
+  adSetName?: string;
+  adId?: string;
+  adName?: string;
   spend: number;
   resultCount: number;
   cpa?: number | null;
@@ -245,15 +249,21 @@ export type ProjectMetaAdsTrendPoint = {
 };
 
 export type ProjectMetaAdsTrendSeries = {
-  level: 'campaign' | 'adset';
+  level: 'campaign' | 'adset' | 'ad';
   entityId: string;
   entityName?: string;
   parentCampaignName?: string;
+  objective?: string;
+  resultType?: string;
   points: ProjectMetaAdsTrendPoint[];
 };
 
-export type ProjectMetaAdsCampaignDelta = {
-  campaignId: string;
+export type ProjectMetaAdsEvolutionDelta = {
+  level?: 'campaign' | 'adset' | 'ad';
+  entityId?: string;
+  entityName?: string;
+  parentCampaignName?: string;
+  campaignId?: string;
   campaignName?: string;
   firstDate: string;
   lastDate: string;
@@ -263,6 +273,11 @@ export type ProjectMetaAdsCampaignDelta = {
   budgetDelta?: number;
   frequencyDelta?: number | null;
   latestChange?: ProjectMetaAdsBudgetChange;
+};
+
+export type ProjectMetaAdsCampaignDelta = ProjectMetaAdsEvolutionDelta & {
+  campaignId: string;
+  campaignName?: string;
 };
 
 export type ProjectMetaAdsChangesByDay = {
@@ -275,6 +290,7 @@ export type ProjectMetaAdsTrend = {
   points: ProjectMetaAdsTrendPoint[];
   series?: ProjectMetaAdsTrendSeries[];
   campaignDeltas: ProjectMetaAdsCampaignDelta[];
+  entityDeltas?: ProjectMetaAdsEvolutionDelta[];
   changesByDay: ProjectMetaAdsChangesByDay[];
 };
 
