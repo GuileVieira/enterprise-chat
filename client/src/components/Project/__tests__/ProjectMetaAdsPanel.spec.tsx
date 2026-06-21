@@ -619,19 +619,19 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByTestId('meta-ads-bi-ads')).not.toHaveTextContent('Low Spend Ad');
   });
 
-  it('ranks ads using result type breakdown when the selected result is not the primary metric', () => {
+  it('lists only primary campaign result types in the BI result filter', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-message',
         campaignName: 'Message Campaign',
         objective: 'OUTCOME_ENGAGEMENT',
         spend: 100,
-        cpa: null,
-        resultCount: 0,
-        resultType: 'UNKNOWN',
+        cpa: 10,
+        resultCount: 10,
+        resultType: 'video_view',
         resultTypeBreakdown: [
           {
-            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+            resultType: 'purchase',
             totalSpend: 100,
             totalResults: 10,
             averageCostPerResult: 10,
@@ -644,12 +644,12 @@ describe('ProjectMetaAdsPanel', () => {
             campaignId: 'campaign-message',
             campaignName: 'Message Campaign',
             spend: 100,
-            cpa: null,
-            resultCount: 0,
-            resultType: 'UNKNOWN',
+            cpa: 10,
+            resultCount: 10,
+            resultType: 'video_view',
             resultTypeBreakdown: [
               {
-                resultType: 'onsite_conversion.messaging_conversation_started_7d',
+                resultType: 'purchase',
                 totalSpend: 100,
                 totalResults: 10,
                 averageCostPerResult: 10,
@@ -662,12 +662,12 @@ describe('ProjectMetaAdsPanel', () => {
                 adSetId: 'adset-message',
                 campaignId: 'campaign-message',
                 spend: 100,
-                cpa: null,
-                resultCount: 0,
-                resultType: 'UNKNOWN',
+                cpa: 10,
+                resultCount: 10,
+                resultType: 'video_view',
                 resultTypeBreakdown: [
                   {
-                    resultType: 'onsite_conversion.messaging_conversation_started_7d',
+                    resultType: 'purchase',
                     totalSpend: 100,
                     totalResults: 10,
                     averageCostPerResult: 10,
@@ -682,8 +682,15 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.change(screen.getByTestId('meta-ads-bi-result-type-filter'), {
-      target: { value: 'onsite_conversion.messaging_conversation_started_7d' },
+    const resultFilter = screen.getByTestId('meta-ads-bi-result-type-filter');
+    const optionValues = Array.from(resultFilter.querySelectorAll('option')).map(
+      (option) => option.value,
+    );
+    expect(optionValues).toContain('video_view');
+    expect(optionValues).not.toContain('purchase');
+
+    fireEvent.change(resultFilter, {
+      target: { value: 'video_view' },
     });
     fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
       target: { value: 'ad' },

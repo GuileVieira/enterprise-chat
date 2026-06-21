@@ -983,22 +983,13 @@ function buildMetaAdsBiRankings(
 function collectBiResultTypes(campaigns: ProjectMetaAdsCampaignSummary[]) {
   const resultTypes = new Set<string>();
   for (const campaign of campaigns) {
-    resultTypes.add(campaign.resultType || 'UNKNOWN');
-    for (const resultType of campaign.resultTypeBreakdown ?? []) {
-      resultTypes.add(resultType.resultType || 'UNKNOWN');
-    }
-    for (const adSet of campaign.adSets ?? []) {
-      resultTypes.add(adSet.resultType || campaign.resultType || 'UNKNOWN');
-      for (const resultType of adSet.resultTypeBreakdown ?? []) {
-        resultTypes.add(resultType.resultType || 'UNKNOWN');
-      }
-      for (const ad of adSet.ads ?? []) {
-        resultTypes.add(ad.resultType || adSet.resultType || campaign.resultType || 'UNKNOWN');
-        for (const resultType of ad.resultTypeBreakdown ?? []) {
-          resultTypes.add(resultType.resultType || 'UNKNOWN');
-        }
-      }
-    }
+    const fallbackAdSet = campaign.adSets?.find((adSet) => adSet.resultType);
+    const fallbackAd = campaign.adSets
+      ?.flatMap((adSet) => adSet.ads ?? [])
+      .find((ad) => ad.resultType);
+    resultTypes.add(
+      campaign.resultType || fallbackAdSet?.resultType || fallbackAd?.resultType || 'UNKNOWN',
+    );
   }
   return Array.from(resultTypes);
 }
