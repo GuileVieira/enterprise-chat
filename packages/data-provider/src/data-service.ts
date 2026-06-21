@@ -905,6 +905,15 @@ export const updateProjectMetaAdsBudget = (
   return request.post(endpoints.projectMetaAdsBudget(id), payload);
 };
 
+export const updateProjectMetaAdsEntityStatus = (
+  id: string,
+  entityLevel: q.ProjectMetaAdsEntityStatusLevel,
+  entityId: string,
+  payload: q.ProjectMetaAdsEntityStatusPayload,
+): Promise<q.ProjectMetaAdsEntityStatusResponse> => {
+  return request.post(endpoints.projectMetaAdsEntityStatus(id, entityLevel, entityId), payload);
+};
+
 export const applyProjectMetaAdsRecommendation = (
   id: string,
   recommendationId: string,

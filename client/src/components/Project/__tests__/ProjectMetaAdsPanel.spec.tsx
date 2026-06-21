@@ -12,6 +12,7 @@ const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
 const mockMutateBudget = jest.fn();
+const mockMutateEntityStatus = jest.fn();
 const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
@@ -85,6 +86,10 @@ jest.mock('~/data-provider', () => ({
   }),
   useUpdateProjectMetaAdsBudgetMutation: () => ({
     mutate: mockMutateBudget,
+    isLoading: false,
+  }),
+  useUpdateProjectMetaAdsEntityStatusMutation: () => ({
+    mutate: mockMutateEntityStatus,
     isLoading: false,
   }),
 }));
@@ -1054,6 +1059,7 @@ describe('ProjectMetaAdsPanel', () => {
         dailyBudget: 70,
         editableBudgetLevel: 'adset',
         budgetMode: 'ABO',
+        status: 'ACTIVE',
         adSets: [
           {
             entityId: 'adset-ads',
@@ -1062,6 +1068,7 @@ describe('ProjectMetaAdsPanel', () => {
             campaignName: 'ABO Leads',
             dailyBudget: 70,
             spend: 160,
+            status: 'PAUSED',
             ads: [
               {
                 adId: 'ad-1',
@@ -1086,6 +1093,22 @@ describe('ProjectMetaAdsPanel', () => {
                 ctr: 4,
                 frequency: 2.1,
                 currency: 'BRL',
+                status: 'ACTIVE',
+              },
+              {
+                adId: 'ad-2',
+                adName: 'Paused creative',
+                adSetId: 'adset-ads',
+                campaignId: 'campaign-ads',
+                spend: 24,
+                cpa: 8,
+                resultCount: 3,
+                impressions: 900,
+                clicks: 30,
+                ctr: 3.33,
+                frequency: 1.8,
+                currency: 'BRL',
+                status: 'PAUSED',
               },
             ],
           },
@@ -1097,16 +1120,76 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_level_campaign')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_level_ad_set')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_level_ad')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_level_ad').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Visit schedule creative').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Paused creative').length).toBeGreaterThan(0);
+    const campaignSwitch = screen.getAllByRole('switch', {
+      name: 'com_ui_project_meta_ads_deactivate_ad',
+    })[0];
+    const adsetSwitch = screen.getAllByRole('switch', {
+      name: 'com_ui_project_meta_ads_activate_ad',
+    })[0];
+    const deactivateSwitch = within(screen.getByTestId('meta-ads-ad-card-ad-1')).getByRole(
+      'switch',
+      {
+        name: 'com_ui_project_meta_ads_deactivate_ad',
+      },
+    );
+    const activateSwitch = within(screen.getByTestId('meta-ads-ad-card-ad-2')).getByRole('switch', {
+      name: 'com_ui_project_meta_ads_activate_ad',
+    });
+    expect(campaignSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(adsetSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(deactivateSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(activateSwitch).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByText('Book a private visit')).toBeInTheDocument();
     expect(screen.getByAltText('Visit schedule creative')).toHaveAttribute(
       'src',
       'https://example.com/thumb.jpg',
     );
 
+    mockMutateEntityStatus.mockImplementation((_payload, options?: { onSuccess?: () => void }) =>
+      options?.onSuccess?.(),
+    );
+    fireEvent.click(campaignSwitch);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_deactivate_ad'));
+    expect(mockMutateEntityStatus).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        entityLevel: 'campaign',
+        entityId: 'campaign-ads',
+        payload: {
+          entityName: 'ABO Leads',
+          status: 'PAUSED',
+        },
+      },
+      expect.any(Object),
+    );
+
+    fireEvent.click(deactivateSwitch);
+    expect(screen.getByText('com_ui_project_meta_ads_confirm_ad_status_title')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_deactivate_ad'));
+    expect(mockMutateEntityStatus).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        entityLevel: 'ad',
+        entityId: 'ad-1',
+        payload: {
+          entityName: 'Visit schedule creative',
+          status: 'PAUSED',
+        },
+      },
+      expect.any(Object),
+    );
+    expect(mockRefetchStatus).toHaveBeenCalled();
+
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
-    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_open_meta_ads'));
+    fireEvent.click(
+      within(screen.getByTestId('meta-ads-ad-card-ad-1')).getByLabelText(
+        'com_ui_project_meta_ads_open_meta_ads',
+      ),
+    );
     expect(openSpy).not.toHaveBeenCalled();
     let previewDialog = screen.getByRole('dialog');
     expect(previewDialog).toHaveTextContent('Visit schedule creative');

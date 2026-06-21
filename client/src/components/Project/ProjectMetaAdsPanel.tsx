@@ -23,12 +23,15 @@ import type {
   ProjectMetaAdsTrendSeries,
   ProjectMetaAdsManualBudgetPayload,
   ProjectMetaAdsRecommendation,
+  ProjectMetaAdsEntityStatusLevel,
+  ProjectMetaAdsEntityStatusPayload,
 } from 'librechat-data-provider';
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
   useProjectMetaAdsQuery,
   useRunProjectMetaAdsMutation,
+  useUpdateProjectMetaAdsEntityStatusMutation,
   useUpdateProjectMetaAdsBudgetMutation,
   useUpdateProjectMetaAdsMutation,
   useUpdateProjectMetaAdsTenantTokenMutation,
@@ -78,6 +81,13 @@ type RuleGroupDraft = {
 type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
   currentBudget?: number;
 };
+type EntityStatusConfirmation = {
+  entityLevel: ProjectMetaAdsEntityStatusLevel;
+  entityId: string;
+  entityName?: string;
+  currentStatus: string;
+  nextStatus: ProjectMetaAdsEntityStatusPayload['status'];
+};
 type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
 type RequestError = {
   message?: unknown;
@@ -122,6 +132,7 @@ type SummaryResultTypeOption = {
 };
 type TableColumnKey =
   | 'level'
+  | 'adStatus'
   | 'name'
   | 'budget'
   | 'objective'
@@ -183,6 +194,11 @@ const tableColumnMap: Record<TableColumnKey, TableColumn> = {
     key: 'level',
     labelKey: 'com_ui_project_meta_ads_delivery',
     widthClass: 'w-28',
+  },
+  adStatus: {
+    key: 'adStatus',
+    labelKey: 'com_ui_project_meta_ads_ad_status',
+    widthClass: 'w-12',
   },
   name: {
     key: 'name',
@@ -284,6 +300,7 @@ const tableColumnMap: Record<TableColumnKey, TableColumn> = {
 const tableViewColumns: Record<TableView, TableColumnKey[]> = {
   summary: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'objective',
@@ -301,6 +318,7 @@ const tableViewColumns: Record<TableView, TableColumnKey[]> = {
   ],
   performance: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'objective',
@@ -316,6 +334,7 @@ const tableViewColumns: Record<TableView, TableColumnKey[]> = {
   ],
   creative: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'spend',
@@ -326,12 +345,13 @@ const tableViewColumns: Record<TableView, TableColumnKey[]> = {
     'clicks',
     'actions',
   ],
-  rules: ['level', 'name', 'budget', 'rule', 'recommendation', 'actions'],
+  rules: ['level', 'adStatus', 'name', 'budget', 'rule', 'recommendation', 'actions'],
 };
 
 const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
   summary: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'objective',
@@ -348,6 +368,7 @@ const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
   ],
   performance: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'objective',
@@ -362,6 +383,7 @@ const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
   ],
   creative: [
     'level',
+    'adStatus',
     'name',
     'budget',
     'roas',
@@ -376,10 +398,10 @@ const ecommerceTableViewColumns: Record<TableView, TableColumnKey[]> = {
 };
 
 const tableViewMinWidth: Record<TableView, string> = {
-  summary: 'min-w-[1900px]',
-  performance: 'min-w-[1540px]',
-  creative: 'min-w-[1160px]',
-  rules: 'min-w-[1060px]',
+  summary: 'min-w-[1948px]',
+  performance: 'min-w-[1588px]',
+  creative: 'min-w-[1208px]',
+  rules: 'min-w-[1108px]',
 };
 
 const defaultRules: MetaAdsRulesState = {
@@ -1172,7 +1194,7 @@ function buildObjectiveSummaries(
 
     summary.campaignCount += 1;
     summary.totalSpend += Number.isFinite(spend) ? spend : 0;
-    summary.totalResults += Number.isFinite(results) ? results : 0;
+    summary.totalResults = (summary.totalResults ?? 0) + (Number.isFinite(results) ? results : 0);
     summary.impressions += Number.isFinite(impressions) ? impressions : 0;
     summary.clicks += Number.isFinite(clicks) ? clicks : 0;
     addFrequencySample(summary, campaign.frequency, impressions);
@@ -1563,6 +1585,8 @@ export default function ProjectMetaAdsPanel({
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
+  const [entityStatusConfirmation, setEntityStatusConfirmation] =
+    useState<EntityStatusConfirmation | null>(null);
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -1596,6 +1620,7 @@ export default function ProjectMetaAdsPanel({
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();
+  const updateEntityStatus = useUpdateProjectMetaAdsEntityStatusMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
@@ -1612,6 +1637,7 @@ export default function ProjectMetaAdsPanel({
     setTenantAccessToken('');
     setShowTenantAccessToken(false);
     setSelectedAdPreview(null);
+    setEntityStatusConfirmation(null);
   }, [project]);
 
   useEffect(() => {
@@ -2014,7 +2040,7 @@ export default function ProjectMetaAdsPanel({
     if (!settingsDraft) {
       return;
     }
-    const nextSettings = {
+    const nextSettings: MetaAdsSettingsState = {
       ...settingsDraft,
       tokenSecretName: '',
       credentialMode: 'tenant_default',
@@ -2114,6 +2140,62 @@ export default function ProjectMetaAdsPanel({
           const message = getRequestErrorMessage(
             error,
             localize('com_ui_project_meta_ads_budget_failed'),
+          );
+          showToast({ message, status: 'error' });
+        },
+      },
+    );
+  };
+
+  const onOpenEntityStatusConfirmation = (
+    event: MouseEvent<HTMLButtonElement>,
+    entity: {
+      entityLevel: ProjectMetaAdsEntityStatusLevel;
+      entityId: string;
+      entityName?: string;
+      status?: string;
+    },
+  ) => {
+    event.stopPropagation();
+    const currentStatus =
+      typeof entity.status === 'string' ? entity.status.trim().toUpperCase() : '';
+    const nextStatus = currentStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
+    setEntityStatusConfirmation({
+      entityLevel: entity.entityLevel,
+      entityId: entity.entityId,
+      entityName: entity.entityName,
+      currentStatus,
+      nextStatus,
+    });
+  };
+
+  const onConfirmEntityStatus = () => {
+    if (!entityStatusConfirmation) {
+      return;
+    }
+    updateEntityStatus.mutate(
+      {
+        projectId: project.projectId,
+        entityLevel: entityStatusConfirmation.entityLevel,
+        entityId: entityStatusConfirmation.entityId,
+        payload: {
+          entityName: entityStatusConfirmation.entityName,
+          status: entityStatusConfirmation.nextStatus,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEntityStatusConfirmation(null);
+          statusQuery.refetch();
+          showToast({
+            message: localize('com_ui_project_meta_ads_ad_status_success'),
+            status: 'success',
+          });
+        },
+        onError: (error) => {
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_project_meta_ads_ad_status_failed'),
           );
           showToast({ message, status: 'error' });
         },
@@ -2827,10 +2909,64 @@ export default function ProjectMetaAdsPanel({
     );
   };
 
+  const renderEntityStatusToggleCell = ({
+    entityLevel,
+    entityId,
+    entityName,
+    status,
+  }: {
+    entityLevel: ProjectMetaAdsEntityStatusLevel;
+    entityId: string;
+    entityName?: string;
+    status?: string;
+  }) => {
+    const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
+    const isActive = normalizedStatus === 'ACTIVE';
+    const canToggle = isActive || normalizedStatus === 'PAUSED';
+    const labelKey: TranslationKeys = isActive
+      ? 'com_ui_project_meta_ads_deactivate_ad'
+      : 'com_ui_project_meta_ads_activate_ad';
+
+    return (
+      <td key="adStatus" className="sticky left-20 z-10 bg-inherit px-2 py-2 align-middle">
+        {canToggle && (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            aria-label={localize(labelKey)}
+            title={localize(labelKey)}
+            disabled={!canEdit || updateEntityStatus.isLoading}
+            onClick={(event) =>
+              onOpenEntityStatusConfirmation(event, {
+                entityLevel,
+                entityId,
+                entityName,
+                status,
+              })
+            }
+            className={`relative inline-flex h-5 w-9 items-center border transition duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300/35 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 ${
+              isActive
+                ? 'border-emerald-300/35 bg-emerald-300/20 hover:border-emerald-200/60 hover:bg-emerald-300/25'
+                : 'border-white/15 bg-white/[0.045] hover:border-rose-200/35 hover:bg-rose-300/10'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`h-3.5 w-3.5 bg-[#f3efe6] shadow-[0_4px_12px_-8px_rgba(0,0,0,0.9)] transition duration-200 ${
+                isActive ? 'translate-x-[18px]' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        )}
+      </td>
+    );
+  };
+
   const renderCampaignNameCell = (campaign: ProjectMetaAdsCampaignSummary) => (
     <td
       key="name"
-      className="sticky left-20 z-10 border-l-2 border-amber-300 bg-inherit px-3 py-3 font-semibold text-[#f3efe6] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.65)] focus-within:z-50 hover:z-50"
+      className="sticky left-32 z-10 border-l-2 border-amber-300 bg-inherit px-3 py-3 font-semibold text-[#f3efe6] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.65)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
         <div className="truncate">
@@ -2845,7 +2981,7 @@ export default function ProjectMetaAdsPanel({
   const renderAdSetNameCell = (adset: ProjectMetaAdsCampaignSummary['adSets'][number]) => (
     <td
       key="name"
-      className="sticky left-20 z-10 border-l-2 border-amber-500/35 bg-inherit px-3 py-3 pl-6 text-[#ddd5c8] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.45)] focus-within:z-50 hover:z-50"
+      className="sticky left-32 z-10 border-l-2 border-amber-500/35 bg-inherit px-3 py-3 pl-6 text-[#ddd5c8] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.45)] focus-within:z-50 hover:z-50"
     >
       <div className="group relative min-w-0">
         <div className="truncate">
@@ -2866,7 +3002,7 @@ export default function ProjectMetaAdsPanel({
     return (
       <td
         key="name"
-        className="sticky left-20 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
+        className="sticky left-32 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
       >
         <div className="group relative flex min-w-0 items-center gap-2">
           <div className="relative h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)]">
@@ -2915,7 +3051,11 @@ export default function ProjectMetaAdsPanel({
           <button
             type="button"
             disabled={!canEdit || applyRecommendation.isLoading}
-            onClick={() => onApply(recommendation)}
+            onClick={() => {
+              if (recommendation) {
+                onApply(recommendation);
+              }
+            }}
             className="h-7 border border-emerald-400/25 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-100 transition duration-200 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {localize('com_ui_project_meta_ads_apply')}
@@ -2932,6 +3072,14 @@ export default function ProjectMetaAdsPanel({
   ) => {
     if (column.key === 'level') {
       return renderLevelCell(column, 'com_ui_project_meta_ads_level_campaign');
+    }
+    if (column.key === 'adStatus') {
+      return renderEntityStatusToggleCell({
+        entityLevel: 'campaign',
+        entityId: campaign.campaignId,
+        entityName: campaign.campaignName,
+        status: campaign.status,
+      });
     }
     if (column.key === 'name') {
       return renderCampaignNameCell(campaign);
@@ -3078,6 +3226,14 @@ export default function ProjectMetaAdsPanel({
     if (column.key === 'level') {
       return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad_set');
     }
+    if (column.key === 'adStatus') {
+      return renderEntityStatusToggleCell({
+        entityLevel: 'adset',
+        entityId: adset.entityId,
+        entityName: adset.entityName,
+        status: adset.status,
+      });
+    }
     if (column.key === 'name') {
       return renderAdSetNameCell(adset);
     }
@@ -3213,6 +3369,14 @@ export default function ProjectMetaAdsPanel({
   const renderAdCell = (column: TableColumn, ad: ProjectMetaAdsAdSummary) => {
     if (column.key === 'level') {
       return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad');
+    }
+    if (column.key === 'adStatus') {
+      return renderEntityStatusToggleCell({
+        entityLevel: 'ad',
+        entityId: ad.adId,
+        entityName: ad.adName ?? ad.title,
+        status: ad.status,
+      });
     }
     if (column.key === 'name') {
       return renderAdNameCell(ad);
@@ -3972,7 +4136,7 @@ export default function ProjectMetaAdsPanel({
                 const content = (
                   <>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
-                      {localize(labelKey)}
+                      {localize(labelKey as TranslationKeys)}
                     </div>
                     {isInitialStatusLoading ? (
                       <div
@@ -4265,6 +4429,41 @@ export default function ProjectMetaAdsPanel({
             </div>
           )}
 
+          {entityStatusConfirmation && (
+            <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <div className="font-semibold">
+                {localize('com_ui_project_meta_ads_confirm_ad_status_title')}
+              </div>
+              <div className="mt-1">
+                {entityStatusConfirmation.entityName ?? entityStatusConfirmation.entityId}:{' '}
+                {entityStatusConfirmation.currentStatus || '-'}
+                {' -> '}
+                {entityStatusConfirmation.nextStatus}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEntityStatusConfirmation(null)}
+                  className="h-8 border border-amber-300 px-3 text-xs font-medium"
+                >
+                  {localize('com_ui_cancel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={updateEntityStatus.isLoading}
+                  onClick={onConfirmEntityStatus}
+                  className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {localize(
+                    entityStatusConfirmation.nextStatus === 'ACTIVE'
+                      ? 'com_ui_project_meta_ads_confirm_activate_ad'
+                      : 'com_ui_project_meta_ads_confirm_deactivate_ad',
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
           {ruleGroupDraft && (
             <div
               role="dialog"
@@ -4496,15 +4695,17 @@ export default function ProjectMetaAdsPanel({
                       column.label ?? (column.labelKey ? localize(column.labelKey) : '');
                     const alignClass = column.align === 'right' ? 'text-right' : '';
                     const stickyClass =
-                      column.key === 'name'
-                        ? 'sticky left-20 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
+                      column.key === 'adStatus'
+                        ? 'sticky left-20 z-40 bg-[#1b1812]'
+                        : column.key === 'name'
+                          ? 'sticky left-32 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
                         : '';
                     return (
                       <th
                         key={column.key}
                         className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-white/10 px-3 py-3`}
                       >
-                        {column.key === 'actions' ? (
+                        {column.key === 'actions' || column.key === 'adStatus' ? (
                           <span className="sr-only">{label}</span>
                         ) : column.sortableKey ? (
                           renderSortableHeader({
@@ -4838,7 +5039,7 @@ export default function ProjectMetaAdsPanel({
                   ].map(([labelKey, value]) => (
                     <div key={labelKey} className="border border-white/10 bg-white/[0.025] p-2">
                       <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        {localize(labelKey)}
+                        {localize(labelKey as TranslationKeys)}
                       </div>
                       <div className="mt-1 truncate font-mono text-xs text-[#f3efe6]" title={value}>
                         {value}
@@ -5246,7 +5447,7 @@ export default function ProjectMetaAdsPanel({
                   ].map(([labelKey, value]) => (
                     <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
                       <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        {localize(labelKey)}
+                        {localize(labelKey as TranslationKeys)}
                       </div>
                       <div className="mt-2 font-mono text-base font-semibold text-[#f3efe6]">
                         {value}
@@ -5284,7 +5485,7 @@ export default function ProjectMetaAdsPanel({
                         className="flex items-start justify-between gap-3 border-b border-white/10 py-2"
                       >
                         <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-[#81796b]">
-                          {localize(labelKey)}
+                          {localize(labelKey as TranslationKeys)}
                         </span>
                         <span className="min-w-0 text-right font-medium text-[#f3efe6]">
                           {value}
@@ -5347,7 +5548,7 @@ export default function ProjectMetaAdsPanel({
                 ].map(([labelKey, value]) => (
                   <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
                     <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                      {localize(labelKey)}
+                      {localize(labelKey as TranslationKeys)}
                     </div>
                     <div className="mt-2 font-mono text-lg font-semibold text-[#f3efe6]">
                       {value}
@@ -5383,7 +5584,7 @@ export default function ProjectMetaAdsPanel({
                     className="flex items-center justify-between gap-3 border-b border-white/10 py-2"
                   >
                     <span className="text-xs uppercase tracking-[0.12em] text-[#81796b]">
-                      {localize(labelKey)}
+                      {localize(labelKey as TranslationKeys)}
                     </span>
                     <span className="text-right font-medium text-[#f3efe6]">{value}</span>
                   </div>

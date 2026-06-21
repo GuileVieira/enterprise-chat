@@ -290,6 +290,19 @@ export type ProjectMetaAdsManualBudgetResponse = {
   change: ProjectMetaAdsBudgetChange;
 };
 
+export type ProjectMetaAdsEntityStatusLevel = 'campaign' | 'adset' | 'ad';
+
+export type ProjectMetaAdsEntityStatusPayload = {
+  entityName?: string;
+  status: 'ACTIVE' | 'PAUSED';
+};
+
+export type ProjectMetaAdsEntityStatusResponse = {
+  entityLevel: ProjectMetaAdsEntityStatusLevel;
+  entityId: string;
+  status: 'ACTIVE' | 'PAUSED';
+};
+
 export type ProjectMetaAdsAdDiagnostics = {
   adsFetched: number;
   adInsightsFetched: number;

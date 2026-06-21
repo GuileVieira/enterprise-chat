@@ -15,6 +15,7 @@ const {
   listAdSetInsights,
   listAdSets,
   metaPost,
+  updateMetaEntityStatus,
 } = require('~/server/services/MetaAds/graph');
 
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
@@ -2675,6 +2676,72 @@ async function applyManualBudgetChange({
   return { change };
 }
 
+async function updateProjectMetaAdsEntityStatus({
+  projectId,
+  tenantId,
+  entityLevel,
+  entityId,
+  entityName,
+  status,
+  actor,
+  actorUserId,
+}) {
+  if (!['ACTIVE', 'PAUSED'].includes(status)) {
+    throw Object.assign(new Error('Invalid Meta Ads status.'), { statusCode: 400 });
+  }
+  if (!['campaign', 'adset', 'ad'].includes(entityLevel)) {
+    throw Object.assign(new Error('Invalid Meta Ads entity level.'), { statusCode: 400 });
+  }
+  const normalizedEntityId = typeof entityId === 'string' ? entityId.trim() : '';
+  if (!normalizedEntityId) {
+    throw Object.assign(new Error('Meta Ads entity id is required.'), { statusCode: 400 });
+  }
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw Object.assign(new Error('Project not found.'), { statusCode: 404 });
+  }
+  const projectTenantId = getProjectTenantId(project, tenantId);
+  if (tenantId && projectTenantId !== tenantId) {
+    throw Object.assign(new Error('Project does not belong to this tenant.'), { statusCode: 403 });
+  }
+
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await updateMetaEntityStatus({
+    entityId: normalizedEntityId,
+    entityLevel,
+    status,
+    token,
+    graphVersion,
+  });
+  logger.info('[MetaAdsBudget] entity status updated', {
+    projectId,
+    tenantId: projectTenantId,
+    entityLevel,
+    entityId: normalizedEntityId,
+    entityName,
+    status,
+    actor,
+    actorUserId,
+  });
+  return { entityLevel, entityId: normalizedEntityId, status };
+}
+
+async function updateProjectMetaAdStatus({ adId, adName, ...options }) {
+  return updateProjectMetaAdsEntityStatus({
+    ...options,
+    entityLevel: 'ad',
+    entityId: adId,
+    entityName: adName,
+  });
+}
+
 async function runCron(options = {}) {
   const Project = mongoose.models.Project;
   if (!Project) {
@@ -2764,5 +2831,7 @@ module.exports = {
   resolveMetaCredentialStatus,
   resolveMetaAccessToken,
   runCron,
+  updateProjectMetaAdStatus,
+  updateProjectMetaAdsEntityStatus,
   validateMetaAdsRules,
 };

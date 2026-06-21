@@ -28,6 +28,7 @@ const {
   listCampaignInsights,
   listAdSetInsights,
   metaGet,
+  updateMetaAdStatus,
 } = require('./graph');
 
 describe('Meta Ads Graph client', () => {
@@ -835,6 +836,29 @@ describe('Meta Ads Graph client', () => {
 
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/campaign-1');
     expect(fetch.mock.calls[0][0]).toContain('fields=daily_budget%2Clifetime_budget');
+  });
+
+  it('updates an ad status through Meta Graph', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true }),
+    });
+
+    await expect(
+      updateMetaAdStatus({
+        adId: 'ad-1',
+        status: 'PAUSED',
+        token: 'token',
+        graphVersion: 'v24.0',
+      }),
+    ).resolves.toEqual({ success: true });
+
+    expect(fetch.mock.calls[0][0]).toContain('/v24.0/ad-1');
+    expect(fetch.mock.calls[0][1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ status: 'PAUSED' }),
+    });
   });
 
   it('fetches ad account currency', async () => {

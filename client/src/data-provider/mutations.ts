@@ -1281,6 +1281,29 @@ export const useUpdateProjectMetaAdsBudgetMutation = (): UseMutationResult<
   );
 };
 
+export const useUpdateProjectMetaAdsEntityStatusMutation = (): UseMutationResult<
+  t.ProjectMetaAdsEntityStatusResponse,
+  unknown,
+  {
+    projectId: string;
+    entityLevel: t.ProjectMetaAdsEntityStatusLevel;
+    entityId: string;
+    payload: t.ProjectMetaAdsEntityStatusPayload;
+  },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entityLevel, entityId, payload }) =>
+      dataService.updateProjectMetaAdsEntityStatus(projectId, entityLevel, entityId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
 export const useApplyProjectMetaAdsRecommendationMutation = (): UseMutationResult<
   t.ProjectMetaAdsApplyResponse,
   unknown,

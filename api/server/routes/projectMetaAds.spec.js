@@ -32,10 +32,12 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
+  updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
 
 const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
+const { updateProjectMetaAdsEntityStatus } = require('~/server/services/MetaAds/budget');
 
 function createApp() {
   const app = express();
@@ -322,5 +324,52 @@ describe('projectMetaAds tenant token route', () => {
       .expect(400);
 
     expect(upsertTenantSecret).not.toHaveBeenCalled();
+  });
+});
+
+describe('projectMetaAds entity status route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    updateProjectMetaAdsEntityStatus.mockImplementation(async ({ entityLevel, entityId, status }) => ({
+      entityLevel,
+      entityId,
+      status,
+    }));
+  });
+
+  it.each([
+    ['campaign', '/projects/p1/meta-ads/campaigns/campaign-1/status', 'campaign-1'],
+    ['adset', '/projects/p1/meta-ads/adsets/adset-1/status', 'adset-1'],
+    ['ad', '/projects/p1/meta-ads/ads/ad-1/status', 'ad-1'],
+  ])('updates a Meta %s status with project edit access', async (entityLevel, path, entityId) => {
+    const response = await request(createApp())
+      .post(path)
+      .send({ entityName: 'Creative A', status: 'PAUSED' })
+      .expect(200);
+
+    expect(updateProjectMetaAdsEntityStatus).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      entityLevel,
+      entityId,
+      entityName: 'Creative A',
+      status: 'PAUSED',
+      actor: 'user',
+      actorUserId: 'user-1',
+    });
+    expect(response.body).toEqual({ entityLevel, entityId, status: 'PAUSED' });
+  });
+
+  it('returns service validation errors for invalid Meta status payloads', async () => {
+    updateProjectMetaAdsEntityStatus.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid Meta Ads status.'), { statusCode: 400 }),
+    );
+
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/ads/ad-1/status')
+      .send({ status: 'ARCHIVED' })
+      .expect(400);
+
+    expect(response.body).toEqual({ message: 'Invalid Meta Ads status.' });
   });
 });

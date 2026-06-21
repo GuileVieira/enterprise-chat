@@ -749,6 +749,26 @@ async function getEntityDailyBudget({ entityId, token, graphVersion }) {
   };
 }
 
+async function updateMetaEntityStatus({ entityId, entityLevel = 'ad', status, token, graphVersion }) {
+  return metaPost({
+    path: encodeURIComponent(entityId),
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} status update`,
+    body: { status },
+  });
+}
+
+async function updateMetaAdStatus({ adId, status, token, graphVersion }) {
+  return updateMetaEntityStatus({
+    entityId: adId,
+    entityLevel: 'ad',
+    status,
+    token,
+    graphVersion,
+  });
+}
+
 async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
   const payload = await metaGet({
     path: encodeURIComponent(adAccountId),
@@ -1086,5 +1106,7 @@ module.exports = {
   listAdSets,
   metaGet,
   metaPost,
+  updateMetaEntityStatus,
+  updateMetaAdStatus,
   clearMetaGraphReadCacheForTests,
 };

@@ -140,6 +140,14 @@ export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/set
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
 export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
+export const projectMetaAdsEntityStatus = (
+  id: string,
+  entityLevel: 'campaign' | 'adset' | 'ad',
+  entityId: string,
+) => {
+  const path = entityLevel === 'campaign' ? 'campaigns' : entityLevel === 'adset' ? 'adsets' : 'ads';
+  return `${projectMetaAds(id)}/${path}/${encodeURIComponent(entityId)}/status`;
+};
 export const projectMetaAdsApply = (id: string, recommendationId: string) =>
   `${projectMetaAds(id)}/recommendations/${encodeURIComponent(recommendationId)}/apply`;
 

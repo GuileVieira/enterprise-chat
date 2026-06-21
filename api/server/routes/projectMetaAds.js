@@ -13,6 +13,7 @@ const {
   applyManualBudgetChange,
   applyRecommendation,
   getProjectMetaAdsStatus,
+  updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
 
@@ -422,6 +423,37 @@ router.post(
     }
   },
 );
+
+const metaAdsStatusRoutes = [
+  { path: '/campaigns/:entityId/status', entityLevel: 'campaign' },
+  { path: '/adsets/:entityId/status', entityLevel: 'adset' },
+  { path: '/ads/:entityId/status', entityLevel: 'ad' },
+];
+
+for (const route of metaAdsStatusRoutes) {
+  router.post(
+    route.path,
+    canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+    async (req, res) => {
+      try {
+        const result = await updateProjectMetaAdsEntityStatus({
+          projectId: req.params.projectId,
+          tenantId: req.user.tenantId || getTenantId(),
+          entityLevel: route.entityLevel,
+          entityId: req.params.entityId,
+          entityName: req.body.entityName,
+          status: req.body.status,
+          actor: 'user',
+          actorUserId: req.user.id,
+        });
+        return res.json(result);
+      } catch (error) {
+        logger.error('[projectMetaAds] entity status update failed', error);
+        return res.status(error.statusCode ?? 500).json({ message: error.message });
+      }
+    },
+  );
+}
 
 router.post(
   '/recommendations/:recommendationId/apply',
