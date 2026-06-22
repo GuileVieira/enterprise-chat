@@ -29,16 +29,12 @@ import type {
   ProjectMetaAdsAdSetSummary,
   ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsObjectiveSummary,
-  ProjectMetaAdsCampaignDelta,
   ProjectMetaAdsEvolutionDelta,
   ProjectMetaAdsBudgetChange,
   ProjectMetaAdsTrendSeries,
   ProjectMetaAdsRankingItem,
-  ProjectMetaAdsManualBudgetPayload,
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsEntityStatusLevel,
-  ProjectMetaAdsEntityStatusPayload,
-  ProjectMetaAdsDuplicatePayload,
 } from 'librechat-data-provider';
 import {
   useGetStartupConfig,
@@ -56,6 +52,43 @@ import { useAuthContext, useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
+import type {
+  Localize,
+  RuleRow,
+  TableView,
+  RuleRowType,
+  TableColumn,
+  DatePreset,
+  RequestError,
+  BudgetEditor,
+  RuleGroupDraft,
+  PeriodFilter,
+  SettingsDrawer,
+  WorkspaceTab,
+  DuplicateDraft,
+  MetaAdsSettings,
+  TableColumnKey,
+  MetaAdsRuleGroup,
+  BiRankingSort,
+  MetaAdsBiRankItem,
+  EvolutionMetric,
+  MetaAdsRulesState,
+  MetaAdsBiRankings,
+  ResultTypeSummary,
+  MetaAdsBiControls,
+  BudgetConfirmation,
+  MetaAdsRuleOverride,
+  MetaAdsCreativeRules,
+  EvolutionHoverPoint,
+  MetaAdsBiRankLevel,
+  MetaAdsSettingsState,
+  FrequencyAccumulator,
+  BiRankingSortKey,
+  ScheduleIntervalMinutes,
+  SummaryResultTypeOption,
+  EntityStatusConfirmation,
+  CampaignFallbackAccumulator,
+} from './metaAds/types';
 import {
   MetaAdsBadge,
   MetaAdsButton,
@@ -71,168 +104,6 @@ import {
   metaAdsModalTileClassName,
   metaAdsPrimaryButtonClassName,
 } from './metaAds/ui';
-
-type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
-type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
-type MetaAdsSettings = NonNullable<TProject['metaAds']>;
-type MetaAdsRuleGroup = NonNullable<MetaAdsSettings['ruleGroups']>[number];
-type MetaAdsRuleOverride = NonNullable<MetaAdsSettings['ruleOverrides']>[number];
-type MetaAdsRulesState = Required<
-  Pick<
-    MetaAdsRules,
-    | 'targetCpa'
-    | 'minRoas'
-    | 'maxIncreasePct'
-    | 'maxDecreasePct'
-    | 'minDailyBudget'
-    | 'maxDailyBudget'
-    | 'cooldownHours'
-    | 'minSpend'
-  >
-> &
-  Pick<MetaAdsRules, 'targetResultType' | 'primaryMetric' | 'minCtr' | 'maxCpc' | 'maxCpm'>;
-type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules' | 'creativeRules'> & {
-  rules: MetaAdsRulesState;
-  creativeRules: Required<MetaAdsCreativeRules>;
-};
-type BudgetEditor = {
-  entityLevel: ProjectMetaAdsManualBudgetPayload['entityLevel'];
-  entityId: string;
-  entityName?: string;
-  currentBudget?: number;
-};
-type RuleGroupDraft = {
-  id?: string;
-  overrideKey?: string;
-  scope: 'global' | 'group' | 'override';
-  name: string;
-  entityLevel: MetaAdsRuleGroup['entityLevel'];
-  entityIds: string[];
-  entityName?: string;
-  rules: MetaAdsRulesState;
-  creativeRules: Required<MetaAdsCreativeRules>;
-};
-type RuleRowType = 'global' | 'group' | 'campaign_override' | 'adset_override';
-type RuleRow = {
-  key: string;
-  type: RuleRowType;
-  enabled: boolean;
-  name: string;
-  scopeLabel: string;
-  precedenceLabel: string;
-  entityLevel?: MetaAdsRuleGroup['entityLevel'];
-  entityIds: string[];
-  group?: MetaAdsRuleGroup;
-  override?: MetaAdsRuleOverride;
-  rules: MetaAdsRulesState;
-  creativeRules?: Required<MetaAdsCreativeRules>;
-};
-type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
-  currentBudget?: number;
-};
-type EntityStatusConfirmation = {
-  entityLevel: ProjectMetaAdsEntityStatusLevel;
-  entityId: string;
-  entityName?: string;
-  currentStatus: string;
-  nextStatus: ProjectMetaAdsEntityStatusPayload['status'];
-};
-type DuplicateDraft = ProjectMetaAdsDuplicatePayload & {
-  status?: string;
-  budget?: number | null;
-};
-type ScheduleIntervalMinutes = NonNullable<MetaAdsSettings['scheduleIntervalMinutes']>;
-type RequestError = {
-  message?: unknown;
-  response?: {
-    data?: {
-      message?: unknown;
-    };
-  };
-};
-type SettingsDrawer = 'account' | 'automation' | null;
-type WorkspaceTab = 'overview' | 'bi';
-type TableView = 'summary' | 'performance' | 'creative' | 'rules';
-type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
-type PeriodFilter = DatePreset | 'custom';
-type EvolutionMetric = 'spend' | 'resultCount' | 'cpa' | 'ctr' | 'frequency' | 'clicks';
-type MetaAdsBiRankLevel = 'campaign' | 'adset' | 'ad';
-type MetaAdsBiControls = {
-  level: MetaAdsBiRankLevel;
-  objective: string;
-  resultType: string;
-  metric: EvolutionMetric;
-};
-type MetaAdsBiRankItem = {
-  id: string;
-  level: MetaAdsBiRankLevel;
-  name: string;
-  parentName?: string;
-  objective?: string;
-  resultType?: string;
-  resultCount?: number | null;
-  cpa?: number | null;
-  spend?: number | null;
-  ctr?: number | null;
-  resultTypeBreakdown?: ProjectMetaAdsCampaignSummary['resultTypeBreakdown'];
-  thumbnailUrls?: string[];
-};
-type MetaAdsBiRankings = {
-  campaigns: MetaAdsBiRankItem[];
-  adSets: MetaAdsBiRankItem[];
-  ads: MetaAdsBiRankItem[];
-};
-type BiRankingSortKey = 'cpa' | 'spend' | 'resultCount' | 'ctr' | 'frequency';
-type BiRankingSort = {
-  key: BiRankingSortKey;
-  direction: 'asc' | 'desc';
-};
-type EvolutionHoverPoint = {
-  seriesId: string;
-  entityName: string;
-  parentCampaignName?: string;
-  date: string;
-  value: number;
-  x: number;
-  y: number;
-  color: string;
-  point?: ProjectMetaAdsTrendSeries['points'][number];
-};
-type SummaryResultTypeOption = {
-  resultType: string;
-  totalSpend: number;
-  totalResults: number;
-  averageCostPerResult: number | null;
-  spendKeys?: Set<string>;
-};
-type TableColumnKey =
-  | 'level'
-  | 'adStatus'
-  | 'name'
-  | 'budget'
-  | 'objective'
-  | 'budgetMode'
-  | 'frequency'
-  | 'roas'
-  | 'result'
-  | 'cpa'
-  | 'spend'
-  | 'ctr'
-  | 'clicks'
-  | 'video'
-  | 'rule'
-  | 'recommendation'
-  | 'actions';
-type TableColumn = {
-  key: TableColumnKey;
-  labelKey?: TranslationKeys;
-  label?: string;
-  widthClass: string;
-  align?: 'left' | 'right';
-  sortableKey?: string;
-  defaultDirection?: 'asc' | 'desc';
-};
-type Localize = ReturnType<typeof useLocalize>;
 
 const scheduleOptions: Array<{ value: ScheduleIntervalMinutes; labelKey: TranslationKeys }> = [
   { value: 30, labelKey: 'com_ui_project_meta_ads_schedule_30' },
@@ -1161,13 +1032,6 @@ function collectBiResultTypes(campaigns: ProjectMetaAdsCampaignSummary[]) {
   return Array.from(resultTypes);
 }
 
-type FrequencyAccumulator = {
-  frequencyWeightedTotal: number;
-  frequencyWeight: number;
-  frequencyTotal: number;
-  frequencyCount: number;
-};
-
 function addFrequencySample(
   target: FrequencyAccumulator,
   frequency: number | null | undefined,
@@ -1209,8 +1073,6 @@ function createObjectiveSummary(objective: string): ProjectMetaAdsObjectiveSumma
     resultTypes: [],
   };
 }
-
-type ResultTypeSummary = NonNullable<ProjectMetaAdsObjectiveSummary['resultTypes']>[number];
 
 function addResultTypeSummary(
   resultTypeMap: Map<string, ResultTypeSummary>,
@@ -1494,12 +1356,6 @@ function getBudgetChangeDelta(change: ProjectMetaAdsBudgetChange) {
     deltaPercent,
   };
 }
-
-type CampaignFallbackAccumulator = ProjectMetaAdsCampaignSummary &
-  FrequencyAccumulator & {
-    cpaSpendTotal: number;
-    cpaResultTotal: number;
-  };
 
 function addFiniteMetric(
   target: ProjectMetaAdsCampaignSummary,
