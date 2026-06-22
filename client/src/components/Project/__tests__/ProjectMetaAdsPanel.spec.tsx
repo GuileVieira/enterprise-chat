@@ -1035,7 +1035,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('-'),
+      ).getByText('com_ui_project_meta_ads_click_to_choose_result_metric'),
     ).toBeInTheDocument();
     expect(
       within(
@@ -1076,7 +1076,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('-'),
+      ).getByText('com_ui_project_meta_ads_click_to_choose_result_metric'),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_objective_filter'), {

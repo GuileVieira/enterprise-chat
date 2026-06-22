@@ -1089,6 +1089,8 @@
   "com_ui_project_meta_ads_cost_per_result": "Custo por resultado",
   "com_ui_project_meta_ads_choose_result_metric": "Escolher métrica de resultado",
   "com_ui_project_meta_ads_choose_result_metric_hint": "O custo médio usa apenas campanhas e conjuntos com este tipo de resultado.",
+  "com_ui_project_meta_ads_change_result_metric": "Alterar métrica",
+  "com_ui_project_meta_ads_click_to_choose_result_metric": "Clique para escolher o resultado principal",
   "com_ui_project_meta_ads_clear_result_metric": "Limpar seleção",
   "com_ui_project_meta_ads_average_frequency": "Frequência média",
   "com_ui_project_meta_ads_evolution": "Evolução da campanha",

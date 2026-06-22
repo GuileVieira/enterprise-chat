@@ -509,7 +509,7 @@ const resultTypeOptions = [
 ] as const;
 const BI_TOP_LIMIT = 5;
 const EVOLUTION_SERIES_LIMIT = 5;
-const evolutionColors = ['#f3efe6', '#8fd4ff', '#9ce6b4', '#f4c76b', '#f29bb2'] as const;
+const evolutionColors = ['#38bdf8', '#14b8a6', '#8b5cf6', '#f59e0b', '#db2777'] as const;
 
 const primaryMetricOptions = [
   { value: 'cpa', labelKey: 'com_ui_project_meta_ads_primary_metric_cpa' },
@@ -519,22 +519,34 @@ const primaryMetricOptions = [
 ] as const;
 
 const metaAdsSurface =
-  'border border-white/10 bg-[#10110f] text-[#f3efe6] dark:border-white/10 dark:bg-[#10110f]';
-const metaAdsPanel = 'border border-white/10 bg-[#151512] dark:border-white/10 dark:bg-[#151512]';
+  'overflow-hidden rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.12),transparent_34%),linear-gradient(135deg,#f8fbff_0%,#eef5ff_45%,#f7f2ff_100%)] text-slate-950 shadow-[0_24px_80px_-52px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.18),transparent_34%),linear-gradient(135deg,#111827_0%,#172033_48%,#241b3a_100%)] dark:text-slate-50 dark:shadow-[0_30px_100px_-60px_rgba(15,23,42,0.95)]';
+const metaAdsPanel =
+  'rounded-2xl border border-slate-200/80 bg-white/78 shadow-[0_18px_60px_-46px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-[#182238]/78 dark:shadow-[0_18px_70px_-54px_rgba(8,13,28,0.95)]';
 const metaAdsMutedPanel =
-  'border border-white/10 bg-[#1f1d18] dark:border-white/10 dark:bg-[#1f1d18]';
+  'rounded-2xl border border-slate-200/75 bg-slate-50/80 shadow-[0_16px_46px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/[0.045]';
 const metaAdsInput =
-  'h-9 w-full min-w-0 border border-white/10 bg-[#0f0e0b] px-3 text-xs text-[#f3efe6] outline-none transition duration-200 placeholder:text-[#81796b] hover:border-amber-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60';
+  'h-10 w-full min-w-0 rounded-xl border border-slate-200/90 bg-white/90 px-3 text-xs font-medium text-slate-800 outline-none transition duration-200 placeholder:text-slate-400 hover:border-teal-400/60 focus:border-teal-400 focus:ring-4 focus:ring-teal-400/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-teal-300/45 dark:focus:border-teal-300 dark:focus:ring-teal-300/15';
 const metaAdsInputLg =
-  'h-10 w-full min-w-0 border border-white/10 bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition duration-200 placeholder:text-[#81796b] hover:border-amber-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 disabled:cursor-not-allowed disabled:opacity-60';
+  'h-11 w-full min-w-0 rounded-xl border border-slate-200/90 bg-white/90 px-3 text-sm font-medium text-slate-800 outline-none transition duration-200 placeholder:text-slate-400 hover:border-teal-400/60 focus:border-teal-400 focus:ring-4 focus:ring-teal-400/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-teal-300/45 dark:focus:border-teal-300 dark:focus:ring-teal-300/15';
 const metaAdsButton =
-  'h-9 border border-white/10 bg-[#1d1a14] px-3 text-xs font-semibold text-[#f3efe6] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-400/50 hover:bg-[#292318] active:translate-y-0 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50';
+  'h-10 rounded-xl border border-slate-200/90 bg-white/80 px-3 text-xs font-semibold text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.42)] transition duration-200 hover:-translate-y-0.5 hover:border-teal-300/70 hover:bg-white hover:text-slate-950 active:translate-y-px disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-200 dark:hover:border-teal-300/45 dark:hover:bg-white/[0.09] dark:hover:text-white';
 const metaAdsGhostButton =
-  'h-9 border border-white/10 px-3 text-xs font-semibold text-[#bdb5a6] transition duration-200 hover:border-amber-400/40 hover:bg-[#221f18] hover:text-[#f3efe6] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50';
+  'h-10 rounded-xl border border-transparent px-3 text-xs font-semibold text-slate-500 transition duration-200 hover:border-slate-200 hover:bg-white/70 hover:text-slate-900 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/[0.06] dark:hover:text-slate-100';
 const metaAdsPrimaryButton =
-  'h-9 bg-[#f2eadb] px-4 text-xs font-semibold text-[#17130c] shadow-[0_16px_36px_-24px_rgba(242,234,219,0.75)] transition duration-200 hover:-translate-y-0.5 hover:bg-white active:translate-y-0 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60';
+  'h-10 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white shadow-[0_18px_40px_-26px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-px disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:shadow-[0_18px_44px_-30px_rgba(255,255,255,0.6)] dark:hover:bg-teal-50';
 const metaAdsLabel =
-  'min-h-8 text-[11px] font-medium uppercase leading-tight tracking-[0.14em] text-[#948b7d]';
+  'min-h-7 text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-slate-500 dark:text-slate-400';
+const metaAdsStickyCell =
+  'bg-white group-odd:bg-slate-50 shadow-[12px_0_28px_-24px_rgba(15,23,42,0.55)] group-hover:bg-teal-50 dark:bg-[#172033] dark:group-odd:bg-[#1b263b] dark:group-hover:bg-[#183247] dark:shadow-[12px_0_28px_-24px_rgba(0,0,0,0.9)]';
+const metaAdsModalOverlay = 'fixed inset-0 z-[10020] bg-slate-950/55 p-4 dark:bg-black/65';
+const metaAdsModalShell =
+  'overflow-hidden rounded-3xl border border-slate-200/80 bg-white text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]';
+const metaAdsDrawerShell =
+  'flex h-full w-full flex-col border-l border-slate-200/80 bg-white text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]';
+const metaAdsModalHeader =
+  'border-b border-slate-200/75 bg-slate-50 px-5 py-4 text-left dark:border-white/10 dark:bg-[#172033]';
+const metaAdsModalTile =
+  'rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_14px_36px_-32px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[#172033]';
 const accountProfileRules: Record<
   (typeof accountProfileOptions)[number]['value'],
   Partial<MetaAdsRulesState>
@@ -1447,8 +1459,8 @@ function buildBudgetReferences(currentBudget: number | null | undefined, currenc
       accessibleLabel: `${percent > 0 ? '+' : ''}${percent}% ${formatMoney(value, currency).replace(/\u00a0/g, ' ')}`,
       tone:
         percent < 0
-          ? 'border-rose-300/25 bg-rose-500/10 text-rose-100 hover:border-rose-300/50 hover:bg-rose-500/15'
-          : 'border-emerald-300/25 bg-emerald-500/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-500/15',
+          ? 'border-rose-200 bg-rose-50 text-rose-900 hover:border-rose-300 hover:bg-rose-100 dark:border-rose-300/30 dark:bg-[#2b1a2a] dark:text-rose-100 dark:hover:border-rose-300/55 dark:hover:bg-[#352031]'
+          : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-300/30 dark:bg-[#132b2a] dark:text-emerald-100 dark:hover:border-emerald-300/55 dark:hover:bg-[#173633]',
     };
   });
 }
@@ -3260,12 +3272,12 @@ export default function ProjectMetaAdsPanel({
       }));
     };
     return (
-      <div className="border border-white/10 bg-[#12120f]">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
-          <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/80 shadow-[0_18px_58px_-46px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+          <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
             {localize(titleKey)}
           </h5>
-          <span className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
             {biRankingsQuery.isFetching
               ? localize('com_ui_project_meta_ads_loading')
               : localize('com_ui_project_meta_ads_bi_rank_by')}
@@ -3273,7 +3285,7 @@ export default function ProjectMetaAdsPanel({
         </div>
         <div className="overflow-x-auto">
           <table data-testid={testId} className="w-full min-w-[58rem] text-left text-xs">
-            <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+            <thead className="border-b border-slate-200/70 bg-slate-50/70 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-400">
               <tr>
                 <th className="w-12 px-3 py-2">#</th>
                 <th className="px-3 py-2">{localize('com_ui_project_meta_ads_name')}</th>
@@ -3285,7 +3297,7 @@ export default function ProjectMetaAdsPanel({
                     <button
                       type="button"
                       onClick={() => onSort(key)}
-                      className="font-semibold uppercase tracking-[0.12em] text-[#a39a8c] hover:text-[#f3efe6]"
+                      className="font-semibold uppercase tracking-[0.12em] text-slate-500 transition hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-200"
                     >
                       {localize(labelKey)}
                       {biRankingSort.key === key
@@ -3298,7 +3310,7 @@ export default function ProjectMetaAdsPanel({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/10">
+            <tbody className="divide-y divide-slate-200/70 dark:divide-white/10">
               {items.length > 0 ? (
                 items.map((item, index) => {
                   const displayName = cleanDashboardName(item.name, item.id);
@@ -3306,40 +3318,42 @@ export default function ProjectMetaAdsPanel({
                     <tr
                       key={`${item.level}:${item.id}`}
                       onClick={() => setSelectedBiRankItem(item as MetaAdsBiRankItem)}
-                      className="cursor-pointer odd:bg-white/[0.025] hover:bg-white/[0.06]"
+                      className="cursor-pointer transition duration-200 odd:bg-slate-50/70 hover:bg-teal-50/70 dark:odd:bg-white/[0.025] dark:hover:bg-teal-300/[0.08]"
                     >
-                      <td className="px-3 py-3 font-mono text-[#81796b]">#{index + 1}</td>
+                      <td className="px-3 py-3 font-mono text-slate-400 dark:text-slate-500">
+                        #{index + 1}
+                      </td>
                       <td className="px-3 py-3">
                         <div className="flex min-w-0 items-center gap-3">
                           {renderRankMedia(item as MetaAdsBiRankItem)}
                           <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-[#f3efe6]">
+                            <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                               {displayName}
                             </div>
                             {'parentName' in item && item.parentName && (
-                              <div className="truncate text-[10px] text-[#81796b]">
+                              <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                                 {item.parentName}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-[#a39a8c]">
+                      <td className="px-3 py-3 text-slate-500 dark:text-slate-400">
                         {getResultTypeLabel(item.resultType, localize)}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono text-[#f3efe6]">
+                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                         {formatMoney(item.spend, currency)}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono text-[#f3efe6]">
+                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                         {formatMetric(item.resultCount)}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono text-[#f3efe6]">
+                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                         {formatRankingCost(getRankEfficiency(item as MetaAdsBiRankItem), currency)}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono text-[#f3efe6]">
+                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                         {formatPercent(item.ctr)}
                       </td>
-                      <td className="px-3 py-3 text-right font-mono text-[#f3efe6]">
+                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                         {formatMetric(item.frequency)}
                       </td>
                     </tr>
@@ -3347,7 +3361,7 @@ export default function ProjectMetaAdsPanel({
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-3 py-5 text-sm text-[#a39a8c]">
+                  <td colSpan={8} className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400">
                     {localize(emptyMessageKey)}
                   </td>
                 </tr>
@@ -3364,16 +3378,18 @@ export default function ProjectMetaAdsPanel({
     isClickable = false,
   ) => {
     const stripeClass =
-      rowIndex % 2 === 0 ? 'bg-[#11100d] dark:bg-[#11100d]' : 'bg-[#181611] dark:bg-[#181611]';
+      rowIndex % 2 === 0
+        ? 'bg-white/75 dark:bg-white/[0.035]'
+        : 'bg-slate-50/70 dark:bg-white/[0.06]';
     const levelClass =
       level === 'campaign'
-        ? 'font-semibold text-[#f3efe6]'
+        ? 'font-semibold text-slate-950 dark:text-white'
         : level === 'adset'
-          ? 'text-[#bdb5a6]'
-          : 'text-[#a69d8d]';
+          ? 'text-slate-700 dark:text-slate-300'
+          : 'text-slate-500 dark:text-slate-400';
     const cursorClass = isClickable ? 'cursor-pointer' : '';
 
-    return `${cursorClass} ${stripeClass} ${levelClass} border-b border-white/5 transition-colors duration-200 hover:bg-[#282115] dark:hover:bg-[#282115]`;
+    return `group ${cursorClass} ${stripeClass} ${levelClass} border-b border-slate-200/70 transition-colors duration-200 hover:bg-teal-50/70 dark:border-white/5 dark:hover:bg-teal-300/[0.08]`;
   };
 
   const renderEmptyCell = (column: TableColumn) => (
@@ -3381,7 +3397,7 @@ export default function ProjectMetaAdsPanel({
       key={column.key}
       className={`px-2 py-2 ${
         column.align === 'right' ? 'text-right font-mono tabular-nums' : ''
-      } text-[#6f675c]`}
+      } text-slate-400 dark:text-slate-600`}
     >
       -
     </td>
@@ -3402,8 +3418,8 @@ export default function ProjectMetaAdsPanel({
   };
 
   const renderLevelCell = (column: TableColumn, labelKey: TranslationKeys) => (
-    <td key={column.key} className="px-3 py-3 text-[#9b9284]">
-      <span className="inline-flex border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]">
+    <td key={column.key} className="px-3 py-3 text-slate-500 dark:text-slate-400">
+      <span className="inline-flex rounded-lg border border-slate-200 bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] dark:border-white/10 dark:bg-white/[0.055]">
         {localize(labelKey)}
       </span>
     </td>
@@ -3413,12 +3429,12 @@ export default function ProjectMetaAdsPanel({
     <span
       aria-hidden="true"
       data-tooltip={value}
-      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal border border-amber-400/30 bg-[#2a2114] px-2 py-1 text-xs font-medium leading-5 text-amber-100 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block"
+      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium leading-5 text-slate-800 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-teal-300/25 dark:bg-[#101827] dark:text-teal-100"
     />
   );
 
   const renderEvolutionNameCell = (name: string) => (
-    <td className="max-w-64 px-3 py-2.5 text-sm font-medium text-[#f3efe6] focus-within:z-50 hover:z-50">
+    <td className="max-w-64 px-3 py-2.5 text-sm font-medium text-slate-900 focus-within:z-50 hover:z-50 dark:text-white">
       <div className="group relative min-w-0">
         <div className="truncate">{name}</div>
         {renderNameTooltip(name)}
@@ -3441,14 +3457,14 @@ export default function ProjectMetaAdsPanel({
   const renderBudgetBadge = (value: number | null | undefined, onClick?: () => void) => {
     const content = (
       <>
-        <span className="h-1.5 w-1.5 bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
         <span>{formatMoney(value, currency)}</span>
       </>
     );
 
     if (!onClick) {
       return (
-        <span className="inline-flex items-center gap-2 border border-white/10 bg-white/[0.035] px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-[#ded6c8]">
+        <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-slate-800 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
           {content}
         </span>
       );
@@ -3459,7 +3475,7 @@ export default function ProjectMetaAdsPanel({
         type="button"
         disabled={!canUseMetaAdsActions}
         onClick={onClick}
-        className="inline-flex items-center gap-2 border border-amber-300/25 bg-amber-300/[0.08] px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-[#fff3d7] shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/60 hover:bg-amber-300/[0.14] focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
+        className="inline-flex items-center gap-2 rounded-xl border border-amber-300/45 bg-amber-300/10 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-amber-900 shadow-[0_14px_30px_-24px_rgba(245,158,11,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/70 hover:bg-amber-300/15 focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 dark:border-amber-300/25 dark:bg-amber-300/[0.08] dark:text-[#fff3d7] dark:shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] dark:hover:border-amber-300/60 dark:hover:bg-amber-300/[0.14]"
       >
         {content}
       </button>
@@ -3485,7 +3501,10 @@ export default function ProjectMetaAdsPanel({
       : 'com_ui_project_meta_ads_activate_ad';
 
     return (
-      <td key="adStatus" className="sticky left-20 z-10 bg-inherit px-2 py-2 align-middle">
+      <td
+        key="adStatus"
+        className={`sticky left-20 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
+      >
         {canToggle && (
           <button
             type="button"
@@ -3502,15 +3521,15 @@ export default function ProjectMetaAdsPanel({
                 status,
               })
             }
-            className={`relative inline-flex h-5 w-9 items-center border transition duration-200 focus:outline-none focus:ring-2 focus:ring-amber-300/35 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 ${
+            className={`relative inline-flex h-5 w-9 items-center rounded-full border transition duration-200 focus:outline-none focus:ring-2 focus:ring-teal-300/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 ${
               isActive
-                ? 'border-emerald-300/35 bg-emerald-300/20 hover:border-emerald-200/60 hover:bg-emerald-300/25'
-                : 'border-white/15 bg-white/[0.045] hover:border-rose-200/35 hover:bg-rose-300/10'
+                ? 'border-teal-300/60 bg-teal-400/25 hover:border-teal-200/70 hover:bg-teal-400/30'
+                : 'border-slate-300 bg-slate-200/70 hover:border-rose-300/45 hover:bg-rose-100 dark:border-white/15 dark:bg-white/[0.055] dark:hover:border-rose-200/35 dark:hover:bg-rose-300/10'
             }`}
           >
             <span
               aria-hidden="true"
-              className={`h-3.5 w-3.5 bg-[#f3efe6] shadow-[0_4px_12px_-8px_rgba(0,0,0,0.9)] transition duration-200 ${
+              className={`h-3.5 w-3.5 rounded-full bg-white shadow-[0_4px_12px_-8px_rgba(0,0,0,0.9)] transition duration-200 dark:bg-slate-50 ${
                 isActive ? 'translate-x-[18px]' : 'translate-x-0.5'
               }`}
             />
@@ -3523,7 +3542,7 @@ export default function ProjectMetaAdsPanel({
   const renderCampaignNameCell = (campaign: ProjectMetaAdsCampaignSummary) => (
     <td
       key="name"
-      className="sticky left-32 z-10 border-l-2 border-amber-300 bg-inherit px-3 py-3 font-semibold text-[#f3efe6] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.65)] focus-within:z-50 hover:z-50"
+      className={`sticky left-32 z-30 border-l-2 border-teal-300 px-3 py-3 font-semibold text-slate-950 focus-within:z-50 hover:z-50 dark:text-white ${metaAdsStickyCell}`}
     >
       <div className="group relative min-w-0">
         <div className="truncate">
@@ -3538,7 +3557,7 @@ export default function ProjectMetaAdsPanel({
   const renderAdSetNameCell = (adset: ProjectMetaAdsCampaignSummary['adSets'][number]) => (
     <td
       key="name"
-      className="sticky left-32 z-10 border-l-2 border-amber-500/35 bg-inherit px-3 py-3 pl-6 text-[#ddd5c8] shadow-[14px_0_26px_-22px_rgba(245,158,11,0.45)] focus-within:z-50 hover:z-50"
+      className={`sticky left-32 z-30 border-l-2 border-teal-300/35 px-3 py-3 pl-6 text-slate-700 focus-within:z-50 hover:z-50 dark:text-slate-200 ${metaAdsStickyCell}`}
     >
       <div className="group relative min-w-0">
         <div className="truncate">
@@ -3559,7 +3578,7 @@ export default function ProjectMetaAdsPanel({
     return (
       <td
         key="name"
-        className="sticky left-32 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
+        className={`sticky left-32 z-30 border-l-2 border-slate-200 px-3 py-3 pl-9 focus-within:z-50 hover:z-50 dark:border-white/10 ${metaAdsStickyCell}`}
       >
         <div className="group relative flex min-w-0 items-center gap-2">
           <button
@@ -3585,10 +3604,12 @@ export default function ProjectMetaAdsPanel({
             </span>
           </button>
           <button type="button" onClick={openAdPreview} className="min-w-0 text-left">
-            <div className="truncate text-sm font-medium text-[#f3efe6]">
+            <div className="truncate text-sm font-medium text-slate-900 dark:text-white">
               {ad.adName ?? ad.title ?? ad.adId}
             </div>
-            <div className="truncate text-xs text-[#9f9687]">{ad.title ?? ad.body ?? '-'}</div>
+            <div className="truncate text-xs text-slate-500 dark:text-slate-400">
+              {ad.title ?? ad.body ?? '-'}
+            </div>
           </button>
           {renderNameTooltip(ad.adName ?? ad.title ?? ad.adId)}
         </div>
@@ -3621,7 +3642,7 @@ export default function ProjectMetaAdsPanel({
                   onApply(recommendation);
                 }
               }}
-              className="h-7 border border-emerald-400/25 bg-emerald-500/10 px-2 text-[11px] font-semibold text-emerald-100 transition duration-200 hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-7 rounded-lg border border-emerald-300/35 bg-emerald-300/10 px-2 text-[11px] font-semibold text-emerald-700 transition duration-200 hover:bg-emerald-300/15 disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-100"
             >
               {localize('com_ui_project_meta_ads_apply')}
             </button>
@@ -3637,21 +3658,24 @@ export default function ProjectMetaAdsPanel({
                   event.stopPropagation();
                   setActionMenuKey((current) => (current === menuKey ? null : menuKey));
                 }}
-                className="flex h-7 w-7 items-center justify-center border border-white/10 bg-white/[0.035] text-[#bdb5a6] transition duration-200 hover:border-amber-300/40 hover:bg-amber-300/10 hover:text-[#f8f1e5] focus:outline-none focus:ring-2 focus:ring-amber-300/35 disabled:cursor-not-allowed disabled:opacity-45"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-500 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] transition duration-200 hover:border-teal-300/60 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-300/35 disabled:cursor-not-allowed disabled:opacity-45 dark:border-white/10 dark:bg-[#172033] dark:text-slate-300 dark:hover:bg-[#183247] dark:hover:text-teal-100"
               >
                 <DotsThreeVertical className="h-4 w-4" aria-hidden="true" />
               </button>
               {actionMenuKey === menuKey && (
-                <div className="border-white/12 absolute right-0 top-8 z-[1100] min-w-52 border bg-[#151512] p-1 shadow-2xl">
+                <div className="absolute right-0 top-9 z-[1200] min-w-56 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_22px_60px_-34px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:shadow-[0_22px_60px_-34px_rgba(0,0,0,0.95)]">
                   <button
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
                       onOpenDuplicateDraft(duplicate);
                     }}
-                    className="flex w-full items-center gap-2 whitespace-nowrap px-2 py-2 text-left text-xs font-medium text-[#f3efe6] transition hover:bg-amber-300/10"
+                    className="flex w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-800 transition hover:bg-teal-50 hover:text-teal-800 dark:text-slate-100 dark:hover:bg-[#183247] dark:hover:text-teal-100"
                   >
-                    <Copy className="h-3.5 w-3.5 text-amber-200" aria-hidden="true" />
+                    <Copy
+                      className="h-3.5 w-3.5 text-teal-600 dark:text-teal-200"
+                      aria-hidden="true"
+                    />
                     {localize(duplicateLabelKey)}
                   </button>
                 </div>
@@ -4100,8 +4124,8 @@ export default function ProjectMetaAdsPanel({
         onClick={() => setSelectedAdPreview(ad)}
         className={`group ${getTableRowClass(rowIndex, 'ad', true)}`}
       >
-        <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-10 align-middle" />
-        <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+        <td className={`sticky left-0 z-30 px-2 py-2 pl-10 align-middle ${metaAdsStickyCell}`} />
+        <td className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}>
           <span aria-hidden="true" className="block h-7 w-7" />
         </td>
         {tableColumns.map((column) => renderAdCell(column, campaign, ad))}
@@ -4114,22 +4138,24 @@ export default function ProjectMetaAdsPanel({
       <div
         data-testid="meta-ads-metrics-workspace"
         className={`${
-          metricsFullscreen ? 'fixed inset-0 z-[9999] overflow-auto' : 'relative overflow-hidden'
+          metricsFullscreen
+            ? 'fixed inset-0 z-[9999] h-screen !overflow-y-auto !rounded-none'
+            : 'relative overflow-hidden'
         } ${metaAdsSurface}`}
       >
-        <div className="relative flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-5 border-b border-slate-200/70 p-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-xl font-semibold leading-tight text-[#f8f1e5]">
+            <h3 className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-white">
               {localize('com_ui_project_meta_ads_title')}
             </h3>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#bdb5a6]">
-              <span className="border border-emerald-400/20 bg-emerald-500/10 px-2 py-1 text-emerald-100">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+              <span className="rounded-full border border-teal-300/40 bg-teal-50 px-3 py-1 font-semibold text-teal-700 dark:border-teal-300/20 dark:bg-teal-400/10 dark:text-teal-100">
                 {localize(tokenStatusKey)}
               </span>
-              <span className="border border-white/10 bg-white/[0.03] px-2 py-1">
+              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-white/10 dark:bg-white/[0.055]">
                 {settings.automationMode}
               </span>
-              <span className="border border-white/10 bg-white/[0.03] px-2 py-1">
+              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-white/10 dark:bg-white/[0.055]">
                 {localize('com_ui_project_meta_ads_schedule_minutes', {
                   0: String(settings.scheduleIntervalMinutes),
                 })}
@@ -4171,6 +4197,27 @@ export default function ProjectMetaAdsPanel({
             >
               {localize('com_ui_project_meta_ads_rules')}
             </button>
+            <button
+              type="button"
+              onClick={() => setMetricsFullscreen((current) => !current)}
+              aria-label={localize(
+                metricsFullscreen
+                  ? 'com_ui_project_meta_ads_exit_fullscreen'
+                  : 'com_ui_project_meta_ads_enter_fullscreen',
+              )}
+              className={`inline-flex items-center gap-2 ${metaAdsButton}`}
+            >
+              {metricsFullscreen ? (
+                <ArrowsIn className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ArrowsOut className="h-4 w-4" aria-hidden="true" />
+              )}
+              {localize(
+                metricsFullscreen
+                  ? 'com_ui_project_meta_ads_exit_fullscreen'
+                  : 'com_ui_project_meta_ads_enter_fullscreen',
+              )}
+            </button>
             {!settingsDrawer && (
               <button
                 type="button"
@@ -4194,7 +4241,7 @@ export default function ProjectMetaAdsPanel({
         <div
           role="tablist"
           aria-label={localize('com_ui_project_meta_ads_title')}
-          className="flex flex-wrap gap-2 border-b border-white/10 bg-[#11100d] px-4 pt-3"
+          className="flex flex-wrap gap-1 border-b border-slate-200/70 bg-white/35 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-slate-950/10"
         >
           {workspaceTabOptions.map((option) => {
             const isSelected = workspaceTab === option.value;
@@ -4208,10 +4255,10 @@ export default function ProjectMetaAdsPanel({
                 aria-controls={`meta-ads-${option.value}-tab-panel`}
                 data-testid={`meta-ads-workspace-tab-${option.value}`}
                 onClick={() => setWorkspaceTab(option.value)}
-                className={`border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
                   isSelected
-                    ? 'border-amber-300/60 bg-amber-300/10 text-[#f8f1e5]'
-                    : 'border-white/10 bg-black/10 text-[#8f8677] hover:border-white/25 hover:text-[#f3efe6]'
+                    ? 'border-teal-300/70 bg-teal-50 text-teal-800 shadow-[0_12px_30px_-24px_rgba(20,184,166,0.65)] dark:border-teal-300/35 dark:bg-teal-300/10 dark:text-teal-100'
+                    : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-white/70 hover:text-slate-900 dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/[0.055] dark:hover:text-slate-100'
                 }`}
               >
                 {localize(option.labelKey)}
@@ -4225,13 +4272,13 @@ export default function ProjectMetaAdsPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="meta-ads-settings-drawer-title"
-            className="fixed inset-0 z-50 flex justify-end bg-black/30"
+            className={`${metaAdsModalOverlay} flex justify-end p-0`}
           >
-            <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
-              <div className="border-b border-border-light p-4">
+            <div className={`${metaAdsDrawerShell} max-w-lg`}>
+              <div className={metaAdsModalHeader}>
                 <h4
                   id="meta-ads-settings-drawer-title"
-                  className="text-base font-semibold text-text-primary"
+                  className="text-base font-semibold text-slate-950 dark:text-white"
                 >
                   {localize(
                     settingsDrawer === 'account'
@@ -4239,7 +4286,7 @@ export default function ProjectMetaAdsPanel({
                       : 'com_ui_project_meta_ads_automation',
                   )}
                 </h4>
-                <div className="mt-2 text-xs text-text-tertiary">
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                   {settingsDrawer === 'account'
                     ? localize(tokenStatusKey)
                     : localize('com_ui_project_meta_ads_schedule_minutes', {
@@ -4251,7 +4298,7 @@ export default function ProjectMetaAdsPanel({
                 {settingsDrawer === 'account' ? (
                   <>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                         {localize('com_ui_project_meta_ads_enabled')}
                         <select
                           disabled={!canUseMetaAdsActions}
@@ -4263,7 +4310,7 @@ export default function ProjectMetaAdsPanel({
                                 : current,
                             )
                           }
-                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                          className={metaAdsInputLg}
                         >
                           <option value="false">
                             {localize('com_ui_project_meta_ads_disabled')}
@@ -4273,7 +4320,7 @@ export default function ProjectMetaAdsPanel({
                           </option>
                         </select>
                       </label>
-                      <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                      <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                         {localize('com_ui_project_meta_ads_account')}
                         <input
                           disabled={!canUseMetaAdsActions}
@@ -4288,11 +4335,11 @@ export default function ProjectMetaAdsPanel({
                             )
                           }
                           placeholder="123456789"
-                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                          className={metaAdsInputLg}
                         />
                       </label>
                     </div>
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                       {localize('com_ui_project_meta_ads_graph_version')}
                       <select
                         disabled={!canUseMetaAdsActions}
@@ -4303,7 +4350,7 @@ export default function ProjectMetaAdsPanel({
                           )
                         }
                         autoComplete="off"
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        className={metaAdsInputLg}
                       >
                         <option value="">
                           {localize('com_ui_project_meta_ads_graph_version_global', {
@@ -4317,17 +4364,17 @@ export default function ProjectMetaAdsPanel({
                         ))}
                       </select>
                     </label>
-                    <div className="border border-border-light bg-surface-secondary p-3">
+                    <div className={metaAdsModalTile}>
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <div className="text-sm font-medium text-text-primary">
+                          <div className="text-sm font-medium text-slate-950 dark:text-white">
                             {localize('com_ui_project_meta_ads_credentials')}
                           </div>
-                          <div className="mt-1 text-xs leading-5 text-text-tertiary">
+                          <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {localize('com_ui_project_meta_ads_credentials_hint')}
                           </div>
                           {tokenCredentials && (
-                            <span className="mt-2 inline-flex w-fit items-center gap-2 border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                            <span className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
                               {localize(tokenStatusKey)}
                             </span>
                           )}
@@ -4336,24 +4383,26 @@ export default function ProjectMetaAdsPanel({
                           type="button"
                           disabled={!canUseMetaAdsActions}
                           onClick={openCredentialsDialog}
-                          className="h-8 shrink-0 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                          className={metaAdsButton}
                         >
                           {localize('com_ui_project_meta_ads_manage_tokens')}
                         </button>
                       </div>
                     </div>
-                    <div className="border border-border-light bg-surface-secondary p-3 text-sm text-text-secondary">
-                      <div className="font-medium text-text-primary">
+                    <div
+                      className={`${metaAdsModalTile} text-sm text-slate-600 dark:text-slate-300`}
+                    >
+                      <div className="font-medium text-slate-950 dark:text-white">
                         {localize(tokenStatusKey)}
                       </div>
-                      <div className="mt-2 text-xs leading-5 text-text-tertiary">
+                      <div className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_graph_version_hint')}
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="grid gap-3">
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                       {localize('com_ui_project_meta_ads_mode')}
                       <select
                         disabled={!canUseMetaAdsActions}
@@ -4369,7 +4418,7 @@ export default function ProjectMetaAdsPanel({
                               : current,
                           )
                         }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        className={metaAdsInputLg}
                       >
                         <option value="recommend">
                           {localize('com_ui_project_meta_ads_mode_recommend')}
@@ -4379,7 +4428,7 @@ export default function ProjectMetaAdsPanel({
                         </option>
                       </select>
                     </label>
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                       {localize('com_ui_project_meta_ads_schedule')}
                       <select
                         disabled={!canUseMetaAdsActions}
@@ -4396,7 +4445,7 @@ export default function ProjectMetaAdsPanel({
                               : current,
                           )
                         }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        className={metaAdsInputLg}
                       >
                         {scheduleOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -4408,19 +4457,15 @@ export default function ProjectMetaAdsPanel({
                   </div>
                 )}
               </div>
-              <div className="flex justify-end gap-2 border-t border-border-light p-4">
-                <button
-                  type="button"
-                  onClick={closeSettingsDrawer}
-                  className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
-                >
+              <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
+                <button type="button" onClick={closeSettingsDrawer} className={metaAdsGhostButton}>
                   {localize('com_ui_cancel')}
                 </button>
                 <button
                   type="button"
                   disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                   onClick={onSaveSettingsDrawer}
-                  className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  className={metaAdsPrimaryButton}
                 >
                   {localize('com_ui_save')}
                 </button>
@@ -4439,49 +4484,49 @@ export default function ProjectMetaAdsPanel({
             closeCredentialsDialog();
           }}
         >
-          <OGDialogContent className="max-w-2xl border border-border-light bg-surface-primary p-0 text-text-primary">
+          <OGDialogContent className={`max-w-2xl p-0 ${metaAdsModalShell}`}>
             <OGDialogHeader>
-              <div className="border-b border-border-light p-4">
+              <div className={metaAdsModalHeader}>
                 <OGDialogTitle>{localize('com_ui_project_meta_ads_manage_tokens')}</OGDialogTitle>
-                <div className="mt-2 text-xs text-text-tertiary">
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                   {localize('com_ui_project_meta_ads_manage_tokens_hint')}
                 </div>
               </div>
             </OGDialogHeader>
             <div className="space-y-4 p-4">
-              <div className="border border-border-light bg-surface-secondary p-3">
+              <div className={metaAdsModalTile}>
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm font-medium text-text-primary">
+                  <div className="text-sm font-medium text-slate-950 dark:text-white">
                     {localize('com_ui_project_meta_ads_global_token_title')}
                   </div>
-                  <div className="text-xs leading-5 text-text-tertiary">
+                  <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {localize(
                       canManageTenantToken
                         ? 'com_ui_project_meta_ads_tenant_token_hint'
                         : 'com_ui_project_meta_ads_tenant_token_admin_hint',
                     )}
                   </div>
-                  <span className="mt-1 inline-flex w-fit border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                  <span className="mt-1 inline-flex w-fit rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
                     {statusQuery.data?.credentials?.tenantConfigured
                       ? localize('com_ui_project_meta_ads_tenant_token_configured')
                       : localize('com_ui_project_meta_ads_token_missing')}
                   </span>
                 </div>
                 {canManageTenantToken && (
-                  <div className="mt-3 flex h-10 overflow-hidden border border-border-light bg-surface-primary">
+                  <div className="mt-3 flex h-11 overflow-hidden rounded-xl border border-slate-200/90 bg-white/90 dark:border-white/10 dark:bg-slate-950/35">
                     <input
                       type={showTenantAccessToken ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={tenantAccessToken}
                       onChange={(event) => setTenantAccessToken(event.target.value)}
                       placeholder={localize('com_ui_project_meta_ads_token_placeholder')}
-                      className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-800 outline-none dark:text-slate-100"
                     />
                     {tenantAccessToken.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setShowTenantAccessToken((current) => !current)}
-                        className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary"
+                        className="shrink-0 border-l border-slate-200/75 px-3 text-xs font-medium text-slate-500 dark:border-white/10 dark:text-slate-400"
                       >
                         {localize(
                           showTenantAccessToken ? 'com_ui_hide_password' : 'com_ui_show_password',
@@ -4496,7 +4541,7 @@ export default function ProjectMetaAdsPanel({
                       type="button"
                       disabled={!tenantAccessToken.trim() || updateTenantToken.isLoading}
                       onClick={onSaveTenantToken}
-                      className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      className={metaAdsPrimaryButton}
                     >
                       {localize('com_ui_project_meta_ads_save_tenant_token')}
                     </button>
@@ -4504,21 +4549,21 @@ export default function ProjectMetaAdsPanel({
                 )}
               </div>
 
-              <div className="border border-border-light bg-surface-secondary p-3">
+              <div className={metaAdsModalTile}>
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm font-medium text-text-primary">
+                  <div className="text-sm font-medium text-slate-950 dark:text-white">
                     {localize('com_ui_project_meta_ads_local_token_title')}
                   </div>
-                  <div className="text-xs leading-5 text-text-tertiary">
+                  <div className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_project_token_hint')}
                   </div>
-                  <span className="mt-1 inline-flex w-fit border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary">
+                  <span className="mt-1 inline-flex w-fit rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
                     {hasProjectToken
                       ? localize('com_ui_project_meta_ads_project_token_configured')
                       : localize('com_ui_project_meta_ads_project_token_not_configured')}
                   </span>
                 </div>
-                <div className="mt-3 flex h-10 overflow-hidden border border-border-light bg-surface-primary">
+                <div className="mt-3 flex h-11 overflow-hidden rounded-xl border border-slate-200/90 bg-white/90 dark:border-white/10 dark:bg-slate-950/35">
                   <input
                     disabled={!canUseMetaAdsActions}
                     type={showSettingsDraftToken ? 'text' : 'password'}
@@ -4531,14 +4576,14 @@ export default function ProjectMetaAdsPanel({
                         ? localize('com_ui_project_meta_ads_token_keep_existing')
                         : localize('com_ui_project_meta_ads_token_placeholder')
                     }
-                    className="min-w-0 flex-1 bg-transparent px-3 text-sm text-text-primary outline-none disabled:cursor-not-allowed"
+                    className="min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-800 outline-none disabled:cursor-not-allowed dark:text-slate-100"
                   />
                   {settingsDraftToken.length > 0 && (
                     <button
                       type="button"
                       disabled={!canUseMetaAdsActions}
                       onClick={() => setShowSettingsDraftToken((current) => !current)}
-                      className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                      className="shrink-0 border-l border-slate-200/75 px-3 text-xs font-medium text-slate-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-slate-400"
                     >
                       {localize(
                         showSettingsDraftToken ? 'com_ui_hide_password' : 'com_ui_show_password',
@@ -4552,7 +4597,7 @@ export default function ProjectMetaAdsPanel({
                       type="button"
                       disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                       onClick={onClearProjectToken}
-                      className="h-8 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                      className={metaAdsGhostButton}
                     >
                       {localize('com_ui_project_meta_ads_use_tenant_token')}
                     </button>
@@ -4565,19 +4610,15 @@ export default function ProjectMetaAdsPanel({
                       updateSettings.isLoading
                     }
                     onClick={onSaveProjectToken}
-                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    className={metaAdsPrimaryButton}
                   >
                     {localize('com_ui_project_meta_ads_save_project_token')}
                   </button>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end border-t border-border-light p-4">
-              <button
-                type="button"
-                onClick={closeCredentialsDialog}
-                className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
-              >
+            <div className="flex justify-end border-t border-slate-200/75 p-4 dark:border-white/10">
+              <button type="button" onClick={closeCredentialsDialog} className={metaAdsGhostButton}>
                 {localize('com_ui_close')}
               </button>
             </div>
@@ -4591,11 +4632,11 @@ export default function ProjectMetaAdsPanel({
             aria-labelledby="meta-ads-tab-overview"
             data-testid="meta-ads-overview-tab-panel"
           >
-            <div className="flex flex-col gap-4 border-b border-white/10 bg-[#11100d]/95 p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.85)]">
+            <div className="flex flex-col gap-4 border-b border-slate-200/70 bg-white/45 p-4 shadow-[0_20px_60px_-50px_rgba(15,23,42,0.35)] backdrop-blur dark:border-white/10 dark:bg-slate-950/10 dark:shadow-[0_20px_70px_-54px_rgba(0,0,0,0.9)]">
               {isStatusLoading && (
                 <div
                   role="status"
-                  className="flex items-center gap-2 border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
+                  className="flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100"
                 >
                   <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-amber-200" />
                   <span>{localize('com_ui_project_meta_ads_loading')}</span>
@@ -4698,7 +4739,7 @@ export default function ProjectMetaAdsPanel({
                     </label>
                   </div>
                   <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                    <span className="h-9 border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-xs tabular-nums text-[#d7cdbd]">
+                    <span className="h-10 rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5 font-mono text-xs tabular-nums text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
                       {localize('com_ui_project_meta_ads_selection_count', {
                         0: String(selectedCount),
                       })}
@@ -4743,55 +4784,48 @@ export default function ProjectMetaAdsPanel({
                     >
                       {localize('com_ui_project_meta_ads_chat_with_agent')}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setMetricsFullscreen((current) => !current)}
-                      aria-label={localize(
-                        metricsFullscreen
-                          ? 'com_ui_project_meta_ads_exit_fullscreen'
-                          : 'com_ui_project_meta_ads_enter_fullscreen',
-                      )}
-                      className={`inline-flex items-center gap-2 ${metaAdsButton}`}
-                    >
-                      {metricsFullscreen ? (
-                        <ArrowsIn className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <ArrowsOut className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      {localize(
-                        metricsFullscreen
-                          ? 'com_ui_project_meta_ads_exit_fullscreen'
-                          : 'com_ui_project_meta_ads_enter_fullscreen',
-                      )}
-                    </button>
                   </div>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {summaryCards.map(({ labelKey, value, tone, context, clickable }) => {
+                  const showResultMetricCta =
+                    clickable && !isInitialStatusLoading && value.trim() === '-';
                   const content = (
                     <>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
-                        {localize(labelKey as TranslationKeys)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                          {localize(labelKey as TranslationKeys)}
+                        </div>
+                        {clickable && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-teal-300/35 bg-teal-300/10 px-2 py-1 text-[10px] font-semibold text-teal-700 opacity-90 transition group-hover:border-teal-300/70 group-hover:bg-teal-300/15 dark:text-teal-200">
+                            <PencilSimple size={11} weight="bold" />
+                            {localize('com_ui_project_meta_ads_change_result_metric')}
+                          </span>
+                        )}
                       </div>
                       {isInitialStatusLoading ? (
                         <div
                           data-testid="meta-ads-summary-skeleton"
-                          className="mt-3 h-7 w-28 animate-pulse bg-white/10"
+                          className="mt-4 h-8 w-28 animate-pulse rounded-lg bg-slate-200/80 dark:bg-white/10"
                         />
+                      ) : showResultMetricCta ? (
+                        <div className="mt-4 rounded-xl border border-dashed border-teal-300/45 bg-teal-300/10 px-3 py-3 text-sm font-semibold text-teal-800 transition group-hover:border-teal-300/75 group-hover:bg-teal-300/15 dark:text-teal-100">
+                          {localize('com_ui_project_meta_ads_click_to_choose_result_metric')}
+                        </div>
                       ) : (
-                        <div className="mt-3 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
+                        <div className="mt-4 font-mono text-3xl font-semibold tabular-nums tracking-tight text-slate-950 dark:text-white">
                           {value}
                         </div>
                       )}
                       {context && !isInitialStatusLoading && (
-                        <div className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8f8677]">
+                        <div className="mt-2 truncate text-xs font-medium text-slate-500 dark:text-slate-400">
                           {context}
                         </div>
                       )}
                     </>
                   );
-                  const className = `relative overflow-hidden border border-l-2 border-white/10 ${tone} bg-[#151512] p-4 text-left`;
+                  const className = `group relative overflow-hidden rounded-2xl border border-l-4 border-slate-200/80 ${tone} bg-white/82 p-5 text-left shadow-[0_16px_42px_-36px_rgba(15,23,42,0.48)] transition duration-300 dark:border-white/10 dark:bg-white/[0.055] dark:shadow-[0_16px_46px_-38px_rgba(0,0,0,0.92)]`;
                   return clickable ? (
                     <button
                       key={labelKey}
@@ -4799,7 +4833,7 @@ export default function ProjectMetaAdsPanel({
                       data-testid={`meta-ads-summary-card-${labelKey}`}
                       disabled={isInitialStatusLoading}
                       onClick={() => setResultTypeSelectorOpen(true)}
-                      className={`${className} transition hover:border-white/25 disabled:cursor-wait disabled:opacity-80`}
+                      className={`${className} hover:-translate-y-0.5 hover:border-teal-300/60 hover:shadow-[0_22px_54px_-40px_rgba(20,184,166,0.55)] disabled:cursor-wait disabled:opacity-80`}
                     >
                       {content}
                     </button>
@@ -4819,18 +4853,20 @@ export default function ProjectMetaAdsPanel({
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="meta-ads-result-type-selector-title"
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+                  className={`${metaAdsModalOverlay} flex items-center justify-center`}
                 >
-                  <div className="flex max-h-[82vh] w-full max-w-xl flex-col border border-white/15 bg-[#151512] p-4 shadow-2xl">
-                    <div className="flex items-start justify-between gap-3">
+                  <div
+                    className={`flex max-h-[82vh] w-full max-w-xl flex-col p-4 ${metaAdsModalShell}`}
+                  >
+                    <div className="flex items-start justify-between gap-3 border-b border-slate-200/75 pb-4 dark:border-white/10">
                       <div>
                         <h4
                           id="meta-ads-result-type-selector-title"
-                          className="text-base font-semibold text-[#f8f1e5]"
+                          className="text-base font-semibold text-slate-950 dark:text-white"
                         >
                           {localize('com_ui_project_meta_ads_choose_result_metric')}
                         </h4>
-                        <div className="mt-1 text-xs text-[#9f9687]">
+                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_choose_result_metric_hint')}
                         </div>
                       </div>
@@ -4851,16 +4887,16 @@ export default function ProjectMetaAdsPanel({
                             setSelectedSummaryResultType(option.resultType);
                             setResultTypeSelectorOpen(false);
                           }}
-                          className={`w-full border p-3 text-left transition ${
+                          className={`w-full rounded-2xl border p-3 text-left transition ${
                             selectedSummaryResultType === option.resultType
-                              ? 'border-emerald-300/60 bg-emerald-500/10'
-                              : 'border-white/10 bg-black/10 hover:border-white/25'
+                              ? 'border-teal-300/70 bg-teal-300/10'
+                              : 'border-slate-200/80 bg-white hover:border-teal-300/45 hover:bg-teal-50 dark:border-white/10 dark:bg-[#172033] dark:hover:bg-[#183247]'
                           }`}
                         >
-                          <div className="truncate text-sm font-semibold text-[#f8f1e5]">
+                          <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                             {getResultTypeLabel(option.resultType, localize)}
                           </div>
-                          <div className="mt-2 grid gap-2 text-xs text-[#b8ae9f] sm:grid-cols-3">
+                          <div className="mt-2 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
                             <span>
                               {localize('com_ui_project_meta_ads_results')}:{' '}
                               {formatMetric(option.totalResults)}
@@ -4938,39 +4974,39 @@ export default function ProjectMetaAdsPanel({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="meta-ads-budget-dialog-title"
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+                className={`${metaAdsModalOverlay} flex items-center justify-center`}
               >
-                <div className="relative w-full max-w-2xl overflow-hidden border border-white/10 bg-[#151411] p-5 text-[#f3efe6] shadow-[0_28px_90px_-60px_rgba(0,0,0,0.95)] sm:p-6">
+                <div className={`relative w-full max-w-2xl p-5 sm:p-6 ${metaAdsModalShell}`}>
                   <div className="relative min-w-0">
                     <h4
                       id="meta-ads-budget-dialog-title"
-                      className="text-2xl font-semibold leading-tight tracking-tight text-[#f8f1e5]"
+                      className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-white"
                     >
                       {localize('com_ui_project_meta_ads_edit_budget')}
                     </h4>
-                    <div className="mt-4 truncate text-lg font-semibold text-[#f3efe6]">
+                    <div className="mt-4 truncate text-lg font-semibold text-slate-950 dark:text-white">
                       {budgetEditor.entityName ?? budgetEditor.entityId}
                     </div>
-                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f8677]">
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                       {budgetEditor.entityLevel === 'campaign'
                         ? localize('com_ui_project_meta_ads_campaign')
                         : localize('com_ui_project_meta_ads_select_ad_set')}
                     </div>
-                    <div className="mt-4 max-w-[56ch] text-sm leading-6 text-[#cfc6b7]">
+                    <div className="mt-4 max-w-[56ch] text-sm leading-6 text-slate-600 dark:text-slate-300">
                       {localize('com_ui_project_meta_ads_manual_budget_hint')}
                     </div>
 
                     <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
-                      <div className="border border-white/10 bg-white/[0.035] p-4">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                      <div className={metaAdsModalTile}>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_budget_defined')}
                         </div>
-                        <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
+                        <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-950 dark:text-white">
                           {formatMoney(budgetEditor.currentBudget, currency)}
                         </div>
                       </div>
-                      <label className="border border-amber-300/20 bg-amber-300/[0.06] p-4 text-xs text-[#cfc6b7]">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9a06a]">
+                      <label className="rounded-2xl border border-amber-300/35 bg-amber-300/10 p-4 text-xs text-slate-600 dark:text-slate-300">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-200">
                           {localize('com_ui_project_meta_ads_new_budget')}
                         </span>
                         <input
@@ -4979,7 +5015,7 @@ export default function ProjectMetaAdsPanel({
                           step="0.01"
                           value={manualDailyBudget}
                           onChange={(event) => setManualDailyBudget(event.target.value)}
-                          className="mt-2 h-11 w-full border border-white/10 bg-[#1f1b15] px-3 font-mono text-lg font-semibold tabular-nums text-[#f8f1e5] outline-none transition duration-200 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20"
+                          className={metaAdsInputLg}
                         />
                       </label>
                     </div>
@@ -4987,10 +5023,10 @@ export default function ProjectMetaAdsPanel({
                     {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
                       <div className="mt-5">
                         <div className="mb-2 flex items-center justify-between gap-3">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                             {localize('com_ui_project_meta_ads_budget_quick_adjustments')}
                           </div>
-                          <div className="h-px flex-1 bg-white/10" />
+                          <div className="h-px flex-1 bg-slate-200/75 dark:bg-white/10" />
                         </div>
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
@@ -5000,7 +5036,7 @@ export default function ProjectMetaAdsPanel({
                                 type="button"
                                 aria-label={reference.accessibleLabel}
                                 onClick={() => setManualDailyBudget(reference.value.toFixed(2))}
-                                className={`group flex min-h-16 items-center justify-between gap-3 border px-3 py-2 text-left transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
+                                className={`group flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-[0_14px_34px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
                               >
                                 <span className="text-sm font-semibold">{reference.label}</span>
                                 <span className="font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
@@ -5017,7 +5053,7 @@ export default function ProjectMetaAdsPanel({
                     <button
                       type="button"
                       onClick={() => setBudgetEditor(null)}
-                      className="h-10 border border-white/10 px-4 text-sm font-semibold text-[#d8cfbf] transition duration-200 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-white/15 active:translate-y-px"
+                      className={metaAdsGhostButton}
                     >
                       {localize('com_ui_cancel')}
                     </button>
@@ -5025,7 +5061,7 @@ export default function ProjectMetaAdsPanel({
                       type="button"
                       disabled={updateBudget.isLoading}
                       onClick={onSaveManualBudget}
-                      className="h-10 bg-[#f8f1e5] px-5 text-sm font-semibold text-[#14120f] shadow-[0_18px_42px_-28px_rgba(248,241,229,0.9)] transition duration-200 hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+                      className={metaAdsPrimaryButton}
                     >
                       {localize('com_ui_project_meta_ads_save_budget')}
                     </button>
@@ -5105,66 +5141,66 @@ export default function ProjectMetaAdsPanel({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="meta-ads-duplicate-title"
-                className="fixed inset-0 z-50 flex justify-end bg-black/45"
+                className={`${metaAdsModalOverlay} flex justify-end p-0`}
               >
-                <div className="border-white/12 flex h-full w-full max-w-md flex-col border-l bg-[#12120f] shadow-2xl">
-                  <div className="border-b border-white/10 px-5 py-4">
-                    <div className="text-[10px] uppercase tracking-[0.16em] text-[#8f8677]">
+                <div className={`${metaAdsDrawerShell} max-w-md`}>
+                  <div className={metaAdsModalHeader}>
+                    <div className="text-[10px] uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                       {duplicateDraft.entityLevel === 'campaign'
                         ? localize('com_ui_project_meta_ads_level_campaign')
                         : localize('com_ui_project_meta_ads_level_ad_set')}
                     </div>
                     <h4
                       id="meta-ads-duplicate-title"
-                      className="mt-1 text-base font-semibold text-[#f3efe6]"
+                      className="mt-1 text-base font-semibold text-slate-950 dark:text-white"
                     >
                       {localize('com_ui_project_meta_ads_duplicate_title')}
                     </h4>
                   </div>
                   <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
                     <div>
-                      <div className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_original')}
                       </div>
-                      <div className="mt-1 truncate text-sm font-medium text-[#f3efe6]">
+                      <div className="mt-1 truncate text-sm font-medium text-slate-950 dark:text-white">
                         {duplicateDraft.entityName ?? duplicateDraft.entityId}
                       </div>
                     </div>
                     <label className="block">
-                      <span className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                      <span className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_duplicate_name')}
                       </span>
                       <input
                         value={duplicateTargetName}
                         onChange={(event) => setDuplicateTargetName(event.target.value)}
-                        className="border-white/12 mt-2 h-10 w-full border bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
+                        className={metaAdsInputLg}
                       />
                     </label>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="border border-white/10 bg-white/[0.025] p-3">
-                        <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                      <div className={metaAdsModalTile}>
+                        <div className="uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_status')}
                         </div>
-                        <div className="mt-2 font-mono text-[#f3efe6]">
+                        <div className="mt-2 font-mono text-slate-950 dark:text-white">
                           {duplicateDraft.status || '-'}
                         </div>
                       </div>
-                      <div className="border border-white/10 bg-white/[0.025] p-3">
-                        <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                      <div className={metaAdsModalTile}>
+                        <div className="uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_budget_defined')}
                         </div>
-                        <div className="mt-2 font-mono text-[#f3efe6]">
+                        <div className="mt-2 font-mono text-slate-950 dark:text-white">
                           {formatMoney(duplicateDraft.budget, currency)}
                         </div>
                       </div>
                     </div>
                     {duplicateDraft.status?.toUpperCase() === 'ACTIVE' && (
-                      <div className="border border-amber-300/25 bg-amber-300/[0.08] p-3 text-xs leading-5 text-amber-100">
+                      <div className="rounded-2xl border border-amber-300/35 bg-amber-300/10 p-3 text-xs leading-5 text-amber-800 dark:text-amber-100">
                         {localize('com_ui_project_meta_ads_duplicate_active_warning')}
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-end gap-2 border-t border-white/10 p-4">
+                  <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
                     <button
                       type="button"
                       onClick={onCloseDuplicateDraft}
@@ -5176,7 +5212,7 @@ export default function ProjectMetaAdsPanel({
                       type="button"
                       disabled={duplicateEntity.isLoading || !duplicateTargetName.trim()}
                       onClick={onConfirmDuplicate}
-                      className="h-9 bg-amber-300 px-4 text-xs font-semibold text-[#15120b] transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={metaAdsPrimaryButton}
                     >
                       {localize('com_ui_project_meta_ads_duplicate_confirm')}
                     </button>
@@ -5190,23 +5226,23 @@ export default function ProjectMetaAdsPanel({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="meta-ads-rule-group-dialog-title"
-                className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-sm"
+                className={`${metaAdsModalOverlay} flex justify-end p-0`}
               >
-                <div className="flex h-full w-full max-w-xl flex-col border-l border-white/10 bg-[#10110f] text-[#f3efe6] shadow-2xl">
-                  <div className="border-b border-white/10 p-4">
+                <div className={`${metaAdsDrawerShell} max-w-xl`}>
+                  <div className={metaAdsModalHeader}>
                     <h4
                       id="meta-ads-rule-group-dialog-title"
-                      className="text-base font-semibold text-[#f3efe6]"
+                      className="text-base font-semibold text-slate-950 dark:text-white"
                     >
                       {localize(getRuleDraftTitleKey(ruleGroupDraft))}
                     </h4>
                     {ruleGroupDraft.scope === 'global' ? (
-                      <div className="mt-2 text-xs text-[#948b7d]">
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_global_rules_hint')}
                       </div>
                     ) : (
                       <div className="mt-2 space-y-2">
-                        <div className="text-xs uppercase tracking-[0.12em] text-[#948b7d]">
+                        <div className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                           {ruleGroupDraft.entityLevel === 'campaign'
                             ? localize('com_ui_project_meta_ads_campaign')
                             : localize('com_ui_project_meta_ads_select_ad_set')}
@@ -5218,7 +5254,7 @@ export default function ProjectMetaAdsPanel({
                           {ruleDraftEntityLabels.slice(0, 8).map((label) => (
                             <span
                               key={label}
-                              className="border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-[#cfc6b7]"
+                              className="rounded-full border border-slate-200/80 bg-white/70 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300"
                             >
                               {label}
                             </span>
@@ -5229,7 +5265,7 @@ export default function ProjectMetaAdsPanel({
                   </div>
                   <div className="flex-1 space-y-4 overflow-y-auto p-4">
                     {(ruleGroupDraft.scope === 'group' || ruleGroupDraft.scope === 'override') && (
-                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                         <RuleFieldLabel
                           localize={localize}
                           labelKey="com_ui_project_meta_ads_rule_group_name"
@@ -5248,11 +5284,11 @@ export default function ProjectMetaAdsPanel({
                       </label>
                     )}
                     {ruleGroupDraft.scope === 'global' && (
-                      <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <div className={metaAdsModalTile}>
                         <h5 className={metaAdsLabel}>
                           {localize('com_ui_project_meta_ads_rule_section_target')}
                         </h5>
-                        <label className="mt-2 flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <label className="mt-2 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                           <RuleFieldLabel
                             localize={localize}
                             labelKey="com_ui_project_meta_ads_account_profile"
@@ -5277,12 +5313,12 @@ export default function ProjectMetaAdsPanel({
                         </label>
                       </div>
                     )}
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <div className={metaAdsModalTile}>
                       <h5 className={metaAdsLabel}>
                         {localize('com_ui_project_meta_ads_rule_section_performance')}
                       </h5>
                       <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                           <RuleFieldLabel
                             localize={localize}
                             labelKey="com_ui_project_meta_ads_target_result_type"
@@ -5306,7 +5342,7 @@ export default function ProjectMetaAdsPanel({
                             ))}
                           </select>
                         </label>
-                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                           <RuleFieldLabel
                             localize={localize}
                             labelKey="com_ui_project_meta_ads_primary_metric"
@@ -5329,7 +5365,7 @@ export default function ProjectMetaAdsPanel({
                         </label>
                       </div>
                     </div>
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <div className={metaAdsModalTile}>
                       <h5 className={metaAdsLabel}>
                         {localize('com_ui_project_meta_ads_rule_section_budget')}
                       </h5>
@@ -5337,7 +5373,7 @@ export default function ProjectMetaAdsPanel({
                         {numberFields.map((field) => (
                           <label
                             key={field.key}
-                            className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                            className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
                           >
                             <RuleFieldLabel
                               localize={localize}
@@ -5372,7 +5408,7 @@ export default function ProjectMetaAdsPanel({
                         ))}
                       </div>
                     </div>
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <div className={metaAdsModalTile}>
                       <h5 className={metaAdsLabel}>
                         {localize('com_ui_project_meta_ads_rule_section_guardrails')}
                       </h5>
@@ -5380,7 +5416,7 @@ export default function ProjectMetaAdsPanel({
                         {optionalNumberFields.map((field) => (
                           <label
                             key={field.key}
-                            className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                            className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
                           >
                             <RuleFieldLabel
                               localize={localize}
@@ -5402,7 +5438,7 @@ export default function ProjectMetaAdsPanel({
                           </label>
                         ))}
                         {ruleGroupDraft.scope === 'global' && (
-                          <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                          <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                             <RuleFieldLabel
                               localize={localize}
                               labelKey="com_ui_project_meta_ads_max_frequency_alert"
@@ -5424,7 +5460,7 @@ export default function ProjectMetaAdsPanel({
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 border-t border-white/10 p-4">
+                  <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
                     <button
                       type="button"
                       onClick={() => setRuleGroupDraft(null)}
@@ -5445,13 +5481,13 @@ export default function ProjectMetaAdsPanel({
               </div>
             )}
 
-            <div className="border-t border-white/10 bg-[#10110f] p-3">
+            <div className="border-t border-slate-200/70 bg-white/35 p-4 dark:border-white/10 dark:bg-slate-950/10">
               <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                     {localize('com_ui_project_meta_ads_rules_workspace')}
                   </h4>
-                  <p className="mt-1 text-xs text-[#81796b]">
+                  <p className="mt-1 max-w-[64ch] text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_rules_workspace_hint')}
                   </p>
                 </div>
@@ -5464,35 +5500,35 @@ export default function ProjectMetaAdsPanel({
                   {localize('com_ui_project_meta_ads_create_rule_group')}
                 </button>
               </div>
-              <div className="overflow-x-auto border border-white/10">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/80 dark:border-white/10 dark:bg-white/[0.045]">
                 <table className="w-full min-w-[980px] table-fixed border-separate border-spacing-0 text-left text-xs">
-                  <thead className="bg-[#1b1812] text-[10px] uppercase tracking-[0.12em] text-[#8f8677]">
+                  <thead className="bg-slate-50/90 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:bg-white/[0.035] dark:text-slate-400">
                     <tr>
-                      <th className="w-20 border-b border-white/10 px-3 py-2">
+                      <th className="w-20 border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
                         {localize('com_ui_project_meta_ads_status')}
                       </th>
-                      <th className="w-36 border-b border-white/10 px-3 py-2">
+                      <th className="w-36 border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
                         {localize('com_ui_project_meta_ads_rule_type')}
                       </th>
-                      <th className="w-64 border-b border-white/10 px-3 py-2">
+                      <th className="w-64 border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
                         {localize('com_ui_project_meta_ads_rule_scope')}
                       </th>
-                      <th className="w-36 border-b border-white/10 px-3 py-2">
+                      <th className="w-36 border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
                         {localize('com_ui_project_meta_ads_target_result_type')}
                       </th>
-                      <th className="w-28 border-b border-white/10 px-3 py-2">
+                      <th className="w-28 border-b border-slate-200/70 px-3 py-2 dark:border-white/10">
                         {localize('com_ui_project_meta_ads_primary_metric')}
                       </th>
-                      <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                      <th className="w-32 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                         {localize('com_ui_project_meta_ads_cpa_roas')}
                       </th>
-                      <th className="w-36 border-b border-white/10 px-3 py-2 text-right">
+                      <th className="w-36 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                         {localize('com_ui_project_meta_ads_budget_range')}
                       </th>
-                      <th className="w-24 border-b border-white/10 px-3 py-2 text-right">
+                      <th className="w-24 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                         {localize('com_ui_project_meta_ads_cooldown')}
                       </th>
-                      <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                      <th className="w-32 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                         {localize('com_ui_project_meta_ads_actions')}
                       </th>
                     </tr>
@@ -5502,7 +5538,7 @@ export default function ProjectMetaAdsPanel({
                       <tr
                         key={row.key}
                         data-testid="meta-ads-rule-row"
-                        className="group bg-[#12120f] transition duration-200 hover:bg-[#19170f]"
+                        className="group bg-white/60 transition duration-200 odd:bg-slate-50/60 hover:bg-teal-50/70 dark:bg-white/[0.035] dark:odd:bg-white/[0.055] dark:hover:bg-teal-300/[0.08]"
                       >
                         <td className="border-b border-white/[0.06] px-3 py-2">
                           <button
@@ -5514,10 +5550,10 @@ export default function ProjectMetaAdsPanel({
                                 : localize('com_ui_project_meta_ads_enable_rule')
                             }
                             onClick={() => onToggleRuleRow(row)}
-                            className={`inline-flex h-7 items-center gap-1 border px-2 font-semibold transition ${
+                            className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 font-semibold transition ${
                               row.enabled
-                                ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/15'
-                                : 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15'
+                                ? 'border-emerald-300/45 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100 dark:hover:bg-emerald-300/15'
+                                : 'border-amber-300/45 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100 dark:hover:bg-amber-300/15'
                             } disabled:cursor-not-allowed disabled:opacity-50`}
                           >
                             {row.enabled ? <Pause size={14} /> : <Play size={14} />}
@@ -5529,34 +5565,36 @@ export default function ProjectMetaAdsPanel({
                           </button>
                         </td>
                         <td className="border-b border-white/[0.06] px-3 py-2">
-                          <div className="font-semibold text-[#f3efe6]">
+                          <div className="font-semibold text-slate-900 dark:text-white">
                             {localize(getRuleRowTypeLabelKey(row.type))}
                           </div>
-                          <div className="mt-0.5 text-[11px] text-[#81796b]">
+                          <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                             {row.precedenceLabel}
                           </div>
                         </td>
                         <td className="border-b border-white/[0.06] px-3 py-2">
-                          <div className="truncate font-semibold text-[#f3efe6]">{row.name}</div>
-                          <div className="mt-0.5 truncate text-[11px] text-[#948b7d]">
+                          <div className="truncate font-semibold text-slate-900 dark:text-white">
+                            {row.name}
+                          </div>
+                          <div className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
                             {row.scopeLabel}
                           </div>
                         </td>
-                        <td className="border-b border-white/[0.06] px-3 py-2 text-[#cfc6b7]">
+                        <td className="border-b border-slate-200/60 px-3 py-2 text-slate-600 dark:border-white/[0.06] dark:text-slate-300">
                           {getResultTypeLabel(row.rules.targetResultType, localize)}
                         </td>
-                        <td className="border-b border-white/[0.06] px-3 py-2 font-mono uppercase text-[#f3efe6]">
+                        <td className="border-b border-slate-200/60 px-3 py-2 font-mono uppercase text-slate-900 dark:border-white/[0.06] dark:text-white">
                           {row.rules.primaryMetric ?? 'cpa'}
                         </td>
-                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
                           {formatMoney(row.rules.targetCpa, currency)} /{' '}
                           {formatMetric(row.rules.minRoas)}
                         </td>
-                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
                           {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
                           {formatMoney(row.rules.maxDailyBudget, currency)}
                         </td>
-                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
                           {localize('com_ui_project_meta_ads_cooldown_hours_value', {
                             0: String(row.rules.cooldownHours),
                           })}
@@ -5580,7 +5618,7 @@ export default function ProjectMetaAdsPanel({
                                   onEditRuleOverride(row.override);
                                 }
                               }}
-                              className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-amber-300/40 hover:text-[#f3efe6] disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-teal-300/60 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:border-teal-300/40 dark:hover:text-white"
                             >
                               <PencilSimple size={15} />
                             </button>
@@ -5598,7 +5636,7 @@ export default function ProjectMetaAdsPanel({
                                     onDeleteRuleOverride(row.override);
                                   }
                                 }}
-                                className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-red-300/40 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-red-300/60 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:border-red-300/40 dark:hover:text-red-100"
                               >
                                 <Trash size={15} />
                               </button>
@@ -5611,7 +5649,7 @@ export default function ProjectMetaAdsPanel({
                 </table>
               </div>
               {ruleRows.length === 1 && (
-                <div className="border-x border-b border-dashed border-white/10 px-3 py-4 text-xs text-[#948b7d]">
+                <div className="rounded-b-2xl border-x border-b border-dashed border-slate-200/80 px-3 py-4 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
                   {localize('com_ui_project_meta_ads_rules_empty')}
                 </div>
               )}
@@ -5620,19 +5658,19 @@ export default function ProjectMetaAdsPanel({
             <div
               ref={tableScrollRef}
               onScroll={onTableScroll}
-              className="max-w-full overflow-x-auto bg-[#0f0e0b]"
+              className="max-w-full overflow-x-auto bg-white/55 dark:bg-slate-950/20"
             >
               <table
-                className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-white/10`}
+                className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-slate-200/60 dark:[&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-200/70 dark:[&_th]:border-white/10`}
               >
-                <thead className="sticky top-0 z-30 border-b border-white/10 bg-[#1b1812] text-[11px] uppercase tracking-[0.12em] text-[#8f8677] shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
+                <thead className="sticky top-0 z-30 border-b border-slate-200 bg-slate-100/95 text-[11px] uppercase tracking-[0.12em] text-slate-500 shadow-[0_16px_36px_-32px_rgba(15,23,42,0.45)] backdrop-blur dark:border-white/10 dark:bg-[#1a2438]/95 dark:text-slate-400 dark:shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
                   <tr>
-                    <th className="sticky left-0 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3">
+                    <th className="sticky left-0 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 dark:border-white/10 dark:bg-[#1a2438]">
                       <span className="sr-only">
                         {localize('com_ui_project_meta_ads_select_ad_set')}
                       </span>
                     </th>
-                    <th className="sticky left-10 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3 shadow-[10px_0_18px_-18px_rgba(245,158,11,0.8)]">
+                    <th className="sticky left-10 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 shadow-[10px_0_18px_-18px_rgba(20,184,166,0.55)] dark:border-white/10 dark:bg-[#1a2438]">
                       <span className="sr-only">
                         {localize('com_ui_project_meta_ads_expand_campaign')}
                       </span>
@@ -5643,14 +5681,14 @@ export default function ProjectMetaAdsPanel({
                       const alignClass = column.align === 'right' ? 'text-right' : '';
                       const stickyClass =
                         column.key === 'adStatus'
-                          ? 'sticky left-20 z-40 bg-[#1b1812]'
+                          ? 'sticky left-20 z-40 bg-slate-100/95 dark:bg-[#1a2438]'
                           : column.key === 'name'
-                            ? 'sticky left-32 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
+                            ? 'sticky left-32 z-40 bg-slate-100/95 shadow-[14px_0_26px_-22px_rgba(15,23,42,0.45)] dark:bg-[#1a2438] dark:shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
                             : '';
                       return (
                         <th
                           key={column.key}
-                          className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-white/10 px-3 py-3`}
+                          className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-slate-200 px-3 py-3 dark:border-white/10`}
                         >
                           {column.key === 'actions' || column.key === 'adStatus' ? (
                             <span className="sr-only">{label}</span>
@@ -5709,7 +5747,9 @@ export default function ProjectMetaAdsPanel({
                             data-testid="meta-ads-campaign-row"
                             className={getTableRowClass(campaignRowIndex, 'campaign')}
                           >
-                            <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
+                            <td
+                              className={`sticky left-0 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
+                            >
                               <input
                                 type="checkbox"
                                 checked={selected}
@@ -5718,7 +5758,9 @@ export default function ProjectMetaAdsPanel({
                                 className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                               />
                             </td>
-                            <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                            <td
+                              className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
+                            >
                               {campaign.adSets.length > 0 && (
                                 <button
                                   type="button"
@@ -5752,7 +5794,9 @@ export default function ProjectMetaAdsPanel({
                                     data-testid="meta-ads-adset-row"
                                     className={getTableRowClass(adsetRowIndex, 'adset')}
                                   >
-                                    <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
+                                    <td
+                                      className={`sticky left-0 z-30 px-2 py-2 pl-6 align-middle ${metaAdsStickyCell}`}
+                                    >
                                       <input
                                         type="checkbox"
                                         checked={adsetSelected}
@@ -5763,7 +5807,9 @@ export default function ProjectMetaAdsPanel({
                                         className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
                                       />
                                     </td>
-                                    <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                                    <td
+                                      className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
+                                    >
                                       {adsetAds.length > 0 ? (
                                         <button
                                           type="button"
@@ -5807,7 +5853,7 @@ export default function ProjectMetaAdsPanel({
                 </div>
               )}
             </div>
-            <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[#10110f] px-4 py-2">
+            <div className="sticky bottom-0 z-20 border-t border-slate-200/70 bg-white/80 px-4 py-2 backdrop-blur dark:border-white/10 dark:bg-[#152033]/80">
               <div
                 ref={stickyHorizontalScrollRef}
                 onScroll={onStickyHorizontalScroll}
@@ -5827,18 +5873,18 @@ export default function ProjectMetaAdsPanel({
             aria-labelledby="meta-ads-tab-bi"
             data-testid="meta-ads-bi-tab-panel"
           >
-            <div className="border-t border-white/10 p-3">
-              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="p-4">
+              <div className="mb-4 rounded-2xl border border-slate-200/80 bg-white/70 p-4 shadow-[0_16px_48px_-42px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
                     {localize('com_ui_project_meta_ads_bi_rankings')}
                   </h4>
-                  <p className="mt-1 text-xs text-[#81796b]">
+                  <p className="mt-1 max-w-[64ch] text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_bi_rankings_hint')}
                   </p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_period')}
                     <select
                       data-testid="meta-ads-bi-period-filter"
@@ -5855,7 +5901,7 @@ export default function ProjectMetaAdsPanel({
                   </label>
                   {periodFilter === 'custom' && (
                     <>
-                      <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                      <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_period_since')}
                         <input
                           type="date"
@@ -5865,7 +5911,7 @@ export default function ProjectMetaAdsPanel({
                           className={metaAdsInput}
                         />
                       </label>
-                      <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                      <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                         {localize('com_ui_project_meta_ads_period_until')}
                         <input
                           type="date"
@@ -5882,14 +5928,14 @@ export default function ProjectMetaAdsPanel({
                             customSince === appliedCustomSince && customUntil === appliedCustomUntil
                           }
                           onClick={onApplyCustomPeriod}
-                          className="h-9 border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-[#81796b]"
+                          className="h-10 rounded-xl border border-teal-300/50 bg-teal-50 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-teal-300/30 dark:bg-teal-300/10 dark:text-teal-100 dark:hover:bg-teal-300/15 dark:disabled:border-white/10 dark:disabled:bg-white/[0.03] dark:disabled:text-slate-600"
                         >
                           {localize('com_ui_project_meta_ads_period_update')}
                         </button>
                       </div>
                     </>
                   )}
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_level')}
                     <select
                       data-testid="meta-ads-bi-level-filter"
@@ -5911,13 +5957,16 @@ export default function ProjectMetaAdsPanel({
                       <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
                     </select>
                   </label>
-                  <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                  <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_objective')}
                     <select
                       data-testid="meta-ads-bi-objective-filter"
                       value={biControls.objective}
                       onChange={(event) =>
-                        setBiControls((current) => ({ ...current, objective: event.target.value }))
+                        setBiControls((current) => ({
+                          ...current,
+                          objective: event.target.value,
+                        }))
                       }
                       className={metaAdsInput}
                     >
@@ -5929,13 +5978,16 @@ export default function ProjectMetaAdsPanel({
                       ))}
                     </select>
                   </label>
-                  <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                  <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_target_result_type')}
                     <select
                       data-testid="meta-ads-bi-result-type-filter"
                       value={biControls.resultType}
                       onChange={(event) =>
-                        setBiControls((current) => ({ ...current, resultType: event.target.value }))
+                        setBiControls((current) => ({
+                          ...current,
+                          resultType: event.target.value,
+                        }))
                       }
                       className={metaAdsInput}
                     >
@@ -5947,7 +5999,7 @@ export default function ProjectMetaAdsPanel({
                       ))}
                     </select>
                   </label>
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_metric')}
                     <select
                       data-testid="meta-ads-bi-metric-filter"
@@ -5985,18 +6037,18 @@ export default function ProjectMetaAdsPanel({
             </div>
 
             {hasEvolutionSection && (
-              <div className="border-t border-white/10 p-3">
-                <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+              <div className="px-4 pb-4">
+                <h4 className="mb-3 text-sm font-semibold text-slate-900 dark:text-white">
                   {localize('com_ui_project_meta_ads_evolution_analysis')}
                 </h4>
                 <div data-testid="meta-ads-evolution-dashboard" className="grid gap-3">
-                  <div className="border border-white/10 bg-[#12120f] p-3">
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_18px_58px_-46px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                        <h5 className="text-sm font-semibold text-slate-900 dark:text-white">
                           {localize('com_ui_project_meta_ads_evolution_comparison')}
                         </h5>
-                        <p className="mt-1 text-xs text-[#81796b]">
+                        <p className="mt-1 max-w-[62ch] text-xs leading-5 text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_evolution_comparison_hint')}
                         </p>
                       </div>
@@ -6032,13 +6084,13 @@ export default function ProjectMetaAdsPanel({
                         .map(([labelKey, value]) => (
                           <div
                             key={labelKey}
-                            className="border border-white/10 bg-white/[0.025] p-2"
+                            className="rounded-xl border border-slate-200/75 bg-slate-50/75 p-3 dark:border-white/10 dark:bg-white/[0.035]"
                           >
-                            <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                               {localize(labelKey as TranslationKeys)}
                             </div>
                             <div
-                              className="mt-1 truncate font-mono text-xs text-[#f3efe6]"
+                              className="mt-1 truncate font-mono text-sm font-semibold text-slate-900 dark:text-white"
                               title={value}
                             >
                               {value}
@@ -6046,14 +6098,14 @@ export default function ProjectMetaAdsPanel({
                           </div>
                         ))}
                     </div>
-                    <div className="relative mt-3 h-48 border-b border-white/10">
+                    <div className="relative mt-4 h-56 rounded-2xl border border-slate-200/70 bg-slate-50/70 p-2 dark:border-white/10 dark:bg-slate-950/20">
                       {canRenderEvolutionSeries ? (
                         <svg
                           data-testid="meta-ads-evolution-chart"
                           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                           role="img"
                           aria-label={localize('com_ui_project_meta_ads_evolution_comparison')}
-                          className="h-full w-full text-[#f3efe6]"
+                          className="h-full w-full text-slate-700 dark:text-slate-100"
                           preserveAspectRatio="none"
                         >
                           {[0.25, 0.5, 0.75].map((line) => (
@@ -6083,7 +6135,7 @@ export default function ProjectMetaAdsPanel({
                           ))}
                         </svg>
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm text-[#a39a8c]">
+                        <div className="flex h-full w-full items-center justify-center text-sm text-slate-500 dark:text-slate-400">
                           {localize('com_ui_project_meta_ads_insufficient_evolution')}
                         </div>
                       )}
@@ -6113,7 +6165,7 @@ export default function ProjectMetaAdsPanel({
                                 data-date={point.date}
                                 data-entity-id={seriesPath.series.entityId}
                                 aria-label={`${entityName} ${formatTrendDate(point.date)}`}
-                                className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-crosshair items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-amber-200/60"
+                                className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-crosshair items-center justify-center rounded-full outline-none transition duration-150 hover:scale-125 focus:ring-2 focus:ring-teal-300/60"
                                 style={{
                                   left: `${(point.x / chartWidth) * 100}%`,
                                   top: `${(point.y / chartHeight) * 100}%`,
@@ -6125,7 +6177,7 @@ export default function ProjectMetaAdsPanel({
                               >
                                 <span
                                   aria-hidden="true"
-                                  className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_2px_rgba(15,14,11,0.85)]"
+                                  className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_2px_rgba(255,255,255,0.85)] dark:shadow-[0_0_0_2px_rgba(15,23,42,0.9)]"
                                   style={{ backgroundColor: seriesPath.color }}
                                 />
                               </button>
@@ -6135,7 +6187,7 @@ export default function ProjectMetaAdsPanel({
                       {hoveredEvolutionPoint && canRenderEvolutionSeries && (
                         <div
                           data-testid="meta-ads-evolution-point-tooltip"
-                          className="pointer-events-none absolute z-[1000] min-w-48 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
+                          className="pointer-events-none absolute z-[1000] min-w-48 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-[0_18px_60px_-32px_rgba(15,23,42,0.45)] dark:border-teal-300/25 dark:bg-[#101827] dark:text-teal-100 dark:shadow-xl"
                           style={{
                             left: `${(hoveredEvolutionPoint.x / chartWidth) * 100}%`,
                             top: `${(hoveredEvolutionPoint.y / chartHeight) * 100}%`,
@@ -6150,49 +6202,49 @@ export default function ProjectMetaAdsPanel({
                               className="h-2 w-2 shrink-0"
                               style={{ backgroundColor: hoveredEvolutionPoint.color }}
                             />
-                            <span className="truncate font-semibold text-[#f3efe6]">
+                            <span className="truncate font-semibold text-slate-950 dark:text-white">
                               {hoveredEvolutionPoint.entityName}
                             </span>
                           </div>
                           {hoveredEvolutionPoint.parentCampaignName && (
-                            <div className="mt-1 truncate text-[11px] text-[#cfc6b7]">
+                            <div className="mt-1 truncate text-[11px] text-slate-500 dark:text-slate-300">
                               {hoveredEvolutionPoint.parentCampaignName}
                             </div>
                           )}
                           <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono">
-                            <span className="text-[#a39a8c]">
+                            <span className="text-slate-500 dark:text-slate-400">
                               {formatTrendDate(hoveredEvolutionPoint.date)}
                             </span>
-                            <span className="text-right text-[#f3efe6]">
+                            <span className="text-right text-slate-950 dark:text-white">
                               {formatEvolutionMetricValue(
                                 hoveredEvolutionPoint.value,
                                 biControls.metric,
                                 currency,
                               )}
                             </span>
-                            <span className="text-[#a39a8c]">
+                            <span className="text-slate-500 dark:text-slate-400">
                               {localize('com_ui_project_meta_ads_results')}
                             </span>
-                            <span className="text-right text-[#f3efe6]">
+                            <span className="text-right text-slate-950 dark:text-white">
                               {formatMetric(hoveredEvolutionPoint.point?.resultCount)}
                             </span>
-                            <span className="text-[#a39a8c]">
+                            <span className="text-slate-500 dark:text-slate-400">
                               {localize('com_ui_project_meta_ads_spend')}
                             </span>
-                            <span className="text-right text-[#f3efe6]">
+                            <span className="text-right text-slate-950 dark:text-white">
                               {formatMoney(hoveredEvolutionPoint.point?.spend, currency)}
                             </span>
-                            <span className="text-[#a39a8c]">
+                            <span className="text-slate-500 dark:text-slate-400">
                               {localize('com_ui_project_meta_ads_cpa')}
                             </span>
-                            <span className="text-right text-[#f3efe6]">
+                            <span className="text-right text-slate-950 dark:text-white">
                               {formatMoney(hoveredEvolutionPoint.point?.cpa, currency)}
                             </span>
                           </div>
                         </div>
                       )}
                     </div>
-                    <div className="mt-2 flex justify-between gap-3 text-[11px] text-[#81796b]">
+                    <div className="mt-2 flex justify-between gap-3 text-[11px] text-slate-500 dark:text-slate-400">
                       {evolutionDates.map((date, index) =>
                         shouldShowTrendLabel(index, evolutionDates.length) ? (
                           <span key={date} className="font-mono">
@@ -6210,7 +6262,7 @@ export default function ProjectMetaAdsPanel({
                         return (
                           <div
                             key={seriesPath.series.entityId}
-                            className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2 py-2"
+                            className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200/75 bg-white/70 px-3 py-2 dark:border-white/10 dark:bg-white/[0.035]"
                           >
                             <div className="flex min-w-0 items-center gap-2">
                               <span
@@ -6219,13 +6271,13 @@ export default function ProjectMetaAdsPanel({
                               />
                               <div className="min-w-0">
                                 <div className="group relative min-w-0">
-                                  <div className="truncate text-xs font-semibold text-[#f3efe6]">
+                                  <div className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                                     {name}
                                   </div>
                                   {renderNameTooltip(name)}
                                 </div>
                                 {seriesPath.series.parentCampaignName && (
-                                  <div className="truncate text-[10px] text-[#81796b]">
+                                  <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
                                     {cleanDashboardName(
                                       seriesPath.series.parentCampaignName,
                                       seriesPath.series.parentCampaignName,
@@ -6234,7 +6286,7 @@ export default function ProjectMetaAdsPanel({
                                 )}
                               </div>
                             </div>
-                            <div className="font-mono text-xs text-[#f3efe6]">
+                            <div className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
                               {formatEvolutionMetricValue(
                                 seriesPath.series.total,
                                 biControls.metric,
@@ -6250,15 +6302,15 @@ export default function ProjectMetaAdsPanel({
                   <div
                     className={`grid gap-3 ${biControls.level === 'ad' ? '' : 'md:grid-cols-2'}`}
                   >
-                    <div className="border border-white/10 bg-[#12120f]">
-                      <div className="border-b border-white/10 px-3 py-2">
-                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-white/10 dark:bg-[#172033]">
+                      <div className="border-b border-slate-200/70 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-[#121a2b]">
+                        <h5 className="text-sm font-semibold text-slate-900 dark:text-white">
                           {localize('com_ui_project_meta_ads_best_evolution')}
                         </h5>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full min-w-[34rem] text-left text-xs">
-                          <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                          <thead className="border-b border-slate-200/70 bg-slate-50 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-400">
                             <tr>
                               <th className="px-3 py-2">
                                 {localize('com_ui_project_meta_ads_campaign')}
@@ -6274,7 +6326,7 @@ export default function ProjectMetaAdsPanel({
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-white/10">
+                          <tbody className="divide-y divide-slate-200/70 dark:divide-white/10">
                             {bestEvolution.length > 0 ? (
                               bestEvolution.map((delta) => {
                                 const entityId = getDeltaEntityId(delta);
@@ -6283,7 +6335,10 @@ export default function ProjectMetaAdsPanel({
                                   entityId,
                                 );
                                 return (
-                                  <tr key={entityId} className="odd:bg-white/[0.025]">
+                                  <tr
+                                    key={entityId}
+                                    className="odd:bg-slate-50/80 dark:odd:bg-[#1b263b]"
+                                  >
                                     {renderEvolutionNameCell(name)}
                                     <td
                                       className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
@@ -6312,7 +6367,10 @@ export default function ProjectMetaAdsPanel({
                               })
                             ) : (
                               <tr>
-                                <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                                <td
+                                  colSpan={4}
+                                  className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400"
+                                >
                                   {localize('com_ui_project_meta_ads_no_evolution')}
                                 </td>
                               </tr>
@@ -6322,15 +6380,15 @@ export default function ProjectMetaAdsPanel({
                       </div>
                     </div>
 
-                    <div className="border border-white/10 bg-[#12120f]">
-                      <div className="border-b border-white/10 px-3 py-2">
-                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/75 dark:border-white/10 dark:bg-white/[0.04]">
+                      <div className="border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                        <h5 className="text-sm font-semibold text-slate-900 dark:text-white">
                           {localize('com_ui_project_meta_ads_budget_changes')}
                         </h5>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full min-w-[34rem] text-left text-xs">
-                          <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                          <thead className="border-b border-slate-200/70 bg-slate-50/70 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-400">
                             <tr>
                               <th className="px-3 py-2">
                                 {localize('com_ui_project_meta_ads_name')}
@@ -6374,7 +6432,7 @@ export default function ProjectMetaAdsPanel({
                                     >
                                       {formatSignedMetric(delta.frequencyDelta)}
                                     </td>
-                                    <td className="px-3 py-2.5 text-[#a39a8c]">
+                                    <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400">
                                       {delta.latestChange?.actor ?? '-'}
                                     </td>
                                   </tr>
@@ -6382,7 +6440,10 @@ export default function ProjectMetaAdsPanel({
                               })
                             ) : (
                               <tr>
-                                <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                                <td
+                                  colSpan={4}
+                                  className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400"
+                                >
                                   {localize('com_ui_project_meta_ads_no_history')}
                                 </td>
                               </tr>
@@ -6400,11 +6461,13 @@ export default function ProjectMetaAdsPanel({
       </div>
 
       {workspaceTab === 'overview' && (
-        <div className="border border-border-light bg-surface-primary p-3">
-          <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-            {localize('com_ui_project_meta_ads_history')}
-          </h4>
-          <div className="mt-3 space-y-2">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_58px_-46px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-[#172033]">
+          <div className="border-b border-slate-200/70 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-[#121a2b]">
+            <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+              {localize('com_ui_project_meta_ads_history')}
+            </h4>
+          </div>
+          <div className="space-y-2 p-4">
             {(biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []).length > 0 ? (
               (biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? [])
                 .slice(0, 8)
@@ -6413,24 +6476,24 @@ export default function ProjectMetaAdsPanel({
                   return (
                     <div
                       key={change._id ?? `${change.entityId}-${change.createdAt}`}
-                      className="flex flex-col gap-1 border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-1 rounded-2xl border border-slate-200/80 bg-slate-50 p-3 text-sm dark:border-white/10 dark:bg-[#121a2b] sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <div className="truncate font-medium text-text-primary">
+                        <div className="truncate font-medium text-slate-950 dark:text-white">
                           {change.entityName ?? change.entityId}
                         </div>
-                        <div className="text-xs text-text-secondary">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
                           {change.actor ?? '-'} · {change.reason ?? '-'}
                         </div>
                       </div>
                       <div className="text-left sm:text-right">
-                        <div className="font-mono text-xs text-text-secondary">
+                        <div className="font-mono text-xs text-slate-600 dark:text-slate-300">
                           {formatMoney(change.previousDailyBudget, currency)}
                           {' -> '}
                           {formatMoney(change.newDailyBudget, currency)}
                         </div>
                         {delta.deltaDailyBudget != null && (
-                          <div className="mt-1 font-mono text-[11px] text-text-tertiary">
+                          <div className="mt-1 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                             {`${formatSignedMoney(delta.deltaDailyBudget, currency)} · ${formatSignedPercent(delta.deltaPercent)}`}
                           </div>
                         )}
@@ -6439,7 +6502,7 @@ export default function ProjectMetaAdsPanel({
                   );
                 })
             ) : (
-              <div className="border border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
+              <div className="rounded-2xl border border-dashed border-slate-300 py-6 text-center text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
                 {localize('com_ui_project_meta_ads_no_history')}
               </div>
             )}
@@ -6457,21 +6520,23 @@ export default function ProjectMetaAdsPanel({
       >
         {selectedAdPreview && (
           <OGDialogContent
-            className="max-w-3xl overflow-hidden p-0"
+            className={`max-w-3xl p-0 ${metaAdsModalShell}`}
             overlayStyle={metricsFullscreen ? { zIndex: 10010 } : undefined}
             style={metricsFullscreen ? { zIndex: 10020 } : undefined}
           >
-            <OGDialogHeader className="border-b border-white/10 bg-[#12120f] px-5 py-4 text-left">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+            <OGDialogHeader className={metaAdsModalHeader}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                 {localize('com_ui_project_meta_ads_ad_preview')}
               </div>
-              <OGDialogTitle className="mt-1 text-base font-semibold text-[#f3efe6]">
+              <OGDialogTitle className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                 {selectedAdPreview.adName ?? selectedAdPreview.title ?? selectedAdPreview.adId}
               </OGDialogTitle>
-              <div className="mt-1 truncate text-xs text-[#81796b]">{selectedAdPreview.adId}</div>
+              <div className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                {selectedAdPreview.adId}
+              </div>
             </OGDialogHeader>
-            <div className="grid gap-0 bg-[#0f0e0b] sm:grid-cols-[minmax(220px,280px)_1fr]">
-              <div className="border-b border-white/10 bg-[#151512] p-5 sm:border-b-0 sm:border-r">
+            <div className="grid gap-0 bg-white dark:bg-[#101827] sm:grid-cols-[minmax(220px,280px)_1fr]">
+              <div className="border-b border-slate-200/75 bg-slate-50/70 p-5 dark:border-white/10 dark:bg-white/[0.035] sm:border-b-0 sm:border-r">
                 <button
                   type="button"
                   aria-label={localize(
@@ -6491,7 +6556,7 @@ export default function ProjectMetaAdsPanel({
                     }
                     window.open(selectedAdPreview.adsManagerUrl, '_blank', 'noopener,noreferrer');
                   }}
-                  className="group relative aspect-[4/3] w-full overflow-hidden border border-white/10 bg-[#242016] text-left transition hover:border-amber-300/50 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:hover:border-white/10"
+                  className="group relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 text-left transition hover:border-teal-300/60 focus:outline-none focus:ring-2 focus:ring-teal-300/60 disabled:cursor-not-allowed disabled:hover:border-slate-200/80 dark:border-white/10 dark:bg-slate-950/35 dark:disabled:hover:border-white/10"
                 >
                   {getAdThumbnailUrl(selectedAdPreview) ? (
                     <img
@@ -6504,7 +6569,7 @@ export default function ProjectMetaAdsPanel({
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-[#8a8172]">
+                    <div className="flex h-full w-full items-center justify-center px-3 text-center text-xs text-slate-500 dark:text-slate-400">
                       {localize('com_ui_project_meta_ads_no_creative_media')}
                     </div>
                   )}
@@ -6549,17 +6614,17 @@ export default function ProjectMetaAdsPanel({
                       formatIntegerMetric(selectedAdPreview.impressions),
                     ],
                   ].map(([labelKey, value]) => (
-                    <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
-                      <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                    <div key={labelKey} className={metaAdsModalTile}>
+                      <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                         {localize(labelKey as TranslationKeys)}
                       </div>
-                      <div className="mt-2 font-mono text-base font-semibold text-[#f3efe6]">
+                      <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
                         {value}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="space-y-2 text-sm text-[#d8d0c2]">
+                <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
                   {[
                     [
                       'com_ui_project_meta_ads_title_text' as TranslationKeys,
@@ -6586,12 +6651,12 @@ export default function ProjectMetaAdsPanel({
                     .map(([labelKey, value]) => (
                       <div
                         key={labelKey}
-                        className="flex items-start justify-between gap-3 border-b border-white/10 py-2"
+                        className="flex items-start justify-between gap-3 border-b border-slate-200/75 py-2 dark:border-white/10"
                       >
-                        <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-[#81796b]">
+                        <span className="shrink-0 text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                           {localize(labelKey as TranslationKeys)}
                         </span>
-                        <span className="min-w-0 text-right font-medium text-[#f3efe6]">
+                        <span className="min-w-0 text-right font-medium text-slate-950 dark:text-white">
                           {value}
                         </span>
                       </div>
@@ -6612,19 +6677,19 @@ export default function ProjectMetaAdsPanel({
         }}
       >
         {selectedBiRankItem && (
-          <OGDialogContent className="max-w-2xl overflow-hidden p-0">
-            <OGDialogHeader className="border-b border-white/10 bg-[#12120f] px-5 py-4 text-left">
+          <OGDialogContent className={`max-w-2xl p-0 ${metaAdsModalShell}`}>
+            <OGDialogHeader className={metaAdsModalHeader}>
               <div className="flex gap-4">
                 {renderRankMedia(selectedBiRankItem, 'lg')}
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                     {localize('com_ui_project_meta_ads_bi_rank_detail')}
                   </div>
-                  <OGDialogTitle className="mt-1 text-base font-semibold text-[#f3efe6]">
+                  <OGDialogTitle className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
                     {cleanDashboardName(selectedBiRankItem.name, selectedBiRankItem.id)}
                   </OGDialogTitle>
                   {selectedBiRankItem.parentName && (
-                    <div className="truncate text-xs text-[#81796b]">
+                    <div className="truncate text-xs text-slate-500 dark:text-slate-400">
                       {cleanDashboardName(
                         selectedBiRankItem.parentName,
                         selectedBiRankItem.parentName,
@@ -6634,7 +6699,7 @@ export default function ProjectMetaAdsPanel({
                 </div>
               </div>
             </OGDialogHeader>
-            <div className="bg-[#0f0e0b] p-5">
+            <div className="bg-white p-5 dark:bg-[#101827]">
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
                   [
@@ -6650,17 +6715,17 @@ export default function ProjectMetaAdsPanel({
                     formatMoney(selectedBiRankItem.spend, currency),
                   ],
                 ].map(([labelKey, value]) => (
-                  <div key={labelKey} className="border border-white/10 bg-[#151512] p-3">
-                    <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                  <div key={labelKey} className={metaAdsModalTile}>
+                    <div className="text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                       {localize(labelKey as TranslationKeys)}
                     </div>
-                    <div className="mt-2 font-mono text-lg font-semibold text-[#f3efe6]">
+                    <div className="mt-2 font-mono text-lg font-semibold text-slate-950 dark:text-white">
                       {value}
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 grid gap-2 text-sm text-[#d8d0c2] sm:grid-cols-2">
+              <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
                 {[
                   [
                     'com_ui_project_meta_ads_level' as TranslationKeys,
@@ -6685,12 +6750,14 @@ export default function ProjectMetaAdsPanel({
                 ].map(([labelKey, value]) => (
                   <div
                     key={labelKey}
-                    className="flex items-center justify-between gap-3 border-b border-white/10 py-2"
+                    className="flex items-center justify-between gap-3 border-b border-slate-200/75 py-2 dark:border-white/10"
                   >
-                    <span className="text-xs uppercase tracking-[0.12em] text-[#81796b]">
+                    <span className="text-xs uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                       {localize(labelKey as TranslationKeys)}
                     </span>
-                    <span className="text-right font-medium text-[#f3efe6]">{value}</span>
+                    <span className="text-right font-medium text-slate-950 dark:text-white">
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>

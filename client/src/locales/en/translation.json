@@ -2065,6 +2065,8 @@
   "com_ui_project_meta_ads_cost_per_result": "Cost per result",
   "com_ui_project_meta_ads_choose_result_metric": "Choose result metric",
   "com_ui_project_meta_ads_choose_result_metric_hint": "Average cost uses only campaigns and ad sets with this result type.",
+  "com_ui_project_meta_ads_change_result_metric": "Change metric",
+  "com_ui_project_meta_ads_click_to_choose_result_metric": "Click to choose the primary result",
   "com_ui_project_meta_ads_clear_result_metric": "Clear selection",
   "com_ui_project_meta_ads_average_frequency": "Avg. frequency",
   "com_ui_project_meta_ads_evolution": "Campaign evolution",
