@@ -561,20 +561,50 @@ function resolveTargetResultType({
 
 function findCanonicalAction(items, targetActionType) {
   const canonicalTarget = canonicalizeMetaActionType(targetActionType);
-  return (Array.isArray(items) ? items : []).find(
-    (item) => canonicalizeMetaActionType(item?.action_type) === canonicalTarget,
+  const values = Array.isArray(items) ? items : [];
+  return (
+    values.find((item) => item?.action_type === canonicalTarget) ??
+    values.find((item) => canonicalizeMetaActionType(item?.action_type) === canonicalTarget)
+  );
+}
+
+function shouldUseCanonicalAction(current, candidate, resultType) {
+  if (!current) {
+    return true;
+  }
+  const currentRawType = current.rawActionType;
+  const candidateRawType = candidate?.action_type;
+  return candidateRawType === resultType && currentRawType !== resultType;
+}
+
+function getCanonicalBreakdownActions(actions) {
+  const actionByCanonicalType = new Map();
+  for (const action of Array.isArray(actions) ? actions : []) {
+    const rawResultType = action?.action_type;
+    const resultType = canonicalizeMetaActionType(rawResultType);
+    const totalResults = Number(action?.value ?? 0);
+    if (!resultType || !Number.isFinite(totalResults) || totalResults <= 0) {
+      continue;
+    }
+    const current = actionByCanonicalType.get(resultType);
+    if (!shouldUseCanonicalAction(current, action, resultType)) {
+      continue;
+    }
+    actionByCanonicalType.set(resultType, {
+      resultType,
+      rawActionType: rawResultType,
+      totalResults,
+    });
+  }
+  return Array.from(actionByCanonicalType.values()).map(
+    ({ rawActionType: _rawActionType, ...action }) => action,
   );
 }
 
 function getActionValue(items, targetActionType) {
-  const canonicalTarget = canonicalizeMetaActionType(targetActionType);
-  return (Array.isArray(items) ? items : []).reduce((total, item) => {
-    if (canonicalizeMetaActionType(item?.action_type) !== canonicalTarget) {
-      return total;
-    }
-    const value = Number(item?.value ?? 0);
-    return Number.isFinite(value) ? total + value : total;
-  }, 0);
+  const canonicalAction = findCanonicalAction(items, targetActionType);
+  const value = Number(canonicalAction?.value ?? 0);
+  return Number.isFinite(value) ? value : 0;
 }
 
 function getPurchaseValue(row) {
@@ -596,29 +626,14 @@ function calculateMetrics(row, targetResultType) {
   const spend = Number(row.spend ?? 0);
   const actions = Array.isArray(row.actions) ? row.actions : [];
   const costPerAction = Array.isArray(row.cost_per_action_type) ? row.cost_per_action_type : [];
-  const resultTypeBreakdownByType = new Map();
-  for (const action of actions) {
-    const rawResultType = action?.action_type;
-    const resultType = canonicalizeMetaActionType(rawResultType);
-    const totalResults = Number(action?.value ?? 0);
-    if (!resultType || !Number.isFinite(totalResults) || totalResults <= 0) {
-      continue;
-    }
-    const current = resultTypeBreakdownByType.get(resultType) ?? {
-      resultType,
-      totalSpend: spend,
-      totalResults: 0,
-      averageCostPerResult: null,
-    };
-    current.totalResults += totalResults;
-    current.averageCostPerResult =
-      current.totalResults > 0
-        ? Number((current.totalSpend / current.totalResults).toFixed(2))
-        : null;
-    resultTypeBreakdownByType.set(resultType, current);
-  }
   const resultTypeBreakdown = filterAggregateResultTypes(
-    Array.from(resultTypeBreakdownByType.values()),
+    getCanonicalBreakdownActions(actions).map((action) => ({
+      resultType: action.resultType,
+      totalSpend: spend,
+      totalResults: action.totalResults,
+      averageCostPerResult:
+        action.totalResults > 0 ? Number((spend / action.totalResults).toFixed(2)) : null,
+    })),
   );
   const normalizedTarget = canonicalizeMetaActionType(targetResultType);
   const prioritizedAction = RESULT_ACTION_PRIORITY.map((actionType) =>

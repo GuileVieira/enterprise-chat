@@ -125,6 +125,32 @@ describe('Meta Ads budget service', () => {
     );
   });
 
+  it('does not add overlapping purchase aliases to purchase result breakdowns', () => {
+    const result = _calculateMetricsForTest(
+      {
+        spend: '340',
+        actions: [
+          { action_type: 'purchase', value: '34' },
+          { action_type: 'omni_purchase', value: '40' },
+          { action_type: 'offsite_conversion.fb_pixel_purchase', value: '34' },
+        ],
+      },
+      'purchase',
+    );
+
+    expect(result.resultType).toBe('purchase');
+    expect(result.resultCount).toBe(34);
+    expect(result.cpa).toBe(10);
+    expect(result.resultTypeBreakdown).toEqual([
+      {
+        resultType: 'purchase',
+        totalSpend: 340,
+        totalResults: 34,
+        averageCostPerResult: 10,
+      },
+    ]);
+  });
+
   it('does not use link clicks as purchase fallback when purchases are missing', () => {
     const result = _calculateMetricsForTest(
       {
