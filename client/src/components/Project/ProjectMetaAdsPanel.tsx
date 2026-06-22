@@ -56,6 +56,21 @@ import { useAuthContext, useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
+import {
+  MetaAdsBadge,
+  MetaAdsButton,
+  MetaAdsField,
+  MetaAdsInput,
+  MetaAdsPanel,
+  MetaAdsSelect,
+  metaAdsButtonClassName,
+  metaAdsGhostButtonClassName,
+  metaAdsInputClassName,
+  metaAdsInputLargeClassName,
+  metaAdsLabelClassName,
+  metaAdsModalTileClassName,
+  metaAdsPrimaryButtonClassName,
+} from './metaAds/ui';
 
 type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
 type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
@@ -520,22 +535,12 @@ const primaryMetricOptions = [
 
 const metaAdsSurface =
   'overflow-hidden rounded-[28px] border border-slate-200/80 bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.12),transparent_34%),linear-gradient(135deg,#f8fbff_0%,#eef5ff_45%,#f7f2ff_100%)] text-slate-950 shadow-[0_24px_80px_-52px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.18),transparent_34%),linear-gradient(135deg,#111827_0%,#172033_48%,#241b3a_100%)] dark:text-slate-50 dark:shadow-[0_30px_100px_-60px_rgba(15,23,42,0.95)]';
-const metaAdsPanel =
-  'rounded-2xl border border-slate-200/80 bg-white/78 shadow-[0_18px_60px_-46px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-[#182238]/78 dark:shadow-[0_18px_70px_-54px_rgba(8,13,28,0.95)]';
-const metaAdsMutedPanel =
-  'rounded-2xl border border-slate-200/75 bg-slate-50/80 shadow-[0_16px_46px_-42px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-white/[0.045]';
-const metaAdsInput =
-  'h-10 w-full min-w-0 rounded-xl border border-slate-200/90 bg-white/90 px-3 text-xs font-medium text-slate-800 outline-none transition duration-200 placeholder:text-slate-400 hover:border-teal-400/60 focus:border-teal-400 focus:ring-4 focus:ring-teal-400/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-teal-300/45 dark:focus:border-teal-300 dark:focus:ring-teal-300/15';
-const metaAdsInputLg =
-  'h-11 w-full min-w-0 rounded-xl border border-slate-200/90 bg-white/90 px-3 text-sm font-medium text-slate-800 outline-none transition duration-200 placeholder:text-slate-400 hover:border-teal-400/60 focus:border-teal-400 focus:ring-4 focus:ring-teal-400/15 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-teal-300/45 dark:focus:border-teal-300 dark:focus:ring-teal-300/15';
-const metaAdsButton =
-  'h-10 rounded-xl border border-slate-200/90 bg-white/80 px-3 text-xs font-semibold text-slate-700 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.42)] transition duration-200 hover:-translate-y-0.5 hover:border-teal-300/70 hover:bg-white hover:text-slate-950 active:translate-y-px disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-200 dark:hover:border-teal-300/45 dark:hover:bg-white/[0.09] dark:hover:text-white';
-const metaAdsGhostButton =
-  'h-10 rounded-xl border border-transparent px-3 text-xs font-semibold text-slate-500 transition duration-200 hover:border-slate-200 hover:bg-white/70 hover:text-slate-900 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:border-white/10 dark:hover:bg-white/[0.06] dark:hover:text-slate-100';
-const metaAdsPrimaryButton =
-  'h-10 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white shadow-[0_18px_40px_-26px_rgba(15,23,42,0.75)] transition duration-200 hover:-translate-y-0.5 hover:bg-slate-800 active:translate-y-px disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:shadow-[0_18px_44px_-30px_rgba(255,255,255,0.6)] dark:hover:bg-teal-50';
-const metaAdsLabel =
-  'min-h-7 text-[11px] font-semibold uppercase leading-tight tracking-[0.14em] text-slate-500 dark:text-slate-400';
+const metaAdsInput = metaAdsInputClassName;
+const metaAdsInputLg = metaAdsInputLargeClassName;
+const metaAdsButton = metaAdsButtonClassName;
+const metaAdsGhostButton = metaAdsGhostButtonClassName;
+const metaAdsPrimaryButton = metaAdsPrimaryButtonClassName;
+const metaAdsLabel = metaAdsLabelClassName;
 const metaAdsStickyCell =
   'bg-white group-odd:bg-slate-50 shadow-[12px_0_28px_-24px_rgba(15,23,42,0.55)] group-hover:bg-teal-50 dark:bg-[#172033] dark:group-odd:bg-[#1b263b] dark:group-hover:bg-[#183247] dark:shadow-[12px_0_28px_-24px_rgba(0,0,0,0.9)]';
 const metaAdsModalOverlay = 'fixed inset-0 z-[10020] bg-slate-950/55 p-4 dark:bg-black/65';
@@ -545,8 +550,7 @@ const metaAdsDrawerShell =
   'flex h-full w-full flex-col border-l border-slate-200/80 bg-white text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]';
 const metaAdsModalHeader =
   'border-b border-slate-200/75 bg-slate-50 px-5 py-4 text-left dark:border-white/10 dark:bg-[#172033]';
-const metaAdsModalTile =
-  'rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_14px_36px_-32px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[#172033]';
+const metaAdsModalTile = metaAdsModalTileClassName;
 const accountProfileRules: Record<
   (typeof accountProfileOptions)[number]['value'],
   Partial<MetaAdsRulesState>
@@ -4149,63 +4153,43 @@ export default function ProjectMetaAdsPanel({
               {localize('com_ui_project_meta_ads_title')}
             </h3>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
-              <span className="rounded-full border border-teal-300/40 bg-teal-50 px-3 py-1 font-semibold text-teal-700 dark:border-teal-300/20 dark:bg-teal-400/10 dark:text-teal-100">
-                {localize(tokenStatusKey)}
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-white/10 dark:bg-white/[0.055]">
-                {settings.automationMode}
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 dark:border-white/10 dark:bg-white/[0.055]">
+              <MetaAdsBadge variant="success">{localize(tokenStatusKey)}</MetaAdsBadge>
+              <MetaAdsBadge className="font-normal">{settings.automationMode}</MetaAdsBadge>
+              <MetaAdsBadge className="font-normal">
                 {localize('com_ui_project_meta_ads_schedule_minutes', {
                   0: String(settings.scheduleIntervalMinutes),
                 })}
-              </span>
+              </MetaAdsBadge>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
+            <MetaAdsButton
               disabled={!canUseMetaAdsActions || runAnalysis.isLoading}
               onClick={onRunAnalysis}
-              className={metaAdsButton}
             >
               {localize(
                 runAnalysis.isLoading
                   ? 'com_ui_project_meta_ads_running'
                   : 'com_ui_project_meta_ads_run',
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => openSettingsDrawer('account')}
-              className={metaAdsButton}
-            >
+            </MetaAdsButton>
+            <MetaAdsButton onClick={() => openSettingsDrawer('account')}>
               {localize('com_ui_project_meta_ads_account_credentials')}
-            </button>
-            <button
-              type="button"
-              onClick={() => openSettingsDrawer('automation')}
-              className={metaAdsButton}
-            >
+            </MetaAdsButton>
+            <MetaAdsButton onClick={() => openSettingsDrawer('automation')}>
               {localize('com_ui_project_meta_ads_automation')}
-            </button>
-            <button
-              type="button"
-              disabled={!canUseMetaAdsActions}
-              onClick={onOpenRuleGroupDraft}
-              className={metaAdsButton}
-            >
+            </MetaAdsButton>
+            <MetaAdsButton disabled={!canUseMetaAdsActions} onClick={onOpenRuleGroupDraft}>
               {localize('com_ui_project_meta_ads_rules')}
-            </button>
-            <button
-              type="button"
+            </MetaAdsButton>
+            <MetaAdsButton
               onClick={() => setMetricsFullscreen((current) => !current)}
               aria-label={localize(
                 metricsFullscreen
                   ? 'com_ui_project_meta_ads_exit_fullscreen'
                   : 'com_ui_project_meta_ads_enter_fullscreen',
               )}
-              className={`inline-flex items-center gap-2 ${metaAdsButton}`}
+              className="inline-flex items-center gap-2"
             >
               {metricsFullscreen ? (
                 <ArrowsIn className="h-4 w-4" aria-hidden="true" />
@@ -4217,16 +4201,15 @@ export default function ProjectMetaAdsPanel({
                   ? 'com_ui_project_meta_ads_exit_fullscreen'
                   : 'com_ui_project_meta_ads_enter_fullscreen',
               )}
-            </button>
+            </MetaAdsButton>
             {!settingsDrawer && (
-              <button
-                type="button"
+              <MetaAdsButton
+                variant="primary"
                 disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                 onClick={onSave}
-                className={metaAdsPrimaryButton}
               >
                 {localize('com_ui_save')}
-              </button>
+              </MetaAdsButton>
             )}
           </div>
         </div>
@@ -4642,42 +4625,30 @@ export default function ProjectMetaAdsPanel({
                   <span>{localize('com_ui_project_meta_ads_loading')}</span>
                 </div>
               )}
-              <div className={`${metaAdsPanel} p-3`}>
+              <MetaAdsPanel className="p-3">
                 <div className="flex min-w-0 flex-col gap-3">
                   <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <span className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_search')}
-                      </span>
-                      <input
+                    <MetaAdsField label={localize('com_ui_project_meta_ads_search')}>
+                      <MetaAdsInput
                         value={campaignSearch}
                         onChange={(event) => setCampaignSearch(event.target.value)}
-                        className={metaAdsInput}
                       />
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <span className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_budget_mode_filter')}
-                      </span>
-                      <select
+                    </MetaAdsField>
+                    <MetaAdsField label={localize('com_ui_project_meta_ads_budget_mode_filter')}>
+                      <MetaAdsSelect
                         value={budgetModeFilter}
                         onChange={(event) => setBudgetModeFilter(event.target.value)}
-                        className={metaAdsInput}
                       >
                         <option value="all">{localize('com_ui_all')}</option>
                         <option value="CBO">CBO</option>
                         <option value="ABO">ABO</option>
                         <option value="UNKNOWN">UNKNOWN</option>
-                      </select>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <span className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_objective_filter')}
-                      </span>
-                      <select
+                      </MetaAdsSelect>
+                    </MetaAdsField>
+                    <MetaAdsField label={localize('com_ui_project_meta_ads_objective_filter')}>
+                      <MetaAdsSelect
                         value={objectiveFilter}
                         onChange={(event) => setObjectiveFilter(event.target.value)}
-                        className={metaAdsInput}
                       >
                         <option value="all">{localize('com_ui_all')}</option>
                         {objectiveOptions.map((objective) => (
@@ -4685,16 +4656,12 @@ export default function ProjectMetaAdsPanel({
                             {getObjectiveLabel(objective, localize)}
                           </option>
                         ))}
-                      </select>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <span className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_sort')}
-                      </span>
-                      <select
+                      </MetaAdsSelect>
+                    </MetaAdsField>
+                    <MetaAdsField label={localize('com_ui_project_meta_ads_sort')}>
+                      <MetaAdsSelect
                         value={campaignSort}
                         onChange={(event) => setCampaignSort(event.target.value)}
-                        className={metaAdsInput}
                       >
                         <option value="name_asc">{localize('com_ui_name')}</option>
                         <option value="budget_desc">
@@ -4719,24 +4686,20 @@ export default function ProjectMetaAdsPanel({
                         <option value="clicks_desc">
                           {localize('com_ui_project_meta_ads_clicks')}
                         </option>
-                      </select>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <span className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_table_view')}
-                      </span>
-                      <select
+                      </MetaAdsSelect>
+                    </MetaAdsField>
+                    <MetaAdsField label={localize('com_ui_project_meta_ads_table_view')}>
+                      <MetaAdsSelect
                         value={tableView}
                         onChange={(event) => setTableView(event.target.value as TableView)}
-                        className={metaAdsInput}
                       >
                         {tableViewOptions.map((option) => (
                           <option key={option.value} value={option.value}>
                             {localize(option.labelKey)}
                           </option>
                         ))}
-                      </select>
-                    </label>
+                      </MetaAdsSelect>
+                    </MetaAdsField>
                   </div>
                   <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
                     <span className="h-10 rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5 font-mono text-xs tabular-nums text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
@@ -4744,49 +4707,39 @@ export default function ProjectMetaAdsPanel({
                         0: String(selectedCount),
                       })}
                     </span>
-                    <button
-                      type="button"
+                    <MetaAdsButton
+                      variant="ghost"
                       disabled={selectedCount === 0}
                       onClick={() => setSelectedEntityIds([])}
-                      className={metaAdsGhostButton}
                     >
                       {localize('com_ui_project_meta_ads_clear_selection')}
-                    </button>
-                    <button
-                      type="button"
+                    </MetaAdsButton>
+                    <MetaAdsButton
+                      variant="ghost"
                       disabled={campaigns.length === 0}
                       onClick={onExpandAllRows}
-                      className={metaAdsGhostButton}
                     >
                       {localize('com_ui_project_meta_ads_expand_all')}
-                    </button>
-                    <button
-                      type="button"
+                    </MetaAdsButton>
+                    <MetaAdsButton
+                      variant="ghost"
                       disabled={campaigns.length === 0}
                       onClick={onCollapseAllRows}
-                      className={metaAdsGhostButton}
                     >
                       {localize('com_ui_project_meta_ads_collapse_all')}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canCreateRuleGroup}
-                      onClick={onOpenRuleGroupDraft}
-                      className={metaAdsButton}
-                    >
+                    </MetaAdsButton>
+                    <MetaAdsButton disabled={!canCreateRuleGroup} onClick={onOpenRuleGroupDraft}>
                       {localize('com_ui_project_meta_ads_create_rule_group')}
-                    </button>
-                    <button
-                      type="button"
+                    </MetaAdsButton>
+                    <MetaAdsButton
                       disabled={!canOpenTrafficAgentChat}
                       onClick={onOpenTrafficAgentChat}
-                      className={metaAdsButton}
                     >
                       {localize('com_ui_project_meta_ads_chat_with_agent')}
-                    </button>
+                    </MetaAdsButton>
                   </div>
                 </div>
-              </div>
+              </MetaAdsPanel>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {summaryCards.map(({ labelKey, value, tone, context, clickable }) => {
                   const showResultMetricCta =
