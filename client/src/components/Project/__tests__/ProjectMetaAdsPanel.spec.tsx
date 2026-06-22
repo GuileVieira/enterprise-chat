@@ -5,6 +5,8 @@ import type {
   ProjectMetaAdsStatus,
   TProject,
 } from 'librechat-data-provider';
+import English from '~/locales/en/translation.json';
+import PortugueseBrazil from '~/locales/pt-BR/translation.json';
 import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
 
 const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
@@ -285,7 +287,7 @@ describe('ProjectMetaAdsPanel', () => {
   it('saves creative frequency alert rules separately from budget rules', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
     const ruleDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_global_rules',
     });
@@ -318,7 +320,7 @@ describe('ProjectMetaAdsPanel', () => {
   it('pre-fills global rules from the ecommerce account profile', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
     const ruleDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_global_rules',
     });
@@ -1826,7 +1828,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[0]);
     fireEvent.click(screen.getAllByLabelText('com_ui_project_meta_ads_select_campaign')[1]);
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
 
     const ruleGroupDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_create_rule_group',
@@ -1879,7 +1881,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_create_rule_group'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
 
     expect(
       screen.getByRole('dialog', { name: 'com_ui_project_meta_ads_create_rule_group' }),
@@ -2418,14 +2420,15 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();
   });
 
-  it('edits and removes existing rule groups', () => {
-    const projectWithRuleGroup = {
+  it('renders global, group, and override rules in one list', () => {
+    const projectWithRules = {
       ...project,
       metaAds: {
+        enabled: true,
         ruleGroups: [
           {
             id: 'group-1',
-            name: 'Old group',
+            name: 'Prospecting group',
             entityLevel: 'campaign' as const,
             entityIds: ['campaign-1'],
             enabled: true,
@@ -2441,13 +2444,172 @@ describe('ProjectMetaAdsPanel', () => {
             },
           },
         ],
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign' as const,
+            entityId: 'campaign-2',
+            entityName: 'Campaign override',
+            enabled: true,
+            rules: { targetCpa: 30 },
+          },
+          {
+            entityLevel: 'adset' as const,
+            entityId: 'adset-1',
+            entityName: 'Ad set override',
+            enabled: false,
+            rules: { targetCpa: 25 },
+          },
+        ],
       },
     } as TProject;
 
-    render(<ProjectMetaAdsPanel project={projectWithRuleGroup} canEdit={true} />);
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
 
-    expect(screen.getByText('Old group')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_edit_rule_group'));
+    expect(screen.getAllByTestId('meta-ads-rule-row')).toHaveLength(4);
+    expect(screen.getByText('com_ui_project_meta_ads_global_rules')).toBeInTheDocument();
+    expect(screen.getByText('Prospecting group')).toBeInTheDocument();
+    expect(screen.getByText('Campaign override')).toBeInTheDocument();
+    expect(screen.getByText('Ad set override')).toBeInTheDocument();
+    expect(screen.queryAllByLabelText('com_ui_project_meta_ads_delete_rule')).toHaveLength(3);
+  });
+
+  it('marks CPA and ROAS rule labels as individually optional in pt-BR and English', () => {
+    expect(PortugueseBrazil.com_ui_project_meta_ads_target_cpa).toBe('CPA alvo (opcional)');
+    expect(PortugueseBrazil.com_ui_project_meta_ads_min_roas).toBe('ROAS mínimo (opcional)');
+    expect(English.com_ui_project_meta_ads_target_cpa).toBe('Target CPA (optional)');
+    expect(English.com_ui_project_meta_ads_min_roas).toBe('Minimum ROAS (optional)');
+  });
+
+  it('toggles global, group, and override rules through the unified list', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign' as const,
+            entityId: 'campaign-2',
+            entityName: 'Campaign override',
+            enabled: true,
+            rules: { targetCpa: 30 },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    const rows = screen.getAllByTestId('meta-ads-rule-row');
+    fireEvent.click(within(rows[0]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({ enabled: false }),
+      },
+      expect.any(Object),
+    );
+
+    fireEvent.click(within(rows[1]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          ruleGroups: [expect.objectContaining({ id: 'group-1', enabled: false })],
+        }),
+      },
+      expect.any(Object),
+    );
+
+    fireEvent.click(within(rows[2]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          ruleOverrides: [
+            expect.objectContaining({
+              entityLevel: 'campaign',
+              entityId: 'campaign-2',
+              enabled: false,
+            }),
+          ],
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('edits global, group, and override rules from the drawer', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        rules: { targetCpa: 45 },
+        creativeRules: { maxFrequency: 5 },
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Old group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign' as const,
+            entityId: 'campaign-2',
+            entityName: 'Campaign override',
+            enabled: true,
+            rules: { targetCpa: 30 },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    const rows = screen.getAllByTestId('meta-ads-rule-row');
+    fireEvent.click(within(rows[0]).getByLabelText('com_ui_project_meta_ads_edit_rule'));
+    let ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '60' },
+    });
+    fireEvent.change(
+      within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_frequency_alert'),
+      {
+        target: { value: '4' },
+      },
+    );
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          rules: expect.objectContaining({ targetCpa: 60 }),
+          creativeRules: expect.objectContaining({ maxFrequency: 4 }),
+        }),
+      },
+      expect.any(Object),
+    );
+
+    fireEvent.click(
+      within(screen.getAllByTestId('meta-ads-rule-row')[1]).getByLabelText(
+        'com_ui_project_meta_ads_edit_rule',
+      ),
+    );
     const ruleGroupDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_edit_rule_group',
     });
@@ -2474,13 +2636,166 @@ describe('ProjectMetaAdsPanel', () => {
       expect.any(Object),
     );
 
-    mockMutateSettings.mockClear();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_delete_rule_group'));
+    fireEvent.click(
+      within(screen.getAllByTestId('meta-ads-rule-row')[2]).getByLabelText(
+        'com_ui_project_meta_ads_edit_rule',
+      ),
+    );
+    ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_edit_rule_override',
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '35' },
+    });
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          ruleOverrides: [
+            expect.objectContaining({
+              entityId: 'campaign-2',
+              rules: expect.objectContaining({ targetCpa: 35 }),
+            }),
+          ],
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('saves a rule with only ROAS configured as the performance metric', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '' },
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
+      target: { value: '3' },
+    });
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
         projectId: 'p1',
+        metaAds: expect.objectContaining({
+          rules: expect.objectContaining({
+            targetCpa: undefined,
+            minRoas: 3,
+          }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('saves a rule with only a guardrail metric configured', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '' },
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
+      target: { value: '' },
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_cpc'), {
+      target: { value: '1.5' },
+    });
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          rules: expect.objectContaining({
+            targetCpa: undefined,
+            minRoas: undefined,
+            maxCpc: 1.5,
+          }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('blocks saving a rule without any performance metric', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '' },
+    });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
+      target: { value: '' },
+    });
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_project_meta_ads_metric_required',
+      status: 'error',
+    });
+  });
+
+  it('deletes group and override rules but not the global rule', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Old group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+        ruleOverrides: [
+          {
+            entityLevel: 'campaign' as const,
+            entityId: 'campaign-2',
+            entityName: 'Campaign override',
+            enabled: true,
+            rules: { targetCpa: 30 },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    const rows = screen.getAllByTestId('meta-ads-rule-row');
+    expect(within(rows[0]).queryByLabelText('com_ui_project_meta_ads_delete_rule')).toBeNull();
+
+    fireEvent.click(within(rows[1]).getByLabelText('com_ui_project_meta_ads_delete_rule'));
+
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
         metaAds: expect.objectContaining({ ruleGroups: [] }),
+      },
+      expect.any(Object),
+    );
+
+    fireEvent.click(within(rows[2]).getByLabelText('com_ui_project_meta_ads_delete_rule'));
+
+    expect(mockMutateSettings).toHaveBeenLastCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({ ruleOverrides: [] }),
       },
       expect.any(Object),
     );

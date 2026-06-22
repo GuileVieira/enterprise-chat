@@ -597,6 +597,14 @@ const optionalNumberFields: Array<{
   { key: 'maxCpm', labelKey: 'com_ui_project_meta_ads_max_cpm', step: '0.01' },
 ];
 
+const performanceMetricRuleKeys: Array<keyof MetaAdsRulesState> = [
+  'targetCpa',
+  'minRoas',
+  'minCtr',
+  'maxCpc',
+  'maxCpm',
+];
+
 function formatMetric(value?: number | null) {
   return value == null || Number.isNaN(value) ? '-' : value.toFixed(2);
 }
@@ -1540,6 +1548,13 @@ function getRuleDraftTitleKey(ruleGroupDraft: RuleGroupDraft): TranslationKeys {
     : 'com_ui_project_meta_ads_create_rule_group';
 }
 
+function hasRulePerformanceMetric(rules: MetaAdsRulesState) {
+  return performanceMetricRuleKeys.some((key) => {
+    const value = rules[key];
+    return typeof value === 'number' && Number.isFinite(value) && value > 0;
+  });
+}
+
 function normalizeSettings(project: TProject): MetaAdsSettingsState {
   return {
     enabled: project.metaAds?.enabled ?? false,
@@ -2010,10 +2025,61 @@ export default function ProjectMetaAdsPanel({
   const getAdSetName = (adSetId: string) =>
     campaigns.flatMap((campaign) => campaign.adSets).find((adSet) => adSet.entityId === adSetId)
       ?.entityName ?? adSetId;
-  const selectedRuleGroupLabels =
-    selectedCampaignIds.length > 0
-      ? selectedCampaignIds.map(getCampaignName)
-      : selectedAdSetIds.map(getAdSetName);
+  const getRuleEntityLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
+    entityLevel === 'campaign' ? getCampaignName(entityId) : getAdSetName(entityId);
+  const ruleDraftEntityLabels = ruleGroupDraft
+    ? ruleGroupDraft.entityIds.map((entityId) =>
+        getRuleEntityLabel(ruleGroupDraft.entityLevel, entityId),
+      )
+    : [];
+  const ruleRows: RuleRow[] = [
+    {
+      key: 'global',
+      type: 'global',
+      enabled: settings.enabled,
+      name: localize('com_ui_project_meta_ads_global_rules'),
+      scopeLabel: localize('com_ui_project_meta_ads_scope_all_campaigns'),
+      precedenceLabel: localize('com_ui_project_meta_ads_precedence_global'),
+      entityIds: [],
+      rules: settings.rules,
+      creativeRules: settings.creativeRules,
+    },
+    ...(settings.ruleGroups ?? []).map<RuleRow>((group) => ({
+      key: `group:${group.id}`,
+      type: 'group',
+      enabled: group.enabled !== false,
+      name: group.name,
+      scopeLabel: `${group.entityLevel === 'campaign' ? localize('com_ui_project_meta_ads_level_campaign') : localize('com_ui_project_meta_ads_level_ad_set')} · ${
+        group.entityIds?.length ?? 0
+      }`,
+      precedenceLabel: localize('com_ui_project_meta_ads_precedence_group'),
+      entityLevel: group.entityLevel,
+      entityIds: group.entityIds ?? [],
+      group,
+      rules: { ...defaultRules, ...(group.rules ?? {}) },
+    })),
+    ...(settings.ruleOverrides ?? []).map<RuleRow>((override) => {
+      const isCampaign = override.entityLevel === 'campaign';
+      return {
+        key: `override:${getRuleOverrideKey(override)}`,
+        type: isCampaign ? 'campaign_override' : 'adset_override',
+        enabled: override.enabled !== false,
+        name:
+          override.entityName ||
+          (isCampaign ? getCampaignName(override.entityId) : getAdSetName(override.entityId)),
+        scopeLabel: `${isCampaign ? localize('com_ui_project_meta_ads_level_campaign') : localize('com_ui_project_meta_ads_level_ad_set')} · ${override.entityId}`,
+        precedenceLabel: localize(
+          isCampaign
+            ? 'com_ui_project_meta_ads_precedence_campaign_override'
+            : 'com_ui_project_meta_ads_precedence_adset_override',
+        ),
+        entityLevel: override.entityLevel,
+        entityIds: [override.entityId],
+        override,
+        rules: { ...defaultRules, ...(override.rules ?? {}) },
+      };
+    }),
+  ];
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
   const objectiveOptions = Array.from(
@@ -2477,6 +2543,17 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
+  const onEditGlobalRule = () => {
+    setRuleGroupDraft({
+      scope: 'global',
+      name: localize('com_ui_project_meta_ads_global_rules'),
+      entityLevel: 'campaign',
+      entityIds: [],
+      rules: { ...settings.rules },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
   const onEditRuleGroup = (group: MetaAdsRuleGroup) => {
     setRuleGroupDraft({
       id: group.id,
@@ -2489,29 +2566,68 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
+  const onEditRuleOverride = (ruleOverride: MetaAdsRuleOverride) => {
+    setRuleGroupDraft({
+      overrideKey: getRuleOverrideKey(ruleOverride),
+      scope: 'override',
+      name: ruleOverride.entityName ?? '',
+      entityLevel: ruleOverride.entityLevel,
+      entityIds: [ruleOverride.entityId],
+      entityName: ruleOverride.entityName,
+      rules: { ...defaultRules, ...(ruleOverride.rules ?? {}) },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
+  const onToggleRuleRow = (row: RuleRow) => {
+    if (!canUseMetaAdsActions) {
+      return;
+    }
+    if (row.type === 'global') {
+      saveSettings({ ...settings, enabled: !row.enabled }, '');
+      return;
+    }
+    if (row.type === 'group' && row.group?.id) {
+      const nextSettings = {
+        ...settings,
+        ruleGroups: (settings.ruleGroups ?? []).map((group) =>
+          group.id === row.group?.id ? { ...group, enabled: !row.enabled } : group,
+        ),
+      };
+      saveSettings(nextSettings, '');
+      return;
+    }
+    if (row.override) {
+      const targetKey = getRuleOverrideKey(row.override);
+      const nextSettings = {
+        ...settings,
+        ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+          getRuleOverrideKey(ruleOverride) === targetKey
+            ? { ...ruleOverride, enabled: !row.enabled }
+            : ruleOverride,
+        ),
+      };
+      saveSettings(nextSettings, '');
+    }
+  };
+
   const onDeleteRuleGroup = (groupId?: string) => {
     const nextSettings = {
       ...settings,
       ruleGroups: (settings.ruleGroups ?? []).filter((group) => group.id !== groupId),
     };
-    setSettings(nextSettings);
-    updateSettings.mutate(
-      {
-        projectId: project.projectId,
-        metaAds: nextSettings,
-      },
-      {
-        onSuccess: () => {
-          statusQuery.refetch();
-          showToast({ message: localize('com_ui_saved'), status: 'success' });
-        },
-        onError: (error) => {
-          const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
+    saveSettings(nextSettings, '');
+  };
+
+  const onDeleteRuleOverride = (ruleOverride: MetaAdsRuleOverride) => {
+    const targetKey = getRuleOverrideKey(ruleOverride);
+    const nextSettings = {
+      ...settings,
+      ruleOverrides: (settings.ruleOverrides ?? []).filter(
+        (currentRuleOverride) => getRuleOverrideKey(currentRuleOverride) !== targetKey,
+      ),
+    };
+    saveSettings(nextSettings, '');
   };
 
   const onRuleGroupRuleChange = (key: keyof MetaAdsRulesState, value: string) => {
@@ -2584,31 +2700,37 @@ export default function ProjectMetaAdsPanel({
     if (!ruleGroupDraft) {
       return;
     }
+    if (!hasRulePerformanceMetric(ruleGroupDraft.rules)) {
+      showToast({
+        message: localize('com_ui_project_meta_ads_metric_required'),
+        status: 'error',
+      });
+      return;
+    }
     if (ruleGroupDraft.scope === 'global') {
       const nextSettings = {
         ...settings,
         rules: ruleGroupDraft.rules,
         creativeRules: ruleGroupDraft.creativeRules,
       };
-      setSettings(nextSettings);
-      updateSettings.mutate(
-        {
-          projectId: project.projectId,
-          metaAds: nextSettings,
-        },
-        {
-          onSuccess: () => {
-            setRuleGroupDraft(null);
-            statusQuery.refetch();
-            showToast({ message: localize('com_ui_saved'), status: 'success' });
-          },
-          onError: (error) => {
-            const message =
-              error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
-            showToast({ message, status: 'error' });
-          },
-        },
-      );
+      saveSettings(nextSettings, '', () => setRuleGroupDraft(null));
+      return;
+    }
+    if (ruleGroupDraft.scope === 'override') {
+      const targetKey = ruleGroupDraft.overrideKey;
+      const nextSettings = {
+        ...settings,
+        ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+          getRuleOverrideKey(ruleOverride) === targetKey
+            ? {
+                ...ruleOverride,
+                entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
+                rules: ruleGroupDraft.rules,
+              }
+            : ruleOverride,
+        ),
+      };
+      saveSettings(nextSettings, '', () => setRuleGroupDraft(null));
       return;
     }
     if (ruleGroupDraft.entityIds.length === 0) {
@@ -2620,7 +2742,10 @@ export default function ProjectMetaAdsPanel({
         ruleGroupDraft.name.trim() || localize('com_ui_project_meta_ads_rule_group_default_name'),
       entityLevel: ruleGroupDraft.entityLevel,
       entityIds: ruleGroupDraft.entityIds,
-      enabled: true,
+      enabled:
+        ruleGroupDraft.id == null
+          ? true
+          : (settings.ruleGroups ?? []).find((group) => group.id === ruleGroupDraft.id)?.enabled,
       rules: ruleGroupDraft.rules,
     };
     const existingGroups = settings.ruleGroups ?? [];
@@ -2630,25 +2755,7 @@ export default function ProjectMetaAdsPanel({
         ? existingGroups.map((group) => (group.id === ruleGroupDraft.id ? nextGroup : group))
         : [...existingGroups, nextGroup],
     };
-    setSettings(nextSettings);
-    updateSettings.mutate(
-      {
-        projectId: project.projectId,
-        metaAds: nextSettings,
-      },
-      {
-        onSuccess: () => {
-          setRuleGroupDraft(null);
-          statusQuery.refetch();
-          showToast({ message: localize('com_ui_saved'), status: 'success' });
-        },
-        onError: (error) => {
-          const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
+    saveSettings(nextSettings, '', () => setRuleGroupDraft(null));
   };
 
   const onRunAnalysis = () => {
@@ -4902,29 +5009,23 @@ export default function ProjectMetaAdsPanel({
               role="dialog"
               aria-modal="true"
               aria-labelledby="meta-ads-rule-group-dialog-title"
-              className="fixed inset-0 z-50 flex justify-end bg-black/30"
+              className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-sm"
             >
-              <div className="flex h-full w-full max-w-lg flex-col border-l border-border-light bg-surface-primary shadow-xl">
-                <div className="border-b border-border-light p-4">
+              <div className="flex h-full w-full max-w-xl flex-col border-l border-white/10 bg-[#10110f] text-[#f3efe6] shadow-2xl">
+                <div className="border-b border-white/10 p-4">
                   <h4
                     id="meta-ads-rule-group-dialog-title"
-                    className="text-base font-semibold text-text-primary"
+                    className="text-base font-semibold text-[#f3efe6]"
                   >
-                    {localize(
-                      ruleGroupDraft.scope === 'global'
-                        ? 'com_ui_project_meta_ads_global_rules'
-                        : ruleGroupDraft.id
-                          ? 'com_ui_project_meta_ads_edit_rule_group'
-                          : 'com_ui_project_meta_ads_create_rule_group',
-                    )}
+                    {localize(getRuleDraftTitleKey(ruleGroupDraft))}
                   </h4>
                   {ruleGroupDraft.scope === 'global' ? (
-                    <div className="mt-2 text-xs text-text-tertiary">
+                    <div className="mt-2 text-xs text-[#948b7d]">
                       {localize('com_ui_project_meta_ads_global_rules_hint')}
                     </div>
                   ) : (
                     <div className="mt-2 space-y-2">
-                      <div className="text-xs uppercase text-text-tertiary">
+                      <div className="text-xs uppercase tracking-[0.12em] text-[#948b7d]">
                         {ruleGroupDraft.entityLevel === 'campaign'
                           ? localize('com_ui_project_meta_ads_campaign')
                           : localize('com_ui_project_meta_ads_select_ad_set')}
@@ -4933,10 +5034,10 @@ export default function ProjectMetaAdsPanel({
                         {localize('com_ui_project_meta_ads_rule_group_selected')}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {selectedRuleGroupLabels.slice(0, 8).map((label) => (
+                        {ruleDraftEntityLabels.slice(0, 8).map((label) => (
                           <span
                             key={label}
-                            className="border border-border-light bg-surface-secondary px-2 py-1 text-xs text-text-secondary"
+                            className="border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-[#cfc6b7]"
                           >
                             {label}
                           </span>
@@ -4946,8 +5047,8 @@ export default function ProjectMetaAdsPanel({
                   )}
                 </div>
                 <div className="flex-1 space-y-4 overflow-y-auto p-4">
-                  {ruleGroupDraft.scope === 'group' && (
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
+                  {(ruleGroupDraft.scope === 'group' || ruleGroupDraft.scope === 'override') && (
+                    <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
                       {localize('com_ui_project_meta_ads_rule_group_name')}
                       <input
                         value={ruleGroupDraft.name}
@@ -4956,137 +5057,165 @@ export default function ProjectMetaAdsPanel({
                             current ? { ...current, name: event.target.value } : current,
                           )
                         }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
+                        className={metaAdsInputLg}
                       />
                     </label>
                   )}
                   {ruleGroupDraft.scope === 'global' && (
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_account_profile')}
-                      <select
-                        value={settings.accountProfile ?? 'custom'}
-                        onChange={(event) =>
-                          onAccountProfileChange(
-                            event.target.value as MetaAdsSettingsState['accountProfile'],
-                          )
-                        }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                      >
-                        {accountProfileOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {localize(option.labelKey)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <h5 className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_rule_section_target')}
+                      </h5>
+                      <label className="mt-2 flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        {localize('com_ui_project_meta_ads_account_profile')}
+                        <select
+                          value={settings.accountProfile ?? 'custom'}
+                          onChange={(event) =>
+                            onAccountProfileChange(
+                              event.target.value as MetaAdsSettingsState['accountProfile'],
+                            )
+                          }
+                          className={metaAdsInputLg}
+                        >
+                          {accountProfileOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {localize(option.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
                   )}
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_target_result_type')}
-                      <select
-                        value={ruleGroupDraft.rules.targetResultType ?? ''}
-                        onChange={(event) =>
-                          onRuleGroupRuleTextChange('targetResultType', event.target.value)
-                        }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                      >
-                        <option value="">
-                          {localize('com_ui_project_meta_ads_result_type_legacy')}
-                        </option>
-                        {resultTypeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {localize(option.labelKey)}
+                  <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <h5 className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_rule_section_performance')}
+                    </h5>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        {localize('com_ui_project_meta_ads_target_result_type')}
+                        <select
+                          value={ruleGroupDraft.rules.targetResultType ?? ''}
+                          onChange={(event) =>
+                            onRuleGroupRuleTextChange('targetResultType', event.target.value)
+                          }
+                          className={metaAdsInputLg}
+                        >
+                          <option value="">
+                            {localize('com_ui_project_meta_ads_result_type_legacy')}
                           </option>
-                        ))}
-                      </select>
-                      <span className="text-[11px] text-text-tertiary">
-                        {localize('com_ui_project_meta_ads_target_result_type_hint')}
-                      </span>
-                    </label>
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_primary_metric')}
-                      <select
-                        value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
-                        onChange={(event) =>
-                          onRuleGroupRuleTextChange('primaryMetric', event.target.value)
-                        }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                      >
-                        {primaryMetricOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {localize(option.labelKey)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                          {resultTypeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {localize(option.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-[11px] text-[#81796b]">
+                          {localize('com_ui_project_meta_ads_target_result_type_hint')}
+                        </span>
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        {localize('com_ui_project_meta_ads_primary_metric')}
+                        <select
+                          value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
+                          onChange={(event) =>
+                            onRuleGroupRuleTextChange('primaryMetric', event.target.value)
+                          }
+                          className={metaAdsInputLg}
+                        >
+                          {primaryMetricOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {localize(option.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {numberFields.map((field) => (
-                      <label
-                        key={field.key}
-                        className="flex flex-col gap-1 text-xs text-text-secondary"
-                      >
-                        {localize(field.labelKey)}
-                        <input
-                          type="number"
-                          step={field.step}
-                          min={
-                            field.key === 'minRoas' || field.key === 'minSpend'
-                              ? '0'
-                              : field.key === 'cooldownHours'
-                                ? '1'
-                                : '0.01'
-                          }
-                          max={
-                            field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
-                              ? '100'
-                              : field.key === 'cooldownHours'
-                                ? '168'
-                                : undefined
-                          }
-                          value={ruleGroupDraft.rules[field.key]}
-                          onChange={(event) => onRuleGroupRuleChange(field.key, event.target.value)}
-                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                        />
-                      </label>
-                    ))}
-                    {optionalNumberFields.map((field) => (
-                      <label
-                        key={field.key}
-                        className="flex flex-col gap-1 text-xs text-text-secondary"
-                      >
-                        {localize(field.labelKey)}
-                        <input
-                          type="number"
-                          step={field.step}
-                          min="0"
-                          value={ruleGroupDraft.rules[field.key] ?? ''}
-                          placeholder={localize('com_ui_project_meta_ads_optional_rule')}
-                          onChange={(event) => onRuleGroupRuleChange(field.key, event.target.value)}
-                          className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                        />
-                      </label>
-                    ))}
-                    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-                      {localize('com_ui_project_meta_ads_max_frequency_alert')}
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={ruleGroupDraft.creativeRules.maxFrequency}
-                        onChange={(event) =>
-                          onRuleGroupCreativeRuleChange('maxFrequency', event.target.value)
-                        }
-                        className="h-10 border border-border-light bg-surface-secondary px-3 text-sm text-text-primary"
-                      />
-                    </label>
+                  <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <h5 className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_rule_section_budget')}
+                    </h5>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                      {numberFields.map((field) => (
+                        <label
+                          key={field.key}
+                          className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                        >
+                          {localize(field.labelKey)}
+                          <input
+                            type="number"
+                            step={field.step}
+                            min={
+                              field.key === 'minRoas' || field.key === 'minSpend'
+                                ? '0'
+                                : field.key === 'cooldownHours'
+                                  ? '1'
+                                  : '0.01'
+                            }
+                            max={
+                              field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
+                                ? '100'
+                                : field.key === 'cooldownHours'
+                                  ? '168'
+                                  : undefined
+                            }
+                            value={ruleGroupDraft.rules[field.key] ?? ''}
+                            onChange={(event) =>
+                              onRuleGroupRuleChange(field.key, event.target.value)
+                            }
+                            className={metaAdsInputLg}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="border border-white/10 bg-white/[0.025] p-3">
+                    <h5 className={metaAdsLabel}>
+                      {localize('com_ui_project_meta_ads_rule_section_guardrails')}
+                    </h5>
+                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                      {optionalNumberFields.map((field) => (
+                        <label
+                          key={field.key}
+                          className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                        >
+                          {localize(field.labelKey)}
+                          <input
+                            type="number"
+                            step={field.step}
+                            min="0"
+                            value={ruleGroupDraft.rules[field.key] ?? ''}
+                            placeholder={localize('com_ui_project_meta_ads_optional_rule')}
+                            onChange={(event) =>
+                              onRuleGroupRuleChange(field.key, event.target.value)
+                            }
+                            className={metaAdsInputLg}
+                          />
+                        </label>
+                      ))}
+                      {ruleGroupDraft.scope === 'global' && (
+                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                          {localize('com_ui_project_meta_ads_max_frequency_alert')}
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={ruleGroupDraft.creativeRules.maxFrequency}
+                            onChange={(event) =>
+                              onRuleGroupCreativeRuleChange('maxFrequency', event.target.value)
+                            }
+                            className={metaAdsInputLg}
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 border-t border-border-light p-4">
+                <div className="flex justify-end gap-2 border-t border-white/10 p-4">
                   <button
                     type="button"
                     onClick={() => setRuleGroupDraft(null)}
-                    className="h-8 border border-border-light px-3 text-xs font-medium text-text-secondary"
+                    className={metaAdsGhostButton}
                   >
                     {localize('com_ui_cancel')}
                   </button>
@@ -5094,7 +5223,7 @@ export default function ProjectMetaAdsPanel({
                     type="button"
                     disabled={updateSettings.isLoading}
                     onClick={onSaveRuleGroup}
-                    className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    className={metaAdsPrimaryButton}
                   >
                     {localize('com_ui_project_meta_ads_save_rule_group')}
                   </button>
@@ -5102,6 +5231,178 @@ export default function ProjectMetaAdsPanel({
               </div>
             </div>
           )}
+
+          <div className="border-t border-white/10 bg-[#10110f] p-3">
+            <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                  {localize('com_ui_project_meta_ads_rules_workspace')}
+                </h4>
+                <p className="mt-1 text-xs text-[#81796b]">
+                  {localize('com_ui_project_meta_ads_rules_workspace_hint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={!canCreateRuleGroup}
+                onClick={onOpenRuleGroupDraft}
+                className={metaAdsPrimaryButton}
+              >
+                {localize('com_ui_project_meta_ads_create_rule_group')}
+              </button>
+            </div>
+            <div className="overflow-x-auto border border-white/10">
+              <table className="w-full min-w-[980px] table-fixed border-separate border-spacing-0 text-left text-xs">
+                <thead className="bg-[#1b1812] text-[10px] uppercase tracking-[0.12em] text-[#8f8677]">
+                  <tr>
+                    <th className="w-20 border-b border-white/10 px-3 py-2">
+                      {localize('com_ui_project_meta_ads_status')}
+                    </th>
+                    <th className="w-36 border-b border-white/10 px-3 py-2">
+                      {localize('com_ui_project_meta_ads_rule_type')}
+                    </th>
+                    <th className="w-64 border-b border-white/10 px-3 py-2">
+                      {localize('com_ui_project_meta_ads_rule_scope')}
+                    </th>
+                    <th className="w-36 border-b border-white/10 px-3 py-2">
+                      {localize('com_ui_project_meta_ads_target_result_type')}
+                    </th>
+                    <th className="w-28 border-b border-white/10 px-3 py-2">
+                      {localize('com_ui_project_meta_ads_primary_metric')}
+                    </th>
+                    <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                      {localize('com_ui_project_meta_ads_cpa_roas')}
+                    </th>
+                    <th className="w-36 border-b border-white/10 px-3 py-2 text-right">
+                      {localize('com_ui_project_meta_ads_budget_range')}
+                    </th>
+                    <th className="w-24 border-b border-white/10 px-3 py-2 text-right">
+                      {localize('com_ui_project_meta_ads_cooldown')}
+                    </th>
+                    <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                      {localize('com_ui_project_meta_ads_actions')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ruleRows.map((row) => (
+                    <tr
+                      key={row.key}
+                      data-testid="meta-ads-rule-row"
+                      className="group bg-[#12120f] transition duration-200 hover:bg-[#19170f]"
+                    >
+                      <td className="border-b border-white/[0.06] px-3 py-2">
+                        <button
+                          type="button"
+                          disabled={!canUseMetaAdsActions || updateSettings.isLoading}
+                          aria-label={
+                            row.enabled
+                              ? localize('com_ui_project_meta_ads_disable_rule')
+                              : localize('com_ui_project_meta_ads_enable_rule')
+                          }
+                          onClick={() => onToggleRuleRow(row)}
+                          className={`inline-flex h-7 items-center gap-1 border px-2 font-semibold transition ${
+                            row.enabled
+                              ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/15'
+                              : 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15'
+                          } disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          {row.enabled ? <Pause size={14} /> : <Play size={14} />}
+                          {localize(
+                            row.enabled
+                              ? 'com_ui_project_meta_ads_rule_enabled'
+                              : 'com_ui_project_meta_ads_rule_disabled',
+                          )}
+                        </button>
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2">
+                        <div className="font-semibold text-[#f3efe6]">
+                          {localize(getRuleRowTypeLabelKey(row.type))}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-[#81796b]">
+                          {row.precedenceLabel}
+                        </div>
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2">
+                        <div className="truncate font-semibold text-[#f3efe6]">{row.name}</div>
+                        <div className="mt-0.5 truncate text-[11px] text-[#948b7d]">
+                          {row.scopeLabel}
+                        </div>
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2 text-[#cfc6b7]">
+                        {getResultTypeLabel(row.rules.targetResultType, localize)}
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2 font-mono uppercase text-[#f3efe6]">
+                        {row.rules.primaryMetric ?? 'cpa'}
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        {formatMoney(row.rules.targetCpa, currency)} /{' '}
+                        {formatMetric(row.rules.minRoas)}
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
+                        {formatMoney(row.rules.maxDailyBudget, currency)}
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                        {localize('com_ui_project_meta_ads_cooldown_hours_value', {
+                          0: String(row.rules.cooldownHours),
+                        })}
+                      </td>
+                      <td className="border-b border-white/[0.06] px-3 py-2">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            disabled={!canUseMetaAdsActions}
+                            aria-label={localize('com_ui_project_meta_ads_edit_rule')}
+                            onClick={() => {
+                              if (row.type === 'global') {
+                                onEditGlobalRule();
+                                return;
+                              }
+                              if (row.group) {
+                                onEditRuleGroup(row.group);
+                                return;
+                              }
+                              if (row.override) {
+                                onEditRuleOverride(row.override);
+                              }
+                            }}
+                            className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-amber-300/40 hover:text-[#f3efe6] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <PencilSimple size={15} />
+                          </button>
+                          {row.type !== 'global' && (
+                            <button
+                              type="button"
+                              disabled={!canUseMetaAdsActions}
+                              aria-label={localize('com_ui_project_meta_ads_delete_rule')}
+                              onClick={() => {
+                                if (row.group) {
+                                  onDeleteRuleGroup(row.group.id);
+                                  return;
+                                }
+                                if (row.override) {
+                                  onDeleteRuleOverride(row.override);
+                                }
+                              }}
+                              className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-red-300/40 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Trash size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {ruleRows.length === 1 && (
+              <div className="border-x border-b border-dashed border-white/10 px-3 py-4 text-xs text-[#948b7d]">
+                {localize('com_ui_project_meta_ads_rules_empty')}
+              </div>
+            )}
+          </div>
 
           <div
             ref={tableScrollRef}
@@ -5289,7 +5590,7 @@ export default function ProjectMetaAdsPanel({
               </div>
             )}
           </div>
-          <div className="sticky bottom-0 z-50 border-t border-white/10 bg-[#10110f] px-4 py-2">
+          <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[#10110f] px-4 py-2">
             <div
               ref={stickyHorizontalScrollRef}
               onScroll={onStickyHorizontalScroll}
@@ -5300,44 +5601,6 @@ export default function ProjectMetaAdsPanel({
             </div>
           </div>
         </div>
-
-        {(settings.ruleGroups ?? []).length > 0 && (
-          <div className="border-t border-border-light bg-surface-secondary p-3">
-            <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-              {localize('com_ui_project_meta_ads_rule_groups')}
-            </h4>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(settings.ruleGroups ?? []).map((group) => (
-                <div
-                  key={group.id ?? group.name}
-                  className="flex items-center gap-2 border border-border-light bg-surface-primary px-2 py-1 text-xs text-text-secondary"
-                >
-                  <span className="font-medium text-text-primary">{group.name}</span>
-                  <span>
-                    {group.entityLevel} · {(group.entityIds ?? []).length}{' '}
-                    {localize('com_ui_project_meta_ads_rule_group_selected')}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={!canUseMetaAdsActions}
-                    onClick={() => onEditRuleGroup(group)}
-                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_edit_rule_group')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canUseMetaAdsActions}
-                    onClick={() => onDeleteRuleGroup(group.id)}
-                    className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_delete_rule_group')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="border-t border-white/10 p-3">
           <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
