@@ -2016,6 +2016,16 @@ export default function ProjectMetaAdsPanel({
   const chartHeight = 160;
   const chartPadding = 18;
   const chartBottom = chartHeight - chartPadding;
+  const getEvolutionTooltipTransform = (point: EvolutionHoverPoint) => {
+    const ratio = point.x / chartWidth;
+    if (ratio < 0.18) {
+      return 'translate(0, calc(-100% - 10px))';
+    }
+    if (ratio > 0.82) {
+      return 'translate(-100%, calc(-100% - 10px))';
+    }
+    return 'translate(-50%, calc(-100% - 10px))';
+  };
   const canRenderSpendChart = dailySpendTrend.length > 1 && maxDailySpend > 0;
   const spendChartPoints = dailySpendTrend.map((point, index) => {
     const x =
@@ -5971,44 +5981,6 @@ export default function ProjectMetaAdsPanel({
                             strokeLinejoin="round"
                             vectorEffect="non-scaling-stroke"
                           />
-                          {seriesPath.points.map((point) => {
-                            const entityName = cleanDashboardName(
-                              seriesPath.series.entityName,
-                              seriesPath.series.entityId,
-                            );
-                            const hoverPoint: EvolutionHoverPoint = {
-                              seriesId: seriesPath.series.entityId,
-                              entityName,
-                              parentCampaignName: seriesPath.series.parentCampaignName,
-                              date: point.date,
-                              value: point.value,
-                              x: point.x,
-                              y: point.y,
-                              color: seriesPath.color,
-                              point: point.rawPoint,
-                            };
-                            const key = `${seriesPath.series.entityId}:${point.date}`;
-                            return (
-                              <Fragment key={key}>
-                                <circle cx={point.x} cy={point.y} r="2.8" fill={seriesPath.color} />
-                                <circle
-                                  data-testid="meta-ads-evolution-point"
-                                  data-date={point.date}
-                                  data-entity-id={seriesPath.series.entityId}
-                                  cx={point.x}
-                                  cy={point.y}
-                                  r="8"
-                                  fill="transparent"
-                                  tabIndex={0}
-                                  className="cursor-crosshair outline-none"
-                                  onMouseEnter={() => setHoveredEvolutionPoint(hoverPoint)}
-                                  onMouseLeave={() => setHoveredEvolutionPoint(null)}
-                                  onFocus={() => setHoveredEvolutionPoint(hoverPoint)}
-                                  onBlur={() => setHoveredEvolutionPoint(null)}
-                                />
-                              </Fragment>
-                            );
-                          })}
                         </Fragment>
                       ))}
                     </svg>
@@ -6017,14 +5989,61 @@ export default function ProjectMetaAdsPanel({
                       {localize('com_ui_project_meta_ads_insufficient_evolution')}
                     </div>
                   )}
+                  {canRenderEvolutionSeries &&
+                    evolutionSeriesPaths.flatMap((seriesPath) =>
+                      seriesPath.points.map((point) => {
+                        const entityName = cleanDashboardName(
+                          seriesPath.series.entityName,
+                          seriesPath.series.entityId,
+                        );
+                        const hoverPoint: EvolutionHoverPoint = {
+                          seriesId: seriesPath.series.entityId,
+                          entityName,
+                          parentCampaignName: seriesPath.series.parentCampaignName,
+                          date: point.date,
+                          value: point.value,
+                          x: point.x,
+                          y: point.y,
+                          color: seriesPath.color,
+                          point: point.rawPoint,
+                        };
+                        return (
+                          <button
+                            key={`${seriesPath.series.entityId}:${point.date}`}
+                            type="button"
+                            data-testid="meta-ads-evolution-point"
+                            data-date={point.date}
+                            data-entity-id={seriesPath.series.entityId}
+                            aria-label={`${entityName} ${formatTrendDate(point.date)}`}
+                            className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-crosshair items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-amber-200/60"
+                            style={{
+                              left: `${(point.x / chartWidth) * 100}%`,
+                              top: `${(point.y / chartHeight) * 100}%`,
+                            }}
+                            onMouseEnter={() => setHoveredEvolutionPoint(hoverPoint)}
+                            onMouseLeave={() => setHoveredEvolutionPoint(null)}
+                            onFocus={() => setHoveredEvolutionPoint(hoverPoint)}
+                            onBlur={() => setHoveredEvolutionPoint(null)}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_2px_rgba(15,14,11,0.85)]"
+                              style={{ backgroundColor: seriesPath.color }}
+                            />
+                          </button>
+                        );
+                      }),
+                    )}
                   {hoveredEvolutionPoint && canRenderEvolutionSeries && (
                     <div
                       data-testid="meta-ads-evolution-point-tooltip"
-                      className="pointer-events-none absolute z-[1000] min-w-52 max-w-72 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
+                      className="pointer-events-none absolute z-[1000] min-w-48 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
                       style={{
                         left: `${(hoveredEvolutionPoint.x / chartWidth) * 100}%`,
                         top: `${(hoveredEvolutionPoint.y / chartHeight) * 100}%`,
-                        transform: 'translate(-50%, calc(-100% - 10px))',
+                        maxWidth: 'min(18rem, calc(100% - 1rem))',
+                        overflowWrap: 'anywhere',
+                        transform: getEvolutionTooltipTransform(hoveredEvolutionPoint),
                       }}
                     >
                       <div className="flex items-center gap-2">

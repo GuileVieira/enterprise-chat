@@ -2193,12 +2193,15 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       table.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(screen.getByTestId('meta-ads-evolution-chart')).toBeInTheDocument();
-    expect(screen.getByTestId('meta-ads-evolution-chart').querySelector('title')).toBeNull();
+    const evolutionChart = screen.getByTestId('meta-ads-evolution-chart');
+    expect(evolutionChart).toBeInTheDocument();
+    expect(evolutionChart).toHaveAttribute('preserveAspectRatio', 'none');
+    expect(evolutionChart.querySelector('title')).toBeNull();
     const dailyPoint = screen
       .getAllByTestId('meta-ads-evolution-point')
       .find((point) => point.getAttribute('data-date') === '2026-06-01');
     expect(dailyPoint).toBeTruthy();
+    expect(dailyPoint).toHaveClass('rounded-full');
     fireEvent.mouseEnter(dailyPoint as Element);
     const pointTooltip = screen.getByTestId('meta-ads-evolution-point-tooltip');
     expect(pointTooltip).toHaveTextContent('Messages Floripa');
@@ -2206,8 +2209,18 @@ describe('ProjectMetaAdsPanel', () => {
     expect(pointTooltip).toHaveTextContent('R$ 100,00');
     expect(pointTooltip).toHaveTextContent('4.00');
     expect(pointTooltip).toHaveTextContent('R$ 25,00');
+    expect(pointTooltip).toHaveStyle('transform: translate(0, calc(-100% - 10px))');
     fireEvent.mouseLeave(dailyPoint as Element);
     expect(screen.queryByTestId('meta-ads-evolution-point-tooltip')).not.toBeInTheDocument();
+    const rightPoint = screen
+      .getAllByTestId('meta-ads-evolution-point')
+      .find((point) => point.getAttribute('data-date') === '2026-06-02');
+    expect(rightPoint).toBeTruthy();
+    fireEvent.mouseEnter(rightPoint as Element);
+    expect(screen.getByTestId('meta-ads-evolution-point-tooltip')).toHaveStyle(
+      'transform: translate(-100%, calc(-100% - 10px))',
+    );
+    fireEvent.mouseLeave(rightPoint as Element);
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_budget_changes').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Messages Floripa').length).toBeGreaterThan(0);
