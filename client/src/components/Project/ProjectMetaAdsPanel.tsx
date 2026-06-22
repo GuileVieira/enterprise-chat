@@ -111,8 +111,8 @@ import {
 } from './metaAds/table';
 import {
   toAdAccountId,
+  getAdAccountDigits,
   normalizeSettings,
-  isSupportedGraphVersion,
   getGraphVersionOptions,
 } from './metaAds/settings';
 import type {

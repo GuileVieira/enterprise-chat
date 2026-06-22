@@ -49,6 +49,6 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
   };
 }
 
-function getAdAccountDigits(value?: string) {
+export function getAdAccountDigits(value?: string) {
   return (value ?? '').replace(/^act_/i, '').replace(/\D/g, '');
 }
