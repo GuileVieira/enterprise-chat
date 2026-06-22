@@ -139,7 +139,7 @@ type SettingsDrawer = 'account' | 'automation' | null;
 type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
 type PeriodFilter = DatePreset | 'custom';
-type EvolutionMetric = 'spend' | 'resultCount' | 'cpa';
+type EvolutionMetric = 'spend' | 'resultCount' | 'cpa' | 'ctr' | 'frequency' | 'clicks';
 type MetaAdsBiRankLevel = 'campaign' | 'adset' | 'ad';
 type MetaAdsBiControls = {
   level: MetaAdsBiRankLevel;
@@ -777,6 +777,9 @@ function formatEvolutionMetricValue(
   if (metric === 'spend' || metric === 'cpa') {
     return formatMoney(value, currency);
   }
+  if (metric === 'ctr') {
+    return formatPercent(value);
+  }
   return formatMetric(value);
 }
 
@@ -785,6 +788,9 @@ function getEvolutionMetricLabel(metric: EvolutionMetric, localize: Localize) {
     spend: 'com_ui_project_meta_ads_spend',
     resultCount: 'com_ui_project_meta_ads_results',
     cpa: 'com_ui_project_meta_ads_cpa',
+    ctr: 'com_ui_project_meta_ads_ctr',
+    frequency: 'com_ui_project_meta_ads_frequency',
+    clicks: 'com_ui_project_meta_ads_clicks',
   };
   return localize(labelKeys[metric]);
 }
@@ -1839,6 +1845,8 @@ export default function ProjectMetaAdsPanel({
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('last_7d');
   const [customSince, setCustomSince] = useState(() => getDateInputDaysAgo(6));
   const [customUntil, setCustomUntil] = useState(() => toDateInputValue(new Date()));
+  const [appliedCustomSince, setAppliedCustomSince] = useState(() => getDateInputDaysAgo(6));
+  const [appliedCustomUntil, setAppliedCustomUntil] = useState(() => toDateInputValue(new Date()));
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
@@ -1853,8 +1861,8 @@ export default function ProjectMetaAdsPanel({
   const biStatusParams =
     periodFilter === 'custom'
       ? {
-          ...(customSince ? { since: customSince } : {}),
-          ...(customUntil ? { until: customUntil } : {}),
+          ...(appliedCustomSince ? { since: appliedCustomSince } : {}),
+          ...(appliedCustomUntil ? { until: appliedCustomUntil } : {}),
         }
       : { datePreset: periodFilter };
   const statusQuery = useProjectMetaAdsQuery(project.projectId, tableStatusParams);
@@ -1940,8 +1948,8 @@ export default function ProjectMetaAdsPanel({
     biControls.metric,
     biControls.objective,
     biControls.resultType,
-    customSince,
-    customUntil,
+    appliedCustomSince,
+    appliedCustomUntil,
     periodFilter,
   ]);
 
@@ -2964,6 +2972,11 @@ export default function ProjectMetaAdsPanel({
     if (value && customSince && value < customSince) {
       setCustomSince(value);
     }
+  };
+
+  const onApplyCustomPeriod = () => {
+    setAppliedCustomSince(customSince);
+    setAppliedCustomUntil(customUntil);
   };
 
   const onExpandAllRows = () => {
@@ -5805,6 +5818,18 @@ export default function ProjectMetaAdsPanel({
                       className={metaAdsInput}
                     />
                   </label>
+                  <div className="flex min-w-32 flex-col justify-end">
+                    <button
+                      type="button"
+                      disabled={
+                        customSince === appliedCustomSince && customUntil === appliedCustomUntil
+                      }
+                      onClick={onApplyCustomPeriod}
+                      className="h-9 border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-[#81796b]"
+                    >
+                      {localize('com_ui_project_meta_ads_period_update')}
+                    </button>
+                  </div>
                 </>
               )}
               <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
@@ -5879,6 +5904,9 @@ export default function ProjectMetaAdsPanel({
                   <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
                   <option value="resultCount">{localize('com_ui_project_meta_ads_results')}</option>
                   <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
+                  <option value="ctr">{localize('com_ui_project_meta_ads_ctr')}</option>
+                  <option value="frequency">{localize('com_ui_project_meta_ads_frequency')}</option>
+                  <option value="clicks">{localize('com_ui_project_meta_ads_clicks')}</option>
                 </select>
               </label>
             </div>
@@ -6345,7 +6373,11 @@ export default function ProjectMetaAdsPanel({
         }}
       >
         {selectedAdPreview && (
-          <OGDialogContent className="max-w-3xl overflow-hidden p-0">
+          <OGDialogContent
+            className="max-w-3xl overflow-hidden p-0"
+            overlayStyle={metricsFullscreen ? { zIndex: 10010 } : undefined}
+            style={metricsFullscreen ? { zIndex: 10020 } : undefined}
+          >
             <OGDialogHeader className="border-b border-white/10 bg-[#12120f] px-5 py-4 text-left">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
                 {localize('com_ui_project_meta_ads_ad_preview')}

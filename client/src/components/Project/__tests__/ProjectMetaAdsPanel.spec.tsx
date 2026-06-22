@@ -66,10 +66,23 @@ jest.mock('react-router-dom', () => ({
 jest.mock('@librechat/client', () => ({
   OGDialog: ({ children, open }: { children: React.ReactNode; open?: boolean }) =>
     open === false ? null : <>{children}</>,
-  OGDialogContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div role="dialog" className={className}>
-      {children}
-    </div>
+  OGDialogContent: ({
+    children,
+    className,
+    style,
+    overlayStyle,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
+    overlayStyle?: React.CSSProperties;
+  }) => (
+    <>
+      <div data-testid="mock-dialog-overlay" style={overlayStyle} />
+      <div role="dialog" className={className} style={style}>
+        {children}
+      </div>
+    </>
   ),
   OGDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
@@ -2015,6 +2028,7 @@ describe('ProjectMetaAdsPanel', () => {
     });
     expect(screen.getByLabelText('com_ui_project_meta_ads_period_since')).toBeInTheDocument();
     expect(screen.getByLabelText('com_ui_project_meta_ads_period_until')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_period_update')).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period_since'), {
       target: { value: '2026-06-01' },
@@ -2023,10 +2037,16 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '2026-06-10' },
     });
 
-    expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
-      since: '2026-06-01',
-      until: '2026-06-10',
-    });
+    const rankingsParamsBeforeApply = mockUseProjectMetaAdsRankingsQuery.mock.calls[
+      mockUseProjectMetaAdsRankingsQuery.mock.calls.length - 1
+    ]?.[1] as Record<string, unknown> | undefined;
+    expect(rankingsParamsBeforeApply).not.toEqual(
+      expect.objectContaining({
+        since: '2026-06-01',
+        until: '2026-06-10',
+      }),
+    );
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_period_update'));
     expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenLastCalledWith(
       'p1',
       expect.objectContaining({
@@ -2034,6 +2054,11 @@ describe('ProjectMetaAdsPanel', () => {
         until: '2026-06-10',
       }),
     );
+    const metricFilter = screen.getByTestId('meta-ads-bi-metric-filter');
+    const metricOptions = Array.from(metricFilter.querySelectorAll('option')).map(
+      (option) => option.value,
+    );
+    expect(metricOptions).toEqual(['spend', 'resultCount', 'cpa', 'ctr', 'frequency', 'clicks']);
   });
 
   it('renders campaign evolution dashboard from historical trend data', () => {
@@ -2079,6 +2104,9 @@ describe('ProjectMetaAdsPanel', () => {
               spend: 100,
               resultCount: 4,
               cpa: 25,
+              ctr: 1.5,
+              clicks: 10,
+              frequency: 2,
             },
             {
               date: '2026-06-02',
@@ -2087,6 +2115,9 @@ describe('ProjectMetaAdsPanel', () => {
               spend: 270,
               resultCount: 11,
               cpa: 24.55,
+              ctr: 2.5,
+              clicks: 25,
+              frequency: 4.5,
             },
           ],
         },
@@ -2105,6 +2136,9 @@ describe('ProjectMetaAdsPanel', () => {
               spend: 10,
               resultCount: 1,
               cpa: 10,
+              ctr: 1,
+              clicks: 3,
+              frequency: 1.4,
             },
             {
               date: '2026-06-02',
@@ -2113,6 +2147,9 @@ describe('ProjectMetaAdsPanel', () => {
               spend: 20,
               resultCount: 2,
               cpa: 10,
+              ctr: 2,
+              clicks: 6,
+              frequency: 1.8,
             },
           ],
         },
@@ -2322,9 +2359,35 @@ describe('ProjectMetaAdsPanel', () => {
         campaignName: 'Messages Floripa',
         spend: 230,
         dailyBudget: 100,
-        editableBudgetLevel: 'campaign',
-        budgetMode: 'CBO',
-        adSets: [],
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        status: 'ACTIVE',
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Main ad set',
+            campaignId: 'campaign-1',
+            campaignName: 'Messages Floripa',
+            dailyBudget: 100,
+            spend: 230,
+            status: 'ACTIVE',
+            ads: [
+              {
+                adId: 'ad-1',
+                adName: 'Fullscreen creative',
+                adSetId: 'adset-1',
+                campaignId: 'campaign-1',
+                title: 'Lead form creative',
+                thumbnailUrl: 'https://example.com/fullscreen-thumb.jpg',
+                spend: 50,
+                cpa: 10,
+                resultCount: 5,
+                currency: 'BRL',
+                status: 'ACTIVE',
+              },
+            ],
+          },
+        ],
       },
     ];
 
@@ -2332,8 +2395,16 @@ describe('ProjectMetaAdsPanel', () => {
 
     const workspace = screen.getByTestId('meta-ads-metrics-workspace');
     expect(workspace.className).not.toContain('sticky');
+    fireEvent.change(screen.getByDisplayValue('com_ui_project_meta_ads_view_summary'), {
+      target: { value: 'creative' },
+    });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
-    expect(screen.getByTestId('meta-ads-metrics-workspace').className).toContain('fixed');
+    const fullscreenWorkspace = screen.getByTestId('meta-ads-metrics-workspace');
+    expect(fullscreenWorkspace.className).toContain('fixed');
+    fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Fullscreen creative');
+    expect(screen.getByRole('dialog')).toHaveStyle({ zIndex: 10020 });
+    expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10010 });
     expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.getByTestId('meta-ads-metrics-workspace').className).not.toContain('fixed');
