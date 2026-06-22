@@ -8,6 +8,7 @@ import {
   ArrowsOut,
   Copy,
   DotsThreeVertical,
+  Info,
   PencilSimple,
   Play,
   Pause,
@@ -169,6 +170,17 @@ type BiRankingSortKey = 'cpa' | 'spend' | 'resultCount' | 'ctr' | 'frequency';
 type BiRankingSort = {
   key: BiRankingSortKey;
   direction: 'asc' | 'desc';
+};
+type EvolutionHoverPoint = {
+  seriesId: string;
+  entityName: string;
+  parentCampaignName?: string;
+  date: string;
+  value: number;
+  x: number;
+  y: number;
+  color: string;
+  point?: ProjectMetaAdsTrendSeries['points'][number];
 };
 type SummaryResultTypeOption = {
   resultType: string;
@@ -575,26 +587,83 @@ const resultTypeLabelKeys: Record<string, TranslationKeys> = {
 const numberFields: Array<{
   key: keyof MetaAdsRulesState;
   labelKey: TranslationKeys;
+  hintKey: TranslationKeys;
   step: string;
 }> = [
-  { key: 'targetCpa', labelKey: 'com_ui_project_meta_ads_target_cpa', step: '0.01' },
-  { key: 'minRoas', labelKey: 'com_ui_project_meta_ads_min_roas', step: '0.01' },
-  { key: 'maxIncreasePct', labelKey: 'com_ui_project_meta_ads_max_increase', step: '1' },
-  { key: 'maxDecreasePct', labelKey: 'com_ui_project_meta_ads_max_decrease', step: '1' },
-  { key: 'minDailyBudget', labelKey: 'com_ui_project_meta_ads_min_budget', step: '0.01' },
-  { key: 'maxDailyBudget', labelKey: 'com_ui_project_meta_ads_max_budget', step: '0.01' },
-  { key: 'cooldownHours', labelKey: 'com_ui_project_meta_ads_cooldown', step: '1' },
-  { key: 'minSpend', labelKey: 'com_ui_project_meta_ads_min_spend', step: '0.01' },
+  {
+    key: 'targetCpa',
+    labelKey: 'com_ui_project_meta_ads_target_cpa',
+    hintKey: 'com_ui_project_meta_ads_target_cpa_hint',
+    step: '0.01',
+  },
+  {
+    key: 'minRoas',
+    labelKey: 'com_ui_project_meta_ads_min_roas',
+    hintKey: 'com_ui_project_meta_ads_min_roas_hint',
+    step: '0.01',
+  },
+  {
+    key: 'maxIncreasePct',
+    labelKey: 'com_ui_project_meta_ads_max_increase',
+    hintKey: 'com_ui_project_meta_ads_max_increase_hint',
+    step: '1',
+  },
+  {
+    key: 'maxDecreasePct',
+    labelKey: 'com_ui_project_meta_ads_max_decrease',
+    hintKey: 'com_ui_project_meta_ads_max_decrease_hint',
+    step: '1',
+  },
+  {
+    key: 'minDailyBudget',
+    labelKey: 'com_ui_project_meta_ads_min_budget',
+    hintKey: 'com_ui_project_meta_ads_min_budget_hint',
+    step: '0.01',
+  },
+  {
+    key: 'maxDailyBudget',
+    labelKey: 'com_ui_project_meta_ads_max_budget',
+    hintKey: 'com_ui_project_meta_ads_max_budget_hint',
+    step: '0.01',
+  },
+  {
+    key: 'cooldownHours',
+    labelKey: 'com_ui_project_meta_ads_cooldown',
+    hintKey: 'com_ui_project_meta_ads_cooldown_hint',
+    step: '1',
+  },
+  {
+    key: 'minSpend',
+    labelKey: 'com_ui_project_meta_ads_min_spend',
+    hintKey: 'com_ui_project_meta_ads_min_spend_hint',
+    step: '0.01',
+  },
 ];
 
 const optionalNumberFields: Array<{
   key: keyof MetaAdsRulesState;
   labelKey: TranslationKeys;
+  hintKey: TranslationKeys;
   step: string;
 }> = [
-  { key: 'minCtr', labelKey: 'com_ui_project_meta_ads_min_ctr', step: '0.01' },
-  { key: 'maxCpc', labelKey: 'com_ui_project_meta_ads_max_cpc', step: '0.01' },
-  { key: 'maxCpm', labelKey: 'com_ui_project_meta_ads_max_cpm', step: '0.01' },
+  {
+    key: 'minCtr',
+    labelKey: 'com_ui_project_meta_ads_min_ctr',
+    hintKey: 'com_ui_project_meta_ads_min_ctr_hint',
+    step: '0.01',
+  },
+  {
+    key: 'maxCpc',
+    labelKey: 'com_ui_project_meta_ads_max_cpc',
+    hintKey: 'com_ui_project_meta_ads_max_cpc_hint',
+    step: '0.01',
+  },
+  {
+    key: 'maxCpm',
+    labelKey: 'com_ui_project_meta_ads_max_cpm',
+    hintKey: 'com_ui_project_meta_ads_max_cpm_hint',
+    step: '0.01',
+  },
 ];
 
 const performanceMetricRuleKeys: Array<keyof MetaAdsRulesState> = [
@@ -671,7 +740,7 @@ function formatTrendDate(value: string) {
   if (yearOnly && monthOnly) {
     return `${monthOnly}/${yearOnly}`;
   }
-  const [, month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
+  const [, , month, day] = value.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
   return month && day ? `${day}/${month}` : value;
 }
 
@@ -1555,6 +1624,34 @@ function hasRulePerformanceMetric(rules: MetaAdsRulesState) {
   });
 }
 
+function RuleFieldLabel({
+  labelKey,
+  hintKey,
+  localize,
+}: {
+  labelKey: TranslationKeys;
+  hintKey: TranslationKeys;
+  localize: Localize;
+}) {
+  return (
+    <span className="group/rule-label relative inline-flex w-fit max-w-full items-center gap-1.5">
+      <span>{localize(labelKey)}</span>
+      <span
+        aria-hidden="true"
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-white/10 text-[#948b7d] transition group-hover/rule-label:border-amber-300/40 group-hover/rule-label:text-amber-100"
+      >
+        <Info size={11} weight="bold" />
+      </span>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-64 border border-white/10 bg-[#1b1812] p-2 text-[11px] normal-case leading-4 tracking-normal text-[#d8d0c2] shadow-xl group-focus-within/rule-label:block group-hover/rule-label:block"
+      >
+        {localize(hintKey)}
+      </span>
+    </span>
+  );
+}
+
 function normalizeSettings(project: TProject): MetaAdsSettingsState {
   return {
     enabled: project.metaAds?.enabled ?? false,
@@ -1746,6 +1843,9 @@ export default function ProjectMetaAdsPanel({
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
+  const [hoveredEvolutionPoint, setHoveredEvolutionPoint] = useState<EvolutionHoverPoint | null>(
+    null,
+  );
   const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
@@ -1832,6 +1932,18 @@ export default function ProjectMetaAdsPanel({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [actionMenuKey]);
+
+  useEffect(() => {
+    setHoveredEvolutionPoint(null);
+  }, [
+    biControls.level,
+    biControls.metric,
+    biControls.objective,
+    biControls.resultType,
+    customSince,
+    customUntil,
+    periodFilter,
+  ]);
 
   const releaseHorizontalScrollSync = () => {
     window.requestAnimationFrame(() => {
@@ -1957,7 +2069,7 @@ export default function ProjectMetaAdsPanel({
         (index / Math.max(evolutionDates.length - 1, 1)) * (chartWidth - chartPadding * 2);
       const y =
         chartBottom - (value / Math.max(maxEvolutionValue, 1)) * (chartHeight - chartPadding * 2);
-      return { x, y, value, date };
+      return { x, y, value, date, rawPoint };
     });
     return {
       series,
@@ -5050,8 +5162,13 @@ export default function ProjectMetaAdsPanel({
                 <div className="flex-1 space-y-4 overflow-y-auto p-4">
                   {(ruleGroupDraft.scope === 'group' || ruleGroupDraft.scope === 'override') && (
                     <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                      {localize('com_ui_project_meta_ads_rule_group_name')}
+                      <RuleFieldLabel
+                        localize={localize}
+                        labelKey="com_ui_project_meta_ads_rule_group_name"
+                        hintKey="com_ui_project_meta_ads_rule_group_name_hint"
+                      />
                       <input
+                        aria-label={localize('com_ui_project_meta_ads_rule_group_name')}
                         value={ruleGroupDraft.name}
                         onChange={(event) =>
                           setRuleGroupDraft((current) =>
@@ -5068,8 +5185,13 @@ export default function ProjectMetaAdsPanel({
                         {localize('com_ui_project_meta_ads_rule_section_target')}
                       </h5>
                       <label className="mt-2 flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        {localize('com_ui_project_meta_ads_account_profile')}
+                        <RuleFieldLabel
+                          localize={localize}
+                          labelKey="com_ui_project_meta_ads_account_profile"
+                          hintKey="com_ui_project_meta_ads_account_profile_hint"
+                        />
                         <select
+                          aria-label={localize('com_ui_project_meta_ads_account_profile')}
                           value={settings.accountProfile ?? 'custom'}
                           onChange={(event) =>
                             onAccountProfileChange(
@@ -5093,8 +5215,13 @@ export default function ProjectMetaAdsPanel({
                     </h5>
                     <div className="mt-2 grid gap-3 sm:grid-cols-2">
                       <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        {localize('com_ui_project_meta_ads_target_result_type')}
+                        <RuleFieldLabel
+                          localize={localize}
+                          labelKey="com_ui_project_meta_ads_target_result_type"
+                          hintKey="com_ui_project_meta_ads_target_result_type_hint"
+                        />
                         <select
+                          aria-label={localize('com_ui_project_meta_ads_target_result_type')}
                           value={ruleGroupDraft.rules.targetResultType ?? ''}
                           onChange={(event) =>
                             onRuleGroupRuleTextChange('targetResultType', event.target.value)
@@ -5110,13 +5237,15 @@ export default function ProjectMetaAdsPanel({
                             </option>
                           ))}
                         </select>
-                        <span className="text-[11px] text-[#81796b]">
-                          {localize('com_ui_project_meta_ads_target_result_type_hint')}
-                        </span>
                       </label>
                       <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        {localize('com_ui_project_meta_ads_primary_metric')}
+                        <RuleFieldLabel
+                          localize={localize}
+                          labelKey="com_ui_project_meta_ads_primary_metric"
+                          hintKey="com_ui_project_meta_ads_primary_metric_hint"
+                        />
                         <select
+                          aria-label={localize('com_ui_project_meta_ads_primary_metric')}
                           value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
                           onChange={(event) =>
                             onRuleGroupRuleTextChange('primaryMetric', event.target.value)
@@ -5142,8 +5271,13 @@ export default function ProjectMetaAdsPanel({
                           key={field.key}
                           className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
                         >
-                          {localize(field.labelKey)}
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey={field.labelKey}
+                            hintKey={field.hintKey}
+                          />
                           <input
+                            aria-label={localize(field.labelKey)}
                             type="number"
                             step={field.step}
                             min={
@@ -5180,8 +5314,13 @@ export default function ProjectMetaAdsPanel({
                           key={field.key}
                           className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
                         >
-                          {localize(field.labelKey)}
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey={field.labelKey}
+                            hintKey={field.hintKey}
+                          />
                           <input
+                            aria-label={localize(field.labelKey)}
                             type="number"
                             step={field.step}
                             min="0"
@@ -5196,8 +5335,13 @@ export default function ProjectMetaAdsPanel({
                       ))}
                       {ruleGroupDraft.scope === 'global' && (
                         <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                          {localize('com_ui_project_meta_ads_max_frequency_alert')}
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey="com_ui_project_meta_ads_max_frequency_alert"
+                            hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
+                          />
                           <input
+                            aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
                             type="number"
                             min="0"
                             step="0.01"
@@ -5794,7 +5938,7 @@ export default function ProjectMetaAdsPanel({
                       </div>
                     ))}
                 </div>
-                <div className="mt-3 h-48 border-b border-white/10">
+                <div className="relative mt-3 h-48 border-b border-white/10">
                   {canRenderEvolutionSeries ? (
                     <svg
                       data-testid="meta-ads-evolution-chart"
@@ -5827,32 +5971,107 @@ export default function ProjectMetaAdsPanel({
                             strokeLinejoin="round"
                             vectorEffect="non-scaling-stroke"
                           />
-                          {seriesPath.points.map((point) => (
-                            <circle
-                              key={`${seriesPath.series.entityId}:${point.date}`}
-                              cx={point.x}
-                              cy={point.y}
-                              r="2.5"
-                              fill={seriesPath.color}
-                            >
-                              <title>
-                                {`${cleanDashboardName(
-                                  seriesPath.series.entityName,
-                                  seriesPath.series.entityId,
-                                )} · ${formatTrendDate(point.date)} · ${formatEvolutionMetricValue(
-                                  point.value,
-                                  biControls.metric,
-                                  currency,
-                                )}`}
-                              </title>
-                            </circle>
-                          ))}
+                          {seriesPath.points.map((point) => {
+                            const entityName = cleanDashboardName(
+                              seriesPath.series.entityName,
+                              seriesPath.series.entityId,
+                            );
+                            const hoverPoint: EvolutionHoverPoint = {
+                              seriesId: seriesPath.series.entityId,
+                              entityName,
+                              parentCampaignName: seriesPath.series.parentCampaignName,
+                              date: point.date,
+                              value: point.value,
+                              x: point.x,
+                              y: point.y,
+                              color: seriesPath.color,
+                              point: point.rawPoint,
+                            };
+                            const key = `${seriesPath.series.entityId}:${point.date}`;
+                            return (
+                              <Fragment key={key}>
+                                <circle cx={point.x} cy={point.y} r="2.8" fill={seriesPath.color} />
+                                <circle
+                                  data-testid="meta-ads-evolution-point"
+                                  data-date={point.date}
+                                  data-entity-id={seriesPath.series.entityId}
+                                  cx={point.x}
+                                  cy={point.y}
+                                  r="8"
+                                  fill="transparent"
+                                  tabIndex={0}
+                                  className="cursor-crosshair outline-none"
+                                  onMouseEnter={() => setHoveredEvolutionPoint(hoverPoint)}
+                                  onMouseLeave={() => setHoveredEvolutionPoint(null)}
+                                  onFocus={() => setHoveredEvolutionPoint(hoverPoint)}
+                                  onBlur={() => setHoveredEvolutionPoint(null)}
+                                />
+                              </Fragment>
+                            );
+                          })}
                         </Fragment>
                       ))}
                     </svg>
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-sm text-[#a39a8c]">
                       {localize('com_ui_project_meta_ads_insufficient_evolution')}
+                    </div>
+                  )}
+                  {hoveredEvolutionPoint && canRenderEvolutionSeries && (
+                    <div
+                      data-testid="meta-ads-evolution-point-tooltip"
+                      className="pointer-events-none absolute z-[1000] min-w-52 max-w-72 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
+                      style={{
+                        left: `${(hoveredEvolutionPoint.x / chartWidth) * 100}%`,
+                        top: `${(hoveredEvolutionPoint.y / chartHeight) * 100}%`,
+                        transform: 'translate(-50%, calc(-100% - 10px))',
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          className="h-2 w-2 shrink-0"
+                          style={{ backgroundColor: hoveredEvolutionPoint.color }}
+                        />
+                        <span className="truncate font-semibold text-[#f3efe6]">
+                          {hoveredEvolutionPoint.entityName}
+                        </span>
+                      </div>
+                      {hoveredEvolutionPoint.parentCampaignName && (
+                        <div className="mt-1 truncate text-[11px] text-[#cfc6b7]">
+                          {hoveredEvolutionPoint.parentCampaignName}
+                        </div>
+                      )}
+                      <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono">
+                        <span className="text-[#a39a8c]">
+                          {formatTrendDate(hoveredEvolutionPoint.date)}
+                        </span>
+                        <span className="text-right text-[#f3efe6]">
+                          {formatEvolutionMetricValue(
+                            hoveredEvolutionPoint.value,
+                            biControls.metric,
+                            currency,
+                          )}
+                        </span>
+                        <span className="text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_results')}
+                        </span>
+                        <span className="text-right text-[#f3efe6]">
+                          {formatMetric(hoveredEvolutionPoint.point?.resultCount)}
+                        </span>
+                        <span className="text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_spend')}
+                        </span>
+                        <span className="text-right text-[#f3efe6]">
+                          {formatMoney(hoveredEvolutionPoint.point?.spend, currency)}
+                        </span>
+                        <span className="text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_cpa')}
+                        </span>
+                        <span className="text-right text-[#f3efe6]">
+                          {formatMoney(hoveredEvolutionPoint.point?.cpa, currency)}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>

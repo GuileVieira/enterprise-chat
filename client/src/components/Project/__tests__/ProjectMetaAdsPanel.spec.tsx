@@ -2194,6 +2194,20 @@ describe('ProjectMetaAdsPanel', () => {
       table.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(screen.getByTestId('meta-ads-evolution-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-evolution-chart').querySelector('title')).toBeNull();
+    const dailyPoint = screen
+      .getAllByTestId('meta-ads-evolution-point')
+      .find((point) => point.getAttribute('data-date') === '2026-06-01');
+    expect(dailyPoint).toBeTruthy();
+    fireEvent.mouseEnter(dailyPoint as Element);
+    const pointTooltip = screen.getByTestId('meta-ads-evolution-point-tooltip');
+    expect(pointTooltip).toHaveTextContent('Messages Floripa');
+    expect(pointTooltip).toHaveTextContent('01/06');
+    expect(pointTooltip).toHaveTextContent('R$ 100,00');
+    expect(pointTooltip).toHaveTextContent('4.00');
+    expect(pointTooltip).toHaveTextContent('R$ 25,00');
+    fireEvent.mouseLeave(dailyPoint as Element);
+    expect(screen.queryByTestId('meta-ads-evolution-point-tooltip')).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_best_evolution')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_budget_changes').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Messages Floripa').length).toBeGreaterThan(0);
@@ -2478,6 +2492,33 @@ describe('ProjectMetaAdsPanel', () => {
     expect(PortugueseBrazil.com_ui_project_meta_ads_min_roas).toBe('ROAS mínimo (opcional)');
     expect(English.com_ui_project_meta_ads_target_cpa).toBe('Target CPA (optional)');
     expect(English.com_ui_project_meta_ads_min_roas).toBe('Minimum ROAS (optional)');
+  });
+
+  it('shows hover hints for rule editor labels including cooldown behavior', () => {
+    expect(PortugueseBrazil.com_ui_project_meta_ads_cooldown_hint).toContain(
+      'aguarda antes de mudar o orçamento da mesma campanha ou conjunto novamente',
+    );
+    expect(English.com_ui_project_meta_ads_cooldown_hint).toContain(
+      'waits before changing the budget for the same campaign or ad set again',
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+
+    expect(
+      within(ruleDrawer).getByText('com_ui_project_meta_ads_target_cpa_hint'),
+    ).toBeInTheDocument();
+    expect(
+      within(ruleDrawer).getByText('com_ui_project_meta_ads_min_roas_hint'),
+    ).toBeInTheDocument();
+    expect(
+      within(ruleDrawer).getByText('com_ui_project_meta_ads_cooldown_hint'),
+    ).toBeInTheDocument();
+    expect(within(ruleDrawer).queryByTitle('com_ui_project_meta_ads_cooldown_hint')).toBeNull();
   });
 
   it('toggles global, group, and override rules through the unified list', () => {
