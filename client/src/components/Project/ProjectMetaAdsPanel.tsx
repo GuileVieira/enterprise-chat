@@ -1749,6 +1749,7 @@ export default function ProjectMetaAdsPanel({
   const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
   const startupConfigQuery = useGetStartupConfig();
+  const tableStatusParams = { datePreset: 'last_7d' };
   const biStatusParams =
     periodFilter === 'custom'
       ? {
@@ -1756,7 +1757,7 @@ export default function ProjectMetaAdsPanel({
           ...(customUntil ? { until: customUntil } : {}),
         }
       : { datePreset: periodFilter };
-  const statusQuery = useProjectMetaAdsQuery(project.projectId);
+  const statusQuery = useProjectMetaAdsQuery(project.projectId, tableStatusParams);
   const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biStatusParams);
   const biRankingsQuery = useProjectMetaAdsRankingsQuery(project.projectId, {
     ...biStatusParams,

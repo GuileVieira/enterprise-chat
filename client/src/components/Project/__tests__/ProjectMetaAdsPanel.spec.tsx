@@ -1989,7 +1989,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', { datePreset: 'last_7d' });
-    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', undefined);
+    expect(mockUseProjectMetaAdsQuery).not.toHaveBeenCalledWith('p1', undefined);
     expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenCalledWith(
       'p1',
       expect.objectContaining({ datePreset: 'last_7d' }),
