@@ -13,6 +13,7 @@ const {
   applyManualBudgetChange,
   applyRecommendation,
   duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsRankings,
   getProjectMetaAdsStatus,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
@@ -339,35 +340,54 @@ router.get(
   },
 );
 
-router.put(
-  '/settings',
-  metaAdsClientActionAccess,
+router.get(
+  '/rankings',
+  canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
   async (req, res) => {
     try {
-      const update = await prepareMetaAdsSettingsUpdate({
-        projectId: req.params.projectId,
-        tenantId: req.user.tenantId,
-        metaAds: req.body.metaAds,
-        metaAccessToken: req.body.metaAccessToken,
-      });
-      if (!update) {
-        return res.status(404).json({ message: 'Project not found' });
-      }
-      const project = await updateProject(req.params.projectId, update);
-      if (!project) {
-        return res.status(404).json({ message: 'Project not found' });
-      }
-      logger.debug('[projectMetaAds] settings saved', {
-        projectId: req.params.projectId,
-        hasProjectTokenSecret: !!project.metaAds?.tokenSecretName,
-      });
-      return res.json(project);
+      const tenantId = req.user.tenantId || getTenantId();
+      return res.json(
+        await getProjectMetaAdsRankings(req.params.projectId, tenantId, {
+          level: req.query.level,
+          objective: req.query.objective,
+          resultType: req.query.resultType,
+          datePreset: req.query.datePreset,
+          since: req.query.since,
+          until: req.query.until,
+        }),
+      );
     } catch (error) {
-      logger.error('[projectMetaAds] settings failed', error);
+      logger.error('[projectMetaAds] rankings failed', error);
       return res.status(error.statusCode ?? 500).json({ message: error.message });
     }
   },
 );
+
+router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
+  try {
+    const update = await prepareMetaAdsSettingsUpdate({
+      projectId: req.params.projectId,
+      tenantId: req.user.tenantId,
+      metaAds: req.body.metaAds,
+      metaAccessToken: req.body.metaAccessToken,
+    });
+    if (!update) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const project = await updateProject(req.params.projectId, update);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    logger.debug('[projectMetaAds] settings saved', {
+      projectId: req.params.projectId,
+      hasProjectTokenSecret: !!project.metaAds?.tokenSecretName,
+    });
+    return res.json(project);
+  } catch (error) {
+    logger.error('[projectMetaAds] settings failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
 
 router.put('/tenant-token', requireManageConfigs, async (req, res) => {
   try {
@@ -402,65 +422,53 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
   }
 });
 
-router.post(
-  '/run',
-  metaAdsClientActionAccess,
-  async (req, res) => {
-    try {
-      return res.json(await analyzeProject({ projectId: req.params.projectId, actor: 'user' }));
-    } catch (error) {
-      logger.error('[projectMetaAds] run failed', error);
-      return res.status(500).json({ message: error.message });
-    }
-  },
-);
+router.post('/run', metaAdsClientActionAccess, async (req, res) => {
+  try {
+    return res.json(await analyzeProject({ projectId: req.params.projectId, actor: 'user' }));
+  } catch (error) {
+    logger.error('[projectMetaAds] run failed', error);
+    return res.status(500).json({ message: error.message });
+  }
+});
 
-router.post(
-  '/budget',
-  metaAdsClientActionAccess,
-  async (req, res) => {
-    try {
-      const change = await applyManualBudgetChange({
-        projectId: req.params.projectId,
-        tenantId: req.user.tenantId || getTenantId(),
-        entityLevel: req.body.entityLevel,
-        entityId: req.body.entityId,
-        entityName: req.body.entityName,
-        dailyBudget: req.body.dailyBudget,
-        reason: req.body.reason,
-        actor: 'user',
-        actorUserId: req.user.id,
-      });
-      return res.json(change);
-    } catch (error) {
-      logger.error('[projectMetaAds] manual budget failed', error);
-      return res.status(error.statusCode ?? 500).json({ message: error.message });
-    }
-  },
-);
+router.post('/budget', metaAdsClientActionAccess, async (req, res) => {
+  try {
+    const change = await applyManualBudgetChange({
+      projectId: req.params.projectId,
+      tenantId: req.user.tenantId || getTenantId(),
+      entityLevel: req.body.entityLevel,
+      entityId: req.body.entityId,
+      entityName: req.body.entityName,
+      dailyBudget: req.body.dailyBudget,
+      reason: req.body.reason,
+      actor: 'user',
+      actorUserId: req.user.id,
+    });
+    return res.json(change);
+  } catch (error) {
+    logger.error('[projectMetaAds] manual budget failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
 
-router.post(
-  '/duplicates',
-  metaAdsClientActionAccess,
-  async (req, res) => {
-    try {
-      const result = await duplicateProjectMetaAdsEntity({
-        projectId: req.params.projectId,
-        tenantId: req.user.tenantId || getTenantId(),
-        entityLevel: req.body.entityLevel,
-        entityId: req.body.entityId,
-        entityName: req.body.entityName,
-        targetName: req.body.targetName,
-        actor: 'user',
-        actorUserId: req.user.id,
-      });
-      return res.json(result);
-    } catch (error) {
-      logger.error('[projectMetaAds] duplicate failed', error);
-      return res.status(error.statusCode ?? 500).json({ message: error.message });
-    }
-  },
-);
+router.post('/duplicates', metaAdsClientActionAccess, async (req, res) => {
+  try {
+    const result = await duplicateProjectMetaAdsEntity({
+      projectId: req.params.projectId,
+      tenantId: req.user.tenantId || getTenantId(),
+      entityLevel: req.body.entityLevel,
+      entityId: req.body.entityId,
+      entityName: req.body.entityName,
+      targetName: req.body.targetName,
+      actor: 'user',
+      actorUserId: req.user.id,
+    });
+    return res.json(result);
+  } catch (error) {
+    logger.error('[projectMetaAds] duplicate failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
 
 const metaAdsStatusRoutes = [
   { path: '/campaigns/:entityId/status', entityLevel: 'campaign' },
@@ -469,28 +477,24 @@ const metaAdsStatusRoutes = [
 ];
 
 for (const route of metaAdsStatusRoutes) {
-  router.post(
-    route.path,
-    metaAdsClientActionAccess,
-    async (req, res) => {
-      try {
-        const result = await updateProjectMetaAdsEntityStatus({
-          projectId: req.params.projectId,
-          tenantId: req.user.tenantId || getTenantId(),
-          entityLevel: route.entityLevel,
-          entityId: req.params.entityId,
-          entityName: req.body.entityName,
-          status: req.body.status,
-          actor: 'user',
-          actorUserId: req.user.id,
-        });
-        return res.json(result);
-      } catch (error) {
-        logger.error('[projectMetaAds] entity status update failed', error);
-        return res.status(error.statusCode ?? 500).json({ message: error.message });
-      }
-    },
-  );
+  router.post(route.path, metaAdsClientActionAccess, async (req, res) => {
+    try {
+      const result = await updateProjectMetaAdsEntityStatus({
+        projectId: req.params.projectId,
+        tenantId: req.user.tenantId || getTenantId(),
+        entityLevel: route.entityLevel,
+        entityId: req.params.entityId,
+        entityName: req.body.entityName,
+        status: req.body.status,
+        actor: 'user',
+        actorUserId: req.user.id,
+      });
+      return res.json(result);
+    } catch (error) {
+      logger.error('[projectMetaAds] entity status update failed', error);
+      return res.status(error.statusCode ?? 500).json({ message: error.message });
+    }
+  });
 }
 
 router.post(

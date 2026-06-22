@@ -1,6 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { ProjectMetaAdsStatus, TProject } from 'librechat-data-provider';
+import type {
+  ProjectMetaAdsRankingResponse,
+  ProjectMetaAdsStatus,
+  TProject,
+} from 'librechat-data-provider';
 import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
 
 const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
@@ -18,11 +22,17 @@ const mockNavigate = jest.fn();
 const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
 let mockStatusQueryState = {};
+let mockRankingQueryState = {};
 let mockUserRole = 'USER';
 const mockUseProjectMetaAdsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
   data: mockStatusData,
   refetch: mockRefetchStatus,
   ...mockStatusQueryState,
+}));
+const mockUseProjectMetaAdsRankingsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
+  data: mockRankingData,
+  isFetching: false,
+  ...mockRankingQueryState,
 }));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
@@ -32,6 +42,14 @@ const mockStatusData: ProjectMetaAdsStatus = {
     effective: 'v25.0',
     source: 'global',
   },
+};
+const mockRankingData: ProjectMetaAdsRankingResponse = {
+  level: 'campaign',
+  period: {
+    datePreset: 'last_7d',
+  },
+  currency: 'BRL',
+  items: [],
 };
 const mockStartupConfig = {
   interface: {
@@ -69,6 +87,8 @@ jest.mock('~/data-provider', () => ({
   }),
   useProjectMetaAdsQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsQuery(projectId, params),
+  useProjectMetaAdsRankingsQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsRankingsQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -116,8 +136,16 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.changes = [];
     mockStatusData.summary = undefined;
     mockStatusQueryState = {};
+    mockRankingQueryState = {};
     mockUserRole = 'USER';
     mockUseProjectMetaAdsQuery.mockClear();
+    mockUseProjectMetaAdsRankingsQuery.mockClear();
+    mockRankingData.level = 'campaign';
+    mockRankingData.period = {
+      datePreset: 'last_7d',
+    };
+    mockRankingData.currency = 'BRL';
+    mockRankingData.items = [];
     delete mockStatusData.campaigns;
     delete mockStatusData.adDiagnostics;
     delete mockStatusData.credentials;
@@ -158,7 +186,9 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
     const credentialsDialog = screen.getAllByRole('dialog')[1];
     expect(
-      within(credentialsDialog).getAllByPlaceholderText('com_ui_project_meta_ads_token_placeholder'),
+      within(credentialsDialog).getAllByPlaceholderText(
+        'com_ui_project_meta_ads_token_placeholder',
+      ),
     ).toHaveLength(1);
     fireEvent.change(
       within(credentialsDialog).getAllByPlaceholderText(
@@ -596,7 +626,7 @@ describe('ProjectMetaAdsPanel', () => {
       0,
     );
 
-    fireEvent.click(within(campaignRankings).getAllByRole('button')[0]);
+    fireEvent.click(within(campaignRankings).getByText('Traffic C'));
 
     expect(screen.getByText('com_ui_project_meta_ads_bi_rank_detail')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);
@@ -621,6 +651,59 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByTestId('meta-ads-bi-ads')).toHaveTextContent('Ad B');
     expect(screen.getByTestId('meta-ads-bi-ads')).not.toHaveTextContent('Low Spend Ad');
+  });
+
+  it('renders compiled BI rankings as sortable columns', () => {
+    mockRankingData.items = [
+      {
+        id: 'campaign-low-cpa',
+        name: 'Low CPA',
+        level: 'campaign',
+        objective: 'OUTCOME_SALES',
+        resultType: 'purchase',
+        resultCount: 10,
+        spend: 100,
+        cpa: 10,
+        ctr: 1.2,
+        frequency: 1.8,
+      },
+      {
+        id: 'campaign-high-spend',
+        name: 'High Spend',
+        level: 'campaign',
+        objective: 'OUTCOME_SALES',
+        resultType: 'purchase',
+        resultCount: 40,
+        spend: 800,
+        cpa: 20,
+        ctr: 2.4,
+        frequency: 2.1,
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    const rankings = screen.getByTestId('meta-ads-bi-campaigns');
+    const initialRankingsText = rankings.textContent ?? '';
+    expect(initialRankingsText.indexOf('Low CPA')).toBeLessThan(
+      initialRankingsText.indexOf('High Spend'),
+    );
+
+    fireEvent.click(
+      within(rankings).getByRole('button', { name: /com_ui_project_meta_ads_spend/ }),
+    );
+
+    const spendRankingsText = rankings.textContent ?? '';
+    expect(spendRankingsText.indexOf('High Spend')).toBeLessThan(
+      spendRankingsText.indexOf('Low CPA'),
+    );
+    expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({
+        datePreset: 'last_7d',
+        level: 'campaign',
+      }),
+    );
   });
 
   it('lists only primary campaign result types in the BI result filter', () => {
@@ -1515,8 +1598,11 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getByRole('button', { name: 'com_ui_project_meta_ads_roas' }),
     ).toBeInTheDocument();
+    const table = screen.getAllByTestId('meta-ads-campaign-row')[0].closest('table');
     expect(
-      screen.queryByRole('button', { name: 'com_ui_project_meta_ads_frequency' }),
+      within(table as HTMLElement).queryByRole('button', {
+        name: 'com_ui_project_meta_ads_frequency',
+      }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_project_meta_ads_video_p75')).not.toBeInTheDocument();
   });
@@ -1877,7 +1963,12 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'com_ui_project_meta_ads_frequency' }));
+    const table = screen.getAllByTestId('meta-ads-campaign-row')[0].closest('table');
+    fireEvent.click(
+      within(table as HTMLElement).getByRole('button', {
+        name: 'com_ui_project_meta_ads_frequency',
+      }),
+    );
     const rows = screen.getAllByTestId('meta-ads-campaign-row');
     expect(rows[0]).toHaveTextContent('High Frequency');
     expect(rows[1]).toHaveTextContent('Low Frequency');
@@ -1896,6 +1987,11 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', { datePreset: 'last_7d' });
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', undefined);
+    expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ datePreset: 'last_7d' }),
+    );
     expect(screen.getByText('com_ui_project_meta_ads_total_spend')).toBeInTheDocument();
     expect(screen.getByText('R$ 300,00')).toBeInTheDocument();
     expect(screen.getByText('R$ 25,00')).toBeInTheDocument();
@@ -1907,6 +2003,10 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
       datePreset: 'last_30d',
     });
+    expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenLastCalledWith(
+      'p1',
+      expect.objectContaining({ datePreset: 'last_30d' }),
+    );
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
       target: { value: 'custom' },
@@ -1925,6 +2025,13 @@ describe('ProjectMetaAdsPanel', () => {
       since: '2026-06-01',
       until: '2026-06-10',
     });
+    expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenLastCalledWith(
+      'p1',
+      expect.objectContaining({
+        since: '2026-06-01',
+        until: '2026-06-10',
+      }),
+    );
   });
 
   it('renders campaign evolution dashboard from historical trend data', () => {

@@ -304,6 +304,23 @@ export const useProjectMetaAdsQuery = (
   );
 };
 
+export const useProjectMetaAdsRankingsQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsRankingParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsRankingResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRankingResponse> => {
+  return useQuery<t.ProjectMetaAdsRankingResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'rankings', params],
+    () => dataService.getProjectMetaAdsRankings(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

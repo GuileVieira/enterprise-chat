@@ -390,6 +390,41 @@ export type ProjectMetaAdsStatusParams = {
   until?: string;
 };
 
+export type ProjectMetaAdsRankingLevel = 'campaign' | 'adset' | 'ad';
+
+export type ProjectMetaAdsRankingParams = ProjectMetaAdsStatusParams & {
+  level?: ProjectMetaAdsRankingLevel;
+  objective?: string;
+  resultType?: string;
+};
+
+export type ProjectMetaAdsRankingItem = {
+  id: string;
+  level: ProjectMetaAdsRankingLevel;
+  name: string;
+  parentName?: string;
+  campaignId?: string;
+  campaignName?: string;
+  objective?: string;
+  resultType?: string;
+  spend: number;
+  resultCount: number;
+  cpa?: number | null;
+  ctr?: number | null;
+  clicks?: number;
+  impressions?: number;
+  frequency?: number | null;
+  thumbnailUrls?: string[];
+  adsManagerUrl?: string;
+};
+
+export type ProjectMetaAdsRankingResponse = {
+  level: ProjectMetaAdsRankingLevel;
+  period: ProjectMetaAdsStatusParams;
+  currency?: string;
+  items: ProjectMetaAdsRankingItem[];
+};
+
 export type ProjectMetaAdsRunResponse = {
   projectId: string;
   adAccountId: string;

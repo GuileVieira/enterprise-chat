@@ -36,6 +36,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
   duplicateProjectMetaAdsEntity: jest.fn(),
+  getProjectMetaAdsRankings: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
   updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
@@ -44,6 +45,7 @@ const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
 const {
   duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsRankings,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 
@@ -339,14 +341,62 @@ describe('projectMetaAds tenant token route', () => {
   });
 });
 
+describe('projectMetaAds rankings route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getProjectMetaAdsRankings.mockResolvedValue({
+      level: 'ad',
+      period: {
+        since: '2026-06-01',
+        until: '2026-06-10',
+      },
+      currency: 'BRL',
+      items: [],
+    });
+  });
+
+  it('loads compiled BI rankings with independent period and filters', async () => {
+    const response = await request(createApp())
+      .get('/projects/p1/meta-ads/rankings')
+      .query({
+        level: 'ad',
+        objective: 'OUTCOME_SALES',
+        resultType: 'purchase',
+        since: '2026-06-01',
+        until: '2026-06-10',
+      })
+      .expect(200);
+
+    expect(getProjectMetaAdsRankings).toHaveBeenCalledWith('p1', 'tenant-x', {
+      level: 'ad',
+      objective: 'OUTCOME_SALES',
+      resultType: 'purchase',
+      datePreset: undefined,
+      since: '2026-06-01',
+      until: '2026-06-10',
+    });
+    expect(response.body).toEqual({
+      level: 'ad',
+      period: {
+        since: '2026-06-01',
+        until: '2026-06-10',
+      },
+      currency: 'BRL',
+      items: [],
+    });
+  });
+});
+
 describe('projectMetaAds entity status route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    updateProjectMetaAdsEntityStatus.mockImplementation(async ({ entityLevel, entityId, status }) => ({
-      entityLevel,
-      entityId,
-      status,
-    }));
+    updateProjectMetaAdsEntityStatus.mockImplementation(
+      async ({ entityLevel, entityId, status }) => ({
+        entityLevel,
+        entityId,
+        status,
+      }),
+    );
   });
 
   it.each([
@@ -389,13 +439,15 @@ describe('projectMetaAds entity status route', () => {
 describe('projectMetaAds duplicate route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    duplicateProjectMetaAdsEntity.mockImplementation(async ({ entityLevel, entityId, targetName }) => ({
-      entityLevel,
-      sourceEntityId: entityId,
-      duplicatedEntityId: `${entityId}-copy`,
-      duplicatedEntityName: targetName,
-      status: 'INHERITED_FROM_SOURCE',
-    }));
+    duplicateProjectMetaAdsEntity.mockImplementation(
+      async ({ entityLevel, entityId, targetName }) => ({
+        entityLevel,
+        sourceEntityId: entityId,
+        duplicatedEntityId: `${entityId}-copy`,
+        duplicatedEntityName: targetName,
+        status: 'INHERITED_FROM_SOURCE',
+      }),
+    );
   });
 
   it.each([

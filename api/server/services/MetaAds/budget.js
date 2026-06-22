@@ -1954,6 +1954,263 @@ function setCachedStatusPeriod(cacheKey, value) {
   }
 }
 
+function getRankingCacheKey({
+  projectId,
+  tenantId,
+  adAccountId,
+  graphVersion,
+  period,
+  accountProfile,
+  targetResultType,
+  level,
+  objective,
+  resultType,
+}) {
+  return JSON.stringify({
+    type: 'ranking',
+    projectId,
+    tenantId,
+    adAccountId,
+    graphVersion,
+    since: period?.since || '',
+    until: period?.until || '',
+    accountProfile: accountProfile || '',
+    targetResultType: targetResultType || '',
+    level,
+    objective: objective || '',
+    resultType: resultType || '',
+  });
+}
+
+function normalizeRankingLevel(level) {
+  return ['campaign', 'adset', 'ad'].includes(level) ? level : 'campaign';
+}
+
+function matchesRankingFilter(value, filter) {
+  return !filter || filter === 'all' || value === filter;
+}
+
+function toRankingItem({ level, insight, metrics, meta = {}, adAccountId, thumbnailUrls = [] }) {
+  const id =
+    level === 'campaign'
+      ? insight.campaign_id
+      : level === 'adset'
+        ? insight.adset_id
+        : insight.ad_id;
+  const name =
+    level === 'campaign'
+      ? insight.campaign_name || meta.name || id
+      : level === 'adset'
+        ? insight.adset_name || meta.name || id
+        : insight.ad_name || meta.name || id;
+  return {
+    id,
+    level,
+    name,
+    parentName: level === 'campaign' ? undefined : insight.campaign_name || meta.campaignName,
+    campaignId: insight.campaign_id || meta.campaignId,
+    campaignName: insight.campaign_name || meta.campaignName,
+    objective: meta.objective || 'UNKNOWN',
+    resultType: metrics.resultType || 'UNKNOWN',
+    spend: metrics.spend,
+    resultCount: metrics.resultCount,
+    cpa: metrics.cpa,
+    ctr: metrics.ctr,
+    clicks: metrics.clicks,
+    impressions: metrics.impressions,
+    frequency: metrics.frequency,
+    thumbnailUrls,
+    adsManagerUrl: level === 'ad' ? buildAdsManagerUrl(adAccountId, id) : undefined,
+  };
+}
+
+async function getProjectMetaAdsRankings(projectId, fallbackTenantId, options = {}) {
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw new Error('Project not found.');
+  }
+
+  const tenantId = getProjectTenantId(project, fallbackTenantId);
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const adAccountId = normalizeAdAccountId(metaAds.adAccountId);
+  if (!adAccountId) {
+    throw new Error('Project Meta Ads account is not configured.');
+  }
+
+  const level = normalizeRankingLevel(options.level);
+  const period = resolveStatusPeriod(options);
+  if (!period.since || !period.until) {
+    throw new Error('Meta Ads ranking period is required.');
+  }
+
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const targetResultType = metaAds.rules?.targetResultType;
+  const cacheKey = getRankingCacheKey({
+    projectId,
+    tenantId,
+    adAccountId,
+    graphVersion,
+    period,
+    accountProfile: metaAds.accountProfile,
+    targetResultType,
+    level,
+    objective: options.objective,
+    resultType: options.resultType,
+  });
+  const cached = getCachedStatusPeriod(cacheKey, period);
+  if (cached) {
+    return cached;
+  }
+
+  const token = await getAccessToken(tenantId, metaAds);
+  const resolvedTargetResultType = resolveTargetResultType({
+    targetResultType,
+    accountProfile: metaAds.accountProfile,
+  });
+  const [campaigns, adsets] = await Promise.all([
+    listCampaigns({ adAccountId, token, graphVersion, includeInactive: true }).catch((error) => {
+      logger.error('[MetaAdsBudget] ranking campaigns fetch failed', {
+        projectId,
+        message: error.message,
+      });
+      return [];
+    }),
+    level === 'campaign'
+      ? Promise.resolve([])
+      : listAdSets({ adAccountId, token, graphVersion, includeInactive: true }).catch((error) => {
+          logger.error('[MetaAdsBudget] ranking adsets fetch failed', {
+            projectId,
+            message: error.message,
+          });
+          return [];
+        }),
+  ]);
+  const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
+  const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
+
+  let insights = [];
+  let adsById = new Map();
+  let adSummaryById = new Map();
+  if (level === 'campaign') {
+    insights = await listCampaignInsights({
+      adAccountId,
+      token,
+      since: period.since,
+      until: period.until,
+      graphVersion,
+    });
+  } else if (level === 'adset') {
+    insights = await listAdSetInsights({
+      adAccountId,
+      token,
+      since: period.since,
+      until: period.until,
+      graphVersion,
+    });
+  } else {
+    insights = await listAdInsights({
+      adAccountId,
+      token,
+      since: period.since,
+      until: period.until,
+      graphVersion,
+    });
+    const adIds = [...new Set(insights.map((row) => row.ad_id).filter(Boolean))];
+    const ads = adIds.length
+      ? await listAds({
+          adAccountId,
+          adIds,
+          token,
+          graphVersion,
+          includeInactive: true,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] ranking ads fetch failed', {
+            projectId,
+            message: error.message,
+          });
+          return [];
+        })
+      : [];
+    adsById = new Map(ads.map((ad) => [ad.id, ad]));
+    adSummaryById = new Map(
+      buildAdSummaries({
+        ads,
+        adInsights: insights,
+        currency: 'BRL',
+        accountProfile: metaAds.accountProfile,
+        targetResultType,
+        adAccountId,
+      }).map((ad) => [ad.adId, ad]),
+    );
+  }
+
+  const items = insights
+    .map((insight) => {
+      const campaign = campaignById.get(insight.campaign_id);
+      const adset = adsetById.get(insight.adset_id);
+      const ad = adsById.get(insight.ad_id);
+      const metrics = calculateMetrics(
+        insight,
+        resolveTargetResultType({
+          targetResultType,
+          accountProfile: metaAds.accountProfile,
+          campaignObjective: campaign?.objective,
+        }) || resolvedTargetResultType,
+      );
+      const meta =
+        level === 'campaign'
+          ? { name: campaign?.name, objective: campaign?.objective }
+          : level === 'adset'
+            ? {
+                name: adset?.name,
+                campaignId: insight.campaign_id || adset?.campaign_id,
+                campaignName: insight.campaign_name || adset?.campaign?.name,
+                objective: campaign?.objective,
+              }
+            : {
+                name: ad?.name,
+                campaignId: insight.campaign_id || ad?.campaign_id,
+                campaignName: insight.campaign_name || campaign?.name,
+                objective: campaign?.objective,
+              };
+      const adSummary = level === 'ad' ? adSummaryById.get(insight.ad_id) : undefined;
+      return toRankingItem({
+        level,
+        insight,
+        metrics,
+        meta,
+        adAccountId,
+        thumbnailUrls:
+          level === 'ad'
+            ? [adSummary?.thumbnailUrl, adSummary?.imageUrl].filter(
+                (url) => typeof url === 'string' && url.trim(),
+              )
+            : [],
+      });
+    })
+    .filter(
+      (item) =>
+        item.id &&
+        Number(item.resultCount ?? 0) > 0 &&
+        matchesRankingFilter(item.objective, options.objective) &&
+        matchesRankingFilter(item.resultType, options.resultType),
+    );
+
+  const response = {
+    level,
+    period,
+    currency: 'BRL',
+    items,
+  };
+  setCachedStatusPeriod(cacheKey, response);
+  return response;
+}
+
 function proposeBudget({
   currentDailyBudget,
   cpa,
@@ -3100,6 +3357,7 @@ module.exports = {
   getModels,
   getEffectiveRules,
   getMetaGraphVersion,
+  getProjectMetaAdsRankings,
   getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,
   withImplicitProjectTokenSecret,

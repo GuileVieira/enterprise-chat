@@ -136,6 +136,7 @@ export const projects = () => projectsRoot;
 export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}`;
 export const archiveProject = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}/archive`;
 export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
+export const projectMetaAdsRankings = (id: string) => `${projectMetaAds(id)}/rankings`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
@@ -146,7 +147,8 @@ export const projectMetaAdsEntityStatus = (
   entityLevel: 'campaign' | 'adset' | 'ad',
   entityId: string,
 ) => {
-  const path = entityLevel === 'campaign' ? 'campaigns' : entityLevel === 'adset' ? 'adsets' : 'ads';
+  const path =
+    entityLevel === 'campaign' ? 'campaigns' : entityLevel === 'adset' ? 'adsets' : 'ads';
   return `${projectMetaAds(id)}/${path}/${encodeURIComponent(entityId)}/status`;
 };
 export const projectMetaAdsApply = (id: string, recommendationId: string) =>
