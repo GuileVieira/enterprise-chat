@@ -2054,6 +2054,8 @@
   "com_ui_project_meta_ads_period_since": "Start date",
   "com_ui_project_meta_ads_period_until": "End date",
   "com_ui_project_meta_ads_period_update": "Update",
+  "com_ui_project_meta_ads_tab_overview": "Overview",
+  "com_ui_project_meta_ads_tab_bi": "BI",
   "com_ui_project_meta_ads_loading": "Loading Meta Ads data...",
   "com_ui_project_meta_ads_total_spend": "Total spend",
   "com_ui_project_meta_ads_roas": "ROAS",

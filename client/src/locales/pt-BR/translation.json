@@ -1078,6 +1078,8 @@
   "com_ui_project_meta_ads_period_since": "Data inicial",
   "com_ui_project_meta_ads_period_until": "Data final",
   "com_ui_project_meta_ads_period_update": "Atualizar",
+  "com_ui_project_meta_ads_tab_overview": "Geral",
+  "com_ui_project_meta_ads_tab_bi": "BI",
   "com_ui_project_meta_ads_loading": "Carregando dados do Meta Ads...",
   "com_ui_project_meta_ads_total_spend": "Gasto total",
   "com_ui_project_meta_ads_roas": "ROAS",

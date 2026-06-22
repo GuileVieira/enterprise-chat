@@ -136,6 +136,7 @@ type RequestError = {
   };
 };
 type SettingsDrawer = 'account' | 'automation' | null;
+type WorkspaceTab = 'overview' | 'bi';
 type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
 type PeriodFilter = DatePreset | 'custom';
@@ -239,6 +240,11 @@ const periodOptions = [
 const periodFilterOptions: Array<{ value: PeriodFilter; labelKey: TranslationKeys }> = [
   ...periodOptions,
   { value: 'custom', labelKey: 'com_ui_project_meta_ads_period_custom' },
+];
+
+const workspaceTabOptions: Array<{ value: WorkspaceTab; labelKey: TranslationKeys }> = [
+  { value: 'overview', labelKey: 'com_ui_project_meta_ads_tab_overview' },
+  { value: 'bi', labelKey: 'com_ui_project_meta_ads_tab_bi' },
 ];
 
 const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [
@@ -1831,6 +1837,7 @@ export default function ProjectMetaAdsPanel({
   const [selectedSummaryResultType, setSelectedSummaryResultType] = useState<string | null>(null);
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
   const [tableView, setTableView] = useState<TableView>('summary');
   const [biControls, setBiControls] = useState<MetaAdsBiControls>({
     level: 'campaign',
@@ -4184,6 +4191,34 @@ export default function ProjectMetaAdsPanel({
             {runErrorMessage}
           </div>
         )}
+        <div
+          role="tablist"
+          aria-label={localize('com_ui_project_meta_ads_title')}
+          className="flex flex-wrap gap-2 border-b border-white/10 bg-[#11100d] px-4 pt-3"
+        >
+          {workspaceTabOptions.map((option) => {
+            const isSelected = workspaceTab === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                id={`meta-ads-tab-${option.value}`}
+                aria-selected={isSelected}
+                aria-controls={`meta-ads-${option.value}-tab-panel`}
+                data-testid={`meta-ads-workspace-tab-${option.value}`}
+                onClick={() => setWorkspaceTab(option.value)}
+                className={`border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                  isSelected
+                    ? 'border-amber-300/60 bg-amber-300/10 text-[#f8f1e5]'
+                    : 'border-white/10 bg-black/10 text-[#8f8677] hover:border-white/25 hover:text-[#f3efe6]'
+                }`}
+              >
+                {localize(option.labelKey)}
+              </button>
+            );
+          })}
+        </div>
 
         {settingsDrawer && settingsDraft && (
           <div
@@ -4549,55 +4584,1344 @@ export default function ProjectMetaAdsPanel({
           </OGDialogContent>
         </OGDialog>
 
-        <div>
-          <div className="flex flex-col gap-4 border-b border-white/10 bg-[#11100d]/95 p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.85)]">
-            {isStatusLoading && (
-              <div
-                role="status"
-                className="flex items-center gap-2 border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
-              >
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-amber-200" />
-                <span>{localize('com_ui_project_meta_ads_loading')}</span>
+        {workspaceTab === 'overview' && (
+          <div
+            id="meta-ads-overview-tab-panel"
+            role="tabpanel"
+            aria-labelledby="meta-ads-tab-overview"
+            data-testid="meta-ads-overview-tab-panel"
+          >
+            <div className="flex flex-col gap-4 border-b border-white/10 bg-[#11100d]/95 p-4 shadow-[0_20px_60px_-44px_rgba(0,0,0,0.85)]">
+              {isStatusLoading && (
+                <div
+                  role="status"
+                  className="flex items-center gap-2 border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
+                >
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-amber-200" />
+                  <span>{localize('com_ui_project_meta_ads_loading')}</span>
+                </div>
+              )}
+              <div className={`${metaAdsPanel} p-3`}>
+                <div className="flex min-w-0 flex-col gap-3">
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <span className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_search')}
+                      </span>
+                      <input
+                        value={campaignSearch}
+                        onChange={(event) => setCampaignSearch(event.target.value)}
+                        className={metaAdsInput}
+                      />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <span className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_budget_mode_filter')}
+                      </span>
+                      <select
+                        value={budgetModeFilter}
+                        onChange={(event) => setBudgetModeFilter(event.target.value)}
+                        className={metaAdsInput}
+                      >
+                        <option value="all">{localize('com_ui_all')}</option>
+                        <option value="CBO">CBO</option>
+                        <option value="ABO">ABO</option>
+                        <option value="UNKNOWN">UNKNOWN</option>
+                      </select>
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <span className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_objective_filter')}
+                      </span>
+                      <select
+                        value={objectiveFilter}
+                        onChange={(event) => setObjectiveFilter(event.target.value)}
+                        className={metaAdsInput}
+                      >
+                        <option value="all">{localize('com_ui_all')}</option>
+                        {objectiveOptions.map((objective) => (
+                          <option key={objective} value={objective}>
+                            {getObjectiveLabel(objective, localize)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <span className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_sort')}
+                      </span>
+                      <select
+                        value={campaignSort}
+                        onChange={(event) => setCampaignSort(event.target.value)}
+                        className={metaAdsInput}
+                      >
+                        <option value="name_asc">{localize('com_ui_name')}</option>
+                        <option value="budget_desc">
+                          {localize('com_ui_project_meta_ads_budget_defined')}
+                        </option>
+                        <option value="frequency_desc">
+                          {localize('com_ui_project_meta_ads_frequency')}
+                        </option>
+                        <option value="spend_desc">
+                          {localize('com_ui_project_meta_ads_spend')}
+                        </option>
+                        <option value="roas_desc">
+                          {localize('com_ui_project_meta_ads_roas')}
+                        </option>
+                        <option value="cpa_asc">
+                          {localize('com_ui_project_meta_ads_cost_result')}
+                        </option>
+                        <option value="result_desc">
+                          {localize('com_ui_project_meta_ads_result')}
+                        </option>
+                        <option value="ctr_desc">CTR</option>
+                        <option value="clicks_desc">
+                          {localize('com_ui_project_meta_ads_clicks')}
+                        </option>
+                      </select>
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
+                      <span className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_table_view')}
+                      </span>
+                      <select
+                        value={tableView}
+                        onChange={(event) => setTableView(event.target.value as TableView)}
+                        className={metaAdsInput}
+                      >
+                        {tableViewOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {localize(option.labelKey)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
+                    <span className="h-9 border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-xs tabular-nums text-[#d7cdbd]">
+                      {localize('com_ui_project_meta_ads_selection_count', {
+                        0: String(selectedCount),
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={selectedCount === 0}
+                      onClick={() => setSelectedEntityIds([])}
+                      className={metaAdsGhostButton}
+                    >
+                      {localize('com_ui_project_meta_ads_clear_selection')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={campaigns.length === 0}
+                      onClick={onExpandAllRows}
+                      className={metaAdsGhostButton}
+                    >
+                      {localize('com_ui_project_meta_ads_expand_all')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={campaigns.length === 0}
+                      onClick={onCollapseAllRows}
+                      className={metaAdsGhostButton}
+                    >
+                      {localize('com_ui_project_meta_ads_collapse_all')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canCreateRuleGroup}
+                      onClick={onOpenRuleGroupDraft}
+                      className={metaAdsButton}
+                    >
+                      {localize('com_ui_project_meta_ads_create_rule_group')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canOpenTrafficAgentChat}
+                      onClick={onOpenTrafficAgentChat}
+                      className={metaAdsButton}
+                    >
+                      {localize('com_ui_project_meta_ads_chat_with_agent')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMetricsFullscreen((current) => !current)}
+                      aria-label={localize(
+                        metricsFullscreen
+                          ? 'com_ui_project_meta_ads_exit_fullscreen'
+                          : 'com_ui_project_meta_ads_enter_fullscreen',
+                      )}
+                      className={`inline-flex items-center gap-2 ${metaAdsButton}`}
+                    >
+                      {metricsFullscreen ? (
+                        <ArrowsIn className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <ArrowsOut className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {localize(
+                        metricsFullscreen
+                          ? 'com_ui_project_meta_ads_exit_fullscreen'
+                          : 'com_ui_project_meta_ads_enter_fullscreen',
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map(({ labelKey, value, tone, context, clickable }) => {
+                  const content = (
+                    <>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                        {localize(labelKey as TranslationKeys)}
+                      </div>
+                      {isInitialStatusLoading ? (
+                        <div
+                          data-testid="meta-ads-summary-skeleton"
+                          className="mt-3 h-7 w-28 animate-pulse bg-white/10"
+                        />
+                      ) : (
+                        <div className="mt-3 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
+                          {value}
+                        </div>
+                      )}
+                      {context && !isInitialStatusLoading && (
+                        <div className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8f8677]">
+                          {context}
+                        </div>
+                      )}
+                    </>
+                  );
+                  const className = `relative overflow-hidden border border-l-2 border-white/10 ${tone} bg-[#151512] p-4 text-left`;
+                  return clickable ? (
+                    <button
+                      key={labelKey}
+                      type="button"
+                      data-testid={`meta-ads-summary-card-${labelKey}`}
+                      disabled={isInitialStatusLoading}
+                      onClick={() => setResultTypeSelectorOpen(true)}
+                      className={`${className} transition hover:border-white/25 disabled:cursor-wait disabled:opacity-80`}
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <div
+                      key={labelKey}
+                      data-testid={`meta-ads-summary-card-${labelKey}`}
+                      className={className}
+                    >
+                      {content}
+                    </div>
+                  );
+                })}
+              </div>
+              {resultTypeSelectorOpen && (
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="meta-ads-result-type-selector-title"
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+                >
+                  <div className="flex max-h-[82vh] w-full max-w-xl flex-col border border-white/15 bg-[#151512] p-4 shadow-2xl">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4
+                          id="meta-ads-result-type-selector-title"
+                          className="text-base font-semibold text-[#f8f1e5]"
+                        >
+                          {localize('com_ui_project_meta_ads_choose_result_metric')}
+                        </h4>
+                        <div className="mt-1 text-xs text-[#9f9687]">
+                          {localize('com_ui_project_meta_ads_choose_result_metric_hint')}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setResultTypeSelectorOpen(false)}
+                        className={metaAdsGhostButton}
+                      >
+                        {localize('com_ui_close')}
+                      </button>
+                    </div>
+                    <div className="mt-4 min-h-0 space-y-2 overflow-y-auto pr-1">
+                      {summaryResultTypeOptions.map((option) => (
+                        <button
+                          key={option.resultType}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSummaryResultType(option.resultType);
+                            setResultTypeSelectorOpen(false);
+                          }}
+                          className={`w-full border p-3 text-left transition ${
+                            selectedSummaryResultType === option.resultType
+                              ? 'border-emerald-300/60 bg-emerald-500/10'
+                              : 'border-white/10 bg-black/10 hover:border-white/25'
+                          }`}
+                        >
+                          <div className="truncate text-sm font-semibold text-[#f8f1e5]">
+                            {getResultTypeLabel(option.resultType, localize)}
+                          </div>
+                          <div className="mt-2 grid gap-2 text-xs text-[#b8ae9f] sm:grid-cols-3">
+                            <span>
+                              {localize('com_ui_project_meta_ads_results')}:{' '}
+                              {formatMetric(option.totalResults)}
+                            </span>
+                            <span>
+                              {localize('com_ui_project_meta_ads_spend')}:{' '}
+                              {formatMoney(option.totalSpend, currency)}
+                            </span>
+                            <span>
+                              {localize('com_ui_project_meta_ads_average_cost')}:{' '}
+                              {formatMoney(option.averageCostPerResult, currency)}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSummaryResultType(null);
+                          setResultTypeSelectorOpen(false);
+                        }}
+                        className={metaAdsGhostButton}
+                      >
+                        {localize('com_ui_project_meta_ads_clear_result_metric')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResultTypeSelectorOpen(false)}
+                        className={metaAdsButton}
+                      >
+                        {localize('com_ui_cancel')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {pendingRecommendations.length > 0 && campaigns.length === 0 && (
+              <div className="border-b border-border-light bg-surface-secondary p-3">
+                <div className="space-y-2">
+                  {pendingRecommendations.map((recommendation) => (
+                    <div
+                      key={recommendation._id ?? recommendation.entityId}
+                      className="flex items-center justify-between gap-3 border border-border-light bg-surface-primary p-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-text-primary">
+                          {recommendation.entityName ?? recommendation.entityId}
+                        </div>
+                        <div className="text-text-secondary">
+                          {getRecommendationLabel(recommendation, currency)}
+                        </div>
+                      </div>
+                      {canApplyRecommendation(recommendation) && (
+                        <button
+                          type="button"
+                          disabled={!canUseMetaAdsActions || applyRecommendation.isLoading}
+                          onClick={() => onApply(recommendation)}
+                          className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {localize('com_ui_project_meta_ads_apply')}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            <div className={`${metaAdsPanel} p-3`}>
-              <div className="flex min-w-0 flex-col gap-3">
-                <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
-                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                    <span className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_search')}
-                    </span>
-                    <input
-                      value={campaignSearch}
-                      onChange={(event) => setCampaignSearch(event.target.value)}
-                      className={metaAdsInput}
-                    />
-                  </label>
-                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                    <span className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_budget_mode_filter')}
-                    </span>
+
+            {budgetEditor && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="meta-ads-budget-dialog-title"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+              >
+                <div className="relative w-full max-w-2xl overflow-hidden border border-white/10 bg-[#151411] p-5 text-[#f3efe6] shadow-[0_28px_90px_-60px_rgba(0,0,0,0.95)] sm:p-6">
+                  <div className="relative min-w-0">
+                    <h4
+                      id="meta-ads-budget-dialog-title"
+                      className="text-2xl font-semibold leading-tight tracking-tight text-[#f8f1e5]"
+                    >
+                      {localize('com_ui_project_meta_ads_edit_budget')}
+                    </h4>
+                    <div className="mt-4 truncate text-lg font-semibold text-[#f3efe6]">
+                      {budgetEditor.entityName ?? budgetEditor.entityId}
+                    </div>
+                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f8677]">
+                      {budgetEditor.entityLevel === 'campaign'
+                        ? localize('com_ui_project_meta_ads_campaign')
+                        : localize('com_ui_project_meta_ads_select_ad_set')}
+                    </div>
+                    <div className="mt-4 max-w-[56ch] text-sm leading-6 text-[#cfc6b7]">
+                      {localize('com_ui_project_meta_ads_manual_budget_hint')}
+                    </div>
+
+                    <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
+                      <div className="border border-white/10 bg-white/[0.035] p-4">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                          {localize('com_ui_project_meta_ads_budget_defined')}
+                        </div>
+                        <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
+                          {formatMoney(budgetEditor.currentBudget, currency)}
+                        </div>
+                      </div>
+                      <label className="border border-amber-300/20 bg-amber-300/[0.06] p-4 text-xs text-[#cfc6b7]">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9a06a]">
+                          {localize('com_ui_project_meta_ads_new_budget')}
+                        </span>
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={manualDailyBudget}
+                          onChange={(event) => setManualDailyBudget(event.target.value)}
+                          className="mt-2 h-11 w-full border border-white/10 bg-[#1f1b15] px-3 font-mono text-lg font-semibold tabular-nums text-[#f8f1e5] outline-none transition duration-200 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20"
+                        />
+                      </label>
+                    </div>
+
+                    {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
+                      <div className="mt-5">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
+                            {localize('com_ui_project_meta_ads_budget_quick_adjustments')}
+                          </div>
+                          <div className="h-px flex-1 bg-white/10" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
+                            (reference) => (
+                              <button
+                                key={reference.percent}
+                                type="button"
+                                aria-label={reference.accessibleLabel}
+                                onClick={() => setManualDailyBudget(reference.value.toFixed(2))}
+                                className={`group flex min-h-16 items-center justify-between gap-3 border px-3 py-2 text-left transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
+                              >
+                                <span className="text-sm font-semibold">{reference.label}</span>
+                                <span className="font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
+                                  {reference.formattedValue}
+                                </span>
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative mt-6 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBudgetEditor(null)}
+                      className="h-10 border border-white/10 px-4 text-sm font-semibold text-[#d8cfbf] transition duration-200 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-white/15 active:translate-y-px"
+                    >
+                      {localize('com_ui_cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updateBudget.isLoading}
+                      onClick={onSaveManualBudget}
+                      className="h-10 bg-[#f8f1e5] px-5 text-sm font-semibold text-[#14120f] shadow-[0_18px_42px_-28px_rgba(248,241,229,0.9)] transition duration-200 hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {localize('com_ui_project_meta_ads_save_budget')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {budgetConfirmation && (
+              <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                <div className="font-semibold">
+                  {localize('com_ui_project_meta_ads_confirm_budget_title')}
+                </div>
+                <div className="mt-1">
+                  {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
+                  {formatMoney(budgetConfirmation.currentBudget, currency)}
+                  {' -> '}
+                  {formatMoney(budgetConfirmation.dailyBudget, currency)}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBudgetConfirmation(null)}
+                    className="h-8 border border-amber-300 px-3 text-xs font-medium"
+                  >
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateBudget.isLoading}
+                    onClick={onConfirmManualBudget}
+                    className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize('com_ui_project_meta_ads_confirm_budget')}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {entityStatusConfirmation && (
+              <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                <div className="font-semibold">
+                  {localize('com_ui_project_meta_ads_confirm_ad_status_title')}
+                </div>
+                <div className="mt-1">
+                  {entityStatusConfirmation.entityName ?? entityStatusConfirmation.entityId}:{' '}
+                  {entityStatusConfirmation.currentStatus || '-'}
+                  {' -> '}
+                  {entityStatusConfirmation.nextStatus}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEntityStatusConfirmation(null)}
+                    className="h-8 border border-amber-300 px-3 text-xs font-medium"
+                  >
+                    {localize('com_ui_cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={updateEntityStatus.isLoading}
+                    onClick={onConfirmEntityStatus}
+                    className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {localize(
+                      entityStatusConfirmation.nextStatus === 'ACTIVE'
+                        ? 'com_ui_project_meta_ads_confirm_activate_ad'
+                        : 'com_ui_project_meta_ads_confirm_deactivate_ad',
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {duplicateDraft && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="meta-ads-duplicate-title"
+                className="fixed inset-0 z-50 flex justify-end bg-black/45"
+              >
+                <div className="border-white/12 flex h-full w-full max-w-md flex-col border-l bg-[#12120f] shadow-2xl">
+                  <div className="border-b border-white/10 px-5 py-4">
+                    <div className="text-[10px] uppercase tracking-[0.16em] text-[#8f8677]">
+                      {duplicateDraft.entityLevel === 'campaign'
+                        ? localize('com_ui_project_meta_ads_level_campaign')
+                        : localize('com_ui_project_meta_ads_level_ad_set')}
+                    </div>
+                    <h4
+                      id="meta-ads-duplicate-title"
+                      className="mt-1 text-base font-semibold text-[#f3efe6]"
+                    >
+                      {localize('com_ui_project_meta_ads_duplicate_title')}
+                    </h4>
+                  </div>
+                  <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                        {localize('com_ui_project_meta_ads_original')}
+                      </div>
+                      <div className="mt-1 truncate text-sm font-medium text-[#f3efe6]">
+                        {duplicateDraft.entityName ?? duplicateDraft.entityId}
+                      </div>
+                    </div>
+                    <label className="block">
+                      <span className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
+                        {localize('com_ui_project_meta_ads_duplicate_name')}
+                      </span>
+                      <input
+                        value={duplicateTargetName}
+                        onChange={(event) => setDuplicateTargetName(event.target.value)}
+                        className="border-white/12 mt-2 h-10 w-full border bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
+                      />
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="border border-white/10 bg-white/[0.025] p-3">
+                        <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                          {localize('com_ui_project_meta_ads_status')}
+                        </div>
+                        <div className="mt-2 font-mono text-[#f3efe6]">
+                          {duplicateDraft.status || '-'}
+                        </div>
+                      </div>
+                      <div className="border border-white/10 bg-white/[0.025] p-3">
+                        <div className="uppercase tracking-[0.14em] text-[#81796b]">
+                          {localize('com_ui_project_meta_ads_budget_defined')}
+                        </div>
+                        <div className="mt-2 font-mono text-[#f3efe6]">
+                          {formatMoney(duplicateDraft.budget, currency)}
+                        </div>
+                      </div>
+                    </div>
+                    {duplicateDraft.status?.toUpperCase() === 'ACTIVE' && (
+                      <div className="border border-amber-300/25 bg-amber-300/[0.08] p-3 text-xs leading-5 text-amber-100">
+                        {localize('com_ui_project_meta_ads_duplicate_active_warning')}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-white/10 p-4">
+                    <button
+                      type="button"
+                      onClick={onCloseDuplicateDraft}
+                      className={metaAdsGhostButton}
+                    >
+                      {localize('com_ui_cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={duplicateEntity.isLoading || !duplicateTargetName.trim()}
+                      onClick={onConfirmDuplicate}
+                      className="h-9 bg-amber-300 px-4 text-xs font-semibold text-[#15120b] transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {localize('com_ui_project_meta_ads_duplicate_confirm')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {ruleGroupDraft && (
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="meta-ads-rule-group-dialog-title"
+                className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-sm"
+              >
+                <div className="flex h-full w-full max-w-xl flex-col border-l border-white/10 bg-[#10110f] text-[#f3efe6] shadow-2xl">
+                  <div className="border-b border-white/10 p-4">
+                    <h4
+                      id="meta-ads-rule-group-dialog-title"
+                      className="text-base font-semibold text-[#f3efe6]"
+                    >
+                      {localize(getRuleDraftTitleKey(ruleGroupDraft))}
+                    </h4>
+                    {ruleGroupDraft.scope === 'global' ? (
+                      <div className="mt-2 text-xs text-[#948b7d]">
+                        {localize('com_ui_project_meta_ads_global_rules_hint')}
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        <div className="text-xs uppercase tracking-[0.12em] text-[#948b7d]">
+                          {ruleGroupDraft.entityLevel === 'campaign'
+                            ? localize('com_ui_project_meta_ads_campaign')
+                            : localize('com_ui_project_meta_ads_select_ad_set')}
+                          {' · '}
+                          {ruleGroupDraft.entityIds.length}{' '}
+                          {localize('com_ui_project_meta_ads_rule_group_selected')}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {ruleDraftEntityLabels.slice(0, 8).map((label) => (
+                            <span
+                              key={label}
+                              className="border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-[#cfc6b7]"
+                            >
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-4 overflow-y-auto p-4">
+                    {(ruleGroupDraft.scope === 'group' || ruleGroupDraft.scope === 'override') && (
+                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                        <RuleFieldLabel
+                          localize={localize}
+                          labelKey="com_ui_project_meta_ads_rule_group_name"
+                          hintKey="com_ui_project_meta_ads_rule_group_name_hint"
+                        />
+                        <input
+                          aria-label={localize('com_ui_project_meta_ads_rule_group_name')}
+                          value={ruleGroupDraft.name}
+                          onChange={(event) =>
+                            setRuleGroupDraft((current) =>
+                              current ? { ...current, name: event.target.value } : current,
+                            )
+                          }
+                          className={metaAdsInputLg}
+                        />
+                      </label>
+                    )}
+                    {ruleGroupDraft.scope === 'global' && (
+                      <div className="border border-white/10 bg-white/[0.025] p-3">
+                        <h5 className={metaAdsLabel}>
+                          {localize('com_ui_project_meta_ads_rule_section_target')}
+                        </h5>
+                        <label className="mt-2 flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey="com_ui_project_meta_ads_account_profile"
+                            hintKey="com_ui_project_meta_ads_account_profile_hint"
+                          />
+                          <select
+                            aria-label={localize('com_ui_project_meta_ads_account_profile')}
+                            value={settings.accountProfile ?? 'custom'}
+                            onChange={(event) =>
+                              onAccountProfileChange(
+                                event.target.value as MetaAdsSettingsState['accountProfile'],
+                              )
+                            }
+                            className={metaAdsInputLg}
+                          >
+                            {accountProfileOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {localize(option.labelKey)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )}
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <h5 className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_rule_section_performance')}
+                      </h5>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey="com_ui_project_meta_ads_target_result_type"
+                            hintKey="com_ui_project_meta_ads_target_result_type_hint"
+                          />
+                          <select
+                            aria-label={localize('com_ui_project_meta_ads_target_result_type')}
+                            value={ruleGroupDraft.rules.targetResultType ?? ''}
+                            onChange={(event) =>
+                              onRuleGroupRuleTextChange('targetResultType', event.target.value)
+                            }
+                            className={metaAdsInputLg}
+                          >
+                            <option value="">
+                              {localize('com_ui_project_meta_ads_result_type_legacy')}
+                            </option>
+                            {resultTypeOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {localize(option.labelKey)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                          <RuleFieldLabel
+                            localize={localize}
+                            labelKey="com_ui_project_meta_ads_primary_metric"
+                            hintKey="com_ui_project_meta_ads_primary_metric_hint"
+                          />
+                          <select
+                            aria-label={localize('com_ui_project_meta_ads_primary_metric')}
+                            value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
+                            onChange={(event) =>
+                              onRuleGroupRuleTextChange('primaryMetric', event.target.value)
+                            }
+                            className={metaAdsInputLg}
+                          >
+                            {primaryMetricOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {localize(option.labelKey)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <h5 className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_rule_section_budget')}
+                      </h5>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        {numberFields.map((field) => (
+                          <label
+                            key={field.key}
+                            className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                          >
+                            <RuleFieldLabel
+                              localize={localize}
+                              labelKey={field.labelKey}
+                              hintKey={field.hintKey}
+                            />
+                            <input
+                              aria-label={localize(field.labelKey)}
+                              type="number"
+                              step={field.step}
+                              min={
+                                field.key === 'minRoas' || field.key === 'minSpend'
+                                  ? '0'
+                                  : field.key === 'cooldownHours'
+                                    ? '1'
+                                    : '0.01'
+                              }
+                              max={
+                                field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
+                                  ? '100'
+                                  : field.key === 'cooldownHours'
+                                    ? '168'
+                                    : undefined
+                              }
+                              value={ruleGroupDraft.rules[field.key] ?? ''}
+                              onChange={(event) =>
+                                onRuleGroupRuleChange(field.key, event.target.value)
+                              }
+                              className={metaAdsInputLg}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border border-white/10 bg-white/[0.025] p-3">
+                      <h5 className={metaAdsLabel}>
+                        {localize('com_ui_project_meta_ads_rule_section_guardrails')}
+                      </h5>
+                      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                        {optionalNumberFields.map((field) => (
+                          <label
+                            key={field.key}
+                            className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
+                          >
+                            <RuleFieldLabel
+                              localize={localize}
+                              labelKey={field.labelKey}
+                              hintKey={field.hintKey}
+                            />
+                            <input
+                              aria-label={localize(field.labelKey)}
+                              type="number"
+                              step={field.step}
+                              min="0"
+                              value={ruleGroupDraft.rules[field.key] ?? ''}
+                              placeholder={localize('com_ui_project_meta_ads_optional_rule')}
+                              onChange={(event) =>
+                                onRuleGroupRuleChange(field.key, event.target.value)
+                              }
+                              className={metaAdsInputLg}
+                            />
+                          </label>
+                        ))}
+                        {ruleGroupDraft.scope === 'global' && (
+                          <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
+                            <RuleFieldLabel
+                              localize={localize}
+                              labelKey="com_ui_project_meta_ads_max_frequency_alert"
+                              hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
+                            />
+                            <input
+                              aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={ruleGroupDraft.creativeRules.maxFrequency}
+                              onChange={(event) =>
+                                onRuleGroupCreativeRuleChange('maxFrequency', event.target.value)
+                              }
+                              className={metaAdsInputLg}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-white/10 p-4">
+                    <button
+                      type="button"
+                      onClick={() => setRuleGroupDraft(null)}
+                      className={metaAdsGhostButton}
+                    >
+                      {localize('com_ui_cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updateSettings.isLoading}
+                      onClick={onSaveRuleGroup}
+                      className={metaAdsPrimaryButton}
+                    >
+                      {localize('com_ui_project_meta_ads_save_rule_group')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-white/10 bg-[#10110f] p-3">
+              <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                    {localize('com_ui_project_meta_ads_rules_workspace')}
+                  </h4>
+                  <p className="mt-1 text-xs text-[#81796b]">
+                    {localize('com_ui_project_meta_ads_rules_workspace_hint')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={!canCreateRuleGroup}
+                  onClick={onOpenRuleGroupDraft}
+                  className={metaAdsPrimaryButton}
+                >
+                  {localize('com_ui_project_meta_ads_create_rule_group')}
+                </button>
+              </div>
+              <div className="overflow-x-auto border border-white/10">
+                <table className="w-full min-w-[980px] table-fixed border-separate border-spacing-0 text-left text-xs">
+                  <thead className="bg-[#1b1812] text-[10px] uppercase tracking-[0.12em] text-[#8f8677]">
+                    <tr>
+                      <th className="w-20 border-b border-white/10 px-3 py-2">
+                        {localize('com_ui_project_meta_ads_status')}
+                      </th>
+                      <th className="w-36 border-b border-white/10 px-3 py-2">
+                        {localize('com_ui_project_meta_ads_rule_type')}
+                      </th>
+                      <th className="w-64 border-b border-white/10 px-3 py-2">
+                        {localize('com_ui_project_meta_ads_rule_scope')}
+                      </th>
+                      <th className="w-36 border-b border-white/10 px-3 py-2">
+                        {localize('com_ui_project_meta_ads_target_result_type')}
+                      </th>
+                      <th className="w-28 border-b border-white/10 px-3 py-2">
+                        {localize('com_ui_project_meta_ads_primary_metric')}
+                      </th>
+                      <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                        {localize('com_ui_project_meta_ads_cpa_roas')}
+                      </th>
+                      <th className="w-36 border-b border-white/10 px-3 py-2 text-right">
+                        {localize('com_ui_project_meta_ads_budget_range')}
+                      </th>
+                      <th className="w-24 border-b border-white/10 px-3 py-2 text-right">
+                        {localize('com_ui_project_meta_ads_cooldown')}
+                      </th>
+                      <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
+                        {localize('com_ui_project_meta_ads_actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ruleRows.map((row) => (
+                      <tr
+                        key={row.key}
+                        data-testid="meta-ads-rule-row"
+                        className="group bg-[#12120f] transition duration-200 hover:bg-[#19170f]"
+                      >
+                        <td className="border-b border-white/[0.06] px-3 py-2">
+                          <button
+                            type="button"
+                            disabled={!canUseMetaAdsActions || updateSettings.isLoading}
+                            aria-label={
+                              row.enabled
+                                ? localize('com_ui_project_meta_ads_disable_rule')
+                                : localize('com_ui_project_meta_ads_enable_rule')
+                            }
+                            onClick={() => onToggleRuleRow(row)}
+                            className={`inline-flex h-7 items-center gap-1 border px-2 font-semibold transition ${
+                              row.enabled
+                                ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/15'
+                                : 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15'
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {row.enabled ? <Pause size={14} /> : <Play size={14} />}
+                            {localize(
+                              row.enabled
+                                ? 'com_ui_project_meta_ads_rule_enabled'
+                                : 'com_ui_project_meta_ads_rule_disabled',
+                            )}
+                          </button>
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2">
+                          <div className="font-semibold text-[#f3efe6]">
+                            {localize(getRuleRowTypeLabelKey(row.type))}
+                          </div>
+                          <div className="mt-0.5 text-[11px] text-[#81796b]">
+                            {row.precedenceLabel}
+                          </div>
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2">
+                          <div className="truncate font-semibold text-[#f3efe6]">{row.name}</div>
+                          <div className="mt-0.5 truncate text-[11px] text-[#948b7d]">
+                            {row.scopeLabel}
+                          </div>
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2 text-[#cfc6b7]">
+                          {getResultTypeLabel(row.rules.targetResultType, localize)}
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2 font-mono uppercase text-[#f3efe6]">
+                          {row.rules.primaryMetric ?? 'cpa'}
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                          {formatMoney(row.rules.targetCpa, currency)} /{' '}
+                          {formatMetric(row.rules.minRoas)}
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                          {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
+                          {formatMoney(row.rules.maxDailyBudget, currency)}
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
+                          {localize('com_ui_project_meta_ads_cooldown_hours_value', {
+                            0: String(row.rules.cooldownHours),
+                          })}
+                        </td>
+                        <td className="border-b border-white/[0.06] px-3 py-2">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              type="button"
+                              disabled={!canUseMetaAdsActions}
+                              aria-label={localize('com_ui_project_meta_ads_edit_rule')}
+                              onClick={() => {
+                                if (row.type === 'global') {
+                                  onEditGlobalRule();
+                                  return;
+                                }
+                                if (row.group) {
+                                  onEditRuleGroup(row.group);
+                                  return;
+                                }
+                                if (row.override) {
+                                  onEditRuleOverride(row.override);
+                                }
+                              }}
+                              className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-amber-300/40 hover:text-[#f3efe6] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <PencilSimple size={15} />
+                            </button>
+                            {row.type !== 'global' && (
+                              <button
+                                type="button"
+                                disabled={!canUseMetaAdsActions}
+                                aria-label={localize('com_ui_project_meta_ads_delete_rule')}
+                                onClick={() => {
+                                  if (row.group) {
+                                    onDeleteRuleGroup(row.group.id);
+                                    return;
+                                  }
+                                  if (row.override) {
+                                    onDeleteRuleOverride(row.override);
+                                  }
+                                }}
+                                className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-red-300/40 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Trash size={15} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {ruleRows.length === 1 && (
+                <div className="border-x border-b border-dashed border-white/10 px-3 py-4 text-xs text-[#948b7d]">
+                  {localize('com_ui_project_meta_ads_rules_empty')}
+                </div>
+              )}
+            </div>
+
+            <div
+              ref={tableScrollRef}
+              onScroll={onTableScroll}
+              className="max-w-full overflow-x-auto bg-[#0f0e0b]"
+            >
+              <table
+                className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-white/10`}
+              >
+                <thead className="sticky top-0 z-30 border-b border-white/10 bg-[#1b1812] text-[11px] uppercase tracking-[0.12em] text-[#8f8677] shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
+                  <tr>
+                    <th className="sticky left-0 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3">
+                      <span className="sr-only">
+                        {localize('com_ui_project_meta_ads_select_ad_set')}
+                      </span>
+                    </th>
+                    <th className="sticky left-10 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3 shadow-[10px_0_18px_-18px_rgba(245,158,11,0.8)]">
+                      <span className="sr-only">
+                        {localize('com_ui_project_meta_ads_expand_campaign')}
+                      </span>
+                    </th>
+                    {tableColumns.map((column) => {
+                      const label =
+                        column.label ?? (column.labelKey ? localize(column.labelKey) : '');
+                      const alignClass = column.align === 'right' ? 'text-right' : '';
+                      const stickyClass =
+                        column.key === 'adStatus'
+                          ? 'sticky left-20 z-40 bg-[#1b1812]'
+                          : column.key === 'name'
+                            ? 'sticky left-32 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
+                            : '';
+                      return (
+                        <th
+                          key={column.key}
+                          className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-white/10 px-3 py-3`}
+                        >
+                          {column.key === 'actions' || column.key === 'adStatus' ? (
+                            <span className="sr-only">{label}</span>
+                          ) : column.sortableKey ? (
+                            renderSortableHeader({
+                              key: column.sortableKey,
+                              label,
+                              className: column.align === 'right' ? 'justify-end text-right' : '',
+                              defaultDirection: column.defaultDirection,
+                            })
+                          ) : (
+                            label
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {isInitialStatusLoading &&
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr
+                        key={`meta-ads-row-skeleton-${index}`}
+                        data-testid="meta-ads-row-skeleton"
+                        className="border-b border-border-light"
+                      >
+                        <td className="px-2 py-3" colSpan={tableColumnCount}>
+                          <div className="flex items-center gap-4">
+                            <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
+                            <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
+                            <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
+                            <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
+                            <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
+                            <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  {(() => {
+                    let rowIndex = 0;
+                    return filteredCampaigns.map((campaign) => {
+                      const expanded =
+                        campaign.budgetMode === 'ABO'
+                          ? !collapsedAboCampaignIds.includes(campaign.campaignId)
+                          : expandedCampaignIds.includes(campaign.campaignId);
+                      const selected = selectedEntityIds.includes(
+                        `campaign:${campaign.campaignId}`,
+                      );
+                      const recommendation = getEntityRecommendation(campaign.campaignId);
+                      const campaignRowIndex = rowIndex;
+                      rowIndex += 1;
+
+                      return (
+                        <Fragment key={campaign.campaignId}>
+                          <tr
+                            data-testid="meta-ads-campaign-row"
+                            className={getTableRowClass(campaignRowIndex, 'campaign')}
+                          >
+                            <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                aria-label={localize('com_ui_project_meta_ads_select_campaign')}
+                                onChange={() => onToggleCampaign(campaign)}
+                                className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                              />
+                            </td>
+                            <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                              {campaign.adSets.length > 0 && (
+                                <button
+                                  type="button"
+                                  aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
+                                  aria-expanded={expanded}
+                                  onClick={() => onToggleCampaignExpanded(campaign)}
+                                  className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                                >
+                                  {expanded ? '-' : '+'}
+                                </button>
+                              )}
+                            </td>
+                            {tableColumns.map((column) =>
+                              renderCampaignCell(column, campaign, recommendation),
+                            )}
+                          </tr>
+                          {expanded &&
+                            campaign.adSets.map((adset) => {
+                              const adsetSelected = selectedEntityIds.includes(
+                                `adset:${adset.entityId}`,
+                              );
+                              const adsetRecommendation = getEntityRecommendation(adset.entityId);
+                              const adsetAds = adset.ads ?? [];
+                              const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
+                              const adsetRowIndex = rowIndex;
+                              rowIndex += 1;
+
+                              return (
+                                <Fragment key={adset.entityId}>
+                                  <tr
+                                    data-testid="meta-ads-adset-row"
+                                    className={getTableRowClass(adsetRowIndex, 'adset')}
+                                  >
+                                    <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
+                                      <input
+                                        type="checkbox"
+                                        checked={adsetSelected}
+                                        aria-label={localize(
+                                          'com_ui_project_meta_ads_select_ad_set',
+                                        )}
+                                        onChange={() => onToggleAdSet(adset.entityId)}
+                                        className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
+                                      />
+                                    </td>
+                                    <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
+                                      {adsetAds.length > 0 ? (
+                                        <button
+                                          type="button"
+                                          aria-expanded={!adsCollapsed}
+                                          aria-label={localize(
+                                            adsCollapsed
+                                              ? 'com_ui_project_meta_ads_show_ads'
+                                              : 'com_ui_project_meta_ads_hide_ads',
+                                          )}
+                                          onClick={() => onToggleAdSetAds(adset.entityId)}
+                                          className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
+                                        >
+                                          {adsCollapsed ? '+' : '-'}
+                                        </button>
+                                      ) : (
+                                        <span aria-hidden="true" className="block h-7 w-7" />
+                                      )}
+                                    </td>
+                                    {tableColumns.map((column) =>
+                                      renderAdSetCell(column, campaign, adset, adsetRecommendation),
+                                    )}
+                                  </tr>
+                                  {!adsCollapsed &&
+                                    adsetAds.map((ad) => {
+                                      const adRowIndex = rowIndex;
+                                      rowIndex += 1;
+                                      return renderAdRow(campaign, ad, adRowIndex);
+                                    })}
+                                </Fragment>
+                              );
+                            })}
+                        </Fragment>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+              {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
+                <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
+                  {localize('com_ui_project_meta_ads_no_snapshots')}
+                </div>
+              )}
+            </div>
+            <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[#10110f] px-4 py-2">
+              <div
+                ref={stickyHorizontalScrollRef}
+                onScroll={onStickyHorizontalScroll}
+                className="max-w-full overflow-x-auto"
+                aria-hidden="true"
+              >
+                <div className={`h-2 w-full ${tableViewMinWidth[tableView]}`} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {workspaceTab === 'bi' && (
+          <div
+            id="meta-ads-bi-tab-panel"
+            role="tabpanel"
+            aria-labelledby="meta-ads-tab-bi"
+            data-testid="meta-ads-bi-tab-panel"
+          >
+            <div className="border-t border-white/10 p-3">
+              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                    {localize('com_ui_project_meta_ads_bi_rankings')}
+                  </h4>
+                  <p className="mt-1 text-xs text-[#81796b]">
+                    {localize('com_ui_project_meta_ads_bi_rankings_hint')}
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                    {localize('com_ui_project_meta_ads_period')}
                     <select
-                      value={budgetModeFilter}
-                      onChange={(event) => setBudgetModeFilter(event.target.value)}
+                      data-testid="meta-ads-bi-period-filter"
+                      value={periodFilter}
+                      onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
                       className={metaAdsInput}
                     >
-                      <option value="all">{localize('com_ui_all')}</option>
-                      <option value="CBO">CBO</option>
-                      <option value="ABO">ABO</option>
-                      <option value="UNKNOWN">UNKNOWN</option>
+                      {periodFilterOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {localize(option.labelKey)}
+                        </option>
+                      ))}
                     </select>
                   </label>
-                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                    <span className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_objective_filter')}
-                    </span>
+                  {periodFilter === 'custom' && (
+                    <>
+                      <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                        {localize('com_ui_project_meta_ads_period_since')}
+                        <input
+                          type="date"
+                          value={customSince}
+                          max={customUntil || undefined}
+                          onChange={(event) => onCustomSinceChange(event.target.value)}
+                          className={metaAdsInput}
+                        />
+                      </label>
+                      <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                        {localize('com_ui_project_meta_ads_period_until')}
+                        <input
+                          type="date"
+                          value={customUntil}
+                          min={customSince || undefined}
+                          onChange={(event) => onCustomUntilChange(event.target.value)}
+                          className={metaAdsInput}
+                        />
+                      </label>
+                      <div className="flex min-w-32 flex-col justify-end">
+                        <button
+                          type="button"
+                          disabled={
+                            customSince === appliedCustomSince && customUntil === appliedCustomUntil
+                          }
+                          onClick={onApplyCustomPeriod}
+                          className="h-9 border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-[#81796b]"
+                        >
+                          {localize('com_ui_project_meta_ads_period_update')}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                    {localize('com_ui_project_meta_ads_level')}
                     <select
-                      value={objectiveFilter}
-                      onChange={(event) => setObjectiveFilter(event.target.value)}
+                      data-testid="meta-ads-bi-level-filter"
+                      value={biControls.level}
+                      onChange={(event) =>
+                        setBiControls((current) => ({
+                          ...current,
+                          level: event.target.value as MetaAdsBiRankLevel,
+                        }))
+                      }
                       className={metaAdsInput}
                     >
-                      <option value="all">{localize('com_ui_all')}</option>
+                      <option value="campaign">
+                        {localize('com_ui_project_meta_ads_level_campaign')}
+                      </option>
+                      <option value="adset">
+                        {localize('com_ui_project_meta_ads_level_ad_set')}
+                      </option>
+                      <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
+                    </select>
+                  </label>
+                  <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                    {localize('com_ui_project_meta_ads_objective')}
+                    <select
+                      data-testid="meta-ads-bi-objective-filter"
+                      value={biControls.objective}
+                      onChange={(event) =>
+                        setBiControls((current) => ({ ...current, objective: event.target.value }))
+                      }
+                      className={metaAdsInput}
+                    >
+                      <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
                       {objectiveOptions.map((objective) => (
                         <option key={objective} value={objective}>
                           {getObjectiveLabel(objective, localize)}
@@ -4605,1764 +5929,523 @@ export default function ProjectMetaAdsPanel({
                       ))}
                     </select>
                   </label>
-                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                    <span className={metaAdsLabel}>{localize('com_ui_project_meta_ads_sort')}</span>
+                  <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                    {localize('com_ui_project_meta_ads_target_result_type')}
                     <select
-                      value={campaignSort}
-                      onChange={(event) => setCampaignSort(event.target.value)}
+                      data-testid="meta-ads-bi-result-type-filter"
+                      value={biControls.resultType}
+                      onChange={(event) =>
+                        setBiControls((current) => ({ ...current, resultType: event.target.value }))
+                      }
                       className={metaAdsInput}
                     >
-                      <option value="name_asc">{localize('com_ui_name')}</option>
-                      <option value="budget_desc">
-                        {localize('com_ui_project_meta_ads_budget_defined')}
-                      </option>
-                      <option value="frequency_desc">
-                        {localize('com_ui_project_meta_ads_frequency')}
-                      </option>
-                      <option value="spend_desc">
-                        {localize('com_ui_project_meta_ads_spend')}
-                      </option>
-                      <option value="roas_desc">{localize('com_ui_project_meta_ads_roas')}</option>
-                      <option value="cpa_asc">
-                        {localize('com_ui_project_meta_ads_cost_result')}
-                      </option>
-                      <option value="result_desc">
-                        {localize('com_ui_project_meta_ads_result')}
-                      </option>
-                      <option value="ctr_desc">CTR</option>
-                      <option value="clicks_desc">
-                        {localize('com_ui_project_meta_ads_clicks')}
-                      </option>
-                    </select>
-                  </label>
-                  <label className="flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]">
-                    <span className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_table_view')}
-                    </span>
-                    <select
-                      value={tableView}
-                      onChange={(event) => setTableView(event.target.value as TableView)}
-                      className={metaAdsInput}
-                    >
-                      {tableViewOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {localize(option.labelKey)}
+                      <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
+                      {biResultTypeOptions.map((resultType) => (
+                        <option key={resultType} value={resultType}>
+                          {getResultTypeLabel(resultType, localize)}
                         </option>
                       ))}
                     </select>
                   </label>
-                </div>
-                <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                  <span className="h-9 border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-xs tabular-nums text-[#d7cdbd]">
-                    {localize('com_ui_project_meta_ads_selection_count', {
-                      0: String(selectedCount),
-                    })}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={selectedCount === 0}
-                    onClick={() => setSelectedEntityIds([])}
-                    className={metaAdsGhostButton}
-                  >
-                    {localize('com_ui_project_meta_ads_clear_selection')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={campaigns.length === 0}
-                    onClick={onExpandAllRows}
-                    className={metaAdsGhostButton}
-                  >
-                    {localize('com_ui_project_meta_ads_expand_all')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={campaigns.length === 0}
-                    onClick={onCollapseAllRows}
-                    className={metaAdsGhostButton}
-                  >
-                    {localize('com_ui_project_meta_ads_collapse_all')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canCreateRuleGroup}
-                    onClick={onOpenRuleGroupDraft}
-                    className={metaAdsButton}
-                  >
-                    {localize('com_ui_project_meta_ads_create_rule_group')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canOpenTrafficAgentChat}
-                    onClick={onOpenTrafficAgentChat}
-                    className={metaAdsButton}
-                  >
-                    {localize('com_ui_project_meta_ads_chat_with_agent')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMetricsFullscreen((current) => !current)}
-                    aria-label={localize(
-                      metricsFullscreen
-                        ? 'com_ui_project_meta_ads_exit_fullscreen'
-                        : 'com_ui_project_meta_ads_enter_fullscreen',
-                    )}
-                    className={`inline-flex items-center gap-2 ${metaAdsButton}`}
-                  >
-                    {metricsFullscreen ? (
-                      <ArrowsIn className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <ArrowsOut className="h-4 w-4" aria-hidden="true" />
-                    )}
-                    {localize(
-                      metricsFullscreen
-                        ? 'com_ui_project_meta_ads_exit_fullscreen'
-                        : 'com_ui_project_meta_ads_enter_fullscreen',
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {summaryCards.map(({ labelKey, value, tone, context, clickable }) => {
-                const content = (
-                  <>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
-                      {localize(labelKey as TranslationKeys)}
-                    </div>
-                    {isInitialStatusLoading ? (
-                      <div
-                        data-testid="meta-ads-summary-skeleton"
-                        className="mt-3 h-7 w-28 animate-pulse bg-white/10"
-                      />
-                    ) : (
-                      <div className="mt-3 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
-                        {value}
-                      </div>
-                    )}
-                    {context && !isInitialStatusLoading && (
-                      <div className="mt-2 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8f8677]">
-                        {context}
-                      </div>
-                    )}
-                  </>
-                );
-                const className = `relative overflow-hidden border border-l-2 border-white/10 ${tone} bg-[#151512] p-4 text-left`;
-                return clickable ? (
-                  <button
-                    key={labelKey}
-                    type="button"
-                    data-testid={`meta-ads-summary-card-${labelKey}`}
-                    disabled={isInitialStatusLoading}
-                    onClick={() => setResultTypeSelectorOpen(true)}
-                    className={`${className} transition hover:border-white/25 disabled:cursor-wait disabled:opacity-80`}
-                  >
-                    {content}
-                  </button>
-                ) : (
-                  <div
-                    key={labelKey}
-                    data-testid={`meta-ads-summary-card-${labelKey}`}
-                    className={className}
-                  >
-                    {content}
-                  </div>
-                );
-              })}
-            </div>
-            {resultTypeSelectorOpen && (
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="meta-ads-result-type-selector-title"
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
-              >
-                <div className="flex max-h-[82vh] w-full max-w-xl flex-col border border-white/15 bg-[#151512] p-4 shadow-2xl">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4
-                        id="meta-ads-result-type-selector-title"
-                        className="text-base font-semibold text-[#f8f1e5]"
-                      >
-                        {localize('com_ui_project_meta_ads_choose_result_metric')}
-                      </h4>
-                      <div className="mt-1 text-xs text-[#9f9687]">
-                        {localize('com_ui_project_meta_ads_choose_result_metric_hint')}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setResultTypeSelectorOpen(false)}
-                      className={metaAdsGhostButton}
+                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
+                    {localize('com_ui_project_meta_ads_metric')}
+                    <select
+                      data-testid="meta-ads-bi-metric-filter"
+                      value={biControls.metric}
+                      onChange={(event) =>
+                        setBiControls((current) => ({
+                          ...current,
+                          metric: event.target.value as EvolutionMetric,
+                        }))
+                      }
+                      className={metaAdsInput}
                     >
-                      {localize('com_ui_close')}
-                    </button>
-                  </div>
-                  <div className="mt-4 min-h-0 space-y-2 overflow-y-auto pr-1">
-                    {summaryResultTypeOptions.map((option) => (
-                      <button
-                        key={option.resultType}
-                        type="button"
-                        onClick={() => {
-                          setSelectedSummaryResultType(option.resultType);
-                          setResultTypeSelectorOpen(false);
-                        }}
-                        className={`w-full border p-3 text-left transition ${
-                          selectedSummaryResultType === option.resultType
-                            ? 'border-emerald-300/60 bg-emerald-500/10'
-                            : 'border-white/10 bg-black/10 hover:border-white/25'
-                        }`}
-                      >
-                        <div className="truncate text-sm font-semibold text-[#f8f1e5]">
-                          {getResultTypeLabel(option.resultType, localize)}
-                        </div>
-                        <div className="mt-2 grid gap-2 text-xs text-[#b8ae9f] sm:grid-cols-3">
-                          <span>
-                            {localize('com_ui_project_meta_ads_results')}:{' '}
-                            {formatMetric(option.totalResults)}
-                          </span>
-                          <span>
-                            {localize('com_ui_project_meta_ads_spend')}:{' '}
-                            {formatMoney(option.totalSpend, currency)}
-                          </span>
-                          <span>
-                            {localize('com_ui_project_meta_ads_average_cost')}:{' '}
-                            {formatMoney(option.averageCostPerResult, currency)}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedSummaryResultType(null);
-                        setResultTypeSelectorOpen(false);
-                      }}
-                      className={metaAdsGhostButton}
-                    >
-                      {localize('com_ui_project_meta_ads_clear_result_metric')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setResultTypeSelectorOpen(false)}
-                      className={metaAdsButton}
-                    >
-                      {localize('com_ui_cancel')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {pendingRecommendations.length > 0 && campaigns.length === 0 && (
-            <div className="border-b border-border-light bg-surface-secondary p-3">
-              <div className="space-y-2">
-                {pendingRecommendations.map((recommendation) => (
-                  <div
-                    key={recommendation._id ?? recommendation.entityId}
-                    className="flex items-center justify-between gap-3 border border-border-light bg-surface-primary p-2 text-xs"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-text-primary">
-                        {recommendation.entityName ?? recommendation.entityId}
-                      </div>
-                      <div className="text-text-secondary">
-                        {getRecommendationLabel(recommendation, currency)}
-                      </div>
-                    </div>
-                    {canApplyRecommendation(recommendation) && (
-                      <button
-                        type="button"
-                        disabled={!canUseMetaAdsActions || applyRecommendation.isLoading}
-                        onClick={() => onApply(recommendation)}
-                        className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {localize('com_ui_project_meta_ads_apply')}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {budgetEditor && (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="meta-ads-budget-dialog-title"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
-            >
-              <div className="relative w-full max-w-2xl overflow-hidden border border-white/10 bg-[#151411] p-5 text-[#f3efe6] shadow-[0_28px_90px_-60px_rgba(0,0,0,0.95)] sm:p-6">
-                <div className="relative min-w-0">
-                  <h4
-                    id="meta-ads-budget-dialog-title"
-                    className="text-2xl font-semibold leading-tight tracking-tight text-[#f8f1e5]"
-                  >
-                    {localize('com_ui_project_meta_ads_edit_budget')}
-                  </h4>
-                  <div className="mt-4 truncate text-lg font-semibold text-[#f3efe6]">
-                    {budgetEditor.entityName ?? budgetEditor.entityId}
-                  </div>
-                  <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f8677]">
-                    {budgetEditor.entityLevel === 'campaign'
-                      ? localize('com_ui_project_meta_ads_campaign')
-                      : localize('com_ui_project_meta_ads_select_ad_set')}
-                  </div>
-                  <div className="mt-4 max-w-[56ch] text-sm leading-6 text-[#cfc6b7]">
-                    {localize('com_ui_project_meta_ads_manual_budget_hint')}
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
-                    <div className="border border-white/10 bg-white/[0.035] p-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
-                        {localize('com_ui_project_meta_ads_budget_defined')}
-                      </div>
-                      <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-[#f8f1e5]">
-                        {formatMoney(budgetEditor.currentBudget, currency)}
-                      </div>
-                    </div>
-                    <label className="border border-amber-300/20 bg-amber-300/[0.06] p-4 text-xs text-[#cfc6b7]">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#b9a06a]">
-                        {localize('com_ui_project_meta_ads_new_budget')}
-                      </span>
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={manualDailyBudget}
-                        onChange={(event) => setManualDailyBudget(event.target.value)}
-                        className="mt-2 h-11 w-full border border-white/10 bg-[#1f1b15] px-3 font-mono text-lg font-semibold tabular-nums text-[#f8f1e5] outline-none transition duration-200 focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20"
-                      />
-                    </label>
-                  </div>
-
-                  {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
-                    <div className="mt-5">
-                      <div className="mb-2 flex items-center justify-between gap-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8f8677]">
-                          {localize('com_ui_project_meta_ads_budget_quick_adjustments')}
-                        </div>
-                        <div className="h-px flex-1 bg-white/10" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
-                          (reference) => (
-                            <button
-                              key={reference.percent}
-                              type="button"
-                              aria-label={reference.accessibleLabel}
-                              onClick={() => setManualDailyBudget(reference.value.toFixed(2))}
-                              className={`group flex min-h-16 items-center justify-between gap-3 border px-3 py-2 text-left transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
-                            >
-                              <span className="text-sm font-semibold">{reference.label}</span>
-                              <span className="font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
-                                {reference.formattedValue}
-                              </span>
-                            </button>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="relative mt-6 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBudgetEditor(null)}
-                    className="h-10 border border-white/10 px-4 text-sm font-semibold text-[#d8cfbf] transition duration-200 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-white/15 active:translate-y-px"
-                  >
-                    {localize('com_ui_cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updateBudget.isLoading}
-                    onClick={onSaveManualBudget}
-                    className="h-10 bg-[#f8f1e5] px-5 text-sm font-semibold text-[#14120f] shadow-[0_18px_42px_-28px_rgba(248,241,229,0.9)] transition duration-200 hover:-translate-y-0.5 hover:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {localize('com_ui_project_meta_ads_save_budget')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {budgetConfirmation && (
-            <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              <div className="font-semibold">
-                {localize('com_ui_project_meta_ads_confirm_budget_title')}
-              </div>
-              <div className="mt-1">
-                {budgetConfirmation.entityName ?? budgetConfirmation.entityId}:{' '}
-                {formatMoney(budgetConfirmation.currentBudget, currency)}
-                {' -> '}
-                {formatMoney(budgetConfirmation.dailyBudget, currency)}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBudgetConfirmation(null)}
-                  className="h-8 border border-amber-300 px-3 text-xs font-medium"
-                >
-                  {localize('com_ui_cancel')}
-                </button>
-                <button
-                  type="button"
-                  disabled={updateBudget.isLoading}
-                  onClick={onConfirmManualBudget}
-                  className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {localize('com_ui_project_meta_ads_confirm_budget')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {entityStatusConfirmation && (
-            <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              <div className="font-semibold">
-                {localize('com_ui_project_meta_ads_confirm_ad_status_title')}
-              </div>
-              <div className="mt-1">
-                {entityStatusConfirmation.entityName ?? entityStatusConfirmation.entityId}:{' '}
-                {entityStatusConfirmation.currentStatus || '-'}
-                {' -> '}
-                {entityStatusConfirmation.nextStatus}
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEntityStatusConfirmation(null)}
-                  className="h-8 border border-amber-300 px-3 text-xs font-medium"
-                >
-                  {localize('com_ui_cancel')}
-                </button>
-                <button
-                  type="button"
-                  disabled={updateEntityStatus.isLoading}
-                  onClick={onConfirmEntityStatus}
-                  className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {localize(
-                    entityStatusConfirmation.nextStatus === 'ACTIVE'
-                      ? 'com_ui_project_meta_ads_confirm_activate_ad'
-                      : 'com_ui_project_meta_ads_confirm_deactivate_ad',
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {duplicateDraft && (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="meta-ads-duplicate-title"
-              className="fixed inset-0 z-50 flex justify-end bg-black/45"
-            >
-              <div className="border-white/12 flex h-full w-full max-w-md flex-col border-l bg-[#12120f] shadow-2xl">
-                <div className="border-b border-white/10 px-5 py-4">
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-[#8f8677]">
-                    {duplicateDraft.entityLevel === 'campaign'
-                      ? localize('com_ui_project_meta_ads_level_campaign')
-                      : localize('com_ui_project_meta_ads_level_ad_set')}
-                  </div>
-                  <h4
-                    id="meta-ads-duplicate-title"
-                    className="mt-1 text-base font-semibold text-[#f3efe6]"
-                  >
-                    {localize('com_ui_project_meta_ads_duplicate_title')}
-                  </h4>
-                </div>
-                <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
-                      {localize('com_ui_project_meta_ads_original')}
-                    </div>
-                    <div className="mt-1 truncate text-sm font-medium text-[#f3efe6]">
-                      {duplicateDraft.entityName ?? duplicateDraft.entityId}
-                    </div>
-                  </div>
-                  <label className="block">
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-[#81796b]">
-                      {localize('com_ui_project_meta_ads_duplicate_name')}
-                    </span>
-                    <input
-                      value={duplicateTargetName}
-                      onChange={(event) => setDuplicateTargetName(event.target.value)}
-                      className="border-white/12 mt-2 h-10 w-full border bg-[#0f0e0b] px-3 text-sm text-[#f3efe6] outline-none transition focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20"
-                    />
+                      <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
+                      <option value="resultCount">
+                        {localize('com_ui_project_meta_ads_results')}
+                      </option>
+                      <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
+                      <option value="ctr">{localize('com_ui_project_meta_ads_ctr')}</option>
+                      <option value="frequency">
+                        {localize('com_ui_project_meta_ads_frequency')}
+                      </option>
+                      <option value="clicks">{localize('com_ui_project_meta_ads_clicks')}</option>
+                    </select>
                   </label>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
-                      <div className="uppercase tracking-[0.14em] text-[#81796b]">
-                        {localize('com_ui_project_meta_ads_status')}
-                      </div>
-                      <div className="mt-2 font-mono text-[#f3efe6]">
-                        {duplicateDraft.status || '-'}
-                      </div>
-                    </div>
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
-                      <div className="uppercase tracking-[0.14em] text-[#81796b]">
-                        {localize('com_ui_project_meta_ads_budget_defined')}
-                      </div>
-                      <div className="mt-2 font-mono text-[#f3efe6]">
-                        {formatMoney(duplicateDraft.budget, currency)}
-                      </div>
-                    </div>
-                  </div>
-                  {duplicateDraft.status?.toUpperCase() === 'ACTIVE' && (
-                    <div className="border border-amber-300/25 bg-amber-300/[0.08] p-3 text-xs leading-5 text-amber-100">
-                      {localize('com_ui_project_meta_ads_duplicate_active_warning')}
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-2 border-t border-white/10 p-4">
-                  <button
-                    type="button"
-                    onClick={onCloseDuplicateDraft}
-                    className={metaAdsGhostButton}
-                  >
-                    {localize('com_ui_cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={duplicateEntity.isLoading || !duplicateTargetName.trim()}
-                    onClick={onConfirmDuplicate}
-                    className="h-9 bg-amber-300 px-4 text-xs font-semibold text-[#15120b] transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {localize('com_ui_project_meta_ads_duplicate_confirm')}
-                  </button>
                 </div>
               </div>
+              {renderBiRankingCard(
+                selectedBiRankingTitleKey,
+                selectedBiRankingItems,
+                selectedBiRankingTestId,
+                biControls.level === 'ad'
+                  ? adRankingEmptyMessageKey
+                  : 'com_ui_project_meta_ads_bi_no_rankings',
+              )}
             </div>
-          )}
 
-          {ruleGroupDraft && (
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="meta-ads-rule-group-dialog-title"
-              className="fixed inset-0 z-50 flex justify-end bg-black/45 backdrop-blur-sm"
-            >
-              <div className="flex h-full w-full max-w-xl flex-col border-l border-white/10 bg-[#10110f] text-[#f3efe6] shadow-2xl">
-                <div className="border-b border-white/10 p-4">
-                  <h4
-                    id="meta-ads-rule-group-dialog-title"
-                    className="text-base font-semibold text-[#f3efe6]"
-                  >
-                    {localize(getRuleDraftTitleKey(ruleGroupDraft))}
-                  </h4>
-                  {ruleGroupDraft.scope === 'global' ? (
-                    <div className="mt-2 text-xs text-[#948b7d]">
-                      {localize('com_ui_project_meta_ads_global_rules_hint')}
-                    </div>
-                  ) : (
-                    <div className="mt-2 space-y-2">
-                      <div className="text-xs uppercase tracking-[0.12em] text-[#948b7d]">
-                        {ruleGroupDraft.entityLevel === 'campaign'
-                          ? localize('com_ui_project_meta_ads_campaign')
-                          : localize('com_ui_project_meta_ads_select_ad_set')}
-                        {' · '}
-                        {ruleGroupDraft.entityIds.length}{' '}
-                        {localize('com_ui_project_meta_ads_rule_group_selected')}
+            {hasEvolutionSection && (
+              <div className="border-t border-white/10 p-3">
+                <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                  {localize('com_ui_project_meta_ads_evolution_analysis')}
+                </h4>
+                <div data-testid="meta-ads-evolution-dashboard" className="grid gap-3">
+                  <div className="border border-white/10 bg-[#12120f] p-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_evolution_comparison')}
+                        </h5>
+                        <p className="mt-1 text-xs text-[#81796b]">
+                          {localize('com_ui_project_meta_ads_evolution_comparison_hint')}
+                        </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {ruleDraftEntityLabels.slice(0, 8).map((label) => (
-                          <span
-                            key={label}
-                            className="border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-[#cfc6b7]"
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                      {[
+                        [
+                          'com_ui_project_meta_ads_metric' as TranslationKeys,
+                          getEvolutionMetricLabel(biControls.metric, localize),
+                        ],
+                        [
+                          'com_ui_project_meta_ads_series' as TranslationKeys,
+                          formatIntegerMetric(evolutionSeries.length),
+                        ],
+                        [
+                          'com_ui_project_meta_ads_peak_value' as TranslationKeys,
+                          formatEvolutionMetricValue(
+                            maxEvolutionValue,
+                            biControls.metric,
+                            currency,
+                          ),
+                        ],
+                        [
+                          'com_ui_project_meta_ads_budget_changes' as TranslationKeys,
+                          formatIntegerMetric(totalBudgetChangeCount),
+                        ],
+                      ]
+                        .filter(
+                          ([labelKey]) =>
+                            biControls.level !== 'ad' ||
+                            labelKey !== 'com_ui_project_meta_ads_budget_changes',
+                        )
+                        .map(([labelKey, value]) => (
+                          <div
+                            key={labelKey}
+                            className="border border-white/10 bg-white/[0.025] p-2"
                           >
-                            {label}
-                          </span>
+                            <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                              {localize(labelKey as TranslationKeys)}
+                            </div>
+                            <div
+                              className="mt-1 truncate font-mono text-xs text-[#f3efe6]"
+                              title={value}
+                            >
+                              {value}
+                            </div>
+                          </div>
                         ))}
-                      </div>
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 space-y-4 overflow-y-auto p-4">
-                  {(ruleGroupDraft.scope === 'group' || ruleGroupDraft.scope === 'override') && (
-                    <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                      <RuleFieldLabel
-                        localize={localize}
-                        labelKey="com_ui_project_meta_ads_rule_group_name"
-                        hintKey="com_ui_project_meta_ads_rule_group_name_hint"
-                      />
-                      <input
-                        aria-label={localize('com_ui_project_meta_ads_rule_group_name')}
-                        value={ruleGroupDraft.name}
-                        onChange={(event) =>
-                          setRuleGroupDraft((current) =>
-                            current ? { ...current, name: event.target.value } : current,
-                          )
-                        }
-                        className={metaAdsInputLg}
-                      />
-                    </label>
-                  )}
-                  {ruleGroupDraft.scope === 'global' && (
-                    <div className="border border-white/10 bg-white/[0.025] p-3">
-                      <h5 className={metaAdsLabel}>
-                        {localize('com_ui_project_meta_ads_rule_section_target')}
-                      </h5>
-                      <label className="mt-2 flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        <RuleFieldLabel
-                          localize={localize}
-                          labelKey="com_ui_project_meta_ads_account_profile"
-                          hintKey="com_ui_project_meta_ads_account_profile_hint"
-                        />
-                        <select
-                          aria-label={localize('com_ui_project_meta_ads_account_profile')}
-                          value={settings.accountProfile ?? 'custom'}
-                          onChange={(event) =>
-                            onAccountProfileChange(
-                              event.target.value as MetaAdsSettingsState['accountProfile'],
-                            )
-                          }
-                          className={metaAdsInputLg}
+                    <div className="relative mt-3 h-48 border-b border-white/10">
+                      {canRenderEvolutionSeries ? (
+                        <svg
+                          data-testid="meta-ads-evolution-chart"
+                          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                          role="img"
+                          aria-label={localize('com_ui_project_meta_ads_evolution_comparison')}
+                          className="h-full w-full text-[#f3efe6]"
+                          preserveAspectRatio="none"
                         >
-                          {accountProfileOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {localize(option.labelKey)}
-                            </option>
+                          {[0.25, 0.5, 0.75].map((line) => (
+                            <line
+                              key={line}
+                              x1={chartPadding}
+                              x2={chartWidth - chartPadding}
+                              y1={chartBottom - line * (chartHeight - chartPadding * 2)}
+                              y2={chartBottom - line * (chartHeight - chartPadding * 2)}
+                              stroke="currentColor"
+                              strokeOpacity="0.08"
+                              vectorEffect="non-scaling-stroke"
+                            />
                           ))}
-                        </select>
-                      </label>
-                    </div>
-                  )}
-                  <div className="border border-white/10 bg-white/[0.025] p-3">
-                    <h5 className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_rule_section_performance')}
-                    </h5>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        <RuleFieldLabel
-                          localize={localize}
-                          labelKey="com_ui_project_meta_ads_target_result_type"
-                          hintKey="com_ui_project_meta_ads_target_result_type_hint"
-                        />
-                        <select
-                          aria-label={localize('com_ui_project_meta_ads_target_result_type')}
-                          value={ruleGroupDraft.rules.targetResultType ?? ''}
-                          onChange={(event) =>
-                            onRuleGroupRuleTextChange('targetResultType', event.target.value)
-                          }
-                          className={metaAdsInputLg}
-                        >
-                          <option value="">
-                            {localize('com_ui_project_meta_ads_result_type_legacy')}
-                          </option>
-                          {resultTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {localize(option.labelKey)}
-                            </option>
+                          {evolutionSeriesPaths.map((seriesPath) => (
+                            <Fragment key={seriesPath.series.entityId}>
+                              <path
+                                d={seriesPath.path}
+                                fill="none"
+                                stroke={seriesPath.color}
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                vectorEffect="non-scaling-stroke"
+                              />
+                            </Fragment>
                           ))}
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                        <RuleFieldLabel
-                          localize={localize}
-                          labelKey="com_ui_project_meta_ads_primary_metric"
-                          hintKey="com_ui_project_meta_ads_primary_metric_hint"
-                        />
-                        <select
-                          aria-label={localize('com_ui_project_meta_ads_primary_metric')}
-                          value={ruleGroupDraft.rules.primaryMetric ?? 'cpa'}
-                          onChange={(event) =>
-                            onRuleGroupRuleTextChange('primaryMetric', event.target.value)
-                          }
-                          className={metaAdsInputLg}
+                        </svg>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_insufficient_evolution')}
+                        </div>
+                      )}
+                      {canRenderEvolutionSeries &&
+                        evolutionSeriesPaths.flatMap((seriesPath) =>
+                          seriesPath.points.map((point) => {
+                            const entityName = cleanDashboardName(
+                              seriesPath.series.entityName,
+                              seriesPath.series.entityId,
+                            );
+                            const hoverPoint: EvolutionHoverPoint = {
+                              seriesId: seriesPath.series.entityId,
+                              entityName,
+                              parentCampaignName: seriesPath.series.parentCampaignName,
+                              date: point.date,
+                              value: point.value,
+                              x: point.x,
+                              y: point.y,
+                              color: seriesPath.color,
+                              point: point.rawPoint,
+                            };
+                            return (
+                              <button
+                                key={`${seriesPath.series.entityId}:${point.date}`}
+                                type="button"
+                                data-testid="meta-ads-evolution-point"
+                                data-date={point.date}
+                                data-entity-id={seriesPath.series.entityId}
+                                aria-label={`${entityName} ${formatTrendDate(point.date)}`}
+                                className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-crosshair items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-amber-200/60"
+                                style={{
+                                  left: `${(point.x / chartWidth) * 100}%`,
+                                  top: `${(point.y / chartHeight) * 100}%`,
+                                }}
+                                onMouseEnter={() => setHoveredEvolutionPoint(hoverPoint)}
+                                onMouseLeave={() => setHoveredEvolutionPoint(null)}
+                                onFocus={() => setHoveredEvolutionPoint(hoverPoint)}
+                                onBlur={() => setHoveredEvolutionPoint(null)}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_2px_rgba(15,14,11,0.85)]"
+                                  style={{ backgroundColor: seriesPath.color }}
+                                />
+                              </button>
+                            );
+                          }),
+                        )}
+                      {hoveredEvolutionPoint && canRenderEvolutionSeries && (
+                        <div
+                          data-testid="meta-ads-evolution-point-tooltip"
+                          className="pointer-events-none absolute z-[1000] min-w-48 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
+                          style={{
+                            left: `${(hoveredEvolutionPoint.x / chartWidth) * 100}%`,
+                            top: `${(hoveredEvolutionPoint.y / chartHeight) * 100}%`,
+                            maxWidth: 'min(18rem, calc(100% - 1rem))',
+                            overflowWrap: 'anywhere',
+                            transform: getEvolutionTooltipTransform(hoveredEvolutionPoint),
+                          }}
                         >
-                          {primaryMetricOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {localize(option.labelKey)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="border border-white/10 bg-white/[0.025] p-3">
-                    <h5 className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_rule_section_budget')}
-                    </h5>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                      {numberFields.map((field) => (
-                        <label
-                          key={field.key}
-                          className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
-                        >
-                          <RuleFieldLabel
-                            localize={localize}
-                            labelKey={field.labelKey}
-                            hintKey={field.hintKey}
-                          />
-                          <input
-                            aria-label={localize(field.labelKey)}
-                            type="number"
-                            step={field.step}
-                            min={
-                              field.key === 'minRoas' || field.key === 'minSpend'
-                                ? '0'
-                                : field.key === 'cooldownHours'
-                                  ? '1'
-                                  : '0.01'
-                            }
-                            max={
-                              field.key === 'maxIncreasePct' || field.key === 'maxDecreasePct'
-                                ? '100'
-                                : field.key === 'cooldownHours'
-                                  ? '168'
-                                  : undefined
-                            }
-                            value={ruleGroupDraft.rules[field.key] ?? ''}
-                            onChange={(event) =>
-                              onRuleGroupRuleChange(field.key, event.target.value)
-                            }
-                            className={metaAdsInputLg}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="border border-white/10 bg-white/[0.025] p-3">
-                    <h5 className={metaAdsLabel}>
-                      {localize('com_ui_project_meta_ads_rule_section_guardrails')}
-                    </h5>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                      {optionalNumberFields.map((field) => (
-                        <label
-                          key={field.key}
-                          className="flex flex-col gap-1 text-xs text-[#bdb5a6]"
-                        >
-                          <RuleFieldLabel
-                            localize={localize}
-                            labelKey={field.labelKey}
-                            hintKey={field.hintKey}
-                          />
-                          <input
-                            aria-label={localize(field.labelKey)}
-                            type="number"
-                            step={field.step}
-                            min="0"
-                            value={ruleGroupDraft.rules[field.key] ?? ''}
-                            placeholder={localize('com_ui_project_meta_ads_optional_rule')}
-                            onChange={(event) =>
-                              onRuleGroupRuleChange(field.key, event.target.value)
-                            }
-                            className={metaAdsInputLg}
-                          />
-                        </label>
-                      ))}
-                      {ruleGroupDraft.scope === 'global' && (
-                        <label className="flex flex-col gap-1 text-xs text-[#bdb5a6]">
-                          <RuleFieldLabel
-                            localize={localize}
-                            labelKey="com_ui_project_meta_ads_max_frequency_alert"
-                            hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
-                          />
-                          <input
-                            aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={ruleGroupDraft.creativeRules.maxFrequency}
-                            onChange={(event) =>
-                              onRuleGroupCreativeRuleChange('maxFrequency', event.target.value)
-                            }
-                            className={metaAdsInputLg}
-                          />
-                        </label>
+                          <div className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className="h-2 w-2 shrink-0"
+                              style={{ backgroundColor: hoveredEvolutionPoint.color }}
+                            />
+                            <span className="truncate font-semibold text-[#f3efe6]">
+                              {hoveredEvolutionPoint.entityName}
+                            </span>
+                          </div>
+                          {hoveredEvolutionPoint.parentCampaignName && (
+                            <div className="mt-1 truncate text-[11px] text-[#cfc6b7]">
+                              {hoveredEvolutionPoint.parentCampaignName}
+                            </div>
+                          )}
+                          <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono">
+                            <span className="text-[#a39a8c]">
+                              {formatTrendDate(hoveredEvolutionPoint.date)}
+                            </span>
+                            <span className="text-right text-[#f3efe6]">
+                              {formatEvolutionMetricValue(
+                                hoveredEvolutionPoint.value,
+                                biControls.metric,
+                                currency,
+                              )}
+                            </span>
+                            <span className="text-[#a39a8c]">
+                              {localize('com_ui_project_meta_ads_results')}
+                            </span>
+                            <span className="text-right text-[#f3efe6]">
+                              {formatMetric(hoveredEvolutionPoint.point?.resultCount)}
+                            </span>
+                            <span className="text-[#a39a8c]">
+                              {localize('com_ui_project_meta_ads_spend')}
+                            </span>
+                            <span className="text-right text-[#f3efe6]">
+                              {formatMoney(hoveredEvolutionPoint.point?.spend, currency)}
+                            </span>
+                            <span className="text-[#a39a8c]">
+                              {localize('com_ui_project_meta_ads_cpa')}
+                            </span>
+                            <span className="text-right text-[#f3efe6]">
+                              {formatMoney(hoveredEvolutionPoint.point?.cpa, currency)}
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 border-t border-white/10 p-4">
-                  <button
-                    type="button"
-                    onClick={() => setRuleGroupDraft(null)}
-                    className={metaAdsGhostButton}
-                  >
-                    {localize('com_ui_cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={updateSettings.isLoading}
-                    onClick={onSaveRuleGroup}
-                    className={metaAdsPrimaryButton}
-                  >
-                    {localize('com_ui_project_meta_ads_save_rule_group')}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="border-t border-white/10 bg-[#10110f] p-3">
-            <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                  {localize('com_ui_project_meta_ads_rules_workspace')}
-                </h4>
-                <p className="mt-1 text-xs text-[#81796b]">
-                  {localize('com_ui_project_meta_ads_rules_workspace_hint')}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={!canCreateRuleGroup}
-                onClick={onOpenRuleGroupDraft}
-                className={metaAdsPrimaryButton}
-              >
-                {localize('com_ui_project_meta_ads_create_rule_group')}
-              </button>
-            </div>
-            <div className="overflow-x-auto border border-white/10">
-              <table className="w-full min-w-[980px] table-fixed border-separate border-spacing-0 text-left text-xs">
-                <thead className="bg-[#1b1812] text-[10px] uppercase tracking-[0.12em] text-[#8f8677]">
-                  <tr>
-                    <th className="w-20 border-b border-white/10 px-3 py-2">
-                      {localize('com_ui_project_meta_ads_status')}
-                    </th>
-                    <th className="w-36 border-b border-white/10 px-3 py-2">
-                      {localize('com_ui_project_meta_ads_rule_type')}
-                    </th>
-                    <th className="w-64 border-b border-white/10 px-3 py-2">
-                      {localize('com_ui_project_meta_ads_rule_scope')}
-                    </th>
-                    <th className="w-36 border-b border-white/10 px-3 py-2">
-                      {localize('com_ui_project_meta_ads_target_result_type')}
-                    </th>
-                    <th className="w-28 border-b border-white/10 px-3 py-2">
-                      {localize('com_ui_project_meta_ads_primary_metric')}
-                    </th>
-                    <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
-                      {localize('com_ui_project_meta_ads_cpa_roas')}
-                    </th>
-                    <th className="w-36 border-b border-white/10 px-3 py-2 text-right">
-                      {localize('com_ui_project_meta_ads_budget_range')}
-                    </th>
-                    <th className="w-24 border-b border-white/10 px-3 py-2 text-right">
-                      {localize('com_ui_project_meta_ads_cooldown')}
-                    </th>
-                    <th className="w-32 border-b border-white/10 px-3 py-2 text-right">
-                      {localize('com_ui_project_meta_ads_actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ruleRows.map((row) => (
-                    <tr
-                      key={row.key}
-                      data-testid="meta-ads-rule-row"
-                      className="group bg-[#12120f] transition duration-200 hover:bg-[#19170f]"
-                    >
-                      <td className="border-b border-white/[0.06] px-3 py-2">
-                        <button
-                          type="button"
-                          disabled={!canUseMetaAdsActions || updateSettings.isLoading}
-                          aria-label={
-                            row.enabled
-                              ? localize('com_ui_project_meta_ads_disable_rule')
-                              : localize('com_ui_project_meta_ads_enable_rule')
-                          }
-                          onClick={() => onToggleRuleRow(row)}
-                          className={`inline-flex h-7 items-center gap-1 border px-2 font-semibold transition ${
-                            row.enabled
-                              ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100 hover:bg-emerald-300/15'
-                              : 'border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15'
-                          } disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                          {row.enabled ? <Pause size={14} /> : <Play size={14} />}
-                          {localize(
-                            row.enabled
-                              ? 'com_ui_project_meta_ads_rule_enabled'
-                              : 'com_ui_project_meta_ads_rule_disabled',
-                          )}
-                        </button>
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2">
-                        <div className="font-semibold text-[#f3efe6]">
-                          {localize(getRuleRowTypeLabelKey(row.type))}
-                        </div>
-                        <div className="mt-0.5 text-[11px] text-[#81796b]">
-                          {row.precedenceLabel}
-                        </div>
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2">
-                        <div className="truncate font-semibold text-[#f3efe6]">{row.name}</div>
-                        <div className="mt-0.5 truncate text-[11px] text-[#948b7d]">
-                          {row.scopeLabel}
-                        </div>
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2 text-[#cfc6b7]">
-                        {getResultTypeLabel(row.rules.targetResultType, localize)}
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2 font-mono uppercase text-[#f3efe6]">
-                        {row.rules.primaryMetric ?? 'cpa'}
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
-                        {formatMoney(row.rules.targetCpa, currency)} /{' '}
-                        {formatMetric(row.rules.minRoas)}
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
-                        {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
-                        {formatMoney(row.rules.maxDailyBudget, currency)}
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2 text-right font-mono text-[#f3efe6]">
-                        {localize('com_ui_project_meta_ads_cooldown_hours_value', {
-                          0: String(row.rules.cooldownHours),
-                        })}
-                      </td>
-                      <td className="border-b border-white/[0.06] px-3 py-2">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            disabled={!canUseMetaAdsActions}
-                            aria-label={localize('com_ui_project_meta_ads_edit_rule')}
-                            onClick={() => {
-                              if (row.type === 'global') {
-                                onEditGlobalRule();
-                                return;
-                              }
-                              if (row.group) {
-                                onEditRuleGroup(row.group);
-                                return;
-                              }
-                              if (row.override) {
-                                onEditRuleOverride(row.override);
-                              }
-                            }}
-                            className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-amber-300/40 hover:text-[#f3efe6] disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <PencilSimple size={15} />
-                          </button>
-                          {row.type !== 'global' && (
-                            <button
-                              type="button"
-                              disabled={!canUseMetaAdsActions}
-                              aria-label={localize('com_ui_project_meta_ads_delete_rule')}
-                              onClick={() => {
-                                if (row.group) {
-                                  onDeleteRuleGroup(row.group.id);
-                                  return;
-                                }
-                                if (row.override) {
-                                  onDeleteRuleOverride(row.override);
-                                }
-                              }}
-                              className="inline-flex h-7 w-7 items-center justify-center border border-white/10 text-[#cfc6b7] transition hover:border-red-300/40 hover:text-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <Trash size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {ruleRows.length === 1 && (
-              <div className="border-x border-b border-dashed border-white/10 px-3 py-4 text-xs text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_rules_empty')}
-              </div>
-            )}
-          </div>
-
-          <div
-            ref={tableScrollRef}
-            onScroll={onTableScroll}
-            className="max-w-full overflow-x-auto bg-[#0f0e0b]"
-          >
-            <table
-              className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-white/10`}
-            >
-              <thead className="sticky top-0 z-30 border-b border-white/10 bg-[#1b1812] text-[11px] uppercase tracking-[0.12em] text-[#8f8677] shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
-                <tr>
-                  <th className="sticky left-0 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3">
-                    <span className="sr-only">
-                      {localize('com_ui_project_meta_ads_select_ad_set')}
-                    </span>
-                  </th>
-                  <th className="sticky left-10 z-40 w-10 border-b border-white/10 bg-[#1b1812] px-2 py-3 shadow-[10px_0_18px_-18px_rgba(245,158,11,0.8)]">
-                    <span className="sr-only">
-                      {localize('com_ui_project_meta_ads_expand_campaign')}
-                    </span>
-                  </th>
-                  {tableColumns.map((column) => {
-                    const label =
-                      column.label ?? (column.labelKey ? localize(column.labelKey) : '');
-                    const alignClass = column.align === 'right' ? 'text-right' : '';
-                    const stickyClass =
-                      column.key === 'adStatus'
-                        ? 'sticky left-20 z-40 bg-[#1b1812]'
-                        : column.key === 'name'
-                          ? 'sticky left-32 z-40 bg-[#1b1812] shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
-                          : '';
-                    return (
-                      <th
-                        key={column.key}
-                        className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-white/10 px-3 py-3`}
-                      >
-                        {column.key === 'actions' || column.key === 'adStatus' ? (
-                          <span className="sr-only">{label}</span>
-                        ) : column.sortableKey ? (
-                          renderSortableHeader({
-                            key: column.sortableKey,
-                            label,
-                            className: column.align === 'right' ? 'justify-end text-right' : '',
-                            defaultDirection: column.defaultDirection,
-                          })
-                        ) : (
-                          label
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {isInitialStatusLoading &&
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <tr
-                      key={`meta-ads-row-skeleton-${index}`}
-                      data-testid="meta-ads-row-skeleton"
-                      className="border-b border-border-light"
-                    >
-                      <td className="px-2 py-3" colSpan={tableColumnCount}>
-                        <div className="flex items-center gap-4">
-                          <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
-                          <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
-                          <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
-                          <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
-                          <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
-                          <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                {(() => {
-                  let rowIndex = 0;
-                  return filteredCampaigns.map((campaign) => {
-                    const expanded =
-                      campaign.budgetMode === 'ABO'
-                        ? !collapsedAboCampaignIds.includes(campaign.campaignId)
-                        : expandedCampaignIds.includes(campaign.campaignId);
-                    const selected = selectedEntityIds.includes(`campaign:${campaign.campaignId}`);
-                    const recommendation = getEntityRecommendation(campaign.campaignId);
-                    const campaignRowIndex = rowIndex;
-                    rowIndex += 1;
-
-                    return (
-                      <Fragment key={campaign.campaignId}>
-                        <tr
-                          data-testid="meta-ads-campaign-row"
-                          className={getTableRowClass(campaignRowIndex, 'campaign')}
-                        >
-                          <td className="sticky left-0 z-20 bg-inherit px-2 py-2 align-middle">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              aria-label={localize('com_ui_project_meta_ads_select_campaign')}
-                              onChange={() => onToggleCampaign(campaign)}
-                              className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                            />
-                          </td>
-                          <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
-                            {campaign.adSets.length > 0 && (
-                              <button
-                                type="button"
-                                aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
-                                aria-expanded={expanded}
-                                onClick={() => onToggleCampaignExpanded(campaign)}
-                                className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                              >
-                                {expanded ? '-' : '+'}
-                              </button>
-                            )}
-                          </td>
-                          {tableColumns.map((column) =>
-                            renderCampaignCell(column, campaign, recommendation),
-                          )}
-                        </tr>
-                        {expanded &&
-                          campaign.adSets.map((adset) => {
-                            const adsetSelected = selectedEntityIds.includes(
-                              `adset:${adset.entityId}`,
-                            );
-                            const adsetRecommendation = getEntityRecommendation(adset.entityId);
-                            const adsetAds = adset.ads ?? [];
-                            const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
-                            const adsetRowIndex = rowIndex;
-                            rowIndex += 1;
-
-                            return (
-                              <Fragment key={adset.entityId}>
-                                <tr
-                                  data-testid="meta-ads-adset-row"
-                                  className={getTableRowClass(adsetRowIndex, 'adset')}
-                                >
-                                  <td className="sticky left-0 z-20 bg-inherit px-2 py-2 pl-6 align-middle">
-                                    <input
-                                      type="checkbox"
-                                      checked={adsetSelected}
-                                      aria-label={localize('com_ui_project_meta_ads_select_ad_set')}
-                                      onChange={() => onToggleAdSet(adset.entityId)}
-                                      className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                                    />
-                                  </td>
-                                  <td className="sticky left-10 z-20 bg-inherit px-2 py-2 align-middle">
-                                    {adsetAds.length > 0 ? (
-                                      <button
-                                        type="button"
-                                        aria-expanded={!adsCollapsed}
-                                        aria-label={localize(
-                                          adsCollapsed
-                                            ? 'com_ui_project_meta_ads_show_ads'
-                                            : 'com_ui_project_meta_ads_hide_ads',
-                                        )}
-                                        onClick={() => onToggleAdSetAds(adset.entityId)}
-                                        className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                                      >
-                                        {adsCollapsed ? '+' : '-'}
-                                      </button>
-                                    ) : (
-                                      <span aria-hidden="true" className="block h-7 w-7" />
-                                    )}
-                                  </td>
-                                  {tableColumns.map((column) =>
-                                    renderAdSetCell(column, campaign, adset, adsetRecommendation),
-                                  )}
-                                </tr>
-                                {!adsCollapsed &&
-                                  adsetAds.map((ad) => {
-                                    const adRowIndex = rowIndex;
-                                    rowIndex += 1;
-                                    return renderAdRow(campaign, ad, adRowIndex);
-                                  })}
-                              </Fragment>
-                            );
-                          })}
-                      </Fragment>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
-            {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
-              <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
-                {localize('com_ui_project_meta_ads_no_snapshots')}
-              </div>
-            )}
-          </div>
-          <div className="sticky bottom-0 z-20 border-t border-white/10 bg-[#10110f] px-4 py-2">
-            <div
-              ref={stickyHorizontalScrollRef}
-              onScroll={onStickyHorizontalScroll}
-              className="max-w-full overflow-x-auto"
-              aria-hidden="true"
-            >
-              <div className={`h-2 w-full ${tableViewMinWidth[tableView]}`} />
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-white/10 p-3">
-          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                {localize('com_ui_project_meta_ads_bi_rankings')}
-              </h4>
-              <p className="mt-1 text-xs text-[#81796b]">
-                {localize('com_ui_project_meta_ads_bi_rankings_hint')}
-              </p>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-              <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_period')}
-                <select
-                  data-testid="meta-ads-bi-period-filter"
-                  value={periodFilter}
-                  onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
-                  className={metaAdsInput}
-                >
-                  {periodFilterOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {localize(option.labelKey)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {periodFilter === 'custom' && (
-                <>
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                    {localize('com_ui_project_meta_ads_period_since')}
-                    <input
-                      type="date"
-                      value={customSince}
-                      max={customUntil || undefined}
-                      onChange={(event) => onCustomSinceChange(event.target.value)}
-                      className={metaAdsInput}
-                    />
-                  </label>
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                    {localize('com_ui_project_meta_ads_period_until')}
-                    <input
-                      type="date"
-                      value={customUntil}
-                      min={customSince || undefined}
-                      onChange={(event) => onCustomUntilChange(event.target.value)}
-                      className={metaAdsInput}
-                    />
-                  </label>
-                  <div className="flex min-w-32 flex-col justify-end">
-                    <button
-                      type="button"
-                      disabled={
-                        customSince === appliedCustomSince && customUntil === appliedCustomUntil
-                      }
-                      onClick={onApplyCustomPeriod}
-                      className="h-9 border border-amber-300/40 bg-amber-300/10 px-3 text-xs font-semibold text-amber-100 transition hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-[#81796b]"
-                    >
-                      {localize('com_ui_project_meta_ads_period_update')}
-                    </button>
-                  </div>
-                </>
-              )}
-              <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_level')}
-                <select
-                  data-testid="meta-ads-bi-level-filter"
-                  value={biControls.level}
-                  onChange={(event) =>
-                    setBiControls((current) => ({
-                      ...current,
-                      level: event.target.value as MetaAdsBiRankLevel,
-                    }))
-                  }
-                  className={metaAdsInput}
-                >
-                  <option value="campaign">
-                    {localize('com_ui_project_meta_ads_level_campaign')}
-                  </option>
-                  <option value="adset">{localize('com_ui_project_meta_ads_level_ad_set')}</option>
-                  <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
-                </select>
-              </label>
-              <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_objective')}
-                <select
-                  data-testid="meta-ads-bi-objective-filter"
-                  value={biControls.objective}
-                  onChange={(event) =>
-                    setBiControls((current) => ({ ...current, objective: event.target.value }))
-                  }
-                  className={metaAdsInput}
-                >
-                  <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
-                  {objectiveOptions.map((objective) => (
-                    <option key={objective} value={objective}>
-                      {getObjectiveLabel(objective, localize)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-48 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_target_result_type')}
-                <select
-                  data-testid="meta-ads-bi-result-type-filter"
-                  value={biControls.resultType}
-                  onChange={(event) =>
-                    setBiControls((current) => ({ ...current, resultType: event.target.value }))
-                  }
-                  className={metaAdsInput}
-                >
-                  <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
-                  {biResultTypeOptions.map((resultType) => (
-                    <option key={resultType} value={resultType}>
-                      {getResultTypeLabel(resultType, localize)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-40 flex-col gap-1 text-[11px] uppercase tracking-[0.12em] text-[#948b7d]">
-                {localize('com_ui_project_meta_ads_metric')}
-                <select
-                  data-testid="meta-ads-bi-metric-filter"
-                  value={biControls.metric}
-                  onChange={(event) =>
-                    setBiControls((current) => ({
-                      ...current,
-                      metric: event.target.value as EvolutionMetric,
-                    }))
-                  }
-                  className={metaAdsInput}
-                >
-                  <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
-                  <option value="resultCount">{localize('com_ui_project_meta_ads_results')}</option>
-                  <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
-                  <option value="ctr">{localize('com_ui_project_meta_ads_ctr')}</option>
-                  <option value="frequency">{localize('com_ui_project_meta_ads_frequency')}</option>
-                  <option value="clicks">{localize('com_ui_project_meta_ads_clicks')}</option>
-                </select>
-              </label>
-            </div>
-          </div>
-          {renderBiRankingCard(
-            selectedBiRankingTitleKey,
-            selectedBiRankingItems,
-            selectedBiRankingTestId,
-            biControls.level === 'ad'
-              ? adRankingEmptyMessageKey
-              : 'com_ui_project_meta_ads_bi_no_rankings',
-          )}
-        </div>
-
-        {hasEvolutionSection && (
-          <div className="border-t border-white/10 p-3">
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-              {localize('com_ui_project_meta_ads_evolution_analysis')}
-            </h4>
-            <div data-testid="meta-ads-evolution-dashboard" className="grid gap-3">
-              <div className="border border-white/10 bg-[#12120f] p-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                      {localize('com_ui_project_meta_ads_evolution_comparison')}
-                    </h5>
-                    <p className="mt-1 text-xs text-[#81796b]">
-                      {localize('com_ui_project_meta_ads_evolution_comparison_hint')}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                  {[
-                    [
-                      'com_ui_project_meta_ads_metric' as TranslationKeys,
-                      getEvolutionMetricLabel(biControls.metric, localize),
-                    ],
-                    [
-                      'com_ui_project_meta_ads_series' as TranslationKeys,
-                      formatIntegerMetric(evolutionSeries.length),
-                    ],
-                    [
-                      'com_ui_project_meta_ads_peak_value' as TranslationKeys,
-                      formatEvolutionMetricValue(maxEvolutionValue, biControls.metric, currency),
-                    ],
-                    [
-                      'com_ui_project_meta_ads_budget_changes' as TranslationKeys,
-                      formatIntegerMetric(totalBudgetChangeCount),
-                    ],
-                  ]
-                    .filter(
-                      ([labelKey]) =>
-                        biControls.level !== 'ad' ||
-                        labelKey !== 'com_ui_project_meta_ads_budget_changes',
-                    )
-                    .map(([labelKey, value]) => (
-                      <div key={labelKey} className="border border-white/10 bg-white/[0.025] p-2">
-                        <div className="text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                          {localize(labelKey as TranslationKeys)}
-                        </div>
-                        <div
-                          className="mt-1 truncate font-mono text-xs text-[#f3efe6]"
-                          title={value}
-                        >
-                          {value}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                <div className="relative mt-3 h-48 border-b border-white/10">
-                  {canRenderEvolutionSeries ? (
-                    <svg
-                      data-testid="meta-ads-evolution-chart"
-                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                      role="img"
-                      aria-label={localize('com_ui_project_meta_ads_evolution_comparison')}
-                      className="h-full w-full text-[#f3efe6]"
-                      preserveAspectRatio="none"
-                    >
-                      {[0.25, 0.5, 0.75].map((line) => (
-                        <line
-                          key={line}
-                          x1={chartPadding}
-                          x2={chartWidth - chartPadding}
-                          y1={chartBottom - line * (chartHeight - chartPadding * 2)}
-                          y2={chartBottom - line * (chartHeight - chartPadding * 2)}
-                          stroke="currentColor"
-                          strokeOpacity="0.08"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ))}
-                      {evolutionSeriesPaths.map((seriesPath) => (
-                        <Fragment key={seriesPath.series.entityId}>
-                          <path
-                            d={seriesPath.path}
-                            fill="none"
-                            stroke={seriesPath.color}
-                            strokeWidth="2.2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            vectorEffect="non-scaling-stroke"
-                          />
-                        </Fragment>
-                      ))}
-                    </svg>
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm text-[#a39a8c]">
-                      {localize('com_ui_project_meta_ads_insufficient_evolution')}
+                    <div className="mt-2 flex justify-between gap-3 text-[11px] text-[#81796b]">
+                      {evolutionDates.map((date, index) =>
+                        shouldShowTrendLabel(index, evolutionDates.length) ? (
+                          <span key={date} className="font-mono">
+                            {formatTrendDate(date)}
+                          </span>
+                        ) : null,
+                      )}
                     </div>
-                  )}
-                  {canRenderEvolutionSeries &&
-                    evolutionSeriesPaths.flatMap((seriesPath) =>
-                      seriesPath.points.map((point) => {
-                        const entityName = cleanDashboardName(
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                      {evolutionSeriesPaths.map((seriesPath) => {
+                        const name = cleanDashboardName(
                           seriesPath.series.entityName,
                           seriesPath.series.entityId,
                         );
-                        const hoverPoint: EvolutionHoverPoint = {
-                          seriesId: seriesPath.series.entityId,
-                          entityName,
-                          parentCampaignName: seriesPath.series.parentCampaignName,
-                          date: point.date,
-                          value: point.value,
-                          x: point.x,
-                          y: point.y,
-                          color: seriesPath.color,
-                          point: point.rawPoint,
-                        };
                         return (
-                          <button
-                            key={`${seriesPath.series.entityId}:${point.date}`}
-                            type="button"
-                            data-testid="meta-ads-evolution-point"
-                            data-date={point.date}
-                            data-entity-id={seriesPath.series.entityId}
-                            aria-label={`${entityName} ${formatTrendDate(point.date)}`}
-                            className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 cursor-crosshair items-center justify-center rounded-full outline-none focus:ring-2 focus:ring-amber-200/60"
-                            style={{
-                              left: `${(point.x / chartWidth) * 100}%`,
-                              top: `${(point.y / chartHeight) * 100}%`,
-                            }}
-                            onMouseEnter={() => setHoveredEvolutionPoint(hoverPoint)}
-                            onMouseLeave={() => setHoveredEvolutionPoint(null)}
-                            onFocus={() => setHoveredEvolutionPoint(hoverPoint)}
-                            onBlur={() => setHoveredEvolutionPoint(null)}
+                          <div
+                            key={seriesPath.series.entityId}
+                            className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2 py-2"
                           >
-                            <span
-                              aria-hidden="true"
-                              className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_2px_rgba(15,14,11,0.85)]"
-                              style={{ backgroundColor: seriesPath.color }}
-                            />
-                          </button>
-                        );
-                      }),
-                    )}
-                  {hoveredEvolutionPoint && canRenderEvolutionSeries && (
-                    <div
-                      data-testid="meta-ads-evolution-point-tooltip"
-                      className="pointer-events-none absolute z-[1000] min-w-48 border border-amber-400/30 bg-[#2a2114] px-3 py-2 text-xs text-amber-100 shadow-xl"
-                      style={{
-                        left: `${(hoveredEvolutionPoint.x / chartWidth) * 100}%`,
-                        top: `${(hoveredEvolutionPoint.y / chartHeight) * 100}%`,
-                        maxWidth: 'min(18rem, calc(100% - 1rem))',
-                        overflowWrap: 'anywhere',
-                        transform: getEvolutionTooltipTransform(hoveredEvolutionPoint),
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="h-2 w-2 shrink-0"
-                          style={{ backgroundColor: hoveredEvolutionPoint.color }}
-                        />
-                        <span className="truncate font-semibold text-[#f3efe6]">
-                          {hoveredEvolutionPoint.entityName}
-                        </span>
-                      </div>
-                      {hoveredEvolutionPoint.parentCampaignName && (
-                        <div className="mt-1 truncate text-[11px] text-[#cfc6b7]">
-                          {hoveredEvolutionPoint.parentCampaignName}
-                        </div>
-                      )}
-                      <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono">
-                        <span className="text-[#a39a8c]">
-                          {formatTrendDate(hoveredEvolutionPoint.date)}
-                        </span>
-                        <span className="text-right text-[#f3efe6]">
-                          {formatEvolutionMetricValue(
-                            hoveredEvolutionPoint.value,
-                            biControls.metric,
-                            currency,
-                          )}
-                        </span>
-                        <span className="text-[#a39a8c]">
-                          {localize('com_ui_project_meta_ads_results')}
-                        </span>
-                        <span className="text-right text-[#f3efe6]">
-                          {formatMetric(hoveredEvolutionPoint.point?.resultCount)}
-                        </span>
-                        <span className="text-[#a39a8c]">
-                          {localize('com_ui_project_meta_ads_spend')}
-                        </span>
-                        <span className="text-right text-[#f3efe6]">
-                          {formatMoney(hoveredEvolutionPoint.point?.spend, currency)}
-                        </span>
-                        <span className="text-[#a39a8c]">
-                          {localize('com_ui_project_meta_ads_cpa')}
-                        </span>
-                        <span className="text-right text-[#f3efe6]">
-                          {formatMoney(hoveredEvolutionPoint.point?.cpa, currency)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-2 flex justify-between gap-3 text-[11px] text-[#81796b]">
-                  {evolutionDates.map((date, index) =>
-                    shouldShowTrendLabel(index, evolutionDates.length) ? (
-                      <span key={date} className="font-mono">
-                        {formatTrendDate(date)}
-                      </span>
-                    ) : null,
-                  )}
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-2">
-                  {evolutionSeriesPaths.map((seriesPath) => {
-                    const name = cleanDashboardName(
-                      seriesPath.series.entityName,
-                      seriesPath.series.entityId,
-                    );
-                    return (
-                      <div
-                        key={seriesPath.series.entityId}
-                        className="flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2 py-2"
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className="h-2.5 w-2.5 shrink-0"
-                            style={{ backgroundColor: seriesPath.color }}
-                          />
-                          <div className="min-w-0">
-                            <div className="group relative min-w-0">
-                              <div className="truncate text-xs font-semibold text-[#f3efe6]">
-                                {name}
-                              </div>
-                              {renderNameTooltip(name)}
-                            </div>
-                            {seriesPath.series.parentCampaignName && (
-                              <div className="truncate text-[10px] text-[#81796b]">
-                                {cleanDashboardName(
-                                  seriesPath.series.parentCampaignName,
-                                  seriesPath.series.parentCampaignName,
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span
+                                className="h-2.5 w-2.5 shrink-0"
+                                style={{ backgroundColor: seriesPath.color }}
+                              />
+                              <div className="min-w-0">
+                                <div className="group relative min-w-0">
+                                  <div className="truncate text-xs font-semibold text-[#f3efe6]">
+                                    {name}
+                                  </div>
+                                  {renderNameTooltip(name)}
+                                </div>
+                                {seriesPath.series.parentCampaignName && (
+                                  <div className="truncate text-[10px] text-[#81796b]">
+                                    {cleanDashboardName(
+                                      seriesPath.series.parentCampaignName,
+                                      seriesPath.series.parentCampaignName,
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                            )}
+                            </div>
+                            <div className="font-mono text-xs text-[#f3efe6]">
+                              {formatEvolutionMetricValue(
+                                seriesPath.series.total,
+                                biControls.metric,
+                                currency,
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="font-mono text-xs text-[#f3efe6]">
-                          {formatEvolutionMetricValue(
-                            seriesPath.series.total,
-                            biControls.metric,
-                            currency,
-                          )}
-                        </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`grid gap-3 ${biControls.level === 'ad' ? '' : 'md:grid-cols-2'}`}
+                  >
+                    <div className="border border-white/10 bg-[#12120f]">
+                      <div className="border-b border-white/10 px-3 py-2">
+                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_best_evolution')}
+                        </h5>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={`grid gap-3 ${biControls.level === 'ad' ? '' : 'md:grid-cols-2'}`}>
-                <div className="border border-white/10 bg-[#12120f]">
-                  <div className="border-b border-white/10 px-3 py-2">
-                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                      {localize('com_ui_project_meta_ads_best_evolution')}
-                    </h5>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[34rem] text-left text-xs">
-                      <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        <tr>
-                          <th className="px-3 py-2">
-                            {localize('com_ui_project_meta_ads_campaign')}
-                          </th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_spend_delta')}
-                          </th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_results_delta')}
-                          </th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_cpa_delta')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {bestEvolution.length > 0 ? (
-                          bestEvolution.map((delta) => {
-                            const entityId = getDeltaEntityId(delta);
-                            const name = cleanDashboardName(getDeltaEntityName(delta), entityId);
-                            return (
-                              <tr key={entityId} className="odd:bg-white/[0.025]">
-                                {renderEvolutionNameCell(name)}
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    delta.spendDelta,
-                                  )}`}
-                                >
-                                  {formatSignedMoney(delta.spendDelta, currency)}
-                                </td>
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    delta.resultDelta,
-                                  )}`}
-                                >
-                                  {formatSignedMetric(delta.resultDelta)}
-                                </td>
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    delta.cpaDelta,
-                                    true,
-                                  )}`}
-                                >
-                                  {formatSignedMoney(delta.cpaDelta, currency)}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
-                              {localize('com_ui_project_meta_ads_no_evolution')}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="border border-white/10 bg-[#12120f]">
-                  <div className="border-b border-white/10 px-3 py-2">
-                    <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
-                      {localize('com_ui_project_meta_ads_budget_changes')}
-                    </h5>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[34rem] text-left text-xs">
-                      <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
-                        <tr>
-                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_name')}</th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_budget_delta')}
-                          </th>
-                          <th className="px-3 py-2 text-right">
-                            {localize('com_ui_project_meta_ads_frequency_delta')}
-                          </th>
-                          <th className="px-3 py-2">{localize('com_ui_project_meta_ads_actor')}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {evolutionAlerts.length > 0 ? (
-                          evolutionAlerts.map((delta) => {
-                            const entityId = getDeltaEntityId(delta);
-                            const name = cleanDashboardName(
-                              delta.latestChange?.entityName ?? getDeltaEntityName(delta),
-                              entityId,
-                            );
-                            const budgetDelta =
-                              delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
-                            return (
-                              <tr key={entityId} className="odd:bg-white/[0.025]">
-                                {renderEvolutionNameCell(name)}
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    budgetDelta,
-                                  )}`}
-                                >
-                                  {formatSignedMoney(budgetDelta, currency)}
-                                </td>
-                                <td
-                                  className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
-                                    delta.frequencyDelta,
-                                    true,
-                                  )}`}
-                                >
-                                  {formatSignedMetric(delta.frequencyDelta)}
-                                </td>
-                                <td className="px-3 py-2.5 text-[#a39a8c]">
-                                  {delta.latestChange?.actor ?? '-'}
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[34rem] text-left text-xs">
+                          <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                            <tr>
+                              <th className="px-3 py-2">
+                                {localize('com_ui_project_meta_ads_campaign')}
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                {localize('com_ui_project_meta_ads_spend_delta')}
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                {localize('com_ui_project_meta_ads_results_delta')}
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                {localize('com_ui_project_meta_ads_cpa_delta')}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/10">
+                            {bestEvolution.length > 0 ? (
+                              bestEvolution.map((delta) => {
+                                const entityId = getDeltaEntityId(delta);
+                                const name = cleanDashboardName(
+                                  getDeltaEntityName(delta),
+                                  entityId,
+                                );
+                                return (
+                                  <tr key={entityId} className="odd:bg-white/[0.025]">
+                                    {renderEvolutionNameCell(name)}
+                                    <td
+                                      className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                        delta.spendDelta,
+                                      )}`}
+                                    >
+                                      {formatSignedMoney(delta.spendDelta, currency)}
+                                    </td>
+                                    <td
+                                      className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                        delta.resultDelta,
+                                      )}`}
+                                    >
+                                      {formatSignedMetric(delta.resultDelta)}
+                                    </td>
+                                    <td
+                                      className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                        delta.cpaDelta,
+                                        true,
+                                      )}`}
+                                    >
+                                      {formatSignedMoney(delta.cpaDelta, currency)}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                                  {localize('com_ui_project_meta_ads_no_evolution')}
                                 </td>
                               </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
-                              {localize('com_ui_project_meta_ads_no_history')}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="border border-white/10 bg-[#12120f]">
+                      <div className="border-b border-white/10 px-3 py-2">
+                        <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
+                          {localize('com_ui_project_meta_ads_budget_changes')}
+                        </h5>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[34rem] text-left text-xs">
+                          <thead className="border-b border-white/10 text-[10px] uppercase tracking-[0.12em] text-[#81796b]">
+                            <tr>
+                              <th className="px-3 py-2">
+                                {localize('com_ui_project_meta_ads_name')}
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                {localize('com_ui_project_meta_ads_budget_delta')}
+                              </th>
+                              <th className="px-3 py-2 text-right">
+                                {localize('com_ui_project_meta_ads_frequency_delta')}
+                              </th>
+                              <th className="px-3 py-2">
+                                {localize('com_ui_project_meta_ads_actor')}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/10">
+                            {evolutionAlerts.length > 0 ? (
+                              evolutionAlerts.map((delta) => {
+                                const entityId = getDeltaEntityId(delta);
+                                const name = cleanDashboardName(
+                                  delta.latestChange?.entityName ?? getDeltaEntityName(delta),
+                                  entityId,
+                                );
+                                const budgetDelta =
+                                  delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
+                                return (
+                                  <tr key={entityId} className="odd:bg-white/[0.025]">
+                                    {renderEvolutionNameCell(name)}
+                                    <td
+                                      className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                        budgetDelta,
+                                      )}`}
+                                    >
+                                      {formatSignedMoney(budgetDelta, currency)}
+                                    </td>
+                                    <td
+                                      className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
+                                        delta.frequencyDelta,
+                                        true,
+                                      )}`}
+                                    >
+                                      {formatSignedMetric(delta.frequencyDelta)}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-[#a39a8c]">
+                                      {delta.latestChange?.actor ?? '-'}
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={4} className="px-3 py-5 text-sm text-[#a39a8c]">
+                                  {localize('com_ui_project_meta_ads_no_history')}
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
-      <div className="border border-border-light bg-surface-primary p-3">
-        <h4 className="text-xs font-semibold uppercase text-text-tertiary">
-          {localize('com_ui_project_meta_ads_history')}
-        </h4>
-        <div className="mt-3 space-y-2">
-          {(biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []).length > 0 ? (
-            (biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? [])
-              .slice(0, 8)
-              .map((change) => {
-                const delta = getBudgetChangeDelta(change);
-                return (
-                  <div
-                    key={change._id ?? `${change.entityId}-${change.createdAt}`}
-                    className="flex flex-col gap-1 border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-medium text-text-primary">
-                        {change.entityName ?? change.entityId}
-                      </div>
-                      <div className="text-xs text-text-secondary">
-                        {change.actor ?? '-'} · {change.reason ?? '-'}
-                      </div>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <div className="font-mono text-xs text-text-secondary">
-                        {formatMoney(change.previousDailyBudget, currency)}
-                        {' -> '}
-                        {formatMoney(change.newDailyBudget, currency)}
-                      </div>
-                      {delta.deltaDailyBudget != null && (
-                        <div className="mt-1 font-mono text-[11px] text-text-tertiary">
-                          {`${formatSignedMoney(delta.deltaDailyBudget, currency)} · ${formatSignedPercent(delta.deltaPercent)}`}
+      {workspaceTab === 'overview' && (
+        <div className="border border-border-light bg-surface-primary p-3">
+          <h4 className="text-xs font-semibold uppercase text-text-tertiary">
+            {localize('com_ui_project_meta_ads_history')}
+          </h4>
+          <div className="mt-3 space-y-2">
+            {(biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []).length > 0 ? (
+              (biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? [])
+                .slice(0, 8)
+                .map((change) => {
+                  const delta = getBudgetChangeDelta(change);
+                  return (
+                    <div
+                      key={change._id ?? `${change.entityId}-${change.createdAt}`}
+                      className="flex flex-col gap-1 border border-border-light p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-text-primary">
+                          {change.entityName ?? change.entityId}
                         </div>
-                      )}
+                        <div className="text-xs text-text-secondary">
+                          {change.actor ?? '-'} · {change.reason ?? '-'}
+                        </div>
+                      </div>
+                      <div className="text-left sm:text-right">
+                        <div className="font-mono text-xs text-text-secondary">
+                          {formatMoney(change.previousDailyBudget, currency)}
+                          {' -> '}
+                          {formatMoney(change.newDailyBudget, currency)}
+                        </div>
+                        {delta.deltaDailyBudget != null && (
+                          <div className="mt-1 font-mono text-[11px] text-text-tertiary">
+                            {`${formatSignedMoney(delta.deltaDailyBudget, currency)} · ${formatSignedPercent(delta.deltaPercent)}`}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-          ) : (
-            <div className="border border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
-              {localize('com_ui_project_meta_ads_no_history')}
-            </div>
-          )}
+                  );
+                })
+            ) : (
+              <div className="border border-dashed border-border-light py-6 text-center text-sm text-text-secondary">
+                {localize('com_ui_project_meta_ads_no_history')}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <OGDialog
         open={Boolean(selectedAdPreview)}

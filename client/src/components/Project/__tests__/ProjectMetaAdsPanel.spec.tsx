@@ -172,6 +172,10 @@ describe('ProjectMetaAdsPanel', () => {
     mockStartupConfig.interface.metaAdsTrafficAgentId = 'traffic-agent-1';
   });
 
+  const openBiTab = () => {
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-bi'));
+  };
+
   it('shows a loading indicator while Meta Ads status is being fetched', () => {
     mockStatusQueryState = {
       data: undefined,
@@ -184,6 +188,37 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_loading')).toBeInTheDocument();
     expect(screen.getAllByTestId('meta-ads-summary-skeleton')).toHaveLength(4);
     expect(screen.getAllByTestId('meta-ads-row-skeleton')).toHaveLength(5);
+  });
+
+  it('splits operational and BI workspaces into tabs', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Overview Campaign',
+        objective: 'OUTCOME_SALES',
+        spend: 100,
+        resultCount: 4,
+        cpa: 25,
+        resultType: 'purchase',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByTestId('meta-ads-overview-tab-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-bi-tab-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-campaign-row')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_project_meta_ads_bi_rankings')).not.toBeInTheDocument();
+
+    openBiTab();
+
+    expect(screen.getByTestId('meta-ads-bi-tab-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-campaign-row')).not.toBeInTheDocument();
+    expect(screen.queryByText('com_ui_project_meta_ads_history')).not.toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
   });
 
   it('lets a USER without project edit save Meta Ads project settings and token', async () => {
@@ -630,6 +665,7 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
     const campaignRankings = screen.getByTestId('meta-ads-bi-campaigns');
     const campaignRankingsText = campaignRankings.textContent ?? '';
@@ -697,6 +733,7 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
     const rankings = screen.getByTestId('meta-ads-bi-campaigns');
     const initialRankingsText = rankings.textContent ?? '';
@@ -783,6 +820,7 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
     const resultFilter = screen.getByTestId('meta-ads-bi-result-type-filter');
     const optionValues = Array.from(resultFilter.querySelectorAll('option')).map(
@@ -835,6 +873,7 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
     fireEvent.change(screen.getByTestId('meta-ads-bi-level-filter'), {
       target: { value: 'ad' },
@@ -2011,6 +2050,8 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('R$ 300,00')).toBeInTheDocument();
     expect(screen.getByText('R$ 25,00')).toBeInTheDocument();
 
+    openBiTab();
+
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
       target: { value: 'last_30d' },
     });
@@ -2222,14 +2263,11 @@ describe('ProjectMetaAdsPanel', () => {
     };
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
-    const table = screen.getAllByRole('table')[0];
     const dashboard = screen.getByTestId('meta-ads-evolution-dashboard');
     expect(screen.getByText('com_ui_project_meta_ads_evolution_analysis')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_evolution_comparison')).toBeInTheDocument();
-    expect(
-      table.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
     const evolutionChart = screen.getByTestId('meta-ads-evolution-chart');
     expect(evolutionChart).toBeInTheDocument();
     expect(evolutionChart).toHaveAttribute('preserveAspectRatio', 'none');
@@ -2318,6 +2356,7 @@ describe('ProjectMetaAdsPanel', () => {
     };
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
 
     expect(screen.getByTestId('meta-ads-evolution-dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('meta-ads-evolution-chart')).not.toBeInTheDocument();
