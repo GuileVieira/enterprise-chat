@@ -1,5 +1,5 @@
 const express = require('express');
-const { PermissionBits } = require('librechat-data-provider');
+const { PermissionBits, SystemRoles } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { findProjectById, getProjectById, updateProject, upsertTenantSecret } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
@@ -26,6 +26,7 @@ const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
 const requireManageConfigs = requireCapability(SystemCapabilities.MANAGE_CONFIGS);
+const META_ADS_CLIENT_ROLES = new Set([SystemRoles.ADMIN, SystemRoles.OWNER, SystemRoles.USER]);
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
@@ -66,6 +67,19 @@ function getProjectMetaTokenSecretName(projectId) {
 function looksLikeMetaAccessToken(value) {
   return typeof value === 'string' && /^EAA[a-zA-Z0-9_-]{40,}$/.test(value.trim());
 }
+
+const requireMetaAdsProjectView = canAccessProjectResource({
+  requiredPermission: PermissionBits.VIEW,
+});
+
+function requireMetaAdsClientAction(req, res, next) {
+  if (!META_ADS_CLIENT_ROLES.has(req.user?.role)) {
+    return res.status(403).json({ message: 'Insufficient Meta Ads permissions' });
+  }
+  return next();
+}
+
+const metaAdsClientActionAccess = [requireMetaAdsProjectView, requireMetaAdsClientAction];
 
 function validateMetaAdsRules(rules = {}) {
   const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
@@ -327,7 +341,7 @@ router.get(
 
 router.put(
   '/settings',
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  metaAdsClientActionAccess,
   async (req, res) => {
     try {
       const update = await prepareMetaAdsSettingsUpdate({
@@ -390,7 +404,7 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
 
 router.post(
   '/run',
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  metaAdsClientActionAccess,
   async (req, res) => {
     try {
       return res.json(await analyzeProject({ projectId: req.params.projectId, actor: 'user' }));
@@ -403,7 +417,7 @@ router.post(
 
 router.post(
   '/budget',
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  metaAdsClientActionAccess,
   async (req, res) => {
     try {
       const change = await applyManualBudgetChange({
@@ -427,7 +441,7 @@ router.post(
 
 router.post(
   '/duplicates',
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  metaAdsClientActionAccess,
   async (req, res) => {
     try {
       const result = await duplicateProjectMetaAdsEntity({
@@ -457,7 +471,7 @@ const metaAdsStatusRoutes = [
 for (const route of metaAdsStatusRoutes) {
   router.post(
     route.path,
-    canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+    metaAdsClientActionAccess,
     async (req, res) => {
       try {
         const result = await updateProjectMetaAdsEntityStatus({
@@ -481,7 +495,7 @@ for (const route of metaAdsStatusRoutes) {
 
 router.post(
   '/recommendations/:recommendationId/apply',
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  metaAdsClientActionAccess,
   async (req, res) => {
     try {
       const recommendation = await applyRecommendation({

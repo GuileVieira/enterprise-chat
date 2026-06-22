@@ -1,5 +1,9 @@
 const express = require('express');
 const request = require('supertest');
+const { SystemRoles } = require('librechat-data-provider');
+
+let mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
+const mockCanAccessProjectResource = jest.fn(() => (_req, _res, next) => next());
 
 jest.mock('~/models', () => ({
   findProjectById: jest.fn(),
@@ -10,7 +14,7 @@ jest.mock('~/models', () => ({
 
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, _res, next) => {
-    req.user = { id: 'user-1', role: 'ADMIN', tenantId: 'tenant-x' };
+    req.user = mockRouteUser;
     next();
   },
 }));
@@ -20,7 +24,7 @@ jest.mock('~/server/middleware/roles/capabilities', () => ({
 }));
 
 jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
-  canAccessProjectResource: () => (_req, _res, next) => next(),
+  canAccessProjectResource: (...args) => mockCanAccessProjectResource(...args),
 }));
 
 jest.mock('~/server/services/Config/app', () => ({
@@ -49,6 +53,10 @@ function createApp() {
   app.use('/projects/:projectId/meta-ads', router);
   return app;
 }
+
+beforeEach(() => {
+  mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
+});
 
 describe('projectMetaAds settings normalization', () => {
   it('rejects a Meta token value pasted into tokenSecretName', () => {
@@ -345,7 +353,7 @@ describe('projectMetaAds entity status route', () => {
     ['campaign', '/projects/p1/meta-ads/campaigns/campaign-1/status', 'campaign-1'],
     ['adset', '/projects/p1/meta-ads/adsets/adset-1/status', 'adset-1'],
     ['ad', '/projects/p1/meta-ads/ads/ad-1/status', 'ad-1'],
-  ])('updates a Meta %s status with project edit access', async (entityLevel, path, entityId) => {
+  ])('updates a Meta %s status with client action access', async (entityLevel, path, entityId) => {
     const response = await request(createApp())
       .post(path)
       .send({ entityName: 'Creative A', status: 'PAUSED' })
@@ -393,7 +401,7 @@ describe('projectMetaAds duplicate route', () => {
   it.each([
     ['campaign', 'campaign-1'],
     ['adset', 'adset-1'],
-  ])('duplicates a Meta %s with project edit access', async (entityLevel, entityId) => {
+  ])('duplicates a Meta %s with client action access', async (entityLevel, entityId) => {
     const response = await request(createApp())
       .post('/projects/p1/meta-ads/duplicates')
       .send({
@@ -421,6 +429,46 @@ describe('projectMetaAds duplicate route', () => {
       duplicatedEntityName: 'Original - cópia',
       status: 'INHERITED_FROM_SOURCE',
     });
+  });
+
+  it('allows a USER role to duplicate Meta entities after project view access', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-x' };
+
+    await request(createApp())
+      .post('/projects/p1/meta-ads/duplicates')
+      .send({
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        entityName: 'Original',
+        targetName: 'Original - cópia',
+      })
+      .expect(200);
+
+    expect(duplicateProjectMetaAdsEntity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        actorUserId: 'user-1',
+      }),
+    );
+  });
+
+  it('blocks roles outside the Meta Ads client action allowlist', async () => {
+    mockRouteUser = { id: 'user-1', role: 'GUEST', tenantId: 'tenant-x' };
+
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/duplicates')
+      .send({
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        targetName: 'Copy',
+      })
+      .expect(403);
+
+    expect(response.body).toEqual({ message: 'Insufficient Meta Ads permissions' });
+    expect(duplicateProjectMetaAdsEntity).not.toHaveBeenCalled();
   });
 
   it('returns service validation errors for invalid duplicate payloads', async () => {

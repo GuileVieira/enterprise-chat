@@ -1660,6 +1660,11 @@ export default function ProjectMetaAdsPanel({
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
+  const canUseMetaAdsActions =
+    canEdit ||
+    user?.role === SystemRoles.ADMIN ||
+    user?.role === SystemRoles.OWNER ||
+    user?.role === SystemRoles.USER;
 
   useEffect(() => {
     setSettings(normalizeSettings(project));
@@ -1896,7 +1901,7 @@ export default function ProjectMetaAdsPanel({
   const selectedAdSetIds = selectedEntityIds
     .filter((id) => id.startsWith('adset:'))
     .map((id) => id.replace('adset:', ''));
-  const canCreateRuleGroup = canEdit;
+  const canCreateRuleGroup = canUseMetaAdsActions;
   const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
     settings.ruleGroups?.find(
       (group) => group.entityLevel === entityLevel && group.entityIds?.includes(entityId),
@@ -3038,7 +3043,7 @@ export default function ProjectMetaAdsPanel({
     return (
       <button
         type="button"
-        disabled={!canEdit}
+        disabled={!canUseMetaAdsActions}
         onClick={onClick}
         className="inline-flex items-center gap-2 border border-amber-300/25 bg-amber-300/[0.08] px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-[#fff3d7] shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/60 hover:bg-amber-300/[0.14] focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55"
       >
@@ -3074,7 +3079,7 @@ export default function ProjectMetaAdsPanel({
             aria-checked={isActive}
             aria-label={localize(labelKey)}
             title={localize(labelKey)}
-            disabled={!canEdit || updateEntityStatus.isLoading}
+            disabled={!canUseMetaAdsActions || updateEntityStatus.isLoading}
             onClick={(event) =>
               onOpenEntityStatusConfirmation(event, {
                 entityLevel,
@@ -3133,7 +3138,7 @@ export default function ProjectMetaAdsPanel({
 
   const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
     const mediaUrl = getAdThumbnailUrl(ad);
-    const openAdPreview = (event: MouseEvent<HTMLButtonElement>) => {
+    const openAdPreview = (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       setSelectedAdPreview(ad);
     };
@@ -3143,7 +3148,13 @@ export default function ProjectMetaAdsPanel({
         className="sticky left-32 z-10 border-l-2 border-white/10 bg-inherit px-3 py-3 pl-9 shadow-[14px_0_26px_-22px_rgba(0,0,0,0.75)] focus-within:z-50 hover:z-50"
       >
         <div className="group relative flex min-w-0 items-center gap-2">
-          <div className="relative h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)]">
+          <button
+            type="button"
+            aria-label={localize('com_ui_project_meta_ads_open_meta_ads')}
+            title={localize('com_ui_project_meta_ads_open_meta_ads')}
+            onClick={openAdPreview}
+            className="relative h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] text-left shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)] focus:outline-none focus:ring-2 focus:ring-amber-300/60"
+          >
             {mediaUrl ? (
               <img
                 src={mediaUrl}
@@ -3155,24 +3166,16 @@ export default function ProjectMetaAdsPanel({
                 {localize('com_ui_project_meta_ads_no_creative_media')}
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/70 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-              <button
-                type="button"
-                aria-label={localize('com_ui_project_meta_ads_open_meta_ads')}
-                title={localize('com_ui_project_meta_ads_open_meta_ads')}
-                onClick={openAdPreview}
-                className="flex h-7 w-7 items-center justify-center border border-white/20 bg-white/10 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-amber-300/60 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <ArrowSquareOut className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-          <div className="min-w-0">
+            <span className="absolute inset-0 flex items-center justify-center gap-1 bg-black/70 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+              <ArrowSquareOut className="h-3.5 w-3.5 text-white" aria-hidden="true" />
+            </span>
+          </button>
+          <button type="button" onClick={openAdPreview} className="min-w-0 text-left">
             <div className="truncate text-sm font-medium text-[#f3efe6]">
               {ad.adName ?? ad.title ?? ad.adId}
             </div>
             <div className="truncate text-xs text-[#9f9687]">{ad.title ?? ad.body ?? '-'}</div>
-          </div>
+          </button>
           {renderNameTooltip(ad.adName ?? ad.title ?? ad.adId)}
         </div>
       </td>
@@ -3198,7 +3201,7 @@ export default function ProjectMetaAdsPanel({
           {canApplyRecommendation(recommendation) && (
             <button
               type="button"
-              disabled={!canEdit || applyRecommendation.isLoading}
+              disabled={!canUseMetaAdsActions || applyRecommendation.isLoading}
               onClick={() => {
                 if (recommendation) {
                   onApply(recommendation);
@@ -3215,7 +3218,7 @@ export default function ProjectMetaAdsPanel({
                 type="button"
                 aria-label={localize('com_ui_project_meta_ads_actions')}
                 aria-expanded={actionMenuKey === menuKey}
-                disabled={!canEdit}
+                disabled={!canUseMetaAdsActions}
                 onClick={(event) => {
                   event.stopPropagation();
                   setActionMenuKey((current) => (current === menuKey ? null : menuKey));
@@ -3722,7 +3725,7 @@ export default function ProjectMetaAdsPanel({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={!canEdit || runAnalysis.isLoading}
+              disabled={!canUseMetaAdsActions || runAnalysis.isLoading}
               onClick={onRunAnalysis}
               className={metaAdsButton}
             >
@@ -3748,7 +3751,7 @@ export default function ProjectMetaAdsPanel({
             </button>
             <button
               type="button"
-              disabled={!canEdit}
+              disabled={!canUseMetaAdsActions}
               onClick={onOpenRuleGroupDraft}
               className={metaAdsButton}
             >
@@ -3757,7 +3760,7 @@ export default function ProjectMetaAdsPanel({
             {!settingsDrawer && (
               <button
                 type="button"
-                disabled={!canEdit || updateSettings.isLoading}
+                disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                 onClick={onSave}
                 className={metaAdsPrimaryButton}
               >
@@ -3809,7 +3812,7 @@ export default function ProjectMetaAdsPanel({
                       <label className="flex flex-col gap-1 text-xs text-text-secondary">
                         {localize('com_ui_project_meta_ads_enabled')}
                         <select
-                          disabled={!canEdit}
+                          disabled={!canUseMetaAdsActions}
                           value={settingsDraft.enabled ? 'true' : 'false'}
                           onChange={(event) =>
                             setSettingsDraft((current) =>
@@ -3831,7 +3834,7 @@ export default function ProjectMetaAdsPanel({
                       <label className="flex flex-col gap-1 text-xs text-text-secondary">
                         {localize('com_ui_project_meta_ads_account')}
                         <input
-                          disabled={!canEdit}
+                          disabled={!canUseMetaAdsActions}
                           inputMode="numeric"
                           pattern="[0-9]*"
                           value={getAdAccountDigits(settingsDraft.adAccountId)}
@@ -3850,7 +3853,7 @@ export default function ProjectMetaAdsPanel({
                     <label className="flex flex-col gap-1 text-xs text-text-secondary">
                       {localize('com_ui_project_meta_ads_graph_version')}
                       <select
-                        disabled={!canEdit}
+                        disabled={!canUseMetaAdsActions}
                         value={settingsDraft.graphVersion ?? ''}
                         onChange={(event) =>
                           setSettingsDraft((current) =>
@@ -3889,7 +3892,7 @@ export default function ProjectMetaAdsPanel({
                         </div>
                         <button
                           type="button"
-                          disabled={!canEdit}
+                          disabled={!canUseMetaAdsActions}
                           onClick={openCredentialsDialog}
                           className="h-8 shrink-0 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -3911,7 +3914,7 @@ export default function ProjectMetaAdsPanel({
                     <label className="flex flex-col gap-1 text-xs text-text-secondary">
                       {localize('com_ui_project_meta_ads_mode')}
                       <select
-                        disabled={!canEdit}
+                        disabled={!canUseMetaAdsActions}
                         value={settingsDraft.automationMode}
                         onChange={(event) =>
                           setSettingsDraft((current) =>
@@ -3937,7 +3940,7 @@ export default function ProjectMetaAdsPanel({
                     <label className="flex flex-col gap-1 text-xs text-text-secondary">
                       {localize('com_ui_project_meta_ads_schedule')}
                       <select
-                        disabled={!canEdit}
+                        disabled={!canUseMetaAdsActions}
                         value={settingsDraft.scheduleIntervalMinutes}
                         onChange={(event) =>
                           setSettingsDraft((current) =>
@@ -3973,7 +3976,7 @@ export default function ProjectMetaAdsPanel({
                 </button>
                 <button
                   type="button"
-                  disabled={!canEdit || updateSettings.isLoading}
+                  disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                   onClick={onSaveSettingsDrawer}
                   className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -4075,7 +4078,7 @@ export default function ProjectMetaAdsPanel({
                 </div>
                 <div className="mt-3 flex h-10 overflow-hidden border border-border-light bg-surface-primary">
                   <input
-                    disabled={!canEdit}
+                    disabled={!canUseMetaAdsActions}
                     type={showSettingsDraftToken ? 'text' : 'password'}
                     name="meta_ads_project_token_new"
                     autoComplete="new-password"
@@ -4091,7 +4094,7 @@ export default function ProjectMetaAdsPanel({
                   {settingsDraftToken.length > 0 && (
                     <button
                       type="button"
-                      disabled={!canEdit}
+                      disabled={!canUseMetaAdsActions}
                       onClick={() => setShowSettingsDraftToken((current) => !current)}
                       className="shrink-0 border-l border-border-light px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -4105,7 +4108,7 @@ export default function ProjectMetaAdsPanel({
                   {hasProjectToken && (
                     <button
                       type="button"
-                      disabled={!canEdit || updateSettings.isLoading}
+                      disabled={!canUseMetaAdsActions || updateSettings.isLoading}
                       onClick={onClearProjectToken}
                       className="h-8 border border-border-light bg-surface-primary px-3 text-xs font-medium text-text-secondary disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -4114,7 +4117,7 @@ export default function ProjectMetaAdsPanel({
                   )}
                   <button
                     type="button"
-                    disabled={!canEdit || !settingsDraftToken.trim() || updateSettings.isLoading}
+                    disabled={!canUseMetaAdsActions || !settingsDraftToken.trim() || updateSettings.isLoading}
                     onClick={onSaveProjectToken}
                     className="h-8 bg-text-primary px-3 text-xs font-medium text-surface-primary disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -4505,7 +4508,7 @@ export default function ProjectMetaAdsPanel({
                     {canApplyRecommendation(recommendation) && (
                       <button
                         type="button"
-                        disabled={!canEdit || applyRecommendation.isLoading}
+                        disabled={!canUseMetaAdsActions || applyRecommendation.isLoading}
                         onClick={() => onApply(recommendation)}
                         className="h-7 shrink-0 border border-border-light px-2 font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
                       >
@@ -5192,7 +5195,7 @@ export default function ProjectMetaAdsPanel({
                   </span>
                   <button
                     type="button"
-                    disabled={!canEdit}
+                    disabled={!canUseMetaAdsActions}
                     onClick={() => onEditRuleGroup(group)}
                     className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -5200,7 +5203,7 @@ export default function ProjectMetaAdsPanel({
                   </button>
                   <button
                     type="button"
-                    disabled={!canEdit}
+                    disabled={!canUseMetaAdsActions}
                     onClick={() => onDeleteRuleGroup(group.id)}
                     className="font-medium text-text-primary disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -5551,8 +5554,7 @@ export default function ProjectMetaAdsPanel({
                   </div>
                 </div>
 
-                {biControls.level !== 'ad' && (
-                  <div className="border border-white/10 bg-[#12120f]">
+                <div className="border border-white/10 bg-[#12120f]">
                     <div className="border-b border-white/10 px-3 py-2">
                       <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a39a8c]">
                         {localize('com_ui_project_meta_ads_budget_changes')}
@@ -5621,7 +5623,6 @@ export default function ProjectMetaAdsPanel({
                       </table>
                     </div>
                   </div>
-                )}
               </div>
             </div>
           </div>

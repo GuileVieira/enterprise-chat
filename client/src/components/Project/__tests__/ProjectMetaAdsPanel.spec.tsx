@@ -143,8 +143,9 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByTestId('meta-ads-row-skeleton')).toHaveLength(5);
   });
 
-  it('accepts numeric ad account input and saves a pasted project token outside metaAds', async () => {
-    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+  it('lets a USER without project edit save Meta Ads project settings and token', async () => {
+    mockUserRole = 'USER';
+    render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
     const accountDialog = screen.getByRole('dialog', {
@@ -156,6 +157,9 @@ describe('ProjectMetaAdsPanel', () => {
     });
     fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
     const credentialsDialog = screen.getAllByRole('dialog')[1];
+    expect(
+      within(credentialsDialog).getAllByPlaceholderText('com_ui_project_meta_ads_token_placeholder'),
+    ).toHaveLength(1);
     fireEvent.change(
       within(credentialsDialog).getAllByPlaceholderText(
         'com_ui_project_meta_ads_token_placeholder',
@@ -1078,7 +1082,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('opens an ad preview modal before redirecting thumbnail clicks to Meta Ads Manager', () => {
+  it('allows a USER without project edit to use Meta Ads ad actions and preview', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -1146,7 +1150,8 @@ describe('ProjectMetaAdsPanel', () => {
       },
     ];
 
-    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    mockUserRole = 'USER';
+    render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
 
     expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_level_ad_set').length).toBeGreaterThan(0);
@@ -2104,7 +2109,9 @@ describe('ProjectMetaAdsPanel', () => {
     });
 
     expect(dashboard).toHaveTextContent('Creative A');
-    expect(within(dashboard).queryByText('com_ui_project_meta_ads_budget_changes')).toBeNull();
+    expect(
+      within(dashboard).getByText('com_ui_project_meta_ads_budget_changes'),
+    ).toBeInTheDocument();
   });
 
   it('shows a clean empty dashboard when trend has one point and zero deltas', () => {
