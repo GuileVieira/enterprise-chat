@@ -465,6 +465,7 @@ export const updateRemoteAgentsPermissions = (roleName: string) =>
 export const updateMarketplacePermissions = (roleName: string) =>
   `${getRole(roleName)}/marketplace`;
 export const updateSkillPermissions = (roleName: string) => `${getRole(roleName)}/skills`;
+export const updateMetaAdsPermissions = (roleName: string) => `${getRole(roleName)}/meta-ads`;
 
 /* Admin Users */
 export const adminUsers = () => `${BASE_URL}/api/admin/users`;

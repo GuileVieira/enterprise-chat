@@ -18,6 +18,8 @@ jest.mock('~/data-provider', () => ({
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key) => key,
+  useHasAccess: jest.fn(),
+  useAuthContext: jest.fn(),
 }));
 
 jest.mock('~/hooks/useProjectPermissions', () => ({
@@ -54,6 +56,7 @@ jest.mock('../ProjectForm', () => ({
 }));
 
 import { useGetStartupConfig, useProjectByIdQuery, useGetProjectFiles } from '~/data-provider';
+import { useAuthContext, useHasAccess } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 
 const createQueryClient = () =>
@@ -80,6 +83,10 @@ describe('ProjectDetailPage', () => {
     window.localStorage.clear();
     (useGetStartupConfig as jest.Mock).mockReturnValue({
       data: { interface: { metaAds: true } },
+    });
+    (useHasAccess as jest.Mock).mockReturnValue(true);
+    (useAuthContext as jest.Mock).mockReturnValue({
+      user: { role: 'USER' },
     });
     (useGetProjectFiles as jest.Mock).mockReturnValue({
       data: [],
@@ -180,6 +187,65 @@ describe('ProjectDetailPage', () => {
     });
     renderPage();
     expect(screen.getByText('com_ui_project_tab_metaAds')).toBeInTheDocument();
+  });
+
+  it('hides Meta Ads tab when role lacks Meta Ads access', () => {
+    (useHasAccess as jest.Mock).mockReturnValue(false);
+    (useAuthContext as jest.Mock).mockReturnValue({
+      user: { role: 'USER' },
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.queryByText('com_ui_project_tab_metaAds')).not.toBeInTheDocument();
+  });
+
+  it('shows Meta Ads tab for ADMIN even before role permissions load', () => {
+    (useHasAccess as jest.Mock).mockReturnValue(false);
+    (useAuthContext as jest.Mock).mockReturnValue({
+      user: { role: 'ADMIN' },
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByText('com_ui_project_tab_metaAds')).toBeInTheDocument();
+  });
+
+  it('falls back from saved Meta Ads tab when role loses Meta Ads access', () => {
+    window.localStorage.setItem('orqest.project.p1.activeTab', 'metaAds');
+    (useHasAccess as jest.Mock).mockReturnValue(false);
+    (useAuthContext as jest.Mock).mockReturnValue({
+      user: { role: 'USER' },
+    });
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+    expect(screen.getByTestId('project-conversations-tab')).toBeInTheDocument();
+    expect(screen.queryByTestId('project-meta-ads-panel')).not.toBeInTheDocument();
   });
 
   it('shows Meta Ads tab while startup config is loading', () => {

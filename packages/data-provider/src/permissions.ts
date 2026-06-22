@@ -68,6 +68,10 @@ export enum PermissionTypes {
    * Type for Skill Permissions
    */
   SKILLS = 'SKILLS',
+  /**
+   * Type for Meta Ads project tools and UI
+   */
+  META_ADS = 'META_ADS',
 }
 
 /**
@@ -75,7 +79,7 @@ export enum PermissionTypes {
  * Used to identify which interface fields seed role permissions at startup
  * and must NOT be overridden via DB config (use the role permissions editor instead).
  */
-export const PERMISSION_TYPE_INTERFACE_FIELDS: Record<PermissionTypes, string> = {
+export const PERMISSION_TYPE_INTERFACE_FIELDS: Partial<Record<PermissionTypes, string>> = {
   [PermissionTypes.PROMPTS]: 'prompts',
   [PermissionTypes.AGENTS]: 'agents',
   [PermissionTypes.BOOKMARKS]: 'bookmarks',
@@ -244,6 +248,11 @@ export const skillPermissionsSchema = z.object({
 });
 export type TSkillPermissions = z.infer<typeof skillPermissionsSchema>;
 
+export const metaAdsPermissionsSchema = z.object({
+  [Permissions.USE]: z.boolean().default(false),
+});
+export type TMetaAdsPermissions = z.infer<typeof metaAdsPermissionsSchema>;
+
 // Define a single permissions schema that holds all permission types.
 export const permissionsSchema = z.object({
   [PermissionTypes.PROMPTS]: promptPermissionsSchema,
@@ -262,4 +271,5 @@ export const permissionsSchema = z.object({
   [PermissionTypes.PROJECTS]: projectPermissionsSchema,
   [PermissionTypes.REMOTE_AGENTS]: remoteAgentsPermissionsSchema,
   [PermissionTypes.SKILLS]: skillPermissionsSchema,
+  [PermissionTypes.META_ADS]: metaAdsPermissionsSchema,
 });

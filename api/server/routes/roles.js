@@ -12,6 +12,7 @@ const {
   mcpServersPermissionsSchema,
   projectPermissionsSchema,
   marketplacePermissionsSchema,
+  metaAdsPermissionsSchema,
   peoplePickerPermissionsSchema,
   remoteAgentsPermissionsSchema,
   skillPermissionsSchema,
@@ -83,6 +84,11 @@ const permissionConfigs = {
     schema: skillPermissionsSchema,
     permissionType: PermissionTypes.SKILLS,
     errorMessage: 'Invalid skill permissions.',
+  },
+  'meta-ads': {
+    schema: metaAdsPermissionsSchema,
+    permissionType: PermissionTypes.META_ADS,
+    errorMessage: 'Invalid Meta Ads permissions.',
   },
 };
 
@@ -216,5 +222,7 @@ router.put('/:roleName/remote-agents', manageRoles, createPermissionUpdateHandle
  * Update skill permissions for a specific role
  */
 router.put('/:roleName/skills', manageRoles, createPermissionUpdateHandler('skills'));
+
+router.put('/:roleName/meta-ads', manageRoles, createPermissionUpdateHandler('meta-ads'));
 
 module.exports = router;

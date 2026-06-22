@@ -22,6 +22,7 @@ jest.mock('~/hooks', () => ({
       com_admin_role: 'Role',
       com_admin_role_user: 'User',
       com_admin_role_owner: 'Owner',
+      com_admin_role_ad_manager: 'AD-MANAGER',
       com_admin_role_admin: 'Admin',
       com_admin_password: 'Password',
       com_admin_auto_generate_password_placeholder: 'Auto generate',
@@ -55,6 +56,9 @@ describe('CreateUserModal', () => {
     const roleSelect = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
     expect(roleSelect.value).toBe(SystemRoles.USER);
     expect(screen.getByRole('option', { name: 'Owner' })).toHaveValue(SystemRoles.OWNER);
+    expect(screen.getByRole('option', { name: 'AD-MANAGER' })).toHaveValue(
+      SystemRoles.AD_MANAGER,
+    );
 
     fireEvent.change(roleSelect, { target: { value: SystemRoles.OWNER } });
     fireEvent.change(screen.getByPlaceholderText('Email placeholder'), {

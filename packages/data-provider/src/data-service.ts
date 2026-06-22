@@ -1427,6 +1427,12 @@ export function updateSkillPermissions(
   return request.put(endpoints.updateSkillPermissions(variables.roleName), variables.updates);
 }
 
+export function updateMetaAdsPermissions(
+  variables: m.UpdateMetaAdsPermVars,
+): Promise<m.UpdatePermResponse> {
+  return request.put(endpoints.updateMetaAdsPermissions(variables.roleName), variables.updates);
+}
+
 /* Tags */
 export function getConversationTags(): Promise<t.TConversationTagsResponse> {
   return request.get(endpoints.conversationTags());

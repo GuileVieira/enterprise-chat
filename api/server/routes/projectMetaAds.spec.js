@@ -4,10 +4,12 @@ const { SystemRoles } = require('librechat-data-provider');
 
 let mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
 const mockCanAccessProjectResource = jest.fn(() => (_req, _res, next) => next());
+const mockGetRoleByName = jest.fn();
 
 jest.mock('~/models', () => ({
   findProjectById: jest.fn(),
   getProjectById: jest.fn(),
+  getRoleByName: (...args) => mockGetRoleByName(...args),
   updateProject: jest.fn(),
   upsertTenantSecret: jest.fn(),
 }));
@@ -46,6 +48,7 @@ const { upsertTenantSecret } = require('~/models');
 const {
   duplicateProjectMetaAdsEntity,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsStatus,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 
@@ -58,6 +61,17 @@ function createApp() {
 
 beforeEach(() => {
   mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
+  mockGetRoleByName.mockImplementation(async (roleName) => ({
+    name: roleName,
+    permissions: {
+      META_ADS: {
+        USE:
+          roleName === SystemRoles.ADMIN ||
+          roleName === SystemRoles.OWNER ||
+          roleName === SystemRoles.AD_MANAGER,
+      },
+    },
+  }));
 });
 
 describe('projectMetaAds settings normalization', () => {
@@ -387,6 +401,47 @@ describe('projectMetaAds rankings route', () => {
   });
 });
 
+describe('projectMetaAds role access', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getProjectMetaAdsStatus.mockResolvedValue({ snapshots: [], recommendations: [] });
+    getProjectMetaAdsRankings.mockResolvedValue({
+      level: 'ad',
+      period: { since: '2026-06-01', until: '2026-06-10' },
+      currency: 'BRL',
+      items: [],
+    });
+  });
+
+  it('rejects USER access to Meta Ads status', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-x' };
+
+    await request(createApp()).get('/projects/p1/meta-ads').expect(403);
+
+    expect(getProjectMetaAdsStatus).not.toHaveBeenCalled();
+  });
+
+  it('allows AD-MANAGER access to Meta Ads status', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+
+    await request(createApp()).get('/projects/p1/meta-ads').expect(200);
+
+    expect(getProjectMetaAdsStatus).toHaveBeenCalledWith('p1', 'tenant-x', {
+      datePreset: undefined,
+      since: undefined,
+      until: undefined,
+    });
+  });
+
+  it('rejects USER access to Meta Ads rankings', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-x' };
+
+    await request(createApp()).get('/projects/p1/meta-ads/rankings').expect(403);
+
+    expect(getProjectMetaAdsRankings).not.toHaveBeenCalled();
+  });
+});
+
 describe('projectMetaAds entity status route', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -483,8 +538,8 @@ describe('projectMetaAds duplicate route', () => {
     });
   });
 
-  it('allows a USER role to duplicate Meta entities after project view access', async () => {
-    mockRouteUser = { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-x' };
+  it('allows an AD-MANAGER role to duplicate Meta entities after project view access', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
 
     await request(createApp())
       .post('/projects/p1/meta-ads/duplicates')
@@ -507,7 +562,7 @@ describe('projectMetaAds duplicate route', () => {
     );
   });
 
-  it('blocks roles outside the Meta Ads client action allowlist', async () => {
+  it('blocks roles without Meta Ads permission', async () => {
     mockRouteUser = { id: 'user-1', role: 'GUEST', tenantId: 'tenant-x' };
 
     const response = await request(createApp())

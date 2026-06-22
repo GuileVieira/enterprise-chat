@@ -1,7 +1,18 @@
 const express = require('express');
-const { PermissionBits, SystemRoles } = require('librechat-data-provider');
+const {
+  PermissionBits,
+  PermissionTypes,
+  Permissions,
+  SystemRoles,
+} = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
-const { findProjectById, getProjectById, updateProject, upsertTenantSecret } = require('~/models');
+const {
+  findProjectById,
+  getProjectById,
+  getRoleByName,
+  updateProject,
+  upsertTenantSecret,
+} = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 const { requireCapability } = require('~/server/middleware/roles/capabilities');
 const {
@@ -27,7 +38,11 @@ const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
 const META_ACCESS_TOKEN_SECRET_TYPE = 'meta_access_token';
 const requireManageConfigs = requireCapability(SystemCapabilities.MANAGE_CONFIGS);
-const META_ADS_CLIENT_ROLES = new Set([SystemRoles.ADMIN, SystemRoles.OWNER, SystemRoles.USER]);
+const META_ADS_SYSTEM_ROLES = new Set([
+  SystemRoles.ADMIN,
+  SystemRoles.OWNER,
+  SystemRoles.AD_MANAGER,
+]);
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
@@ -73,14 +88,28 @@ const requireMetaAdsProjectView = canAccessProjectResource({
   requiredPermission: PermissionBits.VIEW,
 });
 
-function requireMetaAdsClientAction(req, res, next) {
-  if (!META_ADS_CLIENT_ROLES.has(req.user?.role)) {
-    return res.status(403).json({ message: 'Insufficient Meta Ads permissions' });
+async function requireMetaAdsRoleAccess(req, res, next) {
+  try {
+    const roleName = req.user?.role;
+    if (!roleName) {
+      return res.status(403).json({ message: 'Insufficient Meta Ads permissions' });
+    }
+    if (META_ADS_SYSTEM_ROLES.has(roleName)) {
+      return next();
+    }
+    const role = await getRoleByName(roleName);
+    if (role?.permissions?.[PermissionTypes.META_ADS]?.[Permissions.USE] !== true) {
+      return res.status(403).json({ message: 'Insufficient Meta Ads permissions' });
+    }
+    return next();
+  } catch (error) {
+    logger.error('[projectMetaAds] role access check failed', error);
+    return res.status(500).json({ message: error.message });
   }
-  return next();
 }
 
-const metaAdsClientActionAccess = [requireMetaAdsProjectView, requireMetaAdsClientAction];
+const metaAdsAccess = [requireMetaAdsProjectView, requireMetaAdsRoleAccess];
+const metaAdsClientActionAccess = metaAdsAccess;
 
 function validateMetaAdsRules(rules = {}) {
   const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
@@ -318,7 +347,7 @@ async function prepareMetaAdsSettingsUpdate({
 
 router.get(
   '/',
-  canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
+  metaAdsAccess,
   async (req, res) => {
     try {
       const tenantId = req.user.tenantId || getTenantId();
@@ -342,7 +371,7 @@ router.get(
 
 router.get(
   '/rankings',
-  canAccessProjectResource({ requiredPermission: PermissionBits.VIEW }),
+  metaAdsAccess,
   async (req, res) => {
     try {
       const tenantId = req.user.tenantId || getTenantId();

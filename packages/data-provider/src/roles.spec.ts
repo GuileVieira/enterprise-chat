@@ -103,6 +103,31 @@ describe('roleDefaults', () => {
         );
       }
     });
+
+    it('should not allow Meta Ads by default', () => {
+      expect(userPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: false,
+      });
+    });
+  });
+
+  describe('AD-MANAGER role', () => {
+    const adManagerPerms = roleDefaults[SystemRoles.AD_MANAGER].permissions;
+
+    it('should inherit USER defaults except for Meta Ads access', () => {
+      for (const permType of Object.values(PermissionTypes)) {
+        if (permType === PermissionTypes.META_ADS) {
+          continue;
+        }
+
+        expect(adManagerPerms[permType]).toEqual(
+          roleDefaults[SystemRoles.USER].permissions[permType],
+        );
+      }
+      expect(adManagerPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: true,
+      });
+    });
   });
 
   describe('OWNER role', () => {
@@ -121,12 +146,18 @@ describe('roleDefaults', () => {
 
     it('should inherit non-agent defaults from USER', () => {
       for (const permType of Object.values(PermissionTypes)) {
-        if (permType === PermissionTypes.AGENTS) {
+        if (permType === PermissionTypes.AGENTS || permType === PermissionTypes.META_ADS) {
           continue;
         }
 
         expect(ownerPerms[permType]).toEqual(roleDefaults[SystemRoles.USER].permissions[permType]);
       }
+    });
+
+    it('should allow Meta Ads by default', () => {
+      expect(ownerPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: true,
+      });
     });
   });
 

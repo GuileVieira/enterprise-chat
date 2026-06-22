@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { PermissionTypes, Permissions, SystemRoles } from 'librechat-data-provider';
 import {
   ChatCircle,
   FileText,
@@ -15,7 +16,7 @@ import {
   useGetProjectFiles,
   useTitleGeneration,
 } from '~/data-provider';
-import { useLocalize } from '~/hooks';
+import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { cn } from '~/utils';
 import ProjectPromptGroups from './ProjectPromptGroups';
@@ -65,11 +66,19 @@ export default function ProjectDetailPage() {
   const filesQuery = useGetProjectFiles(projectId ?? '');
   const startupConfigQuery = useGetStartupConfig();
   const { permissions } = useProjectPermissions(projectId ?? '');
+  const canUseMetaAds = useHasAccess({
+    permissionType: PermissionTypes.META_ADS,
+    permission: Permissions.USE,
+  });
+  const { user } = useAuthContext();
   const project = projectQuery.data;
-  const visibleTabs =
-    startupConfigQuery.data?.interface?.metaAds !== false
-      ? tabs
-      : tabs.filter((tab) => tab !== 'metaAds');
+  const hasSystemMetaAdsRole =
+    user?.role === SystemRoles.ADMIN ||
+    user?.role === SystemRoles.OWNER ||
+    user?.role === SystemRoles.AD_MANAGER;
+  const isMetaAdsVisible =
+    startupConfigQuery.data?.interface?.metaAds !== false && (hasSystemMetaAdsRole || canUseMetaAds);
+  const visibleTabs = isMetaAdsVisible ? tabs : tabs.filter((tab) => tab !== 'metaAds');
 
   useEffect(() => {
     if (visibleTabs.includes(activeTab)) {
@@ -299,7 +308,7 @@ export default function ProjectDetailPage() {
               )}
             </>
           )}
-          {startupConfigQuery.data?.interface?.metaAds !== false && activeTab === 'metaAds' && (
+          {isMetaAdsVisible && activeTab === 'metaAds' && (
             <ProjectMetaAdsPanel project={project} canEdit={permissions.canEdit} />
           )}
           {activeTab === 'settings' && (

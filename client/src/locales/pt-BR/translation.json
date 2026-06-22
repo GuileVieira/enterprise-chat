@@ -1354,5 +1354,7 @@
   "com_ui_project_upload_error": "Falha ao enviar arquivo",
   "com_ui_project_file_delete_confirm": "Tem certeza de que deseja excluir este arquivo?",
   "com_ui_project_prompt_snippets": "Snippets de Prompt",
-  "com_ui_project_no_prompt_snippets": "Nenhum snippet de prompt ainda. Adicione um para ter acesso rápido no chat."
+  "com_ui_project_no_prompt_snippets": "Nenhum snippet de prompt ainda. Adicione um para ter acesso rápido no chat.",
+  "com_admin_permission_meta_ads": "Meta Ads",
+  "com_admin_role_ad_manager": "AD-MANAGER"
 }

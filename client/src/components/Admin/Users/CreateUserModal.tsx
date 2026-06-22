@@ -280,6 +280,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     >
                       <option value={SystemRoles.USER}>{localize('com_admin_role_user')}</option>
                       <option value={SystemRoles.OWNER}>{localize('com_admin_role_owner')}</option>
+                      <option value={SystemRoles.AD_MANAGER}>
+                        {localize('com_admin_role_ad_manager')}
+                      </option>
                       <option value={SystemRoles.ADMIN}>{localize('com_admin_role_admin')}</option>
                     </select>
                   </div>

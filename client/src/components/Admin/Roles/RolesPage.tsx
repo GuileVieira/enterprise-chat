@@ -14,6 +14,7 @@ const allPermissions: Array<{ key: string; labelKey: TranslationKeys }> = [
   { key: 'mcp_servers', labelKey: 'com_admin_permission_mcp_servers' },
   { key: 'marketplace', labelKey: 'com_admin_permission_marketplace' },
   { key: 'code_execution', labelKey: 'com_admin_permission_code_execution' },
+  { key: 'meta_ads', labelKey: 'com_admin_permission_meta_ads' },
 ];
 
 const RolesPage: React.FC = () => {

@@ -79,6 +79,9 @@ export interface IRole extends Document {
       [Permissions.SHARE]?: boolean;
       [Permissions.SHARE_PUBLIC]?: boolean;
     };
+    [PermissionTypes.META_ADS]?: {
+      [Permissions.USE]?: boolean;
+    };
   };
   tenantId?: string;
 }

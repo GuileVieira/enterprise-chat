@@ -69,6 +69,9 @@ const AuthContextProvider = ({
   const { data: ownerRole = null } = useGetRole(SystemRoles.OWNER, {
     enabled: !!(isAuthenticated && user?.role === SystemRoles.OWNER),
   });
+  const { data: adManagerRole = null } = useGetRole(SystemRoles.AD_MANAGER, {
+    enabled: !!(isAuthenticated && user?.role === SystemRoles.AD_MANAGER),
+  });
   const { data: customRole = null } = useGetRole(isCustomRole ? userRoleName : '_', {
     enabled: isCustomRole,
   });
@@ -79,9 +82,11 @@ const AuthContextProvider = ({
       ? customRole == null && previousRolesRef.current[user.role] == null
       : user.role === SystemRoles.OWNER
         ? ownerRole == null && previousRolesRef.current[user.role] == null
-        : user.role === SystemRoles.ADMIN
-          ? adminRole == null && previousRolesRef.current[user.role] == null
-          : userRole == null && previousRolesRef.current[user.role] == null);
+        : user.role === SystemRoles.AD_MANAGER
+          ? adManagerRole == null && previousRolesRef.current[user.role] == null
+          : user.role === SystemRoles.ADMIN
+            ? adminRole == null && previousRolesRef.current[user.role] == null
+            : userRole == null && previousRolesRef.current[user.role] == null);
 
   const navigate = useNavigate();
 
@@ -295,6 +300,10 @@ const AuthContextProvider = ({
       [SystemRoles.ADMIN]: adminRole ?? previousRolesRef.current[SystemRoles.ADMIN] ?? null,
       [SystemRoles.OWNER]:
         ownerRole ?? previousRolesRef.current[SystemRoles.OWNER] ?? roleDefaults[SystemRoles.OWNER],
+      [SystemRoles.AD_MANAGER]:
+        adManagerRole ??
+        previousRolesRef.current[SystemRoles.AD_MANAGER] ??
+        roleDefaults[SystemRoles.AD_MANAGER],
       ...(isCustomRole
         ? { [userRoleName]: customRole ?? previousRolesRef.current[userRoleName] ?? null }
         : {}),
@@ -319,6 +328,7 @@ const AuthContextProvider = ({
     userRole,
     adminRole,
     ownerRole,
+    adManagerRole,
     isCustomRole,
     userRoleName,
     customRole,
