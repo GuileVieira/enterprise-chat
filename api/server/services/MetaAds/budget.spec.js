@@ -80,6 +80,32 @@ describe('Meta Ads budget service', () => {
     expect(result.reason).toContain('Resultado alvo');
   });
 
+  it('calculates ThruPlay as the video result metric', () => {
+    const metrics = _calculateMetricsForTest(
+      {
+        spend: '80',
+        impressions: '1000',
+        video_thruplay_watched_actions: [{ value: '10' }],
+        actions: [{ action_type: 'video_view', value: '20' }],
+        cost_per_action_type: [{ action_type: 'video_view', value: '4' }],
+      },
+      'thruplay',
+    );
+
+    expect(metrics.resultType).toBe('thruplay');
+    expect(metrics.resultCount).toBe(10);
+    expect(metrics.cpa).toBe(8);
+    expect(metrics.resultTypeBreakdown).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          resultType: 'thruplay',
+          totalResults: 10,
+          averageCostPerResult: 8,
+        }),
+      ]),
+    );
+  });
+
   it('uses ROAS as the primary metric for ecommerce-style rules', () => {
     const result = proposeBudget({
       currentDailyBudget: 100,
@@ -1900,7 +1926,7 @@ describe('Meta Ads budget service persistence safety', () => {
       (resultType) => resultType.resultType,
     );
 
-    expect(resultTypes).toEqual(expect.arrayContaining(['video_view', 'post_reaction']));
+    expect(resultTypes).toEqual(expect.arrayContaining(['thruplay', 'post_reaction']));
     expect(resultTypes).not.toEqual(expect.arrayContaining(['page_engagement', 'post_engagement']));
     expect(status.campaigns[0].resultType).toBe('post_reaction');
     expect(status.campaigns[0].resultCount).toBe(49);

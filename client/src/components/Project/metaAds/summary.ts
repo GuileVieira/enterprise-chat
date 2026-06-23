@@ -76,8 +76,13 @@ export function buildSummaryResultTypeOptions(
     onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
     'onsite_conversion.messaging_first_reply':
       'onsite_conversion.messaging_conversation_started_7d',
+    profile_visit: 'instagram_profile_visit',
+    video_view: 'thruplay',
+    video_thruplay: 'thruplay',
+    video_thruplay_watched_actions: 'thruplay',
   };
   const allowedResultTypes = new Set([
+    'instagram_profile_visit',
     'lead',
     'leadgen_grouped',
     'link_click',
@@ -87,7 +92,10 @@ export function buildSummaryResultTypeOptions(
     'onsite_conversion.lead_grouped',
     'onsite_conversion.messaging_conversation_started_7d',
     'onsite_conversion.messaging_first_reply',
+    'profile_visit',
     'purchase',
+    'thruplay',
+    'video_view',
   ]);
   const options = new Map<string, SummaryResultTypeOption>();
   const summaries =

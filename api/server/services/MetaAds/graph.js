@@ -398,6 +398,7 @@ function aggregateInsightRows(rows, level) {
       actions: new Map(),
       actionValues: new Map(),
       videoP75Watched: 0,
+      videoThruplays: 0,
       roasWeightedTotal: 0,
       roasWeight: 0,
     };
@@ -417,6 +418,12 @@ function aggregateInsightRows(rows, level) {
       : Number(row.video_p75_watched_actions ?? 0);
     if (Number.isFinite(videoP75)) {
       current.videoP75Watched += videoP75;
+    }
+    const videoThruplays = Array.isArray(row.video_thruplay_watched_actions)
+      ? Number(row.video_thruplay_watched_actions[0]?.value ?? 0)
+      : Number(row.video_thruplay_watched_actions ?? 0);
+    if (Number.isFinite(videoThruplays)) {
+      current.videoThruplays += videoThruplays;
     }
 
     const roas = Array.isArray(row.purchase_roas)
@@ -458,11 +465,13 @@ function aggregateInsightRows(rows, level) {
       action_values,
       cost_per_action_type,
       video_p75_watched_actions: [{ value: row.videoP75Watched }],
+      video_thruplay_watched_actions: [{ value: row.videoThruplays }],
       purchase_roas:
         row.roasWeight > 0
           ? [{ value: Number((row.roasWeightedTotal / row.roasWeight).toFixed(2)) }]
           : [],
       videoP75Watched: undefined,
+      videoThruplays: undefined,
       roasWeightedTotal: undefined,
       roasWeight: undefined,
     };
@@ -960,11 +969,11 @@ async function listAds({
 }
 
 const AD_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas';
 const ADSET_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas';
 const CAMPAIGN_INSIGHT_FIELDS =
-  'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,purchase_roas';
+  'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas';
 
 async function fetchInsightsPage({
   adAccountId,

@@ -53,7 +53,7 @@ export const resultTypeOptions = [
     value: 'instagram_profile_visit',
     labelKey: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   },
-  { value: 'video_view', labelKey: 'com_ui_project_meta_ads_result_type_video_view' },
+  { value: 'thruplay', labelKey: 'com_ui_project_meta_ads_result_type_thruplay' },
   {
     value: 'landing_page_view',
     labelKey: 'com_ui_project_meta_ads_result_type_landing_page_view',

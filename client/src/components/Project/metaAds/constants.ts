@@ -297,6 +297,8 @@ export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   purchase: 'com_ui_project_meta_ads_result_type_purchase',
   profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
+  thruplay: 'com_ui_project_meta_ads_result_type_thruplay',
   video_view: 'com_ui_project_meta_ads_result_type_video_view',
+  video_thruplay: 'com_ui_project_meta_ads_result_type_thruplay',
   UNKNOWN: 'com_ui_project_meta_ads_result_type_unknown',
 };

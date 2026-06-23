@@ -490,7 +490,10 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
     return res.json(project);
   } catch (error) {
     logger.error('[projectMetaAds] settings failed', error);
-    return res.status(error.statusCode ?? 500).json({ message: error.message });
+    return res.status(error.statusCode ?? 500).json({
+      message: error.message,
+      ...(Array.isArray(error.details) ? { details: error.details } : {}),
+    });
   }
 });
 

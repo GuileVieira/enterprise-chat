@@ -43,6 +43,23 @@ function getRuleNumberMax(key: keyof MetaAdsRulesState) {
   return undefined;
 }
 
+function getCreativeRuleNumberMin(key: string) {
+  if (key === 'pauseHighCost.minCreativesInScope') {
+    return '3';
+  }
+  if (key === 'pauseHighCost.cooldownHours') {
+    return '1';
+  }
+  if (key === 'pauseHighCost.maxCostPerResult') {
+    return '0.01';
+  }
+  return '0';
+}
+
+function getCreativeRuleNumberMax(key: string) {
+  return key === 'pauseHighCost.cooldownHours' ? '168' : undefined;
+}
+
 export function MetaAdsRuleGroupDialog({
   draft,
   settings,
@@ -405,7 +422,8 @@ export function MetaAdsRuleGroupDialog({
                   <input
                     aria-label={localize(labelKey as Parameters<typeof localize>[0])}
                     type="number"
-                    min="0"
+                    min={getCreativeRuleNumberMin(key)}
+                    max={getCreativeRuleNumberMax(key)}
                     step="1"
                     value={
                       draft.creativeRules.pauseHighCost?.[

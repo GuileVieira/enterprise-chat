@@ -97,6 +97,7 @@ export type RequestError = {
   response?: {
     data?: {
       message?: unknown;
+      details?: unknown;
     };
   };
 };

@@ -79,13 +79,16 @@ const AGGREGATE_RESULT_TYPES = new Set([
   'post_interaction',
   'onsite_conversion.post_interaction_gross',
 ]);
-const VIDEO_RESULT_TYPES = new Set(['video_view']);
+const VIDEO_RESULT_TYPES = new Set(['video_view', 'thruplay']);
 const CANONICAL_RESULT_TYPES = {
   instagram_profile_visit: 'instagram_profile_visit',
   profile_visit: 'instagram_profile_visit',
   instagram_profile_visits: 'instagram_profile_visit',
   ig_profile_visit: 'instagram_profile_visit',
-  video_view: 'video_view',
+  video_view: 'thruplay',
+  thruplay: 'thruplay',
+  video_thruplay: 'thruplay',
+  video_thruplay_watched_actions: 'thruplay',
   leadgen_grouped: 'lead',
   'offsite_conversion.fb_pixel_lead': 'lead',
   offsite_conversion_fb_pixel_lead: 'lead',
@@ -863,6 +866,10 @@ function calculateMetrics(row, targetResultType) {
     })),
   );
   const normalizedTarget = canonicalizeMetaActionType(targetResultType);
+  const rawThruplays = Array.isArray(row.video_thruplay_watched_actions)
+    ? Number(row.video_thruplay_watched_actions[0]?.value ?? 0)
+    : Number(row.video_thruplay_watched_actions ?? 0);
+  const hasThruplayMetric = Number.isFinite(rawThruplays) && rawThruplays > 0;
   const prioritizedAction = RESULT_ACTION_PRIORITY.map((actionType) =>
     actions.find((action) => action.action_type === actionType),
   ).find(Boolean);
@@ -874,14 +881,20 @@ function calculateMetrics(row, targetResultType) {
   const nonVideoAction = actions.find(
     (action) => !VIDEO_RESULT_TYPES.has(canonicalizeMetaActionType(action.action_type)),
   );
-  const resultAction = normalizedTarget
-    ? findCanonicalAction(actions, normalizedTarget)
-    : (prioritizedAction ?? nonAggregateAction ?? nonVideoAction ?? actions[0]);
+  const resultAction =
+    normalizedTarget === 'thruplay' && hasThruplayMetric
+      ? null
+      : normalizedTarget
+        ? findCanonicalAction(actions, normalizedTarget)
+        : (prioritizedAction ?? nonAggregateAction ?? nonVideoAction ?? actions[0]);
+  const thruplays = Number.isFinite(rawThruplays) ? rawThruplays : 0;
   const resultCount = resultAction
     ? Number(resultAction.value ?? 0)
-    : normalizedTarget
-      ? 0
-      : undefined;
+    : normalizedTarget === 'thruplay' && Number.isFinite(thruplays)
+      ? thruplays
+      : normalizedTarget
+        ? 0
+        : undefined;
   const resultCost = resultAction
     ? findCanonicalAction(costPerAction, resultAction.action_type)
     : null;
@@ -902,9 +915,15 @@ function calculateMetrics(row, targetResultType) {
     resultCount,
     cpa,
     roas,
-    resultType: resultAction
-      ? canonicalizeMetaActionType(resultAction.action_type)
-      : normalizedTarget,
+    resultType:
+      normalizedTarget === 'thruplay' &&
+      !resultAction &&
+      Number.isFinite(thruplays) &&
+      thruplays > 0
+        ? 'thruplay'
+        : resultAction
+          ? canonicalizeMetaActionType(resultAction.action_type)
+          : normalizedTarget,
     impressions,
     reach: Number(row.reach ?? 0),
     frequency: Number(row.frequency ?? 0),
@@ -915,7 +934,18 @@ function calculateMetrics(row, targetResultType) {
     videoP75Watched,
     videoP75Rate:
       impressions > 0 ? Number(((Number(videoP75Watched) / impressions) * 100).toFixed(2)) : 0,
-    resultTypeBreakdown,
+    resultTypeBreakdown:
+      Number.isFinite(thruplays) && thruplays > 0
+        ? filterAggregateResultTypes([
+            ...resultTypeBreakdown.filter((resultType) => resultType.resultType !== 'thruplay'),
+            {
+              resultType: 'thruplay',
+              totalSpend: spend,
+              totalResults: thruplays,
+              averageCostPerResult: thruplays > 0 ? Number((spend / thruplays).toFixed(2)) : null,
+            },
+          ])
+        : resultTypeBreakdown,
   };
 }
 

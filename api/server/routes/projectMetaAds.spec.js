@@ -149,7 +149,7 @@ describe('projectMetaAds settings normalization', () => {
             minCreativesInScope: 3,
             minSpend: 20,
             cooldownHours: 48,
-            targetResultType: 'video_view',
+            targetResultType: 'thruplay',
           },
         },
       }),
@@ -164,7 +164,7 @@ describe('projectMetaAds settings normalization', () => {
             minCreativesInScope: 3,
             minSpend: 20,
             cooldownHours: 48,
-            targetResultType: 'video_view',
+            targetResultType: 'thruplay',
           },
         },
       }),
@@ -177,6 +177,50 @@ describe('projectMetaAds settings normalization', () => {
         },
       }),
     ).toThrow('Invalid Meta Ads creative rules.');
+  });
+
+  it('rejects creative pause values that the backend cannot execute', () => {
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        creativeRules: {
+          maxFrequency: 5,
+          pauseHighCost: {
+            enabled: true,
+            maxCostPerResult: 45,
+            lookbackDays: 3,
+            minCreativesInScope: 2,
+            minSpend: 10,
+            cooldownHours: 0,
+          },
+        },
+      }),
+    ).toThrow('Invalid Meta Ads creative rules.');
+  });
+
+  it('returns validation details when settings save fails', async () => {
+    const response = await request(createApp())
+      .put('/projects/p1/meta-ads/settings')
+      .send({
+        metaAds: {
+          creativeRules: {
+            maxFrequency: 5,
+            pauseHighCost: {
+              enabled: true,
+              maxCostPerResult: 45,
+              lookbackDays: 3,
+              minCreativesInScope: 2,
+              minSpend: 10,
+              cooldownHours: 0,
+            },
+          },
+        },
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({
+      message: 'Invalid Meta Ads creative rules.',
+      details: ['pauseHighCost.minCreativesInScope', 'pauseHighCost.cooldownHours'],
+    });
   });
 
   it('normalizes creative rules inside rule groups and overrides', () => {

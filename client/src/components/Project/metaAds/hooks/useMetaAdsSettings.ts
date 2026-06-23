@@ -7,7 +7,7 @@ import type {
 } from '~/data-provider';
 import { logger } from '~/utils';
 import { normalizeSettings } from '../settings';
-import type { Localize, MetaAdsSettingsState, SettingsDrawer } from '../types';
+import type { Localize, RequestError, MetaAdsSettingsState, SettingsDrawer } from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
 
@@ -74,6 +74,7 @@ export function useMetaAdsSettings({
     onSuccess?: () => void,
   ) => {
     const trimmedToken = token.trim();
+    const previousSettings = settings;
     logger.debug('MetaAds', 'Saving project Meta Ads settings', {
       projectId: project.projectId,
       hasMetaAccessToken: trimmedToken.length > 0,
@@ -100,8 +101,13 @@ export function useMetaAdsSettings({
           });
         },
         onError: (error) => {
+          setSettings(previousSettings);
+          const details = (error as RequestError)?.response?.data?.details;
+          const detailText = Array.isArray(details) ? ` (${details.join(', ')})` : '';
           const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+            error instanceof Error
+              ? `${error.message}${detailText}`
+              : localize('com_ui_error_save_admin_settings');
           showToast({ message, status: 'error' });
           logger.error('MetaAds', 'Failed to save project Meta Ads settings', {
             projectId: project.projectId,

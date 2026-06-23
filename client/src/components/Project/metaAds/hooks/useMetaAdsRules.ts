@@ -16,7 +16,6 @@ import type {
   RuleGroupDraft,
   MetaAdsRuleGroup,
   MetaAdsRulesState,
-  MetaAdsCreativeRules,
   MetaAdsRuleOverride,
   MetaAdsSettingsState,
   Localize,
@@ -276,6 +275,22 @@ export function useMetaAdsRules({
     if (!hasRulePerformanceMetric(ruleGroupDraft.rules)) {
       showToast({
         message: localize('com_ui_project_meta_ads_metric_required'),
+        status: 'error',
+      });
+      return;
+    }
+    const pauseRule = ruleGroupDraft.creativeRules.pauseHighCost;
+    if (
+      pauseRule &&
+      (Number(pauseRule.minCreativesInScope) < 3 ||
+        Number(pauseRule.cooldownHours) < 1 ||
+        Number(pauseRule.cooldownHours) > 168 ||
+        ![1, 2, 3, 7].includes(Number(pauseRule.lookbackDays)) ||
+        Number(pauseRule.maxCostPerResult) <= 0 ||
+        Number(pauseRule.minSpend) < 0)
+    ) {
+      showToast({
+        message: localize('com_ui_project_meta_ads_invalid_creative_rules'),
         status: 'error',
       });
       return;
