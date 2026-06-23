@@ -23,6 +23,7 @@ export function getGraphVersionOptions(effectiveVersion?: string) {
 }
 
 export function normalizeSettings(project: TProject): MetaAdsSettingsState {
+  const currentMonth = toDateInputValue(new Date()).slice(0, 7);
   return {
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
@@ -36,6 +37,12 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
     budgetLevel: 'adset',
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
     lastRunAt: project.metaAds?.lastRunAt,
+    monthlyBudget: {
+      month: project.metaAds?.monthlyBudget?.month ?? currentMonth,
+      baseAmount: project.metaAds?.monthlyBudget?.baseAmount ?? 0,
+      additionalAmount: project.metaAds?.monthlyBudget?.additionalAmount ?? 0,
+      allowedOverspendPct: project.metaAds?.monthlyBudget?.allowedOverspendPct ?? 0,
+    },
     ruleGroups: project.metaAds?.ruleGroups ?? [],
     ruleOverrides: project.metaAds?.ruleOverrides ?? [],
     rules: {

@@ -22,6 +22,36 @@ type UseMetaAdsSettingsParams = {
   showToast: ShowToast;
 };
 
+function getSettingsDraftStorageKey(projectId: string) {
+  return `orqest:metaAds:${projectId}:settingsDraft`;
+}
+
+function readStoredSettingsDraft(projectId: string): MetaAdsSettingsState | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const storedValue = window.localStorage.getItem(getSettingsDraftStorageKey(projectId));
+    return storedValue ? (JSON.parse(storedValue) as MetaAdsSettingsState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSettingsDraft(projectId: string, settings: MetaAdsSettingsState) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(getSettingsDraftStorageKey(projectId), JSON.stringify(settings));
+}
+
+function clearStoredSettingsDraft(projectId: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.removeItem(getSettingsDraftStorageKey(projectId));
+}
+
 export function useMetaAdsSettings({
   project,
   statusQuery,
@@ -31,6 +61,7 @@ export function useMetaAdsSettings({
   showToast,
 }: UseMetaAdsSettingsParams) {
   const [settings, setSettings] = useState(() => normalizeSettings(project));
+  const [hasUnsavedSettingsDraft, setHasUnsavedSettingsDraft] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
   const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
@@ -40,7 +71,9 @@ export function useMetaAdsSettings({
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
 
   useEffect(() => {
-    setSettings(normalizeSettings(project));
+    const storedDraft = readStoredSettingsDraft(project.projectId);
+    setSettings(storedDraft ?? normalizeSettings(project));
+    setHasUnsavedSettingsDraft(Boolean(storedDraft));
     setSettingsDrawer(null);
     setSettingsDraft(null);
     setSettingsDraftToken('');
@@ -49,6 +82,12 @@ export function useMetaAdsSettings({
     setTenantAccessToken('');
     setShowTenantAccessToken(false);
   }, [project]);
+
+  const setWorkingSettings = (nextSettings: MetaAdsSettingsState) => {
+    setSettings(nextSettings);
+    writeStoredSettingsDraft(project.projectId, nextSettings);
+    setHasUnsavedSettingsDraft(true);
+  };
 
   const closeCredentialsDialog = () => {
     setCredentialsDialogOpen(false);
@@ -91,6 +130,8 @@ export function useMetaAdsSettings({
       {
         onSuccess: () => {
           statusQuery.refetch();
+          clearStoredSettingsDraft(project.projectId);
+          setHasUnsavedSettingsDraft(false);
           setSettingsDraftToken('');
           setShowSettingsDraftToken(false);
           showToast({ message: localize('com_ui_saved'), status: 'success' });
@@ -196,6 +237,7 @@ export function useMetaAdsSettings({
 
   return {
     settings,
+    hasUnsavedSettingsDraft,
     settingsDraft,
     settingsDraftToken,
     showSettingsDraftToken,
@@ -203,7 +245,7 @@ export function useMetaAdsSettings({
     tenantAccessToken,
     showTenantAccessToken,
     settingsDrawer,
-    setSettings,
+    setSettings: setWorkingSettings,
     setSettingsDraft,
     setSettingsDraftToken,
     setShowSettingsDraftToken,

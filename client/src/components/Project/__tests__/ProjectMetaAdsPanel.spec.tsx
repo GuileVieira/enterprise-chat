@@ -171,6 +171,7 @@ describe('ProjectMetaAdsPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+    localStorage.clear();
     mockStatusData.latestSnapshots = [];
     mockStatusData.recommendations = [];
     mockStatusData.changes = [];
@@ -208,6 +209,10 @@ describe('ProjectMetaAdsPanel', () => {
 
   const openOverviewTab = () => {
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-overview'));
+  };
+
+  const publishSettingsDraft = () => {
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
   };
 
   it('shows a loading indicator while Meta Ads status is being fetched', () => {
@@ -367,6 +372,47 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockMutateSettings.mock.calls[0][0]).not.toHaveProperty('metaAccessToken');
   });
 
+  it('saves monthly investment settings from automation drawer', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_automation'));
+    const automationDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_automation',
+    });
+
+    fireEvent.change(within(automationDialog).getByLabelText('com_ui_project_meta_ads_month'), {
+      target: { value: '2026-07' },
+    });
+    fireEvent.change(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_base_amount'),
+      { target: { value: '5000' } },
+    );
+    fireEvent.change(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_additional_amount'),
+      { target: { value: '1000' } },
+    );
+    fireEvent.change(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_allowed_overspend'),
+      { target: { value: '10' } },
+    );
+    fireEvent.click(within(automationDialog).getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          monthlyBudget: {
+            month: '2026-07',
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
   it('discards account edits when closing the settings sidebar', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
@@ -411,6 +457,7 @@ describe('ProjectMetaAdsPanel', () => {
       },
     );
     fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -441,6 +488,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(selects[2]).toHaveValue('roas');
 
     fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -1201,6 +1249,56 @@ describe('ProjectMetaAdsPanel', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('Vendas SP');
     expect(rows[0]).not.toHaveTextContent('Mensagens Floripa');
+  });
+
+  it('recalculates summary cards from the visible search result', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-a',
+        campaignName: 'Campanha A',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        cpa: 10,
+        resultCount: 10,
+        dailyBudget: 100,
+        frequency: 2,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-b',
+        campaignName: 'Campanha B',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 300,
+        cpa: 30,
+        resultCount: 10,
+        dailyBudget: 100,
+        frequency: 4,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getByText('R$ 400,00'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_search'), {
+      target: { value: 'Campanha A' },
+    });
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getByText('R$ 100,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('R$ 10,00'),
+    ).toBeInTheDocument();
   });
 
   it('shows Ads Manager metrics, CBO/ABO budget modes, and sends manual budget changes', () => {
@@ -2003,6 +2101,10 @@ describe('ProjectMetaAdsPanel', () => {
     expect(ruleGroupDialog).toHaveTextContent('Messages SP');
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
 
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
         projectId: 'p1',
@@ -2043,6 +2145,37 @@ describe('ProjectMetaAdsPanel', () => {
       screen.getByRole('dialog', { name: 'com_ui_project_meta_ads_create_rule_group' }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('meta-ads-campaign-row')).toBeInTheDocument();
+  });
+
+  it('keeps unsaved rule drafts after remounting the panel', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    const { unmount } = render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Draft local' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    unmount();
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    expect(screen.getAllByText('Draft local').length).toBeGreaterThan(0);
   });
 
   it('filters and sorts campaigns like an operator table', () => {
@@ -2903,6 +3036,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     const rows = screen.getAllByTestId('meta-ads-rule-row');
     fireEvent.click(within(rows[0]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    publishSettingsDraft();
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
         projectId: 'p1',
@@ -2912,6 +3046,7 @@ describe('ProjectMetaAdsPanel', () => {
     );
 
     fireEvent.click(within(rows[1]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    publishSettingsDraft();
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
         projectId: 'p1',
@@ -2923,6 +3058,7 @@ describe('ProjectMetaAdsPanel', () => {
     );
 
     fireEvent.click(within(rows[2]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
+    publishSettingsDraft();
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
         projectId: 'p1',
@@ -2986,6 +3122,7 @@ describe('ProjectMetaAdsPanel', () => {
       },
     );
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
         projectId: 'p1',
@@ -3012,6 +3149,7 @@ describe('ProjectMetaAdsPanel', () => {
       },
     );
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -3040,6 +3178,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '35' },
     });
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
         projectId: 'p1',
@@ -3070,6 +3209,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '3' },
     });
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -3102,6 +3242,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '1.5' },
     });
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -3173,6 +3314,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(rows[0]).queryByLabelText('com_ui_project_meta_ads_delete_rule')).toBeNull();
 
     fireEvent.click(within(rows[1]).getByLabelText('com_ui_project_meta_ads_delete_rule'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {
@@ -3182,7 +3324,12 @@ describe('ProjectMetaAdsPanel', () => {
       expect.any(Object),
     );
 
-    fireEvent.click(within(rows[2]).getByLabelText('com_ui_project_meta_ads_delete_rule'));
+    fireEvent.click(
+      within(screen.getAllByTestId('meta-ads-rule-row')[1]).getByLabelText(
+        'com_ui_project_meta_ads_delete_rule',
+      ),
+    );
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenLastCalledWith(
       {

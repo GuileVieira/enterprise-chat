@@ -15,7 +15,7 @@ export const defaultRules: MetaAdsRulesState = {
   maxIncreasePct: 25,
   maxDecreasePct: 25,
   minDailyBudget: 20,
-  maxDailyBudget: 500,
+  maxDailyBudget: 2000,
   cooldownHours: 24,
   minSpend: 10,
 };

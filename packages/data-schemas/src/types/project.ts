@@ -37,6 +37,13 @@ export interface IProjectMetaAdsCreativeRules {
   };
 }
 
+export interface IProjectMetaAdsMonthlyBudget {
+  month?: string;
+  baseAmount?: number;
+  additionalAmount?: number;
+  allowedOverspendPct?: number;
+}
+
 export interface IProjectMetaAds {
   enabled?: boolean;
   adAccountId?: string;
@@ -48,6 +55,7 @@ export interface IProjectMetaAds {
   budgetLevel?: 'campaign' | 'adset';
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;
+  monthlyBudget?: IProjectMetaAdsMonthlyBudget;
   rules?: IProjectMetaAdsRules;
   creativeRules?: IProjectMetaAdsCreativeRules;
   ruleGroups?: Array<{

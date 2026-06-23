@@ -38,7 +38,7 @@ const DEFAULT_RULES = {
   maxIncreasePct: 25,
   maxDecreasePct: 25,
   minDailyBudget: 20,
-  maxDailyBudget: 500,
+  maxDailyBudget: 2000,
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
   primaryMetric: 'cpa',
@@ -113,6 +113,81 @@ const RESULT_ACTION_PRIORITY = [
   'offsite_conversion.fb_pixel_purchase',
   'purchase',
 ];
+
+function getMetaAdsMonthRange(month, _timeZone = getMetaAdsTimeZone(), now = new Date()) {
+  const match = typeof month === 'string' ? month.match(/^(\d{4})-(\d{2})$/) : null;
+  const year = match ? Number(match[1]) : now.getUTCFullYear();
+  const monthIndex = match ? Number(match[2]) - 1 : now.getUTCMonth();
+  const start = new Date(Date.UTC(year, monthIndex, 1));
+  const end = new Date(Date.UTC(year, monthIndex + 1, 0));
+  const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+  const currentMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const remainingDays =
+    start > currentMonthStart
+      ? end.getUTCDate()
+      : start < currentMonthStart
+        ? 0
+        : Math.max(0, end.getUTCDate() - now.getUTCDate() + 1);
+  return {
+    since: `${monthKey}-01`,
+    until: `${monthKey}-${String(end.getUTCDate()).padStart(2, '0')}`,
+    remainingDays,
+  };
+}
+
+function getMonthlyBudgetLimit(monthlyBudget = {}) {
+  const baseAmount = Number(monthlyBudget.baseAmount ?? 0);
+  const additionalAmount = Number(monthlyBudget.additionalAmount ?? 0);
+  const allowedOverspendPct = Number(monthlyBudget.allowedOverspendPct ?? 0);
+  if (
+    !Number.isFinite(baseAmount) ||
+    !Number.isFinite(additionalAmount) ||
+    !Number.isFinite(allowedOverspendPct) ||
+    baseAmount + additionalAmount <= 0
+  ) {
+    return null;
+  }
+  return Number(((baseAmount + additionalAmount) * (1 + allowedOverspendPct / 100)).toFixed(2));
+}
+
+function buildMonthlyBudgetState({ monthlyBudget, insightRows = [], now = new Date() }) {
+  const limit = getMonthlyBudgetLimit(monthlyBudget);
+  if (limit == null) {
+    return null;
+  }
+  const { remainingDays } = getMetaAdsMonthRange(monthlyBudget?.month, getMetaAdsTimeZone(), now);
+  const spend = insightRows.reduce((sum, row) => {
+    const metrics = calculateMetrics(row, undefined);
+    return sum + Number(metrics.spend ?? 0);
+  }, 0);
+  return {
+    limit,
+    spend: Number(spend.toFixed(2)),
+    remainingDays,
+  };
+}
+
+function applyMonthlyBudgetGuard({ proposal, currentDailyBudget, monthlyBudgetState }) {
+  if (!monthlyBudgetState || proposal.action !== 'increase') {
+    return { proposal, blocked: false };
+  }
+  const deltaDailyBudget = Math.max(0, Number(proposal.proposedDailyBudget) - currentDailyBudget);
+  const projectedSpend =
+    monthlyBudgetState.spend + deltaDailyBudget * monthlyBudgetState.remainingDays;
+  if (projectedSpend <= monthlyBudgetState.limit) {
+    return { proposal, blocked: false };
+  }
+  return {
+    blocked: true,
+    proposal: {
+      action: 'hold',
+      proposedDailyBudget: currentDailyBudget,
+      reason: `Bloqueado pelo limite mensal: projeção R$ ${projectedSpend.toFixed(
+        2,
+      )} acima do limite R$ ${monthlyBudgetState.limit.toFixed(2)}.`,
+    },
+  };
+}
 
 function extendStringEnumPath(schema, pathName, values) {
   const path = schema?.path?.(pathName);
@@ -3162,14 +3237,41 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     return [];
   });
-  const [campaigns, adsets, insights, campaignInsights, ads, adInsights] = await Promise.all([
-    campaignsPromise,
-    adsetsPromise,
-    insightsPromise,
-    campaignInsightsPromise,
-    adsPromise,
-    adInsightsPromise,
-  ]);
+  const monthlyRange = getMetaAdsMonthRange(metaAds.monthlyBudget?.month, timeZone, now);
+  const monthlyCampaignInsightsPromise = getMonthlyBudgetLimit(metaAds.monthlyBudget)
+    ? listCampaignInsights({
+        adAccountId,
+        token,
+        since: monthlyRange.since,
+        until: monthlyRange.until,
+        graphVersion,
+      }).catch((error) => {
+        logger.error('[MetaAdsBudget] monthly insights fetch failed', {
+          projectId,
+          adAccountId,
+          since: monthlyRange.since,
+          until: monthlyRange.until,
+          message: error.message,
+          stack: error.stack,
+        });
+        return [];
+      })
+    : Promise.resolve([]);
+  const [campaigns, adsets, insights, campaignInsights, ads, adInsights, monthlyCampaignInsights] =
+    await Promise.all([
+      campaignsPromise,
+      adsetsPromise,
+      insightsPromise,
+      campaignInsightsPromise,
+      adsPromise,
+      adInsightsPromise,
+      monthlyCampaignInsightsPromise,
+    ]);
+  const monthlyBudgetState = buildMonthlyBudgetState({
+    monthlyBudget: metaAds.monthlyBudget,
+    insightRows: monthlyCampaignInsights,
+    now,
+  });
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const campaignInsightById = new Map(campaignInsights.map((row) => [row.campaign_id, row]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
@@ -3292,12 +3394,18 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       }
       handledRecommendationEntities.add(recommendationKey);
 
-      const proposal = proposeBudget({
+      const rawProposal = proposeBudget({
         currentDailyBudget,
         ...recommendationMetrics,
         rules,
         creativeRules,
       });
+      const monthlyGuard = applyMonthlyBudgetGuard({
+        proposal: rawProposal,
+        currentDailyBudget,
+        monthlyBudgetState,
+      });
+      const proposal = monthlyGuard.proposal;
       const recentChange = await getRecentChange({
         projectId,
         entityId: recommendationEntityId,
@@ -3329,7 +3437,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         campaignId,
         campaignName,
         action: blockedByCooldown ? 'hold' : proposal.action,
-        status: blockedByCooldown ? 'blocked' : 'pending',
+        status: blockedByCooldown || monthlyGuard.blocked ? 'blocked' : 'pending',
         currentDailyBudget,
         proposedDailyBudget: proposal.proposedDailyBudget,
         spend: recommendationMetrics.spend,
@@ -3749,6 +3857,27 @@ async function applyManualBudgetChange({
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const currentBudget = await getEntityDailyBudget({ entityId, token, graphVersion });
+  const monthlyRange = getMetaAdsMonthRange(metaAds.monthlyBudget?.month);
+  const monthlyCampaignInsights = getMonthlyBudgetLimit(metaAds.monthlyBudget)
+    ? await listCampaignInsights({
+        adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+        token,
+        since: monthlyRange.since,
+        until: monthlyRange.until,
+        graphVersion,
+      })
+    : [];
+  const monthlyGuard = applyMonthlyBudgetGuard({
+    proposal: { action: 'increase', proposedDailyBudget: nextDailyBudget },
+    currentDailyBudget: currentBudget?.dailyBudget ?? 0,
+    monthlyBudgetState: buildMonthlyBudgetState({
+      monthlyBudget: metaAds.monthlyBudget,
+      insightRows: monthlyCampaignInsights,
+    }),
+  });
+  if (nextDailyBudget > (currentBudget?.dailyBudget ?? 0) && monthlyGuard.blocked) {
+    throw Object.assign(new Error(monthlyGuard.proposal.reason), { statusCode: 400 });
+  }
 
   await metaPost({
     path: encodeURIComponent(entityId),
@@ -4015,6 +4144,7 @@ module.exports = {
   _buildCreativePauseRecommendationsForTest: buildCreativePauseRecommendations,
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
+  _getMetaAdsMonthRangeForTest: getMetaAdsMonthRange,
   _resolveStatusPeriodForTest: resolveStatusPeriod,
   _resolveTargetResultTypeForTest: resolveTargetResultType,
   analyzeProject,

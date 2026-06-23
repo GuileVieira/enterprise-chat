@@ -12,6 +12,7 @@ const {
   resolveMetaAccessToken,
   resolveMetaCredentialStatus,
   _calculateMetricsForTest,
+  _getMetaAdsMonthRangeForTest,
   _resolveTargetResultTypeForTest,
   _resolveStatusPeriodForTest,
   _buildCreativePauseRecommendationsForTest,
@@ -104,6 +105,20 @@ describe('Meta Ads budget service', () => {
         }),
       ]),
     );
+  });
+
+  it('uses the full remaining month when the monthly investment is for a future month', () => {
+    expect(
+      _getMetaAdsMonthRangeForTest(
+        '2026-07',
+        'America/Sao_Paulo',
+        new Date('2026-06-23T12:00:00.000Z'),
+      ),
+    ).toEqual({
+      since: '2026-07-01',
+      until: '2026-07-31',
+      remainingDays: 31,
+    });
   });
 
   it('uses ROAS as the primary metric for ecommerce-style rules', () => {
@@ -2194,6 +2209,43 @@ describe('Meta Ads budget service persistence safety', () => {
       }),
     );
     expect(result.change).toEqual(expect.objectContaining({ newDailyBudget: 100 }));
+  });
+
+  it('blocks manual budget increases that exceed the monthly investment cap', async () => {
+    const { budget, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          tokenSecretName: 'secret',
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, maxDailyBudget: 2000 },
+          monthlyBudget: {
+            month: '2026-07',
+            baseAmount: 100,
+            additionalAmount: 0,
+            allowedOverspendPct: 0,
+          },
+        },
+      },
+      latestEntityBudget: { dailyBudget: 10 },
+      campaignInsights: [{ campaign_id: 'campaign-1', spend: '95' }],
+    });
+
+    await expect(
+      budget.applyManualBudgetChange({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        entityName: 'CBO Campaign',
+        dailyBudget: 100,
+        actor: 'user',
+        actorUserId: 'u1',
+        reason: 'Manual scale',
+      }),
+    ).rejects.toThrow('Bloqueado pelo limite mensal');
+    expect(metaPost).not.toHaveBeenCalled();
   });
 
   it('uses only the latest snapshot per ad set when building campaign summaries', async () => {

@@ -902,6 +902,14 @@ export const projectSchema = z.object({
         ])
         .optional(),
       lastRunAt: z.string().optional(),
+      monthlyBudget: z
+        .object({
+          month: z.string().optional(),
+          baseAmount: z.number().optional(),
+          additionalAmount: z.number().optional(),
+          allowedOverspendPct: z.number().optional(),
+        })
+        .optional(),
       rules: z
         .object({
           targetCpa: z.number().optional(),

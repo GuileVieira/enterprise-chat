@@ -38,7 +38,6 @@ type ShowToast = (toast: { message: string; status: ToastStatus }) => void;
 type UseMetaAdsRulesParams = {
   settings: MetaAdsSettingsState;
   setSettings: (settings: MetaAdsSettingsState) => void;
-  saveSettings: (settings: MetaAdsSettingsState, token: string, onSuccess?: () => void) => void;
   campaigns: ProjectMetaAdsCampaignSummary[];
   selectedCampaignIds: string[];
   selectedAdSetIds: string[];
@@ -50,7 +49,6 @@ type UseMetaAdsRulesParams = {
 export function useMetaAdsRules({
   settings,
   setSettings,
-  saveSettings,
   campaigns,
   selectedCampaignIds,
   selectedAdSetIds,
@@ -133,58 +131,46 @@ export function useMetaAdsRules({
       return;
     }
     if (row.type === 'global') {
-      saveSettings({ ...settings, enabled: !row.enabled }, '');
+      setSettings({ ...settings, enabled: !row.enabled });
       return;
     }
     if (row.type === 'group' && row.group?.id) {
-      saveSettings(
-        {
-          ...settings,
-          ruleGroups: (settings.ruleGroups ?? []).map((group) =>
-            group.id === row.group?.id ? { ...group, enabled: !row.enabled } : group,
-          ),
-        },
-        '',
-      );
+      setSettings({
+        ...settings,
+        ruleGroups: (settings.ruleGroups ?? []).map((group) =>
+          group.id === row.group?.id ? { ...group, enabled: !row.enabled } : group,
+        ),
+      });
       return;
     }
     if (row.override) {
       const targetKey = getRuleOverrideKey(row.override);
-      saveSettings(
-        {
-          ...settings,
-          ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
-            getRuleOverrideKey(ruleOverride) === targetKey
-              ? { ...ruleOverride, enabled: !row.enabled }
-              : ruleOverride,
-          ),
-        },
-        '',
-      );
+      setSettings({
+        ...settings,
+        ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+          getRuleOverrideKey(ruleOverride) === targetKey
+            ? { ...ruleOverride, enabled: !row.enabled }
+            : ruleOverride,
+        ),
+      });
     }
   };
 
   const onDeleteRuleGroup = (groupId?: string) => {
-    saveSettings(
-      {
-        ...settings,
-        ruleGroups: (settings.ruleGroups ?? []).filter((group) => group.id !== groupId),
-      },
-      '',
-    );
+    setSettings({
+      ...settings,
+      ruleGroups: (settings.ruleGroups ?? []).filter((group) => group.id !== groupId),
+    });
   };
 
   const onDeleteRuleOverride = (ruleOverride: MetaAdsRuleOverride) => {
     const targetKey = getRuleOverrideKey(ruleOverride);
-    saveSettings(
-      {
-        ...settings,
-        ruleOverrides: (settings.ruleOverrides ?? []).filter(
-          (currentRuleOverride) => getRuleOverrideKey(currentRuleOverride) !== targetKey,
-        ),
-      },
-      '',
-    );
+    setSettings({
+      ...settings,
+      ruleOverrides: (settings.ruleOverrides ?? []).filter(
+        (currentRuleOverride) => getRuleOverrideKey(currentRuleOverride) !== targetKey,
+      ),
+    });
   };
 
   const onRuleGroupRuleChange = (key: keyof MetaAdsRulesState, value: string) => {
@@ -296,36 +282,30 @@ export function useMetaAdsRules({
       return;
     }
     if (ruleGroupDraft.scope === 'global') {
-      saveSettings(
-        {
-          ...settings,
-          rules: ruleGroupDraft.rules,
-          creativeRules: ruleGroupDraft.creativeRules,
-        },
-        '',
-        () => setRuleGroupDraft(null),
-      );
+      setSettings({
+        ...settings,
+        rules: ruleGroupDraft.rules,
+        creativeRules: ruleGroupDraft.creativeRules,
+      });
+      setRuleGroupDraft(null);
       return;
     }
     if (ruleGroupDraft.scope === 'override') {
       const targetKey = ruleGroupDraft.overrideKey;
-      saveSettings(
-        {
-          ...settings,
-          ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
-            getRuleOverrideKey(ruleOverride) === targetKey
-              ? {
-                  ...ruleOverride,
-                  entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
-                  rules: ruleGroupDraft.rules,
-                  creativeRules: ruleGroupDraft.creativeRules,
-                }
-              : ruleOverride,
-          ),
-        },
-        '',
-        () => setRuleGroupDraft(null),
-      );
+      setSettings({
+        ...settings,
+        ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+          getRuleOverrideKey(ruleOverride) === targetKey
+            ? {
+                ...ruleOverride,
+                entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
+                rules: ruleGroupDraft.rules,
+                creativeRules: ruleGroupDraft.creativeRules,
+              }
+            : ruleOverride,
+        ),
+      });
+      setRuleGroupDraft(null);
       return;
     }
     if (ruleGroupDraft.entityIds.length === 0) {
@@ -345,16 +325,13 @@ export function useMetaAdsRules({
       creativeRules: ruleGroupDraft.creativeRules,
     };
     const existingGroups = settings.ruleGroups ?? [];
-    saveSettings(
-      {
-        ...settings,
-        ruleGroups: ruleGroupDraft.id
-          ? existingGroups.map((group) => (group.id === ruleGroupDraft.id ? nextGroup : group))
-          : [...existingGroups, nextGroup],
-      },
-      '',
-      () => setRuleGroupDraft(null),
-    );
+    setSettings({
+      ...settings,
+      ruleGroups: ruleGroupDraft.id
+        ? existingGroups.map((group) => (group.id === ruleGroupDraft.id ? nextGroup : group))
+        : [...existingGroups, nextGroup],
+    });
+    setRuleGroupDraft(null);
   };
 
   return {

@@ -51,7 +51,7 @@ const DEFAULT_RULES = {
   maxIncreasePct: 25,
   maxDecreasePct: 25,
   minDailyBudget: 20,
-  maxDailyBudget: 500,
+  maxDailyBudget: 2000,
   cooldownHours: 24,
   minSpend: 10,
   primaryMetric: 'cpa',
@@ -86,6 +86,10 @@ const PAUSE_HIGH_COST_DEFAULTS = {
   cooldownHours: 24,
   targetResultType: '',
 };
+
+function getCurrentMonthInputValue(date = new Date()) {
+  return date.toISOString().slice(0, 7);
+}
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -230,6 +234,33 @@ function validateMetaAdsCreativeRules(rules = {}) {
   return validated;
 }
 
+function validateMonthlyBudget(monthlyBudget = undefined) {
+  if (!monthlyBudget || typeof monthlyBudget !== 'object') {
+    return undefined;
+  }
+  const month =
+    typeof monthlyBudget.month === 'string' && /^\d{4}-\d{2}$/.test(monthlyBudget.month.trim())
+      ? monthlyBudget.month.trim()
+      : getCurrentMonthInputValue();
+  const validated = { month };
+  const errors = [];
+  for (const key of ['baseAmount', 'additionalAmount', 'allowedOverspendPct']) {
+    const value = Number(monthlyBudget[key] ?? 0);
+    if (!Number.isFinite(value) || value < 0) {
+      errors.push(`monthlyBudget.${key}`);
+      continue;
+    }
+    validated[key] = value;
+  }
+  if (errors.length > 0) {
+    throw Object.assign(new Error('Invalid Meta Ads monthly budget.'), {
+      statusCode: 400,
+      details: errors,
+    });
+  }
+  return validated;
+}
+
 function normalizeRuleOverrides(ruleOverrides = []) {
   if (!Array.isArray(ruleOverrides)) {
     return [];
@@ -342,6 +373,7 @@ function normalizeMetaAds(metaAds = {}) {
     creativeRules: validateMetaAdsCreativeRules(safeMetaAds.creativeRules),
     ruleGroups: normalizeRuleGroups(safeMetaAds.ruleGroups),
     ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
+    monthlyBudget: validateMonthlyBudget(safeMetaAds.monthlyBudget),
     accountProfile,
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',

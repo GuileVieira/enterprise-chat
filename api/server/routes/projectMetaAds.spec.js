@@ -137,6 +137,42 @@ describe('projectMetaAds settings normalization', () => {
     ).toThrow('Invalid Meta Ads budget rules.');
   });
 
+  it('defaults max daily budget to 2000 and normalizes monthly budget', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: 5000,
+          additionalAmount: 1000,
+          allowedOverspendPct: 10,
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        rules: expect.objectContaining({ maxDailyBudget: 2000 }),
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: 5000,
+          additionalAmount: 1000,
+          allowedOverspendPct: 10,
+        },
+      }),
+    );
+  });
+
+  it('rejects invalid monthly budget values', () => {
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: -1,
+          additionalAmount: 0,
+          allowedOverspendPct: 0,
+        },
+      }),
+    ).toThrow('Invalid Meta Ads monthly budget.');
+  });
+
   it('normalizes creative frequency alert rules separately from budget rules', () => {
     expect(
       router._normalizeMetaAdsForTest({

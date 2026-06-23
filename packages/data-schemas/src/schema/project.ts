@@ -70,6 +70,16 @@ const ProjectMetaAdsCreativeRulesSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsMonthlyBudgetSchema = new Schema(
+  {
+    month: String,
+    baseAmount: Number,
+    additionalAmount: Number,
+    allowedOverspendPct: Number,
+  },
+  { _id: false },
+);
+
 const ProjectMetaAdsRuleOverrideSchema = new Schema(
   {
     entityLevel: {
@@ -177,6 +187,10 @@ const ProjectMetaAdsSchema = new Schema(
     },
     lastRunAt: {
       type: Date,
+    },
+    monthlyBudget: {
+      type: ProjectMetaAdsMonthlyBudgetSchema,
+      default: undefined,
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,

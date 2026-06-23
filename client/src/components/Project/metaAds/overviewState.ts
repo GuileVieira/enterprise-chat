@@ -35,10 +35,20 @@ export function buildMetaAdsOverviewState({
   selectedSummaryResultType,
   localize,
 }: OverviewStateInput) {
+  const filteredCampaigns = filterAndSortCampaigns({
+    campaigns,
+    campaignSearch,
+    objectiveFilter,
+    budgetModeFilter,
+    campaignSort,
+    localize,
+  });
   const objectiveSummaries =
-    summary?.objectives && summary.objectives.length > 0
-      ? summary.objectives
-      : buildObjectiveSummaries(campaigns);
+    campaignSearch.trim() || budgetModeFilter !== 'all'
+      ? buildObjectiveSummaries(filteredCampaigns)
+      : summary?.objectives && summary.objectives.length > 0
+        ? summary.objectives
+        : buildObjectiveSummaries(campaigns);
   const scopedObjectiveSummary = getScopedObjectiveSummary(objectiveSummaries, objectiveFilter);
   const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
   const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, campaigns);
@@ -78,14 +88,6 @@ export function buildMetaAdsOverviewState({
       : (scopedObjectiveSummary?.averageCostPerResult ?? summary?.averageCostPerResult));
   const summaryAverageFrequency =
     scopedObjectiveSummary?.averageFrequency ?? summary?.averageFrequency;
-  const filteredCampaigns = filterAndSortCampaigns({
-    campaigns,
-    campaignSearch,
-    objectiveFilter,
-    budgetModeFilter,
-    campaignSort,
-    localize,
-  });
   const summaryAverageRoas = isEcommerceDashboard ? calculateWeightedRoas(filteredCampaigns) : null;
 
   return {

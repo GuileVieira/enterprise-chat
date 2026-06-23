@@ -16,6 +16,7 @@ type MetaAdsWorkspaceShellProps = {
   canUseMetaAdsActions: boolean;
   runningAnalysis: boolean;
   savingSettings: boolean;
+  hasUnsavedSettingsDraft: boolean;
   runErrorMessage: string | null;
   localize: ReturnType<typeof useLocalize>;
   onRunAnalysis: () => void;
@@ -40,6 +41,7 @@ export function MetaAdsWorkspaceShell({
   canUseMetaAdsActions,
   runningAnalysis,
   savingSettings,
+  hasUnsavedSettingsDraft,
   runErrorMessage,
   localize,
   onRunAnalysis,
@@ -116,8 +118,15 @@ export function MetaAdsWorkspaceShell({
               variant="primary"
               disabled={!canUseMetaAdsActions || savingSettings}
               onClick={onSave}
+              className={
+                hasUnsavedSettingsDraft
+                  ? 'animate-pulse bg-amber-500 text-slate-950 shadow-[0_18px_44px_-26px_rgba(245,158,11,0.75)] hover:bg-amber-400 dark:bg-amber-300 dark:text-slate-950 dark:hover:bg-amber-200'
+                  : undefined
+              }
             >
-              {localize('com_ui_save')}
+              {localize(
+                hasUnsavedSettingsDraft ? 'com_ui_project_meta_ads_publish_draft' : 'com_ui_save',
+              )}
             </MetaAdsButton>
           )}
         </div>

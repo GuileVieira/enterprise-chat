@@ -61,6 +61,18 @@ export function MetaAdsSettingsDrawer({
 
   const updateDraft = (patch: Partial<MetaAdsSettingsState>) =>
     onDraftChange({ ...draft, ...patch });
+  const updateMonthlyBudget = (
+    key: 'month' | 'baseAmount' | 'additionalAmount' | 'allowedOverspendPct',
+    value: string,
+  ) => {
+    const nextValue = key === 'month' ? value : value === '' ? undefined : Number(value);
+    updateDraft({
+      monthlyBudget: {
+        ...(draft.monthlyBudget ?? {}),
+        [key]: nextValue,
+      },
+    });
+  };
 
   return (
     <div
@@ -220,6 +232,66 @@ export function MetaAdsSettingsDrawer({
                   ))}
                 </select>
               </label>
+              <div className={chrome.modalTileClassName}>
+                <div className="text-sm font-medium text-slate-950 dark:text-white">
+                  {localize('com_ui_project_meta_ads_monthly_budget')}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  {localize('com_ui_project_meta_ads_monthly_budget_hint')}
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_month')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="month"
+                      value={draft.monthlyBudget?.month ?? ''}
+                      onChange={(event) => updateMonthlyBudget('month', event.target.value)}
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_monthly_base_amount')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.monthlyBudget?.baseAmount ?? ''}
+                      onChange={(event) => updateMonthlyBudget('baseAmount', event.target.value)}
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_monthly_additional_amount')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.monthlyBudget?.additionalAmount ?? ''}
+                      onChange={(event) =>
+                        updateMonthlyBudget('additionalAmount', event.target.value)
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_monthly_allowed_overspend')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={draft.monthlyBudget?.allowedOverspendPct ?? ''}
+                      onChange={(event) =>
+                        updateMonthlyBudget('allowedOverspendPct', event.target.value)
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
         </div>

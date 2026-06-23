@@ -107,8 +107,14 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
-  const { settings, settingsDrawer, setSettings, saveSettings, onSave, openSettingsDrawer } =
-    metaAdsSettings;
+  const {
+    settings,
+    settingsDrawer,
+    setSettings,
+    hasUnsavedSettingsDraft,
+    onSave,
+    openSettingsDrawer,
+  } = metaAdsSettings;
   const metaAdsEntityActions = useMetaAdsEntityActions({
     project,
     statusQuery,
@@ -163,7 +169,6 @@ export default function ProjectMetaAdsPanel({
   const metaAdsRules = useMetaAdsRules({
     settings,
     setSettings,
-    saveSettings,
     campaigns,
     selectedCampaignIds: selection.selectedCampaignIds,
     selectedAdSetIds: selection.selectedAdSetIds,
@@ -229,6 +234,7 @@ export default function ProjectMetaAdsPanel({
         canUseMetaAdsActions={canUseMetaAdsActions}
         runningAnalysis={runAnalysis.isLoading}
         savingSettings={updateSettings.isLoading}
+        hasUnsavedSettingsDraft={hasUnsavedSettingsDraft}
         runErrorMessage={runErrorMessage}
         localize={localize}
         onRunAnalysis={onRunAnalysis}
