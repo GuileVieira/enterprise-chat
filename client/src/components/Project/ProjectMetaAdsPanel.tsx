@@ -7,7 +7,6 @@ import { useToastContext } from '@librechat/client';
 import type {
   TProject,
   ProjectMetaAdsAdSummary,
-  ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsEntityStatusLevel,
 } from 'librechat-data-provider';
 import {
@@ -25,6 +24,7 @@ import {
 import { useAuthContext, useLocalize } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
+import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import {
   defaultRules,
@@ -157,9 +157,6 @@ export default function ProjectMetaAdsPanel({
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [tenantAccessToken, setTenantAccessToken] = useState('');
   const [showTenantAccessToken, setShowTenantAccessToken] = useState(false);
-  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
-  const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
-  const [collapsedAboCampaignIds, setCollapsedAboCampaignIds] = useState<string[]>([]);
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
@@ -197,7 +194,22 @@ export default function ProjectMetaAdsPanel({
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
   const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
-  const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
+  const {
+    selectedEntityIds,
+    expandedCampaignIds,
+    collapsedAboCampaignIds,
+    collapsedAdSetAdsIds,
+    selectedCampaignIds,
+    selectedAdSetIds,
+    selectedCount,
+    clearSelection,
+    onToggleCampaign,
+    onToggleAdSet,
+    onToggleCampaignExpanded,
+    onToggleAdSetAds,
+    expandAllRows,
+    collapseAllRows,
+  } = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
   const onBiRankingSort = (key: BiRankingSortKey) => {
     setBiRankingSort((current) => {
       if (current.key === key) {
@@ -344,18 +356,11 @@ export default function ProjectMetaAdsPanel({
     evolutionAlerts,
     hasEvolutionSection,
   } = buildMetaAdsEvolutionState({ trend, controls: biControls });
-  const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
   const tokenStatusKey = getMetaAdsTokenStatusKey(tokenCredentials);
   const hasProjectToken =
     tokenCredentials?.effectiveSource === 'project' || Boolean(settingsDraft?.tokenSecretName);
-  const selectedCampaignIds = selectedEntityIds
-    .filter((id) => id.startsWith('campaign:'))
-    .map((id) => id.replace('campaign:', ''));
-  const selectedAdSetIds = selectedEntityIds
-    .filter((id) => id.startsWith('adset:'))
-    .map((id) => id.replace('adset:', ''));
   const canCreateRuleGroup = canUseMetaAdsActions;
   const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
     getMetaAdsEntityRuleLabel(settings, entityLevel, entityId);
@@ -972,52 +977,6 @@ export default function ProjectMetaAdsPanel({
     });
   };
 
-  const onToggleCampaign = (campaign: ProjectMetaAdsCampaignSummary) => {
-    setSelectedEntityIds((current) => {
-      const campaignId = `campaign:${campaign.campaignId}`;
-      const adSetIds = campaign.adSets.map((adset) => `adset:${adset.entityId}`);
-      const campaignIds = [campaignId, ...adSetIds];
-      if (current.includes(campaignId)) {
-        return current.filter((selectedId) => !campaignIds.includes(selectedId));
-      }
-      const next = new Set(current);
-      campaignIds.forEach((selectedId) => next.add(selectedId));
-      return Array.from(next).slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
-    });
-  };
-
-  const onToggleAdSet = (entityId: string) => {
-    setSelectedEntityIds((current) => {
-      const id = `adset:${entityId}`;
-      return current.includes(id)
-        ? current.filter((selectedId) => selectedId !== id)
-        : [...current, id].slice(0, MAX_META_ADS_CHAT_BRIEF_ENTITIES);
-    });
-  };
-
-  const onToggleCampaignExpanded = (campaign: ProjectMetaAdsCampaignSummary) => {
-    if (campaign.budgetMode === 'ABO') {
-      setCollapsedAboCampaignIds((current) =>
-        current.includes(campaign.campaignId)
-          ? current.filter((id) => id !== campaign.campaignId)
-          : [...current, campaign.campaignId],
-      );
-      return;
-    }
-
-    setExpandedCampaignIds((current) =>
-      current.includes(campaign.campaignId)
-        ? current.filter((id) => id !== campaign.campaignId)
-        : [...current, campaign.campaignId],
-    );
-  };
-
-  const onToggleAdSetAds = (adSetId: string) => {
-    setCollapsedAdSetAdsIds((current) =>
-      current.includes(adSetId) ? current.filter((id) => id !== adSetId) : [...current, adSetId],
-    );
-  };
-
   const onCustomSinceChange = (value: string) => {
     setCustomSince(value);
     if (value && customUntil && value > customUntil) {
@@ -1035,28 +994,6 @@ export default function ProjectMetaAdsPanel({
   const onApplyCustomPeriod = () => {
     setAppliedCustomSince(customSince);
     setAppliedCustomUntil(customUntil);
-  };
-
-  const onExpandAllRows = () => {
-    setCollapsedAboCampaignIds([]);
-    setExpandedCampaignIds(
-      campaigns
-        .filter((campaign) => campaign.budgetMode !== 'ABO')
-        .map((campaign) => campaign.campaignId),
-    );
-    setCollapsedAdSetAdsIds([]);
-  };
-
-  const onCollapseAllRows = () => {
-    setCollapsedAboCampaignIds(
-      campaigns
-        .filter((campaign) => campaign.budgetMode === 'ABO')
-        .map((campaign) => campaign.campaignId),
-    );
-    setExpandedCampaignIds([]);
-    setCollapsedAdSetAdsIds(
-      campaigns.flatMap((campaign) => campaign.adSets.map((adset) => adset.entityId)),
-    );
   };
 
   const onOpenTrafficAgentChat = () => {
@@ -1307,9 +1244,9 @@ export default function ProjectMetaAdsPanel({
               onObjectiveFilterChange={setObjectiveFilter}
               onCampaignSortChange={setCampaignSort}
               onTableViewChange={setTableView}
-              onClearSelection={() => setSelectedEntityIds([])}
-              onExpandAllRows={onExpandAllRows}
-              onCollapseAllRows={onCollapseAllRows}
+              onClearSelection={clearSelection}
+              onExpandAllRows={() => expandAllRows(campaigns)}
+              onCollapseAllRows={() => collapseAllRows(campaigns)}
               onCreateRuleGroup={onOpenRuleGroupDraft}
               onOpenTrafficAgentChat={onOpenTrafficAgentChat}
             />
