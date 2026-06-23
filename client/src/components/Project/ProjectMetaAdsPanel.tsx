@@ -10,7 +10,6 @@ import type {
   ProjectMetaAdsAdSummary,
   ProjectMetaAdsCampaignSummary,
   ProjectMetaAdsEvolutionDelta,
-  ProjectMetaAdsRankingItem,
   ProjectMetaAdsEntityStatusLevel,
 } from 'librechat-data-provider';
 import {
@@ -34,7 +33,6 @@ import {
   tableColumnMap,
   tableViewOptions,
   evolutionColors,
-  scheduleOptions,
   tableViewMinWidth,
   workspaceTabOptions,
   EVOLUTION_SERIES_LIMIT,
@@ -45,21 +43,14 @@ import {
   getRuleOverrideKey,
   hasRulePerformanceMetric,
 } from './metaAds/rules';
-import {
-  getRankEfficiency,
-  getAdThumbnailUrl,
-  buildMetaAdsBiRankings,
-  getSortedBiRankingItems,
-} from './metaAds/bi';
+import { getAdThumbnailUrl, buildMetaAdsBiRankings, getSortedBiRankingItems } from './metaAds/bi';
 import {
   formatMoney,
   formatMetric,
-  formatPercent,
   formatTrendDate,
   buildChartPath,
   formatSignedMoney,
   getObjectiveLabel,
-  formatRankingCost,
   formatSignedMetric,
   getResultTypeLabel,
   formatSignedPercent,
@@ -87,13 +78,10 @@ import {
   getTableViewColumns,
   getMetricValue,
   compareNumberSort,
-  buildBudgetReferences,
   getBudgetChangeDelta,
   buildCampaignFallback,
 } from './metaAds/table';
 import {
-  toAdAccountId,
-  getAdAccountDigits,
   normalizeSettings,
   toDateInputValue,
   getDateInputDaysAgo,
@@ -109,6 +97,10 @@ import {
 } from './metaAds/confirmations';
 import { MetaAdsCredentialsDialog } from './metaAds/credentialsDialog';
 import { MetaAdsBiControlsPanel } from './metaAds/biControls';
+import { MetaAdsBiRankingCard } from './metaAds/biRankingCard';
+import { MetaAdsBudgetEditorDialog } from './metaAds/budgetEditor';
+import { MetaAdsRankMedia } from './metaAds/rankMedia';
+import { MetaAdsSettingsDrawer } from './metaAds/settingsDrawer';
 import { MetaAdsOverviewActionCell } from './metaAds/overviewActionCell';
 import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
@@ -123,7 +115,6 @@ import type {
   SettingsDrawer,
   WorkspaceTab,
   DuplicateDraft,
-  MetaAdsSettings,
   MetaAdsRuleGroup,
   BiRankingSort,
   MetaAdsBiRankItem,
@@ -134,7 +125,6 @@ import type {
   EvolutionHoverPoint,
   MetaAdsSettingsState,
   BiRankingSortKey,
-  ScheduleIntervalMinutes,
   EntityStatusConfirmation,
 } from './metaAds/types';
 import {
@@ -250,6 +240,15 @@ export default function ProjectMetaAdsPanel({
   );
   const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
   const [collapsedAdSetAdsIds, setCollapsedAdSetAdsIds] = useState<string[]>([]);
+  const onBiRankingSort = (key: BiRankingSortKey) => {
+    setBiRankingSort((current) => {
+      if (current.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+
+      return { key, direction: key === 'cpa' ? 'asc' : 'desc' };
+    });
+  };
   const startupConfigQuery = useGetStartupConfig();
   const tableStatusParams = { datePreset: 'last_7d' };
   const biStatusParams =
@@ -1526,189 +1525,6 @@ export default function ProjectMetaAdsPanel({
     }
     return value < 0 === improvesWhenNegative ? 'text-emerald-200' : 'text-rose-200';
   };
-  const renderRankMedia = (item: MetaAdsBiRankItem, size: 'sm' | 'lg' = 'sm') => {
-    const thumbnails = item.thumbnailUrls?.slice(0, 3) ?? [];
-    const isLarge = size === 'lg';
-    const frameClass = isLarge ? 'h-28 w-40' : 'h-12 w-16';
-    const emptyClass = isLarge ? 'text-xs' : 'text-[9px]';
-    if (thumbnails.length === 0) {
-      return (
-        <div
-          data-testid="meta-ads-rank-media"
-          className={`${frameClass} flex shrink-0 items-center justify-center border border-white/10 bg-[#1a1712] px-2 text-center ${emptyClass} text-[#81796b]`}
-        >
-          {localize('com_ui_project_meta_ads_no_creative_media')}
-        </div>
-      );
-    }
-    if (thumbnails.length === 1) {
-      return (
-        <div
-          data-testid="meta-ads-rank-media"
-          className={`${frameClass} shrink-0 overflow-hidden border border-white/10 bg-[#1a1712]`}
-        >
-          <img
-            src={thumbnails[0]}
-            alt=""
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-          />
-        </div>
-      );
-    }
-    return (
-      <div data-testid="meta-ads-rank-media" className={`${frameClass} relative shrink-0`}>
-        {thumbnails.map((thumbnailUrl, index) => {
-          const offset = isLarge ? index * 12 : index * 6;
-          const rotation =
-            index === 0
-              ? '-rotate-3 group-hover:-rotate-6 group-hover:-translate-x-1'
-              : index === 1
-                ? 'rotate-1 group-hover:translate-y-0.5'
-                : 'rotate-3 group-hover:rotate-6 group-hover:translate-x-1';
-          return (
-            <div
-              key={thumbnailUrl}
-              className={`absolute inset-y-0 overflow-hidden border border-white/10 bg-[#1a1712] shadow-[0_18px_30px_-24px_rgba(0,0,0,0.85)] transition duration-300 ease-out group-hover:border-white/20 group-hover:shadow-[0_22px_34px_-22px_rgba(0,0,0,0.95)] ${rotation}`}
-              style={{ left: offset, right: Math.max(0, (thumbnails.length - 1 - index) * offset) }}
-            >
-              <img
-                src={thumbnailUrl}
-                alt=""
-                className="h-full w-full object-cover transition duration-300 ease-out group-hover:scale-105"
-              />
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-  const renderBiRankingCard = (
-    titleKey: TranslationKeys,
-    items: Array<MetaAdsBiRankItem | ProjectMetaAdsRankingItem>,
-    testId: string,
-    emptyMessageKey: TranslationKeys = 'com_ui_project_meta_ads_bi_no_rankings',
-  ) => {
-    const sortColumns: Array<[BiRankingSortKey, TranslationKeys]> = [
-      ['spend', 'com_ui_project_meta_ads_spend'],
-      ['resultCount', 'com_ui_project_meta_ads_results'],
-      ['cpa', 'com_ui_project_meta_ads_cpa'],
-      ['ctr', 'com_ui_project_meta_ads_ctr'],
-      ['frequency', 'com_ui_project_meta_ads_frequency'],
-    ];
-    const onSort = (key: BiRankingSortKey) => {
-      setBiRankingSort((current) => ({
-        key,
-        direction:
-          current.key === key
-            ? current.direction === 'asc'
-              ? 'desc'
-              : 'asc'
-            : key === 'cpa'
-              ? 'asc'
-              : 'desc',
-      }));
-    };
-    return (
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white/80 shadow-[0_18px_58px_-46px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
-          <h5 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-slate-300">
-            {localize(titleKey)}
-          </h5>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
-            {biRankingsQuery.isFetching
-              ? localize('com_ui_project_meta_ads_loading')
-              : localize('com_ui_project_meta_ads_bi_rank_by')}
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          <table data-testid={testId} className="w-full min-w-[58rem] text-left text-xs">
-            <thead className="border-b border-slate-200/70 bg-slate-50/70 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-400">
-              <tr>
-                <th className="w-12 px-3 py-2">#</th>
-                <th className="px-3 py-2">{localize('com_ui_project_meta_ads_name')}</th>
-                <th className="px-3 py-2">
-                  {localize('com_ui_project_meta_ads_target_result_type')}
-                </th>
-                {sortColumns.map(([key, labelKey]) => (
-                  <th key={key} className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onSort(key)}
-                      className="font-semibold uppercase tracking-[0.12em] text-slate-500 transition hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-200"
-                    >
-                      {localize(labelKey)}
-                      {biRankingSort.key === key
-                        ? biRankingSort.direction === 'asc'
-                          ? ' ↑'
-                          : ' ↓'
-                        : ''}
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200/70 dark:divide-white/10">
-              {items.length > 0 ? (
-                items.map((item, index) => {
-                  const displayName = cleanDashboardName(item.name, item.id);
-                  return (
-                    <tr
-                      key={`${item.level}:${item.id}`}
-                      onClick={() => setSelectedBiRankItem(item as MetaAdsBiRankItem)}
-                      className="cursor-pointer transition duration-200 odd:bg-slate-50/70 hover:bg-teal-50/70 dark:odd:bg-white/[0.025] dark:hover:bg-teal-300/[0.08]"
-                    >
-                      <td className="px-3 py-3 font-mono text-slate-400 dark:text-slate-500">
-                        #{index + 1}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          {renderRankMedia(item as MetaAdsBiRankItem)}
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
-                              {displayName}
-                            </div>
-                            {'parentName' in item && item.parentName && (
-                              <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
-                                {item.parentName}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-slate-500 dark:text-slate-400">
-                        {getResultTypeLabel(item.resultType, localize)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
-                        {formatMoney(item.spend, currency)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
-                        {formatMetric(item.resultCount)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
-                        {formatRankingCost(getRankEfficiency(item as MetaAdsBiRankItem), currency)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
-                        {formatPercent(item.ctr)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
-                        {formatMetric(item.frequency)}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400">
-                    {localize(emptyMessageKey)}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
   const getTableRowClass = (
     rowIndex: number,
     level: 'campaign' | 'adset' | 'ad',
@@ -2535,212 +2351,33 @@ export default function ProjectMetaAdsPanel({
           })}
         </div>
 
-        {settingsDrawer && settingsDraft && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="meta-ads-settings-drawer-title"
-            className={`${metaAdsModalOverlay} flex justify-end p-0`}
-          >
-            <div className={`${metaAdsDrawerShell} max-w-lg`}>
-              <div className={metaAdsModalHeader}>
-                <h4
-                  id="meta-ads-settings-drawer-title"
-                  className="text-base font-semibold text-slate-950 dark:text-white"
-                >
-                  {localize(
-                    settingsDrawer === 'account'
-                      ? 'com_ui_project_meta_ads_account_credentials'
-                      : 'com_ui_project_meta_ads_automation',
-                  )}
-                </h4>
-                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  {settingsDrawer === 'account'
-                    ? localize(tokenStatusKey)
-                    : localize('com_ui_project_meta_ads_schedule_minutes', {
-                        0: String(settingsDraft.scheduleIntervalMinutes),
-                      })}
-                </div>
-              </div>
-              <div className="flex-1 space-y-4 overflow-y-auto p-4">
-                {settingsDrawer === 'account' ? (
-                  <>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                        {localize('com_ui_project_meta_ads_enabled')}
-                        <select
-                          disabled={!canUseMetaAdsActions}
-                          value={settingsDraft.enabled ? 'true' : 'false'}
-                          onChange={(event) =>
-                            setSettingsDraft((current) =>
-                              current
-                                ? { ...current, enabled: event.target.value === 'true' }
-                                : current,
-                            )
-                          }
-                          className={metaAdsInputLg}
-                        >
-                          <option value="false">
-                            {localize('com_ui_project_meta_ads_disabled')}
-                          </option>
-                          <option value="true">
-                            {localize('com_ui_project_meta_ads_enabled_state')}
-                          </option>
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                        {localize('com_ui_project_meta_ads_account')}
-                        <input
-                          disabled={!canUseMetaAdsActions}
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          value={getAdAccountDigits(settingsDraft.adAccountId)}
-                          onChange={(event) =>
-                            setSettingsDraft((current) =>
-                              current
-                                ? { ...current, adAccountId: toAdAccountId(event.target.value) }
-                                : current,
-                            )
-                          }
-                          placeholder="123456789"
-                          className={metaAdsInputLg}
-                        />
-                      </label>
-                    </div>
-                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                      {localize('com_ui_project_meta_ads_graph_version')}
-                      <select
-                        disabled={!canUseMetaAdsActions}
-                        value={settingsDraft.graphVersion ?? ''}
-                        onChange={(event) =>
-                          setSettingsDraft((current) =>
-                            current ? { ...current, graphVersion: event.target.value } : current,
-                          )
-                        }
-                        autoComplete="off"
-                        className={metaAdsInputLg}
-                      >
-                        <option value="">
-                          {localize('com_ui_project_meta_ads_graph_version_global', {
-                            0: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
-                          })}
-                        </option>
-                        {graphVersionOptions.map((version) => (
-                          <option key={version} value={version}>
-                            {version}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <div className={metaAdsModalTile}>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <div className="text-sm font-medium text-slate-950 dark:text-white">
-                            {localize('com_ui_project_meta_ads_credentials')}
-                          </div>
-                          <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {localize('com_ui_project_meta_ads_credentials_hint')}
-                          </div>
-                          {tokenCredentials && (
-                            <span className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
-                              {localize(tokenStatusKey)}
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={!canUseMetaAdsActions}
-                          onClick={openCredentialsDialog}
-                          className={metaAdsButton}
-                        >
-                          {localize('com_ui_project_meta_ads_manage_tokens')}
-                        </button>
-                      </div>
-                    </div>
-                    <div
-                      className={`${metaAdsModalTile} text-sm text-slate-600 dark:text-slate-300`}
-                    >
-                      <div className="font-medium text-slate-950 dark:text-white">
-                        {localize(tokenStatusKey)}
-                      </div>
-                      <div className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                        {localize('com_ui_project_meta_ads_graph_version_hint')}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="grid gap-3">
-                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                      {localize('com_ui_project_meta_ads_mode')}
-                      <select
-                        disabled={!canUseMetaAdsActions}
-                        value={settingsDraft.automationMode}
-                        onChange={(event) =>
-                          setSettingsDraft((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  automationMode: event.target
-                                    .value as MetaAdsSettings['automationMode'],
-                                }
-                              : current,
-                          )
-                        }
-                        className={metaAdsInputLg}
-                      >
-                        <option value="recommend">
-                          {localize('com_ui_project_meta_ads_mode_recommend')}
-                        </option>
-                        <option value="auto_limited">
-                          {localize('com_ui_project_meta_ads_mode_auto_limited')}
-                        </option>
-                      </select>
-                    </label>
-                    <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                      {localize('com_ui_project_meta_ads_schedule')}
-                      <select
-                        disabled={!canUseMetaAdsActions}
-                        value={settingsDraft.scheduleIntervalMinutes}
-                        onChange={(event) =>
-                          setSettingsDraft((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  scheduleIntervalMinutes: Number(
-                                    event.target.value,
-                                  ) as ScheduleIntervalMinutes,
-                                }
-                              : current,
-                          )
-                        }
-                        className={metaAdsInputLg}
-                      >
-                        {scheduleOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {localize(option.labelKey)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
-              <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
-                <button type="button" onClick={closeSettingsDrawer} className={metaAdsGhostButton}>
-                  {localize('com_ui_cancel')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canUseMetaAdsActions || updateSettings.isLoading}
-                  onClick={onSaveSettingsDrawer}
-                  className={metaAdsPrimaryButton}
-                >
-                  {localize('com_ui_save')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <MetaAdsSettingsDrawer
+          drawer={settingsDrawer}
+          draft={settingsDraft}
+          tokenConfigured={Boolean(tokenCredentials)}
+          tokenStatusLabel={localize(tokenStatusKey)}
+          effectiveGraphVersion={statusQuery.data?.graphVersion?.effective ?? 'v25.0'}
+          graphVersionOptions={graphVersionOptions}
+          canUseMetaAdsActions={canUseMetaAdsActions}
+          saving={updateSettings.isLoading}
+          localize={localize}
+          onDraftChange={setSettingsDraft}
+          onOpenCredentials={openCredentialsDialog}
+          onClose={closeSettingsDrawer}
+          onSave={onSaveSettingsDrawer}
+          chrome={{
+            modalOverlayClassName: metaAdsModalOverlay,
+            drawerShellClassName: metaAdsDrawerShell,
+            modalHeaderClassName: metaAdsModalHeader,
+            modalTileClassName: metaAdsModalTile,
+          }}
+          controls={{
+            inputClassName: metaAdsInputLg,
+            buttonClassName: metaAdsButton,
+            primaryButtonClassName: metaAdsPrimaryButton,
+            ghostButtonClassName: metaAdsGhostButton,
+          }}
+        />
 
         <MetaAdsCredentialsDialog
           open={credentialsDialogOpen}
@@ -3089,106 +2726,26 @@ export default function ProjectMetaAdsPanel({
               </div>
             )}
 
-            {budgetEditor && (
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="meta-ads-budget-dialog-title"
-                className={`${metaAdsModalOverlay} flex items-center justify-center`}
-              >
-                <div className={`relative w-full max-w-2xl p-5 sm:p-6 ${metaAdsModalShell}`}>
-                  <div className="relative min-w-0">
-                    <h4
-                      id="meta-ads-budget-dialog-title"
-                      className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-white"
-                    >
-                      {localize('com_ui_project_meta_ads_edit_budget')}
-                    </h4>
-                    <div className="mt-4 truncate text-lg font-semibold text-slate-950 dark:text-white">
-                      {budgetEditor.entityName ?? budgetEditor.entityId}
-                    </div>
-                    <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                      {budgetEditor.entityLevel === 'campaign'
-                        ? localize('com_ui_project_meta_ads_campaign')
-                        : localize('com_ui_project_meta_ads_select_ad_set')}
-                    </div>
-                    <div className="mt-4 max-w-[56ch] text-sm leading-6 text-slate-600 dark:text-slate-300">
-                      {localize('com_ui_project_meta_ads_manual_budget_hint')}
-                    </div>
-
-                    <div className="mt-5 grid gap-3 sm:grid-cols-[0.9fr_1.1fr]">
-                      <div className={metaAdsModalTile}>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                          {localize('com_ui_project_meta_ads_budget_defined')}
-                        </div>
-                        <div className="mt-2 font-mono text-2xl font-semibold tabular-nums text-slate-950 dark:text-white">
-                          {formatMoney(budgetEditor.currentBudget, currency)}
-                        </div>
-                      </div>
-                      <label className="rounded-2xl border border-amber-300/35 bg-amber-300/10 p-4 text-xs text-slate-600 dark:text-slate-300">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:text-amber-200">
-                          {localize('com_ui_project_meta_ads_new_budget')}
-                        </span>
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={manualDailyBudget}
-                          onChange={(event) => setManualDailyBudget(event.target.value)}
-                          className={metaAdsInputLg}
-                        />
-                      </label>
-                    </div>
-
-                    {buildBudgetReferences(budgetEditor.currentBudget, currency).length > 0 && (
-                      <div className="mt-5">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                            {localize('com_ui_project_meta_ads_budget_quick_adjustments')}
-                          </div>
-                          <div className="h-px flex-1 bg-slate-200/75 dark:bg-white/10" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                          {buildBudgetReferences(budgetEditor.currentBudget, currency).map(
-                            (reference) => (
-                              <button
-                                key={reference.percent}
-                                type="button"
-                                aria-label={reference.accessibleLabel}
-                                onClick={() => setManualDailyBudget(reference.value.toFixed(2))}
-                                className={`group flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-[0_14px_34px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
-                              >
-                                <span className="text-sm font-semibold">{reference.label}</span>
-                                <span className="font-mono text-sm font-semibold tabular-nums text-[#f8f1e5]">
-                                  {reference.formattedValue}
-                                </span>
-                              </button>
-                            ),
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative mt-6 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setBudgetEditor(null)}
-                      className={metaAdsGhostButton}
-                    >
-                      {localize('com_ui_cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={updateBudget.isLoading}
-                      onClick={onSaveManualBudget}
-                      className={metaAdsPrimaryButton}
-                    >
-                      {localize('com_ui_project_meta_ads_save_budget')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            <MetaAdsBudgetEditorDialog
+              editor={budgetEditor}
+              dailyBudget={manualDailyBudget}
+              currency={currency}
+              saving={updateBudget.isLoading}
+              localize={localize}
+              onDailyBudgetChange={setManualDailyBudget}
+              onClose={() => setBudgetEditor(null)}
+              onSave={onSaveManualBudget}
+              chrome={{
+                modalOverlayClassName: metaAdsModalOverlay,
+                modalShellClassName: metaAdsModalShell,
+                modalTileClassName: metaAdsModalTile,
+              }}
+              controls={{
+                inputClassName: metaAdsInputLg,
+                primaryButtonClassName: metaAdsPrimaryButton,
+                ghostButtonClassName: metaAdsGhostButton,
+              }}
+            />
 
             <MetaAdsBudgetConfirmationBanner
               confirmation={budgetConfirmation}
@@ -3337,14 +2894,22 @@ export default function ProjectMetaAdsPanel({
                 }
                 onMetricChange={(metric) => setBiControls((current) => ({ ...current, metric }))}
               />
-              {renderBiRankingCard(
-                selectedBiRankingTitleKey,
-                selectedBiRankingItems,
-                selectedBiRankingTestId,
-                biControls.level === 'ad'
-                  ? adRankingEmptyMessageKey
-                  : 'com_ui_project_meta_ads_bi_no_rankings',
-              )}
+              <MetaAdsBiRankingCard
+                titleKey={selectedBiRankingTitleKey}
+                items={selectedBiRankingItems}
+                testId={selectedBiRankingTestId}
+                emptyMessageKey={
+                  biControls.level === 'ad'
+                    ? adRankingEmptyMessageKey
+                    : 'com_ui_project_meta_ads_bi_no_rankings'
+                }
+                sort={biRankingSort}
+                fetching={biRankingsQuery.isFetching}
+                currency={currency}
+                localize={localize}
+                onSort={onBiRankingSort}
+                onSelect={setSelectedBiRankItem}
+              />
             </div>
 
             {hasEvolutionSection && (
@@ -3838,7 +3403,9 @@ export default function ProjectMetaAdsPanel({
         item={selectedBiRankItem}
         currency={currency}
         localize={localize}
-        renderRankMedia={renderRankMedia}
+        renderRankMedia={(item, size) => (
+          <MetaAdsRankMedia item={item} size={size} localize={localize} />
+        )}
         cleanName={cleanDashboardName}
         onClose={() => setSelectedBiRankItem(null)}
         chrome={{
