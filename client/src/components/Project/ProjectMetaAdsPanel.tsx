@@ -40,6 +40,11 @@ import {
   getRuleOverrideKey,
   hasRulePerformanceMetric,
 } from './metaAds/rules';
+import {
+  buildMetaAdsRuleRows,
+  getMetaAdsEntityRuleLabel,
+  getMetaAdsRuleDraftEntityLabels,
+} from './metaAds/rulesState';
 import { buildMetaAdsBiRankings, getSortedBiRankingItems } from './metaAds/bi';
 import {
   formatMoney,
@@ -459,69 +464,9 @@ export default function ProjectMetaAdsPanel({
     .map((id) => id.replace('adset:', ''));
   const canCreateRuleGroup = canUseMetaAdsActions;
   const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
-    settings.ruleGroups?.find(
-      (group) => group.entityLevel === entityLevel && group.entityIds?.includes(entityId),
-    )?.name ?? '-';
-  const getCampaignName = (campaignId: string) =>
-    campaigns.find((campaign) => campaign.campaignId === campaignId)?.campaignName ?? campaignId;
-  const getAdSetName = (adSetId: string) =>
-    campaigns.flatMap((campaign) => campaign.adSets).find((adSet) => adSet.entityId === adSetId)
-      ?.entityName ?? adSetId;
-  const getRuleEntityLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
-    entityLevel === 'campaign' ? getCampaignName(entityId) : getAdSetName(entityId);
-  const ruleDraftEntityLabels = ruleGroupDraft
-    ? ruleGroupDraft.entityIds.map((entityId) =>
-        getRuleEntityLabel(ruleGroupDraft.entityLevel, entityId),
-      )
-    : [];
-  const ruleRows: RuleRow[] = [
-    {
-      key: 'global',
-      type: 'global',
-      enabled: settings.enabled,
-      name: localize('com_ui_project_meta_ads_global_rules'),
-      scopeLabel: localize('com_ui_project_meta_ads_scope_all_campaigns'),
-      precedenceLabel: localize('com_ui_project_meta_ads_precedence_global'),
-      entityIds: [],
-      rules: settings.rules,
-      creativeRules: settings.creativeRules,
-    },
-    ...(settings.ruleGroups ?? []).map<RuleRow>((group) => ({
-      key: `group:${group.id}`,
-      type: 'group',
-      enabled: group.enabled !== false,
-      name: group.name,
-      scopeLabel: `${group.entityLevel === 'campaign' ? localize('com_ui_project_meta_ads_level_campaign') : localize('com_ui_project_meta_ads_level_ad_set')} · ${
-        group.entityIds?.length ?? 0
-      }`,
-      precedenceLabel: localize('com_ui_project_meta_ads_precedence_group'),
-      entityLevel: group.entityLevel,
-      entityIds: group.entityIds ?? [],
-      group,
-      rules: { ...defaultRules, ...(group.rules ?? {}) },
-    })),
-    ...(settings.ruleOverrides ?? []).map<RuleRow>((override) => {
-      const isCampaign = override.entityLevel === 'campaign';
-      return {
-        key: `override:${getRuleOverrideKey(override)}`,
-        type: isCampaign ? 'campaign_override' : 'adset_override',
-        enabled: override.enabled !== false,
-        name:
-          override.entityName ||
-          (isCampaign ? getCampaignName(override.entityId) : getAdSetName(override.entityId)),
-        scopeLabel: `${isCampaign ? localize('com_ui_project_meta_ads_level_campaign') : localize('com_ui_project_meta_ads_level_ad_set')} · ${override.entityId}`,
-        precedenceLabel: localize(
-          isCampaign
-            ? 'com_ui_project_meta_ads_precedence_campaign_override'
-            : 'com_ui_project_meta_ads_precedence_adset_override',
-        ),
-        entityLevel: override.entityLevel,
-        entityIds: [override.entityId],
-        override,
-        rules: { ...defaultRules, ...(override.rules ?? {}) },
-      };
-    }),
-  ];
+    getMetaAdsEntityRuleLabel(settings, entityLevel, entityId);
+  const ruleDraftEntityLabels = getMetaAdsRuleDraftEntityLabels(ruleGroupDraft, campaigns);
+  const ruleRows = buildMetaAdsRuleRows({ settings, campaigns, localize });
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
   const objectiveOptions = Array.from(
