@@ -380,9 +380,12 @@ describe('ProjectMetaAdsPanel', () => {
       name: 'com_ui_project_meta_ads_automation',
     });
 
-    fireEvent.change(within(automationDialog).getByLabelText('com_ui_project_meta_ads_month'), {
-      target: { value: '2026-07' },
-    });
+    expect(automationDialog.querySelector('input[type="month"]')).toBeNull();
+    fireEvent.click(within(automationDialog).getByLabelText('com_ui_project_meta_ads_month'));
+    expect(
+      within(automationDialog).getByText('com_ui_project_meta_ads_month_picker_today'),
+    ).toBeInTheDocument();
+    fireEvent.click(within(automationDialog).getByTestId('meta-ads-month-option-2026-07'));
     fireEvent.change(
       within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_base_amount'),
       { target: { value: '5000' } },

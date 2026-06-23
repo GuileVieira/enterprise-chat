@@ -1,5 +1,6 @@
-import { scheduleOptions } from './constants';
-import { getAdAccountDigits, toAdAccountId } from './settings';
+import { useEffect, useRef, useState } from 'react';
+import { CalendarBlank, CaretLeft, CaretRight } from '@phosphor-icons/react';
+
 import type {
   Localize,
   SettingsDrawer,
@@ -7,6 +8,8 @@ import type {
   MetaAdsSettingsState,
   ScheduleIntervalMinutes,
 } from './types';
+import { scheduleOptions } from './constants';
+import { getAdAccountDigits, toAdAccountId } from './settings';
 
 type SettingsDrawerChrome = {
   modalOverlayClassName: string;
@@ -21,6 +24,63 @@ type SettingsDrawerControls = {
   primaryButtonClassName: string;
   ghostButtonClassName: string;
 };
+
+type ParsedMonth = {
+  year: number;
+  monthIndex: number;
+};
+
+const monthLabels = [
+  'jan.',
+  'fev.',
+  'mar.',
+  'abr.',
+  'mai.',
+  'jun.',
+  'jul.',
+  'ago.',
+  'set.',
+  'out.',
+  'nov.',
+  'dez.',
+];
+
+function getCurrentMonthValue(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function parseMonthValue(value?: string): ParsedMonth {
+  const match = typeof value === 'string' ? value.match(/^(\d{4})-(\d{2})$/) : null;
+  if (!match) {
+    const now = new Date();
+    return { year: now.getFullYear(), monthIndex: now.getMonth() };
+  }
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(monthIndex) ||
+    monthIndex < 0 ||
+    monthIndex > 11
+  ) {
+    const now = new Date();
+    return { year: now.getFullYear(), monthIndex: now.getMonth() };
+  }
+  return { year, monthIndex };
+}
+
+function formatMonthValue(year: number, monthIndex: number): string {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(value?: string): string {
+  const { year, monthIndex } = parseMonthValue(value);
+  const date = new Date(year, monthIndex, 1);
+  return new Intl.DateTimeFormat('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date);
+}
 
 export function MetaAdsSettingsDrawer({
   drawer,
@@ -55,6 +115,32 @@ export function MetaAdsSettingsDrawer({
   chrome: SettingsDrawerChrome;
   controls: SettingsDrawerControls;
 }) {
+  const monthPickerRef = useRef<HTMLDivElement | null>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const [monthPickerYear, setMonthPickerYear] = useState(() => new Date().getFullYear());
+
+  useEffect(() => {
+    if (!monthPickerOpen) {
+      return;
+    }
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!monthPickerRef.current?.contains(event.target as Node)) {
+        setMonthPickerOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMonthPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [monthPickerOpen]);
+
   if (!drawer || !draft) {
     return null;
   }
@@ -65,13 +151,34 @@ export function MetaAdsSettingsDrawer({
     key: 'month' | 'baseAmount' | 'additionalAmount' | 'allowedOverspendPct',
     value: string,
   ) => {
-    const nextValue = key === 'month' ? value : value === '' ? undefined : Number(value);
+    let nextValue: string | number | undefined = value;
+    if (key !== 'month') {
+      nextValue = value === '' ? undefined : Number(value);
+    }
     updateDraft({
       monthlyBudget: {
         ...(draft.monthlyBudget ?? {}),
         [key]: nextValue,
       },
     });
+  };
+  const selectedMonth = parseMonthValue(draft.monthlyBudget?.month);
+  const openMonthPicker = () => {
+    setMonthPickerYear(selectedMonth.year);
+    setMonthPickerOpen((current) => !current);
+  };
+  const selectMonth = (monthIndex: number) => {
+    updateMonthlyBudget('month', formatMonthValue(monthPickerYear, monthIndex));
+    setMonthPickerOpen(false);
+  };
+  const selectCurrentMonth = () => {
+    updateMonthlyBudget('month', getCurrentMonthValue());
+    setMonthPickerYear(new Date().getFullYear());
+    setMonthPickerOpen(false);
+  };
+  const clearMonth = () => {
+    updateMonthlyBudget('month', '');
+    setMonthPickerOpen(false);
   };
 
   return (
@@ -242,13 +349,83 @@ export function MetaAdsSettingsDrawer({
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                     {localize('com_ui_project_meta_ads_month')}
-                    <input
-                      disabled={!canUseMetaAdsActions}
-                      type="month"
-                      value={draft.monthlyBudget?.month ?? ''}
-                      onChange={(event) => updateMonthlyBudget('month', event.target.value)}
-                      className={controls.inputClassName}
-                    />
+                    <div ref={monthPickerRef} className="relative">
+                      <button
+                        type="button"
+                        disabled={!canUseMetaAdsActions}
+                        aria-label={localize('com_ui_project_meta_ads_month')}
+                        aria-expanded={monthPickerOpen}
+                        onClick={openMonthPicker}
+                        className={`${controls.inputClassName} flex items-center justify-between text-left`}
+                      >
+                        <span>{formatMonthLabel(draft.monthlyBudget?.month)}</span>
+                        <CalendarBlank
+                          className="h-5 w-5 shrink-0 text-slate-400 dark:text-slate-300"
+                          weight="bold"
+                        />
+                      </button>
+                      {monthPickerOpen && (
+                        <div className="absolute left-0 top-full z-30 mt-2 w-full min-w-[280px] rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-[#172033] dark:shadow-[0_24px_80px_-46px_rgba(0,0,0,0.9)]">
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setMonthPickerYear((year) => year - 1)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 text-slate-600 transition hover:border-teal-300/60 hover:bg-white dark:border-white/10 dark:text-slate-300 dark:hover:border-teal-300/45 dark:hover:bg-white/[0.06]"
+                            >
+                              <CaretLeft className="h-4 w-4" weight="bold" />
+                            </button>
+                            <div className="font-mono text-sm font-semibold text-slate-950 dark:text-white">
+                              {monthPickerYear}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setMonthPickerYear((year) => year + 1)}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 text-slate-600 transition hover:border-teal-300/60 hover:bg-white dark:border-white/10 dark:text-slate-300 dark:hover:border-teal-300/45 dark:hover:bg-white/[0.06]"
+                            >
+                              <CaretRight className="h-4 w-4" weight="bold" />
+                            </button>
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {monthLabels.map((label, monthIndex) => {
+                              const selected =
+                                selectedMonth.year === monthPickerYear &&
+                                selectedMonth.monthIndex === monthIndex;
+                              return (
+                                <button
+                                  key={label}
+                                  type="button"
+                                  data-testid={`meta-ads-month-option-${formatMonthValue(monthPickerYear, monthIndex)}`}
+                                  onClick={() => selectMonth(monthIndex)}
+                                  className={`h-10 rounded-xl border px-2 text-sm font-semibold transition ${
+                                    selected
+                                      ? 'border-teal-300/60 bg-teal-400/15 text-teal-700 dark:text-teal-100'
+                                      : 'border-transparent text-slate-700 hover:border-teal-300/50 hover:bg-slate-50 dark:text-slate-200 dark:hover:border-teal-300/35 dark:hover:bg-white/[0.06]'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={clearMonth}
+                              className="h-9 rounded-xl px-3 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-100"
+                            >
+                              {localize('com_ui_project_meta_ads_month_picker_clear')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={selectCurrentMonth}
+                              className="h-9 rounded-xl px-3 text-xs font-semibold text-teal-700 transition hover:bg-teal-50 dark:text-teal-100 dark:hover:bg-teal-400/10"
+                            >
+                              {localize('com_ui_project_meta_ads_month_picker_today')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </label>
                   <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                     {localize('com_ui_project_meta_ads_monthly_base_amount')}

@@ -1072,6 +1072,8 @@
   "com_ui_project_meta_ads_monthly_budget": "Investimento mensal",
   "com_ui_project_meta_ads_monthly_budget_hint": "Define o teto mensal usado para alertar e bloquear aumentos de orçamento.",
   "com_ui_project_meta_ads_month": "Mês",
+  "com_ui_project_meta_ads_month_picker_clear": "Limpar",
+  "com_ui_project_meta_ads_month_picker_today": "Este mês",
   "com_ui_project_meta_ads_monthly_base_amount": "Investimento base",
   "com_ui_project_meta_ads_monthly_additional_amount": "Valor adicional liberado",
   "com_ui_project_meta_ads_monthly_allowed_overspend": "% permitido para extrapolar",
