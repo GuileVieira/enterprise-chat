@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
@@ -24,11 +24,12 @@ import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScroll
 import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
 import { useMetaAdsEntityActions } from './metaAds/hooks/useMetaAdsEntityActions';
 import { useMetaAdsRules } from './metaAds/hooks/useMetaAdsRules';
+import { useMetaAdsBiWorkspace } from './metaAds/hooks/useMetaAdsBiWorkspace';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import { buildMetaAdsBiState } from './metaAds/biState';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
 import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
-import { toDateInputValue, getDateInputDaysAgo, getGraphVersionOptions } from './metaAds/settings';
+import { getGraphVersionOptions } from './metaAds/settings';
 import { getRequestErrorMessage } from './metaAds/errors';
 import { MetaAdsAdPreviewDialog, MetaAdsBiRankDetailsDialog } from './metaAds/dialogs';
 import {
@@ -60,15 +61,7 @@ import {
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import { cleanDashboardName, createMetaAdsBriefStorageKey } from './metaAds/helpers';
-import type {
-  TableView,
-  PeriodFilter,
-  WorkspaceTab,
-  BiRankingSort,
-  MetaAdsBiRankItem,
-  MetaAdsBiControls,
-  BiRankingSortKey,
-} from './metaAds/types';
+import type { TableView, WorkspaceTab } from './metaAds/types';
 import {
   metaAdsInput,
   metaAdsInputLg,
@@ -105,24 +98,26 @@ export default function ProjectMetaAdsPanel({
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
   const [tableView, setTableView] = useState<TableView>('summary');
-  const [biControls, setBiControls] = useState<MetaAdsBiControls>({
-    level: 'campaign',
-    objective: 'all',
-    resultType: 'all',
-    metric: 'spend',
-  });
-  const [biRankingSort, setBiRankingSort] = useState<BiRankingSort>({
-    key: 'cpa',
-    direction: 'asc',
-  });
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('last_7d');
-  const [customSince, setCustomSince] = useState(() => getDateInputDaysAgo(6));
-  const [customUntil, setCustomUntil] = useState(() => toDateInputValue(new Date()));
-  const [appliedCustomSince, setAppliedCustomSince] = useState(() => getDateInputDaysAgo(6));
-  const [appliedCustomUntil, setAppliedCustomUntil] = useState(() => toDateInputValue(new Date()));
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
-  const [metricsFullscreen, setMetricsFullscreen] = useState(false);
-  const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
+  const {
+    biControls,
+    biRankingSort,
+    periodFilter,
+    customSince,
+    customUntil,
+    appliedCustomSince,
+    appliedCustomUntil,
+    metricsFullscreen,
+    selectedBiRankItem,
+    setBiControls,
+    setPeriodFilter,
+    setMetricsFullscreen,
+    setSelectedBiRankItem,
+    onBiRankingSort,
+    onCustomSinceChange,
+    onCustomUntilChange,
+    onApplyCustomPeriod,
+  } = useMetaAdsBiWorkspace();
   const {
     selectedEntityIds,
     expandedCampaignIds,
@@ -139,15 +134,6 @@ export default function ProjectMetaAdsPanel({
     expandAllRows,
     collapseAllRows,
   } = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
-  const onBiRankingSort = (key: BiRankingSortKey) => {
-    setBiRankingSort((current) => {
-      if (current.key === key) {
-        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-      }
-
-      return { key, direction: key === 'cpa' ? 'asc' : 'desc' };
-    });
-  };
   const startupConfigQuery = useGetStartupConfig();
   const tableStatusParams = { datePreset: 'last_7d' };
   const biStatusParams =
@@ -250,24 +236,6 @@ export default function ProjectMetaAdsPanel({
     user?.role === SystemRoles.ADMIN ||
     user?.role === SystemRoles.OWNER ||
     user?.role === SystemRoles.USER;
-
-  useEffect(() => {
-    if (!metricsFullscreen) {
-      return;
-    }
-    const previousBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMetricsFullscreen(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [metricsFullscreen]);
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -426,25 +394,6 @@ export default function ProjectMetaAdsPanel({
         });
       },
     });
-  };
-
-  const onCustomSinceChange = (value: string) => {
-    setCustomSince(value);
-    if (value && customUntil && value > customUntil) {
-      setCustomUntil(value);
-    }
-  };
-
-  const onCustomUntilChange = (value: string) => {
-    setCustomUntil(value);
-    if (value && customSince && value < customSince) {
-      setCustomSince(value);
-    }
-  };
-
-  const onApplyCustomPeriod = () => {
-    setAppliedCustomSince(customSince);
-    setAppliedCustomUntil(customUntil);
   };
 
   const onOpenTrafficAgentChat = () => {
