@@ -46,19 +46,8 @@ import {
   getResultTypeLabel,
 } from './metaAds/formatters';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
-import {
-  collectBiResultTypes,
-  isEcommerceContext,
-  calculateWeightedRoas,
-  buildObjectiveSummaries,
-  buildSummaryResultTypeOptions,
-} from './metaAds/summary';
-import {
-  getTableViewColumns,
-  getMetricValue,
-  compareNumberSort,
-  buildCampaignFallback,
-} from './metaAds/table';
+import { collectBiResultTypes } from './metaAds/summary';
+import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
 import {
   normalizeSettings,
   toDateInputValue,
@@ -87,6 +76,7 @@ import { getMetaAdsTableRowClass } from './metaAds/overviewCells';
 import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
 import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsOverviewToolbar } from './metaAds/overviewToolbar';
+import { buildMetaAdsOverviewState } from './metaAds/overviewState';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import type {
@@ -427,83 +417,28 @@ export default function ProjectMetaAdsPanel({
           biStatusQuery.data.adDiagnostics.adsAttachedToAdSets === 0
         ? 'com_ui_project_meta_ads_bi_no_attached_ads'
         : 'com_ui_project_meta_ads_bi_no_rankings';
-  const objectiveSummaries =
-    statusQuery.data?.summary?.objectives && statusQuery.data.summary.objectives.length > 0
-      ? statusQuery.data.summary.objectives
-      : buildObjectiveSummaries(campaigns);
-  const scopedObjectiveSummary =
-    objectiveFilter !== 'all'
-      ? objectiveSummaries.find((summary) => (summary.objective || 'UNKNOWN') === objectiveFilter)
-      : objectiveSummaries.length === 1
-        ? objectiveSummaries[0]
-        : undefined;
-  const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
-  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, campaigns);
-  const summaryResultTypeOptions = buildSummaryResultTypeOptions(
-    objectiveSummaries,
-    objectiveFilter,
+  const {
+    scopedObjectiveSummary,
     isEcommerceDashboard,
-  );
-  const selectedSummaryResultTypeOption = selectedSummaryResultType
-    ? summaryResultTypeOptions.find((option) => option.resultType === selectedSummaryResultType)
-    : undefined;
-  const ecommercePurchaseResultTypeOption = isEcommerceDashboard
-    ? summaryResultTypeOptions.find((option) => option.resultType === 'purchase')
-    : undefined;
-  const effectiveSummaryResultTypeOption =
-    selectedSummaryResultTypeOption ?? ecommercePurchaseResultTypeOption;
-  const summaryResultType =
-    effectiveSummaryResultTypeOption?.resultType ??
-    (scopedObjectiveSummary?.resultTypes.length === 1
-      ? scopedObjectiveSummary.resultTypes[0].resultType
-      : undefined);
-  const summaryMetricContext = summaryResultType
-    ? getResultTypeLabel(summaryResultType, localize)
-    : scopedObjectiveSummary
-      ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
-      : undefined;
-  const summaryTotalSpend =
-    scopedObjectiveSummary?.totalSpend ?? statusQuery.data?.summary?.totalSpend;
-  const summaryTotalResults =
-    effectiveSummaryResultTypeOption?.totalResults ??
-    (hasMixedObjectiveSummary
-      ? null
-      : (scopedObjectiveSummary?.totalResults ?? statusQuery.data?.summary?.totalResults));
-  const summaryAverageCost =
-    effectiveSummaryResultTypeOption?.averageCostPerResult ??
-    (hasMixedObjectiveSummary
-      ? null
-      : (scopedObjectiveSummary?.averageCostPerResult ??
-        statusQuery.data?.summary?.averageCostPerResult));
-  const summaryAverageFrequency =
-    scopedObjectiveSummary?.averageFrequency ?? statusQuery.data?.summary?.averageFrequency;
-  const filteredCampaigns = campaigns
-    .filter((campaign) => {
-      const query = campaignSearch.trim().toLowerCase();
-      const matchesSearch =
-        !query ||
-        (campaign.campaignName ?? campaign.campaignId).toLowerCase().includes(query) ||
-        getObjectiveLabel(campaign.objective, localize).toLowerCase().includes(query) ||
-        campaign.adSets.some((adset) =>
-          (adset.entityName ?? adset.entityId).toLowerCase().includes(query),
-        );
-      const matchesObjective =
-        objectiveFilter === 'all' || (campaign.objective || 'UNKNOWN') === objectiveFilter;
-      const matchesMode =
-        budgetModeFilter === 'all' || (campaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
-      return matchesSearch && matchesObjective && matchesMode;
-    })
-    .sort((first, second) => {
-      const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
-      if (key === 'name') {
-        const result = String(getMetricValue(first, 'name')).localeCompare(
-          String(getMetricValue(second, 'name')),
-        );
-        return direction === 'desc' ? -result : result;
-      }
-      return compareNumberSort(first, second, key, direction);
-    });
-  const summaryAverageRoas = isEcommerceDashboard ? calculateWeightedRoas(filteredCampaigns) : null;
+    summaryResultTypeOptions,
+    summaryMetricContext,
+    summaryTotalSpend,
+    summaryTotalResults,
+    summaryAverageCost,
+    summaryAverageFrequency,
+    summaryAverageRoas,
+    filteredCampaigns,
+  } = buildMetaAdsOverviewState({
+    campaigns,
+    settings,
+    summary: statusQuery.data?.summary,
+    campaignSearch,
+    objectiveFilter,
+    budgetModeFilter,
+    campaignSort,
+    selectedSummaryResultType,
+    localize,
+  });
 
   const onSortColumn = (key: string, defaultDirection: 'asc' | 'desc') => {
     const [activeKey, activeDirection = defaultDirection] = campaignSort.split('_') as [
