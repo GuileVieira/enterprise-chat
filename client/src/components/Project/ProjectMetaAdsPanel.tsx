@@ -26,7 +26,7 @@ import { useAuthContext, useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
-import { BI_TOP_LIMIT, tableColumnMap, tableViewMinWidth } from './metaAds/constants';
+import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import {
   defaultRules,
   accountProfileRules,
@@ -38,15 +38,9 @@ import {
   getMetaAdsEntityRuleLabel,
   getMetaAdsRuleDraftEntityLabels,
 } from './metaAds/rulesState';
-import { buildMetaAdsBiRankings, getSortedBiRankingItems } from './metaAds/bi';
-import {
-  formatMoney,
-  formatMetric,
-  getObjectiveLabel,
-  getResultTypeLabel,
-} from './metaAds/formatters';
+import { buildMetaAdsBiState } from './metaAds/biState';
+import { formatMoney, formatMetric, getObjectiveLabel } from './metaAds/formatters';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
-import { collectBiResultTypes } from './metaAds/summary';
 import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
 import {
   normalizeSettings,
@@ -371,52 +365,24 @@ export default function ProjectMetaAdsPanel({
   const ruleRows = buildMetaAdsRuleRows({ settings, campaigns, localize });
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
-  const objectiveOptions = Array.from(
-    new Set(campaigns.map((campaign) => campaign.objective || 'UNKNOWN')),
-  ).sort((left, right) =>
-    getObjectiveLabel(left, localize).localeCompare(getObjectiveLabel(right, localize), 'pt-BR'),
-  );
   const biCampaigns = biStatusQuery.data?.campaigns ?? campaigns;
-  const biResultTypeOptions = collectBiResultTypes(biCampaigns).sort((left, right) =>
-    getResultTypeLabel(left, localize).localeCompare(getResultTypeLabel(right, localize), 'pt-BR'),
-  );
-  const biMinSpend = Number(settings.rules.minSpend || defaultRules.minSpend);
-  const fallbackBiRankings = buildMetaAdsBiRankings(
+  const {
+    objectiveOptions,
+    biResultTypeOptions,
+    selectedBiRankingItems,
+    selectedBiRankingTitleKey,
+    selectedBiRankingTestId,
+    adRankingEmptyMessageKey,
+  } = buildMetaAdsBiState({
+    campaigns,
     biCampaigns,
-    biControls.objective,
-    biControls.resultType,
-    Number.isFinite(biMinSpend) && biMinSpend > 0 ? biMinSpend : defaultRules.minSpend,
-  );
-  const selectedBiRankingItems = getSortedBiRankingItems(
-    (biRankingsQuery.data?.items ?? []).length > 0
-      ? (biRankingsQuery.data?.items ?? [])
-      : biControls.level === 'campaign'
-        ? fallbackBiRankings.campaigns
-        : biControls.level === 'adset'
-          ? fallbackBiRankings.adSets
-          : fallbackBiRankings.ads,
-    biRankingSort,
-  ).slice(0, BI_TOP_LIMIT);
-  const selectedBiRankingTitleKey: TranslationKeys =
-    biControls.level === 'campaign'
-      ? 'com_ui_project_meta_ads_bi_top_campaigns'
-      : biControls.level === 'adset'
-        ? 'com_ui_project_meta_ads_bi_top_adsets'
-        : 'com_ui_project_meta_ads_bi_top_ads';
-  const selectedBiRankingTestId =
-    biControls.level === 'campaign'
-      ? 'meta-ads-bi-campaigns'
-      : biControls.level === 'adset'
-        ? 'meta-ads-bi-adsets'
-        : 'meta-ads-bi-ads';
-  const adRankingEmptyMessageKey: TranslationKeys =
-    biStatusQuery.data?.adDiagnostics?.adInsightsFetched === 0
-      ? 'com_ui_project_meta_ads_bi_no_ad_insights'
-      : biStatusQuery.data?.adDiagnostics &&
-          biStatusQuery.data.adDiagnostics.adInsightsFetched > 0 &&
-          biStatusQuery.data.adDiagnostics.adsAttachedToAdSets === 0
-        ? 'com_ui_project_meta_ads_bi_no_attached_ads'
-        : 'com_ui_project_meta_ads_bi_no_rankings';
+    settings,
+    controls: biControls,
+    sort: biRankingSort,
+    rankingItems: biRankingsQuery.data?.items ?? [],
+    adDiagnostics: biStatusQuery.data?.adDiagnostics,
+    localize,
+  });
   const {
     scopedObjectiveSummary,
     isEcommerceDashboard,
