@@ -380,15 +380,28 @@ export function MetaAdsRuleGroupDialog({
                 [
                   'pauseHighCost.minCreativesInScope',
                   'com_ui_project_meta_ads_pause_min_creatives',
+                  'com_ui_project_meta_ads_pause_min_creatives_hint',
                 ],
-                ['pauseHighCost.minSpend', 'com_ui_project_meta_ads_min_spend'],
-                ['pauseHighCost.cooldownHours', 'com_ui_project_meta_ads_cooldown'],
-              ].map(([key, labelKey]) => (
+                [
+                  'pauseHighCost.minSpend',
+                  'com_ui_project_meta_ads_min_spend',
+                  'com_ui_project_meta_ads_pause_min_spend_hint',
+                ],
+                [
+                  'pauseHighCost.cooldownHours',
+                  'com_ui_project_meta_ads_cooldown',
+                  'com_ui_project_meta_ads_pause_cooldown_hint',
+                ],
+              ].map(([key, labelKey, hintKey]) => (
                 <label
                   key={key}
                   className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
                 >
-                  <span>{localize(labelKey as Parameters<typeof localize>[0])}</span>
+                  <RuleFieldLabel
+                    localize={localize}
+                    labelKey={labelKey as Parameters<typeof localize>[0]}
+                    hintKey={hintKey as Parameters<typeof localize>[0]}
+                  />
                   <input
                     aria-label={localize(labelKey as Parameters<typeof localize>[0])}
                     type="number"
