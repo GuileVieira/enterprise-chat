@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
 import type { TProject } from 'librechat-data-provider';
@@ -18,47 +17,34 @@ import {
 } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
 import { logger } from '~/utils';
-import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
+import { MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
 import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
 import { useMetaAdsEntityActions } from './metaAds/hooks/useMetaAdsEntityActions';
 import { useMetaAdsRules } from './metaAds/hooks/useMetaAdsRules';
 import { useMetaAdsBiWorkspace } from './metaAds/hooks/useMetaAdsBiWorkspace';
+import { useMetaAdsTrafficAgent } from './metaAds/hooks/useMetaAdsTrafficAgent';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import { buildMetaAdsBiState } from './metaAds/biState';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
 import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
 import { getGraphVersionOptions } from './metaAds/settings';
 import { getRequestErrorMessage } from './metaAds/errors';
-import { MetaAdsAdPreviewDialog, MetaAdsBiRankDetailsDialog } from './metaAds/dialogs';
-import {
-  MetaAdsDuplicateEntityDialog,
-  MetaAdsBudgetConfirmationBanner,
-  MetaAdsEntityStatusConfirmationBanner,
-} from './metaAds/confirmations';
-import { MetaAdsCredentialsDialog } from './metaAds/credentialsDialog';
-import { MetaAdsBudgetEditorDialog } from './metaAds/budgetEditor';
 import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
-import { MetaAdsPendingRecommendationsPanel } from './metaAds/pendingRecommendationsPanel';
-import { MetaAdsRankMedia } from './metaAds/rankMedia';
-import { MetaAdsSettingsDrawer } from './metaAds/settingsDrawer';
-import { MetaAdsSummaryCards } from './metaAds/summaryCards';
+import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
+import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
 import { getMetaAdsTableRowClass } from './metaAds/overviewCells';
 import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
-import { MetaAdsOverviewTable } from './metaAds/overviewTable';
-import { MetaAdsOverviewToolbar } from './metaAds/overviewToolbar';
 import {
   buildMetaAdsOverviewState,
   buildMetaAdsSummaryCardItems,
   getMetaAdsTokenStatusKey,
   getNextMetaAdsSortDirection,
 } from './metaAds/overviewState';
-import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
-import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
-import { cleanDashboardName, createMetaAdsBriefStorageKey } from './metaAds/helpers';
+import { cleanDashboardName } from './metaAds/helpers';
 import type { TableView, WorkspaceTab } from './metaAds/types';
 import {
   metaAdsInput,
@@ -83,7 +69,6 @@ export default function ProjectMetaAdsPanel({
   canEdit: boolean;
 }) {
   const localize = useLocalize();
-  const navigate = useNavigate();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
   const { tableScrollRef, stickyHorizontalScrollRef, onTableScroll, onStickyHorizontalScroll } =
@@ -156,33 +141,7 @@ export default function ProjectMetaAdsPanel({
   const updateEntityStatus = useUpdateProjectMetaAdsEntityStatusMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
-  const {
-    settings,
-    settingsDraft,
-    settingsDraftToken,
-    showSettingsDraftToken,
-    credentialsDialogOpen,
-    tenantAccessToken,
-    showTenantAccessToken,
-    settingsDrawer,
-    setSettings,
-    setSettingsDraft,
-    setSettingsDraftToken,
-    setShowSettingsDraftToken,
-    setCredentialsDialogOpen,
-    setTenantAccessToken,
-    setShowTenantAccessToken,
-    saveSettings,
-    onSave,
-    onClearProjectToken,
-    openSettingsDrawer,
-    closeSettingsDrawer,
-    openCredentialsDialog,
-    closeCredentialsDialog,
-    onSaveSettingsDrawer,
-    onSaveProjectToken,
-    onSaveTenantToken,
-  } = useMetaAdsSettings({
+  const metaAdsSettings = useMetaAdsSettings({
     project,
     statusQuery,
     updateSettings,
@@ -190,33 +149,9 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
-  const {
-    budgetEditor,
-    manualDailyBudget,
-    budgetConfirmation,
-    entityStatusConfirmation,
-    duplicateDraft,
-    duplicateTargetName,
-    actionMenuKey,
-    selectedAdPreview,
-    setBudgetEditor,
-    setManualDailyBudget,
-    setBudgetConfirmation,
-    setEntityStatusConfirmation,
-    setDuplicateTargetName,
-    setActionMenuKey,
-    setSelectedAdPreview,
-    getDuplicateName,
-    onApply,
-    onOpenBudgetEditor,
-    onSaveManualBudget,
-    onConfirmManualBudget,
-    onOpenEntityStatusConfirmation,
-    onOpenDuplicateDraft,
-    onCloseDuplicateDraft,
-    onConfirmDuplicate,
-    onConfirmEntityStatus,
-  } = useMetaAdsEntityActions({
+  const { settings, settingsDrawer, setSettings, saveSettings, onSave, openSettingsDrawer } =
+    metaAdsSettings;
+  const metaAdsEntityActions = useMetaAdsEntityActions({
     project,
     statusQuery,
     updateBudget,
@@ -226,6 +161,15 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
+  const {
+    actionMenuKey,
+    setActionMenuKey,
+    getDuplicateName,
+    onApply,
+    onOpenBudgetEditor,
+    onOpenEntityStatusConfirmation,
+    onOpenDuplicateDraft,
+  } = metaAdsEntityActions;
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
@@ -255,31 +199,20 @@ export default function ProjectMetaAdsPanel({
     evolutionAlerts,
     hasEvolutionSection,
   } = buildMetaAdsEvolutionState({ trend, controls: biControls });
-  const canOpenTrafficAgentChat =
-    selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
+  const { canOpenTrafficAgentChat, onOpenTrafficAgentChat } = useMetaAdsTrafficAgent({
+    project,
+    startupConfigQuery,
+    statusData: statusQuery.data,
+    latestSnapshots,
+    campaigns,
+    selectedEntityIds,
+    selectedCount,
+  });
   const tokenStatusKey = getMetaAdsTokenStatusKey(tokenCredentials);
   const hasProjectToken =
-    tokenCredentials?.effectiveSource === 'project' || Boolean(settingsDraft?.tokenSecretName);
-  const {
-    ruleGroupDraft,
-    ruleDraftEntityLabels,
-    ruleRows,
-    canCreateRuleGroup,
-    getEntityRuleLabel,
-    setRuleGroupDraft,
-    onOpenRuleGroupDraft,
-    onEditGlobalRule,
-    onEditRuleGroup,
-    onEditRuleOverride,
-    onToggleRuleRow,
-    onDeleteRuleGroup,
-    onDeleteRuleOverride,
-    onRuleGroupRuleChange,
-    onRuleGroupRuleTextChange,
-    onAccountProfileChange,
-    onRuleGroupCreativeRuleChange,
-    onSaveRuleGroup,
-  } = useMetaAdsRules({
+    tokenCredentials?.effectiveSource === 'project' ||
+    Boolean(metaAdsSettings.settingsDraft?.tokenSecretName);
+  const metaAdsRules = useMetaAdsRules({
     settings,
     setSettings,
     saveSettings,
@@ -290,6 +223,18 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
+  const {
+    ruleRows,
+    canCreateRuleGroup,
+    getEntityRuleLabel,
+    onOpenRuleGroupDraft,
+    onEditGlobalRule,
+    onEditRuleGroup,
+    onEditRuleOverride,
+    onToggleRuleRow,
+    onDeleteRuleGroup,
+    onDeleteRuleOverride,
+  } = metaAdsRules;
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
   const biCampaigns = biStatusQuery.data?.campaigns ?? campaigns;
@@ -338,37 +283,6 @@ export default function ProjectMetaAdsPanel({
     setCampaignSort(`${key}_${nextDirection}`);
   };
 
-  const renderSortableHeader = ({
-    key,
-    label,
-    className,
-    defaultDirection = 'desc',
-  }: {
-    key: string;
-    label: string;
-    className?: string;
-    defaultDirection?: 'asc' | 'desc';
-  }) => {
-    const [activeKey, activeDirection] = campaignSort.split('_') as [string, 'asc' | 'desc'];
-    const isActive = activeKey === key;
-    return (
-      <button
-        type="button"
-        onClick={() => onSortColumn(key, defaultDirection)}
-        className={`inline-flex w-full min-w-0 flex-wrap items-center gap-0.5 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-[#8f8677] transition hover:text-[#f8f1e5] ${
-          className ?? ''
-        }`}
-      >
-        <span className="min-w-0 break-words">{label}</span>
-        {isActive && (
-          <span aria-hidden="true" className="text-amber-200">
-            {activeDirection === 'asc' ? '↑' : '↓'}
-          </span>
-        )}
-      </button>
-    );
-  };
-
   const onRunAnalysis = () => {
     setRunErrorMessage(null);
     runAnalysis.mutate(project.projectId, {
@@ -392,32 +306,6 @@ export default function ProjectMetaAdsPanel({
         });
       },
     });
-  };
-
-  const onOpenTrafficAgentChat = () => {
-    if (!canOpenTrafficAgentChat || !statusQuery.data) {
-      return;
-    }
-    const brief = buildMetaAdsChatBrief({
-      project,
-      snapshots: latestSnapshots,
-      campaigns,
-      recommendations: statusQuery.data.recommendations,
-      changes: statusQuery.data.changes,
-      selectedEntityIds,
-    });
-    const storageKey = createMetaAdsBriefStorageKey();
-    sessionStorage.setItem(storageKey, JSON.stringify(brief));
-
-    const params = new URLSearchParams({
-      project_id: project.projectId,
-      meta_ads_brief: storageKey,
-    });
-    const trafficAgentId = startupConfigQuery.data?.interface?.metaAdsTrafficAgentId;
-    if (trafficAgentId) {
-      params.set('agent_id', trafficAgentId);
-    }
-    navigate(`/c/new?${params.toString()}`);
   };
 
   const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
@@ -456,7 +344,7 @@ export default function ProjectMetaAdsPanel({
     onOpenDuplicateDraft,
     onOpenBudgetEditor,
     onOpenEntityStatusConfirmation,
-    onPreviewAd: setSelectedAdPreview,
+    onPreviewAd: metaAdsEntityActions.setSelectedAdPreview,
   });
 
   const content = (
@@ -480,271 +368,115 @@ export default function ProjectMetaAdsPanel({
         onToggleFullscreen={() => setMetricsFullscreen((current) => !current)}
         onSave={onSave}
       >
-        <MetaAdsSettingsDrawer
-          drawer={settingsDrawer}
-          draft={settingsDraft}
-          tokenConfigured={Boolean(tokenCredentials)}
-          tokenStatusLabel={localize(tokenStatusKey)}
-          effectiveGraphVersion={statusQuery.data?.graphVersion?.effective ?? 'v25.0'}
-          graphVersionOptions={graphVersionOptions}
-          canUseMetaAdsActions={canUseMetaAdsActions}
-          saving={updateSettings.isLoading}
-          localize={localize}
-          onDraftChange={setSettingsDraft}
-          onOpenCredentials={openCredentialsDialog}
-          onClose={closeSettingsDrawer}
-          onSave={onSaveSettingsDrawer}
-          chrome={{
-            modalOverlayClassName: metaAdsModalOverlay,
-            drawerShellClassName: metaAdsDrawerShell,
-            modalHeaderClassName: metaAdsModalHeader,
-            modalTileClassName: metaAdsModalTile,
-          }}
-          controls={{
-            inputClassName: metaAdsInputLg,
-            buttonClassName: metaAdsButton,
-            primaryButtonClassName: metaAdsPrimaryButton,
-            ghostButtonClassName: metaAdsGhostButton,
-          }}
-        />
-
-        <MetaAdsCredentialsDialog
-          open={credentialsDialogOpen}
-          tenantConfigured={Boolean(statusQuery.data?.credentials?.tenantConfigured)}
-          canManageTenantToken={canManageTenantToken}
-          canUseMetaAdsActions={canUseMetaAdsActions}
-          hasProjectToken={hasProjectToken}
-          tenantAccessToken={tenantAccessToken}
-          showTenantAccessToken={showTenantAccessToken}
-          settingsDraftToken={settingsDraftToken}
-          showSettingsDraftToken={showSettingsDraftToken}
-          savingTenantToken={updateTenantToken.isLoading}
-          savingProjectToken={updateSettings.isLoading}
-          localize={localize}
-          onOpen={() => setCredentialsDialogOpen(true)}
-          onClose={closeCredentialsDialog}
-          onTenantAccessTokenChange={setTenantAccessToken}
-          onToggleTenantAccessToken={() => setShowTenantAccessToken((current) => !current)}
-          onSaveTenantToken={onSaveTenantToken}
-          onSettingsDraftTokenChange={setSettingsDraftToken}
-          onToggleSettingsDraftToken={() => setShowSettingsDraftToken((current) => !current)}
-          onClearProjectToken={onClearProjectToken}
-          onSaveProjectToken={onSaveProjectToken}
-          chrome={{
-            modalShellClassName: metaAdsModalShell,
-            modalHeaderClassName: metaAdsModalHeader,
-            modalTileClassName: metaAdsModalTile,
-          }}
-          buttons={{
-            primaryClassName: metaAdsPrimaryButton,
-            ghostClassName: metaAdsGhostButton,
-          }}
-        />
-
         {workspaceTab === 'overview' && (
-          <div
-            id="meta-ads-overview-tab-panel"
-            role="tabpanel"
-            aria-labelledby="meta-ads-tab-overview"
-            data-testid="meta-ads-overview-tab-panel"
-          >
-            <MetaAdsOverviewToolbar
-              loading={isStatusLoading}
-              campaignSearch={campaignSearch}
-              budgetModeFilter={budgetModeFilter}
-              objectiveFilter={objectiveFilter}
-              campaignSort={campaignSort}
-              tableView={tableView}
-              selectedCount={selectedCount}
-              campaignCount={campaigns.length}
-              canCreateRuleGroup={canCreateRuleGroup}
-              canOpenTrafficAgentChat={canOpenTrafficAgentChat}
-              objectiveOptions={objectiveOptions}
-              localize={localize}
-              onCampaignSearchChange={setCampaignSearch}
-              onBudgetModeFilterChange={setBudgetModeFilter}
-              onObjectiveFilterChange={setObjectiveFilter}
-              onCampaignSortChange={setCampaignSort}
-              onTableViewChange={setTableView}
-              onClearSelection={clearSelection}
-              onExpandAllRows={() => expandAllRows(campaigns)}
-              onCollapseAllRows={() => collapseAllRows(campaigns)}
-              onCreateRuleGroup={onOpenRuleGroupDraft}
-              onOpenTrafficAgentChat={onOpenTrafficAgentChat}
-            />
-            <MetaAdsSummaryCards
-              cards={summaryCards}
-              resultTypeOptions={summaryResultTypeOptions}
-              selectorOpen={resultTypeSelectorOpen}
-              selectedResultType={selectedSummaryResultType}
-              initialLoading={isInitialStatusLoading}
-              currency={currency}
-              localize={localize}
-              onOpenSelector={() => setResultTypeSelectorOpen(true)}
-              onCloseSelector={() => setResultTypeSelectorOpen(false)}
-              onSelectResultType={(resultType) => {
+          <MetaAdsOverviewWorkspace
+            filters={{ campaignSort, onSortColumn }}
+            selection={{ campaignCount: campaigns.length }}
+            toolbar={{
+              loading: isStatusLoading,
+              campaignSearch,
+              budgetModeFilter,
+              objectiveFilter,
+              campaignSort,
+              tableView,
+              selectedCount,
+              campaignCount: campaigns.length,
+              canCreateRuleGroup,
+              canOpenTrafficAgentChat,
+              objectiveOptions,
+              localize,
+              onCampaignSearchChange: setCampaignSearch,
+              onBudgetModeFilterChange: setBudgetModeFilter,
+              onObjectiveFilterChange: setObjectiveFilter,
+              onCampaignSortChange: setCampaignSort,
+              onTableViewChange: setTableView,
+              onClearSelection: clearSelection,
+              onExpandAllRows: () => expandAllRows(campaigns),
+              onCollapseAllRows: () => collapseAllRows(campaigns),
+              onCreateRuleGroup: onOpenRuleGroupDraft,
+              onOpenTrafficAgentChat,
+            }}
+            summary={{
+              cards: summaryCards,
+              resultTypeOptions: summaryResultTypeOptions,
+              selectorOpen: resultTypeSelectorOpen,
+              selectedResultType: selectedSummaryResultType,
+              initialLoading: isInitialStatusLoading,
+              currency,
+              localize,
+              onOpenSelector: () => setResultTypeSelectorOpen(true),
+              onCloseSelector: () => setResultTypeSelectorOpen(false),
+              onSelectResultType: (resultType) => {
                 setSelectedSummaryResultType(resultType);
                 setResultTypeSelectorOpen(false);
-              }}
-              onClearResultType={() => {
+              },
+              onClearResultType: () => {
                 setSelectedSummaryResultType(null);
                 setResultTypeSelectorOpen(false);
-              }}
-              chrome={{
+              },
+              chrome: {
                 modalOverlayClassName: metaAdsModalOverlay,
                 modalShellClassName: metaAdsModalShell,
-              }}
-              buttons={{
+              },
+              buttons: {
                 buttonClassName: metaAdsButton,
                 ghostButtonClassName: metaAdsGhostButton,
-              }}
-            />
-
-            {campaigns.length === 0 && (
-              <MetaAdsPendingRecommendationsPanel
-                recommendations={pendingRecommendations}
-                currency={currency}
-                canUseMetaAdsActions={canUseMetaAdsActions}
-                applyingRecommendation={applyRecommendation.isLoading}
-                localize={localize}
-                onApply={onApply}
-              />
-            )}
-
-            <MetaAdsBudgetEditorDialog
-              editor={budgetEditor}
-              dailyBudget={manualDailyBudget}
-              currency={currency}
-              saving={updateBudget.isLoading}
-              localize={localize}
-              onDailyBudgetChange={setManualDailyBudget}
-              onClose={() => setBudgetEditor(null)}
-              onSave={onSaveManualBudget}
-              chrome={{
-                modalOverlayClassName: metaAdsModalOverlay,
-                modalShellClassName: metaAdsModalShell,
-                modalTileClassName: metaAdsModalTile,
-              }}
-              controls={{
-                inputClassName: metaAdsInputLg,
-                primaryButtonClassName: metaAdsPrimaryButton,
-                ghostButtonClassName: metaAdsGhostButton,
-              }}
-            />
-
-            <MetaAdsBudgetConfirmationBanner
-              confirmation={budgetConfirmation}
-              currency={currency}
-              saving={updateBudget.isLoading}
-              localize={localize}
-              onCancel={() => setBudgetConfirmation(null)}
-              onConfirm={onConfirmManualBudget}
-            />
-
-            <MetaAdsEntityStatusConfirmationBanner
-              confirmation={entityStatusConfirmation}
-              saving={updateEntityStatus.isLoading}
-              localize={localize}
-              onCancel={() => setEntityStatusConfirmation(null)}
-              onConfirm={onConfirmEntityStatus}
-            />
-
-            <MetaAdsDuplicateEntityDialog
-              draft={duplicateDraft}
-              targetName={duplicateTargetName}
-              currency={currency}
-              saving={duplicateEntity.isLoading}
-              localize={localize}
-              onTargetNameChange={setDuplicateTargetName}
-              onClose={onCloseDuplicateDraft}
-              onConfirm={onConfirmDuplicate}
-              chrome={{
-                modalOverlayClassName: metaAdsModalOverlay,
-                drawerShellClassName: metaAdsDrawerShell,
-                modalHeaderClassName: metaAdsModalHeader,
-                modalTileClassName: metaAdsModalTile,
-              }}
-              buttons={{
-                primaryClassName: metaAdsPrimaryButton,
-                ghostClassName: metaAdsGhostButton,
-                inputClassName: metaAdsInputLg,
-              }}
-            />
-
-            <MetaAdsRuleGroupDialog
-              draft={ruleGroupDraft}
-              settings={settings}
-              entityLabels={ruleDraftEntityLabels}
-              saving={updateSettings.isLoading}
-              localize={localize}
-              onNameChange={(name) =>
-                setRuleGroupDraft((current) => (current ? { ...current, name } : current))
-              }
-              onAccountProfileChange={onAccountProfileChange}
-              onRuleChange={onRuleGroupRuleChange}
-              onRuleTextChange={onRuleGroupRuleTextChange}
-              onCreativeRuleChange={onRuleGroupCreativeRuleChange}
-              onClose={() => setRuleGroupDraft(null)}
-              onSave={onSaveRuleGroup}
-              chrome={{
-                modalOverlayClassName: metaAdsModalOverlay,
-                drawerShellClassName: metaAdsDrawerShell,
-                modalHeaderClassName: metaAdsModalHeader,
-                modalTileClassName: metaAdsModalTile,
-                labelClassName: metaAdsLabel,
-              }}
-              controls={{
-                inputClassName: metaAdsInputLg,
-                primaryButtonClassName: metaAdsPrimaryButton,
-                ghostButtonClassName: metaAdsGhostButton,
-              }}
-            />
-
-            <MetaAdsRulesWorkspace
-              rows={ruleRows}
-              currency={currency}
-              canCreateRuleGroup={canCreateRuleGroup}
-              canUseMetaAdsActions={canUseMetaAdsActions}
-              saving={updateSettings.isLoading}
-              localize={localize}
-              primaryButtonClassName={metaAdsPrimaryButton}
-              onCreateRuleGroup={onOpenRuleGroupDraft}
-              onToggleRuleRow={onToggleRuleRow}
-              onEditGlobalRule={onEditGlobalRule}
-              onEditRuleGroup={onEditRuleGroup}
-              onEditRuleOverride={onEditRuleOverride}
-              onDeleteRuleGroup={onDeleteRuleGroup}
-              onDeleteRuleOverride={onDeleteRuleOverride}
-            />
-
-            <MetaAdsOverviewTable
-              columns={tableColumns}
-              campaigns={filteredCampaigns}
-              selectedEntityIds={selectedEntityIds}
-              expandedCampaignIds={expandedCampaignIds}
-              collapsedAboCampaignIds={collapsedAboCampaignIds}
-              collapsedAdSetAdsIds={collapsedAdSetAdsIds}
-              tableColumnCount={tableColumnCount}
-              tableMinWidthClassName={tableViewMinWidth[tableView]}
-              stickyCellClassName={metaAdsStickyCell}
-              isInitialStatusLoading={isInitialStatusLoading}
-              localize={localize}
-              tableScrollRef={tableScrollRef}
-              stickyHorizontalScrollRef={stickyHorizontalScrollRef}
-              onTableScroll={onTableScroll}
-              onStickyHorizontalScroll={onStickyHorizontalScroll}
-              onToggleCampaign={onToggleCampaign}
-              onToggleCampaignExpanded={onToggleCampaignExpanded}
-              onToggleAdSet={onToggleAdSet}
-              onToggleAdSetAds={onToggleAdSetAds}
-              getTableRowClass={getTableRowClass}
-              getEntityRecommendation={getEntityRecommendation}
-              renderSortableHeader={renderSortableHeader}
-              renderCampaignCell={renderCampaignCell}
-              renderAdSetCell={renderAdSetCell}
-              renderAdRow={renderAdRow}
-            />
-          </div>
+              },
+            }}
+            actions={{
+              pendingRecommendations: {
+                recommendations: pendingRecommendations,
+                currency,
+                canUseMetaAdsActions,
+                applyingRecommendation: applyRecommendation.isLoading,
+                localize,
+                onApply,
+              },
+            }}
+            chrome={{ showPendingRecommendations: true }}
+            rules={{
+              rows: ruleRows,
+              currency,
+              canCreateRuleGroup,
+              canUseMetaAdsActions,
+              saving: updateSettings.isLoading,
+              localize,
+              primaryButtonClassName: metaAdsPrimaryButton,
+              onCreateRuleGroup: onOpenRuleGroupDraft,
+              onToggleRuleRow,
+              onEditGlobalRule,
+              onEditRuleGroup,
+              onEditRuleOverride,
+              onDeleteRuleGroup,
+              onDeleteRuleOverride,
+            }}
+            table={{
+              columns: tableColumns,
+              campaigns: filteredCampaigns,
+              selectedEntityIds,
+              expandedCampaignIds,
+              collapsedAboCampaignIds,
+              collapsedAdSetAdsIds,
+              tableColumnCount,
+              tableMinWidthClassName: tableViewMinWidth[tableView],
+              stickyCellClassName: metaAdsStickyCell,
+              isInitialStatusLoading,
+              localize,
+              tableScrollRef,
+              stickyHorizontalScrollRef,
+              onTableScroll,
+              onStickyHorizontalScroll,
+              onToggleCampaign,
+              onToggleCampaignExpanded,
+              onToggleAdSet,
+              onToggleAdSetAds,
+              getTableRowClass,
+              getEntityRecommendation,
+              renderCampaignCell,
+              renderAdSetCell,
+              renderAdRow,
+            }}
+          />
         )}
 
         {workspaceTab === 'bi' && (
@@ -806,32 +538,47 @@ export default function ProjectMetaAdsPanel({
         />
       )}
 
-      <MetaAdsAdPreviewDialog
-        ad={selectedAdPreview}
+      <MetaAdsDialogsLayer
+        settingsState={metaAdsSettings}
+        entityActions={metaAdsEntityActions}
+        rulesState={metaAdsRules}
         currency={currency}
         localize={localize}
         metricsFullscreen={metricsFullscreen}
-        onClose={() => setSelectedAdPreview(null)}
-        chrome={{
-          modalShellClassName: metaAdsModalShell,
-          modalHeaderClassName: metaAdsModalHeader,
-          modalTileClassName: metaAdsModalTile,
-        }}
-      />
-
-      <MetaAdsBiRankDetailsDialog
-        item={selectedBiRankItem}
-        currency={currency}
-        localize={localize}
-        renderRankMedia={(item, size) => (
-          <MetaAdsRankMedia item={item} size={size} localize={localize} />
-        )}
+        selectedBiRankItem={selectedBiRankItem}
+        onCloseBiRank={() => setSelectedBiRankItem(null)}
         cleanName={cleanDashboardName}
-        onClose={() => setSelectedBiRankItem(null)}
+        token={{
+          configured: Boolean(tokenCredentials),
+          tenantConfigured: Boolean(statusQuery.data?.credentials?.tenantConfigured),
+          statusLabel: localize(tokenStatusKey),
+          effectiveGraphVersion: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
+          graphVersionOptions,
+          canManageTenantToken,
+          canUseMetaAdsActions,
+          hasProjectToken,
+        }}
+        mutations={{
+          savingSettings: updateSettings.isLoading,
+          savingTenantToken: updateTenantToken.isLoading,
+          savingBudget: updateBudget.isLoading,
+          savingDuplicate: duplicateEntity.isLoading,
+          updatingEntityStatus: updateEntityStatus.isLoading,
+        }}
         chrome={{
+          overviewActive: workspaceTab === 'overview',
+          modalOverlayClassName: metaAdsModalOverlay,
           modalShellClassName: metaAdsModalShell,
+          drawerShellClassName: metaAdsDrawerShell,
           modalHeaderClassName: metaAdsModalHeader,
           modalTileClassName: metaAdsModalTile,
+          labelClassName: metaAdsLabel,
+        }}
+        controls={{
+          inputClassName: metaAdsInputLg,
+          buttonClassName: metaAdsButton,
+          primaryButtonClassName: metaAdsPrimaryButton,
+          ghostButtonClassName: metaAdsGhostButton,
         }}
       />
     </>
