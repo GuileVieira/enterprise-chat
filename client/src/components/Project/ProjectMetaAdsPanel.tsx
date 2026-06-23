@@ -26,6 +26,7 @@ import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
+import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import {
   defaultRules,
@@ -41,12 +42,7 @@ import {
 import { buildMetaAdsBiState } from './metaAds/biState';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
 import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
-import {
-  normalizeSettings,
-  toDateInputValue,
-  getDateInputDaysAgo,
-  getGraphVersionOptions,
-} from './metaAds/settings';
+import { toDateInputValue, getDateInputDaysAgo, getGraphVersionOptions } from './metaAds/settings';
 import { getRequestErrorMessage } from './metaAds/errors';
 import { MetaAdsAdPreviewDialog, MetaAdsBiRankDetailsDialog } from './metaAds/dialogs';
 import {
@@ -84,7 +80,6 @@ import type {
   BudgetEditor,
   RuleGroupDraft,
   PeriodFilter,
-  SettingsDrawer,
   WorkspaceTab,
   DuplicateDraft,
   MetaAdsRuleGroup,
@@ -126,13 +121,6 @@ export default function ProjectMetaAdsPanel({
   const { showToast } = useToastContext();
   const { tableScrollRef, stickyHorizontalScrollRef, onTableScroll, onStickyHorizontalScroll } =
     useMetaAdsTableScrollSync();
-  const [settings, setSettings] = useState(() => normalizeSettings(project));
-  const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
-  const [settingsDraftToken, setSettingsDraftToken] = useState('');
-  const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
-  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
-  const [tenantAccessToken, setTenantAccessToken] = useState('');
-  const [showTenantAccessToken, setShowTenantAccessToken] = useState(false);
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
   const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
@@ -166,7 +154,6 @@ export default function ProjectMetaAdsPanel({
   const [appliedCustomSince, setAppliedCustomSince] = useState(() => getDateInputDaysAgo(6));
   const [appliedCustomUntil, setAppliedCustomUntil] = useState(() => toDateInputValue(new Date()));
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
-  const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
   const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
@@ -219,6 +206,40 @@ export default function ProjectMetaAdsPanel({
   const updateEntityStatus = useUpdateProjectMetaAdsEntityStatusMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
+  const {
+    settings,
+    settingsDraft,
+    settingsDraftToken,
+    showSettingsDraftToken,
+    credentialsDialogOpen,
+    tenantAccessToken,
+    showTenantAccessToken,
+    settingsDrawer,
+    setSettings,
+    setSettingsDraft,
+    setSettingsDraftToken,
+    setShowSettingsDraftToken,
+    setCredentialsDialogOpen,
+    setTenantAccessToken,
+    setShowTenantAccessToken,
+    saveSettings,
+    onSave,
+    onClearProjectToken,
+    openSettingsDrawer,
+    closeSettingsDrawer,
+    openCredentialsDialog,
+    closeCredentialsDialog,
+    onSaveSettingsDrawer,
+    onSaveProjectToken,
+    onSaveTenantToken,
+  } = useMetaAdsSettings({
+    project,
+    statusQuery,
+    updateSettings,
+    updateTenantToken,
+    localize,
+    showToast,
+  });
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
@@ -229,14 +250,6 @@ export default function ProjectMetaAdsPanel({
     user?.role === SystemRoles.USER;
 
   useEffect(() => {
-    setSettings(normalizeSettings(project));
-    setSettingsDrawer(null);
-    setSettingsDraft(null);
-    setSettingsDraftToken('');
-    setShowSettingsDraftToken(false);
-    setCredentialsDialogOpen(false);
-    setTenantAccessToken('');
-    setShowTenantAccessToken(false);
     setSelectedAdPreview(null);
     setEntityStatusConfirmation(null);
     setDuplicateDraft(null);
@@ -387,68 +400,6 @@ export default function ProjectMetaAdsPanel({
         )}
       </button>
     );
-  };
-
-  const saveSettings = (
-    nextSettings: MetaAdsSettingsState,
-    token: string,
-    onSuccess?: () => void,
-  ) => {
-    const trimmedToken = token.trim();
-    logger.debug('MetaAds', 'Saving project Meta Ads settings', {
-      projectId: project.projectId,
-      hasMetaAccessToken: trimmedToken.length > 0,
-      tokenLength: trimmedToken.length,
-      tokenSecretName: nextSettings.tokenSecretName,
-    });
-    setSettings(nextSettings);
-    updateSettings.mutate(
-      {
-        projectId: project.projectId,
-        metaAds: nextSettings,
-        ...(trimmedToken ? { metaAccessToken: trimmedToken } : {}),
-      },
-      {
-        onSuccess: () => {
-          statusQuery.refetch();
-          setSettingsDraftToken('');
-          setShowSettingsDraftToken(false);
-          showToast({ message: localize('com_ui_saved'), status: 'success' });
-          onSuccess?.();
-          logger.debug('MetaAds', 'Saved project Meta Ads settings', {
-            projectId: project.projectId,
-            savedProjectToken: trimmedToken.length > 0,
-          });
-        },
-        onError: (error) => {
-          const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
-          showToast({ message, status: 'error' });
-          logger.error('MetaAds', 'Failed to save project Meta Ads settings', {
-            projectId: project.projectId,
-            error,
-          });
-        },
-      },
-    );
-  };
-
-  const onSave = () => {
-    saveSettings(settings, '');
-  };
-
-  const onClearProjectToken = () => {
-    if (!settingsDraft) {
-      return;
-    }
-    const nextSettings: MetaAdsSettingsState = {
-      ...settingsDraft,
-      tokenSecretName: '',
-      credentialMode: 'tenant_default',
-    };
-    setSettingsDraft(nextSettings);
-    setSettingsDraftToken('');
-    saveSettings(nextSettings, '', closeCredentialsDialog);
   };
 
   const onApply = (recommendation: ProjectMetaAdsRecommendation) => {
@@ -964,82 +915,6 @@ export default function ProjectMetaAdsPanel({
       params.set('agent_id', trafficAgentId);
     }
     navigate(`/c/new?${params.toString()}`);
-  };
-
-  const openSettingsDrawer = (drawer: Exclude<SettingsDrawer, null>) => {
-    setSettingsDrawer(drawer);
-    setSettingsDraft(settings);
-    setSettingsDraftToken('');
-    setShowSettingsDraftToken(false);
-    setCredentialsDialogOpen(false);
-    setTenantAccessToken('');
-    setShowTenantAccessToken(false);
-  };
-
-  const closeSettingsDrawer = () => {
-    setSettingsDrawer(null);
-    setSettingsDraft(null);
-    setSettingsDraftToken('');
-    setShowSettingsDraftToken(false);
-    setCredentialsDialogOpen(false);
-    setTenantAccessToken('');
-    setShowTenantAccessToken(false);
-  };
-
-  const openCredentialsDialog = () => {
-    setCredentialsDialogOpen(true);
-    setSettingsDraftToken('');
-    setTenantAccessToken('');
-    setShowSettingsDraftToken(false);
-    setShowTenantAccessToken(false);
-  };
-
-  const closeCredentialsDialog = () => {
-    setCredentialsDialogOpen(false);
-    setSettingsDraftToken('');
-    setTenantAccessToken('');
-    setShowSettingsDraftToken(false);
-    setShowTenantAccessToken(false);
-  };
-
-  const onSaveSettingsDrawer = () => {
-    if (!settingsDraft) {
-      return;
-    }
-    saveSettings(settingsDraft, settingsDraftToken, closeSettingsDrawer);
-  };
-
-  const onSaveProjectToken = () => {
-    if (!settingsDraft) {
-      return;
-    }
-    saveSettings(settingsDraft, settingsDraftToken, closeCredentialsDialog);
-  };
-
-  const onSaveTenantToken = () => {
-    const trimmedToken = tenantAccessToken.trim();
-    if (!trimmedToken) {
-      return;
-    }
-    updateTenantToken.mutate(
-      {
-        projectId: project.projectId,
-        metaAccessToken: trimmedToken,
-      },
-      {
-        onSuccess: () => {
-          setTenantAccessToken('');
-          setShowTenantAccessToken(false);
-          statusQuery.refetch();
-          showToast({ message: localize('com_ui_saved'), status: 'success' });
-        },
-        onError: (error) => {
-          const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
   };
 
   const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
