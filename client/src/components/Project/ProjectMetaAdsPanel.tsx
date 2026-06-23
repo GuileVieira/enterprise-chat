@@ -23,7 +23,6 @@ import {
   useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
-import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
@@ -39,7 +38,6 @@ import {
   getMetaAdsRuleDraftEntityLabels,
 } from './metaAds/rulesState';
 import { buildMetaAdsBiState } from './metaAds/biState';
-import { formatMoney, formatMetric, getObjectiveLabel } from './metaAds/formatters';
 import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
 import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
 import {
@@ -72,6 +70,7 @@ import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsOverviewToolbar } from './metaAds/overviewToolbar';
 import {
   buildMetaAdsOverviewState,
+  buildMetaAdsSummaryCardItems,
   getMetaAdsTokenStatusKey,
   getNextMetaAdsSortDirection,
 } from './metaAds/overviewState';
@@ -1166,60 +1165,19 @@ export default function ProjectMetaAdsPanel({
     (key) => tableColumnMap[key],
   );
   const tableColumnCount = tableColumns.length + 2;
-  const summaryCards = isEcommerceDashboard
-    ? [
-        {
-          labelKey: 'com_ui_project_meta_ads_average_roas' as TranslationKeys,
-          value: formatMetric(summaryAverageRoas),
-          tone: 'border-l-emerald-300/35',
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_total_spend' as TranslationKeys,
-          value: formatMoney(summaryTotalSpend, currency),
-          tone: 'border-l-amber-300/35',
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_total_results' as TranslationKeys,
-          value: formatMetric(summaryTotalResults),
-          tone: 'border-l-sky-300/30',
-          context: summaryMetricContext,
-          clickable: summaryResultTypeOptions.length > 0,
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_average_cost' as TranslationKeys,
-          value: formatMoney(summaryAverageCost, currency),
-          tone: 'border-l-rose-300/30',
-          context: summaryMetricContext,
-        },
-      ]
-    : [
-        {
-          labelKey: 'com_ui_project_meta_ads_total_spend' as TranslationKeys,
-          value: formatMoney(summaryTotalSpend, currency),
-          tone: 'border-l-amber-300/35',
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_total_results' as TranslationKeys,
-          value: formatMetric(summaryTotalResults),
-          tone: 'border-l-emerald-300/35',
-          context: summaryMetricContext,
-          clickable: summaryResultTypeOptions.length > 0,
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_average_cost' as TranslationKeys,
-          value: formatMoney(summaryAverageCost, currency),
-          tone: 'border-l-sky-300/30',
-          context: summaryMetricContext,
-        },
-        {
-          labelKey: 'com_ui_project_meta_ads_average_frequency' as TranslationKeys,
-          value: formatMetric(summaryAverageFrequency),
-          tone: 'border-l-rose-300/30',
-          context: scopedObjectiveSummary
-            ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
-            : undefined,
-        },
-      ];
+  const summaryCards = buildMetaAdsSummaryCardItems({
+    isEcommerceDashboard,
+    summaryAverageRoas,
+    summaryTotalSpend,
+    summaryTotalResults,
+    summaryAverageCost,
+    summaryAverageFrequency,
+    summaryMetricContext,
+    summaryResultTypeOptionsLength: summaryResultTypeOptions.length,
+    scopedObjectiveSummary,
+    currency,
+    localize,
+  });
   const getTableRowClass = getMetaAdsTableRowClass;
   const { renderCampaignCell, renderAdSetCell, renderAdRow } = createMetaAdsOverviewRenderers({
     columns: tableColumns,

@@ -1,7 +1,7 @@
 import type { ProjectMetaAdsCampaignSummary, ProjectMetaAdsStatus } from 'librechat-data-provider';
 import type { useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
-import { getObjectiveLabel, getResultTypeLabel } from './formatters';
+import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
 import {
   buildObjectiveSummaries,
   buildSummaryResultTypeOptions,
@@ -10,6 +10,7 @@ import {
 } from './summary';
 import { compareNumberSort, getMetricValue } from './table';
 import type { MetaAdsSettingsState } from './types';
+import type { MetaAdsSummaryCardItem } from './summaryCards';
 
 type OverviewStateInput = {
   campaigns: ProjectMetaAdsCampaignSummary[];
@@ -130,6 +131,89 @@ export function getNextMetaAdsSortDirection({
     return defaultDirection;
   }
   return defaultDirection === 'asc' ? 'desc' : 'asc';
+}
+
+export function buildMetaAdsSummaryCardItems({
+  isEcommerceDashboard,
+  summaryAverageRoas,
+  summaryTotalSpend,
+  summaryTotalResults,
+  summaryAverageCost,
+  summaryAverageFrequency,
+  summaryMetricContext,
+  summaryResultTypeOptionsLength,
+  scopedObjectiveSummary,
+  currency,
+  localize,
+}: {
+  isEcommerceDashboard: boolean;
+  summaryAverageRoas: number | null;
+  summaryTotalSpend: number | null | undefined;
+  summaryTotalResults: number | null | undefined;
+  summaryAverageCost: number | null | undefined;
+  summaryAverageFrequency: number | null | undefined;
+  summaryMetricContext: string | undefined;
+  summaryResultTypeOptionsLength: number;
+  scopedObjectiveSummary: ReturnType<typeof getScopedObjectiveSummary>;
+  currency: string;
+  localize: ReturnType<typeof useLocalize>;
+}): MetaAdsSummaryCardItem[] {
+  if (isEcommerceDashboard) {
+    return [
+      {
+        labelKey: 'com_ui_project_meta_ads_average_roas',
+        value: formatMetric(summaryAverageRoas),
+        tone: 'border-l-emerald-300/35',
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_total_spend',
+        value: formatMoney(summaryTotalSpend, currency),
+        tone: 'border-l-amber-300/35',
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_total_results',
+        value: formatMetric(summaryTotalResults),
+        tone: 'border-l-sky-300/30',
+        context: summaryMetricContext,
+        clickable: summaryResultTypeOptionsLength > 0,
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_average_cost',
+        value: formatMoney(summaryAverageCost, currency),
+        tone: 'border-l-rose-300/30',
+        context: summaryMetricContext,
+      },
+    ];
+  }
+
+  return [
+    {
+      labelKey: 'com_ui_project_meta_ads_total_spend',
+      value: formatMoney(summaryTotalSpend, currency),
+      tone: 'border-l-amber-300/35',
+    },
+    {
+      labelKey: 'com_ui_project_meta_ads_total_results',
+      value: formatMetric(summaryTotalResults),
+      tone: 'border-l-emerald-300/35',
+      context: summaryMetricContext,
+      clickable: summaryResultTypeOptionsLength > 0,
+    },
+    {
+      labelKey: 'com_ui_project_meta_ads_average_cost',
+      value: formatMoney(summaryAverageCost, currency),
+      tone: 'border-l-sky-300/30',
+      context: summaryMetricContext,
+    },
+    {
+      labelKey: 'com_ui_project_meta_ads_average_frequency',
+      value: formatMetric(summaryAverageFrequency),
+      tone: 'border-l-rose-300/30',
+      context: scopedObjectiveSummary
+        ? getObjectiveLabel(scopedObjectiveSummary.objective, localize)
+        : undefined,
+    },
+  ];
 }
 
 function getScopedObjectiveSummary(
