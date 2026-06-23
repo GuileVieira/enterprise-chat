@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { MouseEvent, UIEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
@@ -25,6 +25,7 @@ import { useAuthContext, useLocalize } from '~/hooks';
 import { logger } from '~/utils';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
+import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import {
   defaultRules,
@@ -147,9 +148,8 @@ export default function ProjectMetaAdsPanel({
   const navigate = useNavigate();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
-  const tableScrollRef = useRef<HTMLDivElement | null>(null);
-  const stickyHorizontalScrollRef = useRef<HTMLDivElement | null>(null);
-  const isSyncingHorizontalScrollRef = useRef(false);
+  const { tableScrollRef, stickyHorizontalScrollRef, onTableScroll, onStickyHorizontalScroll } =
+    useMetaAdsTableScrollSync();
   const [settings, setSettings] = useState(() => normalizeSettings(project));
   const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
@@ -303,38 +303,6 @@ export default function ProjectMetaAdsPanel({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [actionMenuKey]);
-
-  const releaseHorizontalScrollSync = () => {
-    window.requestAnimationFrame(() => {
-      isSyncingHorizontalScrollRef.current = false;
-    });
-  };
-
-  const onTableScroll = (event: UIEvent<HTMLDivElement>) => {
-    if (isSyncingHorizontalScrollRef.current) {
-      return;
-    }
-    const stickyScroll = stickyHorizontalScrollRef.current;
-    if (!stickyScroll || stickyScroll.scrollLeft === event.currentTarget.scrollLeft) {
-      return;
-    }
-    isSyncingHorizontalScrollRef.current = true;
-    stickyScroll.scrollLeft = event.currentTarget.scrollLeft;
-    releaseHorizontalScrollSync();
-  };
-
-  const onStickyHorizontalScroll = (event: UIEvent<HTMLDivElement>) => {
-    if (isSyncingHorizontalScrollRef.current) {
-      return;
-    }
-    const tableScroll = tableScrollRef.current;
-    if (!tableScroll || tableScroll.scrollLeft === event.currentTarget.scrollLeft) {
-      return;
-    }
-    isSyncingHorizontalScrollRef.current = true;
-    tableScroll.scrollLeft = event.currentTarget.scrollLeft;
-    releaseHorizontalScrollSync();
-  };
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
