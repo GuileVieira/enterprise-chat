@@ -140,9 +140,11 @@ export function MetaAdsDialogsLayer({
   const {
     ruleGroupDraft,
     ruleDraftEntityLabels,
+    ruleDraftEntityOptions,
     setRuleGroupDraft,
     onRuleGroupRuleChange,
     onRuleGroupRuleTextChange,
+    onRuleGroupEntityToggle,
     onAccountProfileChange,
     onRuleGroupCreativeRuleChange,
     onSaveRuleGroup,
@@ -253,6 +255,7 @@ export function MetaAdsDialogsLayer({
             draft={ruleGroupDraft}
             settings={settings}
             entityLabels={ruleDraftEntityLabels}
+            entityOptions={ruleDraftEntityOptions}
             saving={mutations.savingSettings}
             localize={localize}
             onNameChange={(name) =>
@@ -261,6 +264,7 @@ export function MetaAdsDialogsLayer({
             onAccountProfileChange={onAccountProfileChange}
             onRuleChange={onRuleGroupRuleChange}
             onRuleTextChange={onRuleGroupRuleTextChange}
+            onEntityToggle={onRuleGroupEntityToggle}
             onCreativeRuleChange={onRuleGroupCreativeRuleChange}
             onClose={() => setRuleGroupDraft(null)}
             onSave={onSaveRuleGroup}

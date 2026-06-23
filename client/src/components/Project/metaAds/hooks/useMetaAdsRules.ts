@@ -10,6 +10,7 @@ import {
   buildMetaAdsRuleRows,
   getMetaAdsEntityRuleLabel,
   getMetaAdsRuleDraftEntityLabels,
+  getMetaAdsRuleDraftEntityOptions,
 } from '../rulesState';
 import type {
   RuleRow,
@@ -61,6 +62,7 @@ export function useMetaAdsRules({
   const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
     getMetaAdsEntityRuleLabel(settings, entityLevel, entityId);
   const ruleDraftEntityLabels = getMetaAdsRuleDraftEntityLabels(ruleGroupDraft, campaigns);
+  const ruleDraftEntityOptions = getMetaAdsRuleDraftEntityOptions(ruleGroupDraft, campaigns);
   const ruleRows = buildMetaAdsRuleRows({ settings, campaigns, localize });
 
   const onOpenRuleGroupDraft = () => {
@@ -187,6 +189,21 @@ export function useMetaAdsRules({
     );
   };
 
+  const onRuleGroupEntityToggle = (entityId: string) => {
+    setRuleGroupDraft((current) => {
+      if (!current || current.scope !== 'group') {
+        return current;
+      }
+      const isSelected = current.entityIds.includes(entityId);
+      return {
+        ...current,
+        entityIds: isSelected
+          ? current.entityIds.filter((currentEntityId) => currentEntityId !== entityId)
+          : [...current.entityIds, entityId],
+      };
+    });
+  };
+
   const onRuleGroupRuleTextChange = (key: keyof MetaAdsRulesState, value: string) => {
     setRuleGroupDraft((current) =>
       current
@@ -309,6 +326,10 @@ export function useMetaAdsRules({
       return;
     }
     if (ruleGroupDraft.entityIds.length === 0) {
+      showToast({
+        message: localize('com_ui_project_meta_ads_rule_group_entities_required'),
+        status: 'error',
+      });
       return;
     }
     const nextGroup: MetaAdsRuleGroup = {
@@ -337,6 +358,7 @@ export function useMetaAdsRules({
   return {
     ruleGroupDraft,
     ruleDraftEntityLabels,
+    ruleDraftEntityOptions,
     ruleRows,
     canCreateRuleGroup,
     getEntityRuleLabel,
@@ -350,6 +372,7 @@ export function useMetaAdsRules({
     onDeleteRuleOverride,
     onRuleGroupRuleChange,
     onRuleGroupRuleTextChange,
+    onRuleGroupEntityToggle,
     onAccountProfileChange,
     onRuleGroupCreativeRuleChange,
     onSaveRuleGroup,

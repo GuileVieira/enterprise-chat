@@ -6,7 +6,9 @@ import {
   buildObjectiveSummaries,
   buildSummaryResultTypeOptions,
   calculateWeightedRoas,
+  addFrequencySample,
   isEcommerceContext,
+  resolveAverageFrequency,
 } from './summary';
 import { compareNumberSort, getMetricValue } from './table';
 import type { MetaAdsSettingsState } from './types';
@@ -43,15 +45,16 @@ export function buildMetaAdsOverviewState({
     campaignSort,
     localize,
   });
-  const objectiveSummaries =
-    campaignSearch.trim() || budgetModeFilter !== 'all'
-      ? buildObjectiveSummaries(filteredCampaigns)
-      : summary?.objectives && summary.objectives.length > 0
-        ? summary.objectives
-        : buildObjectiveSummaries(campaigns);
+  const hasCampaignData = campaigns.length > 0;
+  const objectiveSummaries = hasCampaignData
+    ? buildObjectiveSummaries(filteredCampaigns)
+    : summary?.objectives && summary.objectives.length > 0
+      ? summary.objectives
+      : buildObjectiveSummaries(campaigns);
+  const visibleSummary = hasCampaignData ? buildVisibleCampaignSummary(filteredCampaigns) : null;
   const scopedObjectiveSummary = getScopedObjectiveSummary(objectiveSummaries, objectiveFilter);
   const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
-  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, campaigns);
+  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, filteredCampaigns);
   const summaryResultTypeOptions = buildSummaryResultTypeOptions(
     objectiveSummaries,
     objectiveFilter,
@@ -75,19 +78,24 @@ export function buildMetaAdsOverviewState({
     scopedObjectiveSummary,
     localize,
   });
-  const summaryTotalSpend = scopedObjectiveSummary?.totalSpend ?? summary?.totalSpend;
+  const summaryTotalSpend =
+    visibleSummary?.totalSpend ?? scopedObjectiveSummary?.totalSpend ?? summary?.totalSpend;
   const summaryTotalResults =
     effectiveSummaryResultTypeOption?.totalResults ??
+    visibleSummary?.totalResults ??
     (hasMixedObjectiveSummary
       ? null
       : (scopedObjectiveSummary?.totalResults ?? summary?.totalResults));
   const summaryAverageCost =
     effectiveSummaryResultTypeOption?.averageCostPerResult ??
+    visibleSummary?.averageCostPerResult ??
     (hasMixedObjectiveSummary
       ? null
       : (scopedObjectiveSummary?.averageCostPerResult ?? summary?.averageCostPerResult));
   const summaryAverageFrequency =
-    scopedObjectiveSummary?.averageFrequency ?? summary?.averageFrequency;
+    visibleSummary?.averageFrequency ??
+    scopedObjectiveSummary?.averageFrequency ??
+    summary?.averageFrequency;
   const summaryAverageRoas = isEcommerceDashboard ? calculateWeightedRoas(filteredCampaigns) : null;
 
   return {
@@ -101,6 +109,32 @@ export function buildMetaAdsOverviewState({
     summaryAverageFrequency,
     summaryAverageRoas,
     filteredCampaigns,
+  };
+}
+
+function buildVisibleCampaignSummary(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  const frequency = {
+    frequencyWeightedTotal: 0,
+    frequencyWeight: 0,
+    frequencyTotal: 0,
+    frequencyCount: 0,
+  };
+  let totalSpend = 0;
+  let totalResults = 0;
+  for (const campaign of campaigns) {
+    const spend = Number(campaign.spend ?? 0);
+    const resultCount = Number(campaign.resultCount ?? 0);
+    totalSpend += Number.isFinite(spend) ? spend : 0;
+    totalResults += Number.isFinite(resultCount) ? resultCount : 0;
+    addFrequencySample(frequency, campaign.frequency, campaign.impressions);
+  }
+  const averageCostPerResult =
+    totalResults > 0 ? Number((totalSpend / totalResults).toFixed(2)) : null;
+  return {
+    totalSpend: Number(totalSpend.toFixed(2)),
+    totalResults: Number(totalResults.toFixed(2)),
+    averageCostPerResult,
+    averageFrequency: resolveAverageFrequency(frequency),
   };
 }
 

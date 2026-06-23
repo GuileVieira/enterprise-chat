@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 import {
   numberFields,
   resultTypeOptions,
@@ -7,7 +9,13 @@ import {
   getRuleDraftTitleKey,
 } from './rules';
 import { RuleFieldLabel } from './ruleFields';
-import type { Localize, RuleGroupDraft, MetaAdsRulesState, MetaAdsSettingsState } from './types';
+import type {
+  Localize,
+  RuleGroupDraft,
+  MetaAdsRulesState,
+  MetaAdsSettingsState,
+  RuleGroupEntityOption,
+} from './types';
 
 type RuleGroupDialogChrome = {
   modalOverlayClassName: string;
@@ -83,12 +91,14 @@ export function MetaAdsRuleGroupDialog({
   draft,
   settings,
   entityLabels,
+  entityOptions,
   saving,
   localize,
   onNameChange,
   onAccountProfileChange,
   onRuleChange,
   onRuleTextChange,
+  onEntityToggle,
   onCreativeRuleChange,
   onClose,
   onSave,
@@ -98,12 +108,14 @@ export function MetaAdsRuleGroupDialog({
   draft: RuleGroupDraft | null;
   settings: MetaAdsSettingsState;
   entityLabels: string[];
+  entityOptions: RuleGroupEntityOption[];
   saving: boolean;
   localize: Localize;
   onNameChange: (value: string) => void;
   onAccountProfileChange: (value: MetaAdsSettingsState['accountProfile']) => void;
   onRuleChange: (key: keyof MetaAdsRulesState, value: string) => void;
   onRuleTextChange: (key: keyof MetaAdsRulesState, value: string) => void;
+  onEntityToggle: (entityId: string) => void;
   onCreativeRuleChange: (
     key:
       | 'maxFrequency'
@@ -121,6 +133,19 @@ export function MetaAdsRuleGroupDialog({
   chrome: RuleGroupDialogChrome;
   controls: RuleGroupDialogControls;
 }) {
+  const [entitySearch, setEntitySearch] = useState('');
+  const entitySearchQuery = entitySearch.trim().toLowerCase();
+  const filteredEntityOptions = useMemo(
+    () =>
+      entitySearchQuery
+        ? entityOptions.filter(
+            (option) =>
+              option.label.toLowerCase().includes(entitySearchQuery) ||
+              option.id.toLowerCase().includes(entitySearchQuery),
+          )
+        : entityOptions,
+    [entityOptions, entitySearchQuery],
+  );
   if (!draft) {
     return null;
   }
@@ -132,6 +157,18 @@ export function MetaAdsRuleGroupDialog({
     'pauseHighCost.minSpend': getNumberErrorKey(pauseHighCost?.minSpend, 0),
     'pauseHighCost.cooldownHours': getNumberErrorKey(pauseHighCost?.cooldownHours, 1, 168),
   };
+  const entitySectionTitleKey =
+    draft.entityLevel === 'campaign'
+      ? 'com_ui_project_meta_ads_rule_group_campaigns'
+      : 'com_ui_project_meta_ads_rule_group_adsets';
+  const entitySearchLabelKey =
+    draft.entityLevel === 'campaign'
+      ? 'com_ui_project_meta_ads_search_campaigns'
+      : 'com_ui_project_meta_ads_search_adsets';
+  const entityEmptyKey =
+    draft.entityLevel === 'campaign'
+      ? 'com_ui_project_meta_ads_no_campaigns_found'
+      : 'com_ui_project_meta_ads_no_adsets_found';
 
   return (
     <div
@@ -189,6 +226,49 @@ export function MetaAdsRuleGroupDialog({
                 className={controls.inputClassName}
               />
             </label>
+          )}
+          {draft.scope === 'group' && (
+            <div className={chrome.modalTileClassName}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h5 className={chrome.labelClassName}>{localize(entitySectionTitleKey)}</h5>
+                  <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {draft.entityIds.length}{' '}
+                    {localize('com_ui_project_meta_ads_rule_group_selected')}
+                  </div>
+                </div>
+              </div>
+              <label className="mt-3 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <span className="font-medium">{localize(entitySearchLabelKey)}</span>
+                <input
+                  aria-label={localize(entitySearchLabelKey)}
+                  value={entitySearch}
+                  onChange={(event) => setEntitySearch(event.target.value)}
+                  className={controls.inputClassName}
+                />
+              </label>
+              <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+                {filteredEntityOptions.length > 0 ? (
+                  filteredEntityOptions.map((option) => (
+                    <label
+                      key={option.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-700 transition hover:border-teal-300/60 dark:border-white/10 dark:bg-slate-950/20 dark:text-slate-200 dark:hover:border-teal-300/45"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={option.selected}
+                        onChange={() => onEntityToggle(option.id)}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                    </label>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-200/80 px-3 py-4 text-center text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
+                    {localize(entityEmptyKey)}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
           {draft.scope === 'global' && (
             <div className={chrome.modalTileClassName}>

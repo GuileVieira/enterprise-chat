@@ -1187,12 +1187,12 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('com_ui_project_meta_ads_click_to_choose_result_metric'),
+      ).getByText('14.00'),
     ).toBeInTheDocument();
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
-      ).getByText('-'),
+      ).getByText('R$ 25,00'),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /com_ui_project_meta_ads_total_results/ }));
@@ -1228,7 +1228,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('com_ui_project_meta_ads_click_to_choose_result_metric'),
+      ).getByText('14.00'),
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_objective_filter'), {
@@ -1260,6 +1260,7 @@ describe('ProjectMetaAdsPanel', () => {
         spend: 100,
         cpa: 10,
         resultCount: 10,
+        impressions: 1000,
         dailyBudget: 100,
         frequency: 2,
         adSets: [],
@@ -1271,6 +1272,7 @@ describe('ProjectMetaAdsPanel', () => {
         spend: 300,
         cpa: 30,
         resultCount: 10,
+        impressions: 3000,
         dailyBudget: 100,
         frequency: 4,
         adSets: [],
@@ -1298,6 +1300,16 @@ describe('ProjectMetaAdsPanel', () => {
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
       ).getByText('R$ 10,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('10.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_frequency'),
+      ).getByText('2.00'),
     ).toBeInTheDocument();
   });
 
@@ -3077,6 +3089,24 @@ describe('ProjectMetaAdsPanel', () => {
   });
 
   it('edits global, group, and override rules from the drawer', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Old Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        resultCount: 5,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-3',
+        campaignName: 'New Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 120,
+        resultCount: 6,
+        adSets: [],
+      },
+    ];
     const projectWithRules = {
       ...project,
       metaAds: {
@@ -3148,6 +3178,8 @@ describe('ProjectMetaAdsPanel', () => {
         target: { value: 'New group' },
       },
     );
+    fireEvent.click(within(ruleGroupDialog).getByLabelText('Old Campaign'));
+    fireEvent.click(within(ruleGroupDialog).getByLabelText('New Campaign'));
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
     publishSettingsDraft();
 
@@ -3159,6 +3191,7 @@ describe('ProjectMetaAdsPanel', () => {
             expect.objectContaining({
               id: 'group-1',
               name: 'New group',
+              entityIds: ['campaign-3'],
             }),
           ],
         }),
@@ -3193,6 +3226,54 @@ describe('ProjectMetaAdsPanel', () => {
       },
       expect.any(Object),
     );
+  });
+
+  it('blocks saving a rule group without selected entities', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Old Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        resultCount: 5,
+        adSets: [],
+      },
+    ];
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Old group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    fireEvent.click(
+      within(screen.getAllByTestId('meta-ads-rule-row')[1]).getByLabelText(
+        'com_ui_project_meta_ads_edit_rule',
+      ),
+    );
+    const ruleGroupDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_edit_rule_group',
+    });
+    fireEvent.click(within(ruleGroupDialog).getByLabelText('Old Campaign'));
+    fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_project_meta_ads_rule_group_entities_required',
+      status: 'error',
+    });
   });
 
   it('saves a rule with only ROAS configured as the performance metric', () => {

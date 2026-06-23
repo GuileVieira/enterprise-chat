@@ -58,6 +58,12 @@ export type RuleGroupDraft = {
   creativeRules: Required<MetaAdsCreativeRules>;
 };
 
+export type RuleGroupEntityOption = {
+  id: string;
+  label: string;
+  selected: boolean;
+};
+
 export type RuleRowType = 'global' | 'group' | 'campaign_override' | 'adset_override';
 export type RuleRow = {
   key: string;

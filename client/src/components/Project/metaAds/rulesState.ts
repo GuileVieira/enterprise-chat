@@ -1,7 +1,13 @@
 import type { ProjectMetaAdsCampaignSummary } from 'librechat-data-provider';
 import type { useLocalize } from '~/hooks';
 import { defaultRules, getRuleOverrideKey } from './rules';
-import type { MetaAdsRuleGroup, MetaAdsSettingsState, RuleGroupDraft, RuleRow } from './types';
+import type {
+  MetaAdsRuleGroup,
+  MetaAdsSettingsState,
+  RuleGroupDraft,
+  RuleGroupEntityOption,
+  RuleRow,
+} from './types';
 
 type RulesStateInput = {
   settings: MetaAdsSettingsState;
@@ -58,6 +64,45 @@ export function getMetaAdsRuleDraftEntityLabels(
   return draft.entityIds.map((entityId) =>
     getMetaAdsRuleEntityLabel(campaigns, draft.entityLevel, entityId),
   );
+}
+
+export function getMetaAdsRuleDraftEntityOptions(
+  draft: RuleGroupDraft | null,
+  campaigns: ProjectMetaAdsCampaignSummary[],
+): RuleGroupEntityOption[] {
+  if (!draft || draft.scope !== 'group') {
+    return [];
+  }
+  const selectedIds = new Set(draft.entityIds);
+  const options =
+    draft.entityLevel === 'campaign'
+      ? campaigns.map((campaign) => ({
+          id: campaign.campaignId,
+          label: campaign.campaignName ?? campaign.campaignId,
+          selected: selectedIds.has(campaign.campaignId),
+        }))
+      : campaigns.flatMap((campaign) =>
+          (campaign.adSets ?? []).map((adSet) => ({
+            id: adSet.entityId,
+            label: adSet.entityName ?? adSet.entityId,
+            selected: selectedIds.has(adSet.entityId),
+          })),
+        );
+  const optionIds = new Set(options.map((option) => option.id));
+  const missingSelectedOptions = draft.entityIds
+    .filter((entityId) => !optionIds.has(entityId))
+    .map((entityId) => ({
+      id: entityId,
+      label: getMetaAdsRuleEntityLabel(campaigns, draft.entityLevel, entityId),
+      selected: true,
+    }));
+
+  return [...missingSelectedOptions, ...options].sort((left, right) => {
+    if (left.selected !== right.selected) {
+      return left.selected ? -1 : 1;
+    }
+    return left.label.localeCompare(right.label);
+  });
 }
 
 export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesStateInput) {
