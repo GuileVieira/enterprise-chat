@@ -126,6 +126,7 @@ export type MetaAdsBiRankItem = {
   cpa?: number | null;
   spend?: number | null;
   ctr?: number | null;
+  frequency?: number | null;
   resultTypeBreakdown?: ProjectMetaAdsCampaignSummary['resultTypeBreakdown'];
   thumbnailUrls?: string[];
 };

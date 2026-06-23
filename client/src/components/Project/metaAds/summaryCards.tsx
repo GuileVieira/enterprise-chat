@@ -86,7 +86,7 @@ export function MetaAdsSummaryCards({
     <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ labelKey, value, tone, context, clickable }) => {
-          const showResultMetricCta = clickable && !initialLoading && value.trim() === '-';
+          const showResultMetricCta = Boolean(clickable && !initialLoading && value.trim() === '-');
           const content = (
             <>
               <div className="flex items-start justify-between gap-3">

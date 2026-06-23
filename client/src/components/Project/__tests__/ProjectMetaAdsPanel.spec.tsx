@@ -176,6 +176,10 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-bi'));
   };
 
+  const openOverviewTab = () => {
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-overview'));
+  };
+
   it('shows a loading indicator while Meta Ads status is being fetched', () => {
     mockStatusQueryState = {
       data: undefined,
@@ -2056,7 +2060,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: 'last_30d' },
     });
 
-    expect(mockUseProjectMetaAdsQuery).toHaveBeenLastCalledWith('p1', {
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
       datePreset: 'last_30d',
     });
     expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenLastCalledWith(
@@ -2100,6 +2104,52 @@ describe('ProjectMetaAdsPanel', () => {
       (option) => option.value,
     );
     expect(metricOptions).toEqual(['spend', 'resultCount', 'cpa', 'ctr', 'frequency', 'clicks']);
+  });
+
+  it('lets the overview tab use an independent period filter', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByTestId('meta-ads-overview-period-filter'), {
+      target: { value: 'last_30d' },
+    });
+
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_30d',
+    });
+
+    openBiTab();
+    expect(screen.getByTestId('meta-ads-bi-period-filter')).toHaveValue('last_7d');
+
+    openOverviewTab();
+    fireEvent.change(screen.getByTestId('meta-ads-overview-period-filter'), {
+      target: { value: 'custom' },
+    });
+    expect(screen.getByLabelText('com_ui_project_meta_ads_period_since')).toBeInTheDocument();
+    expect(screen.getByLabelText('com_ui_project_meta_ads_period_until')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_period_update')).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period_since'), {
+      target: { value: '2026-06-01' },
+    });
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period_until'), {
+      target: { value: '2026-06-10' },
+    });
+
+    const overviewParamsBeforeApply = mockUseProjectMetaAdsQuery.mock.calls[
+      mockUseProjectMetaAdsQuery.mock.calls.length - 1
+    ]?.[1] as Record<string, unknown> | undefined;
+    expect(overviewParamsBeforeApply).not.toEqual(
+      expect.objectContaining({
+        since: '2026-06-01',
+        until: '2026-06-10',
+      }),
+    );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_period_update'));
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      since: '2026-06-01',
+      until: '2026-06-10',
+    });
   });
 
   it('renders campaign evolution dashboard from historical trend data', () => {

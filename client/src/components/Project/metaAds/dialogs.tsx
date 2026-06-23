@@ -35,6 +35,13 @@ export function MetaAdsAdPreviewDialog({
   onClose: () => void;
   chrome: MetaAdsDialogChrome;
 }) {
+  const fullscreenLayerProps = metricsFullscreen
+    ? {
+        overlayStyle: { zIndex: 10010 },
+        style: { zIndex: 10020 },
+      }
+    : {};
+
   return (
     <OGDialog
       open={Boolean(ad)}
@@ -47,8 +54,7 @@ export function MetaAdsAdPreviewDialog({
       {ad && (
         <OGDialogContent
           className={`max-w-3xl p-0 ${chrome.modalShellClassName}`}
-          overlayStyle={metricsFullscreen ? { zIndex: 10010 } : undefined}
-          style={metricsFullscreen ? { zIndex: 10020 } : undefined}
+          {...fullscreenLayerProps}
         >
           <OGDialogHeader className={chrome.modalHeaderClassName}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
@@ -148,20 +154,16 @@ export function MetaAdsBiRankDetailsDialog({
           </OGDialogHeader>
           <div className="bg-white p-5 dark:bg-[#101827]">
             <div className="grid gap-3 sm:grid-cols-3">
-              {[
+              {(
                 [
-                  'com_ui_project_meta_ads_cost_per_result' as TranslationKeys,
-                  formatRankingCost(getRankEfficiency(item), currency),
-                ],
-                [
-                  'com_ui_project_meta_ads_results' as TranslationKeys,
-                  formatMetric(item.resultCount),
-                ],
-                [
-                  'com_ui_project_meta_ads_spend' as TranslationKeys,
-                  formatMoney(item.spend, currency),
-                ],
-              ].map(([labelKey, value]) => (
+                  [
+                    'com_ui_project_meta_ads_cost_per_result',
+                    formatRankingCost(getRankEfficiency(item), currency),
+                  ],
+                  ['com_ui_project_meta_ads_results', formatMetric(item.resultCount)],
+                  ['com_ui_project_meta_ads_spend', formatMoney(item.spend, currency)],
+                ] satisfies Array<[TranslationKeys, string]>
+              ).map(([labelKey, value]) => (
                 <MetricTile
                   key={labelKey}
                   labelKey={labelKey}

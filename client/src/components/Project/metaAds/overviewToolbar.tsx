@@ -1,6 +1,8 @@
 import { getObjectiveLabel } from './formatters';
 import { tableViewOptions } from './constants';
+import { MetaAdsPeriodControls } from './periodControls';
 import type { Localize, TableView } from './types';
+import type { MetaAdsPeriodControlProps } from './periodControls';
 import { MetaAdsButton, MetaAdsField, MetaAdsInput, MetaAdsPanel, MetaAdsSelect } from './ui';
 
 export function MetaAdsOverviewToolbar({
@@ -10,6 +12,7 @@ export function MetaAdsOverviewToolbar({
   objectiveFilter,
   campaignSort,
   tableView,
+  period,
   selectedCount,
   campaignCount,
   canCreateRuleGroup,
@@ -33,6 +36,7 @@ export function MetaAdsOverviewToolbar({
   objectiveFilter: string;
   campaignSort: string;
   tableView: TableView;
+  period: Omit<MetaAdsPeriodControlProps, 'localize' | 'testIdPrefix'>;
   selectedCount: number;
   campaignCount: number;
   canCreateRuleGroup: boolean;
@@ -64,6 +68,11 @@ export function MetaAdsOverviewToolbar({
       <MetaAdsPanel className="p-3">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+            <MetaAdsPeriodControls
+              {...period}
+              localize={localize}
+              testIdPrefix="meta-ads-overview"
+            />
             <MetaAdsField label={localize('com_ui_project_meta_ads_search')}>
               <MetaAdsInput
                 value={campaignSearch}

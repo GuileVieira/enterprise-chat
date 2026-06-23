@@ -16,7 +16,8 @@ import { formatMetric, formatMoney, getObjectiveLabel } from './formatters';
 import { createMetaAdsAdRenderers } from './overviewAdRenderers';
 import { getRecommendationLabel } from './recommendations';
 import { MetaAdsOverviewActionCell } from './overviewActionCell';
-import type { TableColumn } from './types';
+import type { DuplicateDraft, Localize, TableColumn } from './types';
+import type { EntityStatusConfirmationPayload } from './overviewCells';
 import type { OverviewRenderers, OverviewRendererContext } from './overviewRendererTypes';
 
 function metricCell(column: TableColumn, content: ReactNode) {
@@ -139,7 +140,7 @@ export function createMetaAdsOverviewRenderers(
     entityId,
     entityName,
     status,
-  }: EntityStatusConfirmation) => (
+  }: EntityStatusConfirmationPayload) => (
     <MetaAdsEntityStatusToggleCell
       key="adStatus"
       entityLevel={entityLevel}

@@ -189,7 +189,7 @@ export function useMetaAdsEntityActions({
   };
 
   const onOpenEntityStatusConfirmation = (
-    event: MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLElement>,
     entity: {
       entityLevel: ProjectMetaAdsEntityStatusLevel;
       entityId: string;

@@ -67,7 +67,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
   const globalRow: RuleRow = {
     key: 'global',
     type: 'global',
-    enabled: settings.enabled,
+    enabled: settings.enabled ?? false,
     name: localize('com_ui_project_meta_ads_global_rules'),
     scopeLabel: localize('com_ui_project_meta_ads_scope_all_campaigns'),
     precedenceLabel: localize('com_ui_project_meta_ads_precedence_global'),

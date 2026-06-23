@@ -5,13 +5,8 @@ import type {
   ProjectMetaAdsRecommendation,
 } from 'librechat-data-provider';
 
-import type {
-  Localize,
-  TableColumn,
-  DuplicateDraft,
-  BudgetEditor,
-  EntityStatusConfirmation,
-} from './types';
+import type { Localize, TableColumn, DuplicateDraft, BudgetEditor } from './types';
+import type { EntityStatusConfirmationPayload } from './overviewCells';
 
 export type OverviewRenderers = {
   renderCampaignCell: (
@@ -54,7 +49,7 @@ export type OverviewRendererContext = {
   onOpenBudgetEditor: (editor: BudgetEditor) => void;
   onOpenEntityStatusConfirmation: (
     event: MouseEvent<HTMLElement>,
-    confirmation: EntityStatusConfirmation,
+    confirmation: EntityStatusConfirmationPayload,
   ) => void;
   onPreviewAd: (ad: ProjectMetaAdsAdSummary) => void;
 };

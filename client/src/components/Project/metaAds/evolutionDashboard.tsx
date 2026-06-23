@@ -166,12 +166,16 @@ export function MetaAdsEvolutionDashboard({
 }) {
   const [hoveredPoint, setHoveredPoint] = useState<EvolutionHoverPoint | null>(null);
   const canRenderSeries = seriesPaths.length > 0 && dates.length > 1 && maxValue > 0;
-  const metricCards: Array<[TranslationKeys, string]> = [
+  const allMetricCards = [
     ['com_ui_project_meta_ads_metric', getEvolutionMetricLabel(metric, localize)],
     ['com_ui_project_meta_ads_series', formatIntegerMetric(seriesPaths.length)],
     ['com_ui_project_meta_ads_peak_value', formatEvolutionMetricValue(maxValue, metric, currency)],
     ['com_ui_project_meta_ads_budget_changes', formatIntegerMetric(totalBudgetChangeCount)],
-  ].filter(([labelKey]) => level !== 'ad' || labelKey !== 'com_ui_project_meta_ads_budget_changes');
+  ] satisfies Array<[TranslationKeys, string]>;
+  const metricCards = allMetricCards.filter(
+    ([labelKey]): boolean =>
+      level !== 'ad' || labelKey !== 'com_ui_project_meta_ads_budget_changes',
+  );
 
   return (
     <div className="px-4 pb-4">

@@ -16,7 +16,6 @@ import {
   useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
-import { logger } from '~/utils';
 import { MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
@@ -24,36 +23,27 @@ import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
 import { useMetaAdsEntityActions } from './metaAds/hooks/useMetaAdsEntityActions';
 import { useMetaAdsRules } from './metaAds/hooks/useMetaAdsRules';
 import { useMetaAdsBiWorkspace } from './metaAds/hooks/useMetaAdsBiWorkspace';
+import { useMetaAdsBiAdapter } from './metaAds/hooks/useMetaAdsBiAdapter';
 import { useMetaAdsTrafficAgent } from './metaAds/hooks/useMetaAdsTrafficAgent';
-import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
-import { buildMetaAdsBiState } from './metaAds/biState';
-import { buildMetaAdsEvolutionState } from './metaAds/evolutionState';
-import { getTableViewColumns, buildCampaignFallback } from './metaAds/table';
+import { useMetaAdsPeriodFilter } from './metaAds/hooks/useMetaAdsPeriodFilter';
+import { useMetaAdsRunAnalysis } from './metaAds/hooks/useMetaAdsRunAnalysis';
+import { useMetaAdsOverviewAdapter } from './metaAds/hooks/useMetaAdsOverviewAdapter';
+import { buildCampaignFallback } from './metaAds/table';
 import { getGraphVersionOptions } from './metaAds/settings';
-import { getRequestErrorMessage } from './metaAds/errors';
 import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
 import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
 import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
-import { getMetaAdsTableRowClass } from './metaAds/overviewCells';
-import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
-import {
-  buildMetaAdsOverviewState,
-  buildMetaAdsSummaryCardItems,
-  getMetaAdsTokenStatusKey,
-  getNextMetaAdsSortDirection,
-} from './metaAds/overviewState';
+import { getMetaAdsTokenStatusKey } from './metaAds/overviewState';
 import { cleanDashboardName } from './metaAds/helpers';
-import type { TableView, WorkspaceTab } from './metaAds/types';
+import type { WorkspaceTab } from './metaAds/types';
 import {
-  metaAdsInput,
   metaAdsInputLg,
   metaAdsButton,
   metaAdsGhostButton,
   metaAdsPrimaryButton,
   metaAdsLabel,
-  metaAdsStickyCell,
   metaAdsModalOverlay,
   metaAdsModalShell,
   metaAdsDrawerShell,
@@ -71,68 +61,21 @@ export default function ProjectMetaAdsPanel({
   const localize = useLocalize();
   const { user } = useAuthContext();
   const { showToast } = useToastContext();
-  const { tableScrollRef, stickyHorizontalScrollRef, onTableScroll, onStickyHorizontalScroll } =
-    useMetaAdsTableScrollSync();
-  const [campaignSearch, setCampaignSearch] = useState('');
-  const [objectiveFilter, setObjectiveFilter] = useState('all');
-  const [resultTypeSelectorOpen, setResultTypeSelectorOpen] = useState(false);
-  const [selectedSummaryResultType, setSelectedSummaryResultType] = useState<string | null>(null);
-  const [budgetModeFilter, setBudgetModeFilter] = useState('all');
-  const [campaignSort, setCampaignSort] = useState('name_asc');
+  const tableScroll = useMetaAdsTableScrollSync();
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
-  const [tableView, setTableView] = useState<TableView>('summary');
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
-  const {
-    biControls,
-    biRankingSort,
-    periodFilter,
-    customSince,
-    customUntil,
-    appliedCustomSince,
-    appliedCustomUntil,
-    metricsFullscreen,
-    selectedBiRankItem,
-    setBiControls,
-    setPeriodFilter,
-    setMetricsFullscreen,
-    setSelectedBiRankItem,
-    onBiRankingSort,
-    onCustomSinceChange,
-    onCustomUntilChange,
-    onApplyCustomPeriod,
-  } = useMetaAdsBiWorkspace();
-  const {
-    selectedEntityIds,
-    expandedCampaignIds,
-    collapsedAboCampaignIds,
-    collapsedAdSetAdsIds,
-    selectedCampaignIds,
-    selectedAdSetIds,
-    selectedCount,
-    clearSelection,
-    onToggleCampaign,
-    onToggleAdSet,
-    onToggleCampaignExpanded,
-    onToggleAdSetAds,
-    expandAllRows,
-    collapseAllRows,
-  } = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
+  const biWorkspace = useMetaAdsBiWorkspace();
+  const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
   const startupConfigQuery = useGetStartupConfig();
-  const tableStatusParams = { datePreset: 'last_7d' };
-  const biStatusParams =
-    periodFilter === 'custom'
-      ? {
-          ...(appliedCustomSince ? { since: appliedCustomSince } : {}),
-          ...(appliedCustomUntil ? { until: appliedCustomUntil } : {}),
-        }
-      : { datePreset: periodFilter };
-  const statusQuery = useProjectMetaAdsQuery(project.projectId, tableStatusParams);
-  const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biStatusParams);
+  const overviewPeriod = useMetaAdsPeriodFilter();
+  const biPeriod = useMetaAdsPeriodFilter();
+  const statusQuery = useProjectMetaAdsQuery(project.projectId, overviewPeriod.statusParams);
+  const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams);
   const biRankingsQuery = useProjectMetaAdsRankingsQuery(project.projectId, {
-    ...biStatusParams,
-    level: biControls.level,
-    objective: biControls.objective,
-    resultType: biControls.resultType,
+    ...biPeriod.statusParams,
+    level: biWorkspace.biControls.level,
+    objective: biWorkspace.biControls.objective,
+    resultType: biWorkspace.biControls.resultType,
   });
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
@@ -161,15 +104,6 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
-  const {
-    actionMenuKey,
-    setActionMenuKey,
-    getDuplicateName,
-    onApply,
-    onOpenBudgetEditor,
-    onOpenEntityStatusConfirmation,
-    onOpenDuplicateDraft,
-  } = metaAdsEntityActions;
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
@@ -188,25 +122,20 @@ export default function ProjectMetaAdsPanel({
       : buildCampaignFallback(latestSnapshots);
   const tokenCredentials = statusQuery.data?.credentials;
   const currency = statusQuery.data?.currency ?? 'BRL';
-  const graphVersionOptions = getGraphVersionOptions(statusQuery.data?.graphVersion?.effective);
+  const automationMode = settings.automationMode ?? 'recommend';
+  const scheduleIntervalMinutes = settings.scheduleIntervalMinutes ?? 180;
+  const graphVersionOptions = getGraphVersionOptions(
+    statusQuery.data?.graphVersion?.effective,
+  ).filter((version): version is string => typeof version === 'string');
   const trend = biStatusQuery.data?.trend ?? statusQuery.data?.trend;
-  const {
-    evolutionDates,
-    evolutionSeriesPaths,
-    maxEvolutionValue,
-    totalBudgetChangeCount,
-    bestEvolution,
-    evolutionAlerts,
-    hasEvolutionSection,
-  } = buildMetaAdsEvolutionState({ trend, controls: biControls });
   const { canOpenTrafficAgentChat, onOpenTrafficAgentChat } = useMetaAdsTrafficAgent({
     project,
     startupConfigQuery,
     statusData: statusQuery.data,
     latestSnapshots,
     campaigns,
-    selectedEntityIds,
-    selectedCount,
+    selectedEntityIds: selection.selectedEntityIds,
+    selectedCount: selection.selectedCount,
   });
   const tokenStatusKey = getMetaAdsTokenStatusKey(tokenCredentials);
   const hasProjectToken =
@@ -217,145 +146,66 @@ export default function ProjectMetaAdsPanel({
     setSettings,
     saveSettings,
     campaigns,
-    selectedCampaignIds,
-    selectedAdSetIds,
+    selectedCampaignIds: selection.selectedCampaignIds,
+    selectedAdSetIds: selection.selectedAdSetIds,
     canUseMetaAdsActions,
     localize,
     showToast,
   });
-  const {
-    ruleRows,
-    canCreateRuleGroup,
-    getEntityRuleLabel,
-    onOpenRuleGroupDraft,
-    onEditGlobalRule,
-    onEditRuleGroup,
-    onEditRuleOverride,
-    onToggleRuleRow,
-    onDeleteRuleGroup,
-    onDeleteRuleOverride,
-  } = metaAdsRules;
-  const getEntityRecommendation = (entityId: string) =>
-    pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
   const biCampaigns = biStatusQuery.data?.campaigns ?? campaigns;
-  const {
-    objectiveOptions,
-    biResultTypeOptions,
-    selectedBiRankingItems,
-    selectedBiRankingTitleKey,
-    selectedBiRankingTestId,
-    adRankingEmptyMessageKey,
-  } = buildMetaAdsBiState({
+  const biAdapter = useMetaAdsBiAdapter({
     campaigns,
     biCampaigns,
     settings,
-    controls: biControls,
-    sort: biRankingSort,
+    biWorkspace,
+    biPeriod,
     rankingItems: biRankingsQuery.data?.items ?? [],
     adDiagnostics: biStatusQuery.data?.adDiagnostics,
+    rankingFetching: biRankingsQuery.isFetching,
+    trend,
+    currency,
     localize,
   });
-  const {
-    scopedObjectiveSummary,
-    isEcommerceDashboard,
-    summaryResultTypeOptions,
-    summaryMetricContext,
-    summaryTotalSpend,
-    summaryTotalResults,
-    summaryAverageCost,
-    summaryAverageFrequency,
-    summaryAverageRoas,
-    filteredCampaigns,
-  } = buildMetaAdsOverviewState({
+  const overviewWorkspaceProps = useMetaAdsOverviewAdapter({
     campaigns,
-    settings,
-    summary: statusQuery.data?.summary,
-    campaignSearch,
-    objectiveFilter,
-    budgetModeFilter,
-    campaignSort,
-    selectedSummaryResultType,
-    localize,
-  });
-
-  const onSortColumn = (key: string, defaultDirection: 'asc' | 'desc') => {
-    const nextDirection = getNextMetaAdsSortDirection({ campaignSort, key, defaultDirection });
-    setCampaignSort(`${key}_${nextDirection}`);
-  };
-
-  const onRunAnalysis = () => {
-    setRunErrorMessage(null);
-    runAnalysis.mutate(project.projectId, {
-      onSuccess: () => {
-        statusQuery.refetch();
-        showToast({
-          message: localize('com_ui_project_meta_ads_run_success'),
-          status: 'success',
-        });
-      },
-      onError: (error) => {
-        const message = getRequestErrorMessage(
-          error,
-          localize('com_ui_project_meta_ads_run_failed'),
-        );
-        setRunErrorMessage(message);
-        showToast({ message, status: 'error' });
-        logger.error('MetaAds', 'Failed to run project Meta Ads analysis', {
-          projectId: project.projectId,
-          error,
-        });
-      },
-    });
-  };
-
-  const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
-    (key) => tableColumnMap[key],
-  );
-  const tableColumnCount = tableColumns.length + 2;
-  const summaryCards = buildMetaAdsSummaryCardItems({
-    isEcommerceDashboard,
-    summaryAverageRoas,
-    summaryTotalSpend,
-    summaryTotalResults,
-    summaryAverageCost,
-    summaryAverageFrequency,
-    summaryMetricContext,
-    summaryResultTypeOptionsLength: summaryResultTypeOptions.length,
-    scopedObjectiveSummary,
+    pendingRecommendations,
     currency,
-    localize,
-  });
-  const getTableRowClass = getMetaAdsTableRowClass;
-  const { renderCampaignCell, renderAdSetCell, renderAdRow } = createMetaAdsOverviewRenderers({
-    columns: tableColumns,
-    currency,
-    actionMenuKey,
-    stickyCellClassName: metaAdsStickyCell,
     canUseMetaAdsActions,
-    applyingRecommendation: applyRecommendation.isLoading,
-    updatingEntityStatus: updateEntityStatus.isLoading,
+    isStatusLoading,
+    isInitialStatusLoading,
+    canOpenTrafficAgentChat,
+    savingSettings: updateSettings.isLoading,
+    objectiveOptions: biAdapter.objectiveOptions,
+    statusSummary: statusQuery.data?.summary,
+    settingsState: metaAdsSettings,
+    entityActions: metaAdsEntityActions,
+    rulesState: metaAdsRules,
+    selection,
+    tableScroll,
+    overviewPeriod,
+    applyRecommendation,
+    updateEntityStatus,
     localize,
-    getTableRowClass,
-    getEntityRuleLabel,
-    getDuplicateName,
-    onApply,
-    onToggleActionMenu: (menuKey) =>
-      setActionMenuKey((current) => (current === menuKey ? null : menuKey)),
-    onOpenDuplicateDraft,
-    onOpenBudgetEditor,
-    onOpenEntityStatusConfirmation,
-    onPreviewAd: metaAdsEntityActions.setSelectedAdPreview,
+    onOpenTrafficAgentChat,
+  });
+  const onRunAnalysis = useMetaAdsRunAnalysis({
+    projectId: project.projectId,
+    runAnalysis,
+    statusQuery,
+    localize,
+    showToast,
+    setRunErrorMessage,
   });
 
   const content = (
     <>
       <MetaAdsWorkspaceShell
-        automationMode={settings.automationMode}
-        scheduleIntervalMinutes={settings.scheduleIntervalMinutes}
+        automationMode={automationMode}
+        scheduleIntervalMinutes={scheduleIntervalMinutes}
         tokenStatusKey={tokenStatusKey}
         workspaceTab={workspaceTab}
         settingsDrawer={settingsDrawer}
-        metricsFullscreen={metricsFullscreen}
+        metricsFullscreen={biWorkspace.metricsFullscreen}
         canUseMetaAdsActions={canUseMetaAdsActions}
         runningAnalysis={runAnalysis.isLoading}
         savingSettings={updateSettings.isLoading}
@@ -363,171 +213,14 @@ export default function ProjectMetaAdsPanel({
         localize={localize}
         onRunAnalysis={onRunAnalysis}
         onOpenSettingsDrawer={openSettingsDrawer}
-        onOpenRuleGroupDraft={onOpenRuleGroupDraft}
+        onOpenRuleGroupDraft={metaAdsRules.onOpenRuleGroupDraft}
         onWorkspaceTabChange={setWorkspaceTab}
-        onToggleFullscreen={() => setMetricsFullscreen((current) => !current)}
+        onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
       >
-        {workspaceTab === 'overview' && (
-          <MetaAdsOverviewWorkspace
-            filters={{ campaignSort, onSortColumn }}
-            selection={{ campaignCount: campaigns.length }}
-            toolbar={{
-              loading: isStatusLoading,
-              campaignSearch,
-              budgetModeFilter,
-              objectiveFilter,
-              campaignSort,
-              tableView,
-              selectedCount,
-              campaignCount: campaigns.length,
-              canCreateRuleGroup,
-              canOpenTrafficAgentChat,
-              objectiveOptions,
-              localize,
-              onCampaignSearchChange: setCampaignSearch,
-              onBudgetModeFilterChange: setBudgetModeFilter,
-              onObjectiveFilterChange: setObjectiveFilter,
-              onCampaignSortChange: setCampaignSort,
-              onTableViewChange: setTableView,
-              onClearSelection: clearSelection,
-              onExpandAllRows: () => expandAllRows(campaigns),
-              onCollapseAllRows: () => collapseAllRows(campaigns),
-              onCreateRuleGroup: onOpenRuleGroupDraft,
-              onOpenTrafficAgentChat,
-            }}
-            summary={{
-              cards: summaryCards,
-              resultTypeOptions: summaryResultTypeOptions,
-              selectorOpen: resultTypeSelectorOpen,
-              selectedResultType: selectedSummaryResultType,
-              initialLoading: isInitialStatusLoading,
-              currency,
-              localize,
-              onOpenSelector: () => setResultTypeSelectorOpen(true),
-              onCloseSelector: () => setResultTypeSelectorOpen(false),
-              onSelectResultType: (resultType) => {
-                setSelectedSummaryResultType(resultType);
-                setResultTypeSelectorOpen(false);
-              },
-              onClearResultType: () => {
-                setSelectedSummaryResultType(null);
-                setResultTypeSelectorOpen(false);
-              },
-              chrome: {
-                modalOverlayClassName: metaAdsModalOverlay,
-                modalShellClassName: metaAdsModalShell,
-              },
-              buttons: {
-                buttonClassName: metaAdsButton,
-                ghostButtonClassName: metaAdsGhostButton,
-              },
-            }}
-            actions={{
-              pendingRecommendations: {
-                recommendations: pendingRecommendations,
-                currency,
-                canUseMetaAdsActions,
-                applyingRecommendation: applyRecommendation.isLoading,
-                localize,
-                onApply,
-              },
-            }}
-            chrome={{ showPendingRecommendations: true }}
-            rules={{
-              rows: ruleRows,
-              currency,
-              canCreateRuleGroup,
-              canUseMetaAdsActions,
-              saving: updateSettings.isLoading,
-              localize,
-              primaryButtonClassName: metaAdsPrimaryButton,
-              onCreateRuleGroup: onOpenRuleGroupDraft,
-              onToggleRuleRow,
-              onEditGlobalRule,
-              onEditRuleGroup,
-              onEditRuleOverride,
-              onDeleteRuleGroup,
-              onDeleteRuleOverride,
-            }}
-            table={{
-              columns: tableColumns,
-              campaigns: filteredCampaigns,
-              selectedEntityIds,
-              expandedCampaignIds,
-              collapsedAboCampaignIds,
-              collapsedAdSetAdsIds,
-              tableColumnCount,
-              tableMinWidthClassName: tableViewMinWidth[tableView],
-              stickyCellClassName: metaAdsStickyCell,
-              isInitialStatusLoading,
-              localize,
-              tableScrollRef,
-              stickyHorizontalScrollRef,
-              onTableScroll,
-              onStickyHorizontalScroll,
-              onToggleCampaign,
-              onToggleCampaignExpanded,
-              onToggleAdSet,
-              onToggleAdSetAds,
-              getTableRowClass,
-              getEntityRecommendation,
-              renderCampaignCell,
-              renderAdSetCell,
-              renderAdRow,
-            }}
-          />
-        )}
+        {workspaceTab === 'overview' && <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />}
 
-        {workspaceTab === 'bi' && (
-          <MetaAdsBiWorkspace
-            controls={biControls}
-            period={{
-              periodFilter,
-              customSince,
-              customUntil,
-              appliedCustomSince,
-              appliedCustomUntil,
-              onPeriodFilterChange: setPeriodFilter,
-              onCustomSinceChange,
-              onCustomUntilChange,
-              onApplyCustomPeriod,
-            }}
-            options={{
-              objectiveOptions,
-              resultTypeOptions: biResultTypeOptions,
-            }}
-            ranking={{
-              titleKey: selectedBiRankingTitleKey,
-              items: selectedBiRankingItems,
-              testId: selectedBiRankingTestId,
-              adRankingEmptyMessageKey,
-              sort: biRankingSort,
-              fetching: biRankingsQuery.isFetching,
-              onSort: onBiRankingSort,
-              onSelect: setSelectedBiRankItem,
-            }}
-            evolution={{
-              enabled: hasEvolutionSection,
-              seriesPaths: evolutionSeriesPaths,
-              dates: evolutionDates,
-              maxValue: maxEvolutionValue,
-              totalBudgetChangeCount,
-              bestEvolution,
-              evolutionAlerts,
-              cleanName: cleanDashboardName,
-            }}
-            inputClassName={metaAdsInput}
-            currency={currency}
-            localize={localize}
-            onControlsChange={{
-              level: (level) => setBiControls((current) => ({ ...current, level })),
-              objective: (objective) => setBiControls((current) => ({ ...current, objective })),
-              resultType: (resultType) => setBiControls((current) => ({ ...current, resultType })),
-              metric: (metric) => setBiControls((current) => ({ ...current, metric })),
-            }}
-          />
-        )}
+        {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
       </MetaAdsWorkspaceShell>
 
       {workspaceTab === 'overview' && (
@@ -544,9 +237,9 @@ export default function ProjectMetaAdsPanel({
         rulesState={metaAdsRules}
         currency={currency}
         localize={localize}
-        metricsFullscreen={metricsFullscreen}
-        selectedBiRankItem={selectedBiRankItem}
-        onCloseBiRank={() => setSelectedBiRankItem(null)}
+        metricsFullscreen={biWorkspace.metricsFullscreen}
+        selectedBiRankItem={biWorkspace.selectedBiRankItem}
+        onCloseBiRank={() => biWorkspace.setSelectedBiRankItem(null)}
         cleanName={cleanDashboardName}
         token={{
           configured: Boolean(tokenCredentials),
@@ -584,7 +277,7 @@ export default function ProjectMetaAdsPanel({
     </>
   );
 
-  return metricsFullscreen ? (
+  return biWorkspace.metricsFullscreen ? (
     createPortal(content, document.body)
   ) : (
     <div className="space-y-4">{content}</div>
