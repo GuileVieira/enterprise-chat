@@ -21,7 +21,7 @@ import { MetaAdsOverviewWorkspace } from '../overviewWorkspace';
 import { buildMetaAdsSummaryCardItems, getNextMetaAdsSortDirection } from '../overviewState';
 import { buildMetaAdsOverviewState } from '../overviewState';
 import { getTableViewColumns } from '../table';
-import type { TableView, Localize } from '../types';
+import type { RuleRow, TableView, Localize } from '../types';
 import type { useMetaAdsEntityActions } from './useMetaAdsEntityActions';
 import type { useMetaAdsPeriodFilter } from './useMetaAdsPeriodFilter';
 import type { useMetaAdsRules } from './useMetaAdsRules';
@@ -54,6 +54,7 @@ type UseMetaAdsOverviewAdapterParams = {
   updateEntityStatus: ReturnType<typeof useUpdateProjectMetaAdsEntityStatusMutation>;
   localize: Localize;
   onOpenTrafficAgentChat: () => void;
+  onOpenRulePerformance: (rule: RuleRow) => void;
 };
 
 export function useMetaAdsOverviewAdapter({
@@ -77,6 +78,7 @@ export function useMetaAdsOverviewAdapter({
   updateEntityStatus,
   localize,
   onOpenTrafficAgentChat,
+  onOpenRulePerformance,
 }: UseMetaAdsOverviewAdapterParams): MetaAdsOverviewWorkspaceProps {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -282,6 +284,7 @@ export function useMetaAdsOverviewAdapter({
       onEditRuleOverride,
       onDeleteRuleGroup,
       onDeleteRuleOverride,
+      onOpenRulePerformance,
     },
     table: {
       columns: tableColumns,

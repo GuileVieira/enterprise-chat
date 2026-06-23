@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type {
   ProjectMetaAdsRankingResponse,
+  ProjectMetaAdsRulePerformanceResponse,
   ProjectMetaAdsStatus,
   TProject,
 } from 'librechat-data-provider';
@@ -47,11 +48,7 @@ const mockUseProjectMetaAdsPerformanceQuery = jest.fn((_projectId?: string, _par
 }));
 const mockUseProjectMetaAdsRulePerformanceQuery = jest.fn(
   (_projectId?: string, _params?: unknown) => ({
-    data: {
-      period: { datePreset: 'last_7d' },
-      currency: 'BRL',
-      rules: [],
-    },
+    data: mockRulePerformanceData,
     isFetching: false,
   }),
 );
@@ -71,6 +68,11 @@ const mockRankingData: ProjectMetaAdsRankingResponse = {
   },
   currency: 'BRL',
   items: [],
+};
+const mockRulePerformanceData: ProjectMetaAdsRulePerformanceResponse = {
+  period: { datePreset: 'last_7d' },
+  currency: 'BRL',
+  rules: [],
 };
 const mockStartupConfig = {
   interface: {
@@ -186,6 +188,9 @@ describe('ProjectMetaAdsPanel', () => {
     };
     mockRankingData.currency = 'BRL';
     mockRankingData.items = [];
+    mockRulePerformanceData.period = { datePreset: 'last_7d' };
+    mockRulePerformanceData.currency = 'BRL';
+    mockRulePerformanceData.rules = [];
     delete mockStatusData.campaigns;
     delete mockStatusData.adDiagnostics;
     delete mockStatusData.credentials;
@@ -2708,6 +2713,84 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('Campaign override')).toBeInTheDocument();
     expect(screen.getByText('Ad set override')).toBeInTheDocument();
     expect(screen.queryAllByLabelText('com_ui_project_meta_ads_delete_rule')).toHaveLength(3);
+  });
+
+  it('opens rule performance filtered by the clicked rule row', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+      },
+    } as TProject;
+    mockRulePerformanceData.rules = [
+      {
+        ruleKey: 'group:group-1',
+        ruleSourceType: 'group',
+        ruleId: 'group-1',
+        ruleName: 'Prospecting group',
+        ruleScope: 'campaign:campaign-1',
+        actionCount: 2,
+        aiActionCount: 2,
+        pausedAdCount: 1,
+        totalSpend: 100,
+        totalResults: 4,
+        averageCpa: 25,
+        averageRoas: null,
+        status: 'neutral',
+        actions: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('Prospecting group'));
+
+    expect(screen.getByTestId('meta-ads-rule-performance-tab-panel')).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_selected_rule_performance'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('campaign:campaign-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
+  });
+
+  it('explains empty rule performance instead of showing a blank table', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+          },
+        ],
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('Prospecting group'));
+
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_empty_selected_title'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_empty_hint'),
+    ).toBeInTheDocument();
   });
 
   it('marks CPA and ROAS rule labels as individually optional in pt-BR and English', () => {

@@ -41,7 +41,7 @@ import { MetaAdsRulePerformanceWorkspace } from './metaAds/rulePerformanceWorksp
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
 import { getMetaAdsTokenStatusKey } from './metaAds/overviewState';
 import { cleanDashboardName } from './metaAds/helpers';
-import type { WorkspaceTab } from './metaAds/types';
+import type { RuleRow, WorkspaceTab } from './metaAds/types';
 import {
   metaAdsInputLg,
   metaAdsButton,
@@ -67,6 +67,7 @@ export default function ProjectMetaAdsPanel({
   const { showToast } = useToastContext();
   const tableScroll = useMetaAdsTableScrollSync();
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
+  const [selectedRulePerformance, setSelectedRulePerformance] = useState<RuleRow | null>(null);
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const biWorkspace = useMetaAdsBiWorkspace();
   const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
@@ -155,6 +156,10 @@ export default function ProjectMetaAdsPanel({
   const hasProjectToken =
     tokenCredentials?.effectiveSource === 'project' ||
     Boolean(metaAdsSettings.settingsDraft?.tokenSecretName);
+  const onOpenRulePerformance = (rule: RuleRow) => {
+    setSelectedRulePerformance(rule);
+    setWorkspaceTab('rulePerformance');
+  };
   const metaAdsRules = useMetaAdsRules({
     settings,
     setSettings,
@@ -201,6 +206,7 @@ export default function ProjectMetaAdsPanel({
     updateEntityStatus,
     localize,
     onOpenTrafficAgentChat,
+    onOpenRulePerformance,
   });
   const onRunAnalysis = useMetaAdsRunAnalysis({
     projectId: project.projectId,
@@ -228,7 +234,12 @@ export default function ProjectMetaAdsPanel({
         onRunAnalysis={onRunAnalysis}
         onOpenSettingsDrawer={openSettingsDrawer}
         onOpenRuleGroupDraft={metaAdsRules.onOpenRuleGroupDraft}
-        onWorkspaceTabChange={setWorkspaceTab}
+        onWorkspaceTabChange={(tab) => {
+          if (tab !== 'rulePerformance') {
+            setSelectedRulePerformance(null);
+          }
+          setWorkspaceTab(tab);
+        }}
         onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
       >
@@ -261,6 +272,8 @@ export default function ProjectMetaAdsPanel({
           <MetaAdsRulePerformanceWorkspace
             data={rulePerformanceQuery.data}
             fetching={rulePerformanceQuery.isFetching}
+            selectedRule={selectedRulePerformance}
+            onClearSelectedRule={() => setSelectedRulePerformance(null)}
             period={{
               periodFilter: rulePerformancePeriod.periodFilter,
               customSince: rulePerformancePeriod.customSince,

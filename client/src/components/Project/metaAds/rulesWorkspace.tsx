@@ -19,6 +19,7 @@ export function MetaAdsRulesWorkspace({
   onEditRuleOverride,
   onDeleteRuleGroup,
   onDeleteRuleOverride,
+  onOpenRulePerformance,
 }: {
   rows: RuleRow[];
   currency: string;
@@ -34,6 +35,7 @@ export function MetaAdsRulesWorkspace({
   onEditRuleOverride: (override: MetaAdsRuleOverride) => void;
   onDeleteRuleGroup: (groupId: string) => void;
   onDeleteRuleOverride: (override: MetaAdsRuleOverride) => void;
+  onOpenRulePerformance: (row: RuleRow) => void;
 }) {
   return (
     <div className="border-t border-slate-200/70 bg-white/35 p-4 dark:border-white/10 dark:bg-slate-950/10">
@@ -93,7 +95,11 @@ export function MetaAdsRulesWorkspace({
               <tr
                 key={row.key}
                 data-testid="meta-ads-rule-row"
-                className="group bg-white/60 transition duration-200 odd:bg-slate-50/60 hover:bg-teal-50/70 dark:bg-white/[0.035] dark:odd:bg-white/[0.055] dark:hover:bg-teal-300/[0.08]"
+                title={localize('com_ui_project_meta_ads_open_rule_performance', {
+                  0: row.name,
+                })}
+                onClick={() => onOpenRulePerformance(row)}
+                className="group cursor-pointer bg-white/60 transition duration-200 odd:bg-slate-50/60 hover:bg-teal-50/70 dark:bg-white/[0.035] dark:odd:bg-white/[0.055] dark:hover:bg-teal-300/[0.08]"
               >
                 <td className="border-b border-white/[0.06] px-3 py-2">
                   <button
@@ -104,7 +110,10 @@ export function MetaAdsRulesWorkspace({
                         ? localize('com_ui_project_meta_ads_disable_rule')
                         : localize('com_ui_project_meta_ads_enable_rule')
                     }
-                    onClick={() => onToggleRuleRow(row)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleRuleRow(row);
+                    }}
                     className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 font-semibold transition ${
                       row.enabled
                         ? 'border-emerald-300/45 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100 dark:hover:bg-emerald-300/15'
@@ -159,7 +168,8 @@ export function MetaAdsRulesWorkspace({
                       type="button"
                       disabled={!canUseMetaAdsActions}
                       aria-label={localize('com_ui_project_meta_ads_edit_rule')}
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (row.type === 'global') {
                           onEditGlobalRule();
                           return;
@@ -181,7 +191,8 @@ export function MetaAdsRulesWorkspace({
                         type="button"
                         disabled={!canUseMetaAdsActions}
                         aria-label={localize('com_ui_project_meta_ads_delete_rule')}
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation();
                           if (row.group) {
                             onDeleteRuleGroup(row.group.id);
                             return;
