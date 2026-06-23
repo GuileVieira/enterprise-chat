@@ -1,5 +1,6 @@
 import { getObjectiveLabel, getResultTypeLabel } from './formatters';
 import { MetaAdsPeriodControls } from './periodControls';
+import { MetaAdsField } from './ui';
 import type {
   Localize,
   PeriodFilter,
@@ -72,8 +73,7 @@ export function MetaAdsBiControlsPanel({
           onCustomUntilChange={onCustomUntilChange}
           onApplyCustomPeriod={onApplyCustomPeriod}
         />
-        <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-          {localize('com_ui_project_meta_ads_level')}
+        <MetaAdsField label={localize('com_ui_project_meta_ads_level')}>
           <select
             data-testid="meta-ads-bi-level-filter"
             value={controls.level}
@@ -84,9 +84,8 @@ export function MetaAdsBiControlsPanel({
             <option value="adset">{localize('com_ui_project_meta_ads_level_ad_set')}</option>
             <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
           </select>
-        </label>
-        <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-          {localize('com_ui_project_meta_ads_objective')}
+        </MetaAdsField>
+        <MetaAdsField label={localize('com_ui_project_meta_ads_objective')}>
           <select
             data-testid="meta-ads-bi-objective-filter"
             value={controls.objective}
@@ -100,9 +99,8 @@ export function MetaAdsBiControlsPanel({
               </option>
             ))}
           </select>
-        </label>
-        <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-          {localize('com_ui_project_meta_ads_target_result_type')}
+        </MetaAdsField>
+        <MetaAdsField label={localize('com_ui_project_meta_ads_target_result_type')}>
           <select
             data-testid="meta-ads-bi-result-type-filter"
             value={controls.resultType}
@@ -116,9 +114,8 @@ export function MetaAdsBiControlsPanel({
               </option>
             ))}
           </select>
-        </label>
-        <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-          {localize('com_ui_project_meta_ads_metric')}
+        </MetaAdsField>
+        <MetaAdsField label={localize('com_ui_project_meta_ads_metric')}>
           <select
             data-testid="meta-ads-bi-metric-filter"
             value={controls.metric}
@@ -132,7 +129,7 @@ export function MetaAdsBiControlsPanel({
             <option value="frequency">{localize('com_ui_project_meta_ads_frequency')}</option>
             <option value="clicks">{localize('com_ui_project_meta_ads_clicks')}</option>
           </select>
-        </label>
+        </MetaAdsField>
       </div>
     </div>
   );
