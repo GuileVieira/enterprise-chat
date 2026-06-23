@@ -1,0 +1,338 @@
+import { useState } from 'react';
+import type { ProjectMetaAdsCampaignSummary } from 'librechat-data-provider';
+import {
+  defaultRules,
+  accountProfileRules,
+  getRuleOverrideKey,
+  hasRulePerformanceMetric,
+} from '../rules';
+import {
+  buildMetaAdsRuleRows,
+  getMetaAdsEntityRuleLabel,
+  getMetaAdsRuleDraftEntityLabels,
+} from '../rulesState';
+import type {
+  RuleRow,
+  RuleGroupDraft,
+  MetaAdsRuleGroup,
+  MetaAdsRulesState,
+  MetaAdsCreativeRules,
+  MetaAdsRuleOverride,
+  MetaAdsSettingsState,
+  Localize,
+} from '../types';
+
+type ToastStatus = 'success' | 'error' | 'warning' | 'info';
+
+type ShowToast = (toast: { message: string; status: ToastStatus }) => void;
+
+type UseMetaAdsRulesParams = {
+  settings: MetaAdsSettingsState;
+  setSettings: (settings: MetaAdsSettingsState) => void;
+  saveSettings: (settings: MetaAdsSettingsState, token: string, onSuccess?: () => void) => void;
+  campaigns: ProjectMetaAdsCampaignSummary[];
+  selectedCampaignIds: string[];
+  selectedAdSetIds: string[];
+  canUseMetaAdsActions: boolean;
+  localize: Localize;
+  showToast: ShowToast;
+};
+
+export function useMetaAdsRules({
+  settings,
+  setSettings,
+  saveSettings,
+  campaigns,
+  selectedCampaignIds,
+  selectedAdSetIds,
+  canUseMetaAdsActions,
+  localize,
+  showToast,
+}: UseMetaAdsRulesParams) {
+  const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
+  const canCreateRuleGroup = canUseMetaAdsActions;
+  const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
+    getMetaAdsEntityRuleLabel(settings, entityLevel, entityId);
+  const ruleDraftEntityLabels = getMetaAdsRuleDraftEntityLabels(ruleGroupDraft, campaigns);
+  const ruleRows = buildMetaAdsRuleRows({ settings, campaigns, localize });
+
+  const onOpenRuleGroupDraft = () => {
+    if (!canCreateRuleGroup) {
+      return;
+    }
+    if (selectedCampaignIds.length === 0 && selectedAdSetIds.length === 0) {
+      setRuleGroupDraft({
+        scope: 'global',
+        name: localize('com_ui_project_meta_ads_global_rules'),
+        entityLevel: 'campaign',
+        entityIds: [],
+        rules: { ...settings.rules },
+        creativeRules: { ...settings.creativeRules },
+      });
+      return;
+    }
+    const entityLevel = selectedCampaignIds.length > 0 ? 'campaign' : 'adset';
+    const entityIds = entityLevel === 'campaign' ? selectedCampaignIds : selectedAdSetIds;
+    setRuleGroupDraft({
+      scope: 'group',
+      name: '',
+      entityLevel,
+      entityIds,
+      rules: { ...settings.rules },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
+  const onEditGlobalRule = () => {
+    setRuleGroupDraft({
+      scope: 'global',
+      name: localize('com_ui_project_meta_ads_global_rules'),
+      entityLevel: 'campaign',
+      entityIds: [],
+      rules: { ...settings.rules },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
+  const onEditRuleGroup = (group: MetaAdsRuleGroup) => {
+    setRuleGroupDraft({
+      id: group.id,
+      scope: 'group',
+      name: group.name ?? '',
+      entityLevel: group.entityLevel,
+      entityIds: group.entityIds ?? [],
+      rules: { ...defaultRules, ...(group.rules ?? {}) },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
+  const onEditRuleOverride = (ruleOverride: MetaAdsRuleOverride) => {
+    setRuleGroupDraft({
+      overrideKey: getRuleOverrideKey(ruleOverride),
+      scope: 'override',
+      name: ruleOverride.entityName ?? '',
+      entityLevel: ruleOverride.entityLevel,
+      entityIds: [ruleOverride.entityId],
+      entityName: ruleOverride.entityName,
+      rules: { ...defaultRules, ...(ruleOverride.rules ?? {}) },
+      creativeRules: { ...settings.creativeRules },
+    });
+  };
+
+  const onToggleRuleRow = (row: RuleRow) => {
+    if (!canUseMetaAdsActions) {
+      return;
+    }
+    if (row.type === 'global') {
+      saveSettings({ ...settings, enabled: !row.enabled }, '');
+      return;
+    }
+    if (row.type === 'group' && row.group?.id) {
+      saveSettings(
+        {
+          ...settings,
+          ruleGroups: (settings.ruleGroups ?? []).map((group) =>
+            group.id === row.group?.id ? { ...group, enabled: !row.enabled } : group,
+          ),
+        },
+        '',
+      );
+      return;
+    }
+    if (row.override) {
+      const targetKey = getRuleOverrideKey(row.override);
+      saveSettings(
+        {
+          ...settings,
+          ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+            getRuleOverrideKey(ruleOverride) === targetKey
+              ? { ...ruleOverride, enabled: !row.enabled }
+              : ruleOverride,
+          ),
+        },
+        '',
+      );
+    }
+  };
+
+  const onDeleteRuleGroup = (groupId?: string) => {
+    saveSettings(
+      {
+        ...settings,
+        ruleGroups: (settings.ruleGroups ?? []).filter((group) => group.id !== groupId),
+      },
+      '',
+    );
+  };
+
+  const onDeleteRuleOverride = (ruleOverride: MetaAdsRuleOverride) => {
+    const targetKey = getRuleOverrideKey(ruleOverride);
+    saveSettings(
+      {
+        ...settings,
+        ruleOverrides: (settings.ruleOverrides ?? []).filter(
+          (currentRuleOverride) => getRuleOverrideKey(currentRuleOverride) !== targetKey,
+        ),
+      },
+      '',
+    );
+  };
+
+  const onRuleGroupRuleChange = (key: keyof MetaAdsRulesState, value: string) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              [key]: value === '' ? undefined : Number(value),
+            },
+          }
+        : current,
+    );
+  };
+
+  const onRuleGroupRuleTextChange = (key: keyof MetaAdsRulesState, value: string) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              [key]: value,
+            },
+          }
+        : current,
+    );
+  };
+
+  const onAccountProfileChange = (value: MetaAdsSettingsState['accountProfile']) => {
+    const profile = value ?? 'custom';
+    const nextSettings = {
+      ...settings,
+      accountProfile: profile,
+      rules: {
+        ...settings.rules,
+        ...(accountProfileRules[profile] ?? {}),
+      },
+    };
+    setSettings(nextSettings);
+    setRuleGroupDraft((current) =>
+      current?.scope === 'global'
+        ? {
+            ...current,
+            rules: nextSettings.rules,
+          }
+        : current,
+    );
+  };
+
+  const onRuleGroupCreativeRuleChange = (
+    key: keyof Required<MetaAdsCreativeRules>,
+    value: string,
+  ) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            creativeRules: {
+              ...current.creativeRules,
+              [key]: Number(value),
+            },
+          }
+        : current,
+    );
+  };
+
+  const onSaveRuleGroup = () => {
+    if (!ruleGroupDraft) {
+      return;
+    }
+    if (!hasRulePerformanceMetric(ruleGroupDraft.rules)) {
+      showToast({
+        message: localize('com_ui_project_meta_ads_metric_required'),
+        status: 'error',
+      });
+      return;
+    }
+    if (ruleGroupDraft.scope === 'global') {
+      saveSettings(
+        {
+          ...settings,
+          rules: ruleGroupDraft.rules,
+          creativeRules: ruleGroupDraft.creativeRules,
+        },
+        '',
+        () => setRuleGroupDraft(null),
+      );
+      return;
+    }
+    if (ruleGroupDraft.scope === 'override') {
+      const targetKey = ruleGroupDraft.overrideKey;
+      saveSettings(
+        {
+          ...settings,
+          ruleOverrides: (settings.ruleOverrides ?? []).map((ruleOverride) =>
+            getRuleOverrideKey(ruleOverride) === targetKey
+              ? {
+                  ...ruleOverride,
+                  entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
+                  rules: ruleGroupDraft.rules,
+                }
+              : ruleOverride,
+          ),
+        },
+        '',
+        () => setRuleGroupDraft(null),
+      );
+      return;
+    }
+    if (ruleGroupDraft.entityIds.length === 0) {
+      return;
+    }
+    const nextGroup: MetaAdsRuleGroup = {
+      id: ruleGroupDraft.id ?? `${ruleGroupDraft.entityLevel}-${Date.now()}`,
+      name:
+        ruleGroupDraft.name.trim() || localize('com_ui_project_meta_ads_rule_group_default_name'),
+      entityLevel: ruleGroupDraft.entityLevel,
+      entityIds: ruleGroupDraft.entityIds,
+      enabled:
+        ruleGroupDraft.id == null
+          ? true
+          : (settings.ruleGroups ?? []).find((group) => group.id === ruleGroupDraft.id)?.enabled,
+      rules: ruleGroupDraft.rules,
+    };
+    const existingGroups = settings.ruleGroups ?? [];
+    saveSettings(
+      {
+        ...settings,
+        ruleGroups: ruleGroupDraft.id
+          ? existingGroups.map((group) => (group.id === ruleGroupDraft.id ? nextGroup : group))
+          : [...existingGroups, nextGroup],
+      },
+      '',
+      () => setRuleGroupDraft(null),
+    );
+  };
+
+  return {
+    ruleGroupDraft,
+    ruleDraftEntityLabels,
+    ruleRows,
+    canCreateRuleGroup,
+    getEntityRuleLabel,
+    setRuleGroupDraft,
+    onOpenRuleGroupDraft,
+    onEditGlobalRule,
+    onEditRuleGroup,
+    onEditRuleOverride,
+    onToggleRuleRow,
+    onDeleteRuleGroup,
+    onDeleteRuleOverride,
+    onRuleGroupRuleChange,
+    onRuleGroupRuleTextChange,
+    onAccountProfileChange,
+    onRuleGroupCreativeRuleChange,
+    onSaveRuleGroup,
+  };
+}
