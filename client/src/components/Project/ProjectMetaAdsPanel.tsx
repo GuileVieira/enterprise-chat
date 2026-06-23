@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent, UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowSquareOut, ArrowsIn, ArrowsOut, PencilSimple } from '@phosphor-icons/react';
+import { ArrowsIn, ArrowsOut, PencilSimple } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
 import type {
@@ -43,7 +43,7 @@ import {
   getRuleOverrideKey,
   hasRulePerformanceMetric,
 } from './metaAds/rules';
-import { getAdThumbnailUrl, buildMetaAdsBiRankings, getSortedBiRankingItems } from './metaAds/bi';
+import { buildMetaAdsBiRankings, getSortedBiRankingItems } from './metaAds/bi';
 import {
   formatMoney,
   formatMetric,
@@ -101,14 +101,18 @@ import { MetaAdsBiRankingCard } from './metaAds/biRankingCard';
 import { MetaAdsBudgetEditorDialog } from './metaAds/budgetEditor';
 import { MetaAdsRankMedia } from './metaAds/rankMedia';
 import { MetaAdsSettingsDrawer } from './metaAds/settingsDrawer';
-import { MetaAdsOverviewActionCell } from './metaAds/overviewActionCell';
+import {
+  MetaAdsNameTooltip,
+  MetaAdsEvolutionNameCell,
+  getMetaAdsTableRowClass,
+} from './metaAds/overviewCells';
+import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
 import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import type {
   RuleRow,
   TableView,
-  TableColumn,
   BudgetEditor,
   RuleGroupDraft,
   PeriodFilter,
@@ -1525,718 +1529,27 @@ export default function ProjectMetaAdsPanel({
     }
     return value < 0 === improvesWhenNegative ? 'text-emerald-200' : 'text-rose-200';
   };
-  const getTableRowClass = (
-    rowIndex: number,
-    level: 'campaign' | 'adset' | 'ad',
-    isClickable = false,
-  ) => {
-    const stripeClass =
-      rowIndex % 2 === 0
-        ? 'bg-white/75 dark:bg-white/[0.035]'
-        : 'bg-slate-50/70 dark:bg-white/[0.06]';
-    const levelClass =
-      level === 'campaign'
-        ? 'font-semibold text-slate-950 dark:text-white'
-        : level === 'adset'
-          ? 'text-slate-700 dark:text-slate-300'
-          : 'text-slate-500 dark:text-slate-400';
-    const cursorClass = isClickable ? 'cursor-pointer' : '';
-
-    return `group ${cursorClass} ${stripeClass} ${levelClass} border-b border-slate-200/70 transition-colors duration-200 hover:bg-teal-50/70 dark:border-white/5 dark:hover:bg-teal-300/[0.08]`;
-  };
-
-  const renderEmptyCell = (column: TableColumn) => (
-    <td
-      key={column.key}
-      className={`px-2 py-2 ${
-        column.align === 'right' ? 'text-right font-mono tabular-nums' : ''
-      } text-slate-400 dark:text-slate-600`}
-    >
-      -
-    </td>
-  );
-
-  const renderFrequencyValue = (source: {
-    frequency?: number | null;
-    impressions?: number | null;
-    reach?: number | null;
-  }) => {
-    const hasAuditMetrics = source.impressions != null && source.reach != null;
-    const title = hasAuditMetrics
-      ? `${localize('com_ui_project_meta_ads_impressions')}: ${formatIntegerMetric(
-          source.impressions,
-        )} / ${localize('com_ui_project_meta_ads_reach')}: ${formatIntegerMetric(source.reach)}`
-      : undefined;
-    return <span title={title}>{formatMetric(source.frequency)}</span>;
-  };
-
-  const renderLevelCell = (column: TableColumn, labelKey: TranslationKeys) => (
-    <td key={column.key} className="px-3 py-3 text-slate-500 dark:text-slate-400">
-      <span className="inline-flex rounded-lg border border-slate-200 bg-white/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] dark:border-white/10 dark:bg-white/[0.055]">
-        {localize(labelKey)}
-      </span>
-    </td>
-  );
-
-  const renderNameTooltip = (value: string) => (
-    <span
-      aria-hidden="true"
-      data-tooltip={value}
-      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium leading-5 text-slate-800 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-teal-300/25 dark:bg-[#101827] dark:text-teal-100"
-    />
-  );
-
-  const renderEvolutionNameCell = (name: string) => (
-    <td className="max-w-64 px-3 py-2.5 text-sm font-medium text-slate-900 focus-within:z-50 hover:z-50 dark:text-white">
-      <div className="group relative min-w-0">
-        <div className="truncate">{name}</div>
-        {renderNameTooltip(name)}
-      </div>
-    </td>
-  );
-
-  const renderStatusBadge = (status: string | undefined) => {
-    const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
-    if (!normalizedStatus || normalizedStatus === 'ACTIVE') {
-      return null;
-    }
-    return (
-      <span className="ml-2 inline-flex shrink-0 border border-rose-300/30 bg-rose-500/10 px-1.5 py-0.5 align-middle text-[9px] font-semibold uppercase tracking-[0.12em] text-rose-100">
-        {normalizedStatus}
-      </span>
-    );
-  };
-
-  const renderBudgetBadge = (value: number | null | undefined, onClick?: () => void) => {
-    const content = (
-      <>
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
-        <span>{formatMoney(value, currency)}</span>
-      </>
-    );
-
-    if (!onClick) {
-      return (
-        <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-slate-800 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
-          {content}
-        </span>
-      );
-    }
-
-    return (
-      <button
-        type="button"
-        disabled={!canUseMetaAdsActions}
-        onClick={onClick}
-        className="inline-flex items-center gap-2 rounded-xl border border-amber-300/45 bg-amber-300/10 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-amber-900 shadow-[0_14px_30px_-24px_rgba(245,158,11,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/70 hover:bg-amber-300/15 focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 dark:border-amber-300/25 dark:bg-amber-300/[0.08] dark:text-[#fff3d7] dark:shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] dark:hover:border-amber-300/60 dark:hover:bg-amber-300/[0.14]"
-      >
-        {content}
-      </button>
-    );
-  };
-
-  const renderEntityStatusToggleCell = ({
-    entityLevel,
-    entityId,
-    entityName,
-    status,
-  }: {
-    entityLevel: ProjectMetaAdsEntityStatusLevel;
-    entityId: string;
-    entityName?: string;
-    status?: string;
-  }) => {
-    const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
-    const isActive = normalizedStatus === 'ACTIVE';
-    const canToggle = isActive || normalizedStatus === 'PAUSED';
-    const labelKey: TranslationKeys = isActive
-      ? 'com_ui_project_meta_ads_deactivate_ad'
-      : 'com_ui_project_meta_ads_activate_ad';
-
-    return (
-      <td
-        key="adStatus"
-        className={`sticky left-20 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
-      >
-        {canToggle && (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isActive}
-            aria-label={localize(labelKey)}
-            title={localize(labelKey)}
-            disabled={!canUseMetaAdsActions || updateEntityStatus.isLoading}
-            onClick={(event) =>
-              onOpenEntityStatusConfirmation(event, {
-                entityLevel,
-                entityId,
-                entityName,
-                status,
-              })
-            }
-            className={`relative inline-flex h-5 w-9 items-center rounded-full border transition duration-200 focus:outline-none focus:ring-2 focus:ring-teal-300/40 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 ${
-              isActive
-                ? 'border-teal-300/60 bg-teal-400/25 hover:border-teal-200/70 hover:bg-teal-400/30'
-                : 'border-slate-300 bg-slate-200/70 hover:border-rose-300/45 hover:bg-rose-100 dark:border-white/15 dark:bg-white/[0.055] dark:hover:border-rose-200/35 dark:hover:bg-rose-300/10'
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`h-3.5 w-3.5 rounded-full bg-white shadow-[0_4px_12px_-8px_rgba(0,0,0,0.9)] transition duration-200 dark:bg-slate-50 ${
-                isActive ? 'translate-x-[18px]' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-        )}
-      </td>
-    );
-  };
-
-  const renderCampaignNameCell = (campaign: ProjectMetaAdsCampaignSummary) => (
-    <td
-      key="name"
-      className={`sticky left-32 z-30 border-l-2 border-teal-300 px-3 py-3 font-semibold text-slate-950 focus-within:z-50 hover:z-50 dark:text-white ${metaAdsStickyCell}`}
-    >
-      <div className="group relative min-w-0">
-        <div className="truncate">
-          {campaign.campaignName ?? campaign.campaignId}
-          {renderStatusBadge(campaign.status)}
-        </div>
-        {renderNameTooltip(campaign.campaignName ?? campaign.campaignId)}
-      </div>
-    </td>
-  );
-
-  const renderAdSetNameCell = (adset: ProjectMetaAdsCampaignSummary['adSets'][number]) => (
-    <td
-      key="name"
-      className={`sticky left-32 z-30 border-l-2 border-teal-300/35 px-3 py-3 pl-6 text-slate-700 focus-within:z-50 hover:z-50 dark:text-slate-200 ${metaAdsStickyCell}`}
-    >
-      <div className="group relative min-w-0">
-        <div className="truncate">
-          {adset.entityName ?? adset.entityId}
-          {renderStatusBadge(adset.status)}
-        </div>
-        {renderNameTooltip(adset.entityName ?? adset.entityId)}
-      </div>
-    </td>
-  );
-
-  const renderAdNameCell = (ad: ProjectMetaAdsAdSummary) => {
-    const mediaUrl = getAdThumbnailUrl(ad);
-    const openAdPreview = (event: MouseEvent<HTMLElement>) => {
-      event.stopPropagation();
-      setSelectedAdPreview(ad);
-    };
-    return (
-      <td
-        key="name"
-        className={`sticky left-32 z-30 border-l-2 border-slate-200 px-3 py-3 pl-9 focus-within:z-50 hover:z-50 dark:border-white/10 ${metaAdsStickyCell}`}
-      >
-        <div className="group relative flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            aria-label={localize('com_ui_project_meta_ads_open_meta_ads')}
-            title={localize('com_ui_project_meta_ads_open_meta_ads')}
-            onClick={openAdPreview}
-            className="relative h-10 w-16 shrink-0 overflow-hidden border border-white/10 bg-[#242016] text-left shadow-[0_12px_30px_-24px_rgba(245,158,11,0.65)] focus:outline-none focus:ring-2 focus:ring-amber-300/60"
-          >
-            {mediaUrl ? (
-              <img
-                src={mediaUrl}
-                alt={ad.adName ?? ad.title ?? ad.adId}
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px] text-[#8a8172]">
-                {localize('com_ui_project_meta_ads_no_creative_media')}
-              </div>
-            )}
-            <span className="absolute inset-0 flex items-center justify-center gap-1 bg-black/70 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-              <ArrowSquareOut className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-            </span>
-          </button>
-          <button type="button" onClick={openAdPreview} className="min-w-0 text-left">
-            <div className="truncate text-sm font-medium text-slate-900 dark:text-white">
-              {ad.adName ?? ad.title ?? ad.adId}
-            </div>
-            <div className="truncate text-xs text-slate-500 dark:text-slate-400">
-              {ad.title ?? ad.body ?? '-'}
-            </div>
-          </button>
-          {renderNameTooltip(ad.adName ?? ad.title ?? ad.adId)}
-        </div>
-      </td>
-    );
-  };
-
-  const renderCampaignActionCell = (
-    column: TableColumn,
-    recommendation: ProjectMetaAdsRecommendation | undefined,
-    duplicate?: DuplicateDraft,
-  ) => (
-    <MetaAdsOverviewActionCell
-      key={column.key}
-      columnKey={column.key}
-      recommendation={recommendation}
-      duplicate={duplicate}
-      actionMenuKey={actionMenuKey}
-      canUseMetaAdsActions={canUseMetaAdsActions}
-      applyingRecommendation={applyRecommendation.isLoading}
-      localize={localize}
-      onApply={onApply}
-      onToggleActionMenu={(menuKey) =>
-        setActionMenuKey((current) => (current === menuKey ? null : menuKey))
-      }
-      onOpenDuplicateDraft={onOpenDuplicateDraft}
-    />
-  );
-
-  const renderCampaignCell = (
-    column: TableColumn,
-    campaign: ProjectMetaAdsCampaignSummary,
-    recommendation: ProjectMetaAdsRecommendation | undefined,
-  ) => {
-    if (column.key === 'level') {
-      return renderLevelCell(column, 'com_ui_project_meta_ads_level_campaign');
-    }
-    if (column.key === 'adStatus') {
-      return renderEntityStatusToggleCell({
-        entityLevel: 'campaign',
-        entityId: campaign.campaignId,
-        entityName: campaign.campaignName,
-        status: campaign.status,
-      });
-    }
-    if (column.key === 'name') {
-      return renderCampaignNameCell(campaign);
-    }
-    if (column.key === 'budget') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {campaign.editableBudgetLevel === 'campaign'
-            ? renderBudgetBadge(campaign.dailyBudget, () =>
-                onOpenBudgetEditor({
-                  entityLevel: 'campaign',
-                  entityId: campaign.campaignId,
-                  entityName: campaign.campaignName,
-                  currentBudget: campaign.dailyBudget,
-                }),
-              )
-            : renderBudgetBadge(campaign.dailyBudget)}
-        </td>
-      );
-    }
-    if (column.key === 'objective') {
-      return (
-        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {getObjectiveLabel(campaign.objective, localize)}
-        </td>
-      );
-    }
-    if (column.key === 'budgetMode') {
-      return (
-        <td key={column.key} className="px-2 py-2 text-text-secondary">
-          {campaign.budgetMode ?? '-'}
-        </td>
-      );
-    }
-    if (column.key === 'frequency') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {renderFrequencyValue(campaign)}
-        </td>
-      );
-    }
-    if (column.key === 'result') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(campaign.resultCount)}
-        </td>
-      );
-    }
-    if (column.key === 'cpa') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(campaign.cpa, currency)}
-        </td>
-      );
-    }
-    if (column.key === 'roas') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(campaign.roas)}
-        </td>
-      );
-    }
-    if (column.key === 'spend') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(campaign.spend, currency)}
-        </td>
-      );
-    }
-    if (column.key === 'ctr') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(campaign.ctr)}
-        </td>
-      );
-    }
-    if (column.key === 'clicks') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(campaign.clicks)}
-        </td>
-      );
-    }
-    if (column.key === 'video') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(campaign.videoP75Watched)}
-        </td>
-      );
-    }
-    if (column.key === 'rule') {
-      return (
-        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {getEntityRuleLabel('campaign', campaign.campaignId)}
-        </td>
-      );
-    }
-    if (column.key === 'recommendation') {
-      return (
-        <td key={column.key} className="px-2 py-2 text-text-secondary">
-          <div className="truncate">{getRecommendationLabel(recommendation, currency)}</div>
-          {recommendation?.reason && (
-            <div className="truncate text-text-tertiary">{recommendation.reason}</div>
-          )}
-        </td>
-      );
-    }
-    return renderCampaignActionCell(column, recommendation, {
-      entityLevel: 'campaign',
-      entityId: campaign.campaignId,
-      entityName: campaign.campaignName,
-      targetName: getDuplicateName(campaign.campaignName ?? campaign.campaignId),
-      status: campaign.status,
-      budget: campaign.dailyBudget,
-    });
-  };
-
-  const renderAdSetCell = (
-    column: TableColumn,
-    campaign: ProjectMetaAdsCampaignSummary,
-    adset: ProjectMetaAdsCampaignSummary['adSets'][number],
-    recommendation: ProjectMetaAdsRecommendation | undefined,
-  ) => {
-    if (column.key === 'level') {
-      return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad_set');
-    }
-    if (column.key === 'adStatus') {
-      return renderEntityStatusToggleCell({
-        entityLevel: 'adset',
-        entityId: adset.entityId,
-        entityName: adset.entityName,
-        status: adset.status,
-      });
-    }
-    if (column.key === 'name') {
-      return renderAdSetNameCell(adset);
-    }
-    if (column.key === 'budget') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {campaign.editableBudgetLevel === 'adset'
-            ? renderBudgetBadge(adset.dailyBudget, () =>
-                onOpenBudgetEditor({
-                  entityLevel: 'adset',
-                  entityId: adset.entityId,
-                  entityName: adset.entityName,
-                  currentBudget: adset.dailyBudget,
-                }),
-              )
-            : renderBudgetBadge(adset.dailyBudget)}
-        </td>
-      );
-    }
-    if (column.key === 'objective') {
-      return (
-        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {getObjectiveLabel(campaign.objective, localize)}
-        </td>
-      );
-    }
-    if (column.key === 'budgetMode') {
-      return (
-        <td key={column.key} className="px-2 py-2 text-text-secondary">
-          {campaign.budgetMode ?? '-'}
-        </td>
-      );
-    }
-    if (column.key === 'frequency') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {renderFrequencyValue(adset)}
-        </td>
-      );
-    }
-    if (column.key === 'result') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(adset.resultCount)}
-        </td>
-      );
-    }
-    if (column.key === 'cpa') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(adset.cpa, currency)}
-        </td>
-      );
-    }
-    if (column.key === 'roas') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(adset.roas)}
-        </td>
-      );
-    }
-    if (column.key === 'spend') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(adset.spend, currency)}
-        </td>
-      );
-    }
-    if (column.key === 'ctr') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(adset.ctr)}
-        </td>
-      );
-    }
-    if (column.key === 'clicks') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(adset.clicks)}
-        </td>
-      );
-    }
-    if (column.key === 'video') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(adset.videoP75Watched)}
-        </td>
-      );
-    }
-    if (column.key === 'rule') {
-      return (
-        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {getEntityRuleLabel('adset', adset.entityId)}
-        </td>
-      );
-    }
-    if (column.key === 'recommendation') {
-      return (
-        <td key={column.key} className="px-2 py-2 text-text-secondary">
-          <div className="truncate">{getRecommendationLabel(recommendation, currency)}</div>
-          {recommendation?.reason && (
-            <div className="truncate text-text-tertiary">{recommendation.reason}</div>
-          )}
-        </td>
-      );
-    }
-    return renderCampaignActionCell(column, recommendation, {
-      entityLevel: 'adset',
-      entityId: adset.entityId,
-      entityName: adset.entityName,
-      targetName: getDuplicateName(adset.entityName ?? adset.entityId),
-      status: adset.status,
-      budget: adset.dailyBudget,
-    });
-  };
-
-  const renderAdCell = (
-    column: TableColumn,
-    campaign: ProjectMetaAdsCampaignSummary,
-    ad: ProjectMetaAdsAdSummary,
-  ) => {
-    if (column.key === 'level') {
-      return renderLevelCell(column, 'com_ui_project_meta_ads_level_ad');
-    }
-    if (column.key === 'adStatus') {
-      return renderEntityStatusToggleCell({
-        entityLevel: 'ad',
-        entityId: ad.adId,
-        entityName: ad.adName ?? ad.title,
-        status: ad.status,
-      });
-    }
-    if (column.key === 'name') {
-      return renderAdNameCell(ad);
-    }
-    if (column.key === 'objective') {
-      return (
-        <td key={column.key} className="truncate px-2 py-2 text-text-secondary">
-          {getObjectiveLabel(campaign.objective, localize)}
-        </td>
-      );
-    }
-    if (column.key === 'budgetMode') {
-      return (
-        <td key={column.key} className="px-2 py-2 text-text-secondary">
-          {campaign.budgetMode ?? '-'}
-        </td>
-      );
-    }
-    if (column.key === 'frequency') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {renderFrequencyValue(ad)}
-        </td>
-      );
-    }
-    if (column.key === 'result') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(ad.resultCount)}
-        </td>
-      );
-    }
-    if (column.key === 'cpa') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(ad.cpa, ad.currency ?? currency)}
-        </td>
-      );
-    }
-    if (column.key === 'roas') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(ad.roas)}
-        </td>
-      );
-    }
-    if (column.key === 'spend') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMoney(ad.spend, ad.currency ?? currency)}
-        </td>
-      );
-    }
-    if (column.key === 'ctr') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(ad.ctr)}
-        </td>
-      );
-    }
-    if (column.key === 'clicks') {
-      return (
-        <td
-          key={column.key}
-          className="px-2 py-2 text-right font-mono tabular-nums text-text-secondary"
-        >
-          {formatMetric(ad.clicks)}
-        </td>
-      );
-    }
-    return renderEmptyCell(column);
-  };
-
-  const renderAdRow = (
-    campaign: ProjectMetaAdsCampaignSummary,
-    ad: ProjectMetaAdsAdSummary,
-    rowIndex: number,
-  ) => {
-    return (
-      <tr
-        key={ad.adId}
-        data-testid={`meta-ads-ad-card-${ad.adId}`}
-        onClick={() => setSelectedAdPreview(ad)}
-        className={`group ${getTableRowClass(rowIndex, 'ad', true)}`}
-      >
-        <td className={`sticky left-0 z-30 px-2 py-2 pl-10 align-middle ${metaAdsStickyCell}`} />
-        <td className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}>
-          <span aria-hidden="true" className="block h-7 w-7" />
-        </td>
-        {tableColumns.map((column) => renderAdCell(column, campaign, ad))}
-      </tr>
-    );
-  };
+  const getTableRowClass = getMetaAdsTableRowClass;
+  const { renderCampaignCell, renderAdSetCell, renderAdRow } = createMetaAdsOverviewRenderers({
+    columns: tableColumns,
+    currency,
+    actionMenuKey,
+    stickyCellClassName: metaAdsStickyCell,
+    canUseMetaAdsActions,
+    applyingRecommendation: applyRecommendation.isLoading,
+    updatingEntityStatus: updateEntityStatus.isLoading,
+    localize,
+    getTableRowClass,
+    getEntityRuleLabel,
+    getDuplicateName,
+    onApply,
+    onToggleActionMenu: (menuKey) =>
+      setActionMenuKey((current) => (current === menuKey ? null : menuKey)),
+    onOpenDuplicateDraft,
+    onOpenBudgetEditor,
+    onOpenEntityStatusConfirmation,
+    onPreviewAd: setSelectedAdPreview,
+  });
 
   const content = (
     <>
@@ -3150,7 +2463,7 @@ export default function ProjectMetaAdsPanel({
                                   <div className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                                     {name}
                                   </div>
-                                  {renderNameTooltip(name)}
+                                  <MetaAdsNameTooltip value={name} />
                                 </div>
                                 {seriesPath.series.parentCampaignName && (
                                   <div className="truncate text-[10px] text-slate-500 dark:text-slate-400">
@@ -3215,7 +2528,7 @@ export default function ProjectMetaAdsPanel({
                                     key={entityId}
                                     className="odd:bg-slate-50/80 dark:odd:bg-[#1b263b]"
                                   >
-                                    {renderEvolutionNameCell(name)}
+                                    <MetaAdsEvolutionNameCell name={name} />
                                     <td
                                       className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
                                         delta.spendDelta,
@@ -3292,7 +2605,7 @@ export default function ProjectMetaAdsPanel({
                                   delta.latestChange?.deltaDailyBudget ?? delta.budgetDelta;
                                 return (
                                   <tr key={entityId} className="odd:bg-white/[0.025]">
-                                    {renderEvolutionNameCell(name)}
+                                    <MetaAdsEvolutionNameCell name={name} />
                                     <td
                                       className={`px-3 py-2.5 text-right font-mono ${renderEvolutionDeltaClass(
                                         budgetDelta,
