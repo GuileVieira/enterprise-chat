@@ -261,6 +261,23 @@ function validateMonthlyBudget(monthlyBudget = undefined) {
   return validated;
 }
 
+function validateMonthlyBudgets(monthlyBudgets = undefined) {
+  if (!monthlyBudgets || typeof monthlyBudgets !== 'object' || Array.isArray(monthlyBudgets)) {
+    return undefined;
+  }
+  return Object.entries(monthlyBudgets).reduce((validated, [month, monthlyBudget]) => {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return validated;
+    }
+    const budget = validateMonthlyBudget({ ...(monthlyBudget ?? {}), month });
+    if (budget) {
+      const { month: _month, ...budgetValues } = budget;
+      validated[month] = budgetValues;
+    }
+    return validated;
+  }, {});
+}
+
 function normalizeRuleOverrides(ruleOverrides = []) {
   if (!Array.isArray(ruleOverrides)) {
     return [];
@@ -374,6 +391,7 @@ function normalizeMetaAds(metaAds = {}) {
     ruleGroups: normalizeRuleGroups(safeMetaAds.ruleGroups),
     ruleOverrides: normalizeRuleOverrides(safeMetaAds.ruleOverrides),
     monthlyBudget: validateMonthlyBudget(safeMetaAds.monthlyBudget),
+    monthlyBudgets: validateMonthlyBudgets(safeMetaAds.monthlyBudgets),
     accountProfile,
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',

@@ -410,6 +410,143 @@ describe('ProjectMetaAdsPanel', () => {
             additionalAmount: 1000,
             allowedOverspendPct: 10,
           },
+          monthlyBudgets: {
+            '2026-07': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+          },
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('inherits monthly investment from previous month and saves only the selected month', () => {
+    const projectWithMonthlyHistory = {
+      ...project,
+      metaAds: {
+        monthlyBudget: {
+          month: '2026-06',
+          baseAmount: 5000,
+          additionalAmount: 1000,
+          allowedOverspendPct: 10,
+        },
+        monthlyBudgets: {
+          '2026-06': {
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+        },
+      },
+    } as TProject;
+    render(<ProjectMetaAdsPanel project={projectWithMonthlyHistory} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_automation'));
+    const automationDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_automation',
+    });
+
+    fireEvent.click(within(automationDialog).getByLabelText('com_ui_project_meta_ads_month'));
+    fireEvent.click(within(automationDialog).getByTestId('meta-ads-month-option-2026-08'));
+    expect(
+      within(automationDialog).getByText('com_ui_project_meta_ads_monthly_budget_inherited'),
+    ).toBeInTheDocument();
+    expect(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_base_amount'),
+    ).toHaveValue(5000);
+
+    fireEvent.change(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_base_amount'),
+      { target: { value: '7000' } },
+    );
+    fireEvent.click(within(automationDialog).getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          monthlyBudget: {
+            month: '2026-08',
+            baseAmount: 7000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+          monthlyBudgets: {
+            '2026-06': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+            '2026-08': {
+              baseAmount: 7000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+          },
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('copies the previous monthly investment into the selected month', () => {
+    const projectWithMonthlyHistory = {
+      ...project,
+      metaAds: {
+        monthlyBudget: {
+          month: '2026-06',
+          baseAmount: 5000,
+          additionalAmount: 1000,
+          allowedOverspendPct: 10,
+        },
+        monthlyBudgets: {
+          '2026-06': {
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+        },
+      },
+    } as TProject;
+    render(<ProjectMetaAdsPanel project={projectWithMonthlyHistory} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_automation'));
+    const automationDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_automation',
+    });
+
+    fireEvent.click(within(automationDialog).getByLabelText('com_ui_project_meta_ads_month'));
+    fireEvent.click(within(automationDialog).getByTestId('meta-ads-month-option-2026-08'));
+    fireEvent.click(
+      within(automationDialog).getByText('com_ui_project_meta_ads_month_copy_previous'),
+    );
+    fireEvent.click(within(automationDialog).getByText('com_ui_save'));
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          monthlyBudget: {
+            month: '2026-08',
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+          monthlyBudgets: {
+            '2026-06': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+            '2026-08': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+          },
         }),
       },
       expect.any(Object),

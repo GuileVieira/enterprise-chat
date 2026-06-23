@@ -135,6 +135,58 @@ function getMetaAdsMonthRange(month, _timeZone = getMetaAdsTimeZone(), now = new
   };
 }
 
+function getMetaAdsMonthKey(month, now = new Date()) {
+  const match = typeof month === 'string' ? month.match(/^(\d{4})-(\d{2})$/) : null;
+  if (match) {
+    return `${match[1]}-${match[2]}`;
+  }
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function getMonthlyBudgetEntries(monthlyBudgets = {}) {
+  if (monthlyBudgets instanceof Map) {
+    return Array.from(monthlyBudgets.entries());
+  }
+  return Object.entries(monthlyBudgets);
+}
+
+function getMonthlyBudgetEntry(monthlyBudgets = {}, month) {
+  if (monthlyBudgets instanceof Map) {
+    return monthlyBudgets.get(month);
+  }
+  return monthlyBudgets[month];
+}
+
+function resolveMonthlyBudget(metaAds = {}, month, now = new Date()) {
+  const monthKey = getMetaAdsMonthKey(month, now);
+  const monthlyBudgets = metaAds.monthlyBudgets ?? {};
+  const monthlyBudget = getMonthlyBudgetEntry(monthlyBudgets, monthKey);
+  if (monthlyBudget) {
+    return {
+      month: monthKey,
+      ...monthlyBudget,
+    };
+  }
+  const inheritedMonth = getMonthlyBudgetEntries(monthlyBudgets)
+    .map(([key]) => key)
+    .filter((key) => /^\d{4}-\d{2}$/.test(key) && key <= monthKey)
+    .sort()
+    .pop();
+  if (inheritedMonth) {
+    return {
+      month: monthKey,
+      ...getMonthlyBudgetEntry(monthlyBudgets, inheritedMonth),
+    };
+  }
+  if (metaAds.monthlyBudget) {
+    return {
+      ...metaAds.monthlyBudget,
+      month: monthKey,
+    };
+  }
+  return { month: monthKey };
+}
+
 function getMonthlyBudgetLimit(monthlyBudget = {}) {
   const baseAmount = Number(monthlyBudget.baseAmount ?? 0);
   const additionalAmount = Number(monthlyBudget.additionalAmount ?? 0);
@@ -3237,8 +3289,9 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     return [];
   });
-  const monthlyRange = getMetaAdsMonthRange(metaAds.monthlyBudget?.month, timeZone, now);
-  const monthlyCampaignInsightsPromise = getMonthlyBudgetLimit(metaAds.monthlyBudget)
+  const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month, now);
+  const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, timeZone, now);
+  const monthlyCampaignInsightsPromise = getMonthlyBudgetLimit(monthlyBudget)
     ? listCampaignInsights({
         adAccountId,
         token,
@@ -3268,7 +3321,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       monthlyCampaignInsightsPromise,
     ]);
   const monthlyBudgetState = buildMonthlyBudgetState({
-    monthlyBudget: metaAds.monthlyBudget,
+    monthlyBudget,
     insightRows: monthlyCampaignInsights,
     now,
   });
@@ -3857,8 +3910,9 @@ async function applyManualBudgetChange({
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const currentBudget = await getEntityDailyBudget({ entityId, token, graphVersion });
-  const monthlyRange = getMetaAdsMonthRange(metaAds.monthlyBudget?.month);
-  const monthlyCampaignInsights = getMonthlyBudgetLimit(metaAds.monthlyBudget)
+  const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);
+  const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month);
+  const monthlyCampaignInsights = getMonthlyBudgetLimit(monthlyBudget)
     ? await listCampaignInsights({
         adAccountId: normalizeAdAccountId(metaAds.adAccountId),
         token,
@@ -3871,7 +3925,7 @@ async function applyManualBudgetChange({
     proposal: { action: 'increase', proposedDailyBudget: nextDailyBudget },
     currentDailyBudget: currentBudget?.dailyBudget ?? 0,
     monthlyBudgetState: buildMonthlyBudgetState({
-      monthlyBudget: metaAds.monthlyBudget,
+      monthlyBudget,
       insightRows: monthlyCampaignInsights,
     }),
   });
@@ -4145,6 +4199,7 @@ module.exports = {
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
   _getMetaAdsMonthRangeForTest: getMetaAdsMonthRange,
+  _resolveMonthlyBudgetForTest: resolveMonthlyBudget,
   _resolveStatusPeriodForTest: resolveStatusPeriod,
   _resolveTargetResultTypeForTest: resolveTargetResultType,
   analyzeProject,

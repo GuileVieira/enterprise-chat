@@ -9,7 +9,7 @@ import type {
   ScheduleIntervalMinutes,
 } from './types';
 import { scheduleOptions } from './constants';
-import { getAdAccountDigits, toAdAccountId } from './settings';
+import { getAdAccountDigits, resolveMonthlyBudgetForMonth, toAdAccountId } from './settings';
 
 type SettingsDrawerChrome = {
   modalOverlayClassName: string;
@@ -151,18 +151,72 @@ export function MetaAdsSettingsDrawer({
     key: 'month' | 'baseAmount' | 'additionalAmount' | 'allowedOverspendPct',
     value: string,
   ) => {
-    let nextValue: string | number | undefined = value;
-    if (key !== 'month') {
-      nextValue = value === '' ? undefined : Number(value);
+    if (key === 'month') {
+      const resolvedBudget = resolveMonthlyBudgetForMonth(
+        value,
+        draft.monthlyBudgets,
+        draft.monthlyBudget,
+      );
+      updateDraft({
+        monthlyBudget: {
+          month: value,
+          ...resolvedBudget.values,
+        },
+      });
+      return;
     }
+    const nextValue = value === '' ? undefined : Number(value);
+    const month = draft.monthlyBudget?.month ?? getCurrentMonthValue();
+    const monthlyBudget = {
+      ...(draft.monthlyBudget ?? {}),
+      month,
+      [key]: nextValue,
+    };
     updateDraft({
+      monthlyBudgets: {
+        ...(draft.monthlyBudgets ?? {}),
+        [month]: {
+          baseAmount: monthlyBudget.baseAmount,
+          additionalAmount: monthlyBudget.additionalAmount,
+          allowedOverspendPct: monthlyBudget.allowedOverspendPct,
+        },
+      },
       monthlyBudget: {
-        ...(draft.monthlyBudget ?? {}),
-        [key]: nextValue,
+        month,
+        baseAmount: monthlyBudget.baseAmount,
+        additionalAmount: monthlyBudget.additionalAmount,
+        allowedOverspendPct: monthlyBudget.allowedOverspendPct,
       },
     });
   };
-  const selectedMonth = parseMonthValue(draft.monthlyBudget?.month);
+  const selectedMonthKey = draft.monthlyBudget?.month ?? getCurrentMonthValue();
+  const selectedMonth = parseMonthValue(selectedMonthKey);
+  const monthlyBudgetResolution = resolveMonthlyBudgetForMonth(
+    selectedMonthKey,
+    draft.monthlyBudgets,
+    draft.monthlyBudget,
+  );
+  const copyPreviousMonthlyBudget = () => {
+    if (!monthlyBudgetResolution.inheritedFrom) {
+      return;
+    }
+    const inheritedBudget = draft.monthlyBudgets?.[monthlyBudgetResolution.inheritedFrom];
+    const values = resolveMonthlyBudgetForMonth(
+      monthlyBudgetResolution.inheritedFrom,
+      draft.monthlyBudgets,
+      inheritedBudget,
+    ).values;
+    updateDraft({
+      monthlyBudgets: {
+        ...(draft.monthlyBudgets ?? {}),
+        [selectedMonthKey]: values,
+      },
+      monthlyBudget: {
+        month: selectedMonthKey,
+        ...values,
+      },
+    });
+  };
   const openMonthPicker = () => {
     setMonthPickerYear(selectedMonth.year);
     setMonthPickerOpen((current) => !current);
@@ -177,7 +231,15 @@ export function MetaAdsSettingsDrawer({
     setMonthPickerOpen(false);
   };
   const clearMonth = () => {
-    updateMonthlyBudget('month', '');
+    const { [selectedMonthKey]: _removed, ...monthlyBudgets } = draft.monthlyBudgets ?? {};
+    const resolvedBudget = resolveMonthlyBudgetForMonth(selectedMonthKey, monthlyBudgets);
+    updateDraft({
+      monthlyBudgets,
+      monthlyBudget: {
+        month: selectedMonthKey,
+        ...resolvedBudget.values,
+      },
+    });
     setMonthPickerOpen(false);
   };
 
@@ -346,6 +408,22 @@ export function MetaAdsSettingsDrawer({
                 <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
                   {localize('com_ui_project_meta_ads_monthly_budget_hint')}
                 </div>
+                {monthlyBudgetResolution.inheritedFrom && (
+                  <div className="mt-2 rounded-xl border border-teal-300/20 bg-teal-400/10 px-3 py-2 text-xs font-medium text-teal-700 dark:text-teal-100">
+                    <div>
+                      {localize('com_ui_project_meta_ads_monthly_budget_inherited', {
+                        0: formatMonthLabel(monthlyBudgetResolution.inheritedFrom),
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={copyPreviousMonthlyBudget}
+                      className="mt-2 rounded-lg border border-teal-300/30 px-2 py-1 text-xs font-semibold text-teal-800 transition hover:bg-teal-400/10 dark:text-teal-100"
+                    >
+                      {localize('com_ui_project_meta_ads_month_copy_previous')}
+                    </button>
+                  </div>
+                )}
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                     {localize('com_ui_project_meta_ads_month')}
@@ -358,7 +436,7 @@ export function MetaAdsSettingsDrawer({
                         onClick={openMonthPicker}
                         className={`${controls.inputClassName} flex items-center justify-between text-left`}
                       >
-                        <span>{formatMonthLabel(draft.monthlyBudget?.month)}</span>
+                        <span>{formatMonthLabel(selectedMonthKey)}</span>
                         <CalendarBlank
                           className="h-5 w-5 shrink-0 text-slate-400 dark:text-slate-300"
                           weight="bold"

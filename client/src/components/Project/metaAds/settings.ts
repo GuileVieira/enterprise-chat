@@ -2,6 +2,18 @@ import type { TProject } from 'librechat-data-provider';
 import type { MetaAdsSettingsState } from './types';
 import { defaultRules, defaultCreativeRules } from './rules';
 
+export type MonthlyBudgetValues = {
+  baseAmount?: number;
+  additionalAmount?: number;
+  allowedOverspendPct?: number;
+};
+
+export type MonthlyBudgetResolution = {
+  month: string;
+  values: Required<MonthlyBudgetValues>;
+  inheritedFrom?: string;
+};
+
 export function toAdAccountId(value: string) {
   const digits = getAdAccountDigits(value);
   return digits ? `act_${digits}` : '';
@@ -22,8 +34,51 @@ export function getGraphVersionOptions(effectiveVersion?: string) {
   );
 }
 
+function toMonthlyBudgetValues(values?: MonthlyBudgetValues): Required<MonthlyBudgetValues> {
+  return {
+    baseAmount: values?.baseAmount ?? 0,
+    additionalAmount: values?.additionalAmount ?? 0,
+    allowedOverspendPct: values?.allowedOverspendPct ?? 0,
+  };
+}
+
+export function resolveMonthlyBudgetForMonth(
+  month: string,
+  monthlyBudgets?: Record<string, MonthlyBudgetValues>,
+  legacyMonthlyBudget?: MonthlyBudgetValues,
+): MonthlyBudgetResolution {
+  if (monthlyBudgets?.[month]) {
+    return {
+      month,
+      values: toMonthlyBudgetValues(monthlyBudgets[month]),
+    };
+  }
+  const inheritedFrom = Object.keys(monthlyBudgets ?? {})
+    .filter((key) => /^\d{4}-\d{2}$/.test(key) && key <= month)
+    .sort()
+    .pop();
+  if (inheritedFrom) {
+    return {
+      month,
+      inheritedFrom,
+      values: toMonthlyBudgetValues(monthlyBudgets?.[inheritedFrom]),
+    };
+  }
+  return {
+    month,
+    values: toMonthlyBudgetValues(legacyMonthlyBudget),
+  };
+}
+
 export function normalizeSettings(project: TProject): MetaAdsSettingsState {
   const currentMonth = toDateInputValue(new Date()).slice(0, 7);
+  const monthlyBudgets = project.metaAds?.monthlyBudgets ?? {};
+  const month = project.metaAds?.monthlyBudget?.month ?? currentMonth;
+  const monthlyBudget = resolveMonthlyBudgetForMonth(
+    month,
+    monthlyBudgets,
+    project.metaAds?.monthlyBudget,
+  );
   return {
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
@@ -38,11 +93,10 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
     lastRunAt: project.metaAds?.lastRunAt,
     monthlyBudget: {
-      month: project.metaAds?.monthlyBudget?.month ?? currentMonth,
-      baseAmount: project.metaAds?.monthlyBudget?.baseAmount ?? 0,
-      additionalAmount: project.metaAds?.monthlyBudget?.additionalAmount ?? 0,
-      allowedOverspendPct: project.metaAds?.monthlyBudget?.allowedOverspendPct ?? 0,
+      month,
+      ...monthlyBudget.values,
     },
+    monthlyBudgets,
     ruleGroups: project.metaAds?.ruleGroups ?? [],
     ruleOverrides: project.metaAds?.ruleOverrides ?? [],
     rules: {

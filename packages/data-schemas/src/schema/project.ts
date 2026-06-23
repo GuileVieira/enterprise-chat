@@ -192,6 +192,11 @@ const ProjectMetaAdsSchema = new Schema(
       type: ProjectMetaAdsMonthlyBudgetSchema,
       default: undefined,
     },
+    monthlyBudgets: {
+      type: Map,
+      of: ProjectMetaAdsMonthlyBudgetSchema,
+      default: undefined,
+    },
     rules: {
       type: ProjectMetaAdsRulesSchema,
       default: {},

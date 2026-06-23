@@ -16,6 +16,7 @@ const {
   _resolveTargetResultTypeForTest,
   _resolveStatusPeriodForTest,
   _buildCreativePauseRecommendationsForTest,
+  _resolveMonthlyBudgetForTest,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
@@ -118,6 +119,66 @@ describe('Meta Ads budget service', () => {
       since: '2026-07-01',
       until: '2026-07-31',
       remainingDays: 31,
+    });
+  });
+
+  it('resolves monthly investment from the selected month first', () => {
+    expect(
+      _resolveMonthlyBudgetForTest(
+        {
+          monthlyBudget: {
+            month: '2026-07',
+            baseAmount: 9999,
+            additionalAmount: 0,
+            allowedOverspendPct: 0,
+          },
+          monthlyBudgets: {
+            '2026-06': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+            '2026-07': {
+              baseAmount: 7000,
+              additionalAmount: 500,
+              allowedOverspendPct: 5,
+            },
+          },
+        },
+        '2026-07',
+      ),
+    ).toEqual({
+      month: '2026-07',
+      baseAmount: 7000,
+      additionalAmount: 500,
+      allowedOverspendPct: 5,
+    });
+  });
+
+  it('inherits monthly investment from the latest previous configured month', () => {
+    expect(
+      _resolveMonthlyBudgetForTest(
+        {
+          monthlyBudgets: {
+            '2026-04': {
+              baseAmount: 3000,
+              additionalAmount: 0,
+              allowedOverspendPct: 0,
+            },
+            '2026-06': {
+              baseAmount: 5000,
+              additionalAmount: 1000,
+              allowedOverspendPct: 10,
+            },
+          },
+        },
+        '2026-08',
+      ),
+    ).toEqual({
+      month: '2026-08',
+      baseAmount: 5000,
+      additionalAmount: 1000,
+      allowedOverspendPct: 10,
     });
   });
 

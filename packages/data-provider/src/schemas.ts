@@ -910,6 +910,15 @@ export const projectSchema = z.object({
           allowedOverspendPct: z.number().optional(),
         })
         .optional(),
+      monthlyBudgets: z
+        .record(
+          z.object({
+            baseAmount: z.number().optional(),
+            additionalAmount: z.number().optional(),
+            allowedOverspendPct: z.number().optional(),
+          }),
+        )
+        .optional(),
       rules: z
         .object({
           targetCpa: z.number().optional(),

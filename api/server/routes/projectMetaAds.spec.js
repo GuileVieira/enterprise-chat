@@ -173,6 +173,66 @@ describe('projectMetaAds settings normalization', () => {
     ).toThrow('Invalid Meta Ads monthly budget.');
   });
 
+  it('normalizes monthly budget history without changing prior months', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: 7000,
+          additionalAmount: 500,
+          allowedOverspendPct: 5,
+        },
+        monthlyBudgets: {
+          '2026-06': {
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+          '2026-07': {
+            baseAmount: 7000,
+            additionalAmount: 500,
+            allowedOverspendPct: 5,
+          },
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: 7000,
+          additionalAmount: 500,
+          allowedOverspendPct: 5,
+        },
+        monthlyBudgets: {
+          '2026-06': {
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+          '2026-07': {
+            baseAmount: 7000,
+            additionalAmount: 500,
+            allowedOverspendPct: 5,
+          },
+        },
+      }),
+    );
+  });
+
+  it('rejects invalid monthly budget history values', () => {
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        monthlyBudgets: {
+          '2026-07': {
+            baseAmount: -1,
+            additionalAmount: 0,
+            allowedOverspendPct: 0,
+          },
+        },
+      }),
+    ).toThrow('Invalid Meta Ads monthly budget.');
+  });
+
   it('normalizes creative frequency alert rules separately from budget rules', () => {
     expect(
       router._normalizeMetaAdsForTest({

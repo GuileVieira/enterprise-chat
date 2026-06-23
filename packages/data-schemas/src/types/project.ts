@@ -44,6 +44,11 @@ export interface IProjectMetaAdsMonthlyBudget {
   allowedOverspendPct?: number;
 }
 
+export type IProjectMetaAdsMonthlyBudgets = Record<
+  string,
+  Omit<IProjectMetaAdsMonthlyBudget, 'month'>
+>;
+
 export interface IProjectMetaAds {
   enabled?: boolean;
   adAccountId?: string;
@@ -56,6 +61,7 @@ export interface IProjectMetaAds {
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
   lastRunAt?: Date;
   monthlyBudget?: IProjectMetaAdsMonthlyBudget;
+  monthlyBudgets?: IProjectMetaAdsMonthlyBudgets;
   rules?: IProjectMetaAdsRules;
   creativeRules?: IProjectMetaAdsCreativeRules;
   ruleGroups?: Array<{
