@@ -31,7 +31,6 @@ import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaA
 import {
   BI_TOP_LIMIT,
   tableColumnMap,
-  tableViewOptions,
   evolutionColors,
   tableViewMinWidth,
   workspaceTabOptions,
@@ -97,6 +96,7 @@ import { MetaAdsSummaryCards } from './metaAds/summaryCards';
 import { getMetaAdsTableRowClass } from './metaAds/overviewCells';
 import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
 import { MetaAdsOverviewTable } from './metaAds/overviewTable';
+import { MetaAdsOverviewToolbar } from './metaAds/overviewToolbar';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import type {
@@ -122,10 +122,6 @@ import type {
 import {
   MetaAdsBadge,
   MetaAdsButton,
-  MetaAdsField,
-  MetaAdsInput,
-  MetaAdsPanel,
-  MetaAdsSelect,
   metaAdsButtonClassName,
   metaAdsGhostButtonClassName,
   metaAdsInputClassName,
@@ -1684,159 +1680,57 @@ export default function ProjectMetaAdsPanel({
             aria-labelledby="meta-ads-tab-overview"
             data-testid="meta-ads-overview-tab-panel"
           >
-            <div className="flex flex-col gap-4 border-b border-slate-200/70 bg-white/45 p-4 shadow-[0_20px_60px_-50px_rgba(15,23,42,0.35)] backdrop-blur dark:border-white/10 dark:bg-slate-950/10 dark:shadow-[0_20px_70px_-54px_rgba(0,0,0,0.9)]">
-              {isStatusLoading && (
-                <div
-                  role="status"
-                  className="flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100"
-                >
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-900 border-t-amber-200" />
-                  <span>{localize('com_ui_project_meta_ads_loading')}</span>
-                </div>
-              )}
-              <MetaAdsPanel className="p-3">
-                <div className="flex min-w-0 flex-col gap-3">
-                  <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
-                    <MetaAdsField label={localize('com_ui_project_meta_ads_search')}>
-                      <MetaAdsInput
-                        value={campaignSearch}
-                        onChange={(event) => setCampaignSearch(event.target.value)}
-                      />
-                    </MetaAdsField>
-                    <MetaAdsField label={localize('com_ui_project_meta_ads_budget_mode_filter')}>
-                      <MetaAdsSelect
-                        value={budgetModeFilter}
-                        onChange={(event) => setBudgetModeFilter(event.target.value)}
-                      >
-                        <option value="all">{localize('com_ui_all')}</option>
-                        <option value="CBO">CBO</option>
-                        <option value="ABO">ABO</option>
-                        <option value="UNKNOWN">UNKNOWN</option>
-                      </MetaAdsSelect>
-                    </MetaAdsField>
-                    <MetaAdsField label={localize('com_ui_project_meta_ads_objective_filter')}>
-                      <MetaAdsSelect
-                        value={objectiveFilter}
-                        onChange={(event) => setObjectiveFilter(event.target.value)}
-                      >
-                        <option value="all">{localize('com_ui_all')}</option>
-                        {objectiveOptions.map((objective) => (
-                          <option key={objective} value={objective}>
-                            {getObjectiveLabel(objective, localize)}
-                          </option>
-                        ))}
-                      </MetaAdsSelect>
-                    </MetaAdsField>
-                    <MetaAdsField label={localize('com_ui_project_meta_ads_sort')}>
-                      <MetaAdsSelect
-                        value={campaignSort}
-                        onChange={(event) => setCampaignSort(event.target.value)}
-                      >
-                        <option value="name_asc">{localize('com_ui_name')}</option>
-                        <option value="budget_desc">
-                          {localize('com_ui_project_meta_ads_budget_defined')}
-                        </option>
-                        <option value="frequency_desc">
-                          {localize('com_ui_project_meta_ads_frequency')}
-                        </option>
-                        <option value="spend_desc">
-                          {localize('com_ui_project_meta_ads_spend')}
-                        </option>
-                        <option value="roas_desc">
-                          {localize('com_ui_project_meta_ads_roas')}
-                        </option>
-                        <option value="cpa_asc">
-                          {localize('com_ui_project_meta_ads_cost_result')}
-                        </option>
-                        <option value="result_desc">
-                          {localize('com_ui_project_meta_ads_result')}
-                        </option>
-                        <option value="ctr_desc">CTR</option>
-                        <option value="clicks_desc">
-                          {localize('com_ui_project_meta_ads_clicks')}
-                        </option>
-                      </MetaAdsSelect>
-                    </MetaAdsField>
-                    <MetaAdsField label={localize('com_ui_project_meta_ads_table_view')}>
-                      <MetaAdsSelect
-                        value={tableView}
-                        onChange={(event) => setTableView(event.target.value as TableView)}
-                      >
-                        {tableViewOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {localize(option.labelKey)}
-                          </option>
-                        ))}
-                      </MetaAdsSelect>
-                    </MetaAdsField>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-start gap-2 xl:justify-end">
-                    <span className="h-10 rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5 font-mono text-xs tabular-nums text-slate-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300">
-                      {localize('com_ui_project_meta_ads_selection_count', {
-                        0: String(selectedCount),
-                      })}
-                    </span>
-                    <MetaAdsButton
-                      variant="ghost"
-                      disabled={selectedCount === 0}
-                      onClick={() => setSelectedEntityIds([])}
-                    >
-                      {localize('com_ui_project_meta_ads_clear_selection')}
-                    </MetaAdsButton>
-                    <MetaAdsButton
-                      variant="ghost"
-                      disabled={campaigns.length === 0}
-                      onClick={onExpandAllRows}
-                    >
-                      {localize('com_ui_project_meta_ads_expand_all')}
-                    </MetaAdsButton>
-                    <MetaAdsButton
-                      variant="ghost"
-                      disabled={campaigns.length === 0}
-                      onClick={onCollapseAllRows}
-                    >
-                      {localize('com_ui_project_meta_ads_collapse_all')}
-                    </MetaAdsButton>
-                    <MetaAdsButton disabled={!canCreateRuleGroup} onClick={onOpenRuleGroupDraft}>
-                      {localize('com_ui_project_meta_ads_create_rule_group')}
-                    </MetaAdsButton>
-                    <MetaAdsButton
-                      disabled={!canOpenTrafficAgentChat}
-                      onClick={onOpenTrafficAgentChat}
-                    >
-                      {localize('com_ui_project_meta_ads_chat_with_agent')}
-                    </MetaAdsButton>
-                  </div>
-                </div>
-              </MetaAdsPanel>
-              <MetaAdsSummaryCards
-                cards={summaryCards}
-                resultTypeOptions={summaryResultTypeOptions}
-                selectorOpen={resultTypeSelectorOpen}
-                selectedResultType={selectedSummaryResultType}
-                initialLoading={isInitialStatusLoading}
-                currency={currency}
-                localize={localize}
-                onOpenSelector={() => setResultTypeSelectorOpen(true)}
-                onCloseSelector={() => setResultTypeSelectorOpen(false)}
-                onSelectResultType={(resultType) => {
-                  setSelectedSummaryResultType(resultType);
-                  setResultTypeSelectorOpen(false);
-                }}
-                onClearResultType={() => {
-                  setSelectedSummaryResultType(null);
-                  setResultTypeSelectorOpen(false);
-                }}
-                chrome={{
-                  modalOverlayClassName: metaAdsModalOverlay,
-                  modalShellClassName: metaAdsModalShell,
-                }}
-                buttons={{
-                  buttonClassName: metaAdsButton,
-                  ghostButtonClassName: metaAdsGhostButton,
-                }}
-              />
-            </div>
+            <MetaAdsOverviewToolbar
+              loading={isStatusLoading}
+              campaignSearch={campaignSearch}
+              budgetModeFilter={budgetModeFilter}
+              objectiveFilter={objectiveFilter}
+              campaignSort={campaignSort}
+              tableView={tableView}
+              selectedCount={selectedCount}
+              campaignCount={campaigns.length}
+              canCreateRuleGroup={canCreateRuleGroup}
+              canOpenTrafficAgentChat={canOpenTrafficAgentChat}
+              objectiveOptions={objectiveOptions}
+              localize={localize}
+              onCampaignSearchChange={setCampaignSearch}
+              onBudgetModeFilterChange={setBudgetModeFilter}
+              onObjectiveFilterChange={setObjectiveFilter}
+              onCampaignSortChange={setCampaignSort}
+              onTableViewChange={setTableView}
+              onClearSelection={() => setSelectedEntityIds([])}
+              onExpandAllRows={onExpandAllRows}
+              onCollapseAllRows={onCollapseAllRows}
+              onCreateRuleGroup={onOpenRuleGroupDraft}
+              onOpenTrafficAgentChat={onOpenTrafficAgentChat}
+            />
+            <MetaAdsSummaryCards
+              cards={summaryCards}
+              resultTypeOptions={summaryResultTypeOptions}
+              selectorOpen={resultTypeSelectorOpen}
+              selectedResultType={selectedSummaryResultType}
+              initialLoading={isInitialStatusLoading}
+              currency={currency}
+              localize={localize}
+              onOpenSelector={() => setResultTypeSelectorOpen(true)}
+              onCloseSelector={() => setResultTypeSelectorOpen(false)}
+              onSelectResultType={(resultType) => {
+                setSelectedSummaryResultType(resultType);
+                setResultTypeSelectorOpen(false);
+              }}
+              onClearResultType={() => {
+                setSelectedSummaryResultType(null);
+                setResultTypeSelectorOpen(false);
+              }}
+              chrome={{
+                modalOverlayClassName: metaAdsModalOverlay,
+                modalShellClassName: metaAdsModalShell,
+              }}
+              buttons={{
+                buttonClassName: metaAdsButton,
+                ghostButtonClassName: metaAdsGhostButton,
+              }}
+            />
 
             {pendingRecommendations.length > 0 && campaigns.length === 0 && (
               <div className="border-b border-border-light bg-surface-secondary p-3">
