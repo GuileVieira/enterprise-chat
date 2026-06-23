@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
-import type {
-  TProject,
-  ProjectMetaAdsAdSummary,
-  ProjectMetaAdsEntityStatusLevel,
-} from 'librechat-data-provider';
+import type { TProject } from 'librechat-data-provider';
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
@@ -27,6 +22,7 @@ import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaA
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
 import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
+import { useMetaAdsEntityActions } from './metaAds/hooks/useMetaAdsEntityActions';
 import { tableColumnMap, tableViewMinWidth } from './metaAds/constants';
 import {
   defaultRules,
@@ -77,21 +73,17 @@ import { cleanDashboardName, createMetaAdsBriefStorageKey } from './metaAds/help
 import type {
   RuleRow,
   TableView,
-  BudgetEditor,
   RuleGroupDraft,
   PeriodFilter,
   WorkspaceTab,
-  DuplicateDraft,
   MetaAdsRuleGroup,
   BiRankingSort,
   MetaAdsBiRankItem,
   MetaAdsRulesState,
   MetaAdsBiControls,
-  BudgetConfirmation,
   MetaAdsRuleOverride,
   MetaAdsSettingsState,
   BiRankingSortKey,
-  EntityStatusConfirmation,
 } from './metaAds/types';
 import {
   metaAdsInput,
@@ -121,14 +113,6 @@ export default function ProjectMetaAdsPanel({
   const { showToast } = useToastContext();
   const { tableScrollRef, stickyHorizontalScrollRef, onTableScroll, onStickyHorizontalScroll } =
     useMetaAdsTableScrollSync();
-  const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
-  const [manualDailyBudget, setManualDailyBudget] = useState('');
-  const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
-  const [entityStatusConfirmation, setEntityStatusConfirmation] =
-    useState<EntityStatusConfirmation | null>(null);
-  const [duplicateDraft, setDuplicateDraft] = useState<DuplicateDraft | null>(null);
-  const [duplicateTargetName, setDuplicateTargetName] = useState('');
-  const [actionMenuKey, setActionMenuKey] = useState<string | null>(null);
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -156,7 +140,6 @@ export default function ProjectMetaAdsPanel({
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
-  const [selectedAdPreview, setSelectedAdPreview] = useState<ProjectMetaAdsAdSummary | null>(null);
   const {
     selectedEntityIds,
     expandedCampaignIds,
@@ -240,6 +223,42 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
+  const {
+    budgetEditor,
+    manualDailyBudget,
+    budgetConfirmation,
+    entityStatusConfirmation,
+    duplicateDraft,
+    duplicateTargetName,
+    actionMenuKey,
+    selectedAdPreview,
+    setBudgetEditor,
+    setManualDailyBudget,
+    setBudgetConfirmation,
+    setEntityStatusConfirmation,
+    setDuplicateTargetName,
+    setActionMenuKey,
+    setSelectedAdPreview,
+    getDuplicateName,
+    onApply,
+    onOpenBudgetEditor,
+    onSaveManualBudget,
+    onConfirmManualBudget,
+    onOpenEntityStatusConfirmation,
+    onOpenDuplicateDraft,
+    onCloseDuplicateDraft,
+    onConfirmDuplicate,
+    onConfirmEntityStatus,
+  } = useMetaAdsEntityActions({
+    project,
+    statusQuery,
+    updateBudget,
+    duplicateEntity,
+    updateEntityStatus,
+    applyRecommendation,
+    localize,
+    showToast,
+  });
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
@@ -248,14 +267,6 @@ export default function ProjectMetaAdsPanel({
     user?.role === SystemRoles.ADMIN ||
     user?.role === SystemRoles.OWNER ||
     user?.role === SystemRoles.USER;
-
-  useEffect(() => {
-    setSelectedAdPreview(null);
-    setEntityStatusConfirmation(null);
-    setDuplicateDraft(null);
-    setDuplicateTargetName('');
-    setActionMenuKey(null);
-  }, [project]);
 
   useEffect(() => {
     if (!metricsFullscreen) {
@@ -274,24 +285,6 @@ export default function ProjectMetaAdsPanel({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [metricsFullscreen]);
-
-  useEffect(() => {
-    if (!actionMenuKey) {
-      return;
-    }
-    const closeMenu = () => setActionMenuKey(null);
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeMenu();
-      }
-    };
-    window.addEventListener('click', closeMenu);
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('click', closeMenu);
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [actionMenuKey]);
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -399,209 +392,6 @@ export default function ProjectMetaAdsPanel({
           </span>
         )}
       </button>
-    );
-  };
-
-  const onApply = (recommendation: ProjectMetaAdsRecommendation) => {
-    if (!recommendation._id) {
-      return;
-    }
-    applyRecommendation.mutate(
-      {
-        projectId: project.projectId,
-        recommendationId: recommendation._id,
-      },
-      {
-        onSuccess: () => {
-          statusQuery.refetch();
-          showToast({
-            message: localize('com_ui_project_meta_ads_apply_success'),
-            status: 'success',
-          });
-        },
-        onError: (error) => {
-          const message = getRequestErrorMessage(
-            error,
-            localize('com_ui_project_meta_ads_apply_failed'),
-          );
-          showToast({ message, status: 'error' });
-          logger.error('MetaAds', 'Failed to apply project Meta Ads recommendation', {
-            projectId: project.projectId,
-            recommendationId: recommendation._id,
-            error,
-          });
-        },
-      },
-    );
-  };
-
-  const onOpenBudgetEditor = (editor: BudgetEditor) => {
-    setBudgetEditor(editor);
-    setManualDailyBudget(editor.currentBudget == null ? '' : String(editor.currentBudget));
-  };
-
-  const onSaveManualBudget = () => {
-    if (!budgetEditor) {
-      return;
-    }
-    const dailyBudget = Number(manualDailyBudget);
-    if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) {
-      showToast({
-        message: localize('com_ui_project_meta_ads_invalid_budget'),
-        status: 'error',
-      });
-      return;
-    }
-    setBudgetConfirmation({
-      entityLevel: budgetEditor.entityLevel,
-      entityId: budgetEditor.entityId,
-      entityName: budgetEditor.entityName,
-      dailyBudget,
-      currentBudget: budgetEditor.currentBudget,
-      reason: 'manual-ui',
-    });
-  };
-
-  const onConfirmManualBudget = () => {
-    if (!budgetConfirmation) {
-      return;
-    }
-    updateBudget.mutate(
-      {
-        projectId: project.projectId,
-        payload: {
-          entityLevel: budgetConfirmation.entityLevel,
-          entityId: budgetConfirmation.entityId,
-          entityName: budgetConfirmation.entityName,
-          dailyBudget: budgetConfirmation.dailyBudget,
-          reason: budgetConfirmation.reason,
-        },
-      },
-      {
-        onSuccess: () => {
-          setBudgetEditor(null);
-          setBudgetConfirmation(null);
-          setManualDailyBudget('');
-          statusQuery.refetch();
-          showToast({
-            message: localize('com_ui_project_meta_ads_budget_success'),
-            status: 'success',
-          });
-        },
-        onError: (error) => {
-          const message = getRequestErrorMessage(
-            error,
-            localize('com_ui_project_meta_ads_budget_failed'),
-          );
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
-  };
-
-  const onOpenEntityStatusConfirmation = (
-    event: MouseEvent<HTMLButtonElement>,
-    entity: {
-      entityLevel: ProjectMetaAdsEntityStatusLevel;
-      entityId: string;
-      entityName?: string;
-      status?: string;
-    },
-  ) => {
-    event.stopPropagation();
-    const currentStatus =
-      typeof entity.status === 'string' ? entity.status.trim().toUpperCase() : '';
-    const nextStatus = currentStatus === 'PAUSED' ? 'ACTIVE' : 'PAUSED';
-    setEntityStatusConfirmation({
-      entityLevel: entity.entityLevel,
-      entityId: entity.entityId,
-      entityName: entity.entityName,
-      currentStatus,
-      nextStatus,
-    });
-  };
-
-  const onConfirmEntityStatus = () => {
-    if (!entityStatusConfirmation) {
-      return;
-    }
-    updateEntityStatus.mutate(
-      {
-        projectId: project.projectId,
-        entityLevel: entityStatusConfirmation.entityLevel,
-        entityId: entityStatusConfirmation.entityId,
-        payload: {
-          entityName: entityStatusConfirmation.entityName,
-          status: entityStatusConfirmation.nextStatus,
-        },
-      },
-      {
-        onSuccess: () => {
-          setEntityStatusConfirmation(null);
-          statusQuery.refetch();
-          showToast({
-            message: localize('com_ui_project_meta_ads_ad_status_success'),
-            status: 'success',
-          });
-        },
-        onError: (error) => {
-          const message = getRequestErrorMessage(
-            error,
-            localize('com_ui_project_meta_ads_ad_status_failed'),
-          );
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
-  };
-
-  const getDuplicateName = (name?: string) => {
-    const baseName = typeof name === 'string' && name.trim() ? name.trim() : 'Meta Ads';
-    return `${baseName} - cópia`;
-  };
-
-  const onOpenDuplicateDraft = (draft: DuplicateDraft) => {
-    setActionMenuKey(null);
-    setDuplicateDraft(draft);
-    setDuplicateTargetName(getDuplicateName(draft.entityName ?? draft.entityId));
-  };
-
-  const onCloseDuplicateDraft = () => {
-    setDuplicateDraft(null);
-    setDuplicateTargetName('');
-  };
-
-  const onConfirmDuplicate = () => {
-    if (!duplicateDraft) {
-      return;
-    }
-    duplicateEntity.mutate(
-      {
-        projectId: project.projectId,
-        payload: {
-          entityLevel: duplicateDraft.entityLevel,
-          entityId: duplicateDraft.entityId,
-          entityName: duplicateDraft.entityName,
-          targetName: duplicateTargetName.trim(),
-        },
-      },
-      {
-        onSuccess: () => {
-          onCloseDuplicateDraft();
-          statusQuery.refetch();
-          showToast({
-            message: localize('com_ui_project_meta_ads_duplicate_success'),
-            status: 'success',
-          });
-        },
-        onError: (error) => {
-          const message = getRequestErrorMessage(
-            error,
-            localize('com_ui_project_meta_ads_duplicate_failed'),
-          );
-          showToast({ message, status: 'error' });
-        },
-      },
     );
   };
 
