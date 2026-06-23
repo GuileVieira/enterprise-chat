@@ -38,10 +38,8 @@ import {
   MetaAdsEntityStatusConfirmationBanner,
 } from './metaAds/confirmations';
 import { MetaAdsCredentialsDialog } from './metaAds/credentialsDialog';
-import { MetaAdsBiControlsPanel } from './metaAds/biControls';
-import { MetaAdsBiRankingCard } from './metaAds/biRankingCard';
 import { MetaAdsBudgetEditorDialog } from './metaAds/budgetEditor';
-import { MetaAdsEvolutionDashboard } from './metaAds/evolutionDashboard';
+import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
 import { MetaAdsPendingRecommendationsPanel } from './metaAds/pendingRecommendationsPanel';
 import { MetaAdsRankMedia } from './metaAds/rankMedia';
@@ -750,71 +748,53 @@ export default function ProjectMetaAdsPanel({
         )}
 
         {workspaceTab === 'bi' && (
-          <div
-            id="meta-ads-bi-tab-panel"
-            role="tabpanel"
-            aria-labelledby="meta-ads-tab-bi"
-            data-testid="meta-ads-bi-tab-panel"
-          >
-            <div className="p-4">
-              <MetaAdsBiControlsPanel
-                controls={biControls}
-                periodFilter={periodFilter}
-                customSince={customSince}
-                customUntil={customUntil}
-                appliedCustomSince={appliedCustomSince}
-                appliedCustomUntil={appliedCustomUntil}
-                objectiveOptions={objectiveOptions}
-                resultTypeOptions={biResultTypeOptions}
-                inputClassName={metaAdsInput}
-                localize={localize}
-                onPeriodFilterChange={setPeriodFilter}
-                onCustomSinceChange={onCustomSinceChange}
-                onCustomUntilChange={onCustomUntilChange}
-                onApplyCustomPeriod={onApplyCustomPeriod}
-                onLevelChange={(level) => setBiControls((current) => ({ ...current, level }))}
-                onObjectiveChange={(objective) =>
-                  setBiControls((current) => ({ ...current, objective }))
-                }
-                onResultTypeChange={(resultType) =>
-                  setBiControls((current) => ({ ...current, resultType }))
-                }
-                onMetricChange={(metric) => setBiControls((current) => ({ ...current, metric }))}
-              />
-              <MetaAdsBiRankingCard
-                titleKey={selectedBiRankingTitleKey}
-                items={selectedBiRankingItems}
-                testId={selectedBiRankingTestId}
-                emptyMessageKey={
-                  biControls.level === 'ad'
-                    ? adRankingEmptyMessageKey
-                    : 'com_ui_project_meta_ads_bi_no_rankings'
-                }
-                sort={biRankingSort}
-                fetching={biRankingsQuery.isFetching}
-                currency={currency}
-                localize={localize}
-                onSort={onBiRankingSort}
-                onSelect={setSelectedBiRankItem}
-              />
-            </div>
-
-            {hasEvolutionSection && (
-              <MetaAdsEvolutionDashboard
-                level={biControls.level}
-                metric={biControls.metric}
-                seriesPaths={evolutionSeriesPaths}
-                dates={evolutionDates}
-                maxValue={maxEvolutionValue}
-                totalBudgetChangeCount={totalBudgetChangeCount}
-                bestEvolution={bestEvolution}
-                evolutionAlerts={evolutionAlerts}
-                currency={currency}
-                localize={localize}
-                cleanName={cleanDashboardName}
-              />
-            )}
-          </div>
+          <MetaAdsBiWorkspace
+            controls={biControls}
+            period={{
+              periodFilter,
+              customSince,
+              customUntil,
+              appliedCustomSince,
+              appliedCustomUntil,
+              onPeriodFilterChange: setPeriodFilter,
+              onCustomSinceChange,
+              onCustomUntilChange,
+              onApplyCustomPeriod,
+            }}
+            options={{
+              objectiveOptions,
+              resultTypeOptions: biResultTypeOptions,
+            }}
+            ranking={{
+              titleKey: selectedBiRankingTitleKey,
+              items: selectedBiRankingItems,
+              testId: selectedBiRankingTestId,
+              adRankingEmptyMessageKey,
+              sort: biRankingSort,
+              fetching: biRankingsQuery.isFetching,
+              onSort: onBiRankingSort,
+              onSelect: setSelectedBiRankItem,
+            }}
+            evolution={{
+              enabled: hasEvolutionSection,
+              seriesPaths: evolutionSeriesPaths,
+              dates: evolutionDates,
+              maxValue: maxEvolutionValue,
+              totalBudgetChangeCount,
+              bestEvolution,
+              evolutionAlerts,
+              cleanName: cleanDashboardName,
+            }}
+            inputClassName={metaAdsInput}
+            currency={currency}
+            localize={localize}
+            onControlsChange={{
+              level: (level) => setBiControls((current) => ({ ...current, level })),
+              objective: (objective) => setBiControls((current) => ({ ...current, objective })),
+              resultType: (resultType) => setBiControls((current) => ({ ...current, resultType })),
+              metric: (metric) => setBiControls((current) => ({ ...current, metric })),
+            }}
+          />
         )}
       </MetaAdsWorkspaceShell>
 
