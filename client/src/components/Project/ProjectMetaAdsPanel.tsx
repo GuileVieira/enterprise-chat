@@ -77,6 +77,7 @@ import {
 } from './metaAds/overviewState';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
+import { cleanDashboardName, createMetaAdsBriefStorageKey } from './metaAds/helpers';
 import type {
   RuleRow,
   TableView,
@@ -98,44 +99,19 @@ import type {
   EntityStatusConfirmation,
 } from './metaAds/types';
 import {
-  metaAdsButtonClassName,
-  metaAdsGhostButtonClassName,
-  metaAdsInputClassName,
-  metaAdsInputLargeClassName,
-  metaAdsLabelClassName,
-  metaAdsModalTileClassName,
-  metaAdsPrimaryButtonClassName,
-} from './metaAds/ui';
-
-const metaAdsInput = metaAdsInputClassName;
-const metaAdsInputLg = metaAdsInputLargeClassName;
-const metaAdsButton = metaAdsButtonClassName;
-const metaAdsGhostButton = metaAdsGhostButtonClassName;
-const metaAdsPrimaryButton = metaAdsPrimaryButtonClassName;
-const metaAdsLabel = metaAdsLabelClassName;
-const metaAdsStickyCell =
-  'bg-white group-odd:bg-slate-50 shadow-[12px_0_28px_-24px_rgba(15,23,42,0.55)] group-hover:bg-teal-50 dark:bg-[#172033] dark:group-odd:bg-[#1b263b] dark:group-hover:bg-[#183247] dark:shadow-[12px_0_28px_-24px_rgba(0,0,0,0.9)]';
-const metaAdsModalOverlay = 'fixed inset-0 z-[10020] bg-slate-950/55 p-4 dark:bg-black/65';
-const metaAdsModalShell =
-  'overflow-hidden rounded-3xl border border-slate-200/80 bg-white text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]';
-const metaAdsDrawerShell =
-  'flex h-full w-full flex-col border-l border-slate-200/80 bg-white text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]';
-const metaAdsModalHeader =
-  'border-b border-slate-200/75 bg-slate-50 px-5 py-4 text-left dark:border-white/10 dark:bg-[#172033]';
-const metaAdsModalTile = metaAdsModalTileClassName;
-
-function cleanDashboardName(value: string | undefined, fallback: string) {
-  const cleanedValue = (value ?? '').replace(/^[^\w[]+\s*/u, '').trim();
-  return cleanedValue || value || fallback;
-}
-
-function createMetaAdsBriefStorageKey() {
-  const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `meta_ads_brief:${id}`;
-}
+  metaAdsInput,
+  metaAdsInputLg,
+  metaAdsButton,
+  metaAdsGhostButton,
+  metaAdsPrimaryButton,
+  metaAdsLabel,
+  metaAdsStickyCell,
+  metaAdsModalOverlay,
+  metaAdsModalShell,
+  metaAdsDrawerShell,
+  metaAdsModalHeader,
+  metaAdsModalTile,
+} from './metaAds/chrome';
 
 export default function ProjectMetaAdsPanel({
   project,
