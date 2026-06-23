@@ -24,7 +24,9 @@ const {
   applyManualBudgetChange,
   applyRecommendation,
   duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsRulePerformance,
   getProjectMetaAdsStatus,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
@@ -74,6 +76,15 @@ const RULE_LIMITS = {
 };
 const CREATIVE_RULE_LIMITS = {
   maxFrequency: { min: 0 },
+};
+const PAUSE_HIGH_COST_DEFAULTS = {
+  enabled: false,
+  maxCostPerResult: 45,
+  lookbackDays: 3,
+  minCreativesInScope: 3,
+  minSpend: 10,
+  cooldownHours: 24,
+  targetResultType: '',
 };
 
 function getProjectMetaTokenSecretName(projectId) {
@@ -171,6 +182,45 @@ function validateMetaAdsCreativeRules(rules = {}) {
       errors.push(key);
     }
   }
+  const rawPauseHighCost = merged.pauseHighCost;
+  if (rawPauseHighCost && typeof rawPauseHighCost === 'object') {
+    const pauseHighCost = {
+      ...PAUSE_HIGH_COST_DEFAULTS,
+      ...rawPauseHighCost,
+    };
+    const maxCostPerResult = Number(pauseHighCost.maxCostPerResult);
+    const lookbackDays = Number(pauseHighCost.lookbackDays);
+    const minCreativesInScope = Number(pauseHighCost.minCreativesInScope);
+    const minSpend = Number(pauseHighCost.minSpend);
+    const cooldownHours = Number(pauseHighCost.cooldownHours);
+    if (!Number.isFinite(maxCostPerResult) || maxCostPerResult <= 0) {
+      errors.push('pauseHighCost.maxCostPerResult');
+    }
+    if (![1, 2, 3, 7].includes(lookbackDays)) {
+      errors.push('pauseHighCost.lookbackDays');
+    }
+    if (!Number.isInteger(minCreativesInScope) || minCreativesInScope < 3) {
+      errors.push('pauseHighCost.minCreativesInScope');
+    }
+    if (!Number.isFinite(minSpend) || minSpend < 0) {
+      errors.push('pauseHighCost.minSpend');
+    }
+    if (!Number.isFinite(cooldownHours) || cooldownHours < 1 || cooldownHours > 168) {
+      errors.push('pauseHighCost.cooldownHours');
+    }
+    validated.pauseHighCost = {
+      enabled: pauseHighCost.enabled === true,
+      maxCostPerResult,
+      lookbackDays,
+      minCreativesInScope,
+      minSpend,
+      cooldownHours,
+      targetResultType:
+        typeof pauseHighCost.targetResultType === 'string'
+          ? pauseHighCost.targetResultType.trim()
+          : '',
+    };
+  }
   if (errors.length > 0) {
     throw Object.assign(new Error('Invalid Meta Ads creative rules.'), {
       statusCode: 400,
@@ -203,6 +253,7 @@ function normalizeRuleOverrides(ruleOverrides = []) {
             : undefined,
         enabled: override.enabled !== false,
         rules: validateMetaAdsRules(override.rules),
+        creativeRules: validateMetaAdsCreativeRules(override.creativeRules),
       };
     })
     .filter(Boolean);
@@ -232,6 +283,7 @@ function normalizeRuleGroups(ruleGroups = []) {
         entityIds: [...new Set(entityIds.map((entityId) => entityId.trim()))],
         enabled: group.enabled !== false,
         rules: validateMetaAdsRules(group.rules),
+        creativeRules: validateMetaAdsCreativeRules(group.creativeRules),
       };
     })
     .filter(Boolean);
@@ -345,52 +397,76 @@ async function prepareMetaAdsSettingsUpdate({
   };
 }
 
-router.get(
-  '/',
-  metaAdsAccess,
-  async (req, res) => {
-    try {
-      const tenantId = req.user.tenantId || getTenantId();
-      logger.debug('[projectMetaAds] status requested', {
-        tenantId,
-        projectId: req.params.projectId,
-      });
-      return res.json(
-        await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
-          datePreset: req.query.datePreset,
-          since: req.query.since,
-          until: req.query.until,
-        }),
-      );
-    } catch (error) {
-      logger.error('[projectMetaAds] status failed', error);
-      return res.status(500).json({ message: error.message });
-    }
-  },
-);
+router.get('/', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    logger.debug('[projectMetaAds] status requested', {
+      tenantId,
+      projectId: req.params.projectId,
+    });
+    return res.json(
+      await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
+        datePreset: req.query.datePreset,
+        since: req.query.since,
+        until: req.query.until,
+      }),
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] status failed', error);
+    return res.status(500).json({ message: error.message });
+  }
+});
 
-router.get(
-  '/rankings',
-  metaAdsAccess,
-  async (req, res) => {
-    try {
-      const tenantId = req.user.tenantId || getTenantId();
-      return res.json(
-        await getProjectMetaAdsRankings(req.params.projectId, tenantId, {
-          level: req.query.level,
-          objective: req.query.objective,
-          resultType: req.query.resultType,
-          datePreset: req.query.datePreset,
-          since: req.query.since,
-          until: req.query.until,
-        }),
-      );
-    } catch (error) {
-      logger.error('[projectMetaAds] rankings failed', error);
-      return res.status(error.statusCode ?? 500).json({ message: error.message });
-    }
-  },
-);
+router.get('/rankings', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    return res.json(
+      await getProjectMetaAdsRankings(req.params.projectId, tenantId, {
+        level: req.query.level,
+        objective: req.query.objective,
+        resultType: req.query.resultType,
+        datePreset: req.query.datePreset,
+        since: req.query.since,
+        until: req.query.until,
+      }),
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] rankings failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.get('/performance', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    return res.json(
+      await getProjectMetaAdsPerformance(req.params.projectId, tenantId, {
+        datePreset: req.query.datePreset,
+        since: req.query.since,
+        until: req.query.until,
+      }),
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] performance failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.get('/rules/performance', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    return res.json(
+      await getProjectMetaAdsRulePerformance(req.params.projectId, tenantId, {
+        datePreset: req.query.datePreset,
+        since: req.query.since,
+        until: req.query.until,
+      }),
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] rule performance failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
 
 router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
   try {

@@ -22,6 +22,15 @@ export const defaultRules: MetaAdsRulesState = {
 
 export const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
   maxFrequency: 5,
+  pauseHighCost: {
+    enabled: false,
+    maxCostPerResult: 45,
+    lookbackDays: 3,
+    minCreativesInScope: 3,
+    minSpend: 10,
+    cooldownHours: 24,
+    targetResultType: '',
+  },
 };
 
 export const accountProfileOptions = [
@@ -40,6 +49,11 @@ export const resultTypeOptions = [
   { value: 'lead', labelKey: 'com_ui_project_meta_ads_result_type_lead' },
   { value: 'purchase', labelKey: 'com_ui_project_meta_ads_result_type_purchase' },
   { value: 'link_click', labelKey: 'com_ui_project_meta_ads_result_type_link_click' },
+  {
+    value: 'instagram_profile_visit',
+    labelKey: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
+  },
+  { value: 'video_view', labelKey: 'com_ui_project_meta_ads_result_type_video_view' },
   {
     value: 'landing_page_view',
     labelKey: 'com_ui_project_meta_ads_result_type_landing_page_view',

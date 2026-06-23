@@ -38,7 +38,9 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
   duplicateProjectMetaAdsEntity: jest.fn(),
+  getProjectMetaAdsPerformance: jest.fn(),
   getProjectMetaAdsRankings: jest.fn(),
+  getProjectMetaAdsRulePerformance: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
   updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
@@ -47,7 +49,9 @@ const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
 const {
   duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsRulePerformance,
   getProjectMetaAdsStatus,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
@@ -138,12 +142,30 @@ describe('projectMetaAds settings normalization', () => {
       router._normalizeMetaAdsForTest({
         creativeRules: {
           maxFrequency: 6,
+          pauseHighCost: {
+            enabled: true,
+            maxCostPerResult: 45,
+            lookbackDays: 3,
+            minCreativesInScope: 3,
+            minSpend: 20,
+            cooldownHours: 48,
+            targetResultType: 'video_view',
+          },
         },
       }),
     ).toEqual(
       expect.objectContaining({
         creativeRules: {
           maxFrequency: 6,
+          pauseHighCost: {
+            enabled: true,
+            maxCostPerResult: 45,
+            lookbackDays: 3,
+            minCreativesInScope: 3,
+            minSpend: 20,
+            cooldownHours: 48,
+            targetResultType: 'video_view',
+          },
         },
       }),
     );
@@ -155,6 +177,46 @@ describe('projectMetaAds settings normalization', () => {
         },
       }),
     ).toThrow('Invalid Meta Ads creative rules.');
+  });
+
+  it('normalizes creative rules inside rule groups and overrides', () => {
+    const result = router._normalizeMetaAdsForTest({
+      ruleGroups: [
+        {
+          id: 'g1',
+          name: 'Local video',
+          entityLevel: 'campaign',
+          entityIds: ['campaign-1'],
+          creativeRules: {
+            pauseHighCost: {
+              enabled: true,
+              maxCostPerResult: 35,
+              lookbackDays: 2,
+            },
+          },
+        },
+      ],
+      ruleOverrides: [
+        {
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          creativeRules: {
+            pauseHighCost: {
+              enabled: true,
+              maxCostPerResult: 40,
+              lookbackDays: 1,
+            },
+          },
+        },
+      ],
+    });
+
+    expect(result.ruleGroups[0].creativeRules.pauseHighCost).toEqual(
+      expect.objectContaining({ maxCostPerResult: 35, lookbackDays: 2 }),
+    );
+    expect(result.ruleOverrides[0].creativeRules.pauseHighCost).toEqual(
+      expect.objectContaining({ maxCostPerResult: 40, lookbackDays: 1 }),
+    );
   });
 
   it('normalizes enabled rule overrides without saving unknown keys', () => {
@@ -191,7 +253,7 @@ describe('projectMetaAds settings normalization', () => {
     ).toEqual(
       expect.objectContaining({
         ruleOverrides: [
-          {
+          expect.objectContaining({
             entityLevel: 'campaign',
             entityId: 'campaign-1',
             entityName: 'Messages Floripa',
@@ -200,8 +262,8 @@ describe('projectMetaAds settings normalization', () => {
               targetCpa: 60,
               maxDailyBudget: 1000,
             }),
-          },
-          {
+          }),
+          expect.objectContaining({
             entityLevel: 'adset',
             entityId: 'adset-1',
             entityName: undefined,
@@ -209,7 +271,7 @@ describe('projectMetaAds settings normalization', () => {
             rules: expect.objectContaining({
               targetCpa: 40,
             }),
-          },
+          }),
         ],
       }),
     );
@@ -235,14 +297,14 @@ describe('projectMetaAds settings normalization', () => {
     ).toEqual(
       expect.objectContaining({
         ruleGroups: [
-          {
+          expect.objectContaining({
             id: 'group-1',
             name: 'Floripa',
             entityLevel: 'campaign',
             entityIds: ['campaign-1', 'campaign-2'],
             enabled: true,
             rules: expect.objectContaining({ targetCpa: 60 }),
-          },
+          }),
         ],
       }),
     );
@@ -411,6 +473,17 @@ describe('projectMetaAds role access', () => {
       currency: 'BRL',
       items: [],
     });
+    getProjectMetaAdsPerformance.mockResolvedValue({
+      period: { datePreset: 'last_3d' },
+      currency: 'BRL',
+      summary: { actionCount: 0 },
+      actions: [],
+    });
+    getProjectMetaAdsRulePerformance.mockResolvedValue({
+      period: { datePreset: 'last_3d' },
+      currency: 'BRL',
+      rules: [],
+    });
   });
 
   it('rejects USER access to Meta Ads status', async () => {
@@ -439,6 +512,34 @@ describe('projectMetaAds role access', () => {
     await request(createApp()).get('/projects/p1/meta-ads/rankings').expect(403);
 
     expect(getProjectMetaAdsRankings).not.toHaveBeenCalled();
+  });
+
+  it('returns Meta Ads AI performance for a short preset', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/performance?datePreset=last_3d')
+      .expect(200);
+
+    expect(getProjectMetaAdsPerformance).toHaveBeenCalledWith('p1', 'tenant-x', {
+      datePreset: 'last_3d',
+      since: undefined,
+      until: undefined,
+    });
+  });
+
+  it('returns Meta Ads rule performance for a custom date range', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/rules/performance?since=2026-06-01&until=2026-06-03')
+      .expect(200);
+
+    expect(getProjectMetaAdsRulePerformance).toHaveBeenCalledWith('p1', 'tenant-x', {
+      datePreset: undefined,
+      since: '2026-06-01',
+      until: '2026-06-03',
+    });
   });
 });
 

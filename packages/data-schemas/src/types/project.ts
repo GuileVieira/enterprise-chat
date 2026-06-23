@@ -26,6 +26,15 @@ export interface IProjectMetaAdsRules {
 
 export interface IProjectMetaAdsCreativeRules {
   maxFrequency?: number;
+  pauseHighCost?: {
+    enabled?: boolean;
+    maxCostPerResult?: number;
+    lookbackDays?: 1 | 2 | 3 | 7;
+    minCreativesInScope?: number;
+    minSpend?: number;
+    cooldownHours?: number;
+    targetResultType?: string;
+  };
 }
 
 export interface IProjectMetaAds {
@@ -48,6 +57,7 @@ export interface IProjectMetaAds {
     entityIds: string[];
     enabled?: boolean;
     rules?: IProjectMetaAdsRules;
+    creativeRules?: IProjectMetaAdsCreativeRules;
   }>;
   ruleOverrides?: Array<{
     entityLevel: 'campaign' | 'adset';
@@ -55,6 +65,7 @@ export interface IProjectMetaAds {
     entityName?: string;
     enabled?: boolean;
     rules?: IProjectMetaAdsRules;
+    creativeRules?: IProjectMetaAdsCreativeRules;
   }>;
 }
 

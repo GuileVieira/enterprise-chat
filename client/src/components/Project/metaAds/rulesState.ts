@@ -91,6 +91,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
     entityIds: group.entityIds ?? [],
     group,
     rules: { ...defaultRules, ...(group.rules ?? {}) },
+    creativeRules: { ...settings.creativeRules, ...(group.creativeRules ?? {}) },
   }));
 
   const overrideRows = (settings.ruleOverrides ?? []).map<RuleRow>((override) => {
@@ -118,6 +119,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
       entityIds: [override.entityId],
       override,
       rules: { ...defaultRules, ...(override.rules ?? {}) },
+      creativeRules: { ...settings.creativeRules, ...(override.creativeRules ?? {}) },
     };
   });
 

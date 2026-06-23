@@ -13,6 +13,8 @@ const {
   resolveMetaCredentialStatus,
   _calculateMetricsForTest,
   _resolveTargetResultTypeForTest,
+  _resolveStatusPeriodForTest,
+  _buildCreativePauseRecommendationsForTest,
 } = require('./budget');
 
 describe('Meta Ads budget service', () => {
@@ -539,6 +541,68 @@ describe('Meta Ads budget service', () => {
       }),
     ).toEqual({ budgetLevel: 'adset', editableBudgetLevel: 'adset', budgetMode: 'ABO' });
   });
+
+  it('resolves short daily presets for local business creative rules', () => {
+    const now = new Date('2026-06-23T12:00:00.000Z');
+
+    expect(_resolveStatusPeriodForTest({ datePreset: 'last_1d' }, now)).toEqual({
+      since: '2026-06-23',
+      until: '2026-06-23',
+    });
+    expect(_resolveStatusPeriodForTest({ datePreset: 'last_2d' }, now)).toEqual({
+      since: '2026-06-22',
+      until: '2026-06-23',
+    });
+    expect(_resolveStatusPeriodForTest({ datePreset: 'last_3d' }, now)).toEqual({
+      since: '2026-06-21',
+      until: '2026-06-23',
+    });
+  });
+
+  it('builds creative pause recommendations without leaving fewer than two active ads', () => {
+    const recommendations = _buildCreativePauseRecommendationsForTest({
+      ads: [
+        { id: 'ad-1', name: 'Good', effective_status: 'ACTIVE', adset_id: 'adset-1' },
+        { id: 'ad-2', name: 'Bad', effective_status: 'ACTIVE', adset_id: 'adset-1' },
+        { id: 'ad-3', name: 'Also active', effective_status: 'ACTIVE', adset_id: 'adset-1' },
+      ],
+      adInsights: [
+        { ad_id: 'ad-1', spend: '100', actions: [{ action_type: 'lead', value: '10' }] },
+        { ad_id: 'ad-2', spend: '100', actions: [{ action_type: 'lead', value: '1' }] },
+        { ad_id: 'ad-3', spend: '100', actions: [{ action_type: 'lead', value: '1' }] },
+      ],
+      ruleContext: {
+        ruleSourceType: 'group',
+        ruleId: 'g1',
+        ruleName: 'Criativos locais',
+        campaignId: 'campaign-1',
+        campaignName: 'Campanha local',
+        adsetId: 'adset-1',
+        adsetName: 'Conjunto local',
+      },
+      creativeRules: {
+        pauseHighCost: {
+          enabled: true,
+          maxCostPerResult: 45,
+          minCreativesInScope: 3,
+          minSpend: 20,
+          targetResultType: 'lead',
+        },
+      },
+    });
+
+    expect(recommendations).toHaveLength(1);
+    expect(recommendations[0]).toEqual(
+      expect.objectContaining({
+        entityLevel: 'ad',
+        entityId: 'ad-2',
+        action: 'pause',
+        proposedStatus: 'PAUSED',
+        ruleSourceType: 'group',
+        ruleId: 'g1',
+      }),
+    );
+  });
 });
 
 describe('Meta Ads budget service persistence safety', () => {
@@ -584,6 +648,7 @@ describe('Meta Ads budget service persistence safety', () => {
     }));
     const createSnapshot = jest.fn(async (payload) => payload);
     const createChange = jest.fn(async (payload) => payload);
+    const createAutomationAction = jest.fn(async (payload) => payload);
     const findChangeOne = jest.fn(() => ({ lean: async () => null }));
     const makeFindChain = jest.fn((query) => ({
       sort: () => ({
@@ -638,6 +703,11 @@ describe('Meta Ads budget service persistence safety', () => {
           find: findChanges,
           findOne: findChangeOne,
         },
+        MetaAdsAutomationAction: {
+          schema: {},
+          create: createAutomationAction,
+          find: findChanges,
+        },
       },
       Schema: function Schema() {},
       model: jest.fn(),
@@ -677,6 +747,7 @@ describe('Meta Ads budget service persistence safety', () => {
     }));
 
     const metaPost = jest.fn(async () => ({}));
+    const updateMetaEntityStatus = jest.fn(async () => ({}));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
     const getEntityDailyBudget = jest.fn(async () => latestEntityBudget);
     const getAdAccountCurrency = jest.fn(async () => 'BRL');
@@ -702,6 +773,7 @@ describe('Meta Ads budget service persistence safety', () => {
       listAdSets,
       listAdSetInsights,
       metaPost,
+      updateMetaEntityStatus,
     }));
 
     const budget = require('./budget');
@@ -710,6 +782,7 @@ describe('Meta Ads budget service persistence safety', () => {
       createChange,
       createRecommendation,
       createSnapshot,
+      createAutomationAction,
       findByIdAndUpdate,
       getAdSetDailyBudget,
       getEntityDailyBudget,
@@ -722,6 +795,7 @@ describe('Meta Ads budget service persistence safety', () => {
       listAdSetInsights,
       makeFindChain,
       metaPost,
+      updateMetaEntityStatus,
       projectFind,
       projectUpdateOne,
       updateMany,

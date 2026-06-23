@@ -68,7 +68,18 @@ export function MetaAdsRuleGroupDialog({
   onAccountProfileChange: (value: MetaAdsSettingsState['accountProfile']) => void;
   onRuleChange: (key: keyof MetaAdsRulesState, value: string) => void;
   onRuleTextChange: (key: keyof MetaAdsRulesState, value: string) => void;
-  onCreativeRuleChange: (key: 'maxFrequency', value: string) => void;
+  onCreativeRuleChange: (
+    key:
+      | 'maxFrequency'
+      | 'pauseHighCost.enabled'
+      | 'pauseHighCost.maxCostPerResult'
+      | 'pauseHighCost.lookbackDays'
+      | 'pauseHighCost.minCreativesInScope'
+      | 'pauseHighCost.minSpend'
+      | 'pauseHighCost.cooldownHours'
+      | 'pauseHighCost.targetResultType',
+    value: string,
+  ) => void;
   onClose: () => void;
   onSave: () => void;
   chrome: RuleGroupDialogChrome;
@@ -267,24 +278,139 @@ export function MetaAdsRuleGroupDialog({
                   />
                 </label>
               ))}
-              {draft.scope === 'global' && (
-                <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                  <RuleFieldLabel
-                    localize={localize}
-                    labelKey="com_ui_project_meta_ads_max_frequency_alert"
-                    hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
-                  />
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <RuleFieldLabel
+                  localize={localize}
+                  labelKey="com_ui_project_meta_ads_max_frequency_alert"
+                  hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
+                />
+                <input
+                  aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.creativeRules.maxFrequency}
+                  onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
+                  className={controls.inputClassName}
+                />
+              </label>
+            </div>
+          </div>
+          <div className={chrome.modalTileClassName}>
+            <h5 className={chrome.labelClassName}>
+              {localize('com_ui_project_meta_ads_rule_section_creatives')}
+            </h5>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <input
+                  aria-label={localize('com_ui_project_meta_ads_pause_high_cost_creatives')}
+                  type="checkbox"
+                  checked={draft.creativeRules.pauseHighCost?.enabled === true}
+                  onChange={(event) =>
+                    onCreativeRuleChange(
+                      'pauseHighCost.enabled',
+                      event.target.checked ? 'true' : 'false',
+                    )
+                  }
+                />
+                <span>{localize('com_ui_project_meta_ads_pause_high_cost_creatives')}</span>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <RuleFieldLabel
+                  localize={localize}
+                  labelKey="com_ui_project_meta_ads_pause_cost_limit"
+                  hintKey="com_ui_project_meta_ads_pause_cost_limit_hint"
+                />
+                <input
+                  aria-label={localize('com_ui_project_meta_ads_pause_cost_limit')}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={draft.creativeRules.pauseHighCost?.maxCostPerResult ?? ''}
+                  onChange={(event) =>
+                    onCreativeRuleChange('pauseHighCost.maxCostPerResult', event.target.value)
+                  }
+                  className={controls.inputClassName}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <RuleFieldLabel
+                  localize={localize}
+                  labelKey="com_ui_project_meta_ads_pause_lookback_days"
+                  hintKey="com_ui_project_meta_ads_pause_lookback_days_hint"
+                />
+                <select
+                  aria-label={localize('com_ui_project_meta_ads_pause_lookback_days')}
+                  value={draft.creativeRules.pauseHighCost?.lookbackDays ?? 3}
+                  onChange={(event) =>
+                    onCreativeRuleChange('pauseHighCost.lookbackDays', event.target.value)
+                  }
+                  className={controls.inputClassName}
+                >
+                  {[1, 2, 3, 7].map((days) => (
+                    <option key={days} value={days}>
+                      {days}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <RuleFieldLabel
+                  localize={localize}
+                  labelKey="com_ui_project_meta_ads_pause_target_result_type"
+                  hintKey="com_ui_project_meta_ads_target_result_type_hint"
+                />
+                <select
+                  aria-label={localize('com_ui_project_meta_ads_pause_target_result_type')}
+                  value={draft.creativeRules.pauseHighCost?.targetResultType ?? ''}
+                  onChange={(event) =>
+                    onCreativeRuleChange('pauseHighCost.targetResultType', event.target.value)
+                  }
+                  className={controls.inputClassName}
+                >
+                  <option value="">{localize('com_ui_project_meta_ads_result_type_legacy')}</option>
+                  {resultTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {localize(option.labelKey)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {[
+                [
+                  'pauseHighCost.minCreativesInScope',
+                  'com_ui_project_meta_ads_pause_min_creatives',
+                ],
+                ['pauseHighCost.minSpend', 'com_ui_project_meta_ads_min_spend'],
+                ['pauseHighCost.cooldownHours', 'com_ui_project_meta_ads_cooldown'],
+              ].map(([key, labelKey]) => (
+                <label
+                  key={key}
+                  className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
+                >
+                  <span>{localize(labelKey as Parameters<typeof localize>[0])}</span>
                   <input
-                    aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
+                    aria-label={localize(labelKey as Parameters<typeof localize>[0])}
                     type="number"
                     min="0"
-                    step="0.01"
-                    value={draft.creativeRules.maxFrequency}
-                    onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
+                    step="1"
+                    value={
+                      draft.creativeRules.pauseHighCost?.[
+                        key.replace('pauseHighCost.', '') as keyof NonNullable<
+                          typeof draft.creativeRules.pauseHighCost
+                        >
+                      ] ?? ''
+                    }
+                    onChange={(event) =>
+                      onCreativeRuleChange(
+                        key as Parameters<typeof onCreativeRuleChange>[0],
+                        event.target.value,
+                      )
+                    }
                     className={controls.inputClassName}
                   />
                 </label>
-              )}
+              ))}
             </div>
           </div>
         </div>

@@ -69,7 +69,7 @@ export type MessagesListResponse = {
 
 export type ProjectMetaAdsSnapshot = {
   _id?: string;
-  level?: 'campaign' | 'adset';
+  level?: 'campaign' | 'adset' | 'ad';
   entityId: string;
   entityName?: string;
   campaignId?: string;
@@ -105,20 +105,66 @@ export type ProjectMetaAdsResultTypeBreakdown = {
 
 export type ProjectMetaAdsRecommendation = {
   _id?: string;
-  entityLevel?: 'campaign' | 'adset';
+  entityLevel?: 'campaign' | 'adset' | 'ad';
   entityId: string;
   entityName?: string;
   campaignId?: string;
   campaignName?: string;
-  action: 'increase' | 'decrease' | 'hold';
+  adsetId?: string;
+  adsetName?: string;
+  action: 'increase' | 'decrease' | 'hold' | 'pause';
   status: 'pending' | 'applied' | 'ignored' | 'blocked';
+  currentStatus?: 'ACTIVE' | 'PAUSED';
+  proposedStatus?: 'ACTIVE' | 'PAUSED';
   currentDailyBudget?: number;
   proposedDailyBudget?: number;
   spend?: number;
+  resultCount?: number;
   cpa?: number | null;
   roas?: number | null;
+  ctr?: number | null;
+  cpc?: number | null;
+  frequency?: number | null;
+  ruleSourceType?: 'global' | 'group' | 'override' | 'creative' | 'manual' | 'unknown';
+  ruleId?: string;
+  ruleName?: string;
+  ruleScope?: string;
   reason?: string;
   mode?: string;
+  createdAt?: string;
+};
+
+export type ProjectMetaAdsAutomationAction = {
+  _id?: string;
+  actionType: 'budget_change' | 'pause_ad' | 'status_change';
+  entityLevel: 'campaign' | 'adset' | 'ad';
+  entityId: string;
+  entityName?: string;
+  campaignId?: string;
+  campaignName?: string;
+  adsetId?: string;
+  adsetName?: string;
+  previousDailyBudget?: number;
+  newDailyBudget?: number;
+  deltaDailyBudget?: number;
+  deltaPercent?: number | null;
+  previousStatus?: 'ACTIVE' | 'PAUSED';
+  newStatus?: 'ACTIVE' | 'PAUSED';
+  spend?: number;
+  resultCount?: number;
+  cpa?: number | null;
+  roas?: number | null;
+  ctr?: number | null;
+  cpc?: number | null;
+  frequency?: number | null;
+  ruleSourceType?: 'global' | 'group' | 'override' | 'creative' | 'manual' | 'unknown';
+  ruleId?: string;
+  ruleName?: string;
+  ruleScope?: string;
+  recommendationId?: string;
+  actor?: 'cron' | 'user' | 'tool';
+  actorUserId?: string;
+  reason?: string;
   createdAt?: string;
 };
 
@@ -350,7 +396,7 @@ export type ProjectMetaAdsStatus = {
   adDiagnostics?: ProjectMetaAdsAdDiagnostics;
   currency?: string;
   period?: {
-    datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+    datePreset?: ProjectMetaAdsDatePreset;
     since?: string;
     until?: string;
   };
@@ -384,8 +430,18 @@ export type ProjectMetaAdsTenantTokenResponse = {
   };
 };
 
+export type ProjectMetaAdsDatePreset =
+  | 'today'
+  | 'yesterday'
+  | 'last_1d'
+  | 'last_2d'
+  | 'last_3d'
+  | 'last_7d'
+  | 'last_14d'
+  | 'last_30d';
+
 export type ProjectMetaAdsStatusParams = {
-  datePreset?: 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+  datePreset?: ProjectMetaAdsDatePreset;
   since?: string;
   until?: string;
 };
@@ -423,6 +479,52 @@ export type ProjectMetaAdsRankingResponse = {
   period: ProjectMetaAdsStatusParams;
   currency?: string;
   items: ProjectMetaAdsRankingItem[];
+};
+
+export type ProjectMetaAdsPerformanceSummary = {
+  actionCount: number;
+  aiActionCount: number;
+  budgetChangeCount?: number;
+  pausedAdCount?: number;
+  totalDeltaDailyBudget?: number;
+  appliedRecommendationCount?: number;
+  blockedRecommendationCount?: number;
+  ignoredRecommendationCount?: number;
+  totalSpend?: number;
+  totalResults?: number;
+  averageCpa?: number | null;
+  averageRoas?: number | null;
+};
+
+export type ProjectMetaAdsPerformanceResponse = {
+  period: ProjectMetaAdsStatusParams;
+  currency?: string;
+  summary: ProjectMetaAdsPerformanceSummary;
+  actions: ProjectMetaAdsAutomationAction[];
+  recommendations: ProjectMetaAdsRecommendation[];
+};
+
+export type ProjectMetaAdsRulePerformanceItem = {
+  ruleKey: string;
+  ruleSourceType?: ProjectMetaAdsAutomationAction['ruleSourceType'];
+  ruleId?: string;
+  ruleName?: string;
+  ruleScope?: string;
+  actionCount: number;
+  aiActionCount: number;
+  pausedAdCount: number;
+  totalSpend: number;
+  totalResults: number;
+  averageCpa?: number | null;
+  averageRoas?: number | null;
+  status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
+  actions: ProjectMetaAdsAutomationAction[];
+};
+
+export type ProjectMetaAdsRulePerformanceResponse = {
+  period: ProjectMetaAdsStatusParams;
+  currency?: string;
+  rules: ProjectMetaAdsRulePerformanceItem[];
 };
 
 export type ProjectMetaAdsRunResponse = {

@@ -22,6 +22,16 @@ import type {
   Localize,
 } from '../types';
 
+type CreativeRuleChangeKey =
+  | 'maxFrequency'
+  | 'pauseHighCost.enabled'
+  | 'pauseHighCost.maxCostPerResult'
+  | 'pauseHighCost.lookbackDays'
+  | 'pauseHighCost.minCreativesInScope'
+  | 'pauseHighCost.minSpend'
+  | 'pauseHighCost.cooldownHours'
+  | 'pauseHighCost.targetResultType';
+
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
 
 type ShowToast = (toast: { message: string; status: ToastStatus }) => void;
@@ -102,7 +112,7 @@ export function useMetaAdsRules({
       entityLevel: group.entityLevel,
       entityIds: group.entityIds ?? [],
       rules: { ...defaultRules, ...(group.rules ?? {}) },
-      creativeRules: { ...settings.creativeRules },
+      creativeRules: { ...settings.creativeRules, ...(group.creativeRules ?? {}) },
     });
   };
 
@@ -115,7 +125,7 @@ export function useMetaAdsRules({
       entityIds: [ruleOverride.entityId],
       entityName: ruleOverride.entityName,
       rules: { ...defaultRules, ...(ruleOverride.rules ?? {}) },
-      creativeRules: { ...settings.creativeRules },
+      creativeRules: { ...settings.creativeRules, ...(ruleOverride.creativeRules ?? {}) },
     });
   };
 
@@ -227,19 +237,34 @@ export function useMetaAdsRules({
     );
   };
 
-  const onRuleGroupCreativeRuleChange = (
-    key: keyof Required<MetaAdsCreativeRules>,
-    value: string,
-  ) => {
+  const onRuleGroupCreativeRuleChange = (key: CreativeRuleChangeKey, value: string) => {
     setRuleGroupDraft((current) =>
       current
-        ? {
-            ...current,
-            creativeRules: {
-              ...current.creativeRules,
-              [key]: Number(value),
-            },
-          }
+        ? key.startsWith('pauseHighCost.')
+          ? {
+              ...current,
+              creativeRules: {
+                ...current.creativeRules,
+                pauseHighCost: {
+                  ...current.creativeRules.pauseHighCost,
+                  [key.replace('pauseHighCost.', '')]:
+                    key === 'pauseHighCost.enabled'
+                      ? value === 'true'
+                      : key === 'pauseHighCost.targetResultType'
+                        ? value
+                        : value === ''
+                          ? undefined
+                          : Number(value),
+                },
+              },
+            }
+          : {
+              ...current,
+              creativeRules: {
+                ...current.creativeRules,
+                [key]: value === '' ? undefined : Number(value),
+              },
+            }
         : current,
     );
   };
@@ -278,6 +303,7 @@ export function useMetaAdsRules({
                   ...ruleOverride,
                   entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
                   rules: ruleGroupDraft.rules,
+                  creativeRules: ruleGroupDraft.creativeRules,
                 }
               : ruleOverride,
           ),
@@ -301,6 +327,7 @@ export function useMetaAdsRules({
           ? true
           : (settings.ruleGroups ?? []).find((group) => group.id === ruleGroupDraft.id)?.enabled,
       rules: ruleGroupDraft.rules,
+      creativeRules: ruleGroupDraft.creativeRules,
     };
     const existingGroups = settings.ruleGroups ?? [];
     saveSettings(

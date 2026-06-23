@@ -321,6 +321,40 @@ export const useProjectMetaAdsRankingsQuery = (
   );
 };
 
+export const useProjectMetaAdsPerformanceQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsPerformanceResponse>,
+): QueryObserverResult<t.ProjectMetaAdsPerformanceResponse> => {
+  return useQuery<t.ProjectMetaAdsPerformanceResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'performance', params],
+    () => dataService.getProjectMetaAdsPerformance(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsRulePerformanceQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsRulePerformanceResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRulePerformanceResponse> => {
+  return useQuery<t.ProjectMetaAdsRulePerformanceResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'rulePerformance', params],
+    () => dataService.getProjectMetaAdsRulePerformance(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

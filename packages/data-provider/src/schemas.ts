@@ -922,6 +922,19 @@ export const projectSchema = z.object({
       creativeRules: z
         .object({
           maxFrequency: z.number().optional(),
+          pauseHighCost: z
+            .object({
+              enabled: z.boolean().optional(),
+              maxCostPerResult: z.number().optional(),
+              lookbackDays: z
+                .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                .optional(),
+              minCreativesInScope: z.number().optional(),
+              minSpend: z.number().optional(),
+              cooldownHours: z.number().optional(),
+              targetResultType: z.string().optional(),
+            })
+            .optional(),
         })
         .optional(),
       ruleOverrides: z
@@ -946,6 +959,24 @@ export const projectSchema = z.object({
                 maxDailyBudget: z.number().optional(),
                 cooldownHours: z.number().optional(),
                 minSpend: z.number().optional(),
+              })
+              .optional(),
+            creativeRules: z
+              .object({
+                maxFrequency: z.number().optional(),
+                pauseHighCost: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    maxCostPerResult: z.number().optional(),
+                    lookbackDays: z
+                      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                      .optional(),
+                    minCreativesInScope: z.number().optional(),
+                    minSpend: z.number().optional(),
+                    cooldownHours: z.number().optional(),
+                    targetResultType: z.string().optional(),
+                  })
+                  .optional(),
               })
               .optional(),
           }),
@@ -974,6 +1005,24 @@ export const projectSchema = z.object({
                 maxDailyBudget: z.number().optional(),
                 cooldownHours: z.number().optional(),
                 minSpend: z.number().optional(),
+              })
+              .optional(),
+            creativeRules: z
+              .object({
+                maxFrequency: z.number().optional(),
+                pauseHighCost: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    maxCostPerResult: z.number().optional(),
+                    lookbackDays: z
+                      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                      .optional(),
+                    minCreativesInScope: z.number().optional(),
+                    minSpend: z.number().optional(),
+                    cooldownHours: z.number().optional(),
+                    targetResultType: z.string().optional(),
+                  })
+                  .optional(),
               })
               .optional(),
           }),

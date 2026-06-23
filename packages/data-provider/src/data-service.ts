@@ -886,6 +886,20 @@ export const getProjectMetaAdsRankings = (
   return request.get(endpoints.projectMetaAdsRankings(id), { params });
 };
 
+export const getProjectMetaAdsPerformance = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsPerformanceResponse> => {
+  return request.get(endpoints.projectMetaAdsPerformance(id), { params });
+};
+
+export const getProjectMetaAdsRulePerformance = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsRulePerformanceResponse> => {
+  return request.get(endpoints.projectMetaAdsRulePerformance(id), { params });
+};
+
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],

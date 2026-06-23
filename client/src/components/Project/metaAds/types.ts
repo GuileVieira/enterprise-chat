@@ -102,9 +102,17 @@ export type RequestError = {
 };
 
 export type SettingsDrawer = 'account' | 'automation' | null;
-export type WorkspaceTab = 'overview' | 'bi';
+export type WorkspaceTab = 'overview' | 'bi' | 'aiPerformance' | 'rulePerformance';
 export type TableView = 'summary' | 'performance' | 'creative' | 'rules';
-export type DatePreset = 'today' | 'yesterday' | 'last_7d' | 'last_14d' | 'last_30d';
+export type DatePreset =
+  | 'today'
+  | 'yesterday'
+  | 'last_1d'
+  | 'last_2d'
+  | 'last_3d'
+  | 'last_7d'
+  | 'last_14d'
+  | 'last_30d';
 export type PeriodFilter = DatePreset | 'custom';
 export type EvolutionMetric = 'spend' | 'resultCount' | 'cpa' | 'ctr' | 'frequency' | 'clicks';
 export type MetaAdsBiRankLevel = 'campaign' | 'adset' | 'ad';

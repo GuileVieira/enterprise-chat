@@ -36,6 +36,25 @@ const mockUseProjectMetaAdsRankingsQuery = jest.fn((_projectId?: string, _params
   isFetching: false,
   ...mockRankingQueryState,
 }));
+const mockUseProjectMetaAdsPerformanceQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
+  data: {
+    period: { datePreset: 'last_7d' },
+    currency: 'BRL',
+    summary: { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 },
+    actions: [],
+  },
+  isFetching: false,
+}));
+const mockUseProjectMetaAdsRulePerformanceQuery = jest.fn(
+  (_projectId?: string, _params?: unknown) => ({
+    data: {
+      period: { datePreset: 'last_7d' },
+      currency: 'BRL',
+      rules: [],
+    },
+    isFetching: false,
+  }),
+);
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
@@ -104,6 +123,10 @@ jest.mock('~/data-provider', () => ({
     mockUseProjectMetaAdsQuery(projectId, params),
   useProjectMetaAdsRankingsQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsRankingsQuery(projectId, params),
+  useProjectMetaAdsPerformanceQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsPerformanceQuery(projectId, params),
+  useProjectMetaAdsRulePerformanceQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsRulePerformanceQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -155,6 +178,8 @@ describe('ProjectMetaAdsPanel', () => {
     mockUserRole = 'USER';
     mockUseProjectMetaAdsQuery.mockClear();
     mockUseProjectMetaAdsRankingsQuery.mockClear();
+    mockUseProjectMetaAdsPerformanceQuery.mockClear();
+    mockUseProjectMetaAdsRulePerformanceQuery.mockClear();
     mockRankingData.level = 'campaign';
     mockRankingData.period = {
       datePreset: 'last_7d',
@@ -225,8 +250,33 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
   });
 
-  it('lets a USER without project edit save Meta Ads project settings and token', async () => {
+  it('renders AI and rule performance workspaces as dedicated tabs', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-aiPerformance'));
+    expect(screen.getByTestId('meta-ads-ai-performance-tab-panel')).toBeInTheDocument();
+    expect(mockUseProjectMetaAdsPerformanceQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_7d',
+    });
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
+    expect(screen.getByTestId('meta-ads-rule-performance-tab-panel')).toBeInTheDocument();
+    expect(mockUseProjectMetaAdsRulePerformanceQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_7d',
+    });
+  });
+
+  it('does not allow default USER role to run Meta Ads actions without project edit access', () => {
     mockUserRole = 'USER';
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
+
+    expect(screen.getByRole('button', { name: 'com_ui_project_meta_ads_run' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'com_ui_project_meta_ads_rules' })).toBeDisabled();
+  });
+
+  it('lets an AD-MANAGER without project edit save Meta Ads project settings and token', async () => {
+    mockUserRole = 'AD-MANAGER';
     render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
@@ -361,7 +411,7 @@ describe('ProjectMetaAdsPanel', () => {
       {
         projectId: 'p1',
         metaAds: expect.objectContaining({
-          creativeRules: { maxFrequency: 5.5 },
+          creativeRules: expect.objectContaining({ maxFrequency: 5.5 }),
           rules: expect.not.objectContaining({ maxFrequency: expect.anything() }),
         }),
       },
@@ -1223,7 +1273,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('allows a USER without project edit to use Meta Ads ad actions and preview', () => {
+  it('allows an AD-MANAGER without project edit to use Meta Ads ad actions and preview', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -1291,7 +1341,7 @@ describe('ProjectMetaAdsPanel', () => {
       },
     ];
 
-    mockUserRole = 'USER';
+    mockUserRole = 'AD-MANAGER';
     render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
 
     expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);

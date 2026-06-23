@@ -63,6 +63,15 @@ const RULE_LIMITS = {
 const CREATIVE_RULE_LIMITS = {
   maxFrequency: { min: 0 },
 };
+const PAUSE_HIGH_COST_DEFAULTS = {
+  enabled: false,
+  maxCostPerResult: 45,
+  lookbackDays: 3,
+  minCreativesInScope: 3,
+  minSpend: MIN_SAMPLE_SPEND,
+  cooldownHours: 24,
+  targetResultType: '',
+};
 const AGGREGATE_RESULT_TYPES = new Set([
   'page_engagement',
   'post',
@@ -72,6 +81,11 @@ const AGGREGATE_RESULT_TYPES = new Set([
 ]);
 const VIDEO_RESULT_TYPES = new Set(['video_view']);
 const CANONICAL_RESULT_TYPES = {
+  instagram_profile_visit: 'instagram_profile_visit',
+  profile_visit: 'instagram_profile_visit',
+  instagram_profile_visits: 'instagram_profile_visit',
+  ig_profile_visit: 'instagram_profile_visit',
+  video_view: 'video_view',
   leadgen_grouped: 'lead',
   'offsite_conversion.fb_pixel_lead': 'lead',
   offsite_conversion_fb_pixel_lead: 'lead',
@@ -85,6 +99,8 @@ const CANONICAL_RESULT_TYPES = {
 };
 const RESULT_ACTION_PRIORITY = [
   'onsite_conversion.messaging_conversation_started_7d',
+  'instagram_profile_visit',
+  'profile_visit',
   'onsite_conversion.messaging_first_reply',
   'onsite_conversion.lead_grouped',
   'offsite_conversion.fb_pixel_lead',
@@ -94,6 +110,18 @@ const RESULT_ACTION_PRIORITY = [
   'offsite_conversion.fb_pixel_purchase',
   'purchase',
 ];
+
+function extendStringEnumPath(schema, pathName, values) {
+  const path = schema?.path?.(pathName);
+  if (!path || !Array.isArray(path.enumValues)) {
+    return;
+  }
+  for (const value of values) {
+    if (!path.enumValues.includes(value)) {
+      path.enumValues.push(value);
+    }
+  }
+}
 
 function getProjectMetaTokenSecretName(projectId) {
   return `meta_graph_access_token_project_${projectId}`;
@@ -106,6 +134,7 @@ function getModels() {
     typeof existingSnapshotSchema.path === 'function' &&
     typeof existingSnapshotSchema.add === 'function'
   ) {
+    extendStringEnumPath(existingSnapshotSchema, 'level', ['campaign', 'adset', 'ad']);
     const missingSnapshotFields = {};
     if (!existingSnapshotSchema.path('status')) {
       missingSnapshotFields.status = String;
@@ -134,7 +163,7 @@ function getModels() {
         tenantId: { type: String, index: true },
         projectId: { type: String, index: true },
         adAccountId: { type: String, index: true },
-        level: { type: String, enum: ['campaign', 'adset'], default: 'adset' },
+        level: { type: String, enum: ['campaign', 'adset', 'ad'], default: 'adset' },
         entityId: { type: String, index: true },
         entityName: String,
         campaignId: { type: String, index: true },
@@ -170,30 +199,90 @@ function getModels() {
       { timestamps: true },
     );
 
+  const existingRecommendationSchema = mongoose.models.MetaAdsRecommendation?.schema;
+  if (
+    existingRecommendationSchema &&
+    typeof existingRecommendationSchema.path === 'function' &&
+    typeof existingRecommendationSchema.add === 'function'
+  ) {
+    extendStringEnumPath(existingRecommendationSchema, 'entityLevel', ['campaign', 'adset', 'ad']);
+    extendStringEnumPath(existingRecommendationSchema, 'action', [
+      'increase',
+      'decrease',
+      'hold',
+      'pause',
+    ]);
+    const missingRecommendationFields = {};
+    for (const key of [
+      'adsetId',
+      'adsetName',
+      'currentStatus',
+      'proposedStatus',
+      'resultCount',
+      'ctr',
+      'cpc',
+      'frequency',
+      'ruleSourceType',
+      'ruleId',
+      'ruleName',
+      'ruleScope',
+    ]) {
+      if (!existingRecommendationSchema.path(key)) {
+        missingRecommendationFields[key] = String;
+      }
+    }
+    if (!existingRecommendationSchema.path('resultCount')) {
+      missingRecommendationFields.resultCount = Number;
+    }
+    if (!existingRecommendationSchema.path('ctr')) {
+      missingRecommendationFields.ctr = Number;
+    }
+    if (!existingRecommendationSchema.path('cpc')) {
+      missingRecommendationFields.cpc = Number;
+    }
+    if (!existingRecommendationSchema.path('frequency')) {
+      missingRecommendationFields.frequency = Number;
+    }
+    if (Object.keys(missingRecommendationFields).length > 0) {
+      existingRecommendationSchema.add(missingRecommendationFields);
+    }
+  }
   const recommendationSchema =
-    mongoose.models.MetaAdsRecommendation?.schema ||
+    existingRecommendationSchema ||
     new mongoose.Schema(
       {
         tenantId: { type: String, index: true },
         projectId: { type: String, index: true },
         adAccountId: { type: String, index: true },
-        entityLevel: { type: String, enum: ['campaign', 'adset'], default: 'adset' },
+        entityLevel: { type: String, enum: ['campaign', 'adset', 'ad'], default: 'adset' },
         entityId: { type: String, index: true },
         entityName: String,
         campaignId: { type: String, index: true },
         campaignName: String,
-        action: { type: String, enum: ['increase', 'decrease', 'hold'], required: true },
+        adsetId: { type: String, index: true },
+        adsetName: String,
+        action: { type: String, enum: ['increase', 'decrease', 'hold', 'pause'], required: true },
         status: {
           type: String,
           enum: ['pending', 'applied', 'ignored', 'blocked'],
           default: 'pending',
           index: true,
         },
+        currentStatus: String,
+        proposedStatus: String,
         currentDailyBudget: Number,
         proposedDailyBudget: Number,
         spend: Number,
+        resultCount: Number,
         cpa: Number,
         roas: Number,
+        ctr: Number,
+        cpc: Number,
+        frequency: Number,
+        ruleSourceType: String,
+        ruleId: String,
+        ruleName: String,
+        ruleScope: String,
         reason: String,
         mode: String,
       },
@@ -236,6 +325,51 @@ function getModels() {
       { timestamps: true },
     );
 
+  const actionSchema =
+    mongoose.models.MetaAdsAutomationAction?.schema ||
+    new mongoose.Schema(
+      {
+        tenantId: { type: String, index: true },
+        projectId: { type: String, index: true },
+        adAccountId: { type: String, index: true },
+        actionType: {
+          type: String,
+          enum: ['budget_change', 'pause_ad', 'status_change'],
+          required: true,
+          index: true,
+        },
+        entityLevel: { type: String, enum: ['campaign', 'adset', 'ad'], required: true },
+        entityId: { type: String, index: true },
+        entityName: String,
+        campaignId: { type: String, index: true },
+        campaignName: String,
+        adsetId: { type: String, index: true },
+        adsetName: String,
+        previousDailyBudget: Number,
+        newDailyBudget: Number,
+        deltaDailyBudget: Number,
+        deltaPercent: Number,
+        previousStatus: String,
+        newStatus: String,
+        spend: Number,
+        resultCount: Number,
+        cpa: Number,
+        roas: Number,
+        ctr: Number,
+        cpc: Number,
+        frequency: Number,
+        ruleSourceType: String,
+        ruleId: String,
+        ruleName: String,
+        ruleScope: String,
+        recommendationId: String,
+        actor: { type: String, enum: ['cron', 'user', 'tool'], required: true },
+        actorUserId: String,
+        reason: String,
+      },
+      { timestamps: true },
+    );
+
   return {
     MetaAdsSnapshot:
       mongoose.models.MetaAdsSnapshot || mongoose.model('MetaAdsSnapshot', snapshotSchema),
@@ -244,6 +378,9 @@ function getModels() {
       mongoose.model('MetaAdsRecommendation', recommendationSchema),
     MetaAdsBudgetChange:
       mongoose.models.MetaAdsBudgetChange || mongoose.model('MetaAdsBudgetChange', changeSchema),
+    MetaAdsAutomationAction:
+      mongoose.models.MetaAdsAutomationAction ||
+      mongoose.model('MetaAdsAutomationAction', actionSchema),
   };
 }
 
@@ -328,6 +465,57 @@ function getEffectiveRules({
   });
 }
 
+function getEffectiveRuleContext({
+  projectRules = {},
+  projectCreativeRules = {},
+  ruleGroups = [],
+  ruleOverrides = [],
+  campaignId,
+  adsetId,
+}) {
+  const baseRules = validateMetaAdsRules(projectRules);
+  const baseCreativeRules = validateMetaAdsCreativeRules(projectCreativeRules);
+  const ruleGroup = findRuleGroup({ ruleGroups, campaignId, adsetId });
+  const campaignOverride = ruleOverrides.find(
+    (override) =>
+      override?.enabled !== false &&
+      override.entityLevel === 'campaign' &&
+      override.entityId === campaignId,
+  );
+  const adsetOverride = ruleOverrides.find(
+    (override) =>
+      override?.enabled !== false &&
+      override.entityLevel === 'adset' &&
+      override.entityId === adsetId,
+  );
+  const appliedSource = adsetOverride ?? campaignOverride ?? ruleGroup;
+  const ruleSourceType =
+    adsetOverride || campaignOverride ? 'override' : ruleGroup ? 'group' : 'global';
+  const rules = validateMetaAdsRules({
+    ...baseRules,
+    ...(ruleGroup?.rules ?? {}),
+    ...(campaignOverride?.rules ?? {}),
+    ...(adsetOverride?.rules ?? {}),
+  });
+  const creativeRules = validateMetaAdsCreativeRules({
+    ...baseCreativeRules,
+    ...(ruleGroup?.creativeRules ?? {}),
+    ...(campaignOverride?.creativeRules ?? {}),
+    ...(adsetOverride?.creativeRules ?? {}),
+  });
+  return {
+    rules,
+    creativeRules,
+    ruleSourceType,
+    ruleId: appliedSource?.id || appliedSource?.entityId || 'global',
+    ruleName: appliedSource?.name || appliedSource?.entityName || 'Global',
+    ruleScope:
+      ruleSourceType === 'global'
+        ? 'global'
+        : `${appliedSource?.entityLevel || 'campaign'}:${(appliedSource?.entityIds ?? [appliedSource?.entityId]).filter(Boolean).join(',')}`,
+  };
+}
+
 function validateRuleNumber(rules, key, errors) {
   const value = Number(rules[key]);
   const limits = RULE_LIMITS[key];
@@ -409,6 +597,45 @@ function validateMetaAdsCreativeRules(rules = {}) {
     ) {
       errors.push(key);
     }
+  }
+  const rawPauseHighCost = merged.pauseHighCost;
+  if (rawPauseHighCost && typeof rawPauseHighCost === 'object') {
+    const pauseHighCost = {
+      ...PAUSE_HIGH_COST_DEFAULTS,
+      ...rawPauseHighCost,
+    };
+    const maxCostPerResult = Number(pauseHighCost.maxCostPerResult);
+    const lookbackDays = Number(pauseHighCost.lookbackDays);
+    const minCreativesInScope = Number(pauseHighCost.minCreativesInScope);
+    const minSpend = Number(pauseHighCost.minSpend);
+    const cooldownHours = Number(pauseHighCost.cooldownHours);
+    if (!Number.isFinite(maxCostPerResult) || maxCostPerResult <= 0) {
+      errors.push('pauseHighCost.maxCostPerResult');
+    }
+    if (![1, 2, 3, 7].includes(lookbackDays)) {
+      errors.push('pauseHighCost.lookbackDays');
+    }
+    if (!Number.isInteger(minCreativesInScope) || minCreativesInScope < 3) {
+      errors.push('pauseHighCost.minCreativesInScope');
+    }
+    if (!Number.isFinite(minSpend) || minSpend < 0) {
+      errors.push('pauseHighCost.minSpend');
+    }
+    if (!Number.isFinite(cooldownHours) || cooldownHours < 1 || cooldownHours > 168) {
+      errors.push('pauseHighCost.cooldownHours');
+    }
+    validated.pauseHighCost = {
+      enabled: pauseHighCost.enabled === true,
+      maxCostPerResult,
+      lookbackDays,
+      minCreativesInScope,
+      minSpend,
+      cooldownHours,
+      targetResultType:
+        typeof pauseHighCost.targetResultType === 'string'
+          ? pauseHighCost.targetResultType.trim()
+          : '',
+    };
   }
   if (errors.length > 0) {
     throw Object.assign(new Error('Invalid Meta Ads creative rules.'), {
@@ -1085,6 +1312,71 @@ function buildAdSummaries({
       ),
     }));
   return [...listedAdSummaries, ...insightOnlySummaries];
+}
+
+function buildCreativePauseRecommendations({
+  ads = [],
+  adInsights = [],
+  creativeRules = {},
+  ruleContext = {},
+  targetResultType,
+}) {
+  const pauseRule = creativeRules?.pauseHighCost;
+  if (!pauseRule?.enabled) {
+    return [];
+  }
+  const activeAds = ads.filter(
+    (ad) => ad?.effective_status === 'ACTIVE' || ad?.status === 'ACTIVE',
+  );
+  const minCreativesInScope = Number(pauseRule.minCreativesInScope ?? 3);
+  if (activeAds.length < minCreativesInScope || activeAds.length <= 2) {
+    return [];
+  }
+  const insightByAdId = new Map(adInsights.map((row) => [row.ad_id, row]));
+  const resolvedTargetResultType =
+    pauseRule.targetResultType || targetResultType || ruleContext.targetResultType || '';
+  const minSpend = Number(pauseRule.minSpend ?? MIN_SAMPLE_SPEND);
+  const maxCostPerResult = Number(pauseRule.maxCostPerResult);
+  if (!Number.isFinite(maxCostPerResult) || maxCostPerResult <= 0) {
+    return [];
+  }
+  const candidates = activeAds
+    .map((ad) => {
+      const metrics = calculateMetrics(insightByAdId.get(ad.id) ?? {}, resolvedTargetResultType);
+      return { ad, metrics };
+    })
+    .filter(
+      ({ metrics }) =>
+        Number(metrics.spend ?? 0) >= minSpend &&
+        metrics.cpa != null &&
+        Number(metrics.cpa) > maxCostPerResult,
+    )
+    .sort((left, right) => Number(right.metrics.cpa ?? 0) - Number(left.metrics.cpa ?? 0));
+  const maxPauses = Math.max(0, activeAds.length - 2);
+  return candidates.slice(0, maxPauses).map(({ ad, metrics }) => ({
+    entityLevel: 'ad',
+    entityId: ad.id,
+    entityName: ad.name || ad.id,
+    campaignId: ad.campaign_id || ruleContext.campaignId,
+    campaignName: ruleContext.campaignName,
+    adsetId: ad.adset_id || ruleContext.adsetId,
+    adsetName: ruleContext.adsetName,
+    action: 'pause',
+    currentStatus: 'ACTIVE',
+    proposedStatus: 'PAUSED',
+    spend: metrics.spend,
+    resultCount: metrics.resultCount,
+    cpa: metrics.cpa,
+    roas: metrics.roas,
+    ctr: metrics.ctr,
+    cpc: metrics.cpc,
+    frequency: metrics.frequency,
+    reason: `Criativo com custo por resultado ${Number(metrics.cpa).toFixed(2)} acima do limite ${maxCostPerResult.toFixed(2)}.`,
+    ruleSourceType: ruleContext.ruleSourceType || 'creative',
+    ruleId: ruleContext.ruleId,
+    ruleName: ruleContext.ruleName,
+    ruleScope: ruleContext.ruleScope,
+  }));
 }
 
 function buildAdDiagnostics({ ads = [], adInsights = [], adSummaries = [], campaigns = [] }) {
@@ -1885,6 +2177,9 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
     return { since: yesterday, until: yesterday };
   }
   const daysByPreset = {
+    last_1d: 1,
+    last_2d: 2,
+    last_3d: 3,
     last_7d: 7,
     last_14d: 14,
     last_30d: 30,
@@ -1952,6 +2247,147 @@ function setCachedStatusPeriod(cacheKey, value) {
   if (oldestKey) {
     statusPeriodCache.delete(oldestKey);
   }
+}
+
+function resolveReportPeriod(options = {}) {
+  const period = resolveStatusPeriod(options);
+  if (period.since && period.until) {
+    return period;
+  }
+  return resolveStatusPeriod({ datePreset: 'last_7d' });
+}
+
+function getDateRangeQuery(period) {
+  const query = {};
+  if (period?.since) {
+    query.$gte = new Date(`${period.since}T00:00:00.000Z`);
+  }
+  if (period?.until) {
+    query.$lte = new Date(`${period.until}T23:59:59.999Z`);
+  }
+  return Object.keys(query).length > 0 ? query : undefined;
+}
+
+function averageMetric(items, key) {
+  const values = items.map((item) => Number(item[key])).filter((value) => Number.isFinite(value));
+  if (values.length === 0) {
+    return null;
+  }
+  return roundMetric(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function buildPerformanceSummary(actions = [], recommendations = []) {
+  const aiActions = actions.filter((action) => action.actor !== 'user');
+  const totalDeltaDailyBudget = actions.reduce(
+    (sum, action) => sum + Number(action.deltaDailyBudget ?? 0),
+    0,
+  );
+  const totalSpend = actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
+  const totalResults = actions.reduce((sum, action) => sum + Number(action.resultCount ?? 0), 0);
+  return {
+    actionCount: actions.length,
+    aiActionCount: aiActions.length,
+    budgetChangeCount: actions.filter((action) => action.actionType === 'budget_change').length,
+    pausedAdCount: actions.filter((action) => action.actionType === 'pause_ad').length,
+    totalDeltaDailyBudget: roundMetric(totalDeltaDailyBudget) ?? 0,
+    appliedRecommendationCount: recommendations.filter((item) => item.status === 'applied').length,
+    blockedRecommendationCount: recommendations.filter((item) => item.status === 'blocked').length,
+    ignoredRecommendationCount: recommendations.filter((item) => item.status === 'ignored').length,
+    totalSpend: roundMetric(totalSpend) ?? 0,
+    totalResults: roundMetric(totalResults) ?? 0,
+    averageCpa: averageMetric(actions, 'cpa'),
+    averageRoas: averageMetric(actions, 'roas'),
+  };
+}
+
+async function getProjectMetaAdsPerformance(projectId, fallbackTenantId, options = {}) {
+  const { MetaAdsAutomationAction, MetaAdsRecommendation } = getModels();
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  const tenantId = project ? getProjectTenantId(project, fallbackTenantId) : fallbackTenantId;
+  const period = resolveReportPeriod(options);
+  const createdAt = getDateRangeQuery(period);
+  const query = {
+    projectId,
+    ...(tenantId ? { tenantId } : {}),
+    ...(createdAt ? { createdAt } : {}),
+  };
+  const [actions, recommendations] = await Promise.all([
+    MetaAdsAutomationAction.find(query).sort({ createdAt: -1 }).limit(500).lean(),
+    MetaAdsRecommendation.find(query).sort({ createdAt: -1 }).limit(500).lean(),
+  ]);
+  return {
+    period,
+    currency: 'BRL',
+    summary: buildPerformanceSummary(actions, recommendations),
+    actions,
+    recommendations,
+  };
+}
+
+function getRulePerformanceStatus(actions) {
+  const cpaValues = actions
+    .map((action) => Number(action.cpa))
+    .filter((value) => Number.isFinite(value));
+  const roasValues = actions
+    .map((action) => Number(action.roas))
+    .filter((value) => Number.isFinite(value));
+  if (cpaValues.length < 2 && roasValues.length < 2) {
+    return 'insufficient_data';
+  }
+  if (
+    (cpaValues.length >= 2 && cpaValues[cpaValues.length - 1] < cpaValues[0]) ||
+    (roasValues.length >= 2 && roasValues[roasValues.length - 1] > roasValues[0])
+  ) {
+    return 'improved';
+  }
+  if (
+    (cpaValues.length >= 2 && cpaValues[cpaValues.length - 1] > cpaValues[0]) ||
+    (roasValues.length >= 2 && roasValues[roasValues.length - 1] < roasValues[0])
+  ) {
+    return 'regressed';
+  }
+  return 'neutral';
+}
+
+async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, options = {}) {
+  const performance = await getProjectMetaAdsPerformance(projectId, fallbackTenantId, options);
+  const groups = new Map();
+  for (const action of performance.actions) {
+    const ruleKey = `${action.ruleSourceType || 'unknown'}:${action.ruleId || 'unknown'}`;
+    const current = groups.get(ruleKey) || {
+      ruleKey,
+      ruleSourceType: action.ruleSourceType || 'unknown',
+      ruleId: action.ruleId,
+      ruleName: action.ruleName || 'Sem regra atribuída',
+      ruleScope: action.ruleScope,
+      actions: [],
+    };
+    current.actions.push(action);
+    groups.set(ruleKey, current);
+  }
+  const rules = Array.from(groups.values()).map((group) => {
+    const actions = group.actions;
+    const totalSpend = actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
+    const totalResults = actions.reduce((sum, action) => sum + Number(action.resultCount ?? 0), 0);
+    return {
+      ...group,
+      actionCount: actions.length,
+      aiActionCount: actions.filter((action) => action.actor !== 'user').length,
+      pausedAdCount: actions.filter((action) => action.actionType === 'pause_ad').length,
+      totalSpend: roundMetric(totalSpend) ?? 0,
+      totalResults: roundMetric(totalResults) ?? 0,
+      averageCpa: averageMetric(actions, 'cpa'),
+      averageRoas: averageMetric(actions, 'roas'),
+      status: getRulePerformanceStatus(actions),
+    };
+  });
+  return {
+    period: performance.period,
+    currency: performance.currency,
+    rules,
+  };
 }
 
 function getRankingCacheKey({
@@ -2420,8 +2856,19 @@ async function getRecentChange({ projectId, entityId, cooldownHours }) {
   return MetaAdsBudgetChange.findOne({ projectId, entityId, createdAt: { $gte: since } }).lean();
 }
 
+async function getRecentAutomationAction({ projectId, entityId, actionType, cooldownHours }) {
+  const { MetaAdsAutomationAction } = getModels();
+  const since = new Date(Date.now() - cooldownHours * 60 * 60 * 1000);
+  return MetaAdsAutomationAction.findOne({
+    projectId,
+    entityId,
+    actionType,
+    createdAt: { $gte: since },
+  }).lean();
+}
+
 async function applyRecommendation({ recommendationId, projectId, tenantId, actor, actorUserId }) {
-  const { MetaAdsRecommendation, MetaAdsBudgetChange } = getModels();
+  const { MetaAdsRecommendation, MetaAdsBudgetChange, MetaAdsAutomationAction } = getModels();
   const recommendation = await MetaAdsRecommendation.findById(recommendationId).lean();
   if (!recommendation) {
     throw new Error('Recommendation not found.');
@@ -2451,6 +2898,50 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
   const metaAds = withImplicitProjectTokenSecret(recommendation.projectId, project?.metaAds ?? {});
   const token = await getAccessToken(recommendation.tenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  if (recommendation.action === 'pause') {
+    await updateMetaEntityStatus({
+      entityId: recommendation.entityId,
+      entityLevel: recommendation.entityLevel || 'ad',
+      status: recommendation.proposedStatus || 'PAUSED',
+      token,
+      graphVersion,
+    });
+    await MetaAdsAutomationAction.create({
+      tenantId: recommendation.tenantId,
+      projectId: recommendation.projectId,
+      adAccountId: recommendation.adAccountId,
+      recommendationId: String(recommendation._id),
+      actionType: 'pause_ad',
+      entityLevel: recommendation.entityLevel || 'ad',
+      entityId: recommendation.entityId,
+      entityName: recommendation.entityName,
+      campaignId: recommendation.campaignId,
+      campaignName: recommendation.campaignName,
+      adsetId: recommendation.adsetId,
+      adsetName: recommendation.adsetName,
+      previousStatus: recommendation.currentStatus || 'ACTIVE',
+      newStatus: recommendation.proposedStatus || 'PAUSED',
+      spend: recommendation.spend,
+      resultCount: recommendation.resultCount,
+      cpa: recommendation.cpa,
+      roas: recommendation.roas,
+      ctr: recommendation.ctr,
+      cpc: recommendation.cpc,
+      frequency: recommendation.frequency,
+      ruleSourceType: recommendation.ruleSourceType || 'creative',
+      ruleId: recommendation.ruleId,
+      ruleName: recommendation.ruleName,
+      ruleScope: recommendation.ruleScope,
+      actor,
+      actorUserId,
+      reason: recommendation.reason,
+    });
+    return MetaAdsRecommendation.findByIdAndUpdate(
+      recommendationId,
+      { status: 'applied' },
+      { new: true, lean: true },
+    );
+  }
   const currentDailyBudget = await getAdSetDailyBudget({
     entityId: recommendation.entityId,
     token,
@@ -2495,6 +2986,36 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     newDailyBudget: recommendation.proposedDailyBudget,
     deltaDailyBudget,
     deltaPercent,
+    actor,
+    actorUserId,
+    reason: recommendation.reason,
+  });
+  await MetaAdsAutomationAction.create({
+    tenantId: recommendation.tenantId,
+    projectId: recommendation.projectId,
+    adAccountId: recommendation.adAccountId,
+    recommendationId: String(recommendation._id),
+    actionType: 'budget_change',
+    entityLevel: recommendation.entityLevel,
+    entityId: recommendation.entityId,
+    entityName: recommendation.entityName,
+    campaignId: recommendation.campaignId,
+    campaignName: recommendation.campaignName,
+    previousDailyBudget: recommendation.currentDailyBudget,
+    newDailyBudget: recommendation.proposedDailyBudget,
+    deltaDailyBudget,
+    deltaPercent,
+    spend: recommendation.spend,
+    resultCount: recommendation.resultCount,
+    cpa: recommendation.cpa,
+    roas: recommendation.roas,
+    ctr: recommendation.ctr,
+    cpc: recommendation.cpc,
+    frequency: recommendation.frequency,
+    ruleSourceType: recommendation.ruleSourceType || 'unknown',
+    ruleId: recommendation.ruleId,
+    ruleName: recommendation.ruleName,
+    ruleScope: recommendation.ruleScope,
     actor,
     actorUserId,
     reason: recommendation.reason,
@@ -2585,11 +3106,39 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     return [];
   });
-  const [campaigns, adsets, insights, campaignInsights] = await Promise.all([
+  const adsPromise = listAds({ adAccountId, token, graphVersion }).catch((error) => {
+    logger.error('[MetaAdsBudget] ads fetch failed', {
+      projectId,
+      adAccountId,
+      message: error.message,
+      stack: error.stack,
+    });
+    return [];
+  });
+  const adInsightsPromise = listAdInsights({
+    adAccountId,
+    token,
+    since,
+    until,
+    graphVersion,
+  }).catch((error) => {
+    logger.error('[MetaAdsBudget] ad insights fetch failed', {
+      projectId,
+      adAccountId,
+      since,
+      until,
+      message: error.message,
+      stack: error.stack,
+    });
+    return [];
+  });
+  const [campaigns, adsets, insights, campaignInsights, ads, adInsights] = await Promise.all([
     campaignsPromise,
     adsetsPromise,
     insightsPromise,
     campaignInsightsPromise,
+    adsPromise,
+    adInsightsPromise,
   ]);
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
   const campaignInsightById = new Map(campaignInsights.map((row) => [row.campaign_id, row]));
@@ -2612,6 +3161,20 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       ]);
     }
   }
+  const adsByAdSetId = new Map();
+  for (const ad of ads) {
+    const adSetId = ad.adset_id;
+    if (adSetId) {
+      adsByAdSetId.set(adSetId, [...(adsByAdSetId.get(adSetId) ?? []), ad]);
+    }
+  }
+  const adInsightsByAdSetId = new Map();
+  for (const row of adInsights) {
+    const adSetId = row.adset_id;
+    if (adSetId) {
+      adInsightsByAdSetId.set(adSetId, [...(adInsightsByAdSetId.get(adSetId) ?? []), row]);
+    }
+  }
   const handledRecommendationEntities = new Set();
 
   const recommendations = (
@@ -2628,13 +3191,15 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         campaign,
         adsets: adsetsByCampaignId.get(campaignId) ?? [adset],
       });
-      const rules = getEffectiveRules({
+      const effectiveRuleContext = getEffectiveRuleContext({
         projectRules,
+        projectCreativeRules: creativeRules,
         ruleGroups: metaAds.ruleGroups,
         ruleOverrides: metaAds.ruleOverrides,
         campaignId,
         adsetId: entityId,
       });
+      const { rules } = effectiveRuleContext;
       const adsetName = row.adset_name || adset.name;
       const recommendationEntityLevel =
         budgetInfo.editableBudgetLevel === 'campaign' ? 'campaign' : 'adset';
@@ -2738,14 +3303,71 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         currentDailyBudget,
         proposedDailyBudget: proposal.proposedDailyBudget,
         spend: recommendationMetrics.spend,
+        resultCount: recommendationMetrics.resultCount,
         cpa: recommendationMetrics.cpa,
         roas: recommendationMetrics.roas,
+        ctr: recommendationMetrics.ctr,
+        cpc: recommendationMetrics.cpc,
+        frequency: recommendationMetrics.frequency,
+        ruleSourceType: effectiveRuleContext.ruleSourceType,
+        ruleId: effectiveRuleContext.ruleId,
+        ruleName: effectiveRuleContext.ruleName,
+        ruleScope: effectiveRuleContext.ruleScope,
         reason: blockedByCooldown ? 'Bloqueado por cooldown de orçamento.' : proposal.reason,
         mode: metaAds.automationMode || 'recommend',
       });
-      return recommendation.toObject();
+      const creativePauseRecommendations = [];
+      const pauseProposals = buildCreativePauseRecommendations({
+        ads: adsByAdSetId.get(entityId) ?? [],
+        adInsights: adInsightsByAdSetId.get(entityId) ?? [],
+        creativeRules: effectiveRuleContext.creativeRules,
+        targetResultType: resolvedTargetResultType,
+        ruleContext: {
+          ...effectiveRuleContext,
+          ruleSourceType: 'creative',
+          campaignId,
+          campaignName,
+          adsetId: entityId,
+          adsetName,
+        },
+      });
+      for (const pauseProposal of pauseProposals) {
+        const recentPause = await getRecentAutomationAction({
+          projectId,
+          entityId: pauseProposal.entityId,
+          actionType: 'pause_ad',
+          cooldownHours: effectiveRuleContext.creativeRules.pauseHighCost?.cooldownHours ?? 24,
+        });
+        await MetaAdsRecommendation.updateMany(
+          {
+            tenantId,
+            projectId,
+            entityId: pauseProposal.entityId,
+            action: 'pause',
+            status: 'pending',
+          },
+          {
+            $set: {
+              status: 'ignored',
+            },
+          },
+        );
+        const pauseRecommendation = await MetaAdsRecommendation.create({
+          tenantId,
+          projectId,
+          adAccountId,
+          ...pauseProposal,
+          status: recentPause ? 'blocked' : 'pending',
+          reason: recentPause ? 'Bloqueado por cooldown de criativo.' : pauseProposal.reason,
+          mode: metaAds.automationMode || 'recommend',
+        });
+        creativePauseRecommendations.push(pauseRecommendation.toObject());
+      }
+      return [recommendation.toObject(), ...creativePauseRecommendations];
     })
-  ).filter(Boolean);
+  )
+    .flat()
+    .filter(Boolean);
 
   if (applyAuto && metaAds.automationMode === 'auto_limited') {
     for (const recommendation of recommendations) {
@@ -3175,6 +3797,21 @@ async function updateProjectMetaAdsEntityStatus({
     token,
     graphVersion,
   });
+  const { MetaAdsAutomationAction } = getModels();
+  await MetaAdsAutomationAction.create({
+    tenantId: projectTenantId,
+    projectId,
+    adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+    actionType: entityLevel === 'ad' && status === 'PAUSED' ? 'pause_ad' : 'status_change',
+    entityLevel,
+    entityId: normalizedEntityId,
+    entityName,
+    newStatus: status,
+    ruleSourceType: 'manual',
+    actor,
+    actorUserId,
+    reason: `Manual status update to ${status}.`,
+  });
   logger.info('[MetaAdsBudget] entity status updated', {
     projectId,
     tenantId: projectTenantId,
@@ -3345,8 +3982,10 @@ async function runCron(options = {}) {
 
 module.exports = {
   DEFAULT_RULES,
+  _buildCreativePauseRecommendationsForTest: buildCreativePauseRecommendations,
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
+  _resolveStatusPeriodForTest: resolveStatusPeriod,
   _resolveTargetResultTypeForTest: resolveTargetResultType,
   analyzeProject,
   applyManualBudgetChange,
@@ -3357,7 +3996,9 @@ module.exports = {
   getModels,
   getEffectiveRules,
   getMetaGraphVersion,
+  getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsRulePerformance,
   getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,
   withImplicitProjectTokenSecret,

@@ -25,6 +25,9 @@ export const scheduleOptions: Array<{
 export const periodOptions = [
   { value: 'today', labelKey: 'com_ui_project_meta_ads_period_today' },
   { value: 'yesterday', labelKey: 'com_ui_project_meta_ads_period_yesterday' },
+  { value: 'last_1d', labelKey: 'com_ui_project_meta_ads_period_last_1d' },
+  { value: 'last_2d', labelKey: 'com_ui_project_meta_ads_period_last_2d' },
+  { value: 'last_3d', labelKey: 'com_ui_project_meta_ads_period_last_3d' },
   { value: 'last_7d', labelKey: 'com_ui_project_meta_ads_period_last_7d' },
   { value: 'last_14d', labelKey: 'com_ui_project_meta_ads_period_last_14d' },
   { value: 'last_30d', labelKey: 'com_ui_project_meta_ads_period_last_30d' },
@@ -38,6 +41,8 @@ export const periodFilterOptions: Array<{ value: PeriodFilter; labelKey: Transla
 export const workspaceTabOptions: Array<{ value: WorkspaceTab; labelKey: TranslationKeys }> = [
   { value: 'overview', labelKey: 'com_ui_project_meta_ads_tab_overview' },
   { value: 'bi', labelKey: 'com_ui_project_meta_ads_tab_bi' },
+  { value: 'aiPerformance', labelKey: 'com_ui_project_meta_ads_tab_ai_performance' },
+  { value: 'rulePerformance', labelKey: 'com_ui_project_meta_ads_tab_rule_performance' },
 ];
 
 export const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [
@@ -279,6 +284,7 @@ export const objectiveLabelKeys: Record<string, TranslationKeys> = {
 export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   landing_page_view: 'com_ui_project_meta_ads_result_type_landing_page_view',
   lead: 'com_ui_project_meta_ads_result_type_lead',
+  instagram_profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   leadgen_grouped: 'com_ui_project_meta_ads_result_type_lead',
   link_click: 'com_ui_project_meta_ads_result_type_link_click',
   onsite_conversion_lead_grouped: 'com_ui_project_meta_ads_result_type_lead',
@@ -290,5 +296,7 @@ export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   offsite_conversion_fb_pixel_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   purchase: 'com_ui_project_meta_ads_result_type_purchase',
+  profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
+  video_view: 'com_ui_project_meta_ads_result_type_video_view',
   UNKNOWN: 'com_ui_project_meta_ads_result_type_unknown',
 };

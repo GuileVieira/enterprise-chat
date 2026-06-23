@@ -7,8 +7,10 @@ import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
   useDuplicateProjectMetaAdsEntityMutation,
+  useProjectMetaAdsPerformanceQuery,
   useProjectMetaAdsRankingsQuery,
   useProjectMetaAdsQuery,
+  useProjectMetaAdsRulePerformanceQuery,
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
   useUpdateProjectMetaAdsBudgetMutation,
@@ -31,9 +33,11 @@ import { useMetaAdsOverviewAdapter } from './metaAds/hooks/useMetaAdsOverviewAda
 import { buildCampaignFallback } from './metaAds/table';
 import { getGraphVersionOptions } from './metaAds/settings';
 import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
+import { MetaAdsAiPerformanceWorkspace } from './metaAds/aiPerformanceWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
 import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
 import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
+import { MetaAdsRulePerformanceWorkspace } from './metaAds/rulePerformanceWorkspace';
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
 import { getMetaAdsTokenStatusKey } from './metaAds/overviewState';
 import { cleanDashboardName } from './metaAds/helpers';
@@ -69,8 +73,18 @@ export default function ProjectMetaAdsPanel({
   const startupConfigQuery = useGetStartupConfig();
   const overviewPeriod = useMetaAdsPeriodFilter();
   const biPeriod = useMetaAdsPeriodFilter();
+  const aiPerformancePeriod = useMetaAdsPeriodFilter();
+  const rulePerformancePeriod = useMetaAdsPeriodFilter();
   const statusQuery = useProjectMetaAdsQuery(project.projectId, overviewPeriod.statusParams);
   const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams);
+  const aiPerformanceQuery = useProjectMetaAdsPerformanceQuery(
+    project.projectId,
+    aiPerformancePeriod.statusParams,
+  );
+  const rulePerformanceQuery = useProjectMetaAdsRulePerformanceQuery(
+    project.projectId,
+    rulePerformancePeriod.statusParams,
+  );
   const biRankingsQuery = useProjectMetaAdsRankingsQuery(project.projectId, {
     ...biPeriod.statusParams,
     level: biWorkspace.biControls.level,
@@ -111,7 +125,7 @@ export default function ProjectMetaAdsPanel({
     canEdit ||
     user?.role === SystemRoles.ADMIN ||
     user?.role === SystemRoles.OWNER ||
-    user?.role === SystemRoles.USER;
+    user?.role === SystemRoles.AD_MANAGER;
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -221,6 +235,48 @@ export default function ProjectMetaAdsPanel({
         {workspaceTab === 'overview' && <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />}
 
         {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
+
+        {workspaceTab === 'aiPerformance' && (
+          <MetaAdsAiPerformanceWorkspace
+            data={aiPerformanceQuery.data}
+            fetching={aiPerformanceQuery.isFetching}
+            period={{
+              periodFilter: aiPerformancePeriod.periodFilter,
+              customSince: aiPerformancePeriod.customSince,
+              customUntil: aiPerformancePeriod.customUntil,
+              appliedCustomSince: aiPerformancePeriod.appliedCustomSince,
+              appliedCustomUntil: aiPerformancePeriod.appliedCustomUntil,
+              inputClassName: metaAdsInputLg,
+              onPeriodFilterChange: aiPerformancePeriod.setPeriodFilter,
+              onCustomSinceChange: aiPerformancePeriod.onCustomSinceChange,
+              onCustomUntilChange: aiPerformancePeriod.onCustomUntilChange,
+              onApplyCustomPeriod: aiPerformancePeriod.onApplyCustomPeriod,
+            }}
+            currency={currency}
+            localize={localize}
+          />
+        )}
+
+        {workspaceTab === 'rulePerformance' && (
+          <MetaAdsRulePerformanceWorkspace
+            data={rulePerformanceQuery.data}
+            fetching={rulePerformanceQuery.isFetching}
+            period={{
+              periodFilter: rulePerformancePeriod.periodFilter,
+              customSince: rulePerformancePeriod.customSince,
+              customUntil: rulePerformancePeriod.customUntil,
+              appliedCustomSince: rulePerformancePeriod.appliedCustomSince,
+              appliedCustomUntil: rulePerformancePeriod.appliedCustomUntil,
+              inputClassName: metaAdsInputLg,
+              onPeriodFilterChange: rulePerformancePeriod.setPeriodFilter,
+              onCustomSinceChange: rulePerformancePeriod.onCustomSinceChange,
+              onCustomUntilChange: rulePerformancePeriod.onCustomUntilChange,
+              onApplyCustomPeriod: rulePerformancePeriod.onApplyCustomPeriod,
+            }}
+            currency={currency}
+            localize={localize}
+          />
+        )}
       </MetaAdsWorkspaceShell>
 
       {workspaceTab === 'overview' && (

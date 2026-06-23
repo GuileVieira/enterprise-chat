@@ -54,6 +54,18 @@ const ProjectMetaAdsRulesSchema = new Schema(
 const ProjectMetaAdsCreativeRulesSchema = new Schema(
   {
     maxFrequency: Number,
+    pauseHighCost: {
+      enabled: Boolean,
+      maxCostPerResult: Number,
+      lookbackDays: {
+        type: Number,
+        enum: [1, 2, 3, 7],
+      },
+      minCreativesInScope: Number,
+      minSpend: Number,
+      cooldownHours: Number,
+      targetResultType: String,
+    },
   },
   { _id: false },
 );
@@ -78,6 +90,10 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+    creativeRules: {
+      type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
     },
   },
@@ -109,6 +125,10 @@ const ProjectMetaAdsRuleGroupSchema = new Schema(
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,
+      default: {},
+    },
+    creativeRules: {
+      type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
     },
   },
