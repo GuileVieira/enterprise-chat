@@ -817,6 +817,51 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
+  it('filters BI rankings by search text', () => {
+    mockRankingData.items = [
+      {
+        id: 'campaign-low-cpa',
+        name: 'Low CPA',
+        level: 'campaign',
+        parentName: 'Account A',
+        objective: 'OUTCOME_SALES',
+        resultType: 'purchase',
+        resultCount: 10,
+        spend: 100,
+        cpa: 10,
+        ctr: 1.2,
+        frequency: 1.8,
+      },
+      {
+        id: 'campaign-high-spend',
+        name: 'High Spend',
+        level: 'campaign',
+        parentName: 'Account B',
+        objective: 'OUTCOME_TRAFFIC',
+        resultType: 'link_click',
+        resultCount: 40,
+        spend: 800,
+        cpa: 20,
+        ctr: 2.4,
+        frequency: 2.1,
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    openBiTab();
+
+    const rankings = screen.getByTestId('meta-ads-bi-campaigns');
+    expect(rankings).toHaveTextContent('Low CPA');
+    expect(rankings).toHaveTextContent('High Spend');
+
+    fireEvent.change(screen.getByTestId('meta-ads-bi-search'), {
+      target: { value: 'high' },
+    });
+
+    expect(rankings).not.toHaveTextContent('Low CPA');
+    expect(rankings).toHaveTextContent('High Spend');
+  });
+
   it('lists only primary campaign result types in the BI result filter', () => {
     mockStatusData.campaigns = [
       {

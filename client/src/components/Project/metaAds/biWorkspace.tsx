@@ -18,6 +18,10 @@ type MetaAdsBiWorkspaceProps = {
     | 'onCustomUntilChange'
     | 'onApplyCustomPeriod'
   >;
+  search: {
+    query: ComponentProps<typeof MetaAdsBiControlsPanel>['searchQuery'];
+    onChange: ComponentProps<typeof MetaAdsBiControlsPanel>['onSearchQueryChange'];
+  };
   options: Pick<
     ComponentProps<typeof MetaAdsBiControlsPanel>,
     'objectiveOptions' | 'resultTypeOptions'
@@ -54,6 +58,7 @@ type MetaAdsBiWorkspaceProps = {
 export function MetaAdsBiWorkspace({
   controls,
   period,
+  search,
   options,
   ranking,
   evolution,
@@ -72,6 +77,7 @@ export function MetaAdsBiWorkspace({
       <div className="p-4">
         <MetaAdsBiControlsPanel
           controls={controls}
+          searchQuery={search.query}
           periodFilter={period.periodFilter}
           customSince={period.customSince}
           customUntil={period.customUntil}
@@ -82,6 +88,7 @@ export function MetaAdsBiWorkspace({
           inputClassName={inputClassName}
           localize={localize}
           onPeriodFilterChange={period.onPeriodFilterChange}
+          onSearchQueryChange={search.onChange}
           onCustomSinceChange={period.onCustomSinceChange}
           onCustomUntilChange={period.onCustomUntilChange}
           onApplyCustomPeriod={period.onApplyCustomPeriod}

@@ -8,8 +8,9 @@ import { metaAdsInput } from '../chrome';
 import { buildMetaAdsBiState } from '../biState';
 import { MetaAdsBiWorkspace } from '../biWorkspace';
 import { buildMetaAdsEvolutionState } from '../evolutionState';
+import { getObjectiveLabel, getResultTypeLabel } from '../formatters';
 import { cleanDashboardName } from '../helpers';
-import type { Localize, MetaAdsSettingsState } from '../types';
+import type { Localize, MetaAdsBiRankItem, MetaAdsSettingsState } from '../types';
 import type { useMetaAdsBiWorkspace } from './useMetaAdsBiWorkspace';
 import type { useMetaAdsPeriodFilter } from './useMetaAdsPeriodFilter';
 
@@ -29,6 +30,42 @@ type UseMetaAdsBiAdapterParams = {
   localize: Localize;
 };
 
+function normalizeSearchValue(value: string | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function filterBiRankingItems(
+  items: MetaAdsBiWorkspaceProps['ranking']['items'],
+  query: string,
+  localize: Localize,
+) {
+  const normalizedQuery = normalizeSearchValue(query);
+  if (!normalizedQuery) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    const rankItem = item as MetaAdsBiRankItem;
+    const searchableText = [
+      item.name,
+      item.id,
+      item.parentName,
+      rankItem.objective,
+      rankItem.objective ? getObjectiveLabel(rankItem.objective, localize) : '',
+      rankItem.resultType,
+      rankItem.resultType ? getResultTypeLabel(rankItem.resultType, localize) : '',
+    ]
+      .map(normalizeSearchValue)
+      .join(' ');
+
+    return searchableText.includes(normalizedQuery);
+  });
+}
+
 export function useMetaAdsBiAdapter({
   campaigns,
   biCampaigns,
@@ -45,8 +82,15 @@ export function useMetaAdsBiAdapter({
   objectiveOptions: ReturnType<typeof buildMetaAdsBiState>['objectiveOptions'];
   workspace: MetaAdsBiWorkspaceProps;
 } {
-  const { biControls, biRankingSort, setBiControls, setSelectedBiRankItem, onBiRankingSort } =
-    biWorkspace;
+  const {
+    biControls,
+    biRankingSort,
+    biSearchQuery,
+    setBiControls,
+    setBiSearchQuery,
+    setSelectedBiRankItem,
+    onBiRankingSort,
+  } = biWorkspace;
   const {
     evolutionDates,
     evolutionSeriesPaths,
@@ -73,6 +117,11 @@ export function useMetaAdsBiAdapter({
     adDiagnostics,
     localize,
   });
+  const filteredBiRankingItems = filterBiRankingItems(
+    selectedBiRankingItems,
+    biSearchQuery,
+    localize,
+  );
 
   return {
     objectiveOptions,
@@ -89,13 +138,17 @@ export function useMetaAdsBiAdapter({
         onCustomUntilChange: biPeriod.onCustomUntilChange,
         onApplyCustomPeriod: biPeriod.onApplyCustomPeriod,
       },
+      search: {
+        query: biSearchQuery,
+        onChange: setBiSearchQuery,
+      },
       options: {
         objectiveOptions,
         resultTypeOptions: biResultTypeOptions,
       },
       ranking: {
         titleKey: selectedBiRankingTitleKey,
-        items: selectedBiRankingItems,
+        items: filteredBiRankingItems,
         testId: selectedBiRankingTestId,
         adRankingEmptyMessageKey,
         sort: biRankingSort,

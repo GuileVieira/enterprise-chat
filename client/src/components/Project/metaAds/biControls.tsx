@@ -11,6 +11,7 @@ import type {
 
 export function MetaAdsBiControlsPanel({
   controls,
+  searchQuery,
   periodFilter,
   customSince,
   customUntil,
@@ -21,6 +22,7 @@ export function MetaAdsBiControlsPanel({
   inputClassName,
   localize,
   onPeriodFilterChange,
+  onSearchQueryChange,
   onCustomSinceChange,
   onCustomUntilChange,
   onApplyCustomPeriod,
@@ -30,6 +32,7 @@ export function MetaAdsBiControlsPanel({
   onMetricChange,
 }: {
   controls: MetaAdsBiControls;
+  searchQuery: string;
   periodFilter: PeriodFilter;
   customSince: string;
   customUntil: string;
@@ -40,6 +43,7 @@ export function MetaAdsBiControlsPanel({
   inputClassName: string;
   localize: Localize;
   onPeriodFilterChange: (value: PeriodFilter) => void;
+  onSearchQueryChange: (value: string) => void;
   onCustomSinceChange: (value: string) => void;
   onCustomUntilChange: (value: string) => void;
   onApplyCustomPeriod: () => void;
@@ -58,7 +62,7 @@ export function MetaAdsBiControlsPanel({
           {localize('com_ui_project_meta_ads_bi_rankings_hint')}
         </p>
       </div>
-      <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <MetaAdsPeriodControls
           periodFilter={periodFilter}
           customSince={customSince}
@@ -73,6 +77,15 @@ export function MetaAdsBiControlsPanel({
           onCustomUntilChange={onCustomUntilChange}
           onApplyCustomPeriod={onApplyCustomPeriod}
         />
+        <MetaAdsField label={localize('com_ui_project_meta_ads_search')}>
+          <input
+            type="search"
+            value={searchQuery}
+            data-testid="meta-ads-bi-search"
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            className={inputClassName}
+          />
+        </MetaAdsField>
         <MetaAdsField label={localize('com_ui_project_meta_ads_level')}>
           <select
             data-testid="meta-ads-bi-level-filter"

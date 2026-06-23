@@ -18,6 +18,7 @@ export function useMetaAdsBiWorkspace() {
     direction: 'asc',
   });
   const [metricsFullscreen, setMetricsFullscreen] = useState(false);
+  const [biSearchQuery, setBiSearchQuery] = useState('');
   const [selectedBiRankItem, setSelectedBiRankItem] = useState<MetaAdsBiRankItem | null>(null);
 
   useEffect(() => {
@@ -51,9 +52,11 @@ export function useMetaAdsBiWorkspace() {
   return {
     biControls,
     biRankingSort,
+    biSearchQuery,
     metricsFullscreen,
     selectedBiRankItem,
     setBiControls,
+    setBiSearchQuery,
     setMetricsFullscreen,
     setSelectedBiRankItem,
     onBiRankingSort,
