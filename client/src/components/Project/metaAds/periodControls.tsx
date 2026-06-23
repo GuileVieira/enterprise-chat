@@ -1,4 +1,5 @@
 import { periodFilterOptions } from './constants';
+import { MetaAdsField } from './ui';
 import type { Localize, PeriodFilter } from './types';
 
 export type MetaAdsPeriodControlProps = {
@@ -32,8 +33,7 @@ export function MetaAdsPeriodControls({
 }: MetaAdsPeriodControlProps) {
   return (
     <>
-      <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-        {localize('com_ui_project_meta_ads_period')}
+      <MetaAdsField label={localize('com_ui_project_meta_ads_period')}>
         <select
           data-testid={`${testIdPrefix}-period-filter`}
           value={periodFilter}
@@ -46,11 +46,10 @@ export function MetaAdsPeriodControls({
             </option>
           ))}
         </select>
-      </label>
+      </MetaAdsField>
       {periodFilter === 'custom' && (
         <>
-          <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_period_since')}
+          <MetaAdsField label={localize('com_ui_project_meta_ads_period_since')}>
             <input
               type="date"
               value={customSince}
@@ -58,9 +57,8 @@ export function MetaAdsPeriodControls({
               onChange={(event) => onCustomSinceChange(event.target.value)}
               className={inputClassName}
             />
-          </label>
-          <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_period_until')}
+          </MetaAdsField>
+          <MetaAdsField label={localize('com_ui_project_meta_ads_period_until')}>
             <input
               type="date"
               value={customUntil}
@@ -68,7 +66,7 @@ export function MetaAdsPeriodControls({
               onChange={(event) => onCustomUntilChange(event.target.value)}
               className={inputClassName}
             />
-          </label>
+          </MetaAdsField>
           <div className="flex min-w-32 flex-col justify-end">
             <button
               type="button"
