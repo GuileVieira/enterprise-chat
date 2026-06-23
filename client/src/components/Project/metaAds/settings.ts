@@ -52,3 +52,14 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
 export function getAdAccountDigits(value?: string) {
   return (value ?? '').replace(/^act_/i, '').replace(/\D/g, '');
 }
+
+export function toDateInputValue(date: Date) {
+  const localTimestamp = date.getTime() - date.getTimezoneOffset() * 60 * 1000;
+  return new Date(localTimestamp).toISOString().slice(0, 10);
+}
+
+export function getDateInputDaysAgo(daysAgo: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+  return toDateInputValue(date);
+}

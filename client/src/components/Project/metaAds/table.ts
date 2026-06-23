@@ -12,6 +12,49 @@ export function getTableViewColumns(tableView: TableView, isEcommerce: boolean) 
   return isEcommerce ? ecommerceTableViewColumns[tableView] : tableViewColumns[tableView];
 }
 
+export function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: string) {
+  if (key === 'budget') {
+    return campaign.dailyBudget ?? 0;
+  }
+  if (key === 'frequency') {
+    return campaign.frequency ?? 0;
+  }
+  if (key === 'spend') {
+    return campaign.spend ?? 0;
+  }
+  if (key === 'roas') {
+    return campaign.roas ?? 0;
+  }
+  if (key === 'cpa') {
+    return campaign.cpa;
+  }
+  if (key === 'result') {
+    return campaign.resultCount ?? 0;
+  }
+  if (key === 'ctr') {
+    return campaign.ctr ?? 0;
+  }
+  if (key === 'clicks') {
+    return campaign.clicks ?? 0;
+  }
+  return campaign.campaignName ?? campaign.campaignId;
+}
+
+export function compareNumberSort(
+  left: ProjectMetaAdsCampaignSummary,
+  right: ProjectMetaAdsCampaignSummary,
+  key: string,
+  direction: 'asc' | 'desc',
+) {
+  const leftRaw = getMetricValue(left, key);
+  const rightRaw = getMetricValue(right, key);
+  const emptyValue = key === 'cpa' && direction === 'asc' ? Infinity : -Infinity;
+  const leftValue = typeof leftRaw === 'number' && Number.isFinite(leftRaw) ? leftRaw : emptyValue;
+  const rightValue =
+    typeof rightRaw === 'number' && Number.isFinite(rightRaw) ? rightRaw : emptyValue;
+  return direction === 'asc' ? leftValue - rightValue : rightValue - leftValue;
+}
+
 export function buildBudgetReferences(currentBudget: number | null | undefined, currency = 'BRL') {
   const current = Number(currentBudget);
   if (!Number.isFinite(current) || current <= 0) {
