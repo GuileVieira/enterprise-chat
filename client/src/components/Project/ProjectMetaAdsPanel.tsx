@@ -70,7 +70,11 @@ import { getMetaAdsTableRowClass } from './metaAds/overviewCells';
 import { createMetaAdsOverviewRenderers } from './metaAds/overviewRenderers';
 import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsOverviewToolbar } from './metaAds/overviewToolbar';
-import { buildMetaAdsOverviewState } from './metaAds/overviewState';
+import {
+  buildMetaAdsOverviewState,
+  getMetaAdsTokenStatusKey,
+  getNextMetaAdsSortDirection,
+} from './metaAds/overviewState';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import type {
@@ -344,12 +348,7 @@ export default function ProjectMetaAdsPanel({
   const selectedCount = selectedEntityIds.length;
   const canOpenTrafficAgentChat =
     selectedCount > 0 && selectedCount <= MAX_META_ADS_CHAT_BRIEF_ENTITIES;
-  const tokenStatusKey: TranslationKeys =
-    tokenCredentials?.effectiveSource === 'project'
-      ? 'com_ui_project_meta_ads_project_token_configured'
-      : tokenCredentials?.effectiveSource === 'tenant'
-        ? 'com_ui_project_meta_ads_tenant_token_configured'
-        : 'com_ui_project_meta_ads_token_missing';
+  const tokenStatusKey = getMetaAdsTokenStatusKey(tokenCredentials);
   const hasProjectToken =
     tokenCredentials?.effectiveSource === 'project' || Boolean(settingsDraft?.tokenSecretName);
   const selectedCampaignIds = selectedEntityIds
@@ -407,16 +406,7 @@ export default function ProjectMetaAdsPanel({
   });
 
   const onSortColumn = (key: string, defaultDirection: 'asc' | 'desc') => {
-    const [activeKey, activeDirection = defaultDirection] = campaignSort.split('_') as [
-      string,
-      'asc' | 'desc',
-    ];
-    const nextDirection =
-      activeKey === key && activeDirection === defaultDirection
-        ? defaultDirection === 'asc'
-          ? 'desc'
-          : 'asc'
-        : defaultDirection;
+    const nextDirection = getNextMetaAdsSortDirection({ campaignSort, key, defaultDirection });
     setCampaignSort(`${key}_${nextDirection}`);
   };
 

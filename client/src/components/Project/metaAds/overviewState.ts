@@ -1,5 +1,6 @@
 import type { ProjectMetaAdsCampaignSummary, ProjectMetaAdsStatus } from 'librechat-data-provider';
 import type { useLocalize } from '~/hooks';
+import type { TranslationKeys } from '~/hooks';
 import { getObjectiveLabel, getResultTypeLabel } from './formatters';
 import {
   buildObjectiveSummaries,
@@ -98,6 +99,37 @@ export function buildMetaAdsOverviewState({
     summaryAverageRoas,
     filteredCampaigns,
   };
+}
+
+export function getMetaAdsTokenStatusKey(
+  credentials: ProjectMetaAdsStatus['credentials'] | undefined,
+): TranslationKeys {
+  if (credentials?.effectiveSource === 'project') {
+    return 'com_ui_project_meta_ads_project_token_configured';
+  }
+  if (credentials?.effectiveSource === 'tenant') {
+    return 'com_ui_project_meta_ads_tenant_token_configured';
+  }
+  return 'com_ui_project_meta_ads_token_missing';
+}
+
+export function getNextMetaAdsSortDirection({
+  campaignSort,
+  key,
+  defaultDirection,
+}: {
+  campaignSort: string;
+  key: string;
+  defaultDirection: 'asc' | 'desc';
+}) {
+  const [activeKey, activeDirection = defaultDirection] = campaignSort.split('_') as [
+    string,
+    'asc' | 'desc',
+  ];
+  if (activeKey !== key || activeDirection !== defaultDirection) {
+    return defaultDirection;
+  }
+  return defaultDirection === 'asc' ? 'desc' : 'asc';
 }
 
 function getScopedObjectiveSummary(
