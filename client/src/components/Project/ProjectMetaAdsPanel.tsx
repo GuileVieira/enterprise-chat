@@ -2,14 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { MouseEvent, UIEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowSquareOut,
-  ArrowsIn,
-  ArrowsOut,
-  Copy,
-  DotsThreeVertical,
-  PencilSimple,
-} from '@phosphor-icons/react';
+import { ArrowSquareOut, ArrowsIn, ArrowsOut, PencilSimple } from '@phosphor-icons/react';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
 import type {
@@ -44,7 +37,6 @@ import {
   scheduleOptions,
   tableViewMinWidth,
   workspaceTabOptions,
-  periodFilterOptions,
   EVOLUTION_SERIES_LIMIT,
 } from './metaAds/constants';
 import {
@@ -116,6 +108,9 @@ import {
   MetaAdsEntityStatusConfirmationBanner,
 } from './metaAds/confirmations';
 import { MetaAdsCredentialsDialog } from './metaAds/credentialsDialog';
+import { MetaAdsBiControlsPanel } from './metaAds/biControls';
+import { MetaAdsOverviewActionCell } from './metaAds/overviewActionCell';
+import { MetaAdsOverviewTable } from './metaAds/overviewTable';
 import { MetaAdsRuleGroupDialog } from './metaAds/ruleGroupDialog';
 import { MetaAdsRulesWorkspace } from './metaAds/rulesWorkspace';
 import type {
@@ -132,13 +127,11 @@ import type {
   MetaAdsRuleGroup,
   BiRankingSort,
   MetaAdsBiRankItem,
-  EvolutionMetric,
   MetaAdsRulesState,
   MetaAdsBiControls,
   BudgetConfirmation,
   MetaAdsRuleOverride,
   EvolutionHoverPoint,
-  MetaAdsBiRankLevel,
   MetaAdsSettingsState,
   BiRankingSortKey,
   ScheduleIntervalMinutes,
@@ -1965,71 +1958,23 @@ export default function ProjectMetaAdsPanel({
     column: TableColumn,
     recommendation: ProjectMetaAdsRecommendation | undefined,
     duplicate?: DuplicateDraft,
-  ) => {
-    const menuKey = duplicate ? `${duplicate.entityLevel}:${duplicate.entityId}` : '';
-    const duplicateLabelKey: TranslationKeys =
-      duplicate?.entityLevel === 'campaign'
-        ? 'com_ui_project_meta_ads_duplicate_campaign'
-        : 'com_ui_project_meta_ads_duplicate_adset';
-    return (
-      <td
-        key={column.key}
-        className={`px-2 py-2 ${actionMenuKey === menuKey ? 'relative z-[1000]' : ''}`}
-      >
-        <div className="relative flex items-center gap-1">
-          {canApplyRecommendation(recommendation) && (
-            <button
-              type="button"
-              disabled={!canUseMetaAdsActions || applyRecommendation.isLoading}
-              onClick={() => {
-                if (recommendation) {
-                  onApply(recommendation);
-                }
-              }}
-              className="h-7 rounded-lg border border-emerald-300/35 bg-emerald-300/10 px-2 text-[11px] font-semibold text-emerald-700 transition duration-200 hover:bg-emerald-300/15 disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-100"
-            >
-              {localize('com_ui_project_meta_ads_apply')}
-            </button>
-          )}
-          {duplicate && (
-            <>
-              <button
-                type="button"
-                aria-label={localize('com_ui_project_meta_ads_actions')}
-                aria-expanded={actionMenuKey === menuKey}
-                disabled={!canUseMetaAdsActions}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setActionMenuKey((current) => (current === menuKey ? null : menuKey));
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-500 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.55)] transition duration-200 hover:border-teal-300/60 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-300/35 disabled:cursor-not-allowed disabled:opacity-45 dark:border-white/10 dark:bg-[#172033] dark:text-slate-300 dark:hover:bg-[#183247] dark:hover:text-teal-100"
-              >
-                <DotsThreeVertical className="h-4 w-4" aria-hidden="true" />
-              </button>
-              {actionMenuKey === menuKey && (
-                <div className="absolute right-0 top-9 z-[1200] min-w-56 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_22px_60px_-34px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:shadow-[0_22px_60px_-34px_rgba(0,0,0,0.95)]">
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onOpenDuplicateDraft(duplicate);
-                    }}
-                    className="flex w-full items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-800 transition hover:bg-teal-50 hover:text-teal-800 dark:text-slate-100 dark:hover:bg-[#183247] dark:hover:text-teal-100"
-                  >
-                    <Copy
-                      className="h-3.5 w-3.5 text-teal-600 dark:text-teal-200"
-                      aria-hidden="true"
-                    />
-                    {localize(duplicateLabelKey)}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </td>
-    );
-  };
+  ) => (
+    <MetaAdsOverviewActionCell
+      key={column.key}
+      columnKey={column.key}
+      recommendation={recommendation}
+      duplicate={duplicate}
+      actionMenuKey={actionMenuKey}
+      canUseMetaAdsActions={canUseMetaAdsActions}
+      applyingRecommendation={applyRecommendation.isLoading}
+      localize={localize}
+      onApply={onApply}
+      onToggleActionMenu={(menuKey) =>
+        setActionMenuKey((current) => (current === menuKey ? null : menuKey))
+      }
+      onOpenDuplicateDraft={onOpenDuplicateDraft}
+    />
+  );
 
   const renderCampaignCell = (
     column: TableColumn,
@@ -3330,214 +3275,33 @@ export default function ProjectMetaAdsPanel({
               onDeleteRuleOverride={onDeleteRuleOverride}
             />
 
-            <div
-              ref={tableScrollRef}
-              onScroll={onTableScroll}
-              className="max-w-full overflow-x-auto bg-white/55 dark:bg-slate-950/20"
-            >
-              <table
-                className={`w-full ${tableViewMinWidth[tableView]} table-fixed border-separate border-spacing-0 text-left text-xs [&_td:last-child]:border-r-0 [&_td]:border-r [&_td]:border-slate-200/60 dark:[&_td]:border-white/[0.06] [&_th:last-child]:border-r-0 [&_th]:border-r [&_th]:border-slate-200/70 dark:[&_th]:border-white/10`}
-              >
-                <thead className="sticky top-0 z-30 border-b border-slate-200 bg-slate-100/95 text-[11px] uppercase tracking-[0.12em] text-slate-500 shadow-[0_16px_36px_-32px_rgba(15,23,42,0.45)] backdrop-blur dark:border-white/10 dark:bg-[#1a2438]/95 dark:text-slate-400 dark:shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
-                  <tr>
-                    <th className="sticky left-0 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 dark:border-white/10 dark:bg-[#1a2438]">
-                      <span className="sr-only">
-                        {localize('com_ui_project_meta_ads_select_ad_set')}
-                      </span>
-                    </th>
-                    <th className="sticky left-10 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 shadow-[10px_0_18px_-18px_rgba(20,184,166,0.55)] dark:border-white/10 dark:bg-[#1a2438]">
-                      <span className="sr-only">
-                        {localize('com_ui_project_meta_ads_expand_campaign')}
-                      </span>
-                    </th>
-                    {tableColumns.map((column) => {
-                      const label =
-                        column.label ?? (column.labelKey ? localize(column.labelKey) : '');
-                      const alignClass = column.align === 'right' ? 'text-right' : '';
-                      const stickyClass =
-                        column.key === 'adStatus'
-                          ? 'sticky left-20 z-40 bg-slate-100/95 dark:bg-[#1a2438]'
-                          : column.key === 'name'
-                            ? 'sticky left-32 z-40 bg-slate-100/95 shadow-[14px_0_26px_-22px_rgba(15,23,42,0.45)] dark:bg-[#1a2438] dark:shadow-[14px_0_26px_-22px_rgba(0,0,0,0.9)]'
-                            : '';
-                      return (
-                        <th
-                          key={column.key}
-                          className={`${column.widthClass} ${alignClass} ${stickyClass} border-b border-slate-200 px-3 py-3 dark:border-white/10`}
-                        >
-                          {column.key === 'actions' || column.key === 'adStatus' ? (
-                            <span className="sr-only">{label}</span>
-                          ) : column.sortableKey ? (
-                            renderSortableHeader({
-                              key: column.sortableKey,
-                              label,
-                              className: column.align === 'right' ? 'justify-end text-right' : '',
-                              defaultDirection: column.defaultDirection,
-                            })
-                          ) : (
-                            label
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {isInitialStatusLoading &&
-                    Array.from({ length: 5 }).map((_, index) => (
-                      <tr
-                        key={`meta-ads-row-skeleton-${index}`}
-                        data-testid="meta-ads-row-skeleton"
-                        className="border-b border-border-light"
-                      >
-                        <td className="px-2 py-3" colSpan={tableColumnCount}>
-                          <div className="flex items-center gap-4">
-                            <div className="h-[18px] w-[18px] animate-pulse border border-border-light bg-surface-secondary" />
-                            <div className="h-7 w-7 animate-pulse border border-border-light bg-surface-secondary" />
-                            <div className="h-4 w-48 animate-pulse bg-surface-secondary" />
-                            <div className="h-4 w-28 animate-pulse bg-surface-secondary" />
-                            <div className="h-4 w-24 animate-pulse bg-surface-secondary" />
-                            <div className="h-4 w-20 animate-pulse bg-surface-secondary" />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  {(() => {
-                    let rowIndex = 0;
-                    return filteredCampaigns.map((campaign) => {
-                      const expanded =
-                        campaign.budgetMode === 'ABO'
-                          ? !collapsedAboCampaignIds.includes(campaign.campaignId)
-                          : expandedCampaignIds.includes(campaign.campaignId);
-                      const selected = selectedEntityIds.includes(
-                        `campaign:${campaign.campaignId}`,
-                      );
-                      const recommendation = getEntityRecommendation(campaign.campaignId);
-                      const campaignRowIndex = rowIndex;
-                      rowIndex += 1;
-
-                      return (
-                        <Fragment key={campaign.campaignId}>
-                          <tr
-                            data-testid="meta-ads-campaign-row"
-                            className={getTableRowClass(campaignRowIndex, 'campaign')}
-                          >
-                            <td
-                              className={`sticky left-0 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selected}
-                                aria-label={localize('com_ui_project_meta_ads_select_campaign')}
-                                onChange={() => onToggleCampaign(campaign)}
-                                className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                              />
-                            </td>
-                            <td
-                              className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
-                            >
-                              {campaign.adSets.length > 0 && (
-                                <button
-                                  type="button"
-                                  aria-label={localize('com_ui_project_meta_ads_expand_campaign')}
-                                  aria-expanded={expanded}
-                                  onClick={() => onToggleCampaignExpanded(campaign)}
-                                  className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                                >
-                                  {expanded ? '-' : '+'}
-                                </button>
-                              )}
-                            </td>
-                            {tableColumns.map((column) =>
-                              renderCampaignCell(column, campaign, recommendation),
-                            )}
-                          </tr>
-                          {expanded &&
-                            campaign.adSets.map((adset) => {
-                              const adsetSelected = selectedEntityIds.includes(
-                                `adset:${adset.entityId}`,
-                              );
-                              const adsetRecommendation = getEntityRecommendation(adset.entityId);
-                              const adsetAds = adset.ads ?? [];
-                              const adsCollapsed = collapsedAdSetAdsIds.includes(adset.entityId);
-                              const adsetRowIndex = rowIndex;
-                              rowIndex += 1;
-
-                              return (
-                                <Fragment key={adset.entityId}>
-                                  <tr
-                                    data-testid="meta-ads-adset-row"
-                                    className={getTableRowClass(adsetRowIndex, 'adset')}
-                                  >
-                                    <td
-                                      className={`sticky left-0 z-30 px-2 py-2 pl-6 align-middle ${metaAdsStickyCell}`}
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={adsetSelected}
-                                        aria-label={localize(
-                                          'com_ui_project_meta_ads_select_ad_set',
-                                        )}
-                                        onChange={() => onToggleAdSet(adset.entityId)}
-                                        className="h-4 w-4 border-border-light bg-surface-primary text-text-primary"
-                                      />
-                                    </td>
-                                    <td
-                                      className={`sticky left-10 z-30 px-2 py-2 align-middle ${metaAdsStickyCell}`}
-                                    >
-                                      {adsetAds.length > 0 ? (
-                                        <button
-                                          type="button"
-                                          aria-expanded={!adsCollapsed}
-                                          aria-label={localize(
-                                            adsCollapsed
-                                              ? 'com_ui_project_meta_ads_show_ads'
-                                              : 'com_ui_project_meta_ads_hide_ads',
-                                          )}
-                                          onClick={() => onToggleAdSetAds(adset.entityId)}
-                                          className="h-6 w-6 border border-border-light bg-surface-primary font-mono text-xs leading-none text-text-secondary"
-                                        >
-                                          {adsCollapsed ? '+' : '-'}
-                                        </button>
-                                      ) : (
-                                        <span aria-hidden="true" className="block h-7 w-7" />
-                                      )}
-                                    </td>
-                                    {tableColumns.map((column) =>
-                                      renderAdSetCell(column, campaign, adset, adsetRecommendation),
-                                    )}
-                                  </tr>
-                                  {!adsCollapsed &&
-                                    adsetAds.map((ad) => {
-                                      const adRowIndex = rowIndex;
-                                      rowIndex += 1;
-                                      return renderAdRow(campaign, ad, adRowIndex);
-                                    })}
-                                </Fragment>
-                              );
-                            })}
-                        </Fragment>
-                      );
-                    });
-                  })()}
-                </tbody>
-              </table>
-              {filteredCampaigns.length === 0 && !isInitialStatusLoading && (
-                <div className="border-t border-dashed border-border-light py-8 text-center text-sm text-text-secondary">
-                  {localize('com_ui_project_meta_ads_no_snapshots')}
-                </div>
-              )}
-            </div>
-            <div className="sticky bottom-0 z-20 border-t border-slate-200/70 bg-white/80 px-4 py-2 backdrop-blur dark:border-white/10 dark:bg-[#152033]/80">
-              <div
-                ref={stickyHorizontalScrollRef}
-                onScroll={onStickyHorizontalScroll}
-                className="max-w-full overflow-x-auto"
-                aria-hidden="true"
-              >
-                <div className={`h-2 w-full ${tableViewMinWidth[tableView]}`} />
-              </div>
-            </div>
+            <MetaAdsOverviewTable
+              columns={tableColumns}
+              campaigns={filteredCampaigns}
+              selectedEntityIds={selectedEntityIds}
+              expandedCampaignIds={expandedCampaignIds}
+              collapsedAboCampaignIds={collapsedAboCampaignIds}
+              collapsedAdSetAdsIds={collapsedAdSetAdsIds}
+              tableColumnCount={tableColumnCount}
+              tableMinWidthClassName={tableViewMinWidth[tableView]}
+              stickyCellClassName={metaAdsStickyCell}
+              isInitialStatusLoading={isInitialStatusLoading}
+              localize={localize}
+              tableScrollRef={tableScrollRef}
+              stickyHorizontalScrollRef={stickyHorizontalScrollRef}
+              onTableScroll={onTableScroll}
+              onStickyHorizontalScroll={onStickyHorizontalScroll}
+              onToggleCampaign={onToggleCampaign}
+              onToggleCampaignExpanded={onToggleCampaignExpanded}
+              onToggleAdSet={onToggleAdSet}
+              onToggleAdSetAds={onToggleAdSetAds}
+              getTableRowClass={getTableRowClass}
+              getEntityRecommendation={getEntityRecommendation}
+              renderSortableHeader={renderSortableHeader}
+              renderCampaignCell={renderCampaignCell}
+              renderAdSetCell={renderAdSetCell}
+              renderAdRow={renderAdRow}
+            />
           </div>
         )}
 
@@ -3549,158 +3313,30 @@ export default function ProjectMetaAdsPanel({
             data-testid="meta-ads-bi-tab-panel"
           >
             <div className="p-4">
-              <div className="mb-4 rounded-2xl border border-slate-200/80 bg-white/70 p-4 shadow-[0_16px_48px_-42px_rgba(15,23,42,0.42)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {localize('com_ui_project_meta_ads_bi_rankings')}
-                  </h4>
-                  <p className="mt-1 max-w-[64ch] text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_bi_rankings_hint')}
-                  </p>
-                </div>
-                <div className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_period')}
-                    <select
-                      data-testid="meta-ads-bi-period-filter"
-                      value={periodFilter}
-                      onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
-                      className={metaAdsInput}
-                    >
-                      {periodFilterOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {localize(option.labelKey)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {periodFilter === 'custom' && (
-                    <>
-                      <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                        {localize('com_ui_project_meta_ads_period_since')}
-                        <input
-                          type="date"
-                          value={customSince}
-                          max={customUntil || undefined}
-                          onChange={(event) => onCustomSinceChange(event.target.value)}
-                          className={metaAdsInput}
-                        />
-                      </label>
-                      <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                        {localize('com_ui_project_meta_ads_period_until')}
-                        <input
-                          type="date"
-                          value={customUntil}
-                          min={customSince || undefined}
-                          onChange={(event) => onCustomUntilChange(event.target.value)}
-                          className={metaAdsInput}
-                        />
-                      </label>
-                      <div className="flex min-w-32 flex-col justify-end">
-                        <button
-                          type="button"
-                          disabled={
-                            customSince === appliedCustomSince && customUntil === appliedCustomUntil
-                          }
-                          onClick={onApplyCustomPeriod}
-                          className="h-10 rounded-xl border border-teal-300/50 bg-teal-50 px-3 text-xs font-semibold text-teal-800 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-teal-300/30 dark:bg-teal-300/10 dark:text-teal-100 dark:hover:bg-teal-300/15 dark:disabled:border-white/10 dark:disabled:bg-white/[0.03] dark:disabled:text-slate-600"
-                        >
-                          {localize('com_ui_project_meta_ads_period_update')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_level')}
-                    <select
-                      data-testid="meta-ads-bi-level-filter"
-                      value={biControls.level}
-                      onChange={(event) =>
-                        setBiControls((current) => ({
-                          ...current,
-                          level: event.target.value as MetaAdsBiRankLevel,
-                        }))
-                      }
-                      className={metaAdsInput}
-                    >
-                      <option value="campaign">
-                        {localize('com_ui_project_meta_ads_level_campaign')}
-                      </option>
-                      <option value="adset">
-                        {localize('com_ui_project_meta_ads_level_ad_set')}
-                      </option>
-                      <option value="ad">{localize('com_ui_project_meta_ads_level_ad')}</option>
-                    </select>
-                  </label>
-                  <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_objective')}
-                    <select
-                      data-testid="meta-ads-bi-objective-filter"
-                      value={biControls.objective}
-                      onChange={(event) =>
-                        setBiControls((current) => ({
-                          ...current,
-                          objective: event.target.value,
-                        }))
-                      }
-                      className={metaAdsInput}
-                    >
-                      <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
-                      {objectiveOptions.map((objective) => (
-                        <option key={objective} value={objective}>
-                          {getObjectiveLabel(objective, localize)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex min-w-48 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_target_result_type')}
-                    <select
-                      data-testid="meta-ads-bi-result-type-filter"
-                      value={biControls.resultType}
-                      onChange={(event) =>
-                        setBiControls((current) => ({
-                          ...current,
-                          resultType: event.target.value,
-                        }))
-                      }
-                      className={metaAdsInput}
-                    >
-                      <option value="all">{localize('com_ui_project_meta_ads_filter_all')}</option>
-                      {biResultTypeOptions.map((resultType) => (
-                        <option key={resultType} value={resultType}>
-                          {getResultTypeLabel(resultType, localize)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex min-w-40 flex-col gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-                    {localize('com_ui_project_meta_ads_metric')}
-                    <select
-                      data-testid="meta-ads-bi-metric-filter"
-                      value={biControls.metric}
-                      onChange={(event) =>
-                        setBiControls((current) => ({
-                          ...current,
-                          metric: event.target.value as EvolutionMetric,
-                        }))
-                      }
-                      className={metaAdsInput}
-                    >
-                      <option value="spend">{localize('com_ui_project_meta_ads_spend')}</option>
-                      <option value="resultCount">
-                        {localize('com_ui_project_meta_ads_results')}
-                      </option>
-                      <option value="cpa">{localize('com_ui_project_meta_ads_cpa')}</option>
-                      <option value="ctr">{localize('com_ui_project_meta_ads_ctr')}</option>
-                      <option value="frequency">
-                        {localize('com_ui_project_meta_ads_frequency')}
-                      </option>
-                      <option value="clicks">{localize('com_ui_project_meta_ads_clicks')}</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
+              <MetaAdsBiControlsPanel
+                controls={biControls}
+                periodFilter={periodFilter}
+                customSince={customSince}
+                customUntil={customUntil}
+                appliedCustomSince={appliedCustomSince}
+                appliedCustomUntil={appliedCustomUntil}
+                objectiveOptions={objectiveOptions}
+                resultTypeOptions={biResultTypeOptions}
+                inputClassName={metaAdsInput}
+                localize={localize}
+                onPeriodFilterChange={setPeriodFilter}
+                onCustomSinceChange={onCustomSinceChange}
+                onCustomUntilChange={onCustomUntilChange}
+                onApplyCustomPeriod={onApplyCustomPeriod}
+                onLevelChange={(level) => setBiControls((current) => ({ ...current, level }))}
+                onObjectiveChange={(objective) =>
+                  setBiControls((current) => ({ ...current, objective }))
+                }
+                onResultTypeChange={(resultType) =>
+                  setBiControls((current) => ({ ...current, resultType }))
+                }
+                onMetricChange={(metric) => setBiControls((current) => ({ ...current, metric }))}
+              />
               {renderBiRankingCard(
                 selectedBiRankingTitleKey,
                 selectedBiRankingItems,
