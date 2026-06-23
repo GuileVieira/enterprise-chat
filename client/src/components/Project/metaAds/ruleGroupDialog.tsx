@@ -60,6 +60,25 @@ function getCreativeRuleNumberMax(key: string) {
   return key === 'pauseHighCost.cooldownHours' ? '168' : undefined;
 }
 
+function getInvalidInputClassName(inputClassName: string, hasError: boolean) {
+  return hasError
+    ? `${inputClassName} border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500 dark:border-red-400 dark:ring-red-400`
+    : inputClassName;
+}
+
+function getNumberErrorKey(value: unknown, min: number, max?: number) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < min) {
+    return max == null
+      ? 'com_ui_project_meta_ads_field_error_min'
+      : 'com_ui_project_meta_ads_field_error_range';
+  }
+  if (max != null && numericValue > max) {
+    return 'com_ui_project_meta_ads_field_error_range';
+  }
+  return undefined;
+}
+
 export function MetaAdsRuleGroupDialog({
   draft,
   settings,
@@ -105,6 +124,14 @@ export function MetaAdsRuleGroupDialog({
   if (!draft) {
     return null;
   }
+  const pauseHighCost = draft.creativeRules.pauseHighCost;
+  const maxFrequencyErrorKey = getNumberErrorKey(draft.creativeRules.maxFrequency, 0);
+  const maxCostErrorKey = getNumberErrorKey(pauseHighCost?.maxCostPerResult, 0.01);
+  const fieldErrors = {
+    'pauseHighCost.minCreativesInScope': getNumberErrorKey(pauseHighCost?.minCreativesInScope, 3),
+    'pauseHighCost.minSpend': getNumberErrorKey(pauseHighCost?.minSpend, 0),
+    'pauseHighCost.cooldownHours': getNumberErrorKey(pauseHighCost?.cooldownHours, 1, 168),
+  };
 
   return (
     <div
@@ -303,13 +330,22 @@ export function MetaAdsRuleGroupDialog({
                 />
                 <input
                   aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
+                  aria-invalid={maxFrequencyErrorKey ? true : undefined}
                   type="number"
                   min="0"
                   step="0.01"
                   value={draft.creativeRules.maxFrequency}
                   onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
-                  className={controls.inputClassName}
+                  className={getInvalidInputClassName(
+                    controls.inputClassName,
+                    !!maxFrequencyErrorKey,
+                  )}
                 />
+                {maxFrequencyErrorKey && (
+                  <span className="text-xs font-medium text-red-600 dark:text-red-300">
+                    {localize(maxFrequencyErrorKey, { 0: '0' })}
+                  </span>
+                )}
               </label>
             </div>
           </div>
@@ -340,6 +376,7 @@ export function MetaAdsRuleGroupDialog({
                 />
                 <input
                   aria-label={localize('com_ui_project_meta_ads_pause_cost_limit')}
+                  aria-invalid={maxCostErrorKey ? true : undefined}
                   type="number"
                   min="0.01"
                   step="0.01"
@@ -347,8 +384,13 @@ export function MetaAdsRuleGroupDialog({
                   onChange={(event) =>
                     onCreativeRuleChange('pauseHighCost.maxCostPerResult', event.target.value)
                   }
-                  className={controls.inputClassName}
+                  className={getInvalidInputClassName(controls.inputClassName, !!maxCostErrorKey)}
                 />
+                {maxCostErrorKey && (
+                  <span className="text-xs font-medium text-red-600 dark:text-red-300">
+                    {localize(maxCostErrorKey, { 0: '0.01' })}
+                  </span>
+                )}
               </label>
               <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
                 <RuleFieldLabel
@@ -409,39 +451,50 @@ export function MetaAdsRuleGroupDialog({
                   'com_ui_project_meta_ads_cooldown',
                   'com_ui_project_meta_ads_pause_cooldown_hint',
                 ],
-              ].map(([key, labelKey, hintKey]) => (
-                <label
-                  key={key}
-                  className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
-                >
-                  <RuleFieldLabel
-                    localize={localize}
-                    labelKey={labelKey as Parameters<typeof localize>[0]}
-                    hintKey={hintKey as Parameters<typeof localize>[0]}
-                  />
-                  <input
-                    aria-label={localize(labelKey as Parameters<typeof localize>[0])}
-                    type="number"
-                    min={getCreativeRuleNumberMin(key)}
-                    max={getCreativeRuleNumberMax(key)}
-                    step="1"
-                    value={
-                      draft.creativeRules.pauseHighCost?.[
-                        key.replace('pauseHighCost.', '') as keyof NonNullable<
-                          typeof draft.creativeRules.pauseHighCost
-                        >
-                      ] ?? ''
-                    }
-                    onChange={(event) =>
-                      onCreativeRuleChange(
-                        key as Parameters<typeof onCreativeRuleChange>[0],
-                        event.target.value,
-                      )
-                    }
-                    className={controls.inputClassName}
-                  />
-                </label>
-              ))}
+              ].map(([key, labelKey, hintKey]) => {
+                const errorKey = fieldErrors[key as keyof typeof fieldErrors];
+                const min = getCreativeRuleNumberMin(key);
+                const max = getCreativeRuleNumberMax(key);
+                return (
+                  <label
+                    key={key}
+                    className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
+                  >
+                    <RuleFieldLabel
+                      localize={localize}
+                      labelKey={labelKey as Parameters<typeof localize>[0]}
+                      hintKey={hintKey as Parameters<typeof localize>[0]}
+                    />
+                    <input
+                      aria-label={localize(labelKey as Parameters<typeof localize>[0])}
+                      aria-invalid={errorKey ? true : undefined}
+                      type="number"
+                      min={min}
+                      max={max}
+                      step="1"
+                      value={
+                        draft.creativeRules.pauseHighCost?.[
+                          key.replace('pauseHighCost.', '') as keyof NonNullable<
+                            typeof draft.creativeRules.pauseHighCost
+                          >
+                        ] ?? ''
+                      }
+                      onChange={(event) =>
+                        onCreativeRuleChange(
+                          key as Parameters<typeof onCreativeRuleChange>[0],
+                          event.target.value,
+                        )
+                      }
+                      className={getInvalidInputClassName(controls.inputClassName, !!errorKey)}
+                    />
+                    {errorKey && (
+                      <span className="text-xs font-medium text-red-600 dark:text-red-300">
+                        {localize(errorKey, max ? { 0: min, 1: max } : { 0: min })}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>

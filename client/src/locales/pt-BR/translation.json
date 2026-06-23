@@ -1161,6 +1161,8 @@
   "com_ui_project_meta_ads_pause_min_spend_hint": "Gasto mínimo que o criativo precisa ter no período antes de ser avaliado para pausa.",
   "com_ui_project_meta_ads_pause_cooldown_hint": "Tempo que a automação aguarda antes de pausar novamente o mesmo criativo por esta regra.",
   "com_ui_project_meta_ads_invalid_creative_rules": "Revise a regra de criativos: mínimo de criativos deve ser 3 ou mais e cooldown deve ficar entre 1 e 168 horas.",
+  "com_ui_project_meta_ads_field_error_min": "Use um valor maior ou igual a {{0}}.",
+  "com_ui_project_meta_ads_field_error_range": "Use um valor entre {{0}} e {{1}}.",
   "com_ui_project_meta_ads_ai_actions": "Ações da IA",
   "com_ui_project_meta_ads_paused_creatives": "Criativos pausados",
   "com_ui_project_meta_ads_budget_delta": "Variação de orçamento",

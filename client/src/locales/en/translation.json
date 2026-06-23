@@ -2163,6 +2163,8 @@
   "com_ui_project_meta_ads_pause_min_spend_hint": "Minimum spend the creative needs in the period before it can be evaluated for pause.",
   "com_ui_project_meta_ads_pause_cooldown_hint": "How long automation waits before pausing the same creative again through this rule.",
   "com_ui_project_meta_ads_invalid_creative_rules": "Review creative rules: minimum creatives must be 3 or more and cooldown must be between 1 and 168 hours.",
+  "com_ui_project_meta_ads_field_error_min": "Use a value greater than or equal to {{0}}.",
+  "com_ui_project_meta_ads_field_error_range": "Use a value between {{0}} and {{1}}.",
   "com_ui_project_meta_ads_ai_actions": "AI actions",
   "com_ui_project_meta_ads_paused_creatives": "Paused creatives",
   "com_ui_project_meta_ads_budget_delta": "Budget delta",
