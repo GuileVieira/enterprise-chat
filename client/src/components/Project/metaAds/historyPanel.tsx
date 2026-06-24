@@ -1,3 +1,4 @@
+import { Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import type { ProjectMetaAdsBudgetChange } from 'librechat-data-provider';
 
 import { formatMoney, formatSignedMoney, formatSignedPercent } from './formatters';
@@ -37,6 +38,42 @@ function TruncatedHoverText({ value, className }: { value: string; className: st
   );
 }
 
+function getBudgetChangeVisual(deltaDailyBudget?: number | null) {
+  if (deltaDailyBudget == null || Number.isNaN(deltaDailyBudget) || deltaDailyBudget === 0) {
+    return {
+      Icon: Minus,
+      labelKey: 'com_ui_project_meta_ads_budget_unchanged',
+      rowClassName: 'border-slate-200/80 bg-slate-50 dark:border-white/10 dark:bg-[#121a2b]',
+      badgeClassName:
+        'border-slate-300/80 bg-slate-100 text-slate-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300',
+      valueClassName: 'text-slate-500 dark:text-slate-400',
+      budgetClassName: 'text-slate-600 dark:text-slate-300',
+    };
+  }
+  if (deltaDailyBudget > 0) {
+    return {
+      Icon: TrendingUp,
+      labelKey: 'com_ui_project_meta_ads_budget_increased',
+      rowClassName:
+        'border-emerald-300/45 bg-emerald-50/75 dark:border-emerald-300/20 dark:bg-emerald-300/[0.08]',
+      badgeClassName:
+        'border-emerald-300/70 bg-emerald-100 text-emerald-800 dark:border-emerald-300/25 dark:bg-emerald-300/15 dark:text-emerald-200',
+      valueClassName: 'text-emerald-700 dark:text-emerald-200',
+      budgetClassName: 'text-emerald-900 dark:text-emerald-100',
+    };
+  }
+  return {
+    Icon: TrendingDown,
+    labelKey: 'com_ui_project_meta_ads_budget_decreased',
+    rowClassName:
+      'border-rose-300/45 bg-rose-50/75 dark:border-rose-300/20 dark:bg-rose-300/[0.08]',
+    badgeClassName:
+      'border-rose-300/70 bg-rose-100 text-rose-800 dark:border-rose-300/25 dark:bg-rose-300/15 dark:text-rose-200',
+    valueClassName: 'text-rose-700 dark:text-rose-200',
+    budgetClassName: 'text-rose-900 dark:text-rose-100',
+  };
+}
+
 export function MetaAdsHistoryPanel({
   changes,
   currency,
@@ -66,12 +103,14 @@ export function MetaAdsHistoryPanel({
             </div>
             {changes.slice(0, 8).map((change) => {
               const delta = getBudgetChangeDelta(change);
+              const visual = getBudgetChangeVisual(delta.deltaDailyBudget);
+              const Icon = visual.Icon;
               const entityName = change.entityName ?? change.entityId;
               const reason = change.reason ?? '-';
               return (
                 <div
                   key={change._id ?? `${change.entityId}-${change.createdAt}`}
-                  className="grid gap-2 rounded-2xl border border-slate-200/80 bg-slate-50 p-3 text-sm dark:border-white/10 dark:bg-[#121a2b] lg:grid-cols-[minmax(0,1.7fr)_140px_90px_minmax(0,1fr)_160px_130px] lg:items-center lg:gap-3"
+                  className={`grid gap-2 rounded-2xl border p-3 text-sm ${visual.rowClassName} lg:grid-cols-[minmax(0,1.7fr)_140px_90px_minmax(0,1fr)_160px_130px] lg:items-center lg:gap-3`}
                 >
                   <div className="min-w-0">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
@@ -107,24 +146,36 @@ export function MetaAdsHistoryPanel({
                       className="block truncate text-xs text-slate-500 dark:text-slate-400"
                     />
                   </div>
-                  <div className="font-mono text-xs text-slate-600 dark:text-slate-300 lg:text-right">
+                  <div className={`font-mono text-xs ${visual.budgetClassName} lg:text-right`}>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
                       {localize('com_ui_project_meta_ads_budget')}
                     </div>
-                    {formatMoney(change.previousDailyBudget, currency)}
-                    {' -> '}
-                    {formatMoney(change.newDailyBudget, currency)}
+                    <span>{formatMoney(change.previousDailyBudget, currency)}</span>
+                    <span className="mx-1 text-slate-400 dark:text-slate-500">→</span>
+                    <span className="font-semibold">
+                      {formatMoney(change.newDailyBudget, currency)}
+                    </span>
                   </div>
-                  <div className="font-mono text-[11px] text-slate-500 dark:text-slate-400 lg:text-right">
+                  <div className={`font-mono text-[11px] ${visual.valueClassName} lg:text-right`}>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
                       {localize('com_ui_project_meta_ads_budget_delta')}
                     </div>
-                    {delta.deltaDailyBudget != null
-                      ? `${formatSignedMoney(
-                          delta.deltaDailyBudget,
-                          currency,
-                        )} · ${formatSignedPercent(delta.deltaPercent)}`
-                      : '-'}
+                    <div className="flex items-center gap-2 lg:justify-end">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em] ${visual.badgeClassName}`}
+                      >
+                        <Icon className="h-3 w-3" aria-hidden="true" />
+                        {localize(visual.labelKey as Parameters<typeof localize>[0])}
+                      </span>
+                      <span className="font-semibold">
+                        {delta.deltaDailyBudget != null
+                          ? `${formatSignedMoney(
+                              delta.deltaDailyBudget,
+                              currency,
+                            )} · ${formatSignedPercent(delta.deltaPercent)}`
+                          : '-'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

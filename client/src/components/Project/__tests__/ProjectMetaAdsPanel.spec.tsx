@@ -3004,6 +3004,19 @@ describe('ProjectMetaAdsPanel', () => {
         reason: 'manual-ui',
         createdAt: '2026-06-12T12:00:00.000-03:00',
       },
+      {
+        _id: 'change-2',
+        entityId: 'campaign-abo',
+        entityName: 'ABO Leads',
+        entityLevel: 'campaign',
+        previousDailyBudget: 80,
+        newDailyBudget: 40,
+        deltaDailyBudget: -40,
+        deltaPercent: -50,
+        actor: 'cron',
+        reason: 'ai-rule',
+        createdAt: '2026-06-12T13:00:00.000-03:00',
+      },
     ];
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -3014,8 +3027,12 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByTitle('CBO Messages')).toBeInTheDocument();
     expect(screen.getByTitle('manual-ui')).toBeInTheDocument();
     expect(screen.getByText(/12\/06\/2026 12:00/)).toBeInTheDocument();
-    expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100,00')).toBeInTheDocument();
+    expect(screen.getByText('R$ 125,00')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_budget_increased')).toBeInTheDocument();
     expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_budget_decreased')).toBeInTheDocument();
+    expect(screen.getByText('-R$ 40,00 · -50.00%')).toBeInTheDocument();
   });
 
   it('renders global, group, and override rules in one list', () => {
