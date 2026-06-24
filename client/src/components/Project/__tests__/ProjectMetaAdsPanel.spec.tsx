@@ -2988,6 +2988,8 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
     expect(screen.getByText('CBO Messages')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_date').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('CBO Messages')).toBeInTheDocument();
     expect(screen.getByText(/12\/06\/2026 12:00/)).toBeInTheDocument();
     expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
     expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();
@@ -3082,8 +3084,8 @@ describe('ProjectMetaAdsPanel', () => {
           {
             entityLevel: 'campaign',
             entityId: 'campaign-1',
-            entityName: 'Summer Campaign',
-            campaignName: 'Summer Campaign',
+            entityName: 'Summer Campaign With A Very Long Name',
+            campaignName: 'Parent Campaign With A Very Long Name',
             actionCount: 2,
             pausedAdCount: 1,
             totalSpend: 100,
@@ -3107,7 +3109,9 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_rule_entities_count_one')).toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
     expect(screen.getByText('com_ui_project_meta_ads_rule_details')).toBeInTheDocument();
-    expect(screen.getByText('Summer Campaign')).toBeInTheDocument();
+    expect(screen.getAllByTitle('Prospecting group').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('Summer Campaign With A Very Long Name')).toBeInTheDocument();
+    expect(screen.getByTitle('Parent Campaign With A Very Long Name')).toBeInTheDocument();
     expect(screen.getByText('24/06/2026 14:03')).toBeInTheDocument();
     expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
   });

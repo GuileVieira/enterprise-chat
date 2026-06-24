@@ -189,7 +189,12 @@ export function MetaAdsRulePerformanceWorkspace({
                   className="cursor-pointer transition odd:bg-slate-50/60 hover:bg-teal-50/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300/60 dark:odd:bg-white/[0.045] dark:hover:bg-teal-300/10"
                 >
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
-                    {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+                    <div
+                      className="truncate"
+                      title={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+                    >
+                      {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+                    </div>
                   </td>
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
                     {getRuleScopeSummary(rule, localize)}
@@ -259,7 +264,9 @@ function RulePerformanceDetailsDialog({
               {localize('com_ui_project_meta_ads_rule_details')}
             </div>
             <OGDialogTitle className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
-              {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+              <span title={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}>
+                {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+              </span>
             </OGDialogTitle>
             <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {rule.ruleScope ?? '-'}
@@ -290,43 +297,54 @@ function RulePerformanceDetailsDialog({
               </div>
               {(rule.entities ?? []).length > 0 ? (
                 <div className="max-h-[50vh] divide-y divide-slate-200/70 overflow-y-auto dark:divide-white/10">
-                  {(rule.entities ?? []).map((entity) => (
-                    <div
-                      key={`${entity.entityLevel}:${entity.entityId}`}
-                      className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,0.7fr))]"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-slate-950 dark:text-white">
-                          {entity.entityName ?? entity.entityId}
+                  {(rule.entities ?? []).map((entity) => {
+                    const entityName = entity.entityName ?? entity.entityId;
+                    const parentNames = `${entity.campaignName ?? '-'}${
+                      entity.adsetName ? ` · ${entity.adsetName}` : ''
+                    }`;
+                    return (
+                      <div
+                        key={`${entity.entityLevel}:${entity.entityId}`}
+                        className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,0.7fr))]"
+                      >
+                        <div className="min-w-0">
+                          <div
+                            className="truncate font-semibold text-slate-950 dark:text-white"
+                            title={entityName}
+                          >
+                            {entityName}
+                          </div>
+                          <div
+                            className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
+                            title={parentNames}
+                          >
+                            {entity.entityLevel} · {parentNames}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {formatRuleDateTime(entity.lastActionAt)}
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {entity.entityLevel} · {entity.campaignName ?? '-'}
-                          {entity.adsetName ? ` · ${entity.adsetName}` : ''}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {formatRuleDateTime(entity.lastActionAt)}
-                        </div>
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_actions')}
+                          value={String(entity.actionCount)}
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_paused_creatives')}
+                          value={String(entity.pausedAdCount)}
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_spend')}
+                          value={formatMoney(entity.totalSpend, currency)}
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_cost_result')}
+                          value={`${formatMoney(entity.averageCpa, currency)} / ${formatMetric(
+                            entity.averageRoas,
+                          )}`}
+                        />
                       </div>
-                      <DetailMetric
-                        label={localize('com_ui_project_meta_ads_actions')}
-                        value={String(entity.actionCount)}
-                      />
-                      <DetailMetric
-                        label={localize('com_ui_project_meta_ads_paused_creatives')}
-                        value={String(entity.pausedAdCount)}
-                      />
-                      <DetailMetric
-                        label={localize('com_ui_project_meta_ads_spend')}
-                        value={formatMoney(entity.totalSpend, currency)}
-                      />
-                      <DetailMetric
-                        label={localize('com_ui_project_meta_ads_cost_result')}
-                        value={`${formatMoney(entity.averageCpa, currency)} / ${formatMetric(
-                          entity.averageRoas,
-                        )}`}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-4 text-sm text-slate-600 dark:text-slate-300">
