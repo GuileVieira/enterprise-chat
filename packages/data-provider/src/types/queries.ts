@@ -125,6 +125,8 @@ export type ProjectMetaAdsRecommendation = {
   ctr?: number | null;
   cpc?: number | null;
   frequency?: number | null;
+  primaryMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr';
+  targetMetricValue?: number | null;
   beforeMetrics?: ProjectMetaAdsAutomationMetrics;
   afterMetrics?: ProjectMetaAdsAutomationMetrics;
   afterMeasuredAt?: string;
@@ -160,6 +162,8 @@ export type ProjectMetaAdsAutomationAction = {
   ctr?: number | null;
   cpc?: number | null;
   frequency?: number | null;
+  primaryMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr';
+  targetMetricValue?: number | null;
   ruleSourceType?: 'global' | 'group' | 'override' | 'creative' | 'manual' | 'unknown';
   ruleId?: string;
   ruleName?: string;
@@ -536,6 +540,11 @@ export type ProjectMetaAdsRulePerformanceItem = {
   firstRoas?: number | null;
   lastRoas?: number | null;
   roasDelta?: number | null;
+  targetMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr' | null;
+  targetMetricGoal?: number | null;
+  firstTargetMetric?: number | null;
+  lastTargetMetric?: number | null;
+  targetMetricDelta?: number | null;
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
@@ -561,6 +570,11 @@ export type ProjectMetaAdsRulePerformanceEntity = {
   firstRoas?: number | null;
   lastRoas?: number | null;
   roasDelta?: number | null;
+  targetMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr' | null;
+  targetMetricGoal?: number | null;
+  firstTargetMetric?: number | null;
+  lastTargetMetric?: number | null;
+  targetMetricDelta?: number | null;
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';

@@ -356,6 +356,7 @@ function getModels() {
       'ruleId',
       'ruleName',
       'ruleScope',
+      'primaryMetric',
     ]) {
       if (!existingRecommendationSchema.path(key)) {
         missingRecommendationFields[key] = String;
@@ -372,6 +373,9 @@ function getModels() {
     }
     if (!existingRecommendationSchema.path('frequency')) {
       missingRecommendationFields.frequency = Number;
+    }
+    if (!existingRecommendationSchema.path('targetMetricValue')) {
+      missingRecommendationFields.targetMetricValue = Number;
     }
     if (Object.keys(missingRecommendationFields).length > 0) {
       existingRecommendationSchema.add(missingRecommendationFields);
@@ -409,6 +413,8 @@ function getModels() {
         ctr: Number,
         cpc: Number,
         frequency: Number,
+        primaryMetric: String,
+        targetMetricValue: Number,
         beforeMetrics: {
           spend: Number,
           resultCount: Number,
@@ -475,7 +481,51 @@ function getModels() {
     );
 
   const actionSchema =
-    mongoose.models.MetaAdsAutomationAction?.schema ||
+    (() => {
+      const existingActionSchema = mongoose.models.MetaAdsAutomationAction?.schema;
+      if (
+        existingActionSchema &&
+        typeof existingActionSchema.path === 'function' &&
+        typeof existingActionSchema.add === 'function'
+      ) {
+        const missingActionFields = {};
+        if (!existingActionSchema.path('primaryMetric')) {
+          missingActionFields.primaryMetric = String;
+        }
+        if (!existingActionSchema.path('targetMetricValue')) {
+          missingActionFields.targetMetricValue = Number;
+        }
+        if (!existingActionSchema.path('beforeMetrics')) {
+          missingActionFields.beforeMetrics = {
+            spend: Number,
+            resultCount: Number,
+            cpa: Number,
+            roas: Number,
+            ctr: Number,
+            cpc: Number,
+            frequency: Number,
+          };
+        }
+        if (!existingActionSchema.path('afterMetrics')) {
+          missingActionFields.afterMetrics = {
+            spend: Number,
+            resultCount: Number,
+            cpa: Number,
+            roas: Number,
+            ctr: Number,
+            cpc: Number,
+            frequency: Number,
+          };
+        }
+        if (!existingActionSchema.path('afterMeasuredAt')) {
+          missingActionFields.afterMeasuredAt = Date;
+        }
+        if (Object.keys(missingActionFields).length > 0) {
+          existingActionSchema.add(missingActionFields);
+        }
+      }
+      return existingActionSchema;
+    })() ||
     new mongoose.Schema(
       {
         tenantId: { type: String, index: true },
@@ -507,6 +557,27 @@ function getModels() {
         ctr: Number,
         cpc: Number,
         frequency: Number,
+        primaryMetric: String,
+        targetMetricValue: Number,
+        beforeMetrics: {
+          spend: Number,
+          resultCount: Number,
+          cpa: Number,
+          roas: Number,
+          ctr: Number,
+          cpc: Number,
+          frequency: Number,
+        },
+        afterMetrics: {
+          spend: Number,
+          resultCount: Number,
+          cpa: Number,
+          roas: Number,
+          ctr: Number,
+          cpc: Number,
+          frequency: Number,
+        },
+        afterMeasuredAt: Date,
         ruleSourceType: String,
         ruleId: String,
         ruleName: String,
@@ -730,6 +801,28 @@ function validateMetaAdsRules(rules = {}) {
     });
   }
   return validated;
+}
+
+function getPrimaryMetric(rules = {}) {
+  return PRIMARY_METRICS.has(rules.primaryMetric) ? rules.primaryMetric : 'cpa';
+}
+
+function getRuleTargetMetricValue(rules = {}) {
+  const primaryMetric = getPrimaryMetric(rules);
+  if (primaryMetric === 'roas') {
+    return toFiniteMetric(rules.minRoas);
+  }
+  if (primaryMetric === 'cpc') {
+    return toFiniteMetric(rules.maxCpc);
+  }
+  if (primaryMetric === 'ctr') {
+    return toFiniteMetric(rules.minCtr);
+  }
+  return toFiniteMetric(rules.targetCpa);
+}
+
+function isLowerBetterMetric(metric) {
+  return metric === 'cpa' || metric === 'cpc';
 }
 
 function validateMetaAdsCreativeRules(rules = {}) {
@@ -1547,6 +1640,8 @@ function buildCreativePauseRecommendations({
     ctr: metrics.ctr,
     cpc: metrics.cpc,
     frequency: metrics.frequency,
+    primaryMetric: 'cpa',
+    targetMetricValue: maxCostPerResult,
     reason: `Criativo com custo por resultado ${Number(metrics.cpa).toFixed(2)} acima do limite ${maxCostPerResult.toFixed(2)}.`,
     ruleSourceType: ruleContext.ruleSourceType || 'creative',
     ruleId: ruleContext.ruleId,
@@ -2499,12 +2594,55 @@ function getFirstLastMetric(actions, key) {
   };
 }
 
+function getRealBeforeAfterMetric(actions, key) {
+  const actionsWithAfterMetrics = actions.filter((action) => action.afterMetrics);
+  const firstAction = actionsWithAfterMetrics.find((action) => action.beforeMetrics) || null;
+  const lastAction = actionsWithAfterMetrics[actionsWithAfterMetrics.length - 1] || null;
+  const firstValue = toFiniteMetric(firstAction?.beforeMetrics?.[key]);
+  const lastValue = toFiniteMetric(lastAction?.afterMetrics?.[key]);
+  return {
+    first: firstValue != null ? { value: firstValue, createdAt: firstAction?.createdAt } : null,
+    last:
+      lastValue != null
+        ? { value: lastValue, createdAt: lastAction?.afterMeasuredAt || lastAction?.createdAt }
+        : null,
+  };
+}
+
+function getActionPrimaryMetric(actions = []) {
+  return actions.find((action) => PRIMARY_METRICS.has(action.primaryMetric))?.primaryMetric || null;
+}
+
+function getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas }) {
+  if (firstCpa != null && lastCpa != null) {
+    return 'cpa';
+  }
+  if (firstRoas != null && lastRoas != null) {
+    return 'roas';
+  }
+  return null;
+}
+
+function getTargetMetricStatus({ metric, firstTargetMetric, lastTargetMetric }) {
+  if (!metric || firstTargetMetric == null || lastTargetMetric == null) {
+    return null;
+  }
+  if (firstTargetMetric === lastTargetMetric) {
+    return 'neutral';
+  }
+  const improved = isLowerBetterMetric(metric)
+    ? lastTargetMetric < firstTargetMetric
+    : lastTargetMetric > firstTargetMetric;
+  return improved ? 'improved' : 'regressed';
+}
+
 function getRulePerformanceComparison(actions = []) {
   const orderedActions = sortActionsByCreatedAt(actions);
   const actionsWithAfterMetrics = orderedActions.filter((action) => action.afterMetrics);
   const comparisonBasis = actionsWithAfterMetrics.length
     ? 'real_before_after'
     : 'period_first_last';
+  const actionPrimaryMetric = getActionPrimaryMetric(orderedActions);
   if (comparisonBasis === 'real_before_after') {
     const firstAction = actionsWithAfterMetrics.find((action) => action.beforeMetrics) || null;
     const lastAction = actionsWithAfterMetrics[actionsWithAfterMetrics.length - 1] || null;
@@ -2512,6 +2650,16 @@ function getRulePerformanceComparison(actions = []) {
     const lastCpa = toFiniteMetric(lastAction?.afterMetrics?.cpa);
     const firstRoas = toFiniteMetric(firstAction?.beforeMetrics?.roas);
     const lastRoas = toFiniteMetric(lastAction?.afterMetrics?.roas);
+    const targetMetric =
+      actionPrimaryMetric || getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas });
+    const target = targetMetric ? getRealBeforeAfterMetric(orderedActions, targetMetric) : null;
+    const firstTargetMetric = target?.first?.value ?? null;
+    const lastTargetMetric = target?.last?.value ?? null;
+    const targetMetricStatus = getTargetMetricStatus({
+      metric: targetMetric,
+      firstTargetMetric,
+      lastTargetMetric,
+    });
     return {
       firstCpa,
       lastCpa,
@@ -2519,10 +2667,21 @@ function getRulePerformanceComparison(actions = []) {
       firstRoas,
       lastRoas,
       roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
-      firstActionAt: firstAction?.createdAt,
-      lastActionAt: lastAction?.afterMeasuredAt || lastAction?.createdAt,
+      targetMetric,
+      targetMetricGoal:
+        toFiniteMetric(lastAction?.targetMetricValue) ??
+        toFiniteMetric(firstAction?.targetMetricValue),
+      firstTargetMetric,
+      lastTargetMetric,
+      targetMetricDelta:
+        firstTargetMetric != null && lastTargetMetric != null
+          ? roundMetric(lastTargetMetric - firstTargetMetric)
+          : null,
+      firstActionAt: target?.first?.createdAt || firstAction?.createdAt,
+      lastActionAt: target?.last?.createdAt || lastAction?.afterMeasuredAt || lastAction?.createdAt,
       comparisonBasis,
-      status: getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+      status:
+        targetMetricStatus ?? getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
     };
   }
   const cpa = getFirstLastMetric(orderedActions, 'cpa');
@@ -2531,9 +2690,23 @@ function getRulePerformanceComparison(actions = []) {
   const lastCpa = cpa.last?.value ?? null;
   const firstRoas = roas.first?.value ?? null;
   const lastRoas = roas.last?.value ?? null;
+  const targetMetric =
+    actionPrimaryMetric || getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas });
+  const target = targetMetric ? getFirstLastMetric(orderedActions, targetMetric) : null;
+  const firstTargetMetric = target?.first?.value ?? null;
+  const lastTargetMetric = target?.last?.value ?? null;
+  const targetMetricStatus = getTargetMetricStatus({
+    metric: targetMetric,
+    firstTargetMetric,
+    lastTargetMetric,
+  });
   const firstActionAt =
-    cpa.first?.createdAt || roas.first?.createdAt || orderedActions[0]?.createdAt;
+    target?.first?.createdAt ||
+    cpa.first?.createdAt ||
+    roas.first?.createdAt ||
+    orderedActions[0]?.createdAt;
   const lastActionAt =
+    target?.last?.createdAt ||
     cpa.last?.createdAt ||
     roas.last?.createdAt ||
     orderedActions[orderedActions.length - 1]?.createdAt;
@@ -2544,10 +2717,19 @@ function getRulePerformanceComparison(actions = []) {
     firstRoas,
     lastRoas,
     roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
+    targetMetric,
+    targetMetricGoal: toFiniteMetric(orderedActions[orderedActions.length - 1]?.targetMetricValue),
+    firstTargetMetric,
+    lastTargetMetric,
+    targetMetricDelta:
+      firstTargetMetric != null && lastTargetMetric != null
+        ? roundMetric(lastTargetMetric - firstTargetMetric)
+        : null,
     firstActionAt,
     lastActionAt,
     comparisonBasis,
-    status: getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+    status:
+      targetMetricStatus ?? getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
   };
 }
 
@@ -3231,6 +3413,8 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
       ctr: recommendation.ctr,
       cpc: recommendation.cpc,
       frequency: recommendation.frequency,
+      primaryMetric: recommendation.primaryMetric,
+      targetMetricValue: recommendation.targetMetricValue,
       ruleSourceType: recommendation.ruleSourceType || 'creative',
       ruleId: recommendation.ruleId,
       ruleName: recommendation.ruleName,
@@ -3315,6 +3499,8 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     ctr: recommendation.ctr,
     cpc: recommendation.cpc,
     frequency: recommendation.frequency,
+    primaryMetric: recommendation.primaryMetric,
+    targetMetricValue: recommendation.targetMetricValue,
     ruleSourceType: recommendation.ruleSourceType || 'unknown',
     ruleId: recommendation.ruleId,
     ruleName: recommendation.ruleName,
@@ -3646,6 +3832,8 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         ctr: recommendationMetrics.ctr,
         cpc: recommendationMetrics.cpc,
         frequency: recommendationMetrics.frequency,
+        primaryMetric: getPrimaryMetric(effectiveRuleContext.rules),
+        targetMetricValue: getRuleTargetMetricValue(effectiveRuleContext.rules),
         ruleSourceType: effectiveRuleContext.ruleSourceType,
         ruleId: effectiveRuleContext.ruleId,
         ruleName: effectiveRuleContext.ruleName,

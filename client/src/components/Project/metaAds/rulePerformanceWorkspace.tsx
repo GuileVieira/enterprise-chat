@@ -105,25 +105,77 @@ function formatSignedMoneyValue(value: number | null | undefined, currency: stri
   return formatMoney(value, currency);
 }
 
+function getMetricLabel(metric: string | null | undefined, localize: Localize) {
+  if (metric === 'roas') {
+    return localize('com_ui_project_meta_ads_roas');
+  }
+  if (metric === 'cpc') {
+    return localize('com_ui_project_meta_ads_cpc');
+  }
+  if (metric === 'ctr') {
+    return localize('com_ui_project_meta_ads_ctr');
+  }
+  return localize('com_ui_project_meta_ads_cpa');
+}
+
+function formatComparisonMetricValue(
+  metric: string | null | undefined,
+  value: number | null | undefined,
+  currency: string,
+) {
+  if (metric === 'cpa' || metric === 'cpc') {
+    return formatMoney(value, currency);
+  }
+  return formatMetric(value);
+}
+
+function formatSignedComparisonMetricValue(
+  metric: string | null | undefined,
+  value: number | null | undefined,
+  currency: string,
+) {
+  if (metric === 'cpa' || metric === 'cpc') {
+    return formatSignedMoneyValue(value, currency);
+  }
+  return formatSignedMetricValue(value);
+}
+
 function getComparisonReasons(item: RulePerformanceComparison) {
   const reasons: string[] = [];
-  if (item.cpaDelta != null && item.cpaDelta < 0) {
+  const targetMetric = item.targetMetric;
+  if (targetMetric === 'cpa' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_down');
   }
-  if (item.cpaDelta != null && item.cpaDelta > 0) {
+  if (targetMetric === 'cpa' && item.targetMetricDelta != null && item.targetMetricDelta > 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_up');
   }
-  if (item.roasDelta != null && item.roasDelta > 0) {
+  if (targetMetric === 'roas' && item.targetMetricDelta != null && item.targetMetricDelta > 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_roas_up');
   }
-  if (item.roasDelta != null && item.roasDelta < 0) {
+  if (targetMetric === 'roas' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_roas_down');
+  }
+  if (targetMetric === 'cpc' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpc_down');
+  }
+  if (targetMetric === 'cpc' && item.targetMetricDelta != null && item.targetMetricDelta > 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpc_up');
+  }
+  if (targetMetric === 'ctr' && item.targetMetricDelta != null && item.targetMetricDelta > 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_ctr_up');
+  }
+  if (targetMetric === 'ctr' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_ctr_down');
   }
   return reasons;
 }
 
 function getComparisonMissingItems(item: RulePerformanceComparison) {
   const missingItems: string[] = [];
+  if (item.targetMetric && (item.firstTargetMetric == null || item.lastTargetMetric == null)) {
+    missingItems.push('com_ui_project_meta_ads_rule_performance_missing_target_metric');
+    return missingItems;
+  }
   if (item.firstCpa == null || item.lastCpa == null) {
     missingItems.push('com_ui_project_meta_ads_rule_performance_missing_cpa');
   }
@@ -467,6 +519,10 @@ function PerformanceComparisonPanel({
 }) {
   const reasons = getComparisonReasons(item);
   const missingItems = getComparisonMissingItems(item);
+  const targetMetricLabel = getMetricLabel(item.targetMetric, localize);
+  const hasTargetMetric = Boolean(
+    item.targetMetric && item.firstTargetMetric != null && item.lastTargetMetric != null,
+  );
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.035]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -486,6 +542,59 @@ function PerformanceComparisonPanel({
           </span>
         )}
       </div>
+      {item.targetMetric && (
+        <div className="mt-4 rounded-xl border border-teal-300/30 bg-teal-50/80 p-4 dark:border-teal-300/20 dark:bg-teal-300/10">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-700 dark:text-teal-200">
+                {localize('com_ui_project_meta_ads_target_metric')}
+              </div>
+              <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+                {targetMetricLabel}
+              </div>
+            </div>
+            <div className={`text-sm font-semibold ${getStatusTone(item.status)}`}>
+              {item.status
+                ? localize(`com_ui_project_meta_ads_rule_performance_${item.status}`)
+                : '-'}
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <DetailMetric
+              label={localize('com_ui_project_meta_ads_rule_goal')}
+              value={formatComparisonMetricValue(
+                item.targetMetric,
+                item.targetMetricGoal,
+                currency,
+              )}
+            />
+            <DetailMetric
+              label={localize('com_ui_project_meta_ads_before_after')}
+              value={
+                hasTargetMetric
+                  ? `${formatComparisonMetricValue(
+                      item.targetMetric,
+                      item.firstTargetMetric,
+                      currency,
+                    )} → ${formatComparisonMetricValue(
+                      item.targetMetric,
+                      item.lastTargetMetric,
+                      currency,
+                    )}`
+                  : localize('com_ui_project_meta_ads_insufficient_comparison_data')
+              }
+            />
+            <DetailMetric
+              label={localize('com_ui_project_meta_ads_variation')}
+              value={formatSignedComparisonMetricValue(
+                item.targetMetric,
+                item.targetMetricDelta,
+                currency,
+              )}
+            />
+          </div>
+        </div>
+      )}
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <MetricComparisonBlock
           metric="cpa"

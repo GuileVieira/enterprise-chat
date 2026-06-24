@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type {
   ProjectMetaAdsRankingResponse,
+  ProjectMetaAdsPerformanceResponse,
   ProjectMetaAdsRulePerformanceResponse,
   ProjectMetaAdsStatus,
   TProject,
@@ -38,12 +39,7 @@ const mockUseProjectMetaAdsRankingsQuery = jest.fn((_projectId?: string, _params
   ...mockRankingQueryState,
 }));
 const mockUseProjectMetaAdsPerformanceQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
-  data: {
-    period: { datePreset: 'last_7d' },
-    currency: 'BRL',
-    summary: { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 },
-    actions: [],
-  },
+  data: mockPerformanceData,
   isFetching: false,
 }));
 const mockUseProjectMetaAdsRulePerformanceQuery = jest.fn(
@@ -73,6 +69,13 @@ const mockRulePerformanceData: ProjectMetaAdsRulePerformanceResponse = {
   period: { datePreset: 'last_7d' },
   currency: 'BRL',
   rules: [],
+};
+const mockPerformanceData: ProjectMetaAdsPerformanceResponse = {
+  period: { datePreset: 'last_7d' },
+  currency: 'BRL',
+  summary: { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 },
+  actions: [],
+  recommendations: [],
 };
 const mockStartupConfig = {
   interface: {
@@ -192,6 +195,11 @@ describe('ProjectMetaAdsPanel', () => {
     mockRulePerformanceData.period = { datePreset: 'last_7d' };
     mockRulePerformanceData.currency = 'BRL';
     mockRulePerformanceData.rules = [];
+    mockPerformanceData.period = { datePreset: 'last_7d' };
+    mockPerformanceData.currency = 'BRL';
+    mockPerformanceData.summary = { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 };
+    mockPerformanceData.actions = [];
+    mockPerformanceData.recommendations = [];
     delete mockStatusData.campaigns;
     delete mockStatusData.adDiagnostics;
     delete mockStatusData.credentials;
@@ -261,10 +269,24 @@ describe('ProjectMetaAdsPanel', () => {
   });
 
   it('renders AI and rule performance workspaces as dedicated tabs', () => {
+    mockPerformanceData.actions = [
+      {
+        actionType: 'budget_change',
+        entityLevel: 'adset',
+        entityId: 'adset-1',
+        entityName: 'Topo',
+        cpa: 12,
+        ruleName: 'Validados',
+        reason: 'Ajuste automático',
+        createdAt: '2026-06-02T09:00:00.000-03:00',
+      },
+    ];
+
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-aiPerformance'));
     expect(screen.getByTestId('meta-ads-ai-performance-tab-panel')).toBeInTheDocument();
+    expect(screen.getByText('02/06/2026 09:00')).toBeInTheDocument();
     expect(mockUseProjectMetaAdsPerformanceQuery).toHaveBeenCalledWith('p1', {
       datePreset: 'last_7d',
     });
@@ -3083,6 +3105,11 @@ describe('ProjectMetaAdsPanel', () => {
         firstCpa: 40,
         lastCpa: 20,
         cpaDelta: -20,
+        targetMetric: 'cpa',
+        targetMetricGoal: 10,
+        firstTargetMetric: 40,
+        lastTargetMetric: 20,
+        targetMetricDelta: -20,
         firstRoas: null,
         lastRoas: null,
         roasDelta: null,
@@ -3104,6 +3131,11 @@ describe('ProjectMetaAdsPanel', () => {
             firstCpa: 40,
             lastCpa: 20,
             cpaDelta: -20,
+            targetMetric: 'cpa',
+            targetMetricGoal: 10,
+            firstTargetMetric: 40,
+            lastTargetMetric: 20,
+            targetMetricDelta: -20,
             firstRoas: null,
             lastRoas: null,
             roasDelta: null,
@@ -3133,7 +3165,10 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('com_ui_project_meta_ads_average_in_period').length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByText(/R\$\s*40,00\s*→\s*R\$\s*20,00/)).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*40,00\s*→\s*R\$\s*20,00/).length).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_target_metric')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_rule_goal')).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*10,00/)).toBeInTheDocument();
     expect(screen.getAllByText(/R\$\s*25,00/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/R\$\s*25,00\s*\/\s*-/)).not.toBeInTheDocument();
     expect(

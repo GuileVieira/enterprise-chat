@@ -6,6 +6,26 @@ import { MetaAdsPeriodControls } from './periodControls';
 import type { Localize } from './types';
 import type { MetaAdsPeriodControlProps } from './periodControls';
 
+function formatActionDateTime(value?: string): string {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
+}
+
 export function MetaAdsAiPerformanceWorkspace({
   data,
   fetching,
@@ -87,7 +107,7 @@ export function MetaAdsAiPerformanceWorkspace({
                 className="odd:bg-slate-50/60 dark:odd:bg-white/[0.045]"
               >
                 <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
-                  {action.createdAt?.slice(0, 10) ?? '-'}
+                  {formatActionDateTime(action.createdAt)}
                 </td>
                 <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
                   {action.actionType}
