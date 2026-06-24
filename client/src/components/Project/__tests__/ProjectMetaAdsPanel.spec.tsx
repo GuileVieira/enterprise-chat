@@ -2980,7 +2980,7 @@ describe('ProjectMetaAdsPanel', () => {
         deltaPercent: 25,
         actor: 'user',
         reason: 'manual-ui',
-        createdAt: '2026-06-12T12:00:00.000Z',
+        createdAt: '2026-06-12T12:00:00.000-03:00',
       },
     ];
 
@@ -2988,6 +2988,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
     expect(screen.getByText('CBO Messages')).toBeInTheDocument();
+    expect(screen.getByText(/12\/06\/2026 12:00/)).toBeInTheDocument();
     expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
     expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();
   });

@@ -4,6 +4,26 @@ import { formatMoney, formatSignedMoney, formatSignedPercent } from './formatter
 import { getBudgetChangeDelta } from './table';
 import type { Localize } from './types';
 
+function formatChangeDateTime(value?: string): string {
+  if (!value) {
+    return '-';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
+}
+
 export function MetaAdsHistoryPanel({
   changes,
   currency,
@@ -34,7 +54,8 @@ export function MetaAdsHistoryPanel({
                     {change.entityName ?? change.entityId}
                   </div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {change.actor ?? '-'} · {change.reason ?? '-'}
+                    {formatChangeDateTime(change.createdAt)} · {change.actor ?? '-'} ·{' '}
+                    {change.reason ?? '-'}
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
