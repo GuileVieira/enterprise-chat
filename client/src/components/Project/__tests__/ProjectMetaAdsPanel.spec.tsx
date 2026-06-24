@@ -3314,6 +3314,73 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByTestId('meta-ads-rule-details-body')).toHaveClass('overflow-y-auto');
   });
 
+  it('shows no-result evidence after enough spend without calling CPA zero an improvement', () => {
+    mockRulePerformanceData.rules = [
+      {
+        ruleKey: 'global:global',
+        ruleSourceType: 'global',
+        ruleId: 'global',
+        ruleName: 'Global',
+        ruleScope: 'global',
+        actionCount: 2,
+        aiActionCount: 2,
+        pausedAdCount: 0,
+        totalSpend: 242.71,
+        totalResults: 1,
+        averageCpa: 42.71,
+        averageRoas: 5.5,
+        firstCpa: 42.71,
+        lastCpa: null,
+        cpaDelta: null,
+        firstRoas: 5.5,
+        lastRoas: null,
+        roasDelta: null,
+        targetMetric: 'cpa',
+        targetMetricGoal: 45,
+        firstTargetMetric: 42.71,
+        lastTargetMetric: null,
+        targetMetricDelta: null,
+        firstResultCount: 1,
+        lastResultCount: 0,
+        firstActionAt: '2026-06-24T08:23:00.000-03:00',
+        lastActionAt: '2026-06-24T14:03:00.000-03:00',
+        comparisonBasis: 'period_first_last',
+        status: 'no_result_after_spend',
+        evidenceSpend: 200,
+        evidenceSpendThreshold: 90,
+        evidenceSpendBasis: 45,
+        evidenceMultiplier: 2,
+        canAct: true,
+        decisionReason: 'no_result_after_spend',
+        entities: [],
+        actions: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_rule_performance_no_result_after_spend').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_no_result_after_spend_short').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_evidence_spend')).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_evidence_spend_threshold'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_reason_no_result_after_spend'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/R\$\s*42,71\s*→\s*R\$\s*0,00/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_rule_performance_improved'),
+    ).not.toBeInTheDocument();
+  });
+
   it('explains empty rule performance instead of showing a blank table', () => {
     const projectWithRules = {
       ...project,

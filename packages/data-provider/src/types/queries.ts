@@ -127,6 +127,12 @@ export type ProjectMetaAdsRecommendation = {
   frequency?: number | null;
   primaryMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr';
   targetMetricValue?: number | null;
+  evidenceSpend?: number | null;
+  evidenceSpendThreshold?: number | null;
+  evidenceSpendBasis?: number | null;
+  evidenceMultiplier?: number | null;
+  canAct?: boolean | null;
+  decisionReason?: 'awaiting_results' | 'no_result_after_spend';
   beforeMetrics?: ProjectMetaAdsAutomationMetrics;
   afterMetrics?: ProjectMetaAdsAutomationMetrics;
   afterMeasuredAt?: string;
@@ -164,6 +170,12 @@ export type ProjectMetaAdsAutomationAction = {
   frequency?: number | null;
   primaryMetric?: 'cpa' | 'roas' | 'cpc' | 'ctr';
   targetMetricValue?: number | null;
+  evidenceSpend?: number | null;
+  evidenceSpendThreshold?: number | null;
+  evidenceSpendBasis?: number | null;
+  evidenceMultiplier?: number | null;
+  canAct?: boolean | null;
+  decisionReason?: 'awaiting_results' | 'no_result_after_spend';
   ruleSourceType?: 'global' | 'group' | 'override' | 'creative' | 'manual' | 'unknown';
   ruleId?: string;
   ruleName?: string;
@@ -548,10 +560,22 @@ export type ProjectMetaAdsRulePerformanceItem = {
   firstResultCount?: number | null;
   lastResultCount?: number | null;
   awaitingReason?: 'missing_expected_result';
+  evidenceSpend?: number | null;
+  evidenceSpendThreshold?: number | null;
+  evidenceSpendBasis?: number | null;
+  evidenceMultiplier?: number | null;
+  canAct?: boolean | null;
+  decisionReason?: 'awaiting_results' | 'no_result_after_spend';
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
-  status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data' | 'awaiting_results';
+  status:
+    | 'improved'
+    | 'neutral'
+    | 'regressed'
+    | 'insufficient_data'
+    | 'awaiting_results'
+    | 'no_result_after_spend';
   entities?: ProjectMetaAdsRulePerformanceEntity[];
   actions: ProjectMetaAdsAutomationAction[];
 };
@@ -581,10 +605,22 @@ export type ProjectMetaAdsRulePerformanceEntity = {
   firstResultCount?: number | null;
   lastResultCount?: number | null;
   awaitingReason?: 'missing_expected_result';
+  evidenceSpend?: number | null;
+  evidenceSpendThreshold?: number | null;
+  evidenceSpendBasis?: number | null;
+  evidenceMultiplier?: number | null;
+  canAct?: boolean | null;
+  decisionReason?: 'awaiting_results' | 'no_result_after_spend';
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
-  status?: 'improved' | 'neutral' | 'regressed' | 'insufficient_data' | 'awaiting_results';
+  status?:
+    | 'improved'
+    | 'neutral'
+    | 'regressed'
+    | 'insufficient_data'
+    | 'awaiting_results'
+    | 'no_result_after_spend';
 };
 
 export type ProjectMetaAdsRulePerformanceResponse = {

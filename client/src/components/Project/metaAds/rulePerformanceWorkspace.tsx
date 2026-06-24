@@ -71,6 +71,9 @@ function getStatusTone(status?: ProjectMetaAdsRulePerformanceItem['status']) {
   if (status === 'awaiting_results') {
     return 'text-amber-700 dark:text-amber-200';
   }
+  if (status === 'no_result_after_spend') {
+    return 'text-rose-700 dark:text-rose-200';
+  }
   return 'text-slate-600 dark:text-slate-300';
 }
 
@@ -80,6 +83,38 @@ function getDeltaTone(metric: 'cpa' | 'roas', value?: number | null) {
   }
   const improved = metric === 'cpa' ? value < 0 : value > 0;
   return improved ? 'text-emerald-700 dark:text-emerald-200' : 'text-rose-700 dark:text-rose-200';
+}
+
+function getTargetMetricCardClassName({
+  isNoResultAfterSpend,
+  isAwaitingResults,
+}: {
+  isNoResultAfterSpend: boolean;
+  isAwaitingResults: boolean;
+}) {
+  if (isNoResultAfterSpend) {
+    return 'border-rose-300/35 bg-rose-50/80 dark:border-rose-300/20 dark:bg-rose-300/10';
+  }
+  if (isAwaitingResults) {
+    return 'border-amber-300/35 bg-amber-50/80 dark:border-amber-300/20 dark:bg-amber-300/10';
+  }
+  return 'border-teal-300/30 bg-teal-50/80 dark:border-teal-300/20 dark:bg-teal-300/10';
+}
+
+function getTargetMetricLabelClassName({
+  isNoResultAfterSpend,
+  isAwaitingResults,
+}: {
+  isNoResultAfterSpend: boolean;
+  isAwaitingResults: boolean;
+}) {
+  if (isNoResultAfterSpend) {
+    return 'text-rose-700 dark:text-rose-200';
+  }
+  if (isAwaitingResults) {
+    return 'text-amber-700 dark:text-amber-200';
+  }
+  return 'text-teal-700 dark:text-teal-200';
 }
 
 function formatSignedMetricValue(value?: number | null) {
@@ -149,6 +184,10 @@ function getComparisonReasons(item: RulePerformanceComparison) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_missing_expected_result');
     return reasons;
   }
+  if (item.status === 'no_result_after_spend') {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_no_result_after_spend');
+    return reasons;
+  }
   const targetMetric = item.targetMetric;
   if (targetMetric === 'cpa' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_down');
@@ -180,6 +219,9 @@ function getComparisonReasons(item: RulePerformanceComparison) {
 function getComparisonMissingItems(item: RulePerformanceComparison) {
   const missingItems: string[] = [];
   if (item.status === 'awaiting_results') {
+    return missingItems;
+  }
+  if (item.status === 'no_result_after_spend') {
     return missingItems;
   }
   if (item.targetMetric && (item.firstTargetMetric == null || item.lastTargetMetric == null)) {
@@ -536,15 +578,26 @@ function PerformanceComparisonPanel({
   const missingItems = getComparisonMissingItems(item);
   const targetMetricLabel = getMetricLabel(item.targetMetric, localize);
   const isAwaitingResults = item.status === 'awaiting_results';
+  const isNoResultAfterSpend = item.status === 'no_result_after_spend';
+  const isWaitingForFinalValue = isAwaitingResults || isNoResultAfterSpend;
   const hasTargetMetric = Boolean(
     item.targetMetric && item.firstTargetMetric != null && item.lastTargetMetric != null,
   );
-  const targetMetricCardClassName = isAwaitingResults
-    ? 'border-amber-300/35 bg-amber-50/80 dark:border-amber-300/20 dark:bg-amber-300/10'
-    : 'border-teal-300/30 bg-teal-50/80 dark:border-teal-300/20 dark:bg-teal-300/10';
-  const targetMetricLabelClassName = isAwaitingResults
-    ? 'text-amber-700 dark:text-amber-200'
-    : 'text-teal-700 dark:text-teal-200';
+  const hasEvidence =
+    item.evidenceSpend != null ||
+    item.evidenceSpendThreshold != null ||
+    item.evidenceSpendBasis != null;
+  const targetMetricCardClassName = getTargetMetricCardClassName({
+    isNoResultAfterSpend,
+    isAwaitingResults,
+  });
+  const targetMetricLabelClassName = getTargetMetricLabelClassName({
+    isNoResultAfterSpend,
+    isAwaitingResults,
+  });
+  const finalValueLabel = isNoResultAfterSpend
+    ? localize('com_ui_project_meta_ads_no_result_after_spend_short')
+    : localize('com_ui_project_meta_ads_awaiting_result');
   let targetBeforeAfterValue = localize('com_ui_project_meta_ads_insufficient_comparison_data');
   if (hasTargetMetric) {
     targetBeforeAfterValue = `${formatComparisonMetricValue(
@@ -552,12 +605,12 @@ function PerformanceComparisonPanel({
       item.firstTargetMetric,
       currency,
     )} → ${formatComparisonMetricValue(item.targetMetric, item.lastTargetMetric, currency)}`;
-  } else if (isAwaitingResults) {
+  } else if (isWaitingForFinalValue && item.firstTargetMetric != null) {
     targetBeforeAfterValue = `${formatComparisonMetricValue(
       item.targetMetric,
       item.firstTargetMetric,
       currency,
-    )} → ${localize('com_ui_project_meta_ads_awaiting_result')}`;
+    )} → ${finalValueLabel}`;
   }
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.035]">
@@ -619,6 +672,26 @@ function PerformanceComparisonPanel({
               )}
             />
           </div>
+          {hasEvidence && (
+            <div className="mt-4 grid gap-3 border-t border-slate-200/70 pt-3 dark:border-white/10 md:grid-cols-4">
+              <DetailMetric
+                label={localize('com_ui_project_meta_ads_evidence_spend')}
+                value={formatMoney(item.evidenceSpend, currency)}
+              />
+              <DetailMetric
+                label={localize('com_ui_project_meta_ads_evidence_spend_threshold')}
+                value={formatMoney(item.evidenceSpendThreshold, currency)}
+              />
+              <DetailMetric
+                label={localize('com_ui_project_meta_ads_evidence_spend_basis')}
+                value={formatMoney(item.evidenceSpendBasis, currency)}
+              />
+              <DetailMetric
+                label={localize('com_ui_project_meta_ads_evidence_multiplier')}
+                value={formatMetric(item.evidenceMultiplier)}
+              />
+            </div>
+          )}
         </div>
       )}
       <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -629,7 +702,8 @@ function PerformanceComparisonPanel({
           after={item.lastCpa}
           delta={item.cpaDelta}
           average={item.averageCpa}
-          awaiting={isAwaitingResults}
+          awaiting={isWaitingForFinalValue}
+          finalValueLabel={finalValueLabel}
           currency={currency}
           localize={localize}
         />
@@ -640,7 +714,8 @@ function PerformanceComparisonPanel({
           after={item.lastRoas}
           delta={item.roasDelta}
           average={item.averageRoas}
-          awaiting={isAwaitingResults}
+          awaiting={isWaitingForFinalValue}
+          finalValueLabel={finalValueLabel}
           currency={currency}
           localize={localize}
         />
@@ -696,6 +771,7 @@ function MetricComparisonBlock({
   delta,
   average,
   awaiting,
+  finalValueLabel,
   currency,
   localize,
 }: {
@@ -706,6 +782,7 @@ function MetricComparisonBlock({
   delta?: number | null;
   average?: number | null;
   awaiting?: boolean;
+  finalValueLabel?: string;
   currency: string;
   localize: Localize;
 }) {
@@ -728,7 +805,8 @@ function MetricComparisonBlock({
   } else if (awaiting && before != null) {
     comparisonContent = (
       <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
-        {formatValue(before)} → {localize('com_ui_project_meta_ads_awaiting_result')}
+        {formatValue(before)} →{' '}
+        {finalValueLabel ?? localize('com_ui_project_meta_ads_awaiting_result')}
       </div>
     );
   }
@@ -757,7 +835,9 @@ function MetricComparisonBlock({
             {localize('com_ui_project_meta_ads_after')}
           </div>
           <div className="mt-1 font-mono text-slate-800 dark:text-slate-100">
-            {awaiting ? localize('com_ui_project_meta_ads_awaiting_result') : formatValue(after)}
+            {awaiting
+              ? (finalValueLabel ?? localize('com_ui_project_meta_ads_awaiting_result'))
+              : formatValue(after)}
           </div>
         </div>
       </div>

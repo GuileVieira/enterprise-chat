@@ -41,6 +41,8 @@ const DEFAULT_RULES = {
   maxDailyBudget: 2000,
   cooldownHours: 24,
   minSpend: MIN_SAMPLE_SPEND,
+  conversionEvidenceMultiplier: 2,
+  conversionEvidenceMinHours: 6,
   primaryMetric: 'cpa',
 };
 const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
@@ -56,6 +58,8 @@ const RULE_LIMITS = {
   maxDailyBudget: { min: 0.01 },
   cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
+  conversionEvidenceMultiplier: { min: 1, max: 10 },
+  conversionEvidenceMinHours: { min: 0, max: 168 },
   minCtr: { min: 0 },
   maxCpc: { min: 0 },
   maxCpm: { min: 0 },
@@ -357,6 +361,7 @@ function getModels() {
       'ruleName',
       'ruleScope',
       'primaryMetric',
+      'decisionReason',
     ]) {
       if (!existingRecommendationSchema.path(key)) {
         missingRecommendationFields[key] = String;
@@ -376,6 +381,19 @@ function getModels() {
     }
     if (!existingRecommendationSchema.path('targetMetricValue')) {
       missingRecommendationFields.targetMetricValue = Number;
+    }
+    for (const key of [
+      'evidenceSpend',
+      'evidenceSpendThreshold',
+      'evidenceSpendBasis',
+      'evidenceMultiplier',
+    ]) {
+      if (!existingRecommendationSchema.path(key)) {
+        missingRecommendationFields[key] = Number;
+      }
+    }
+    if (!existingRecommendationSchema.path('canAct')) {
+      missingRecommendationFields.canAct = Boolean;
     }
     if (Object.keys(missingRecommendationFields).length > 0) {
       existingRecommendationSchema.add(missingRecommendationFields);
@@ -415,6 +433,12 @@ function getModels() {
         frequency: Number,
         primaryMetric: String,
         targetMetricValue: Number,
+        evidenceSpend: Number,
+        evidenceSpendThreshold: Number,
+        evidenceSpendBasis: Number,
+        evidenceMultiplier: Number,
+        canAct: Boolean,
+        decisionReason: String,
         beforeMetrics: {
           spend: Number,
           resultCount: Number,
@@ -772,6 +796,8 @@ function validateMetaAdsRules(rules = {}) {
     'maxDailyBudget',
     'cooldownHours',
     'minSpend',
+    'conversionEvidenceMultiplier',
+    'conversionEvidenceMinHours',
   ]) {
     validated[key] = validateRuleNumber(merged, key, errors);
   }
@@ -2620,6 +2646,7 @@ function getFirstLastMetric(actions, key) {
       value: getComparableMetricValue(action, key),
       createdAt: action.createdAt,
       resultCount: toFiniteMetric(action.resultCount),
+      spend: toFiniteMetric(action.spend),
     }))
     .filter((item) => item.value != null);
   if (values.length === 0) {
@@ -2630,6 +2657,7 @@ function getFirstLastMetric(actions, key) {
         ? {
             createdAt: latestAction.createdAt,
             resultCount: toFiniteMetric(latestAction.resultCount),
+            spend: toFiniteMetric(latestAction.spend),
           }
         : null,
       awaiting,
@@ -2639,7 +2667,11 @@ function getFirstLastMetric(actions, key) {
     first: values[0],
     last: values.length >= 2 && !awaiting ? values[values.length - 1] : null,
     latest: latestAction
-      ? { createdAt: latestAction.createdAt, resultCount: toFiniteMetric(latestAction.resultCount) }
+      ? {
+          createdAt: latestAction.createdAt,
+          resultCount: toFiniteMetric(latestAction.resultCount),
+          spend: toFiniteMetric(latestAction.spend),
+        }
       : null,
     awaiting,
   };
@@ -2661,6 +2693,7 @@ function getRealBeforeAfterMetric(actions, key) {
             value: firstValue,
             createdAt: firstAction?.createdAt,
             resultCount: toFiniteMetric(firstAction?.beforeMetrics?.resultCount),
+            spend: toFiniteMetric(firstAction?.beforeMetrics?.spend),
           }
         : null,
     last:
@@ -2671,9 +2704,40 @@ function getRealBeforeAfterMetric(actions, key) {
       ? {
           createdAt: lastAction.afterMeasuredAt || lastAction.createdAt,
           resultCount: toFiniteMetric(lastAction.afterMetrics?.resultCount),
+          spend: toFiniteMetric(lastAction.afterMetrics?.spend),
         }
       : null,
     awaiting,
+  };
+}
+
+function getConversionEvidence({ target, targetMetricGoal, rules = {} }) {
+  const evidenceSpend = roundMetric(target?.latest?.spend) ?? null;
+  const evidenceSpendBasis = roundMetric(targetMetricGoal) ?? null;
+  const evidenceMultiplier =
+    toFiniteMetric(rules.conversionEvidenceMultiplier) ??
+    DEFAULT_RULES.conversionEvidenceMultiplier;
+  const evidenceSpendThreshold =
+    evidenceSpendBasis != null ? roundMetric(evidenceSpendBasis * evidenceMultiplier) : null;
+  const noResultAfterSpend =
+    Boolean(target?.awaiting) &&
+    evidenceSpend != null &&
+    evidenceSpendThreshold != null &&
+    evidenceSpend >= evidenceSpendThreshold;
+  let decisionReason;
+  if (noResultAfterSpend) {
+    decisionReason = 'no_result_after_spend';
+  } else if (target?.awaiting) {
+    decisionReason = 'awaiting_results';
+  }
+  return {
+    evidenceSpend,
+    evidenceSpendBasis,
+    evidenceMultiplier,
+    evidenceSpendThreshold,
+    noResultAfterSpend,
+    canAct: noResultAfterSpend,
+    decisionReason,
   };
 }
 
@@ -2711,7 +2775,53 @@ function getTargetMetricStatus({ metric, firstTargetMetric, lastTargetMetric }) 
   return improved ? 'improved' : 'regressed';
 }
 
-function getRulePerformanceComparison(actions = []) {
+function getAwaitableRuleStatus({ noResultAfterSpend, awaiting, fallbackStatus }) {
+  if (noResultAfterSpend) {
+    return 'no_result_after_spend';
+  }
+  if (awaiting) {
+    return 'awaiting_results';
+  }
+  return fallbackStatus;
+}
+
+function getMissingResultEvidence({ spend, resultCount, rules = {}, latestActionAt }) {
+  const evidenceSpend = roundMetric(toFiniteMetric(spend)) ?? 0;
+  const evidenceSpendBasis = roundMetric(toFiniteMetric(rules.targetCpa)) ?? null;
+  const evidenceMultiplier =
+    toFiniteMetric(rules.conversionEvidenceMultiplier) ??
+    DEFAULT_RULES.conversionEvidenceMultiplier;
+  const evidenceMinHours =
+    toFiniteMetric(rules.conversionEvidenceMinHours) ?? DEFAULT_RULES.conversionEvidenceMinHours;
+  const evidenceSpendThreshold =
+    evidenceSpendBasis != null ? roundMetric(evidenceSpendBasis * evidenceMultiplier) : null;
+  const latestTime = latestActionAt ? new Date(latestActionAt).getTime() : null;
+  const evidenceAgeHours =
+    latestTime && Number.isFinite(latestTime)
+      ? Math.max(0, (Date.now() - latestTime) / (60 * 60 * 1000))
+      : null;
+  const hasEnoughTime =
+    evidenceAgeHours == null || evidenceMinHours <= 0 || evidenceAgeHours >= evidenceMinHours;
+  const hasResult = Number(resultCount ?? 0) > 0;
+  const noResultAfterSpend =
+    !hasResult &&
+    hasEnoughTime &&
+    evidenceSpendThreshold != null &&
+    evidenceSpend >= evidenceSpendThreshold;
+  return {
+    evidenceSpend,
+    evidenceSpendBasis,
+    evidenceMultiplier,
+    evidenceMinHours,
+    evidenceAgeHours: roundMetric(evidenceAgeHours),
+    evidenceSpendThreshold,
+    noResultAfterSpend,
+    canAct: noResultAfterSpend,
+    decisionReason: noResultAfterSpend ? 'no_result_after_spend' : 'awaiting_results',
+  };
+}
+
+function getRulePerformanceComparison(actions = [], rules = {}) {
   const orderedActions = sortActionsByCreatedAt(actions);
   const actionsWithAfterMetrics = orderedActions.filter((action) => action.afterMetrics);
   const comparisonBasis = actionsWithAfterMetrics.length
@@ -2745,6 +2855,11 @@ function getRulePerformanceComparison(actions = []) {
       firstTargetMetric,
       lastTargetMetric,
     });
+    const targetMetricGoal =
+      toFiniteMetric(lastAction?.targetMetricValue) ??
+      toFiniteMetric(firstAction?.targetMetricValue);
+    const evidence = getConversionEvidence({ target, targetMetricGoal, rules });
+    const { noResultAfterSpend, ...publicEvidence } = evidence;
     return {
       firstCpa,
       lastCpa,
@@ -2753,9 +2868,7 @@ function getRulePerformanceComparison(actions = []) {
       lastRoas,
       roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
       targetMetric,
-      targetMetricGoal:
-        toFiniteMetric(lastAction?.targetMetricValue) ??
-        toFiniteMetric(firstAction?.targetMetricValue),
+      targetMetricGoal,
       firstTargetMetric,
       lastTargetMetric,
       targetMetricDelta:
@@ -2764,15 +2877,20 @@ function getRulePerformanceComparison(actions = []) {
           : null,
       firstResultCount: target?.first?.resultCount ?? null,
       lastResultCount: target?.latest?.resultCount ?? null,
-      awaitingReason: target?.awaiting ? 'missing_expected_result' : undefined,
+      awaitingReason:
+        target?.awaiting && !noResultAfterSpend ? 'missing_expected_result' : undefined,
+      ...publicEvidence,
       firstActionAt: target?.first?.createdAt || firstAction?.createdAt,
       lastActionAt:
         target?.latest?.createdAt || lastAction?.afterMeasuredAt || lastAction?.createdAt,
       comparisonBasis,
-      status: target?.awaiting
-        ? 'awaiting_results'
-        : (targetMetricStatus ??
-          getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas })),
+      status: getAwaitableRuleStatus({
+        noResultAfterSpend,
+        awaiting: target?.awaiting,
+        fallbackStatus:
+          targetMetricStatus ??
+          getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+      }),
     };
   }
   const cpa = getFirstLastMetric(orderedActions, 'cpa');
@@ -2809,6 +2927,11 @@ function getRulePerformanceComparison(actions = []) {
     cpa.last?.createdAt ||
     roas.last?.createdAt ||
     orderedActions[orderedActions.length - 1]?.createdAt;
+  const targetMetricGoal = toFiniteMetric(
+    orderedActions[orderedActions.length - 1]?.targetMetricValue,
+  );
+  const evidence = getConversionEvidence({ target, targetMetricGoal, rules });
+  const { noResultAfterSpend, ...publicEvidence } = evidence;
   return {
     firstCpa,
     lastCpa,
@@ -2817,7 +2940,7 @@ function getRulePerformanceComparison(actions = []) {
     lastRoas,
     roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
     targetMetric,
-    targetMetricGoal: toFiniteMetric(orderedActions[orderedActions.length - 1]?.targetMetricValue),
+    targetMetricGoal,
     firstTargetMetric,
     lastTargetMetric,
     targetMetricDelta:
@@ -2826,14 +2949,17 @@ function getRulePerformanceComparison(actions = []) {
         : null,
     firstResultCount: target?.first?.resultCount ?? null,
     lastResultCount: target?.latest?.resultCount ?? null,
-    awaitingReason: target?.awaiting ? 'missing_expected_result' : undefined,
+    awaitingReason: target?.awaiting && !noResultAfterSpend ? 'missing_expected_result' : undefined,
+    ...publicEvidence,
     firstActionAt,
     lastActionAt,
     comparisonBasis,
-    status: target?.awaiting
-      ? 'awaiting_results'
-      : (targetMetricStatus ??
-        getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas })),
+    status: getAwaitableRuleStatus({
+      noResultAfterSpend,
+      awaiting: target?.awaiting,
+      fallbackStatus:
+        targetMetricStatus ?? getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+    }),
   };
 }
 
@@ -3249,6 +3375,8 @@ function proposeBudget({
   cpm,
   rules,
   creativeRules,
+  evidenceSpend,
+  latestActionAt,
 }) {
   if (!currentDailyBudget || spend < rules.minSpend) {
     return {
@@ -3265,6 +3393,25 @@ function proposeBudget({
       : '';
   const missingTargetResult =
     targetResultType && resultType === targetResultType && Number(resultCount ?? 0) <= 0;
+  const missingResultEvidence = missingTargetResult
+    ? getMissingResultEvidence({
+        spend: evidenceSpend ?? spend,
+        resultCount,
+        rules,
+        latestActionAt,
+      })
+    : null;
+  if (missingResultEvidence && !missingResultEvidence.canAct) {
+    return {
+      action: 'hold',
+      proposedDailyBudget: currentDailyBudget,
+      status: 'blocked',
+      reason: `Aguardando conversões para ${targetResultType}. Gasto desde a análise ${missingResultEvidence.evidenceSpend.toFixed(
+        2,
+      )} abaixo do limite ${missingResultEvidence.evidenceSpendThreshold?.toFixed(2) ?? '-'}.`,
+      ...missingResultEvidence,
+    };
+  }
   const cpaGood = cpa != null && cpa <= rules.targetCpa;
   const roasGood = roas != null && roas >= rules.minRoas;
   const cpcGood = rules.maxCpc != null && cpc != null && cpc <= rules.maxCpc;
@@ -3350,12 +3497,13 @@ function proposeBudget({
       action: proposed < currentDailyBudget ? 'decrease' : 'hold',
       proposedDailyBudget: Number(proposed.toFixed(2)),
       reason: missingTargetResult
-        ? `Resultado alvo ${targetResultType} sem conversões no período.`
+        ? `Resultado alvo ${targetResultType} sem conversões após gasto suficiente.`
         : `Performance abaixo da regra: CPA ${cpa?.toFixed(2) ?? '-'} / ROAS ${
             roas?.toFixed(2) ?? '-'
           } / CPC ${cpc?.toFixed(2) ?? '-'} / CTR ${ctr?.toFixed(2) ?? '-'}. ${
             guardrailReasons.join(' ') || ''
           }`.trim(),
+      ...(missingResultEvidence ?? {}),
     };
   }
 
@@ -3643,7 +3791,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const timeZone = getMetaAdsTimeZone();
   const since = getMetaAdsDateKey(addDays(now, -1), timeZone);
   const until = getMetaAdsDateKey(now, timeZone);
-  const { MetaAdsSnapshot, MetaAdsRecommendation } = getModels();
+  const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsAutomationAction } = getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const entityConcurrency = getCronEntityConcurrency();
 
@@ -3882,12 +4030,33 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         return null;
       }
       handledRecommendationEntities.add(recommendationKey);
+      const primaryMetric = getPrimaryMetric(effectiveRuleContext.rules);
+      const targetMetricValue = getRuleTargetMetricValue(effectiveRuleContext.rules);
+      const recentAutomationActions = await MetaAdsAutomationAction.find({
+        tenantId,
+        projectId,
+        entityId: recommendationEntityId,
+        primaryMetric,
+        ruleSourceType: effectiveRuleContext.ruleSourceType,
+        ruleId: effectiveRuleContext.ruleId,
+      })
+        .sort({ createdAt: -1 })
+        .limit(1)
+        .lean();
+      const latestAutomationAction = recentAutomationActions[0] || null;
+      const actionSpend = toFiniteMetric(latestAutomationAction?.spend);
+      const evidenceSpend =
+        actionSpend != null
+          ? Math.max(0, Number(recommendationMetrics.spend ?? 0) - actionSpend)
+          : undefined;
 
       const rawProposal = proposeBudget({
         currentDailyBudget,
         ...recommendationMetrics,
         rules,
         creativeRules,
+        evidenceSpend,
+        latestActionAt: latestAutomationAction?.createdAt,
       });
       const monthlyGuard = applyMonthlyBudgetGuard({
         proposal: rawProposal,
@@ -3926,7 +4095,8 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         campaignId,
         campaignName,
         action: blockedByCooldown ? 'hold' : proposal.action,
-        status: blockedByCooldown || monthlyGuard.blocked ? 'blocked' : 'pending',
+        status:
+          proposal.status || (blockedByCooldown || monthlyGuard.blocked ? 'blocked' : 'pending'),
         currentDailyBudget,
         proposedDailyBudget: proposal.proposedDailyBudget,
         spend: recommendationMetrics.spend,
@@ -3936,8 +4106,14 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         ctr: recommendationMetrics.ctr,
         cpc: recommendationMetrics.cpc,
         frequency: recommendationMetrics.frequency,
-        primaryMetric: getPrimaryMetric(effectiveRuleContext.rules),
-        targetMetricValue: getRuleTargetMetricValue(effectiveRuleContext.rules),
+        primaryMetric,
+        targetMetricValue,
+        evidenceSpend: proposal.evidenceSpend,
+        evidenceSpendThreshold: proposal.evidenceSpendThreshold,
+        evidenceSpendBasis: proposal.evidenceSpendBasis,
+        evidenceMultiplier: proposal.evidenceMultiplier,
+        canAct: proposal.canAct,
+        decisionReason: proposal.decisionReason,
         ruleSourceType: effectiveRuleContext.ruleSourceType,
         ruleId: effectiveRuleContext.ruleId,
         ruleName: effectiveRuleContext.ruleName,

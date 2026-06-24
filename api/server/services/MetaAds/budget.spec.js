@@ -63,7 +63,28 @@ describe('Meta Ads budget service', () => {
     expect(result.proposedDailyBudget).toBe(75);
   });
 
-  it('decreases when the configured target result type has no conversions', () => {
+  it('waits when the configured target result type has no conversions below evidence spend', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: null,
+      roas: 3,
+      spend: 80,
+      resultCount: 0,
+      resultType: 'onsite_conversion.messaging_conversation_started_7d',
+      rules: {
+        ...DEFAULT_RULES,
+        targetResultType: 'onsite_conversion.messaging_conversation_started_7d',
+      },
+    });
+
+    expect(result.action).toBe('hold');
+    expect(result.status).toBe('blocked');
+    expect(result.decisionReason).toBe('awaiting_results');
+    expect(result.canAct).toBe(false);
+    expect(result.reason).toContain('Aguardando conversões');
+  });
+
+  it('decreases when the configured target result type has no conversions after evidence spend', () => {
     const result = proposeBudget({
       currentDailyBudget: 100,
       cpa: null,
@@ -79,7 +100,9 @@ describe('Meta Ads budget service', () => {
 
     expect(result.action).toBe('decrease');
     expect(result.proposedDailyBudget).toBe(75);
-    expect(result.reason).toContain('Resultado alvo');
+    expect(result.decisionReason).toBe('no_result_after_spend');
+    expect(result.canAct).toBe(true);
+    expect(result.reason).toContain('sem conversões após gasto suficiente');
   });
 
   it('calculates ThruPlay as the video result metric', () => {
@@ -1888,7 +1911,7 @@ describe('Meta Ads budget service persistence safety', () => {
           entityLevel: 'adset',
           entityId: 'adset-1',
           entityName: 'Audience A',
-          spend: 91.51,
+          spend: 80,
           resultCount: 0,
           cpa: 0,
           roas: 0,
@@ -1950,6 +1973,71 @@ describe('Meta Ads budget service persistence safety', () => {
         targetMetricDelta: null,
         lastResultCount: 0,
         awaitingReason: 'missing_expected_result',
+      }),
+    );
+  });
+
+  it('marks CPA rule performance as no result after enough spend without conversions', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      actions: [
+        {
+          actionType: 'budget_change',
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          entityName: 'Audience A',
+          spend: 100,
+          resultCount: 0,
+          cpa: 0,
+          roas: 0,
+          primaryMetric: 'cpa',
+          targetMetricValue: 45,
+          actor: 'cron',
+          ruleSourceType: 'global',
+          ruleId: 'global',
+          ruleName: 'Global',
+          createdAt: '2026-06-24T17:03:00.000Z',
+        },
+        {
+          actionType: 'budget_change',
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          entityName: 'Audience A',
+          spend: 42.71,
+          resultCount: 1,
+          cpa: 42.71,
+          roas: 5.5,
+          primaryMetric: 'cpa',
+          targetMetricValue: 45,
+          actor: 'cron',
+          ruleSourceType: 'global',
+          ruleId: 'global',
+          ruleName: 'Global',
+          createdAt: '2026-06-24T14:03:00.000Z',
+        },
+      ],
+    });
+
+    const performance = await budget.getProjectMetaAdsRulePerformance('p1', 'tenant-a');
+
+    expect(performance.rules[0]).toEqual(
+      expect.objectContaining({
+        status: 'no_result_after_spend',
+        targetMetric: 'cpa',
+        targetMetricGoal: 45,
+        firstTargetMetric: 42.71,
+        lastTargetMetric: null,
+        targetMetricDelta: null,
+        evidenceSpend: 100,
+        evidenceSpendThreshold: 90,
+        evidenceSpendBasis: 45,
+        evidenceMultiplier: 2,
+        canAct: true,
+        decisionReason: 'no_result_after_spend',
       }),
     );
   });
@@ -2844,9 +2932,84 @@ describe('Meta Ads budget service persistence safety', () => {
         entityId: 'adset-1',
         action: 'decrease',
         proposedDailyBudget: 75,
-        reason: 'Resultado alvo lead sem conversões no período.',
+        reason: 'Resultado alvo lead sem conversões após gasto suficiente.',
+        evidenceSpend: 200,
+        evidenceSpendThreshold: 90,
+        evidenceSpendBasis: 45,
+        evidenceMultiplier: 2,
+        canAct: true,
+        decisionReason: 'no_result_after_spend',
       }),
     );
+  });
+
+  it('blocks repeated target-result changes until new spend reaches the evidence threshold', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-24T18:00:00.000Z'));
+    try {
+      const { budget, createRecommendation } = loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: {
+            adAccountId: 'act_123',
+            rules: {
+              ...DEFAULT_RULES,
+              targetResultType: 'lead',
+              targetCpa: 45,
+            },
+          },
+        },
+        campaigns: [{ id: 'campaign-1', name: 'Lead campaign', objective: 'OUTCOME_LEADS' }],
+        adsets: [
+          {
+            id: 'adset-1',
+            name: 'Lead set',
+            campaign_id: 'campaign-1',
+            daily_budget: '10000',
+          },
+        ],
+        insights: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Lead campaign',
+            adset_id: 'adset-1',
+            adset_name: 'Lead set',
+            spend: '200',
+            actions: [],
+          },
+        ],
+        actions: [
+          {
+            actionType: 'budget_change',
+            entityLevel: 'adset',
+            entityId: 'adset-1',
+            spend: 150,
+            resultCount: 0,
+            primaryMetric: 'cpa',
+            targetMetricValue: 45,
+            ruleSourceType: 'global',
+            ruleId: 'global',
+            createdAt: '2026-06-24T10:00:00.000Z',
+          },
+        ],
+      });
+
+      await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+      expect(createRecommendation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityId: 'adset-1',
+          action: 'hold',
+          status: 'blocked',
+          evidenceSpend: 50,
+          evidenceSpendThreshold: 90,
+          canAct: false,
+          decisionReason: 'awaiting_results',
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('uses the configured Meta Ads timezone for cron insight date ranges', async () => {
