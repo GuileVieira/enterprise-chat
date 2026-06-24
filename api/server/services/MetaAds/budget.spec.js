@@ -732,6 +732,7 @@ describe('Meta Ads budget service persistence safety', () => {
     snapshots = [],
     recommendations = [],
     changes = [],
+    actions = [],
     projects = [],
   } = {}) => {
     jest.resetModules();
@@ -765,6 +766,9 @@ describe('Meta Ads budget service persistence safety', () => {
             if (query?.__collection === 'changes') {
               return changes;
             }
+            if (query?.__collection === 'actions') {
+              return actions;
+            }
             return [];
           },
         }),
@@ -777,6 +781,7 @@ describe('Meta Ads budget service persistence safety', () => {
       makeFindChain({ ...query, __collection: 'recommendations' }),
     );
     const findChanges = jest.fn((query) => makeFindChain({ ...query, __collection: 'changes' }));
+    const findActions = jest.fn((query) => makeFindChain({ ...query, __collection: 'actions' }));
     const projectFind = jest.fn(() => ({ lean: async () => projects }));
     const projectUpdateOne = jest.fn(async () => ({ modifiedCount: 1 }));
 
@@ -808,7 +813,7 @@ describe('Meta Ads budget service persistence safety', () => {
         MetaAdsAutomationAction: {
           schema: {},
           create: createAutomationAction,
-          find: findChanges,
+          find: findActions,
         },
       },
       Schema: function Schema() {},
@@ -1684,6 +1689,105 @@ describe('Meta Ads budget service persistence safety', () => {
         }),
       ]),
     );
+  });
+
+  it('returns entities grouped by rule performance', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      actions: [
+        {
+          actionType: 'pause_ad',
+          entityLevel: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          campaignName: 'Campaign A',
+          adsetName: 'Ad set A',
+          spend: 30,
+          cpa: 15,
+          roas: 2,
+          actor: 'cron',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          ruleScope: 'campaign:campaign-1',
+          createdAt: '2026-06-24T14:03:00.000Z',
+        },
+        {
+          actionType: 'budget_change',
+          entityLevel: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          campaignName: 'Campaign A',
+          adsetName: 'Ad set A',
+          spend: 50,
+          cpa: 25,
+          roas: 4,
+          actor: 'cron',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          ruleScope: 'campaign:campaign-1',
+          createdAt: '2026-06-24T15:10:00.000Z',
+        },
+        {
+          actionType: 'pause_ad',
+          entityLevel: 'adset',
+          entityId: 'adset-2',
+          entityName: 'Audience B',
+          campaignName: 'Campaign B',
+          spend: 20,
+          cpa: 10,
+          roas: 1,
+          actor: 'user',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          ruleScope: 'campaign:campaign-1',
+          createdAt: '2026-06-23T08:00:00.000Z',
+        },
+      ],
+    });
+
+    const performance = await budget.getProjectMetaAdsRulePerformance('p1', 'tenant-a');
+
+    expect(performance.rules).toEqual([
+      expect.objectContaining({
+        ruleKey: 'group:group-1',
+        actionCount: 3,
+        pausedAdCount: 2,
+        entities: [
+          expect.objectContaining({
+            entityLevel: 'ad',
+            entityId: 'ad-1',
+            entityName: 'Creative A',
+            campaignName: 'Campaign A',
+            adsetName: 'Ad set A',
+            actionCount: 2,
+            pausedAdCount: 1,
+            totalSpend: 80,
+            averageCpa: 20,
+            averageRoas: 3,
+            lastActionAt: '2026-06-24T15:10:00.000Z',
+          }),
+          expect.objectContaining({
+            entityLevel: 'adset',
+            entityId: 'adset-2',
+            entityName: 'Audience B',
+            campaignName: 'Campaign B',
+            actionCount: 1,
+            pausedAdCount: 1,
+            totalSpend: 20,
+            averageCpa: 10,
+            averageRoas: 1,
+            lastActionAt: '2026-06-23T08:00:00.000Z',
+          }),
+        ],
+      }),
+    ]);
   });
 
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {

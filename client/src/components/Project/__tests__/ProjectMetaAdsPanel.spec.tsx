@@ -3078,6 +3078,20 @@ describe('ProjectMetaAdsPanel', () => {
         averageCpa: 25,
         averageRoas: null,
         status: 'neutral',
+        entities: [
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-1',
+            entityName: 'Summer Campaign',
+            campaignName: 'Summer Campaign',
+            actionCount: 2,
+            pausedAdCount: 1,
+            totalSpend: 100,
+            averageCpa: 25,
+            averageRoas: null,
+            lastActionAt: '2026-06-24T14:03:00.000-03:00',
+          },
+        ],
         actions: [],
       },
     ];
@@ -3090,7 +3104,11 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getByText('com_ui_project_meta_ads_selected_rule_performance'),
     ).toBeInTheDocument();
-    expect(screen.getByText('campaign:campaign-1')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_rule_entities_count_one')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    expect(screen.getByText('com_ui_project_meta_ads_rule_details')).toBeInTheDocument();
+    expect(screen.getByText('Summer Campaign')).toBeInTheDocument();
+    expect(screen.getByText('24/06/2026 14:03')).toBeInTheDocument();
     expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
   });
 

@@ -518,7 +518,22 @@ export type ProjectMetaAdsRulePerformanceItem = {
   averageCpa?: number | null;
   averageRoas?: number | null;
   status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
+  entities?: ProjectMetaAdsRulePerformanceEntity[];
   actions: ProjectMetaAdsAutomationAction[];
+};
+
+export type ProjectMetaAdsRulePerformanceEntity = {
+  entityLevel: ProjectMetaAdsAutomationAction['entityLevel'];
+  entityId: string;
+  entityName?: string;
+  campaignName?: string;
+  adsetName?: string;
+  actionCount: number;
+  pausedAdCount: number;
+  totalSpend: number;
+  averageCpa?: number | null;
+  averageRoas?: number | null;
+  lastActionAt?: string;
 };
 
 export type ProjectMetaAdsRulePerformanceResponse = {

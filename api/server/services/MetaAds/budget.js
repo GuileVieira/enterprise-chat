@@ -2508,6 +2508,56 @@ function getRulePerformanceStatus(actions) {
   return 'neutral';
 }
 
+function buildRulePerformanceEntities(actions = []) {
+  const groups = new Map();
+  for (const action of actions) {
+    const entityId = action.entityId || 'unknown';
+    const entityLevel = action.entityLevel || 'unknown';
+    const entityKey = `${entityLevel}:${entityId}`;
+    const current = groups.get(entityKey) || {
+      entityLevel,
+      entityId,
+      entityName: action.entityName || entityId,
+      campaignName: action.campaignName,
+      adsetName: action.adsetName,
+      actions: [],
+    };
+    if (!current.entityName && action.entityName) {
+      current.entityName = action.entityName;
+    }
+    if (!current.campaignName && action.campaignName) {
+      current.campaignName = action.campaignName;
+    }
+    if (!current.adsetName && action.adsetName) {
+      current.adsetName = action.adsetName;
+    }
+    current.actions.push(action);
+    groups.set(entityKey, current);
+  }
+  return Array.from(groups.values()).map((group) => {
+    const totalSpend = group.actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
+    const lastAction = group.actions.reduce((latest, action) => {
+      if (!latest) {
+        return action;
+      }
+      return String(action.createdAt || '') > String(latest.createdAt || '') ? action : latest;
+    }, null);
+    return {
+      entityLevel: group.entityLevel,
+      entityId: group.entityId,
+      entityName: group.entityName,
+      campaignName: group.campaignName,
+      adsetName: group.adsetName,
+      actionCount: group.actions.length,
+      pausedAdCount: group.actions.filter((action) => action.actionType === 'pause_ad').length,
+      totalSpend: roundMetric(totalSpend) ?? 0,
+      averageCpa: averageMetric(group.actions, 'cpa'),
+      averageRoas: averageMetric(group.actions, 'roas'),
+      lastActionAt: lastAction?.createdAt,
+    };
+  });
+}
+
 async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, options = {}) {
   const performance = await getProjectMetaAdsPerformance(projectId, fallbackTenantId, options);
   const groups = new Map();
@@ -2538,6 +2588,7 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
       averageCpa: averageMetric(actions, 'cpa'),
       averageRoas: averageMetric(actions, 'roas'),
       status: getRulePerformanceStatus(actions),
+      entities: buildRulePerformanceEntities(actions),
     };
   });
   return {
