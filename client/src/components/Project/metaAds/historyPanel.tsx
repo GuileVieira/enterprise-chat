@@ -24,6 +24,19 @@ function formatChangeDateTime(value?: string): string {
   return `${values.day}/${values.month}/${values.year} ${values.hour}:${values.minute}`;
 }
 
+function TruncatedHoverText({ value, className }: { value: string; className: string }) {
+  return (
+    <span className="group relative block min-w-0" tabIndex={0}>
+      <span className={className} title={value}>
+        {value}
+      </span>
+      <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden max-w-[min(560px,80vw)] rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium leading-5 text-slate-900 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.65)] group-hover:block group-focus:block dark:border-white/10 dark:bg-[#0f1728] dark:text-white">
+        {value}
+      </span>
+    </span>
+  );
+}
+
 export function MetaAdsHistoryPanel({
   changes,
   currency,
@@ -54,6 +67,7 @@ export function MetaAdsHistoryPanel({
             {changes.slice(0, 8).map((change) => {
               const delta = getBudgetChangeDelta(change);
               const entityName = change.entityName ?? change.entityId;
+              const reason = change.reason ?? '-';
               return (
                 <div
                   key={change._id ?? `${change.entityId}-${change.createdAt}`}
@@ -63,12 +77,10 @@ export function MetaAdsHistoryPanel({
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
                       {localize('com_ui_project_meta_ads_name')}
                     </div>
-                    <div
-                      className="truncate font-medium text-slate-950 dark:text-white"
-                      title={entityName}
-                    >
-                      {entityName}
-                    </div>
+                    <TruncatedHoverText
+                      value={entityName}
+                      className="block truncate font-medium text-slate-950 dark:text-white"
+                    />
                   </div>
                   <div className="min-w-0">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
@@ -90,9 +102,10 @@ export function MetaAdsHistoryPanel({
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
                       {localize('com_ui_project_meta_ads_reason')}
                     </div>
-                    <div className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {change.reason ?? '-'}
-                    </div>
+                    <TruncatedHoverText
+                      value={reason}
+                      className="block truncate text-xs text-slate-500 dark:text-slate-400"
+                    />
                   </div>
                   <div className="font-mono text-xs text-slate-600 dark:text-slate-300 lg:text-right">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">

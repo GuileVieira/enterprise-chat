@@ -2987,9 +2987,10 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
-    expect(screen.getByText('CBO Messages')).toBeInTheDocument();
+    expect(screen.getAllByText('CBO Messages').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_date').length).toBeGreaterThan(0);
     expect(screen.getByTitle('CBO Messages')).toBeInTheDocument();
+    expect(screen.getByTitle('manual-ui')).toBeInTheDocument();
     expect(screen.getByText(/12\/06\/2026 12:00/)).toBeInTheDocument();
     expect(screen.getByText('R$ 100,00 -> R$ 125,00')).toBeInTheDocument();
     expect(screen.getByText('+R$ 25,00 · +25.00%')).toBeInTheDocument();

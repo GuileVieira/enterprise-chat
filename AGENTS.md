@@ -158,7 +158,7 @@ Quirks:
 - **Project selector state is not project membership.** `selectedProjectId` filters the sidebar; `conversation.projectId` is the source of truth for chat context, prompt injection, upload target, and ACL inheritance.
 - **ChatForm buttons must opt out of submit.** Inside `client/src/components/Chat/Input/ChatForm.tsx`, only `SendButton` should use `type="submit"`; menus, toggles, badges, uploads, prompt snippets, collapse, and action buttons must use `type="button"` to avoid accidental empty submits/regeneration.
 - **Admin-disabled speech overrides local preferences.** `speechTab.speechToText=false` and `speechTab.textToSpeech=false` must hide/disable STT/TTS UI even if localStorage has user toggles enabled.
-- **Meta Ads truncated names need hover text.** Any Meta Ads campaign, ad set, or ad/creative name that uses truncation/ellipsis must expose the full name with `title` or an accessible tooltip.
+- **Meta Ads truncated names need visible hover text.** Any Meta Ads campaign, ad set, ad/creative name, or reason text that uses truncation/ellipsis must expose the full value with a visible hover/focus tooltip; `title` alone is not enough when the user needs to read it in the UI.
 
 ---
 
