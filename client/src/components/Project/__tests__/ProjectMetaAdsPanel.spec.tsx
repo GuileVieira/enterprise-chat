@@ -3142,6 +3142,19 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getAllByText('com_ui_project_meta_ads_rule_performance_improved').length,
     ).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_rule_performance_why')).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_reason_cpa_down'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_missing'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_missing_roas'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_rule_performance_missing_cpa'),
+    ).not.toBeInTheDocument();
     expect(screen.getAllByText('Prospecting group').length).toBeGreaterThanOrEqual(2);
     expect(
       screen.getAllByText('Summer Campaign With A Very Long Name').length,
@@ -3189,6 +3202,18 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.getAllByText('com_ui_project_meta_ads_insufficient_comparison_data').length,
     ).toBeGreaterThan(0);
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_missing'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_missing_cpa'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_missing_roas'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_rule_performance_why'),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_average_cpa')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_average_roas')).toBeInTheDocument();
     expect(screen.getAllByText(/R\$\s*30,00/).length).toBeGreaterThan(0);

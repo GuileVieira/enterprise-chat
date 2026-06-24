@@ -105,6 +105,34 @@ function formatSignedMoneyValue(value: number | null | undefined, currency: stri
   return formatMoney(value, currency);
 }
 
+function getComparisonReasons(item: RulePerformanceComparison) {
+  const reasons: string[] = [];
+  if (item.cpaDelta != null && item.cpaDelta < 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_down');
+  }
+  if (item.cpaDelta != null && item.cpaDelta > 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_up');
+  }
+  if (item.roasDelta != null && item.roasDelta > 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_roas_up');
+  }
+  if (item.roasDelta != null && item.roasDelta < 0) {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_roas_down');
+  }
+  return reasons;
+}
+
+function getComparisonMissingItems(item: RulePerformanceComparison) {
+  const missingItems: string[] = [];
+  if (item.firstCpa == null || item.lastCpa == null) {
+    missingItems.push('com_ui_project_meta_ads_rule_performance_missing_cpa');
+  }
+  if (item.firstRoas == null || item.lastRoas == null) {
+    missingItems.push('com_ui_project_meta_ads_rule_performance_missing_roas');
+  }
+  return missingItems;
+}
+
 function NameWithTooltip({ value, className = '' }: { value: string; className?: string }) {
   return (
     <span className={`group relative block min-w-0 focus-within:z-50 hover:z-50 ${className}`}>
@@ -437,6 +465,8 @@ function PerformanceComparisonPanel({
   currency: string;
   localize: Localize;
 }) {
+  const reasons = getComparisonReasons(item);
+  const missingItems = getComparisonMissingItems(item);
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.035]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -487,6 +517,36 @@ function PerformanceComparisonPanel({
           {localize('com_ui_project_meta_ads_last_record')}: {formatRuleDateTime(item.lastActionAt)}
         </div>
       </div>
+      {(reasons.length > 0 || missingItems.length > 0) && (
+        <div className="mt-4 grid gap-3 border-t border-slate-200 pt-3 text-xs dark:border-white/10 md:grid-cols-2">
+          {reasons.length > 0 && (
+            <div>
+              <div className="font-semibold text-slate-700 dark:text-slate-200">
+                {localize('com_ui_project_meta_ads_rule_performance_why')}
+              </div>
+              <ul className="mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+                {reasons.map((reason) => (
+                  <li key={reason}>{localize(reason as Parameters<typeof localize>[0])}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {missingItems.length > 0 && (
+            <div>
+              <div className="font-semibold text-slate-700 dark:text-slate-200">
+                {localize('com_ui_project_meta_ads_rule_performance_missing')}
+              </div>
+              <ul className="mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+                {missingItems.map((missingItem) => (
+                  <li key={missingItem}>
+                    {localize(missingItem as Parameters<typeof localize>[0])}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
