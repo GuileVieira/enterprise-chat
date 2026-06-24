@@ -545,10 +545,13 @@ export type ProjectMetaAdsRulePerformanceItem = {
   firstTargetMetric?: number | null;
   lastTargetMetric?: number | null;
   targetMetricDelta?: number | null;
+  firstResultCount?: number | null;
+  lastResultCount?: number | null;
+  awaitingReason?: 'missing_expected_result';
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
-  status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
+  status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data' | 'awaiting_results';
   entities?: ProjectMetaAdsRulePerformanceEntity[];
   actions: ProjectMetaAdsAutomationAction[];
 };
@@ -575,10 +578,13 @@ export type ProjectMetaAdsRulePerformanceEntity = {
   firstTargetMetric?: number | null;
   lastTargetMetric?: number | null;
   targetMetricDelta?: number | null;
+  firstResultCount?: number | null;
+  lastResultCount?: number | null;
+  awaitingReason?: 'missing_expected_result';
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
-  status?: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
+  status?: 'improved' | 'neutral' | 'regressed' | 'insufficient_data' | 'awaiting_results';
 };
 
 export type ProjectMetaAdsRulePerformanceResponse = {

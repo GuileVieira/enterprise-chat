@@ -3255,6 +3255,65 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('2.00')).toBeInTheDocument();
   });
 
+  it('shows awaiting conversions instead of improvement when the latest CPA record has no result', () => {
+    mockRulePerformanceData.rules = [
+      {
+        ruleKey: 'global:global',
+        ruleSourceType: 'global',
+        ruleId: 'global',
+        ruleName: 'Global',
+        ruleScope: 'global',
+        actionCount: 2,
+        aiActionCount: 2,
+        pausedAdCount: 0,
+        totalSpend: 134.22,
+        totalResults: 1,
+        averageCpa: 42.71,
+        averageRoas: 5.5,
+        firstCpa: 42.71,
+        lastCpa: null,
+        cpaDelta: null,
+        firstRoas: 5.5,
+        lastRoas: null,
+        roasDelta: null,
+        targetMetric: 'cpa',
+        targetMetricGoal: null,
+        firstTargetMetric: 42.71,
+        lastTargetMetric: null,
+        targetMetricDelta: null,
+        firstResultCount: 1,
+        lastResultCount: 0,
+        awaitingReason: 'missing_expected_result',
+        firstActionAt: '2026-06-24T08:23:00.000-03:00',
+        lastActionAt: '2026-06-24T14:03:00.000-03:00',
+        comparisonBasis: 'period_first_last',
+        status: 'awaiting_results',
+        entities: [],
+        actions: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_rule_performance_awaiting_results').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_awaiting_result').length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_reason_missing_expected_result'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_rule_performance_improved'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/R\$\s*42,71\s*→\s*R\$\s*0,00/)).not.toBeInTheDocument();
+    expect(screen.getByTestId('meta-ads-rule-details-body')).toHaveClass('overflow-y-auto');
+  });
+
   it('explains empty rule performance instead of showing a blank table', () => {
     const projectWithRules = {
       ...project,

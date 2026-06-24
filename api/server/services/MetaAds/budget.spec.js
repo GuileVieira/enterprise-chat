@@ -1875,6 +1875,85 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('waits for conversions before concluding CPA rule performance', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      actions: [
+        {
+          actionType: 'budget_change',
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          entityName: 'Audience A',
+          spend: 91.51,
+          resultCount: 0,
+          cpa: 0,
+          roas: 0,
+          primaryMetric: 'cpa',
+          targetMetricValue: 45,
+          actor: 'cron',
+          ruleSourceType: 'global',
+          ruleId: 'global',
+          ruleName: 'Global',
+          createdAt: '2026-06-24T17:03:00.000Z',
+        },
+        {
+          actionType: 'budget_change',
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          entityName: 'Audience A',
+          spend: 42.71,
+          resultCount: 1,
+          cpa: 42.71,
+          roas: 5.5,
+          primaryMetric: 'cpa',
+          targetMetricValue: 45,
+          actor: 'cron',
+          ruleSourceType: 'global',
+          ruleId: 'global',
+          ruleName: 'Global',
+          createdAt: '2026-06-24T14:03:00.000Z',
+        },
+      ],
+    });
+
+    const performance = await budget.getProjectMetaAdsRulePerformance('p1', 'tenant-a');
+
+    expect(performance.rules[0]).toEqual(
+      expect.objectContaining({
+        status: 'awaiting_results',
+        firstCpa: 42.71,
+        lastCpa: null,
+        cpaDelta: null,
+        firstRoas: 5.5,
+        lastRoas: null,
+        roasDelta: null,
+        targetMetric: 'cpa',
+        targetMetricGoal: 45,
+        firstTargetMetric: 42.71,
+        lastTargetMetric: null,
+        targetMetricDelta: null,
+        firstResultCount: 1,
+        lastResultCount: 0,
+        awaitingReason: 'missing_expected_result',
+        firstActionAt: '2026-06-24T14:03:00.000Z',
+        lastActionAt: '2026-06-24T17:03:00.000Z',
+      }),
+    );
+    expect(performance.rules[0].entities[0]).toEqual(
+      expect.objectContaining({
+        status: 'awaiting_results',
+        lastTargetMetric: null,
+        targetMetricDelta: null,
+        lastResultCount: 0,
+        awaitingReason: 'missing_expected_result',
+      }),
+    );
+  });
+
   it('uses real before and after metrics when available for rule performance', async () => {
     const { budget } = loadBudgetWithMocks({
       project: {

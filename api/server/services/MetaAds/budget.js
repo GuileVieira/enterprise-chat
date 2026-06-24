@@ -2539,8 +2539,42 @@ function getDateRangeQuery(period) {
   return Object.keys(query).length > 0 ? query : undefined;
 }
 
+function isConversionMetric(key) {
+  return key === 'cpa' || key === 'roas';
+}
+
+function hasMeasuredResultCount(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0;
+}
+
+function isAwaitingConversionMetric(metrics, key) {
+  if (!isConversionMetric(key)) {
+    return false;
+  }
+  const value = toFiniteMetric(metrics?.[key]);
+  const resultCount = toFiniteMetric(metrics?.resultCount);
+  return (
+    (resultCount != null && resultCount <= 0) ||
+    (value === 0 && !hasMeasuredResultCount(resultCount))
+  );
+}
+
+function getComparableMetricValue(metrics, key) {
+  const value = toFiniteMetric(metrics?.[key]);
+  if (!isConversionMetric(key)) {
+    return value;
+  }
+  if (isAwaitingConversionMetric(metrics, key)) {
+    return null;
+  }
+  return value != null && value > 0 ? value : null;
+}
+
 function averageMetric(items, key) {
-  const values = items.map((item) => Number(item[key])).filter((value) => Number.isFinite(value));
+  const values = items
+    .map((item) => getComparableMetricValue(item, key))
+    .filter((value) => value != null);
   if (values.length === 0) {
     return null;
   }
@@ -2579,18 +2613,35 @@ function getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }) {
 }
 
 function getFirstLastMetric(actions, key) {
+  const latestAction = actions[actions.length - 1] || null;
+  const awaiting = latestAction ? isAwaitingConversionMetric(latestAction, key) : false;
   const values = actions
     .map((action) => ({
-      value: toFiniteMetric(action[key]),
+      value: getComparableMetricValue(action, key),
       createdAt: action.createdAt,
+      resultCount: toFiniteMetric(action.resultCount),
     }))
     .filter((item) => item.value != null);
-  if (values.length < 2) {
-    return { first: null, last: null };
+  if (values.length === 0) {
+    return {
+      first: null,
+      last: null,
+      latest: latestAction
+        ? {
+            createdAt: latestAction.createdAt,
+            resultCount: toFiniteMetric(latestAction.resultCount),
+          }
+        : null,
+      awaiting,
+    };
   }
   return {
     first: values[0],
-    last: values[values.length - 1],
+    last: values.length >= 2 && !awaiting ? values[values.length - 1] : null,
+    latest: latestAction
+      ? { createdAt: latestAction.createdAt, resultCount: toFiniteMetric(latestAction.resultCount) }
+      : null,
+    awaiting,
   };
 }
 
@@ -2598,14 +2649,31 @@ function getRealBeforeAfterMetric(actions, key) {
   const actionsWithAfterMetrics = actions.filter((action) => action.afterMetrics);
   const firstAction = actionsWithAfterMetrics.find((action) => action.beforeMetrics) || null;
   const lastAction = actionsWithAfterMetrics[actionsWithAfterMetrics.length - 1] || null;
-  const firstValue = toFiniteMetric(firstAction?.beforeMetrics?.[key]);
-  const lastValue = toFiniteMetric(lastAction?.afterMetrics?.[key]);
+  const firstValue = getComparableMetricValue(firstAction?.beforeMetrics, key);
+  const lastValue = getComparableMetricValue(lastAction?.afterMetrics, key);
+  const awaiting = lastAction?.afterMetrics
+    ? isAwaitingConversionMetric(lastAction.afterMetrics, key)
+    : false;
   return {
-    first: firstValue != null ? { value: firstValue, createdAt: firstAction?.createdAt } : null,
+    first:
+      firstValue != null
+        ? {
+            value: firstValue,
+            createdAt: firstAction?.createdAt,
+            resultCount: toFiniteMetric(firstAction?.beforeMetrics?.resultCount),
+          }
+        : null,
     last:
-      lastValue != null
+      lastValue != null && !awaiting
         ? { value: lastValue, createdAt: lastAction?.afterMeasuredAt || lastAction?.createdAt }
         : null,
+    latest: lastAction
+      ? {
+          createdAt: lastAction.afterMeasuredAt || lastAction.createdAt,
+          resultCount: toFiniteMetric(lastAction.afterMetrics?.resultCount),
+        }
+      : null,
+    awaiting,
   };
 }
 
@@ -2613,11 +2681,18 @@ function getActionPrimaryMetric(actions = []) {
   return actions.find((action) => PRIMARY_METRICS.has(action.primaryMetric))?.primaryMetric || null;
 }
 
-function getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas }) {
-  if (firstCpa != null && lastCpa != null) {
+function getFallbackTargetMetric({
+  firstCpa,
+  lastCpa,
+  firstRoas,
+  lastRoas,
+  cpaAwaiting,
+  roasAwaiting,
+}) {
+  if (cpaAwaiting || (firstCpa != null && lastCpa != null)) {
     return 'cpa';
   }
-  if (firstRoas != null && lastRoas != null) {
+  if (roasAwaiting || (firstRoas != null && lastRoas != null)) {
     return 'roas';
   }
   return null;
@@ -2646,12 +2721,22 @@ function getRulePerformanceComparison(actions = []) {
   if (comparisonBasis === 'real_before_after') {
     const firstAction = actionsWithAfterMetrics.find((action) => action.beforeMetrics) || null;
     const lastAction = actionsWithAfterMetrics[actionsWithAfterMetrics.length - 1] || null;
-    const firstCpa = toFiniteMetric(firstAction?.beforeMetrics?.cpa);
-    const lastCpa = toFiniteMetric(lastAction?.afterMetrics?.cpa);
-    const firstRoas = toFiniteMetric(firstAction?.beforeMetrics?.roas);
-    const lastRoas = toFiniteMetric(lastAction?.afterMetrics?.roas);
+    const cpa = getRealBeforeAfterMetric(orderedActions, 'cpa');
+    const roas = getRealBeforeAfterMetric(orderedActions, 'roas');
+    const firstCpa = cpa.first?.value ?? null;
+    const lastCpa = cpa.last?.value ?? null;
+    const firstRoas = roas.first?.value ?? null;
+    const lastRoas = roas.last?.value ?? null;
     const targetMetric =
-      actionPrimaryMetric || getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas });
+      actionPrimaryMetric ||
+      getFallbackTargetMetric({
+        firstCpa,
+        lastCpa,
+        firstRoas,
+        lastRoas,
+        cpaAwaiting: cpa.awaiting,
+        roasAwaiting: roas.awaiting,
+      });
     const target = targetMetric ? getRealBeforeAfterMetric(orderedActions, targetMetric) : null;
     const firstTargetMetric = target?.first?.value ?? null;
     const lastTargetMetric = target?.last?.value ?? null;
@@ -2677,11 +2762,17 @@ function getRulePerformanceComparison(actions = []) {
         firstTargetMetric != null && lastTargetMetric != null
           ? roundMetric(lastTargetMetric - firstTargetMetric)
           : null,
+      firstResultCount: target?.first?.resultCount ?? null,
+      lastResultCount: target?.latest?.resultCount ?? null,
+      awaitingReason: target?.awaiting ? 'missing_expected_result' : undefined,
       firstActionAt: target?.first?.createdAt || firstAction?.createdAt,
-      lastActionAt: target?.last?.createdAt || lastAction?.afterMeasuredAt || lastAction?.createdAt,
+      lastActionAt:
+        target?.latest?.createdAt || lastAction?.afterMeasuredAt || lastAction?.createdAt,
       comparisonBasis,
-      status:
-        targetMetricStatus ?? getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+      status: target?.awaiting
+        ? 'awaiting_results'
+        : (targetMetricStatus ??
+          getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas })),
     };
   }
   const cpa = getFirstLastMetric(orderedActions, 'cpa');
@@ -2691,7 +2782,15 @@ function getRulePerformanceComparison(actions = []) {
   const firstRoas = roas.first?.value ?? null;
   const lastRoas = roas.last?.value ?? null;
   const targetMetric =
-    actionPrimaryMetric || getFallbackTargetMetric({ firstCpa, lastCpa, firstRoas, lastRoas });
+    actionPrimaryMetric ||
+    getFallbackTargetMetric({
+      firstCpa,
+      lastCpa,
+      firstRoas,
+      lastRoas,
+      cpaAwaiting: cpa.awaiting,
+      roasAwaiting: roas.awaiting,
+    });
   const target = targetMetric ? getFirstLastMetric(orderedActions, targetMetric) : null;
   const firstTargetMetric = target?.first?.value ?? null;
   const lastTargetMetric = target?.last?.value ?? null;
@@ -2725,11 +2824,16 @@ function getRulePerformanceComparison(actions = []) {
       firstTargetMetric != null && lastTargetMetric != null
         ? roundMetric(lastTargetMetric - firstTargetMetric)
         : null,
+    firstResultCount: target?.first?.resultCount ?? null,
+    lastResultCount: target?.latest?.resultCount ?? null,
+    awaitingReason: target?.awaiting ? 'missing_expected_result' : undefined,
     firstActionAt,
     lastActionAt,
     comparisonBasis,
-    status:
-      targetMetricStatus ?? getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+    status: target?.awaiting
+      ? 'awaiting_results'
+      : (targetMetricStatus ??
+        getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas })),
   };
 }
 

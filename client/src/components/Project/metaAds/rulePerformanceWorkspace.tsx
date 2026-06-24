@@ -68,6 +68,9 @@ function getStatusTone(status?: ProjectMetaAdsRulePerformanceItem['status']) {
   if (status === 'regressed') {
     return 'text-rose-700 dark:text-rose-200';
   }
+  if (status === 'awaiting_results') {
+    return 'text-amber-700 dark:text-amber-200';
+  }
   return 'text-slate-600 dark:text-slate-300';
 }
 
@@ -142,6 +145,10 @@ function formatSignedComparisonMetricValue(
 
 function getComparisonReasons(item: RulePerformanceComparison) {
   const reasons: string[] = [];
+  if (item.status === 'awaiting_results') {
+    reasons.push('com_ui_project_meta_ads_rule_performance_reason_missing_expected_result');
+    return reasons;
+  }
   const targetMetric = item.targetMetric;
   if (targetMetric === 'cpa' && item.targetMetricDelta != null && item.targetMetricDelta < 0) {
     reasons.push('com_ui_project_meta_ads_rule_performance_reason_cpa_down');
@@ -172,6 +179,9 @@ function getComparisonReasons(item: RulePerformanceComparison) {
 
 function getComparisonMissingItems(item: RulePerformanceComparison) {
   const missingItems: string[] = [];
+  if (item.status === 'awaiting_results') {
+    return missingItems;
+  }
   if (item.targetMetric && (item.firstTargetMetric == null || item.lastTargetMetric == null)) {
     missingItems.push('com_ui_project_meta_ads_rule_performance_missing_target_metric');
     return missingItems;
@@ -405,8 +415,10 @@ function RulePerformanceDetailsDialog({
       }}
     >
       {rule && (
-        <OGDialogContent className={`max-w-4xl p-0 ${metaAdsModalShell}`}>
-          <OGDialogHeader className={metaAdsModalHeader}>
+        <OGDialogContent
+          className={`flex max-h-[92vh] max-w-4xl flex-col overflow-hidden p-0 ${metaAdsModalShell}`}
+        >
+          <OGDialogHeader className={`shrink-0 ${metaAdsModalHeader}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
               {localize('com_ui_project_meta_ads_rule_details')}
             </div>
@@ -419,7 +431,10 @@ function RulePerformanceDetailsDialog({
               {rule.ruleScope ?? '-'}
             </div>
           </OGDialogHeader>
-          <div className="space-y-4 p-5">
+          <div
+            data-testid="meta-ads-rule-details-body"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5"
+          >
             <div className="grid gap-3 sm:grid-cols-4">
               <MetricTile
                 label={localize('com_ui_project_meta_ads_actions')}
@@ -520,9 +535,30 @@ function PerformanceComparisonPanel({
   const reasons = getComparisonReasons(item);
   const missingItems = getComparisonMissingItems(item);
   const targetMetricLabel = getMetricLabel(item.targetMetric, localize);
+  const isAwaitingResults = item.status === 'awaiting_results';
   const hasTargetMetric = Boolean(
     item.targetMetric && item.firstTargetMetric != null && item.lastTargetMetric != null,
   );
+  const targetMetricCardClassName = isAwaitingResults
+    ? 'border-amber-300/35 bg-amber-50/80 dark:border-amber-300/20 dark:bg-amber-300/10'
+    : 'border-teal-300/30 bg-teal-50/80 dark:border-teal-300/20 dark:bg-teal-300/10';
+  const targetMetricLabelClassName = isAwaitingResults
+    ? 'text-amber-700 dark:text-amber-200'
+    : 'text-teal-700 dark:text-teal-200';
+  let targetBeforeAfterValue = localize('com_ui_project_meta_ads_insufficient_comparison_data');
+  if (hasTargetMetric) {
+    targetBeforeAfterValue = `${formatComparisonMetricValue(
+      item.targetMetric,
+      item.firstTargetMetric,
+      currency,
+    )} → ${formatComparisonMetricValue(item.targetMetric, item.lastTargetMetric, currency)}`;
+  } else if (isAwaitingResults) {
+    targetBeforeAfterValue = `${formatComparisonMetricValue(
+      item.targetMetric,
+      item.firstTargetMetric,
+      currency,
+    )} → ${localize('com_ui_project_meta_ads_awaiting_result')}`;
+  }
   return (
     <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.035]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -543,10 +579,12 @@ function PerformanceComparisonPanel({
         )}
       </div>
       {item.targetMetric && (
-        <div className="mt-4 rounded-xl border border-teal-300/30 bg-teal-50/80 p-4 dark:border-teal-300/20 dark:bg-teal-300/10">
+        <div className={`mt-4 rounded-xl border p-4 ${targetMetricCardClassName}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-700 dark:text-teal-200">
+              <div
+                className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${targetMetricLabelClassName}`}
+              >
                 {localize('com_ui_project_meta_ads_target_metric')}
               </div>
               <div className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
@@ -570,19 +608,7 @@ function PerformanceComparisonPanel({
             />
             <DetailMetric
               label={localize('com_ui_project_meta_ads_before_after')}
-              value={
-                hasTargetMetric
-                  ? `${formatComparisonMetricValue(
-                      item.targetMetric,
-                      item.firstTargetMetric,
-                      currency,
-                    )} → ${formatComparisonMetricValue(
-                      item.targetMetric,
-                      item.lastTargetMetric,
-                      currency,
-                    )}`
-                  : localize('com_ui_project_meta_ads_insufficient_comparison_data')
-              }
+              value={targetBeforeAfterValue}
             />
             <DetailMetric
               label={localize('com_ui_project_meta_ads_variation')}
@@ -603,6 +629,7 @@ function PerformanceComparisonPanel({
           after={item.lastCpa}
           delta={item.cpaDelta}
           average={item.averageCpa}
+          awaiting={isAwaitingResults}
           currency={currency}
           localize={localize}
         />
@@ -613,6 +640,7 @@ function PerformanceComparisonPanel({
           after={item.lastRoas}
           delta={item.roasDelta}
           average={item.averageRoas}
+          awaiting={isAwaitingResults}
           currency={currency}
           localize={localize}
         />
@@ -667,6 +695,7 @@ function MetricComparisonBlock({
   after,
   delta,
   average,
+  awaiting,
   currency,
   localize,
 }: {
@@ -676,6 +705,7 @@ function MetricComparisonBlock({
   after?: number | null;
   delta?: number | null;
   average?: number | null;
+  awaiting?: boolean;
   currency: string;
   localize: Localize;
 }) {
@@ -684,6 +714,24 @@ function MetricComparisonBlock({
     metric === 'cpa' ? formatMoney(value, currency) : formatMetric(value);
   const formattedDelta =
     metric === 'cpa' ? formatSignedMoneyValue(delta, currency) : formatSignedMetricValue(delta);
+  let comparisonContent = (
+    <div className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+      {localize('com_ui_project_meta_ads_insufficient_comparison_data')}
+    </div>
+  );
+  if (hasData) {
+    comparisonContent = (
+      <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
+        {formatValue(before)} → {formatValue(after)}
+      </div>
+    );
+  } else if (awaiting && before != null) {
+    comparisonContent = (
+      <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
+        {formatValue(before)} → {localize('com_ui_project_meta_ads_awaiting_result')}
+      </div>
+    );
+  }
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/[0.045]">
       <div className="flex items-center justify-between gap-3">
@@ -694,15 +742,7 @@ function MetricComparisonBlock({
           {localize('com_ui_project_meta_ads_variation')}: {formattedDelta}
         </div>
       </div>
-      {hasData ? (
-        <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
-          {formatValue(before)} → {formatValue(after)}
-        </div>
-      ) : (
-        <div className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          {localize('com_ui_project_meta_ads_insufficient_comparison_data')}
-        </div>
-      )}
+      {comparisonContent}
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
@@ -717,7 +757,7 @@ function MetricComparisonBlock({
             {localize('com_ui_project_meta_ads_after')}
           </div>
           <div className="mt-1 font-mono text-slate-800 dark:text-slate-100">
-            {formatValue(after)}
+            {awaiting ? localize('com_ui_project_meta_ads_awaiting_result') : formatValue(after)}
           </div>
         </div>
       </div>
