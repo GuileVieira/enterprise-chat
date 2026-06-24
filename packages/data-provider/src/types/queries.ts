@@ -125,6 +125,9 @@ export type ProjectMetaAdsRecommendation = {
   ctr?: number | null;
   cpc?: number | null;
   frequency?: number | null;
+  beforeMetrics?: ProjectMetaAdsAutomationMetrics;
+  afterMetrics?: ProjectMetaAdsAutomationMetrics;
+  afterMeasuredAt?: string;
   ruleSourceType?: 'global' | 'group' | 'override' | 'creative' | 'manual' | 'unknown';
   ruleId?: string;
   ruleName?: string;
@@ -166,6 +169,16 @@ export type ProjectMetaAdsAutomationAction = {
   actorUserId?: string;
   reason?: string;
   createdAt?: string;
+};
+
+export type ProjectMetaAdsAutomationMetrics = {
+  spend?: number | null;
+  resultCount?: number | null;
+  cpa?: number | null;
+  roas?: number | null;
+  ctr?: number | null;
+  cpc?: number | null;
+  frequency?: number | null;
 };
 
 export type ProjectMetaAdsBudgetChange = {
@@ -517,6 +530,15 @@ export type ProjectMetaAdsRulePerformanceItem = {
   totalResults: number;
   averageCpa?: number | null;
   averageRoas?: number | null;
+  firstCpa?: number | null;
+  lastCpa?: number | null;
+  cpaDelta?: number | null;
+  firstRoas?: number | null;
+  lastRoas?: number | null;
+  roasDelta?: number | null;
+  firstActionAt?: string;
+  lastActionAt?: string;
+  comparisonBasis?: 'period_first_last' | 'real_before_after';
   status: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
   entities?: ProjectMetaAdsRulePerformanceEntity[];
   actions: ProjectMetaAdsAutomationAction[];
@@ -533,7 +555,16 @@ export type ProjectMetaAdsRulePerformanceEntity = {
   totalSpend: number;
   averageCpa?: number | null;
   averageRoas?: number | null;
+  firstCpa?: number | null;
+  lastCpa?: number | null;
+  cpaDelta?: number | null;
+  firstRoas?: number | null;
+  lastRoas?: number | null;
+  roasDelta?: number | null;
+  firstActionAt?: string;
   lastActionAt?: string;
+  comparisonBasis?: 'period_first_last' | 'real_before_after';
+  status?: 'improved' | 'neutral' | 'regressed' | 'insufficient_data';
 };
 
 export type ProjectMetaAdsRulePerformanceResponse = {

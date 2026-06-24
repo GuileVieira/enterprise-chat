@@ -409,6 +409,25 @@ function getModels() {
         ctr: Number,
         cpc: Number,
         frequency: Number,
+        beforeMetrics: {
+          spend: Number,
+          resultCount: Number,
+          cpa: Number,
+          roas: Number,
+          ctr: Number,
+          cpc: Number,
+          frequency: Number,
+        },
+        afterMetrics: {
+          spend: Number,
+          resultCount: Number,
+          cpa: Number,
+          roas: Number,
+          ctr: Number,
+          cpc: Number,
+          frequency: Number,
+        },
+        afterMeasuredAt: Date,
         ruleSourceType: String,
         ruleId: String,
         ruleName: String,
@@ -2433,6 +2452,105 @@ function averageMetric(items, key) {
   return roundMetric(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
+function toFiniteMetric(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function sortActionsByCreatedAt(actions = []) {
+  return [...actions].sort((left, right) => {
+    const leftTime = new Date(left.createdAt || 0).getTime();
+    const rightTime = new Date(right.createdAt || 0).getTime();
+    return leftTime - rightTime;
+  });
+}
+
+function getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }) {
+  const hasCpaComparison = firstCpa != null && lastCpa != null && firstCpa !== lastCpa;
+  const hasRoasComparison = firstRoas != null && lastRoas != null && firstRoas !== lastRoas;
+  if (!hasCpaComparison && !hasRoasComparison) {
+    if ((firstCpa != null && lastCpa != null) || (firstRoas != null && lastRoas != null)) {
+      return 'neutral';
+    }
+    return 'insufficient_data';
+  }
+  if ((hasCpaComparison && lastCpa < firstCpa) || (hasRoasComparison && lastRoas > firstRoas)) {
+    return 'improved';
+  }
+  if ((hasCpaComparison && lastCpa > firstCpa) || (hasRoasComparison && lastRoas < firstRoas)) {
+    return 'regressed';
+  }
+  return 'neutral';
+}
+
+function getFirstLastMetric(actions, key) {
+  const values = actions
+    .map((action) => ({
+      value: toFiniteMetric(action[key]),
+      createdAt: action.createdAt,
+    }))
+    .filter((item) => item.value != null);
+  if (values.length < 2) {
+    return { first: null, last: null };
+  }
+  return {
+    first: values[0],
+    last: values[values.length - 1],
+  };
+}
+
+function getRulePerformanceComparison(actions = []) {
+  const orderedActions = sortActionsByCreatedAt(actions);
+  const actionsWithAfterMetrics = orderedActions.filter((action) => action.afterMetrics);
+  const comparisonBasis = actionsWithAfterMetrics.length
+    ? 'real_before_after'
+    : 'period_first_last';
+  if (comparisonBasis === 'real_before_after') {
+    const firstAction = actionsWithAfterMetrics.find((action) => action.beforeMetrics) || null;
+    const lastAction = actionsWithAfterMetrics[actionsWithAfterMetrics.length - 1] || null;
+    const firstCpa = toFiniteMetric(firstAction?.beforeMetrics?.cpa);
+    const lastCpa = toFiniteMetric(lastAction?.afterMetrics?.cpa);
+    const firstRoas = toFiniteMetric(firstAction?.beforeMetrics?.roas);
+    const lastRoas = toFiniteMetric(lastAction?.afterMetrics?.roas);
+    return {
+      firstCpa,
+      lastCpa,
+      cpaDelta: firstCpa != null && lastCpa != null ? roundMetric(lastCpa - firstCpa) : null,
+      firstRoas,
+      lastRoas,
+      roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
+      firstActionAt: firstAction?.createdAt,
+      lastActionAt: lastAction?.afterMeasuredAt || lastAction?.createdAt,
+      comparisonBasis,
+      status: getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+    };
+  }
+  const cpa = getFirstLastMetric(orderedActions, 'cpa');
+  const roas = getFirstLastMetric(orderedActions, 'roas');
+  const firstCpa = cpa.first?.value ?? null;
+  const lastCpa = cpa.last?.value ?? null;
+  const firstRoas = roas.first?.value ?? null;
+  const lastRoas = roas.last?.value ?? null;
+  const firstActionAt =
+    cpa.first?.createdAt || roas.first?.createdAt || orderedActions[0]?.createdAt;
+  const lastActionAt =
+    cpa.last?.createdAt ||
+    roas.last?.createdAt ||
+    orderedActions[orderedActions.length - 1]?.createdAt;
+  return {
+    firstCpa,
+    lastCpa,
+    cpaDelta: firstCpa != null && lastCpa != null ? roundMetric(lastCpa - firstCpa) : null,
+    firstRoas,
+    lastRoas,
+    roasDelta: firstRoas != null && lastRoas != null ? roundMetric(lastRoas - firstRoas) : null,
+    firstActionAt,
+    lastActionAt,
+    comparisonBasis,
+    status: getMetricEvolutionStatus({ firstCpa, lastCpa, firstRoas, lastRoas }),
+  };
+}
+
 function buildPerformanceSummary(actions = [], recommendations = []) {
   const aiActions = actions.filter((action) => action.actor !== 'user');
   const totalDeltaDailyBudget = actions.reduce(
@@ -2483,31 +2601,6 @@ async function getProjectMetaAdsPerformance(projectId, fallbackTenantId, options
   };
 }
 
-function getRulePerformanceStatus(actions) {
-  const cpaValues = actions
-    .map((action) => Number(action.cpa))
-    .filter((value) => Number.isFinite(value));
-  const roasValues = actions
-    .map((action) => Number(action.roas))
-    .filter((value) => Number.isFinite(value));
-  if (cpaValues.length < 2 && roasValues.length < 2) {
-    return 'insufficient_data';
-  }
-  if (
-    (cpaValues.length >= 2 && cpaValues[cpaValues.length - 1] < cpaValues[0]) ||
-    (roasValues.length >= 2 && roasValues[roasValues.length - 1] > roasValues[0])
-  ) {
-    return 'improved';
-  }
-  if (
-    (cpaValues.length >= 2 && cpaValues[cpaValues.length - 1] > cpaValues[0]) ||
-    (roasValues.length >= 2 && roasValues[roasValues.length - 1] < roasValues[0])
-  ) {
-    return 'regressed';
-  }
-  return 'neutral';
-}
-
 function buildRulePerformanceEntities(actions = []) {
   const groups = new Map();
   for (const action of actions) {
@@ -2534,28 +2627,28 @@ function buildRulePerformanceEntities(actions = []) {
     current.actions.push(action);
     groups.set(entityKey, current);
   }
-  return Array.from(groups.values()).map((group) => {
-    const totalSpend = group.actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
-    const lastAction = group.actions.reduce((latest, action) => {
-      if (!latest) {
-        return action;
-      }
-      return String(action.createdAt || '') > String(latest.createdAt || '') ? action : latest;
-    }, null);
-    return {
-      entityLevel: group.entityLevel,
-      entityId: group.entityId,
-      entityName: group.entityName,
-      campaignName: group.campaignName,
-      adsetName: group.adsetName,
-      actionCount: group.actions.length,
-      pausedAdCount: group.actions.filter((action) => action.actionType === 'pause_ad').length,
-      totalSpend: roundMetric(totalSpend) ?? 0,
-      averageCpa: averageMetric(group.actions, 'cpa'),
-      averageRoas: averageMetric(group.actions, 'roas'),
-      lastActionAt: lastAction?.createdAt,
-    };
-  });
+  return Array.from(groups.values())
+    .map((group) => {
+      const actions = sortActionsByCreatedAt(group.actions);
+      const totalSpend = actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
+      const comparison = getRulePerformanceComparison(actions);
+      return {
+        entityLevel: group.entityLevel,
+        entityId: group.entityId,
+        entityName: group.entityName,
+        campaignName: group.campaignName,
+        adsetName: group.adsetName,
+        actionCount: group.actions.length,
+        pausedAdCount: group.actions.filter((action) => action.actionType === 'pause_ad').length,
+        totalSpend: roundMetric(totalSpend) ?? 0,
+        averageCpa: averageMetric(actions, 'cpa'),
+        averageRoas: averageMetric(actions, 'roas'),
+        ...comparison,
+      };
+    })
+    .sort((left, right) =>
+      String(right.lastActionAt || '').localeCompare(String(left.lastActionAt || '')),
+    );
 }
 
 async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, options = {}) {
@@ -2575,11 +2668,13 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
     groups.set(ruleKey, current);
   }
   const rules = Array.from(groups.values()).map((group) => {
-    const actions = group.actions;
+    const actions = sortActionsByCreatedAt(group.actions);
     const totalSpend = actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
     const totalResults = actions.reduce((sum, action) => sum + Number(action.resultCount ?? 0), 0);
+    const comparison = getRulePerformanceComparison(actions);
     return {
       ...group,
+      actions,
       actionCount: actions.length,
       aiActionCount: actions.filter((action) => action.actor !== 'user').length,
       pausedAdCount: actions.filter((action) => action.actionType === 'pause_ad').length,
@@ -2587,7 +2682,7 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
       totalResults: roundMetric(totalResults) ?? 0,
       averageCpa: averageMetric(actions, 'cpa'),
       averageRoas: averageMetric(actions, 'roas'),
-      status: getRulePerformanceStatus(actions),
+      ...comparison,
       entities: buildRulePerformanceEntities(actions),
     };
   });

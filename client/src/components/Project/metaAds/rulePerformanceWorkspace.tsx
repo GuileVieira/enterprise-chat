@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { OGDialog, OGDialogTitle, OGDialogHeader, OGDialogContent } from '@librechat/client';
 import type {
   ProjectMetaAdsRulePerformanceItem,
+  ProjectMetaAdsRulePerformanceEntity,
   ProjectMetaAdsRulePerformanceResponse,
 } from 'librechat-data-provider';
 
@@ -9,6 +10,7 @@ import { formatMoney, formatMetric } from './formatters';
 import { MetaAdsMetricCard, MetaAdsPanel } from './ui';
 import { MetaAdsPeriodControls } from './periodControls';
 import { metaAdsModalHeader, metaAdsModalShell, metaAdsModalTile } from './chrome';
+import { MetaAdsNameTooltip } from './overviewCells';
 import type { Localize, RuleRow } from './types';
 import type { MetaAdsPeriodControlProps } from './periodControls';
 
@@ -53,6 +55,65 @@ function getRuleScopeSummary(rule: ProjectMetaAdsRulePerformanceItem, localize: 
     });
   }
   return rule.ruleScope ?? '-';
+}
+
+type RulePerformanceComparison =
+  | ProjectMetaAdsRulePerformanceItem
+  | ProjectMetaAdsRulePerformanceEntity;
+
+function getStatusTone(status?: ProjectMetaAdsRulePerformanceItem['status']) {
+  if (status === 'improved') {
+    return 'text-emerald-700 dark:text-emerald-200';
+  }
+  if (status === 'regressed') {
+    return 'text-rose-700 dark:text-rose-200';
+  }
+  return 'text-slate-600 dark:text-slate-300';
+}
+
+function getDeltaTone(metric: 'cpa' | 'roas', value?: number | null) {
+  if (value == null || Number.isNaN(value) || value === 0) {
+    return 'text-slate-500 dark:text-slate-400';
+  }
+  const improved = metric === 'cpa' ? value < 0 : value > 0;
+  return improved ? 'text-emerald-700 dark:text-emerald-200' : 'text-rose-700 dark:text-rose-200';
+}
+
+function formatSignedMetricValue(value?: number | null) {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  if (value > 0) {
+    return `+${formatMetric(value)}`;
+  }
+  if (value < 0) {
+    return `-${formatMetric(Math.abs(value))}`;
+  }
+  return formatMetric(value);
+}
+
+function formatSignedMoneyValue(value: number | null | undefined, currency: string) {
+  if (value == null || Number.isNaN(value)) {
+    return '-';
+  }
+  if (value > 0) {
+    return `+${formatMoney(value, currency)}`;
+  }
+  if (value < 0) {
+    return `-${formatMoney(Math.abs(value), currency)}`;
+  }
+  return formatMoney(value, currency);
+}
+
+function NameWithTooltip({ value, className = '' }: { value: string; className?: string }) {
+  return (
+    <span className={`group relative block min-w-0 focus-within:z-50 hover:z-50 ${className}`}>
+      <span tabIndex={0} className="block truncate focus:outline-none">
+        {value}
+      </span>
+      <MetaAdsNameTooltip value={value} />
+    </span>
+  );
 }
 
 export function MetaAdsRulePerformanceWorkspace({
@@ -189,12 +250,9 @@ export function MetaAdsRulePerformanceWorkspace({
                   className="cursor-pointer transition odd:bg-slate-50/60 hover:bg-teal-50/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300/60 dark:odd:bg-white/[0.045] dark:hover:bg-teal-300/10"
                 >
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
-                    <div
-                      className="truncate"
-                      title={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
-                    >
-                      {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
-                    </div>
+                    <NameWithTooltip
+                      value={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+                    />
                   </td>
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
                     {getRuleScopeSummary(rule, localize)}
@@ -209,7 +267,16 @@ export function MetaAdsRulePerformanceWorkspace({
                     {formatMoney(rule.totalSpend, currency)}
                   </td>
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
-                    {formatMoney(rule.averageCpa, currency)} / {formatMetric(rule.averageRoas)}
+                    <div className="grid gap-1 font-mono text-[11px] text-slate-700 dark:text-slate-200">
+                      <span>
+                        {localize('com_ui_project_meta_ads_average_cpa')}:{' '}
+                        {formatMoney(rule.averageCpa, currency)}
+                      </span>
+                      <span>
+                        {localize('com_ui_project_meta_ads_average_roas')}:{' '}
+                        {formatMetric(rule.averageRoas)}
+                      </span>
+                    </div>
                   </td>
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
                     <div className="flex items-center justify-between gap-2">
@@ -264,9 +331,9 @@ function RulePerformanceDetailsDialog({
               {localize('com_ui_project_meta_ads_rule_details')}
             </div>
             <OGDialogTitle className="mt-1 text-base font-semibold text-slate-950 dark:text-white">
-              <span title={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}>
-                {rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
-              </span>
+              <NameWithTooltip
+                value={rule.ruleName ?? localize('com_ui_project_meta_ads_unattributed_rule')}
+              />
             </OGDialogTitle>
             <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {rule.ruleScope ?? '-'}
@@ -291,6 +358,7 @@ function RulePerformanceDetailsDialog({
                 value={localize(`com_ui_project_meta_ads_rule_performance_${rule.status}`)}
               />
             </div>
+            <PerformanceComparisonPanel item={rule} currency={currency} localize={localize} />
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/10">
               <div className="border-b border-slate-200/70 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-400">
                 {localize('com_ui_project_meta_ads_affected_entities')}
@@ -305,20 +373,19 @@ function RulePerformanceDetailsDialog({
                     return (
                       <div
                         key={`${entity.entityLevel}:${entity.entityId}`}
-                        className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-[minmax(0,1.5fr)_repeat(4,minmax(0,0.7fr))]"
+                        className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,0.7fr))]"
                       >
                         <div className="min-w-0">
-                          <div
-                            className="truncate font-semibold text-slate-950 dark:text-white"
-                            title={entityName}
-                          >
-                            {entityName}
-                          </div>
-                          <div
-                            className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
-                            title={parentNames}
-                          >
-                            {entity.entityLevel} · {parentNames}
+                          <NameWithTooltip
+                            value={entityName}
+                            className="font-semibold text-slate-950 dark:text-white"
+                          />
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {entity.entityLevel} ·{' '}
+                            <NameWithTooltip
+                              value={parentNames}
+                              className="inline-block max-w-full align-bottom"
+                            />
                           </div>
                           <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             {formatRuleDateTime(entity.lastActionAt)}
@@ -337,10 +404,12 @@ function RulePerformanceDetailsDialog({
                           value={formatMoney(entity.totalSpend, currency)}
                         />
                         <DetailMetric
-                          label={localize('com_ui_project_meta_ads_cost_result')}
-                          value={`${formatMoney(entity.averageCpa, currency)} / ${formatMetric(
-                            entity.averageRoas,
-                          )}`}
+                          label={localize('com_ui_project_meta_ads_average_cpa')}
+                          value={formatMoney(entity.averageCpa, currency)}
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_average_roas')}
+                          value={formatMetric(entity.averageRoas)}
                         />
                       </div>
                     );
@@ -356,6 +425,149 @@ function RulePerformanceDetailsDialog({
         </OGDialogContent>
       )}
     </OGDialog>
+  );
+}
+
+function PerformanceComparisonPanel({
+  item,
+  currency,
+  localize,
+}: {
+  item: RulePerformanceComparison;
+  currency: string;
+  localize: Localize;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.035]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_before_after')}
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {item.comparisonBasis === 'real_before_after'
+              ? localize('com_ui_project_meta_ads_rule_performance_basis_real')
+              : localize('com_ui_project_meta_ads_rule_performance_basis_period')}
+          </p>
+        </div>
+        {item.status && (
+          <span className={`text-xs font-semibold ${getStatusTone(item.status)}`}>
+            {localize(`com_ui_project_meta_ads_rule_performance_${item.status}`)}
+          </span>
+        )}
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <MetricComparisonBlock
+          metric="cpa"
+          label={localize('com_ui_project_meta_ads_cpa')}
+          before={item.firstCpa}
+          after={item.lastCpa}
+          delta={item.cpaDelta}
+          average={item.averageCpa}
+          currency={currency}
+          localize={localize}
+        />
+        <MetricComparisonBlock
+          metric="roas"
+          label={localize('com_ui_project_meta_ads_roas')}
+          before={item.firstRoas}
+          after={item.lastRoas}
+          delta={item.roasDelta}
+          average={item.averageRoas}
+          currency={currency}
+          localize={localize}
+        />
+      </div>
+      <div className="mt-3 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+        <div>
+          {localize('com_ui_project_meta_ads_first_record')}:{' '}
+          {formatRuleDateTime(item.firstActionAt)}
+        </div>
+        <div>
+          {localize('com_ui_project_meta_ads_last_record')}: {formatRuleDateTime(item.lastActionAt)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricComparisonBlock({
+  metric,
+  label,
+  before,
+  after,
+  delta,
+  average,
+  currency,
+  localize,
+}: {
+  metric: 'cpa' | 'roas';
+  label: string;
+  before?: number | null;
+  after?: number | null;
+  delta?: number | null;
+  average?: number | null;
+  currency: string;
+  localize: Localize;
+}) {
+  const hasData = before != null && after != null;
+  const formatValue = (value?: number | null) =>
+    metric === 'cpa' ? formatMoney(value, currency) : formatMetric(value);
+  const formattedDelta =
+    metric === 'cpa' ? formatSignedMoneyValue(delta, currency) : formatSignedMetricValue(delta);
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/[0.045]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+          {label}
+        </div>
+        <div className={`text-xs font-semibold ${getDeltaTone(metric, delta)}`}>
+          {localize('com_ui_project_meta_ads_variation')}: {formattedDelta}
+        </div>
+      </div>
+      {hasData ? (
+        <div className="mt-2 font-mono text-base font-semibold text-slate-950 dark:text-white">
+          {formatValue(before)} → {formatValue(after)}
+        </div>
+      ) : (
+        <div className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          {localize('com_ui_project_meta_ads_insufficient_comparison_data')}
+        </div>
+      )}
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_before')}
+          </div>
+          <div className="mt-1 font-mono text-slate-800 dark:text-slate-100">
+            {formatValue(before)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_after')}
+          </div>
+          <div className="mt-1 font-mono text-slate-800 dark:text-slate-100">
+            {formatValue(after)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 border-t border-slate-200 pt-2 text-xs dark:border-white/10">
+        <div className="text-slate-500 dark:text-slate-400">
+          {localize('com_ui_project_meta_ads_average_in_period')}
+        </div>
+        <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+          {localize(
+            metric === 'cpa'
+              ? 'com_ui_project_meta_ads_average_cpa'
+              : 'com_ui_project_meta_ads_average_roas',
+          )}
+        </div>
+        <span className="mt-1 block font-mono font-semibold text-slate-900 dark:text-white">
+          {formatValue(average)}
+        </span>
+      </div>
+    </div>
   );
 }
 

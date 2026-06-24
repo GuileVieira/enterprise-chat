@@ -1790,6 +1790,121 @@ describe('Meta Ads budget service persistence safety', () => {
     ]);
   });
 
+  it('calculates rule performance evolution from oldest to newest actions', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      actions: [
+        {
+          actionType: 'pause_ad',
+          entityLevel: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          spend: 30,
+          cpa: 20,
+          roas: 4,
+          actor: 'cron',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          createdAt: '2026-06-24T15:10:00.000Z',
+        },
+        {
+          actionType: 'pause_ad',
+          entityLevel: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          spend: 30,
+          cpa: 40,
+          roas: 2,
+          actor: 'cron',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          createdAt: '2026-06-24T14:03:00.000Z',
+        },
+      ],
+    });
+
+    const performance = await budget.getProjectMetaAdsRulePerformance('p1', 'tenant-a');
+
+    expect(performance.rules[0]).toEqual(
+      expect.objectContaining({
+        status: 'improved',
+        firstCpa: 40,
+        lastCpa: 20,
+        cpaDelta: -20,
+        firstRoas: 2,
+        lastRoas: 4,
+        roasDelta: 2,
+        firstActionAt: '2026-06-24T14:03:00.000Z',
+        lastActionAt: '2026-06-24T15:10:00.000Z',
+        comparisonBasis: 'period_first_last',
+      }),
+    );
+    expect(performance.rules[0].entities[0]).toEqual(
+      expect.objectContaining({
+        status: 'improved',
+        firstCpa: 40,
+        lastCpa: 20,
+        cpaDelta: -20,
+        firstRoas: 2,
+        lastRoas: 4,
+        roasDelta: 2,
+        firstActionAt: '2026-06-24T14:03:00.000Z',
+        lastActionAt: '2026-06-24T15:10:00.000Z',
+        comparisonBasis: 'period_first_last',
+      }),
+    );
+  });
+
+  it('uses real before and after metrics when available for rule performance', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', tokenSecretName: 'meta-token' },
+      },
+      actions: [
+        {
+          actionType: 'pause_ad',
+          entityLevel: 'ad',
+          entityId: 'ad-1',
+          entityName: 'Creative A',
+          spend: 30,
+          cpa: 20,
+          roas: 4,
+          beforeMetrics: { cpa: 18, roas: 5 },
+          afterMetrics: { cpa: 24, roas: 3 },
+          afterMeasuredAt: '2026-06-24T16:10:00.000Z',
+          actor: 'cron',
+          ruleSourceType: 'group',
+          ruleId: 'group-1',
+          ruleName: 'Validos junho',
+          createdAt: '2026-06-24T15:10:00.000Z',
+        },
+      ],
+    });
+
+    const performance = await budget.getProjectMetaAdsRulePerformance('p1', 'tenant-a');
+
+    expect(performance.rules[0]).toEqual(
+      expect.objectContaining({
+        status: 'regressed',
+        firstCpa: 18,
+        lastCpa: 24,
+        cpaDelta: 6,
+        firstRoas: 5,
+        lastRoas: 3,
+        roasDelta: -2,
+        comparisonBasis: 'real_before_after',
+      }),
+    );
+  });
+
   it('builds status metrics from Meta insights for the selected period and returns currency', async () => {
     const { budget, getAdAccountCurrency, listCampaignInsights, listAdSetInsights } =
       loadBudgetWithMocks({

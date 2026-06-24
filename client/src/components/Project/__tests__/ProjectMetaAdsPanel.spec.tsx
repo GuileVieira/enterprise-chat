@@ -3080,7 +3080,16 @@ describe('ProjectMetaAdsPanel', () => {
         totalResults: 4,
         averageCpa: 25,
         averageRoas: null,
-        status: 'neutral',
+        firstCpa: 40,
+        lastCpa: 20,
+        cpaDelta: -20,
+        firstRoas: null,
+        lastRoas: null,
+        roasDelta: null,
+        firstActionAt: '2026-06-24T13:03:00.000-03:00',
+        lastActionAt: '2026-06-24T14:03:00.000-03:00',
+        comparisonBasis: 'period_first_last',
+        status: 'improved',
         entities: [
           {
             entityLevel: 'campaign',
@@ -3092,7 +3101,16 @@ describe('ProjectMetaAdsPanel', () => {
             totalSpend: 100,
             averageCpa: 25,
             averageRoas: null,
+            firstCpa: 40,
+            lastCpa: 20,
+            cpaDelta: -20,
+            firstRoas: null,
+            lastRoas: null,
+            roasDelta: null,
+            firstActionAt: '2026-06-24T13:03:00.000-03:00',
             lastActionAt: '2026-06-24T14:03:00.000-03:00',
+            comparisonBasis: 'period_first_last',
+            status: 'improved',
           },
         ],
         actions: [],
@@ -3110,11 +3128,71 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_rule_entities_count_one')).toBeInTheDocument();
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
     expect(screen.getByText('com_ui_project_meta_ads_rule_details')).toBeInTheDocument();
-    expect(screen.getAllByTitle('Prospecting group').length).toBeGreaterThan(0);
-    expect(screen.getByTitle('Summer Campaign With A Very Long Name')).toBeInTheDocument();
-    expect(screen.getByTitle('Parent Campaign With A Very Long Name')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_before').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_after').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_project_meta_ads_average_in_period').length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByText(/R\$\s*40,00\s*→\s*R\$\s*20,00/)).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*25,00/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/R\$\s*25,00\s*\/\s*-/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('com_ui_project_meta_ads_rule_performance_basis_period'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_rule_performance_improved').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('Prospecting group').length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText('Summer Campaign With A Very Long Name').length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText('Parent Campaign With A Very Long Name').length,
+    ).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('24/06/2026 14:03')).toBeInTheDocument();
     expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
+  });
+
+  it('shows insufficient rule performance data in rule details when comparison has one record', () => {
+    mockRulePerformanceData.rules = [
+      {
+        ruleKey: 'group:group-1',
+        ruleSourceType: 'group',
+        ruleId: 'group-1',
+        ruleName: 'Single record rule',
+        ruleScope: 'campaign:campaign-1',
+        actionCount: 1,
+        aiActionCount: 1,
+        pausedAdCount: 1,
+        totalSpend: 30,
+        totalResults: 1,
+        averageCpa: 30,
+        averageRoas: 2,
+        firstCpa: null,
+        lastCpa: null,
+        cpaDelta: null,
+        firstRoas: null,
+        lastRoas: null,
+        roasDelta: null,
+        comparisonBasis: 'period_first_last',
+        status: 'insufficient_data',
+        entities: [],
+        actions: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_insufficient_comparison_data').length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_average_cpa')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_average_roas')).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$\s*30,00/).length).toBeGreaterThan(0);
+    expect(screen.getByText('2.00')).toBeInTheDocument();
   });
 
   it('explains empty rule performance instead of showing a blank table', () => {
