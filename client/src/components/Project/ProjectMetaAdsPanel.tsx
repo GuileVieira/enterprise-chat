@@ -249,7 +249,18 @@ export default function ProjectMetaAdsPanel({
         onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
       >
-        {workspaceTab === 'overview' && <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />}
+        {workspaceTab === 'overview' && (
+          <>
+            <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />
+            <div className="p-5 pt-0">
+              <MetaAdsHistoryPanel
+                changes={biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []}
+                currency={currency}
+                localize={localize}
+              />
+            </div>
+          </>
+        )}
 
         {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
 
@@ -297,14 +308,6 @@ export default function ProjectMetaAdsPanel({
           />
         )}
       </MetaAdsWorkspaceShell>
-
-      {workspaceTab === 'overview' && (
-        <MetaAdsHistoryPanel
-          changes={biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []}
-          currency={currency}
-          localize={localize}
-        />
-      )}
 
       <MetaAdsDialogsLayer
         settingsState={metaAdsSettings}

@@ -2849,6 +2849,21 @@ describe('ProjectMetaAdsPanel', () => {
   });
 
   it('expands the metrics workspace without using sticky filters', () => {
+    mockStatusData.changes = [
+      {
+        _id: 'change-fullscreen',
+        entityId: 'campaign-1',
+        entityName: 'Messages Floripa',
+        entityLevel: 'campaign',
+        previousDailyBudget: 100,
+        newDailyBudget: 125,
+        deltaDailyBudget: 25,
+        deltaPercent: 25,
+        actor: 'user',
+        reason: 'manual-ui',
+        createdAt: '2026-06-12T12:00:00.000-03:00',
+      },
+    ];
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-1',
@@ -2897,11 +2912,14 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
     const fullscreenWorkspace = screen.getByTestId('meta-ads-metrics-workspace');
     expect(fullscreenWorkspace.className).toContain('fixed');
+    expect(
+      within(fullscreenWorkspace).getByText('com_ui_project_meta_ads_history'),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('meta-ads-ad-card-ad-1'));
     expect(screen.getByRole('dialog')).toHaveTextContent('Fullscreen creative');
     expect(screen.getByRole('dialog')).toHaveStyle({ zIndex: 10020 });
     expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10010 });
-    expect(screen.getByText('Messages Floripa')).toBeInTheDocument();
+    expect(screen.getAllByText('Messages Floripa').length).toBeGreaterThan(0);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.getByTestId('meta-ads-metrics-workspace').className).not.toContain('fixed');
   });

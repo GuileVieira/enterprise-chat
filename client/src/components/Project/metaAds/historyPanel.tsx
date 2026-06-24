@@ -93,7 +93,7 @@ export function MetaAdsHistoryPanel({
       <div className="space-y-2 p-4">
         {changes.length > 0 ? (
           <>
-            <div className="hidden grid-cols-[minmax(0,1.7fr)_140px_90px_minmax(0,1fr)_160px_130px] gap-3 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:grid">
+            <div className="hidden grid-cols-[minmax(220px,1.4fr)_150px_90px_minmax(180px,1fr)_minmax(190px,0.7fr)_minmax(150px,0.55fr)] gap-4 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:grid">
               <div>{localize('com_ui_project_meta_ads_name')}</div>
               <div>{localize('com_ui_date')}</div>
               <div>{localize('com_ui_project_meta_ads_actor')}</div>
@@ -110,10 +110,10 @@ export function MetaAdsHistoryPanel({
               return (
                 <div
                   key={change._id ?? `${change.entityId}-${change.createdAt}`}
-                  className={`grid gap-2 rounded-2xl border p-3 text-sm ${visual.rowClassName} lg:grid-cols-[minmax(0,1.7fr)_140px_90px_minmax(0,1fr)_160px_130px] lg:items-center lg:gap-3`}
+                  className={`grid gap-3 rounded-2xl border p-3 text-sm ${visual.rowClassName} md:grid-cols-2 xl:grid-cols-[minmax(220px,1.4fr)_150px_90px_minmax(180px,1fr)_minmax(190px,0.7fr)_minmax(150px,0.55fr)] xl:items-center xl:gap-4`}
                 >
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_project_meta_ads_name')}
                     </div>
                     <TruncatedHoverText
@@ -122,7 +122,7 @@ export function MetaAdsHistoryPanel({
                     />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_date')}
                     </div>
                     <div className="font-mono text-xs text-slate-600 dark:text-slate-300">
@@ -130,7 +130,7 @@ export function MetaAdsHistoryPanel({
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_project_meta_ads_actor')}
                     </div>
                     <div className="truncate text-xs text-slate-500 dark:text-slate-400">
@@ -138,7 +138,7 @@ export function MetaAdsHistoryPanel({
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_project_meta_ads_reason')}
                     </div>
                     <TruncatedHoverText
@@ -146,8 +146,8 @@ export function MetaAdsHistoryPanel({
                       className="block truncate text-xs text-slate-500 dark:text-slate-400"
                     />
                   </div>
-                  <div className={`font-mono text-xs ${visual.budgetClassName} lg:text-right`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                  <div className={`font-mono text-xs ${visual.budgetClassName} xl:text-right`}>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_project_meta_ads_budget')}
                     </div>
                     <span>{formatMoney(change.previousDailyBudget, currency)}</span>
@@ -156,11 +156,11 @@ export function MetaAdsHistoryPanel({
                       {formatMoney(change.newDailyBudget, currency)}
                     </span>
                   </div>
-                  <div className={`font-mono text-[11px] ${visual.valueClassName} lg:text-right`}>
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 lg:hidden">
+                  <div className={`font-mono text-[11px] ${visual.valueClassName} xl:text-right`}>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 xl:hidden">
                       {localize('com_ui_project_meta_ads_budget_delta')}
                     </div>
-                    <div className="flex items-center gap-2 lg:justify-end">
+                    <div className="flex flex-wrap items-center gap-2 xl:flex-col xl:items-end xl:gap-1">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 font-sans text-[10px] font-semibold uppercase tracking-[0.08em] ${visual.badgeClassName}`}
                       >
