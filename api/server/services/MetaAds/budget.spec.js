@@ -1049,6 +1049,132 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(result.status).toBe('blocked');
   });
 
+  it('retries budget updates with the Meta minimum when a decrease is too low', async () => {
+    const { budget, createAutomationAction, createChange, findByIdAndUpdate, metaPost } =
+      loadBudgetWithMocks({
+        project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+        recommendation: {
+          _id: 'rec1',
+          tenantId: 'tenant-a',
+          projectId: 'p1',
+          adAccountId: 'act_123',
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          entityName: 'Prospecting',
+          action: 'decrease',
+          status: 'pending',
+          currentDailyBudget: 50,
+          proposedDailyBudget: 10,
+          reason: 'Resultado alvo purchase sem conversões.',
+        },
+        latestBudget: 50,
+      });
+    metaPost
+      .mockRejectedValueOnce(
+        Object.assign(new Error('Invalid parameter'), {
+          statusCode: 400,
+          data: {
+            code: 100,
+            error_subcode: 1885650,
+            error_user_msg:
+              'Seu orçamento deve ser de no mínimo R$10,28. Esse valor mínimo é necessário.',
+          },
+        }),
+      )
+      .mockResolvedValueOnce({});
+
+    const result = await budget.applyRecommendation({
+      recommendationId: 'rec1',
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      actor: 'user',
+    });
+
+    expect(metaPost).toHaveBeenCalledTimes(2);
+    expect(metaPost).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        body: { daily_budget: 1028 },
+      }),
+    );
+    expect(createChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousDailyBudget: 50,
+        newDailyBudget: 10.28,
+        reason: expect.stringContaining('Meta exigiu orçamento mínimo de R$10,28'),
+      }),
+    );
+    expect(createAutomationAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousDailyBudget: 50,
+        newDailyBudget: 10.28,
+        reason: expect.stringContaining('Meta exigiu orçamento mínimo de R$10,28'),
+      }),
+    );
+    expect(findByIdAndUpdate).toHaveBeenLastCalledWith(
+      'rec1',
+      expect.objectContaining({
+        status: 'applied',
+        proposedDailyBudget: 10.28,
+        reason: expect.stringContaining('Meta exigiu orçamento mínimo de R$10,28'),
+      }),
+      { new: true, lean: true },
+    );
+    expect(result.status).toBe('applied');
+  });
+
+  it('blocks Meta minimum budget retries that would not reduce the current budget', async () => {
+    const { budget, createChange, findByIdAndUpdate, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      recommendation: {
+        _id: 'rec1',
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        adAccountId: 'act_123',
+        entityLevel: 'adset',
+        entityId: 'adset-1',
+        entityName: 'Prospecting',
+        action: 'decrease',
+        status: 'pending',
+        currentDailyBudget: 10,
+        proposedDailyBudget: 8,
+        reason: 'Resultado alvo purchase sem conversões.',
+      },
+      latestBudget: 10,
+    });
+    metaPost.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid parameter'), {
+        statusCode: 400,
+        data: {
+          code: 100,
+          error_subcode: 1885650,
+          error_user_msg:
+            'Seu orçamento deve ser de no mínimo R$10,28. Esse valor mínimo é necessário.',
+        },
+      }),
+    );
+
+    const result = await budget.applyRecommendation({
+      recommendationId: 'rec1',
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      actor: 'user',
+    });
+
+    expect(metaPost).toHaveBeenCalledTimes(1);
+    expect(createChange).not.toHaveBeenCalled();
+    expect(findByIdAndUpdate).toHaveBeenLastCalledWith(
+      'rec1',
+      expect.objectContaining({
+        action: 'hold',
+        status: 'blocked',
+        reason: expect.stringContaining('maior ou igual ao orçamento atual'),
+      }),
+      { new: true, lean: true },
+    );
+    expect(result.status).toBe('blocked');
+  });
+
   it('queries Meta Ads status by project and tenant', async () => {
     const { budget, makeFindChain } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },

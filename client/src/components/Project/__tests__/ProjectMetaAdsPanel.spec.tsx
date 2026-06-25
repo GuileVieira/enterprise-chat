@@ -4027,6 +4027,30 @@ describe('ProjectMetaAdsPanel', () => {
     });
   });
 
+  it('shows Meta Ads run feedback messages after automatic adjustments', () => {
+    mockMutateRun.mockImplementationOnce(
+      (_projectId, options?: { onSuccess?: (data: unknown) => void }) =>
+        options?.onSuccess?.({
+          projectId: 'p1',
+          messages: [
+            'Meta exigiu orçamento mínimo de R$10,28; aplicado esse mínimo em vez de R$10,00.',
+          ],
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_run'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Meta exigiu orçamento mínimo de R$10,28; aplicado esse mínimo em vez de R$10,00.',
+    );
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'Meta exigiu orçamento mínimo de R$10,28; aplicado esse mínimo em vez de R$10,00.',
+      status: 'success',
+    });
+  });
+
   it('shows Meta Ads analysis errors to the user', () => {
     mockMutateRun.mockImplementationOnce(
       (

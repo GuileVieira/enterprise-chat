@@ -17,7 +17,8 @@ type MetaAdsWorkspaceShellProps = {
   runningAnalysis: boolean;
   savingSettings: boolean;
   hasUnsavedSettingsDraft: boolean;
-  runErrorMessage: string | null;
+  runNoticeMessage: string | null;
+  runNoticeStatus: 'success' | 'error';
   localize: ReturnType<typeof useLocalize>;
   onRunAnalysis: () => void;
   onOpenSettingsDrawer: (drawer: Exclude<SettingsDrawer, null>) => void;
@@ -42,7 +43,8 @@ export function MetaAdsWorkspaceShell({
   runningAnalysis,
   savingSettings,
   hasUnsavedSettingsDraft,
-  runErrorMessage,
+  runNoticeMessage,
+  runNoticeStatus,
   localize,
   onRunAnalysis,
   onOpenSettingsDrawer,
@@ -131,12 +133,16 @@ export function MetaAdsWorkspaceShell({
           )}
         </div>
       </div>
-      {runErrorMessage && (
+      {runNoticeMessage && (
         <div
           role="alert"
-          className="relative m-5 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100"
+          className={
+            runNoticeStatus === 'success'
+              ? 'relative m-5 border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-100'
+              : 'relative m-5 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100'
+          }
         >
-          {runErrorMessage}
+          {runNoticeMessage}
         </div>
       )}
       <div

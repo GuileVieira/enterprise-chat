@@ -67,7 +67,8 @@ export default function ProjectMetaAdsPanel({
   const { showToast } = useToastContext();
   const tableScroll = useMetaAdsTableScrollSync();
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
-  const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
+  const [runNoticeMessage, setRunNoticeMessage] = useState<string | null>(null);
+  const [runNoticeStatus, setRunNoticeStatus] = useState<'success' | 'error'>('error');
   const biWorkspace = useMetaAdsBiWorkspace();
   const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
   const startupConfigQuery = useGetStartupConfig();
@@ -210,7 +211,8 @@ export default function ProjectMetaAdsPanel({
     statusQuery,
     localize,
     showToast,
-    setRunErrorMessage,
+    setRunNoticeMessage,
+    setRunNoticeStatus,
   });
 
   const content = (
@@ -226,7 +228,8 @@ export default function ProjectMetaAdsPanel({
         runningAnalysis={runAnalysis.isLoading}
         savingSettings={updateSettings.isLoading}
         hasUnsavedSettingsDraft={hasUnsavedSettingsDraft}
-        runErrorMessage={runErrorMessage}
+        runNoticeMessage={runNoticeMessage}
+        runNoticeStatus={runNoticeStatus}
         localize={localize}
         onRunAnalysis={onRunAnalysis}
         onOpenSettingsDrawer={openSettingsDrawer}

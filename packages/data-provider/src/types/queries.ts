@@ -676,6 +676,13 @@ export type ProjectMetaAdsRunResponse = {
   since: string;
   until: string;
   recommendations: ProjectMetaAdsRecommendation[];
+  autoApplySummary?: {
+    appliedCount: number;
+    adjustedToMetaMinimumCount: number;
+    blockedCount: number;
+    messages: string[];
+  };
+  messages?: string[];
 };
 
 export type ProjectMetaAdsApplyResponse = {

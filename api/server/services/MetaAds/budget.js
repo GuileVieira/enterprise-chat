@@ -677,6 +677,31 @@ function dailyBudgetToCents(value) {
   return Math.max(1, Math.round(Number(value) * 100));
 }
 
+function parseBrazilianCurrency(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const match = value.match(/R\$\s*(\d{1,3}(?:\.\d{3})*|\d+)(?:,(\d{1,2}))?/i);
+  if (!match) {
+    return null;
+  }
+  const integer = match[1].replace(/\./g, '');
+  const decimal = match[2] ? match[2].padEnd(2, '0') : '00';
+  const amount = Number(`${integer}.${decimal}`);
+  return Number.isFinite(amount) ? Number(amount.toFixed(2)) : null;
+}
+
+function getMetaMinimumBudget(error) {
+  if (error?.data?.error_subcode !== 1885650) {
+    return null;
+  }
+  return parseBrazilianCurrency(error.data.error_user_msg);
+}
+
+function formatCurrencyPtBr(value) {
+  return `R$${Number(value).toFixed(2).replace('.', ',')}`;
+}
+
 function calculateBudgetDelta(previousDailyBudget, nextDailyBudget) {
   const previous = Number(previousDailyBudget);
   const next = Number(nextDailyBudget);
@@ -3868,18 +3893,49 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
       { new: true, lean: true },
     );
   }
-  await metaPost({
-    path: encodeURIComponent(recommendation.entityId),
-    token,
-    graphVersion,
-    resourceLabel: 'budget update',
-    body: {
-      daily_budget: dailyBudgetToCents(recommendation.proposedDailyBudget),
-    },
-  });
+  let appliedDailyBudget = recommendation.proposedDailyBudget;
+  let finalReason = recommendation.reason;
+  try {
+    await metaPost({
+      path: encodeURIComponent(recommendation.entityId),
+      token,
+      graphVersion,
+      resourceLabel: 'budget update',
+      body: {
+        daily_budget: dailyBudgetToCents(appliedDailyBudget),
+      },
+    });
+  } catch (error) {
+    const metaMinimumBudget = getMetaMinimumBudget(error);
+    if (metaMinimumBudget == null || metaMinimumBudget <= appliedDailyBudget) {
+      throw error;
+    }
+    if (currentDailyBudget != null && metaMinimumBudget >= currentDailyBudget) {
+      return MetaAdsRecommendation.findByIdAndUpdate(
+        recommendationId,
+        {
+          action: 'hold',
+          status: 'blocked',
+          reason: `Meta exigiu orçamento mínimo de ${formatCurrencyPtBr(metaMinimumBudget)}, maior ou igual ao orçamento atual; nenhuma redução aplicada.`,
+        },
+        { new: true, lean: true },
+      );
+    }
+    appliedDailyBudget = metaMinimumBudget;
+    finalReason = `Meta exigiu orçamento mínimo de ${formatCurrencyPtBr(metaMinimumBudget)}; aplicado esse mínimo em vez de ${formatCurrencyPtBr(recommendation.proposedDailyBudget)}.`;
+    await metaPost({
+      path: encodeURIComponent(recommendation.entityId),
+      token,
+      graphVersion,
+      resourceLabel: 'budget update',
+      body: {
+        daily_budget: dailyBudgetToCents(appliedDailyBudget),
+      },
+    });
+  }
   const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
     recommendation.currentDailyBudget,
-    recommendation.proposedDailyBudget,
+    appliedDailyBudget,
   );
   await MetaAdsBudgetChange.create({
     tenantId: recommendation.tenantId,
@@ -3890,12 +3946,12 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     entityId: recommendation.entityId,
     entityName: recommendation.entityName,
     previousDailyBudget: recommendation.currentDailyBudget,
-    newDailyBudget: recommendation.proposedDailyBudget,
+    newDailyBudget: appliedDailyBudget,
     deltaDailyBudget,
     deltaPercent,
     actor,
     actorUserId,
-    reason: recommendation.reason,
+    reason: finalReason,
   });
   await MetaAdsAutomationAction.create({
     tenantId: recommendation.tenantId,
@@ -3909,7 +3965,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     campaignId: recommendation.campaignId,
     campaignName: recommendation.campaignName,
     previousDailyBudget: recommendation.currentDailyBudget,
-    newDailyBudget: recommendation.proposedDailyBudget,
+    newDailyBudget: appliedDailyBudget,
     deltaDailyBudget,
     deltaPercent,
     spend: recommendation.spend,
@@ -3927,11 +3983,11 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     ruleScope: recommendation.ruleScope,
     actor,
     actorUserId,
-    reason: recommendation.reason,
+    reason: finalReason,
   });
   return MetaAdsRecommendation.findByIdAndUpdate(
     recommendationId,
-    { status: 'applied' },
+    { status: 'applied', proposedDailyBudget: appliedDailyBudget, reason: finalReason },
     { new: true, lean: true },
   );
 }
@@ -4346,17 +4402,53 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     .filter(Boolean);
 
   if (applyAuto && metaAds.automationMode === 'auto_limited') {
+    const appliedRecommendations = new Map();
+    const autoApplySummary = {
+      appliedCount: 0,
+      adjustedToMetaMinimumCount: 0,
+      blockedCount: 0,
+      messages: [],
+    };
     for (const recommendation of recommendations) {
       if (recommendation.status !== 'pending' || recommendation.action === 'hold') {
         continue;
       }
-      await applyRecommendation({
+      const appliedRecommendation = await applyRecommendation({
         recommendationId: recommendation._id,
         projectId,
         tenantId,
         actor,
       });
+      if (appliedRecommendation?._id) {
+        appliedRecommendations.set(String(appliedRecommendation._id), appliedRecommendation);
+      }
+      if (appliedRecommendation?.status === 'applied') {
+        autoApplySummary.appliedCount += 1;
+      }
+      if (appliedRecommendation?.status === 'blocked') {
+        autoApplySummary.blockedCount += 1;
+      }
+      if (typeof appliedRecommendation?.reason === 'string') {
+        autoApplySummary.messages.push(appliedRecommendation.reason);
+        if (appliedRecommendation.reason.includes('Meta exigiu orçamento mínimo')) {
+          autoApplySummary.adjustedToMetaMinimumCount +=
+            appliedRecommendation.status === 'applied' ? 1 : 0;
+        }
+      }
     }
+    const resolvedRecommendations = recommendations.map(
+      (recommendation) => appliedRecommendations.get(String(recommendation._id)) ?? recommendation,
+    );
+    return {
+      projectId,
+      adAccountId,
+      graphVersion,
+      since,
+      until,
+      recommendations: resolvedRecommendations,
+      autoApplySummary,
+      messages: autoApplySummary.messages,
+    };
   }
 
   return {

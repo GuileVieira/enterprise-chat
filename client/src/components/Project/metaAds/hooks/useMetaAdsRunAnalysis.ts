@@ -11,7 +11,8 @@ type UseMetaAdsRunAnalysisParams = {
   statusQuery: ReturnType<typeof useProjectMetaAdsQuery>;
   localize: Localize;
   showToast: (toast: { message: string; status: ToastStatus }) => void;
-  setRunErrorMessage: (message: string | null) => void;
+  setRunNoticeMessage: (message: string | null) => void;
+  setRunNoticeStatus: (status: 'success' | 'error') => void;
 };
 
 export function useMetaAdsRunAnalysis({
@@ -20,15 +21,22 @@ export function useMetaAdsRunAnalysis({
   statusQuery,
   localize,
   showToast,
-  setRunErrorMessage,
+  setRunNoticeMessage,
+  setRunNoticeStatus,
 }: UseMetaAdsRunAnalysisParams) {
   return () => {
-    setRunErrorMessage(null);
+    setRunNoticeMessage(null);
     runAnalysis.mutate(projectId, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         statusQuery.refetch();
+        const message =
+          Array.isArray(data?.messages) && data.messages.length > 0
+            ? data.messages[0]
+            : localize('com_ui_project_meta_ads_run_success');
+        setRunNoticeStatus('success');
+        setRunNoticeMessage(message);
         showToast({
-          message: localize('com_ui_project_meta_ads_run_success'),
+          message,
           status: 'success',
         });
       },
@@ -37,7 +45,8 @@ export function useMetaAdsRunAnalysis({
           error,
           localize('com_ui_project_meta_ads_run_failed'),
         );
-        setRunErrorMessage(message);
+        setRunNoticeStatus('error');
+        setRunNoticeMessage(message);
         showToast({ message, status: 'error' });
         logger.error('MetaAds', 'Failed to run project Meta Ads analysis', {
           projectId,
