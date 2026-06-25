@@ -89,6 +89,11 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
     credentialMode: project.metaAds?.tokenSecretName ? 'project_secret' : 'tenant_default',
     accountProfile: project.metaAds?.accountProfile ?? 'custom',
     automationMode: project.metaAds?.automationMode ?? 'recommend',
+    automationAnalysisPreset: project.metaAds?.automationAnalysisPreset ?? 'last_2d',
+    clientGoal: project.metaAds?.clientGoal ?? {
+      resultType: 'purchase',
+      monthlyTarget: 0,
+    },
     budgetLevel: 'adset',
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,
     lastRunAt: project.metaAds?.lastRunAt,

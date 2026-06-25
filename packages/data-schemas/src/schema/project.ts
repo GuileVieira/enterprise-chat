@@ -47,6 +47,15 @@ const ProjectMetaAdsRulesSchema = new Schema(
     maxDailyBudget: Number,
     cooldownHours: Number,
     minSpend: Number,
+    enabledSections: {
+      performance: Boolean,
+      creatives: Boolean,
+      noResultSpendCap: Boolean,
+    },
+    noResultSpendCap: {
+      enabled: Boolean,
+      minSpend: Number,
+    },
   },
   { _id: false },
 );
@@ -76,6 +85,14 @@ const ProjectMetaAdsMonthlyBudgetSchema = new Schema(
     baseAmount: Number,
     additionalAmount: Number,
     allowedOverspendPct: Number,
+  },
+  { _id: false },
+);
+
+const ProjectMetaAdsClientGoalSchema = new Schema(
+  {
+    resultType: String,
+    monthlyTarget: Number,
   },
   { _id: false },
 );
@@ -185,8 +202,17 @@ const ProjectMetaAdsSchema = new Schema(
       enum: [30, 60, 120, 180, 360, 720, 1440],
       default: 180,
     },
+    automationAnalysisPreset: {
+      type: String,
+      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
+      default: 'last_2d',
+    },
     lastRunAt: {
       type: Date,
+    },
+    clientGoal: {
+      type: ProjectMetaAdsClientGoalSchema,
+      default: undefined,
     },
     monthlyBudget: {
       type: ProjectMetaAdsMonthlyBudgetSchema,

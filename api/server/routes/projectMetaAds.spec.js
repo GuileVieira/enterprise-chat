@@ -40,8 +40,10 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   duplicateProjectMetaAdsEntity: jest.fn(),
   getProjectMetaAdsPerformance: jest.fn(),
   getProjectMetaAdsRankings: jest.fn(),
+  getProjectMetaAdsRuleHistory: jest.fn(),
   getProjectMetaAdsRulePerformance: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
+  recordProjectMetaAdsRuleChange: jest.fn(),
   updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
 
@@ -156,6 +158,50 @@ describe('projectMetaAds settings normalization', () => {
           additionalAmount: 1000,
           allowedOverspendPct: 10,
         },
+      }),
+    );
+  });
+
+  it('normalizes client goal, analysis preset, enabled sections, and no-result cap', () => {
+    expect(
+      router._normalizeMetaAdsForTest({
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 350,
+        },
+        automationAnalysisPreset: 'today',
+        rules: {
+          targetResultType: 'purchase',
+          enabledSections: {
+            performance: true,
+            creatives: false,
+            noResultSpendCap: true,
+          },
+          noResultSpendCap: {
+            enabled: true,
+            minSpend: 100,
+          },
+        },
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        automationAnalysisPreset: 'today',
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 350,
+        },
+        rules: expect.objectContaining({
+          targetResultType: 'purchase',
+          enabledSections: {
+            performance: true,
+            creatives: false,
+            noResultSpendCap: true,
+          },
+          noResultSpendCap: {
+            enabled: true,
+            minSpend: 100,
+          },
+        }),
       }),
     );
   });

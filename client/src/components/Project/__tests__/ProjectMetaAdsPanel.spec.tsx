@@ -4,6 +4,7 @@ import type {
   ProjectMetaAdsRankingResponse,
   ProjectMetaAdsPerformanceResponse,
   ProjectMetaAdsRulePerformanceResponse,
+  ProjectMetaAdsRuleHistoryResponse,
   ProjectMetaAdsStatus,
   TProject,
 } from 'librechat-data-provider';
@@ -48,6 +49,10 @@ const mockUseProjectMetaAdsRulePerformanceQuery = jest.fn(
     isFetching: false,
   }),
 );
+const mockUseProjectMetaAdsRuleHistoryQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
+  data: mockRuleHistoryData,
+  isFetching: false,
+}));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
@@ -69,6 +74,9 @@ const mockRulePerformanceData: ProjectMetaAdsRulePerformanceResponse = {
   period: { datePreset: 'last_7d' },
   currency: 'BRL',
   rules: [],
+};
+const mockRuleHistoryData: ProjectMetaAdsRuleHistoryResponse = {
+  changes: [],
 };
 const mockPerformanceData: ProjectMetaAdsPerformanceResponse = {
   period: { datePreset: 'last_7d' },
@@ -132,6 +140,8 @@ jest.mock('~/data-provider', () => ({
     mockUseProjectMetaAdsPerformanceQuery(projectId, params),
   useProjectMetaAdsRulePerformanceQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsRulePerformanceQuery(projectId, params),
+  useProjectMetaAdsRuleHistoryQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsRuleHistoryQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -186,6 +196,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockUseProjectMetaAdsRankingsQuery.mockClear();
     mockUseProjectMetaAdsPerformanceQuery.mockClear();
     mockUseProjectMetaAdsRulePerformanceQuery.mockClear();
+    mockUseProjectMetaAdsRuleHistoryQuery.mockClear();
     mockRankingData.level = 'campaign';
     mockRankingData.period = {
       datePreset: 'last_7d',
@@ -195,6 +206,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockRulePerformanceData.period = { datePreset: 'last_7d' };
     mockRulePerformanceData.currency = 'BRL';
     mockRulePerformanceData.rules = [];
+    mockRuleHistoryData.changes = [];
     mockPerformanceData.period = { datePreset: 'last_7d' };
     mockPerformanceData.currency = 'BRL';
     mockPerformanceData.summary = { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 };

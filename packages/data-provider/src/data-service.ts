@@ -900,6 +900,12 @@ export const getProjectMetaAdsRulePerformance = (
   return request.get(endpoints.projectMetaAdsRulePerformance(id), { params });
 };
 
+export const getProjectMetaAdsRuleHistory = (
+  id: string,
+): Promise<q.ProjectMetaAdsRuleHistoryResponse> => {
+  return request.get(endpoints.projectMetaAdsRuleHistory(id));
+};
+
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],

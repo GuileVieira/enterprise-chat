@@ -32,7 +32,16 @@ export type MetaAdsRulesState = Required<
     | 'minSpend'
   >
 > &
-  Pick<MetaAdsRules, 'targetResultType' | 'primaryMetric' | 'minCtr' | 'maxCpc' | 'maxCpm'>;
+  Pick<
+    MetaAdsRules,
+    | 'targetResultType'
+    | 'primaryMetric'
+    | 'minCtr'
+    | 'maxCpc'
+    | 'maxCpm'
+    | 'enabledSections'
+    | 'noResultSpendCap'
+  >;
 
 export type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules' | 'creativeRules'> & {
   rules: MetaAdsRulesState;

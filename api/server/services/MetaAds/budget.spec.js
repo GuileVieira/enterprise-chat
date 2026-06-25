@@ -105,6 +105,52 @@ describe('Meta Ads budget service', () => {
     expect(result.reason).toContain('sem conversões após gasto suficiente');
   });
 
+  it('caps budget to analyzed spend when no result spend cap is enabled', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 500,
+      cpa: null,
+      roas: 3,
+      spend: 120,
+      resultCount: 0,
+      resultType: 'purchase',
+      rules: {
+        ...DEFAULT_RULES,
+        targetResultType: 'purchase',
+        minDailyBudget: 50,
+        maxDailyBudget: 1000,
+        noResultSpendCap: {
+          enabled: true,
+          minSpend: 100,
+        },
+      },
+    });
+
+    expect(result.action).toBe('decrease');
+    expect(result.proposedDailyBudget).toBe(120);
+    expect(result.reason).toContain('ajustado para o gasto analisado');
+  });
+
+  it('does not use performance rules when the performance section is disabled', () => {
+    const result = proposeBudget({
+      currentDailyBudget: 100,
+      cpa: 80,
+      roas: 1,
+      spend: 200,
+      rules: {
+        ...DEFAULT_RULES,
+        enabledSections: {
+          performance: false,
+          creatives: true,
+          noResultSpendCap: true,
+        },
+      },
+    });
+
+    expect(result.action).toBe('hold');
+    expect(result.proposedDailyBudget).toBe(100);
+    expect(result.reason).toContain('desativadas');
+  });
+
   it('calculates ThruPlay as the video result metric', () => {
     const metrics = _calculateMetricsForTest(
       {
@@ -3045,6 +3091,38 @@ describe('Meta Ads budget service persistence safety', () => {
         expect.objectContaining({
           since: '2026-06-16',
           until: '2026-06-17',
+        }),
+      );
+    } finally {
+      delete process.env.META_ADS_TIME_ZONE;
+      jest.useRealTimers();
+    }
+  });
+
+  it('uses today only when automation analysis preset is today', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-18T14:30:00.000Z'));
+    process.env.META_ADS_TIME_ZONE = 'America/Sao_Paulo';
+    try {
+      const { budget, listAdSetInsights } = loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: {
+            adAccountId: 'act_123',
+            automationAnalysisPreset: 'today',
+          },
+        },
+        campaigns: [],
+        adsets: [],
+        insights: [],
+      });
+
+      await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+      expect(listAdSetInsights).toHaveBeenCalledWith(
+        expect.objectContaining({
+          since: '2026-06-18',
+          until: '2026-06-18',
         }),
       );
     } finally {

@@ -9,6 +9,7 @@ import {
   useDuplicateProjectMetaAdsEntityMutation,
   useProjectMetaAdsRankingsQuery,
   useProjectMetaAdsQuery,
+  useProjectMetaAdsRuleHistoryQuery,
   useProjectMetaAdsRulePerformanceQuery,
   useRunProjectMetaAdsMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
@@ -36,6 +37,7 @@ import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
 import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
 import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
 import { MetaAdsRulePerformanceWorkspace } from './metaAds/rulePerformanceWorkspace';
+import { MetaAdsRuleHistoryPanel } from './metaAds/ruleHistoryPanel';
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
 import { getMetaAdsTokenStatusKey } from './metaAds/overviewState';
 import { cleanDashboardName } from './metaAds/helpers';
@@ -78,6 +80,9 @@ export default function ProjectMetaAdsPanel({
     project.projectId,
     rulePerformancePeriod.statusParams,
   );
+  const ruleHistoryQuery = useProjectMetaAdsRuleHistoryQuery(project.projectId, {
+    enabled: workspaceTab === 'rules',
+  });
   const biRankingsQuery = useProjectMetaAdsRankingsQuery(project.projectId, {
     ...biPeriod.statusParams,
     level: biWorkspace.biControls.level,
@@ -246,36 +251,43 @@ export default function ProjectMetaAdsPanel({
         {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
 
         {workspaceTab === 'rules' && (
-          <MetaAdsRulePerformanceWorkspace
-            data={rulePerformanceQuery.data}
-            fetching={rulePerformanceQuery.isFetching}
-            rows={metaAdsRules.ruleRows}
-            canCreateRuleGroup={metaAdsRules.canCreateRuleGroup}
-            canUseMetaAdsActions={canUseMetaAdsActions}
-            saving={updateSettings.isLoading}
-            primaryButtonClassName={metaAdsPrimaryButton}
-            onCreateRuleGroup={metaAdsRules.onOpenRuleGroupDraft}
-            onToggleRuleRow={metaAdsRules.onToggleRuleRow}
-            onEditGlobalRule={metaAdsRules.onEditGlobalRule}
-            onEditRuleGroup={metaAdsRules.onEditRuleGroup}
-            onEditRuleOverride={metaAdsRules.onEditRuleOverride}
-            onDeleteRuleGroup={metaAdsRules.onDeleteRuleGroup}
-            onDeleteRuleOverride={metaAdsRules.onDeleteRuleOverride}
-            period={{
-              periodFilter: rulePerformancePeriod.periodFilter,
-              customSince: rulePerformancePeriod.customSince,
-              customUntil: rulePerformancePeriod.customUntil,
-              appliedCustomSince: rulePerformancePeriod.appliedCustomSince,
-              appliedCustomUntil: rulePerformancePeriod.appliedCustomUntil,
-              inputClassName: metaAdsInputLg,
-              onPeriodFilterChange: rulePerformancePeriod.setPeriodFilter,
-              onCustomSinceChange: rulePerformancePeriod.onCustomSinceChange,
-              onCustomUntilChange: rulePerformancePeriod.onCustomUntilChange,
-              onApplyCustomPeriod: rulePerformancePeriod.onApplyCustomPeriod,
-            }}
-            currency={currency}
-            localize={localize}
-          />
+          <>
+            <MetaAdsRulePerformanceWorkspace
+              data={rulePerformanceQuery.data}
+              fetching={rulePerformanceQuery.isFetching}
+              rows={metaAdsRules.ruleRows}
+              canCreateRuleGroup={metaAdsRules.canCreateRuleGroup}
+              canUseMetaAdsActions={canUseMetaAdsActions}
+              saving={updateSettings.isLoading}
+              primaryButtonClassName={metaAdsPrimaryButton}
+              onCreateRuleGroup={metaAdsRules.onOpenRuleGroupDraft}
+              onToggleRuleRow={metaAdsRules.onToggleRuleRow}
+              onEditGlobalRule={metaAdsRules.onEditGlobalRule}
+              onEditRuleGroup={metaAdsRules.onEditRuleGroup}
+              onEditRuleOverride={metaAdsRules.onEditRuleOverride}
+              onDeleteRuleGroup={metaAdsRules.onDeleteRuleGroup}
+              onDeleteRuleOverride={metaAdsRules.onDeleteRuleOverride}
+              period={{
+                periodFilter: rulePerformancePeriod.periodFilter,
+                customSince: rulePerformancePeriod.customSince,
+                customUntil: rulePerformancePeriod.customUntil,
+                appliedCustomSince: rulePerformancePeriod.appliedCustomSince,
+                appliedCustomUntil: rulePerformancePeriod.appliedCustomUntil,
+                inputClassName: metaAdsInputLg,
+                onPeriodFilterChange: rulePerformancePeriod.setPeriodFilter,
+                onCustomSinceChange: rulePerformancePeriod.onCustomSinceChange,
+                onCustomUntilChange: rulePerformancePeriod.onCustomUntilChange,
+                onApplyCustomPeriod: rulePerformancePeriod.onApplyCustomPeriod,
+              }}
+              currency={currency}
+              localize={localize}
+            />
+            <MetaAdsRuleHistoryPanel
+              changes={ruleHistoryQuery.data?.changes ?? []}
+              fetching={ruleHistoryQuery.isFetching}
+              localize={localize}
+            />
+          </>
         )}
       </MetaAdsWorkspaceShell>
 

@@ -22,6 +22,15 @@ export interface IProjectMetaAdsRules {
   maxDailyBudget?: number;
   cooldownHours?: number;
   minSpend?: number;
+  enabledSections?: {
+    performance?: boolean;
+    creatives?: boolean;
+    noResultSpendCap?: boolean;
+  };
+  noResultSpendCap?: {
+    enabled?: boolean;
+    minSpend?: number;
+  };
 }
 
 export interface IProjectMetaAdsCreativeRules {
@@ -59,7 +68,19 @@ export interface IProjectMetaAds {
   accountProfile?: 'local_business' | 'ecommerce' | 'lead_gen' | 'traffic' | 'custom';
   budgetLevel?: 'campaign' | 'adset';
   scheduleIntervalMinutes?: 30 | 60 | 120 | 180 | 360 | 720 | 1440;
+  automationAnalysisPreset?:
+    | 'today'
+    | 'yesterday'
+    | 'last_2d'
+    | 'last_3d'
+    | 'last_7d'
+    | 'last_14d'
+    | 'last_30d';
   lastRunAt?: Date;
+  clientGoal?: {
+    resultType?: string;
+    monthlyTarget?: number;
+  };
   monthlyBudget?: IProjectMetaAdsMonthlyBudget;
   monthlyBudgets?: IProjectMetaAdsMonthlyBudgets;
   rules?: IProjectMetaAdsRules;

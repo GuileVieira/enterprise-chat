@@ -26,8 +26,10 @@ const {
   duplicateProjectMetaAdsEntity,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsRuleHistory,
   getProjectMetaAdsRulePerformance,
   getProjectMetaAdsStatus,
+  recordProjectMetaAdsRuleChange,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
@@ -55,9 +57,27 @@ const DEFAULT_RULES = {
   cooldownHours: 24,
   minSpend: 10,
   primaryMetric: 'cpa',
+  enabledSections: {
+    performance: true,
+    creatives: true,
+    noResultSpendCap: false,
+  },
+  noResultSpendCap: {
+    enabled: false,
+    minSpend: 10,
+  },
 };
 const ACCOUNT_PROFILES = new Set(['local_business', 'ecommerce', 'lead_gen', 'traffic', 'custom']);
 const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
+const ANALYSIS_PRESETS = new Set([
+  'today',
+  'yesterday',
+  'last_2d',
+  'last_3d',
+  'last_7d',
+  'last_14d',
+  'last_30d',
+]);
 const DEFAULT_CREATIVE_RULES = {
   maxFrequency: 5,
 };
@@ -86,6 +106,28 @@ const PAUSE_HIGH_COST_DEFAULTS = {
   cooldownHours: 24,
   targetResultType: '',
 };
+
+function validateEnabledSections(sections = {}) {
+  return {
+    performance: sections.performance !== false,
+    creatives: sections.creatives !== false,
+    noResultSpendCap: sections.noResultSpendCap === true,
+  };
+}
+
+function validateNoResultSpendCap(value = {}) {
+  const minSpend = Number(value.minSpend ?? DEFAULT_RULES.noResultSpendCap.minSpend);
+  if (!Number.isFinite(minSpend) || minSpend < 0) {
+    throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: ['noResultSpendCap.minSpend'],
+    });
+  }
+  return {
+    enabled: value.enabled === true,
+    minSpend,
+  };
+}
 
 function getCurrentMonthInputValue(date = new Date()) {
   return date.toISOString().slice(0, 7);
@@ -159,6 +201,8 @@ function validateMetaAdsRules(rules = {}) {
   validated.primaryMetric = PRIMARY_METRICS.has(primaryMetric)
     ? primaryMetric
     : DEFAULT_RULES.primaryMetric;
+  validated.enabledSections = validateEnabledSections(merged.enabledSections);
+  validated.noResultSpendCap = validateNoResultSpendCap(merged.noResultSpendCap);
   if (validated.minDailyBudget > validated.maxDailyBudget) {
     errors.push('minDailyBudget', 'maxDailyBudget');
   }
@@ -169,6 +213,24 @@ function validateMetaAdsRules(rules = {}) {
     });
   }
   return validated;
+}
+
+function validateClientGoal(clientGoal = undefined) {
+  if (!clientGoal || typeof clientGoal !== 'object') {
+    return undefined;
+  }
+  const resultType = typeof clientGoal.resultType === 'string' ? clientGoal.resultType.trim() : '';
+  const monthlyTarget = Number(clientGoal.monthlyTarget ?? 0);
+  if (!resultType || !Number.isFinite(monthlyTarget) || monthlyTarget < 0) {
+    throw Object.assign(new Error('Invalid Meta Ads client goal.'), {
+      statusCode: 400,
+      details: ['clientGoal'],
+    });
+  }
+  return {
+    resultType,
+    monthlyTarget,
+  };
 }
 
 function validateMetaAdsCreativeRules(rules = {}) {
@@ -393,6 +455,10 @@ function normalizeMetaAds(metaAds = {}) {
     monthlyBudget: validateMonthlyBudget(safeMetaAds.monthlyBudget),
     monthlyBudgets: validateMonthlyBudgets(safeMetaAds.monthlyBudgets),
     accountProfile,
+    automationAnalysisPreset: ANALYSIS_PRESETS.has(safeMetaAds.automationAnalysisPreset)
+      ? safeMetaAds.automationAnalysisPreset
+      : 'last_2d',
+    clientGoal: validateClientGoal(safeMetaAds.clientGoal),
     ...(graphVersion ? { graphVersion } : {}),
     credentialMode: tokenSecretName ? 'project_secret' : 'tenant_default',
     scheduleIntervalMinutes: SCHEDULE_INTERVALS.has(Number(safeMetaAds.scheduleIntervalMinutes))
@@ -518,8 +584,20 @@ router.get('/rules/performance', metaAdsAccess, async (req, res) => {
   }
 });
 
+router.get('/rules/history', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    return res.json(await getProjectMetaAdsRuleHistory(req.params.projectId, tenantId));
+  } catch (error) {
+    logger.error('[projectMetaAds] rule history failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
 router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
   try {
+    const previousProject =
+      (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
     const update = await prepareMetaAdsSettingsUpdate({
       projectId: req.params.projectId,
       tenantId: req.user.tenantId,
@@ -533,6 +611,14 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
+    await recordProjectMetaAdsRuleChange({
+      projectId: req.params.projectId,
+      tenantId: project.tenantId || req.user.tenantId || getTenantId(),
+      beforeMetaAds: previousProject?.metaAds,
+      afterMetaAds: project.metaAds,
+      actor: 'user',
+      actorUserId: req.user.id,
+    });
     logger.debug('[projectMetaAds] settings saved', {
       projectId: req.params.projectId,
       hasProjectTokenSecret: !!project.metaAds?.tokenSecretName,

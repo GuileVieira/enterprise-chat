@@ -225,9 +225,19 @@ export default function ProjectsPanel() {
   const { data: projects = [] } = useProjectsQuery();
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const visibleProjects = showAll ? projects : projects.slice(0, 8);
-  const hasMore = projects.length > 8;
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredProjects = useMemo(
+    () =>
+      normalizedSearchQuery
+        ? projects.filter((project) => project.name.toLowerCase().includes(normalizedSearchQuery))
+        : projects,
+    [normalizedSearchQuery, projects],
+  );
+  const visibleProjects =
+    showAll || normalizedSearchQuery ? filteredProjects : filteredProjects.slice(0, 8);
+  const hasMore = !normalizedSearchQuery && filteredProjects.length > 8;
 
   return (
     <div className="flex h-full flex-col gap-1 px-2 py-2">
@@ -260,6 +270,16 @@ export default function ProjectsPanel() {
           {/* Divider */}
           <div className="mx-2 my-1 border-b border-border-light" />
 
+          <label className="px-2 py-1">
+            <span className="sr-only">{localize('com_ui_project_search')}</span>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={localize('com_ui_project_search_placeholder')}
+              className="w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
+            />
+          </label>
+
           {/* Project List */}
           <div className="flex flex-col gap-1">
             {visibleProjects.map((project) => (
@@ -269,6 +289,11 @@ export default function ProjectsPanel() {
                 name={project.name}
               />
             ))}
+            {visibleProjects.length === 0 && (
+              <div className="px-2 py-2 text-xs italic text-text-tertiary">
+                {localize('com_ui_project_search_empty')}
+              </div>
+            )}
           </div>
 
           {/* More */}

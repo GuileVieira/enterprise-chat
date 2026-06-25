@@ -44,8 +44,26 @@ const DEFAULT_RULES = {
   conversionEvidenceMultiplier: 2,
   conversionEvidenceMinHours: 6,
   primaryMetric: 'cpa',
+  enabledSections: {
+    performance: true,
+    creatives: true,
+    noResultSpendCap: false,
+  },
+  noResultSpendCap: {
+    enabled: false,
+    minSpend: MIN_SAMPLE_SPEND,
+  },
 };
 const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
+const ANALYSIS_PRESETS = new Set([
+  'today',
+  'yesterday',
+  'last_2d',
+  'last_3d',
+  'last_7d',
+  'last_14d',
+  'last_30d',
+]);
 const DEFAULT_CREATIVE_RULES = {
   maxFrequency: 5,
 };
@@ -614,6 +632,23 @@ function getModels() {
       { timestamps: true },
     );
 
+  const existingRuleChangeSchema = mongoose.models.MetaAdsRuleChange?.schema;
+  const mixedSchemaType = mongoose.Schema?.Types?.Mixed ?? Object;
+  const ruleChangeSchema =
+    existingRuleChangeSchema ||
+    new mongoose.Schema(
+      {
+        tenantId: { type: String, index: true },
+        projectId: { type: String, index: true },
+        actor: { type: String, enum: ['user', 'tool', 'cron'], default: 'user' },
+        actorUserId: String,
+        changedFields: [String],
+        before: mixedSchemaType,
+        after: mixedSchemaType,
+      },
+      { timestamps: true },
+    );
+
   return {
     MetaAdsSnapshot:
       mongoose.models.MetaAdsSnapshot || mongoose.model('MetaAdsSnapshot', snapshotSchema),
@@ -625,6 +660,8 @@ function getModels() {
     MetaAdsAutomationAction:
       mongoose.models.MetaAdsAutomationAction ||
       mongoose.model('MetaAdsAutomationAction', actionSchema),
+    MetaAdsRuleChange:
+      mongoose.models.MetaAdsRuleChange || mongoose.model('MetaAdsRuleChange', ruleChangeSchema),
   };
 }
 
@@ -783,6 +820,29 @@ function validateOptionalRuleNumber(rules, key, validated, errors) {
   }
 }
 
+function validateEnabledSections(sections = {}) {
+  const defaults = DEFAULT_RULES.enabledSections;
+  return {
+    performance: sections.performance !== false,
+    creatives: sections.creatives !== false,
+    noResultSpendCap: sections.noResultSpendCap === true,
+  };
+}
+
+function validateNoResultSpendCap(value = {}) {
+  const minSpend = Number(value.minSpend ?? DEFAULT_RULES.noResultSpendCap.minSpend);
+  if (!Number.isFinite(minSpend) || minSpend < 0) {
+    throw Object.assign(new Error('Invalid Meta Ads budget rules.'), {
+      statusCode: 400,
+      details: ['noResultSpendCap.minSpend'],
+    });
+  }
+  return {
+    enabled: value.enabled === true,
+    minSpend,
+  };
+}
+
 function validateMetaAdsRules(rules = {}) {
   const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
   const errors = [];
@@ -816,6 +876,8 @@ function validateMetaAdsRules(rules = {}) {
   validated.primaryMetric = PRIMARY_METRICS.has(primaryMetric)
     ? primaryMetric
     : DEFAULT_RULES.primaryMetric;
+  validated.enabledSections = validateEnabledSections(merged.enabledSections);
+  validated.noResultSpendCap = validateNoResultSpendCap(merged.noResultSpendCap);
   if (validated.minDailyBudget > validated.maxDailyBudget) {
     errors.push('minDailyBudget');
     errors.push('maxDailyBudget');
@@ -2489,6 +2551,16 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   return {};
 }
 
+function resolveAutomationAnalysisPeriod(metaAds = {}, now = new Date()) {
+  const preset = ANALYSIS_PRESETS.has(metaAds.automationAnalysisPreset)
+    ? metaAds.automationAnalysisPreset
+    : 'last_2d';
+  return {
+    ...resolveStatusPeriod({ datePreset: preset }, now),
+    datePreset: preset,
+  };
+}
+
 function getStatusPeriodCacheKey({
   projectId,
   tenantId,
@@ -3130,6 +3202,60 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
   };
 }
 
+function normalizeRuleChangeSnapshot(metaAds = {}) {
+  return {
+    automationAnalysisPreset: metaAds.automationAnalysisPreset ?? 'last_2d',
+    clientGoal: metaAds.clientGoal ?? null,
+    rules: metaAds.rules ?? {},
+    creativeRules: metaAds.creativeRules ?? {},
+    ruleGroups: metaAds.ruleGroups ?? [],
+    ruleOverrides: metaAds.ruleOverrides ?? [],
+  };
+}
+
+function getRuleChangeFields(beforeSnapshot, afterSnapshot) {
+  return Object.keys(afterSnapshot).filter(
+    (key) => JSON.stringify(beforeSnapshot[key]) !== JSON.stringify(afterSnapshot[key]),
+  );
+}
+
+async function recordProjectMetaAdsRuleChange({
+  projectId,
+  tenantId,
+  beforeMetaAds,
+  afterMetaAds,
+  actor = 'user',
+  actorUserId,
+}) {
+  const before = normalizeRuleChangeSnapshot(beforeMetaAds);
+  const after = normalizeRuleChangeSnapshot(afterMetaAds);
+  const changedFields = getRuleChangeFields(before, after);
+  if (changedFields.length === 0) {
+    return null;
+  }
+  const { MetaAdsRuleChange } = getModels();
+  return MetaAdsRuleChange.create({
+    tenantId,
+    projectId,
+    actor,
+    actorUserId,
+    changedFields,
+    before,
+    after,
+  });
+}
+
+async function getProjectMetaAdsRuleHistory(projectId, fallbackTenantId) {
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  const tenantId = project ? getProjectTenantId(project, fallbackTenantId) : fallbackTenantId;
+  const query = tenantId ? { projectId, tenantId } : { projectId };
+  const { MetaAdsRuleChange } = getModels();
+  const changes = await MetaAdsRuleChange.find(query).sort({ createdAt: -1 }).limit(100).lean();
+  return { changes };
+}
+
 function getRankingCacheKey({
   projectId,
   tenantId,
@@ -3411,6 +3537,14 @@ function proposeBudget({
     };
   }
 
+  if (rules.enabledSections?.performance === false) {
+    return {
+      action: 'hold',
+      proposedDailyBudget: currentDailyBudget,
+      reason: 'Regras de performance desativadas para este escopo.',
+    };
+  }
+
   const primaryMetric = PRIMARY_METRICS.has(rules.primaryMetric) ? rules.primaryMetric : 'cpa';
   const targetResultType =
     typeof rules.targetResultType === 'string' && rules.targetResultType.trim()
@@ -3514,15 +3648,24 @@ function proposeBudget({
   }
 
   if (primaryBad || hasBadGuardrail || missingTargetResult) {
-    const proposed = Math.max(
-      rules.minDailyBudget,
-      currentDailyBudget * (1 - rules.maxDecreasePct / 100),
-    );
+    const noResultCap = rules.noResultSpendCap ?? DEFAULT_RULES.noResultSpendCap;
+    const noResultCapEnabled =
+      missingTargetResult &&
+      noResultCap.enabled === true &&
+      spend >= Number(noResultCap.minSpend ?? 0);
+    const proposed = noResultCapEnabled
+      ? Math.min(
+          rules.maxDailyBudget,
+          Math.max(rules.minDailyBudget, Number(Number(spend).toFixed(2))),
+        )
+      : Math.max(rules.minDailyBudget, currentDailyBudget * (1 - rules.maxDecreasePct / 100));
     return {
       action: proposed < currentDailyBudget ? 'decrease' : 'hold',
       proposedDailyBudget: Number(proposed.toFixed(2)),
       reason: missingTargetResult
-        ? `Resultado alvo ${targetResultType} sem conversões após gasto suficiente.`
+        ? noResultCapEnabled
+          ? `Resultado alvo ${targetResultType} sem conversões; orçamento ajustado para o gasto analisado.`
+          : `Resultado alvo ${targetResultType} sem conversões após gasto suficiente.`
         : `Performance abaixo da regra: CPA ${cpa?.toFixed(2) ?? '-'} / ROAS ${
             roas?.toFixed(2) ?? '-'
           } / CPC ${cpc?.toFixed(2) ?? '-'} / CTR ${ctr?.toFixed(2) ?? '-'}. ${
@@ -3814,8 +3957,8 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const token = await getAccessToken(tenantId, metaAds);
   const now = new Date();
   const timeZone = getMetaAdsTimeZone();
-  const since = getMetaAdsDateKey(addDays(now, -1), timeZone);
-  const until = getMetaAdsDateKey(now, timeZone);
+  const analysisPeriod = resolveAutomationAnalysisPeriod(metaAds, now);
+  const { since, until } = analysisPeriod;
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsAutomationAction } = getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const entityConcurrency = getCronEntityConcurrency();
@@ -4147,20 +4290,23 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         mode: metaAds.automationMode || 'recommend',
       });
       const creativePauseRecommendations = [];
-      const pauseProposals = buildCreativePauseRecommendations({
-        ads: adsByAdSetId.get(entityId) ?? [],
-        adInsights: adInsightsByAdSetId.get(entityId) ?? [],
-        creativeRules: effectiveRuleContext.creativeRules,
-        targetResultType: resolvedTargetResultType,
-        ruleContext: {
-          ...effectiveRuleContext,
-          ruleSourceType: 'creative',
-          campaignId,
-          campaignName,
-          adsetId: entityId,
-          adsetName,
-        },
-      });
+      const pauseProposals =
+        rules.enabledSections?.creatives === false
+          ? []
+          : buildCreativePauseRecommendations({
+              ads: adsByAdSetId.get(entityId) ?? [],
+              adInsights: adInsightsByAdSetId.get(entityId) ?? [],
+              creativeRules: effectiveRuleContext.creativeRules,
+              targetResultType: resolvedTargetResultType,
+              ruleContext: {
+                ...effectiveRuleContext,
+                ruleSourceType: 'creative',
+                campaignId,
+                campaignName,
+                adsetId: entityId,
+                adsetName,
+              },
+            });
       for (const pauseProposal of pauseProposals) {
         const recentPause = await getRecentAutomationAction({
           projectId,
@@ -4532,7 +4678,40 @@ async function applyManualBudgetChange({
   if (tenantId && projectTenantId !== tenantId) {
     throw new Error('Project does not belong to this tenant.');
   }
-  const rules = validateMetaAdsRules(project.metaAds?.rules);
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  let campaignId = entityLevel === 'campaign' ? entityId : undefined;
+  let adsetId = entityLevel === 'adset' ? entityId : undefined;
+  if (entityLevel === 'adset') {
+    const adsets = await listAdSets({
+      adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+      token,
+      graphVersion,
+      includeInactive: true,
+    }).catch((error) => {
+      logger.error('[MetaAdsBudget] adsets manual budget rule lookup failed', {
+        projectId,
+        entityId,
+        message: error.message,
+      });
+      return [];
+    });
+    const adset = adsets.find((item) => item.id === entityId);
+    campaignId = adset?.campaign_id || adset?.campaign?.id;
+  }
+  const effectiveRuleContext = getEffectiveRuleContext({
+    projectRules: mergeRules(metaAds),
+    projectCreativeRules: metaAds.creativeRules,
+    ruleGroups: metaAds.ruleGroups,
+    ruleOverrides: metaAds.ruleOverrides,
+    campaignId,
+    adsetId,
+  });
+  const rules = effectiveRuleContext.rules;
   const nextDailyBudget = Number(dailyBudget);
   if (
     !Number.isFinite(nextDailyBudget) ||
@@ -4541,13 +4720,6 @@ async function applyManualBudgetChange({
   ) {
     throw new Error('Manual Meta Ads budget is outside the effective rule limits.');
   }
-
-  const metaAds = withImplicitProjectTokenSecret(
-    project.projectId || projectId,
-    project.metaAds ?? {},
-  );
-  const token = await getAccessToken(projectTenantId, metaAds);
-  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const currentBudget = await getEntityDailyBudget({ entityId, token, graphVersion });
   const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);
   const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month);
@@ -4594,6 +4766,7 @@ async function applyManualBudgetChange({
     entityLevel,
     entityId,
     entityName,
+    campaignId,
     previousDailyBudget: currentBudget?.dailyBudget,
     newDailyBudget: nextDailyBudget,
     deltaDailyBudget,
@@ -4853,6 +5026,7 @@ module.exports = {
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
   getProjectMetaAdsRulePerformance,
+  getProjectMetaAdsRuleHistory,
   getProjectMetaTokenSecretName,
   getProjectMetaAdsStatus,
   withImplicitProjectTokenSecret,
@@ -4862,6 +5036,7 @@ module.exports = {
   isProjectDueForMetaAdsRun,
   normalizeAdAccountId,
   proposeBudget,
+  recordProjectMetaAdsRuleChange,
   resolveMetaCredentialStatus,
   resolveMetaAccessToken,
   runCron,

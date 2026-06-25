@@ -901,7 +901,16 @@ export const projectSchema = z.object({
           z.literal(1440),
         ])
         .optional(),
+      automationAnalysisPreset: z
+        .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+        .optional(),
       lastRunAt: z.string().optional(),
+      clientGoal: z
+        .object({
+          resultType: z.string().optional(),
+          monthlyTarget: z.number().optional(),
+        })
+        .optional(),
       monthlyBudget: z
         .object({
           month: z.string().optional(),
@@ -934,6 +943,19 @@ export const projectSchema = z.object({
           maxDailyBudget: z.number().optional(),
           cooldownHours: z.number().optional(),
           minSpend: z.number().optional(),
+          enabledSections: z
+            .object({
+              performance: z.boolean().optional(),
+              creatives: z.boolean().optional(),
+              noResultSpendCap: z.boolean().optional(),
+            })
+            .optional(),
+          noResultSpendCap: z
+            .object({
+              enabled: z.boolean().optional(),
+              minSpend: z.number().optional(),
+            })
+            .optional(),
         })
         .optional(),
       creativeRules: z
@@ -976,6 +998,19 @@ export const projectSchema = z.object({
                 maxDailyBudget: z.number().optional(),
                 cooldownHours: z.number().optional(),
                 minSpend: z.number().optional(),
+                enabledSections: z
+                  .object({
+                    performance: z.boolean().optional(),
+                    creatives: z.boolean().optional(),
+                    noResultSpendCap: z.boolean().optional(),
+                  })
+                  .optional(),
+                noResultSpendCap: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    minSpend: z.number().optional(),
+                  })
+                  .optional(),
               })
               .optional(),
             creativeRules: z
@@ -1022,6 +1057,19 @@ export const projectSchema = z.object({
                 maxDailyBudget: z.number().optional(),
                 cooldownHours: z.number().optional(),
                 minSpend: z.number().optional(),
+                enabledSections: z
+                  .object({
+                    performance: z.boolean().optional(),
+                    creatives: z.boolean().optional(),
+                    noResultSpendCap: z.boolean().optional(),
+                  })
+                  .optional(),
+                noResultSpendCap: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    minSpend: z.number().optional(),
+                  })
+                  .optional(),
               })
               .optional(),
             creativeRules: z

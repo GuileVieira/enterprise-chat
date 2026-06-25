@@ -355,6 +355,22 @@ export const useProjectMetaAdsRulePerformanceQuery = (
   );
 };
 
+export const useProjectMetaAdsRuleHistoryQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.ProjectMetaAdsRuleHistoryResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRuleHistoryResponse> => {
+  return useQuery<t.ProjectMetaAdsRuleHistoryResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'ruleHistory'],
+    () => dataService.getProjectMetaAdsRuleHistory(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

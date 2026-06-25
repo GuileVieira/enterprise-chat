@@ -177,6 +177,7 @@ export function buildMetaAdsSummaryCardItems({
   summaryAverageCost,
   summaryAverageFrequency,
   summaryMetricContext,
+  goalContext,
   summaryResultTypeOptionsLength,
   scopedObjectiveSummary,
   currency,
@@ -189,6 +190,7 @@ export function buildMetaAdsSummaryCardItems({
   summaryAverageCost: number | null | undefined;
   summaryAverageFrequency: number | null | undefined;
   summaryMetricContext: string | undefined;
+  goalContext?: string;
   summaryResultTypeOptionsLength: number;
   scopedObjectiveSummary: ReturnType<typeof getScopedObjectiveSummary>;
   currency: string;
@@ -210,7 +212,7 @@ export function buildMetaAdsSummaryCardItems({
         labelKey: 'com_ui_project_meta_ads_total_results',
         value: formatMetric(summaryTotalResults),
         tone: 'border-l-sky-300/30',
-        context: summaryMetricContext,
+        context: goalContext ?? summaryMetricContext,
         clickable: summaryResultTypeOptionsLength > 0,
       },
       {
@@ -232,7 +234,7 @@ export function buildMetaAdsSummaryCardItems({
       labelKey: 'com_ui_project_meta_ads_total_results',
       value: formatMetric(summaryTotalResults),
       tone: 'border-l-emerald-300/35',
-      context: summaryMetricContext,
+      context: goalContext ?? summaryMetricContext,
       clickable: summaryResultTypeOptionsLength > 0,
     },
     {

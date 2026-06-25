@@ -16,6 +16,7 @@ import {
 } from '../chrome';
 import { getMetaAdsTableRowClass } from '../overviewCells';
 import { createMetaAdsOverviewRenderers } from '../overviewRenderers';
+import { formatMetric, getResultTypeLabel } from '../formatters';
 import { MetaAdsOverviewWorkspace } from '../overviewWorkspace';
 import { buildMetaAdsSummaryCardItems, getNextMetaAdsSortDirection } from '../overviewState';
 import { buildMetaAdsOverviewState } from '../overviewState';
@@ -143,6 +144,24 @@ export function useMetaAdsOverviewAdapter({
     summaryAverageCost,
     summaryAverageFrequency,
     summaryMetricContext,
+    goalContext: (() => {
+      const goalTarget = Number(settings.clientGoal?.monthlyTarget ?? 0);
+      const goalResultType = settings.clientGoal?.resultType;
+      if (!goalResultType || !Number.isFinite(goalTarget) || goalTarget <= 0) {
+        return summaryMetricContext;
+      }
+      const resultOption = summaryResultTypeOptions.find(
+        (option) => option.resultType === goalResultType,
+      );
+      const reached = Number(resultOption?.totalResults ?? 0);
+      const percent = goalTarget > 0 ? Math.round((reached / goalTarget) * 100) : 0;
+      return localize('com_ui_project_meta_ads_goal_progress', {
+        0: getResultTypeLabel(goalResultType, localize),
+        1: formatMetric(reached),
+        2: formatMetric(goalTarget),
+        3: String(percent),
+      });
+    })(),
     summaryResultTypeOptionsLength: summaryResultTypeOptions.length,
     scopedObjectiveSummary,
     currency,

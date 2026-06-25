@@ -10,6 +10,7 @@ import type {
 } from './types';
 import { scheduleOptions } from './constants';
 import { getAdAccountDigits, resolveMonthlyBudgetForMonth, toAdAccountId } from './settings';
+import { resultTypeOptions } from './rules';
 
 type SettingsDrawerChrome = {
   modalOverlayClassName: string;
@@ -401,6 +402,167 @@ export function MetaAdsSettingsDrawer({
                   ))}
                 </select>
               </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                {localize('com_ui_project_meta_ads_analysis_window')}
+                <select
+                  disabled={!canUseMetaAdsActions}
+                  value={draft.automationAnalysisPreset ?? 'last_2d'}
+                  onChange={(event) =>
+                    updateDraft({
+                      automationAnalysisPreset: event.target
+                        .value as MetaAdsSettings['automationAnalysisPreset'],
+                    })
+                  }
+                  className={controls.inputClassName}
+                >
+                  {[
+                    ['today', 'com_ui_project_meta_ads_analysis_today'],
+                    ['yesterday', 'com_ui_project_meta_ads_analysis_yesterday'],
+                    ['last_2d', 'com_ui_project_meta_ads_analysis_last_2d'],
+                    ['last_3d', 'com_ui_project_meta_ads_analysis_last_3d'],
+                    ['last_7d', 'com_ui_project_meta_ads_analysis_last_7d'],
+                    ['last_14d', 'com_ui_project_meta_ads_analysis_last_14d'],
+                    ['last_30d', 'com_ui_project_meta_ads_analysis_last_30d'],
+                  ].map(([value, labelKey]) => (
+                    <option key={value} value={value}>
+                      {localize(labelKey as Parameters<typeof localize>[0])}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className={chrome.modalTileClassName}>
+                <div className="text-sm font-medium text-slate-950 dark:text-white">
+                  {localize('com_ui_project_meta_ads_client_goal')}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  {localize('com_ui_project_meta_ads_client_goal_hint')}
+                </div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_target_result_type')}
+                    <select
+                      disabled={!canUseMetaAdsActions}
+                      value={draft.clientGoal?.resultType ?? 'purchase'}
+                      onChange={(event) =>
+                        updateDraft({
+                          clientGoal: {
+                            ...(draft.clientGoal ?? {}),
+                            resultType: event.target.value,
+                          },
+                        })
+                      }
+                      className={controls.inputClassName}
+                    >
+                      {resultTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {localize(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_monthly_result_goal')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={draft.clientGoal?.monthlyTarget ?? ''}
+                      onChange={(event) =>
+                        updateDraft({
+                          clientGoal: {
+                            ...(draft.clientGoal ?? {}),
+                            monthlyTarget:
+                              event.target.value === '' ? undefined : Number(event.target.value),
+                          },
+                        })
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                </div>
+              </div>
+              <div className={chrome.modalTileClassName}>
+                <div className="text-sm font-medium text-slate-950 dark:text-white">
+                  {localize('com_ui_project_meta_ads_rule_sections')}
+                </div>
+                <div className="mt-3 grid gap-3">
+                  {[
+                    ['performance', 'com_ui_project_meta_ads_rule_section_performance_toggle'],
+                    ['creatives', 'com_ui_project_meta_ads_rule_section_creatives_toggle'],
+                  ].map(([key, labelKey]) => (
+                    <label
+                      key={key}
+                      className="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300"
+                    >
+                      <span>{localize(labelKey as Parameters<typeof localize>[0])}</span>
+                      <input
+                        type="checkbox"
+                        disabled={!canUseMetaAdsActions}
+                        checked={
+                          draft.rules.enabledSections?.[key as 'performance' | 'creatives'] !==
+                          false
+                        }
+                        onChange={(event) =>
+                          updateDraft({
+                            rules: {
+                              ...draft.rules,
+                              enabledSections: {
+                                ...(draft.rules.enabledSections ?? {}),
+                                [key]: event.target.checked,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                  <label className="flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300">
+                    <span>{localize('com_ui_project_meta_ads_no_result_spend_cap')}</span>
+                    <input
+                      type="checkbox"
+                      disabled={!canUseMetaAdsActions}
+                      checked={draft.rules.noResultSpendCap?.enabled === true}
+                      onChange={(event) =>
+                        updateDraft({
+                          rules: {
+                            ...draft.rules,
+                            noResultSpendCap: {
+                              ...(draft.rules.noResultSpendCap ?? {}),
+                              enabled: event.target.checked,
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_no_result_spend_cap_min')}
+                    <input
+                      disabled={
+                        !canUseMetaAdsActions || draft.rules.noResultSpendCap?.enabled !== true
+                      }
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.rules.noResultSpendCap?.minSpend ?? ''}
+                      onChange={(event) =>
+                        updateDraft({
+                          rules: {
+                            ...draft.rules,
+                            noResultSpendCap: {
+                              ...(draft.rules.noResultSpendCap ?? {}),
+                              minSpend:
+                                event.target.value === '' ? undefined : Number(event.target.value),
+                            },
+                          },
+                        })
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                </div>
+              </div>
               <div className={chrome.modalTileClassName}>
                 <div className="text-sm font-medium text-slate-950 dark:text-white">
                   {localize('com_ui_project_meta_ads_monthly_budget')}

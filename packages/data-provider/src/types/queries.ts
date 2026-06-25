@@ -641,6 +641,34 @@ export type ProjectMetaAdsRulePerformanceResponse = {
   rules: ProjectMetaAdsRulePerformanceItem[];
 };
 
+export type ProjectMetaAdsRuleChange = {
+  _id?: string;
+  actor?: 'user' | 'tool' | 'cron';
+  actorUserId?: string;
+  changedFields: string[];
+  before?: {
+    automationAnalysisPreset?: ProjectMetaAdsDatePreset;
+    clientGoal?: { resultType?: string; monthlyTarget?: number } | null;
+    rules?: Record<string, unknown>;
+    creativeRules?: Record<string, unknown>;
+    ruleGroups?: unknown[];
+    ruleOverrides?: unknown[];
+  };
+  after?: {
+    automationAnalysisPreset?: ProjectMetaAdsDatePreset;
+    clientGoal?: { resultType?: string; monthlyTarget?: number } | null;
+    rules?: Record<string, unknown>;
+    creativeRules?: Record<string, unknown>;
+    ruleGroups?: unknown[];
+    ruleOverrides?: unknown[];
+  };
+  createdAt?: string;
+};
+
+export type ProjectMetaAdsRuleHistoryResponse = {
+  changes: ProjectMetaAdsRuleChange[];
+};
+
 export type ProjectMetaAdsRunResponse = {
   projectId: string;
   adAccountId: string;
