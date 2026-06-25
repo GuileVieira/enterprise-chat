@@ -2238,6 +2238,7 @@
   "com_ui_project_meta_ads_rule_performance_empty_hint": "Performance appears after a rule recommendation is applied by AI, automatic mode, or manually. Creating the rule does not create retroactive history.",
   "com_ui_project_meta_ads_rule_attention": "Attention",
   "com_ui_project_meta_ads_rule_no_execution": "No execution yet",
+  "com_ui_project_meta_ads_rule_history": "History",
   "com_ui_project_meta_ads_rule_timeline": "Rule timeline",
   "com_ui_project_meta_ads_rules_empty_title": "No configured rules",
   "com_ui_project_meta_ads_optional_rule": "Optional",

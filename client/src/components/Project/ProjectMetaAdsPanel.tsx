@@ -39,7 +39,7 @@ import { MetaAdsRulePerformanceWorkspace } from './metaAds/rulePerformanceWorksp
 import { MetaAdsWorkspaceShell } from './metaAds/workspaceShell';
 import { getMetaAdsTokenStatusKey } from './metaAds/overviewState';
 import { cleanDashboardName } from './metaAds/helpers';
-import type { RuleRow, WorkspaceTab } from './metaAds/types';
+import type { WorkspaceTab } from './metaAds/types';
 import {
   metaAdsInputLg,
   metaAdsButton,
@@ -65,7 +65,6 @@ export default function ProjectMetaAdsPanel({
   const { showToast } = useToastContext();
   const tableScroll = useMetaAdsTableScrollSync();
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
-  const [selectedRulePerformance, setSelectedRulePerformance] = useState<RuleRow | null>(null);
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const biWorkspace = useMetaAdsBiWorkspace();
   const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
@@ -227,12 +226,7 @@ export default function ProjectMetaAdsPanel({
         onRunAnalysis={onRunAnalysis}
         onOpenSettingsDrawer={openSettingsDrawer}
         onOpenRuleGroupDraft={metaAdsRules.onOpenRuleGroupDraft}
-        onWorkspaceTabChange={(tab) => {
-          if (tab !== 'rules') {
-            setSelectedRulePerformance(null);
-          }
-          setWorkspaceTab(tab);
-        }}
+        onWorkspaceTabChange={setWorkspaceTab}
         onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
       >
@@ -260,8 +254,6 @@ export default function ProjectMetaAdsPanel({
             canUseMetaAdsActions={canUseMetaAdsActions}
             saving={updateSettings.isLoading}
             primaryButtonClassName={metaAdsPrimaryButton}
-            selectedRule={selectedRulePerformance}
-            onClearSelectedRule={() => setSelectedRulePerformance(null)}
             onCreateRuleGroup={metaAdsRules.onOpenRuleGroupDraft}
             onToggleRuleRow={metaAdsRules.onToggleRuleRow}
             onEditGlobalRule={metaAdsRules.onEditGlobalRule}

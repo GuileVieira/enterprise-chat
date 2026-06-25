@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { OGDialog, OGDialogTitle, OGDialogHeader, OGDialogContent } from '@librechat/client';
 import type {
   ProjectMetaAdsRulePerformanceItem,
   ProjectMetaAdsRulePerformanceEntity,
@@ -7,7 +8,7 @@ import type {
 
 import { defaultRules, getRuleRowTypeLabelKey } from './rules';
 import { formatMoney, formatMetric, getResultTypeLabel } from './formatters';
-import { MetaAdsMetricCard, MetaAdsPanel } from './ui';
+import { MetaAdsPanel } from './ui';
 import { MetaAdsPeriodControls } from './periodControls';
 import { MetaAdsNameTooltip } from './overviewCells';
 import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
@@ -290,8 +291,6 @@ export function MetaAdsRulePerformanceWorkspace({
   canUseMetaAdsActions,
   saving,
   primaryButtonClassName,
-  selectedRule,
-  onClearSelectedRule,
   onCreateRuleGroup,
   onToggleRuleRow,
   onEditGlobalRule,
@@ -310,8 +309,6 @@ export function MetaAdsRulePerformanceWorkspace({
   canUseMetaAdsActions: boolean;
   saving: boolean;
   primaryButtonClassName: string;
-  selectedRule: RuleRow | null;
-  onClearSelectedRule: () => void;
   onCreateRuleGroup: () => void;
   onToggleRuleRow: (row: RuleRow) => void;
   onEditGlobalRule: () => void;
@@ -328,39 +325,13 @@ export function MetaAdsRulePerformanceWorkspace({
   const allRows = [...rows, ...historicalRows];
   const performanceByKey = new Map(performanceRules.map((rule) => [rule.ruleKey, rule]));
   const [selectedRuleKey, setSelectedRuleKey] = useState<string | null>(null);
-  const externalRuleKey = selectedRule ? getRulePerformanceKey(selectedRule) : null;
-  const firstPerformanceRow =
-    allRows.find((row) => performanceByKey.has(getRulePerformanceKey(row))) ?? null;
-  let fallbackRuleKey: string | null = null;
-  if (firstPerformanceRow) {
-    fallbackRuleKey = getRulePerformanceKey(firstPerformanceRow);
-  } else if (allRows[0]) {
-    fallbackRuleKey = getRulePerformanceKey(allRows[0]);
-  }
-  const activeRuleKey = externalRuleKey ?? selectedRuleKey ?? fallbackRuleKey;
   const selectedRow =
-    allRows.find((row) => getRulePerformanceKey(row) === activeRuleKey) ?? allRows[0] ?? null;
+    selectedRuleKey == null
+      ? null
+      : (allRows.find((row) => getRulePerformanceKey(row) === selectedRuleKey) ?? null);
   const selectedPerformance = selectedRow
     ? (performanceByKey.get(getRulePerformanceKey(selectedRow)) ?? null)
     : null;
-  const visiblePerformance = performanceRules;
-  const totalActions = visiblePerformance.reduce((sum, rule) => sum + rule.actionCount, 0);
-  const pausedAds = visiblePerformance.reduce((sum, rule) => sum + rule.pausedAdCount, 0);
-  const affectedEntities = visiblePerformance.reduce(
-    (sum, rule) => sum + (rule.entities?.length ?? 0),
-    0,
-  );
-  const awaitingEntities = visiblePerformance.reduce(
-    (sum, rule) => sum + (rule.entityStatusSummary?.awaiting_results ?? 0),
-    0,
-  );
-  const regressedEntities = visiblePerformance.reduce(
-    (sum, rule) =>
-      sum +
-      (rule.entityStatusSummary?.regressed ?? 0) +
-      (rule.entityStatusSummary?.no_result_after_spend ?? 0),
-    0,
-  );
 
   return (
     <div
@@ -384,113 +355,93 @@ export function MetaAdsRulePerformanceWorkspace({
             {localize('com_ui_project_meta_ads_create_rule_group')}
           </button>
         </div>
-        {externalRuleKey && selectedRule && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-teal-300/35 bg-teal-50/80 px-3 py-2 text-xs text-teal-900 dark:border-teal-300/20 dark:bg-teal-300/10 dark:text-teal-100">
-            <span className="font-semibold">
-              {localize('com_ui_project_meta_ads_selected_rule_performance', {
-                0: selectedRule.name,
-              })}
-            </span>
-            <button
-              type="button"
-              onClick={onClearSelectedRule}
-              className="rounded-lg border border-teal-300/40 px-2 py-1 font-semibold transition hover:bg-teal-100 dark:border-teal-300/25 dark:hover:bg-teal-300/10"
-            >
-              {localize('com_ui_project_meta_ads_clear_rule_filter')}
-            </button>
-          </div>
-        )}
       </MetaAdsPanel>
       {fetching && (
         <div className="rounded-2xl border border-amber-300/35 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
           {localize('com_ui_project_meta_ads_loading')}
         </div>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetaAdsMetricCard
-          label={localize('com_ui_project_meta_ads_rules')}
-          value={String(allRows.length)}
-        />
-        <MetaAdsMetricCard
-          label={localize('com_ui_project_meta_ads_actions')}
-          value={String(totalActions)}
-        />
-        <MetaAdsMetricCard
-          label={localize('com_ui_project_meta_ads_affected_entities')}
-          value={String(affectedEntities)}
-        />
-        <MetaAdsMetricCard
-          label={localize('com_ui_project_meta_ads_rule_attention')}
-          value={String(awaitingEntities + regressedEntities)}
-          context={`${localize('com_ui_project_meta_ads_paused_creatives')}: ${pausedAds}`}
-        />
-      </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.5fr)]">
-        <MetaAdsPanel className="p-0">
-          {allRows.length === 0 ? (
-            <div className="p-5 text-sm text-slate-600 dark:text-slate-300">
-              <div className="font-semibold text-slate-900 dark:text-white">
-                {localize('com_ui_project_meta_ads_rules_empty_title')}
-              </div>
-              <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                {localize('com_ui_project_meta_ads_rules_empty')}
-              </p>
-              <button
-                type="button"
-                disabled={!canCreateRuleGroup}
-                onClick={onCreateRuleGroup}
-                className={`mt-4 ${primaryButtonClassName}`}
-              >
-                {localize('com_ui_project_meta_ads_create_rule_group')}
-              </button>
+      <MetaAdsPanel className="overflow-hidden p-0">
+        {allRows.length === 0 ? (
+          <div className="p-5 text-sm text-slate-600 dark:text-slate-300">
+            <div className="font-semibold text-slate-900 dark:text-white">
+              {localize('com_ui_project_meta_ads_rules_empty_title')}
             </div>
-          ) : (
-            <div className="divide-y divide-slate-200/70 dark:divide-white/10">
-              {allRows.map((row) => {
-                const ruleKey = getRulePerformanceKey(row);
-                const performance = performanceByKey.get(ruleKey);
-                const isSelected = selectedRow
-                  ? getRulePerformanceKey(selectedRow) === ruleKey
-                  : false;
-                return (
-                  <RuleListItem
-                    key={row.key}
-                    row={row}
-                    performance={performance}
-                    selected={isSelected}
-                    currency={currency}
-                    canUseMetaAdsActions={canUseMetaAdsActions}
-                    saving={saving}
-                    localize={localize}
-                    onSelect={() => {
-                      onClearSelectedRule();
-                      setSelectedRuleKey(ruleKey);
-                    }}
-                    onToggleRuleRow={onToggleRuleRow}
-                    onEditGlobalRule={onEditGlobalRule}
-                    onEditRuleGroup={onEditRuleGroup}
-                    onEditRuleOverride={onEditRuleOverride}
-                    onDeleteRuleGroup={onDeleteRuleGroup}
-                    onDeleteRuleOverride={onDeleteRuleOverride}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </MetaAdsPanel>
-        {selectedRow ? (
-          <RuleCenterDetailPanel
-            row={selectedRow}
-            performance={selectedPerformance}
-            currency={currency}
-            localize={localize}
-          />
+            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              {localize('com_ui_project_meta_ads_rules_empty')}
+            </p>
+            <button
+              type="button"
+              disabled={!canCreateRuleGroup}
+              onClick={onCreateRuleGroup}
+              className={`mt-4 ${primaryButtonClassName}`}
+            >
+              {localize('com_ui_project_meta_ads_create_rule_group')}
+            </button>
+          </div>
         ) : (
-          <MetaAdsPanel className="p-5 text-sm text-slate-600 dark:text-slate-300">
-            {localize('com_ui_project_meta_ads_rules_empty')}
-          </MetaAdsPanel>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1120px] table-fixed border-separate border-spacing-0 text-left text-xs">
+              <thead className="bg-slate-50/90 text-[10px] uppercase tracking-[0.12em] text-slate-500 dark:bg-white/[0.035] dark:text-slate-400">
+                <tr>
+                  <th className="w-28 border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_status')}
+                  </th>
+                  <th className="w-[34%] border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_rule_scope')}
+                  </th>
+                  <th className="w-36 border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_primary_metric')}
+                  </th>
+                  <th className="w-40 border-b border-slate-200/70 px-4 py-3 dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_last_record')}
+                  </th>
+                  <th className="w-24 border-b border-slate-200/70 px-4 py-3 text-right dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_actions')}
+                  </th>
+                  <th className="w-32 border-b border-slate-200/70 px-4 py-3 text-right dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_spend')}
+                  </th>
+                  <th className="w-56 border-b border-slate-200/70 px-4 py-3 text-right dark:border-white/10">
+                    {localize('com_ui_project_meta_ads_actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {allRows.map((row) => {
+                  const ruleKey = getRulePerformanceKey(row);
+                  const performance = performanceByKey.get(ruleKey);
+                  return (
+                    <RuleListItem
+                      key={row.key}
+                      row={row}
+                      performance={performance}
+                      currency={currency}
+                      canUseMetaAdsActions={canUseMetaAdsActions}
+                      saving={saving}
+                      localize={localize}
+                      onSelect={() => setSelectedRuleKey(ruleKey)}
+                      onToggleRuleRow={onToggleRuleRow}
+                      onEditGlobalRule={onEditGlobalRule}
+                      onEditRuleGroup={onEditRuleGroup}
+                      onEditRuleOverride={onEditRuleOverride}
+                      onDeleteRuleGroup={onDeleteRuleGroup}
+                      onDeleteRuleOverride={onDeleteRuleOverride}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </MetaAdsPanel>
+      <RulePerformanceDetailsModal
+        row={selectedRow}
+        performance={selectedPerformance}
+        currency={currency}
+        localize={localize}
+        onClose={() => setSelectedRuleKey(null)}
+      />
     </div>
   );
 }
@@ -498,7 +449,6 @@ export function MetaAdsRulePerformanceWorkspace({
 function RuleListItem({
   row,
   performance,
-  selected,
   currency,
   canUseMetaAdsActions,
   saving,
@@ -513,7 +463,6 @@ function RuleListItem({
 }: {
   row: RuleRow;
   performance?: ProjectMetaAdsRulePerformanceItem;
-  selected: boolean;
   currency: string;
   canUseMetaAdsActions: boolean;
   saving: boolean;
@@ -545,39 +494,34 @@ function RuleListItem({
   };
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <tr
       data-testid="meta-ads-rule-row"
       onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-      className={`group cursor-pointer p-4 transition focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-300/60 ${
-        selected
-          ? 'bg-teal-50/80 dark:bg-teal-300/10'
-          : 'bg-white/60 hover:bg-slate-50 dark:bg-white/[0.025] dark:hover:bg-white/[0.055]'
-      }`}
+      className="group cursor-pointer bg-white/60 transition duration-200 odd:bg-slate-50/60 hover:bg-teal-50/70 dark:bg-white/[0.025] dark:odd:bg-white/[0.045] dark:hover:bg-teal-300/[0.08]"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <td className="border-b border-slate-200/60 px-4 py-4 align-top dark:border-white/[0.06]">
+        <span
+          className={`inline-flex rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
+            row.enabled
+              ? 'border-emerald-300/45 bg-emerald-50 text-emerald-700 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100'
+              : 'border-amber-300/45 bg-amber-50 text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100'
+          }`}
+        >
+          {localize(
+            row.enabled
+              ? 'com_ui_project_meta_ads_rule_enabled'
+              : 'com_ui_project_meta_ads_rule_disabled',
+          )}
+        </span>
+        {!canMutateRow && (
+          <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_rule_history')}
+          </div>
+        )}
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 align-top dark:border-white/[0.06]">
+        <div className="min-w-0 max-w-full">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-lg border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${
-                row.enabled
-                  ? 'border-emerald-300/45 bg-emerald-50 text-emerald-700 dark:border-emerald-300/30 dark:bg-emerald-300/10 dark:text-emerald-100'
-                  : 'border-amber-300/45 bg-amber-50 text-amber-700 dark:border-amber-300/30 dark:bg-amber-300/10 dark:text-amber-100'
-              }`}
-            >
-              {localize(
-                row.enabled
-                  ? 'com_ui_project_meta_ads_rule_enabled'
-                  : 'com_ui_project_meta_ads_rule_disabled',
-              )}
-            </span>
             <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
               {localize(getRuleRowTypeLabelKey(row.type))}
             </span>
@@ -590,95 +534,142 @@ function RuleListItem({
             {row.scopeLabel}
           </div>
         </div>
-        <div
-          className={`shrink-0 text-right text-xs font-semibold ${getStatusTone(
-            performance?.status,
-          )}`}
-        >
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 align-top font-mono uppercase text-slate-900 dark:border-white/[0.06] dark:text-white">
+        {row.rules.primaryMetric ?? 'cpa'}
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 align-top font-mono text-slate-700 dark:border-white/[0.06] dark:text-slate-200">
+        {formatRuleDateTime(performance?.lastActionAt)}
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 text-right align-top font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
+        {performance?.actionCount ?? 0}
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 text-right align-top font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
+        {formatMoney(performance?.totalSpend, currency)}
+        <div className={`mt-1 text-[11px] font-semibold ${getStatusTone(performance?.status)}`}>
           {statusLabel}
         </div>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_primary_metric')}
-          </div>
-          <div className="mt-1 font-mono uppercase">{row.rules.primaryMetric ?? 'cpa'}</div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_last_record')}
-          </div>
-          <div className="mt-1 font-mono">{formatRuleDateTime(performance?.lastActionAt)}</div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_actions')}
-          </div>
-          <div className="mt-1 font-mono">{performance?.actionCount ?? 0}</div>
-        </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
-            {localize('com_ui_project_meta_ads_spend')}
-          </div>
-          <div className="mt-1 font-mono">{formatMoney(performance?.totalSpend, currency)}</div>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          aria-label={localize(
-            row.enabled
-              ? 'com_ui_project_meta_ads_disable_rule'
-              : 'com_ui_project_meta_ads_enable_rule',
-          )}
-          disabled={!canUseMetaAdsActions || saving || !canMutateRow}
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleRuleRow(row);
-          }}
-          className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-teal-300/60 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
-        >
-          {localize(
-            row.enabled
-              ? 'com_ui_project_meta_ads_disable_rule'
-              : 'com_ui_project_meta_ads_enable_rule',
-          )}
-        </button>
-        <button
-          type="button"
-          aria-label={localize('com_ui_project_meta_ads_edit_rule')}
-          disabled={!canUseMetaAdsActions || !canMutateRow}
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit();
-          }}
-          className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-teal-300/60 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
-        >
-          {localize('com_ui_project_meta_ads_edit_rule')}
-        </button>
-        {row.type !== 'global' && canMutateRow && (
+      </td>
+      <td className="border-b border-slate-200/60 px-4 py-4 align-top dark:border-white/[0.06]">
+        <div className="flex flex-wrap justify-end gap-2">
           <button
             type="button"
-            aria-label={localize('com_ui_project_meta_ads_delete_rule')}
-            disabled={!canUseMetaAdsActions}
             onClick={(event) => {
               event.stopPropagation();
-              if (row.group) {
-                onDeleteRuleGroup(row.group.id);
-                return;
-              }
-              if (row.override) {
-                onDeleteRuleOverride(row.override);
-              }
+              onSelect();
             }}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-red-300/60 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-red-100"
+            className="rounded-lg border border-teal-300/40 px-2 py-1 text-[11px] font-semibold text-teal-700 transition hover:bg-teal-50 dark:border-teal-300/25 dark:text-teal-100 dark:hover:bg-teal-300/10"
           >
-            {localize('com_ui_project_meta_ads_delete_rule')}
+            {localize('com_ui_project_meta_ads_view_details')}
           </button>
-        )}
-      </div>
-    </div>
+          <button
+            type="button"
+            aria-label={localize(
+              row.enabled
+                ? 'com_ui_project_meta_ads_disable_rule'
+                : 'com_ui_project_meta_ads_enable_rule',
+            )}
+            disabled={!canUseMetaAdsActions || saving || !canMutateRow}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleRuleRow(row);
+            }}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-teal-300/60 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
+          >
+            {localize(
+              row.enabled
+                ? 'com_ui_project_meta_ads_disable_rule'
+                : 'com_ui_project_meta_ads_enable_rule',
+            )}
+          </button>
+          <button
+            type="button"
+            aria-label={localize('com_ui_project_meta_ads_edit_rule')}
+            disabled={!canUseMetaAdsActions || !canMutateRow}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-teal-300/60 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
+          >
+            {localize('com_ui_project_meta_ads_edit_rule')}
+          </button>
+          {row.type !== 'global' && canMutateRow && (
+            <button
+              type="button"
+              aria-label={localize('com_ui_project_meta_ads_delete_rule')}
+              disabled={!canUseMetaAdsActions}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (row.group) {
+                  onDeleteRuleGroup(row.group.id);
+                  return;
+                }
+                if (row.override) {
+                  onDeleteRuleOverride(row.override);
+                }
+              }}
+              className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-red-300/60 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:text-red-100"
+            >
+              {localize('com_ui_project_meta_ads_delete_rule')}
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function RulePerformanceDetailsModal({
+  row,
+  performance,
+  currency,
+  localize,
+  onClose,
+}: {
+  row: RuleRow | null;
+  performance: ProjectMetaAdsRulePerformanceItem | null;
+  currency: string;
+  localize: Localize;
+  onClose: () => void;
+}) {
+  return (
+    <OGDialog
+      open={Boolean(row)}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      {row && (
+        <OGDialogContent
+          overlayStyle={{ zIndex: 10030 }}
+          style={{ zIndex: 10040 }}
+          className="flex h-[92dvh] w-[min(96vw,1540px)] max-w-none flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-0 text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]"
+        >
+          <OGDialogHeader className="shrink-0 border-b border-slate-200/75 bg-slate-50 px-5 py-4 text-left dark:border-white/10 dark:bg-[#172033]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+              {localize('com_ui_project_meta_ads_rule_details')}
+            </div>
+            <OGDialogTitle className="mt-1 text-lg font-semibold text-slate-950 dark:text-white">
+              {row.name}
+            </OGDialogTitle>
+            <div className="mt-1 max-w-[84ch] truncate text-xs text-slate-500 dark:text-slate-400">
+              {row.scopeLabel}
+            </div>
+          </OGDialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+            <RuleCenterDetailPanel
+              row={row}
+              performance={performance}
+              currency={currency}
+              localize={localize}
+            />
+          </div>
+        </OGDialogContent>
+      )}
+    </OGDialog>
   );
 }
 
@@ -702,11 +693,12 @@ function RuleCenterDetailPanel({
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
               {localize('com_ui_project_meta_ads_rule_details')}
             </div>
-            <NameWithTooltip
-              value={row.name}
-              className="mt-1 text-lg font-semibold text-slate-950 dark:text-white"
-            />
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{row.scopeLabel}</div>
+            <div className="mt-1 break-words text-lg font-semibold text-slate-950 dark:text-white">
+              {row.name}
+            </div>
+            <div className="mt-1 break-words text-xs text-slate-500 dark:text-slate-400">
+              {row.scopeLabel}
+            </div>
           </div>
           <RuleDetailStatus
             performance={performance}

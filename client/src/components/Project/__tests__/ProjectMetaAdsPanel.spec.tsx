@@ -3174,7 +3174,16 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(screen.getByTestId('meta-ads-rules-center-tab-panel')).toBeInTheDocument();
     expect(screen.getAllByText('Prospecting group').length).toBeGreaterThan(0);
-    expect(screen.getByText('com_ui_project_meta_ads_rule_details')).toBeInTheDocument();
+    const prospectingRow = screen
+      .getAllByTestId('meta-ads-rule-row')
+      .find((row) => within(row).queryByText('Prospecting group'));
+    expect(prospectingRow).toBeDefined();
+    fireEvent.click(
+      within(prospectingRow as HTMLElement).getByText('com_ui_project_meta_ads_view_details'),
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('com_ui_project_meta_ads_rule_details');
+    expect(screen.getByRole('dialog')).toHaveStyle({ zIndex: 10040 });
+    expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10030 });
     expect(screen.getAllByText('com_ui_project_meta_ads_before').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_after').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_average_in_period').length).toBeGreaterThan(
@@ -3313,6 +3322,13 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    const multiEntityRow = screen
+      .getAllByTestId('meta-ads-rule-row')
+      .find((row) => within(row).queryByText('Multi entity rule'));
+    expect(multiEntityRow).toBeDefined();
+    fireEvent.click(
+      within(multiEntityRow as HTMLElement).getByText('com_ui_project_meta_ads_view_details'),
+    );
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_no_general_conclusion').length,
@@ -3355,6 +3371,13 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    const singleRecordRow = screen
+      .getAllByTestId('meta-ads-rule-row')
+      .find((row) => within(row).queryByText('Single record rule'));
+    expect(singleRecordRow).toBeDefined();
+    fireEvent.click(
+      within(singleRecordRow as HTMLElement).getByText('com_ui_project_meta_ads_view_details'),
+    );
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_insufficient_comparison_data').length,
@@ -3418,6 +3441,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_view_details')[0]);
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_rule_performance_awaiting_results').length,
@@ -3481,6 +3505,7 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_view_details')[0]);
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_rule_performance_no_result_after_spend').length,
@@ -3521,6 +3546,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
     fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_view_details')[0]);
 
     expect(screen.getAllByText('com_ui_project_meta_ads_rule_no_execution').length).toBeGreaterThan(
       0,
