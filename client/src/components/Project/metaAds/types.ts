@@ -109,7 +109,7 @@ export type RequestError = {
 };
 
 export type SettingsDrawer = 'account' | 'automation' | null;
-export type WorkspaceTab = 'overview' | 'bi' | 'aiPerformance' | 'rulePerformance';
+export type WorkspaceTab = 'overview' | 'bi' | 'rules';
 export type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 export type DatePreset =
   | 'today'

@@ -10,7 +10,6 @@ import {
   metaAdsButton,
   metaAdsGhostButton,
   metaAdsInput,
-  metaAdsPrimaryButton,
   metaAdsStickyCell,
   metaAdsModalOverlay,
   metaAdsModalShell,
@@ -21,7 +20,7 @@ import { MetaAdsOverviewWorkspace } from '../overviewWorkspace';
 import { buildMetaAdsSummaryCardItems, getNextMetaAdsSortDirection } from '../overviewState';
 import { buildMetaAdsOverviewState } from '../overviewState';
 import { getTableViewColumns } from '../table';
-import type { RuleRow, TableView, Localize } from '../types';
+import type { TableView, Localize } from '../types';
 import type { useMetaAdsEntityActions } from './useMetaAdsEntityActions';
 import type { useMetaAdsPeriodFilter } from './useMetaAdsPeriodFilter';
 import type { useMetaAdsRules } from './useMetaAdsRules';
@@ -41,7 +40,6 @@ type UseMetaAdsOverviewAdapterParams = {
   isStatusLoading: boolean;
   isInitialStatusLoading: boolean;
   canOpenTrafficAgentChat: boolean;
-  savingSettings: boolean;
   objectiveOptions: MetaAdsOverviewWorkspaceProps['toolbar']['objectiveOptions'];
   statusSummary: Parameters<typeof buildMetaAdsOverviewState>[0]['summary'];
   settingsState: ReturnType<typeof useMetaAdsSettings>;
@@ -54,7 +52,6 @@ type UseMetaAdsOverviewAdapterParams = {
   updateEntityStatus: ReturnType<typeof useUpdateProjectMetaAdsEntityStatusMutation>;
   localize: Localize;
   onOpenTrafficAgentChat: () => void;
-  onOpenRulePerformance: (rule: RuleRow) => void;
 };
 
 export function useMetaAdsOverviewAdapter({
@@ -65,7 +62,6 @@ export function useMetaAdsOverviewAdapter({
   isStatusLoading,
   isInitialStatusLoading,
   canOpenTrafficAgentChat,
-  savingSettings,
   objectiveOptions,
   statusSummary,
   settingsState,
@@ -78,7 +74,6 @@ export function useMetaAdsOverviewAdapter({
   updateEntityStatus,
   localize,
   onOpenTrafficAgentChat,
-  onOpenRulePerformance,
 }: UseMetaAdsOverviewAdapterParams): MetaAdsOverviewWorkspaceProps {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
@@ -97,18 +92,7 @@ export function useMetaAdsOverviewAdapter({
     onOpenEntityStatusConfirmation,
     onOpenDuplicateDraft,
   } = entityActions;
-  const {
-    ruleRows,
-    canCreateRuleGroup,
-    getEntityRuleLabel,
-    onOpenRuleGroupDraft,
-    onEditGlobalRule,
-    onEditRuleGroup,
-    onEditRuleOverride,
-    onToggleRuleRow,
-    onDeleteRuleGroup,
-    onDeleteRuleOverride,
-  } = rulesState;
+  const { canCreateRuleGroup, getEntityRuleLabel, onOpenRuleGroupDraft } = rulesState;
   const {
     selectedEntityIds,
     expandedCampaignIds,
@@ -269,23 +253,6 @@ export function useMetaAdsOverviewAdapter({
       },
     },
     chrome: { showPendingRecommendations: true },
-    rules: {
-      rows: ruleRows,
-      currency,
-      canCreateRuleGroup,
-      canUseMetaAdsActions,
-      saving: savingSettings,
-      localize,
-      primaryButtonClassName: metaAdsPrimaryButton,
-      onCreateRuleGroup: onOpenRuleGroupDraft,
-      onToggleRuleRow,
-      onEditGlobalRule,
-      onEditRuleGroup,
-      onEditRuleOverride,
-      onDeleteRuleGroup,
-      onDeleteRuleOverride,
-      onOpenRulePerformance,
-    },
     table: {
       columns: tableColumns,
       campaigns: filteredCampaigns,

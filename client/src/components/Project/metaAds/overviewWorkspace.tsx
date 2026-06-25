@@ -3,7 +3,6 @@ import type { ComponentProps, ReactNode } from 'react';
 import { MetaAdsOverviewTable } from './overviewTable';
 import { MetaAdsOverviewToolbar } from './overviewToolbar';
 import { MetaAdsSummaryCards } from './summaryCards';
-import { MetaAdsRulesWorkspace } from './rulesWorkspace';
 import { MetaAdsPendingRecommendationsPanel } from './pendingRecommendationsPanel';
 
 type SortableHeaderArgs = {
@@ -22,7 +21,6 @@ type MetaAdsOverviewWorkspaceProps = {
     campaignCount: number;
   };
   summary: ComponentProps<typeof MetaAdsSummaryCards>;
-  rules: ComponentProps<typeof MetaAdsRulesWorkspace>;
   table: Omit<ComponentProps<typeof MetaAdsOverviewTable>, 'renderSortableHeader'>;
   actions: {
     pendingRecommendations: ComponentProps<typeof MetaAdsPendingRecommendationsPanel>;
@@ -67,7 +65,6 @@ export function MetaAdsOverviewWorkspace({
   filters,
   selection,
   summary,
-  rules,
   table,
   actions,
   chrome,
@@ -87,7 +84,6 @@ export function MetaAdsOverviewWorkspace({
         <MetaAdsPendingRecommendationsPanel {...actions.pendingRecommendations} />
       )}
 
-      <MetaAdsRulesWorkspace {...rules} />
       <MetaAdsOverviewTable
         {...table}
         renderSortableHeader={(args) =>

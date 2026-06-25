@@ -251,32 +251,32 @@ export function MetaAdsDialogsLayer({
               inputClassName: controls.inputClassName,
             }}
           />
-          <MetaAdsRuleGroupDialog
-            draft={ruleGroupDraft}
-            settings={settings}
-            entityLabels={ruleDraftEntityLabels}
-            entityOptions={ruleDraftEntityOptions}
-            saving={mutations.savingSettings}
-            localize={localize}
-            onNameChange={(name) =>
-              setRuleGroupDraft((current) => (current ? { ...current, name } : current))
-            }
-            onAccountProfileChange={onAccountProfileChange}
-            onRuleChange={onRuleGroupRuleChange}
-            onRuleTextChange={onRuleGroupRuleTextChange}
-            onEntityToggle={onRuleGroupEntityToggle}
-            onCreativeRuleChange={onRuleGroupCreativeRuleChange}
-            onClose={() => setRuleGroupDraft(null)}
-            onSave={onSaveRuleGroup}
-            chrome={drawerChromeWithLabel}
-            controls={{
-              inputClassName: controls.inputClassName,
-              primaryButtonClassName: controls.primaryButtonClassName,
-              ghostButtonClassName: controls.ghostButtonClassName,
-            }}
-          />
         </>
       )}
+      <MetaAdsRuleGroupDialog
+        draft={ruleGroupDraft}
+        settings={settings}
+        entityLabels={ruleDraftEntityLabels}
+        entityOptions={ruleDraftEntityOptions}
+        saving={mutations.savingSettings}
+        localize={localize}
+        onNameChange={(name) =>
+          setRuleGroupDraft((current) => (current ? { ...current, name } : current))
+        }
+        onAccountProfileChange={onAccountProfileChange}
+        onRuleChange={onRuleGroupRuleChange}
+        onRuleTextChange={onRuleGroupRuleTextChange}
+        onEntityToggle={onRuleGroupEntityToggle}
+        onCreativeRuleChange={onRuleGroupCreativeRuleChange}
+        onClose={() => setRuleGroupDraft(null)}
+        onSave={onSaveRuleGroup}
+        chrome={drawerChromeWithLabel}
+        controls={{
+          inputClassName: controls.inputClassName,
+          primaryButtonClassName: controls.primaryButtonClassName,
+          ghostButtonClassName: controls.ghostButtonClassName,
+        }}
+      />
       <MetaAdsAdPreviewDialog
         ad={selectedAdPreview}
         currency={currency}

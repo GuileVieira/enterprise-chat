@@ -7,7 +7,6 @@ import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
   useDuplicateProjectMetaAdsEntityMutation,
-  useProjectMetaAdsPerformanceQuery,
   useProjectMetaAdsRankingsQuery,
   useProjectMetaAdsQuery,
   useProjectMetaAdsRulePerformanceQuery,
@@ -33,7 +32,6 @@ import { useMetaAdsOverviewAdapter } from './metaAds/hooks/useMetaAdsOverviewAda
 import { buildCampaignFallback } from './metaAds/table';
 import { getGraphVersionOptions } from './metaAds/settings';
 import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
-import { MetaAdsAiPerformanceWorkspace } from './metaAds/aiPerformanceWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
 import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
 import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
@@ -74,14 +72,9 @@ export default function ProjectMetaAdsPanel({
   const startupConfigQuery = useGetStartupConfig();
   const overviewPeriod = useMetaAdsPeriodFilter();
   const biPeriod = useMetaAdsPeriodFilter();
-  const aiPerformancePeriod = useMetaAdsPeriodFilter();
   const rulePerformancePeriod = useMetaAdsPeriodFilter();
   const statusQuery = useProjectMetaAdsQuery(project.projectId, overviewPeriod.statusParams);
   const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams);
-  const aiPerformanceQuery = useProjectMetaAdsPerformanceQuery(
-    project.projectId,
-    aiPerformancePeriod.statusParams,
-  );
   const rulePerformanceQuery = useProjectMetaAdsRulePerformanceQuery(
     project.projectId,
     rulePerformancePeriod.statusParams,
@@ -162,10 +155,6 @@ export default function ProjectMetaAdsPanel({
   const hasProjectToken =
     tokenCredentials?.effectiveSource === 'project' ||
     Boolean(metaAdsSettings.settingsDraft?.tokenSecretName);
-  const onOpenRulePerformance = (rule: RuleRow) => {
-    setSelectedRulePerformance(rule);
-    setWorkspaceTab('rulePerformance');
-  };
   const metaAdsRules = useMetaAdsRules({
     settings,
     setSettings,
@@ -198,7 +187,6 @@ export default function ProjectMetaAdsPanel({
     isStatusLoading,
     isInitialStatusLoading,
     canOpenTrafficAgentChat,
-    savingSettings: updateSettings.isLoading,
     objectiveOptions: biAdapter.objectiveOptions,
     statusSummary: statusQuery.data?.summary,
     settingsState: metaAdsSettings,
@@ -211,7 +199,6 @@ export default function ProjectMetaAdsPanel({
     updateEntityStatus,
     localize,
     onOpenTrafficAgentChat,
-    onOpenRulePerformance,
   });
   const onRunAnalysis = useMetaAdsRunAnalysis({
     projectId: project.projectId,
@@ -241,7 +228,7 @@ export default function ProjectMetaAdsPanel({
         onOpenSettingsDrawer={openSettingsDrawer}
         onOpenRuleGroupDraft={metaAdsRules.onOpenRuleGroupDraft}
         onWorkspaceTabChange={(tab) => {
-          if (tab !== 'rulePerformance') {
+          if (tab !== 'rules') {
             setSelectedRulePerformance(null);
           }
           setWorkspaceTab(tab);
@@ -264,34 +251,24 @@ export default function ProjectMetaAdsPanel({
 
         {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
 
-        {workspaceTab === 'aiPerformance' && (
-          <MetaAdsAiPerformanceWorkspace
-            data={aiPerformanceQuery.data}
-            fetching={aiPerformanceQuery.isFetching}
-            period={{
-              periodFilter: aiPerformancePeriod.periodFilter,
-              customSince: aiPerformancePeriod.customSince,
-              customUntil: aiPerformancePeriod.customUntil,
-              appliedCustomSince: aiPerformancePeriod.appliedCustomSince,
-              appliedCustomUntil: aiPerformancePeriod.appliedCustomUntil,
-              inputClassName: metaAdsInputLg,
-              onPeriodFilterChange: aiPerformancePeriod.setPeriodFilter,
-              onCustomSinceChange: aiPerformancePeriod.onCustomSinceChange,
-              onCustomUntilChange: aiPerformancePeriod.onCustomUntilChange,
-              onApplyCustomPeriod: aiPerformancePeriod.onApplyCustomPeriod,
-            }}
-            currency={currency}
-            localize={localize}
-          />
-        )}
-
-        {workspaceTab === 'rulePerformance' && (
+        {workspaceTab === 'rules' && (
           <MetaAdsRulePerformanceWorkspace
             data={rulePerformanceQuery.data}
             fetching={rulePerformanceQuery.isFetching}
-            metricsFullscreen={biWorkspace.metricsFullscreen}
+            rows={metaAdsRules.ruleRows}
+            canCreateRuleGroup={metaAdsRules.canCreateRuleGroup}
+            canUseMetaAdsActions={canUseMetaAdsActions}
+            saving={updateSettings.isLoading}
+            primaryButtonClassName={metaAdsPrimaryButton}
             selectedRule={selectedRulePerformance}
             onClearSelectedRule={() => setSelectedRulePerformance(null)}
+            onCreateRuleGroup={metaAdsRules.onOpenRuleGroupDraft}
+            onToggleRuleRow={metaAdsRules.onToggleRuleRow}
+            onEditGlobalRule={metaAdsRules.onEditGlobalRule}
+            onEditRuleGroup={metaAdsRules.onEditRuleGroup}
+            onEditRuleOverride={metaAdsRules.onEditRuleOverride}
+            onDeleteRuleGroup={metaAdsRules.onDeleteRuleGroup}
+            onDeleteRuleOverride={metaAdsRules.onDeleteRuleOverride}
             period={{
               periodFilter: rulePerformancePeriod.periodFilter,
               customSince: rulePerformancePeriod.customSince,

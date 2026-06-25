@@ -41,8 +41,7 @@ export const periodFilterOptions: Array<{ value: PeriodFilter; labelKey: Transla
 export const workspaceTabOptions: Array<{ value: WorkspaceTab; labelKey: TranslationKeys }> = [
   { value: 'overview', labelKey: 'com_ui_project_meta_ads_tab_overview' },
   { value: 'bi', labelKey: 'com_ui_project_meta_ads_tab_bi' },
-  { value: 'aiPerformance', labelKey: 'com_ui_project_meta_ads_tab_ai_performance' },
-  { value: 'rulePerformance', labelKey: 'com_ui_project_meta_ads_tab_rule_performance' },
+  { value: 'rules', labelKey: 'com_ui_project_meta_ads_rules' },
 ];
 
 export const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [

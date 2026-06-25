@@ -268,31 +268,14 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
   });
 
-  it('renders AI and rule performance workspaces as dedicated tabs', () => {
-    mockPerformanceData.actions = [
-      {
-        actionType: 'budget_change',
-        entityLevel: 'adset',
-        entityId: 'adset-1',
-        entityName: 'Topo',
-        cpa: 12,
-        ruleName: 'Validados',
-        reason: 'Ajuste automático',
-        createdAt: '2026-06-02T09:00:00.000-03:00',
-      },
-    ];
-
+  it('renders BI and unified rules workspaces as dedicated tabs', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-aiPerformance'));
-    expect(screen.getByTestId('meta-ads-ai-performance-tab-panel')).toBeInTheDocument();
-    expect(screen.getByText('02/06/2026 09:00')).toBeInTheDocument();
-    expect(mockUseProjectMetaAdsPerformanceQuery).toHaveBeenCalledWith('p1', {
-      datePreset: 'last_7d',
-    });
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-bi'));
+    expect(screen.getByTestId('meta-ads-bi-tab-panel')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
-    expect(screen.getByTestId('meta-ads-rule-performance-tab-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+    expect(screen.getByTestId('meta-ads-rules-center-tab-panel')).toBeInTheDocument();
     expect(mockUseProjectMetaAdsRulePerformanceQuery).toHaveBeenCalledWith('p1', {
       datePreset: 'last_7d',
     });
@@ -3097,12 +3080,13 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     expect(screen.getAllByTestId('meta-ads-rule-row')).toHaveLength(4);
-    expect(screen.getByText('com_ui_project_meta_ads_global_rules')).toBeInTheDocument();
-    expect(screen.getByText('Prospecting group')).toBeInTheDocument();
-    expect(screen.getByText('Campaign override')).toBeInTheDocument();
-    expect(screen.getByText('Ad set override')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_global_rules').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Prospecting group').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Campaign override').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ad set override').length).toBeGreaterThan(0);
     expect(screen.queryAllByLabelText('com_ui_project_meta_ads_delete_rule')).toHaveLength(3);
   });
 
@@ -3186,14 +3170,10 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
 
-    fireEvent.click(screen.getByText('Prospecting group'));
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
-    expect(screen.getByTestId('meta-ads-rule-performance-tab-panel')).toBeInTheDocument();
-    expect(
-      screen.getByText('com_ui_project_meta_ads_selected_rule_performance'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_rule_entities_count_one')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    expect(screen.getByTestId('meta-ads-rules-center-tab-panel')).toBeInTheDocument();
+    expect(screen.getAllByText('Prospecting group').length).toBeGreaterThan(0);
     expect(screen.getByText('com_ui_project_meta_ads_rule_details')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_before').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_after').length).toBeGreaterThan(0);
@@ -3202,7 +3182,7 @@ describe('ProjectMetaAdsPanel', () => {
     );
     expect(screen.getAllByText(/R\$\s*40,00\s*→\s*R\$\s*20,00/).length).toBeGreaterThan(0);
     expect(screen.getByText('com_ui_project_meta_ads_target_metric')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_rule_goal')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_rule_goal').length).toBeGreaterThan(0);
     expect(screen.getByText(/R\$\s*10,00/)).toBeInTheDocument();
     expect(screen.getAllByText(/R\$\s*25,00/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/R\$\s*25,00\s*\/\s*-/)).not.toBeInTheDocument();
@@ -3226,13 +3206,9 @@ describe('ProjectMetaAdsPanel', () => {
       screen.queryByText('com_ui_project_meta_ads_rule_performance_missing_cpa'),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText('Prospecting group').length).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getAllByText('Summer Campaign With A Very Long Name').length,
-    ).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getAllByText('Parent Campaign With A Very Long Name').length,
-    ).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('24/06/2026 14:03')).toBeInTheDocument();
+    expect(screen.getAllByText('Summer Campaign With A Very Long Name').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Parent Campaign With A Very Long Name').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('24/06/2026 14:03').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
   });
 
@@ -3336,24 +3312,16 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
-    expect(screen.getByText('com_ui_project_meta_ads_view_entities')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveStyle({ zIndex: 10020 });
-    expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10010 });
     expect(
-      within(dialog).getAllByText('com_ui_project_meta_ads_no_general_conclusion').length,
+      screen.getAllByText('com_ui_project_meta_ads_no_general_conclusion').length,
     ).toBeGreaterThan(0);
-    expect(
-      within(dialog).getByText('com_ui_project_meta_ads_entity_result_summary'),
-    ).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Improved Campaign').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('Regressed Campaign').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText(/R\$\s*20,00\s*→\s*R\$\s*10,00/).length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText(/R\$\s*20,00\s*→\s*R\$\s*40,00/).length).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_entity_result_summary')).toBeInTheDocument();
+    expect(screen.getAllByText('Improved Campaign').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Regressed Campaign').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*20,00\s*→\s*R\$\s*10,00/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/R\$\s*20,00\s*→\s*R\$\s*40,00/).length).toBeGreaterThan(0);
   });
 
   it('shows insufficient rule performance data in rule details when comparison has one record', () => {
@@ -3386,8 +3354,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_insufficient_comparison_data').length,
@@ -3450,8 +3417,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_rule_performance_awaiting_results').length,
@@ -3466,7 +3432,7 @@ describe('ProjectMetaAdsPanel', () => {
       screen.queryByText('com_ui_project_meta_ads_rule_performance_improved'),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/R\$\s*42,71\s*→\s*R\$\s*0,00/)).not.toBeInTheDocument();
-    expect(screen.getByTestId('meta-ads-rule-details-body')).toHaveClass('overflow-y-auto');
+    expect(screen.getByTestId('meta-ads-rules-center-tab-panel')).toBeInTheDocument();
   });
 
   it('shows no-result evidence after enough spend without calling CPA zero an improvement', () => {
@@ -3514,8 +3480,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     expect(
       screen.getAllByText('com_ui_project_meta_ads_rule_performance_no_result_after_spend').length,
@@ -3555,12 +3520,11 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
-    fireEvent.click(screen.getByText('Prospecting group'));
-
-    expect(
-      screen.getByText('com_ui_project_meta_ads_rule_performance_empty_selected_title'),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_rule_no_execution').length).toBeGreaterThan(
+      0,
+    );
     expect(
       screen.getByText('com_ui_project_meta_ads_rule_performance_empty_hint'),
     ).toBeInTheDocument();
@@ -3628,6 +3592,7 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     const rows = screen.getAllByTestId('meta-ads-rule-row');
     fireEvent.click(within(rows[0]).getByLabelText('com_ui_project_meta_ads_disable_rule'));
@@ -3719,6 +3684,7 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     const rows = screen.getAllByTestId('meta-ads-rule-row');
     fireEvent.click(within(rows[0]).getByLabelText('com_ui_project_meta_ads_edit_rule'));
@@ -3840,6 +3806,7 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     fireEvent.click(
       within(screen.getAllByTestId('meta-ads-rule-row')[1]).getByLabelText(
@@ -3973,6 +3940,7 @@ describe('ProjectMetaAdsPanel', () => {
     } as TProject;
 
     render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
 
     const rows = screen.getAllByTestId('meta-ads-rule-row');
     expect(within(rows[0]).queryByLabelText('com_ui_project_meta_ads_delete_rule')).toBeNull();
