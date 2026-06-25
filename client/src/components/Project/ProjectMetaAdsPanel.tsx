@@ -289,6 +289,7 @@ export default function ProjectMetaAdsPanel({
           <MetaAdsRulePerformanceWorkspace
             data={rulePerformanceQuery.data}
             fetching={rulePerformanceQuery.isFetching}
+            metricsFullscreen={biWorkspace.metricsFullscreen}
             selectedRule={selectedRulePerformance}
             onClearSelectedRule={() => setSelectedRulePerformance(null)}
             period={{

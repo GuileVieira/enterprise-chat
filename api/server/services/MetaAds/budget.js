@@ -3063,6 +3063,23 @@ function buildRulePerformanceEntities(actions = []) {
     );
 }
 
+function buildEntityStatusSummary(entities = []) {
+  const summary = {
+    improved: 0,
+    neutral: 0,
+    regressed: 0,
+    insufficient_data: 0,
+    awaiting_results: 0,
+    no_result_after_spend: 0,
+  };
+  for (const entity of entities) {
+    if (entity.status && Object.prototype.hasOwnProperty.call(summary, entity.status)) {
+      summary[entity.status] += 1;
+    }
+  }
+  return summary;
+}
+
 async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, options = {}) {
   const performance = await getProjectMetaAdsPerformance(projectId, fallbackTenantId, options);
   const groups = new Map();
@@ -3084,6 +3101,11 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
     const totalSpend = actions.reduce((sum, action) => sum + Number(action.spend ?? 0), 0);
     const totalResults = actions.reduce((sum, action) => sum + Number(action.resultCount ?? 0), 0);
     const comparison = getRulePerformanceComparison(actions);
+    const entities = buildRulePerformanceEntities(actions);
+    const entityStatusSummary = buildEntityStatusSummary(entities);
+    const entityStatuses = entities.map((entity) => entity.status).filter(Boolean);
+    const hasEntityLevelEvaluation = entities.length > 0;
+    const hasMixedEntityStatuses = new Set(entityStatuses).size > 1;
     return {
       ...group,
       actions,
@@ -3095,7 +3117,10 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
       averageCpa: averageMetric(actions, 'cpa'),
       averageRoas: averageMetric(actions, 'roas'),
       ...comparison,
-      entities: buildRulePerformanceEntities(actions),
+      entities,
+      entityStatusSummary,
+      hasEntityLevelEvaluation,
+      hasMixedEntityStatuses,
     };
   });
   return {

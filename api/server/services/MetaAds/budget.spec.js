@@ -1782,6 +1782,16 @@ describe('Meta Ads budget service persistence safety', () => {
         ruleKey: 'group:group-1',
         actionCount: 3,
         pausedAdCount: 2,
+        hasEntityLevelEvaluation: true,
+        hasMixedEntityStatuses: true,
+        entityStatusSummary: {
+          improved: 0,
+          neutral: 0,
+          regressed: 1,
+          insufficient_data: 1,
+          awaiting_results: 0,
+          no_result_after_spend: 0,
+        },
         entities: [
           expect.objectContaining({
             entityLevel: 'ad',
@@ -1794,6 +1804,7 @@ describe('Meta Ads budget service persistence safety', () => {
             totalSpend: 80,
             averageCpa: 20,
             averageRoas: 3,
+            status: 'regressed',
             lastActionAt: '2026-06-24T15:10:00.000Z',
           }),
           expect.objectContaining({
@@ -1806,6 +1817,7 @@ describe('Meta Ads budget service persistence safety', () => {
             totalSpend: 20,
             averageCpa: 10,
             averageRoas: 1,
+            status: 'insufficient_data',
             lastActionAt: '2026-06-23T08:00:00.000Z',
           }),
         ],

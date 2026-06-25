@@ -77,6 +77,19 @@ function getStatusTone(status?: ProjectMetaAdsRulePerformanceItem['status']) {
   return 'text-slate-600 dark:text-slate-300';
 }
 
+function hasMultipleEvaluatedEntities(rule: ProjectMetaAdsRulePerformanceItem) {
+  return (rule.entities?.length ?? 0) > 1;
+}
+
+function getRuleTableStatusLabel(rule: ProjectMetaAdsRulePerformanceItem, localize: Localize) {
+  const entities = rule.entities ?? [];
+  if (entities.length > 1) {
+    return localize('com_ui_project_meta_ads_view_entities');
+  }
+  const entityStatus = entities[0]?.status;
+  return localize(`com_ui_project_meta_ads_rule_performance_${entityStatus ?? rule.status}`);
+}
+
 function getDeltaTone(metric: 'cpa' | 'roas', value?: number | null) {
   if (value == null || Number.isNaN(value) || value === 0) {
     return 'text-slate-500 dark:text-slate-400';
@@ -254,6 +267,7 @@ export function MetaAdsRulePerformanceWorkspace({
   period,
   currency,
   localize,
+  metricsFullscreen,
   selectedRule,
   onClearSelectedRule,
 }: {
@@ -262,6 +276,7 @@ export function MetaAdsRulePerformanceWorkspace({
   period: Omit<MetaAdsPeriodControlProps, 'localize' | 'testIdPrefix'>;
   currency: string;
   localize: Localize;
+  metricsFullscreen: boolean;
   selectedRule: RuleRow | null;
   onClearSelectedRule: () => void;
 }) {
@@ -412,9 +427,7 @@ export function MetaAdsRulePerformanceWorkspace({
                   </td>
                   <td className="border-b border-slate-200/60 px-3 py-2 dark:border-white/[0.06]">
                     <div className="flex items-center justify-between gap-2">
-                      <span>
-                        {localize(`com_ui_project_meta_ads_rule_performance_${rule.status}`)}
-                      </span>
+                      <span>{getRuleTableStatusLabel(rule, localize)}</span>
                       <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-700 dark:text-teal-200">
                         {localize('com_ui_project_meta_ads_view_details')}
                       </span>
@@ -430,6 +443,7 @@ export function MetaAdsRulePerformanceWorkspace({
         rule={selectedRuleDetails}
         currency={currency}
         localize={localize}
+        metricsFullscreen={metricsFullscreen}
         onClose={() => setSelectedRuleDetails(null)}
       />
     </div>
@@ -440,13 +454,23 @@ function RulePerformanceDetailsDialog({
   rule,
   currency,
   localize,
+  metricsFullscreen,
   onClose,
 }: {
   rule: ProjectMetaAdsRulePerformanceItem | null;
   currency: string;
   localize: Localize;
+  metricsFullscreen: boolean;
   onClose: () => void;
 }) {
+  const suppressGeneralStatus = Boolean(rule && hasMultipleEvaluatedEntities(rule));
+  const fullscreenLayerProps = metricsFullscreen
+    ? {
+        overlayStyle: { zIndex: 10010 },
+        style: { zIndex: 10020 },
+      }
+    : {};
+
   return (
     <OGDialog
       open={Boolean(rule)}
@@ -459,6 +483,7 @@ function RulePerformanceDetailsDialog({
       {rule && (
         <OGDialogContent
           className={`flex max-h-[92vh] max-w-4xl flex-col overflow-hidden p-0 ${metaAdsModalShell}`}
+          {...fullscreenLayerProps}
         >
           <OGDialogHeader className={`shrink-0 ${metaAdsModalHeader}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
@@ -492,10 +517,20 @@ function RulePerformanceDetailsDialog({
               />
               <MetricTile
                 label={localize('com_ui_project_meta_ads_status')}
-                value={localize(`com_ui_project_meta_ads_rule_performance_${rule.status}`)}
+                value={
+                  suppressGeneralStatus
+                    ? localize('com_ui_project_meta_ads_no_general_conclusion')
+                    : localize(`com_ui_project_meta_ads_rule_performance_${rule.status}`)
+                }
               />
             </div>
-            <PerformanceComparisonPanel item={rule} currency={currency} localize={localize} />
+            <PerformanceComparisonPanel
+              item={rule}
+              currency={currency}
+              localize={localize}
+              suppressStatus={suppressGeneralStatus}
+            />
+            {suppressGeneralStatus && <EntityStatusSummaryPanel rule={rule} localize={localize} />}
             <div className="overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/10">
               <div className="border-b border-slate-200/70 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-400">
                 {localize('com_ui_project_meta_ads_affected_entities')}
@@ -510,7 +545,7 @@ function RulePerformanceDetailsDialog({
                     return (
                       <div
                         key={`${entity.entityLevel}:${entity.entityId}`}
-                        className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,0.7fr))]"
+                        className="grid gap-3 p-4 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(7,minmax(0,0.65fr))]"
                       >
                         <div className="min-w-0">
                           <NameWithTooltip
@@ -541,6 +576,24 @@ function RulePerformanceDetailsDialog({
                           value={formatMoney(entity.totalSpend, currency)}
                         />
                         <DetailMetric
+                          label={localize('com_ui_project_meta_ads_status')}
+                          value={
+                            entity.status
+                              ? localize(
+                                  `com_ui_project_meta_ads_rule_performance_${entity.status}`,
+                                )
+                              : '-'
+                          }
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_cpa')}
+                          value={formatEntityComparison('cpa', entity, currency, localize)}
+                        />
+                        <DetailMetric
+                          label={localize('com_ui_project_meta_ads_roas')}
+                          value={formatEntityComparison('roas', entity, currency, localize)}
+                        />
+                        <DetailMetric
                           label={localize('com_ui_project_meta_ads_average_cpa')}
                           value={formatMoney(entity.averageCpa, currency)}
                         />
@@ -565,14 +618,87 @@ function RulePerformanceDetailsDialog({
   );
 }
 
+function formatEntityComparison(
+  metric: 'cpa' | 'roas',
+  entity: ProjectMetaAdsRulePerformanceEntity,
+  currency: string,
+  localize: Localize,
+) {
+  const before = metric === 'cpa' ? entity.firstCpa : entity.firstRoas;
+  const after = metric === 'cpa' ? entity.lastCpa : entity.lastRoas;
+  const hasComparison = before != null && after != null;
+  const formatValue = (value?: number | null) =>
+    metric === 'cpa' ? formatMoney(value, currency) : formatMetric(value);
+  if (hasComparison) {
+    return `${formatValue(before)} → ${formatValue(after)}`;
+  }
+  if (
+    (entity.status === 'awaiting_results' || entity.status === 'no_result_after_spend') &&
+    before != null
+  ) {
+    const finalValue =
+      entity.status === 'no_result_after_spend'
+        ? localize('com_ui_project_meta_ads_no_result_after_spend_short')
+        : localize('com_ui_project_meta_ads_awaiting_result');
+    return `${formatValue(before)} → ${finalValue}`;
+  }
+  return localize('com_ui_project_meta_ads_insufficient_comparison_data');
+}
+
+function EntityStatusSummaryPanel({
+  rule,
+  localize,
+}: {
+  rule: ProjectMetaAdsRulePerformanceItem;
+  localize: Localize;
+}) {
+  const summary = rule.entityStatusSummary;
+  const items: Array<keyof NonNullable<ProjectMetaAdsRulePerformanceItem['entityStatusSummary']>> =
+    [
+      'improved',
+      'regressed',
+      'awaiting_results',
+      'no_result_after_spend',
+      'neutral',
+      'insufficient_data',
+    ];
+  return (
+    <div className="rounded-2xl border border-amber-300/30 bg-amber-50/70 p-4 dark:border-amber-300/20 dark:bg-amber-300/10">
+      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {localize('com_ui_project_meta_ads_entity_result_summary')}
+      </div>
+      <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+        {localize('com_ui_project_meta_ads_no_general_conclusion_hint')}
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {items.map((status) => (
+          <div
+            key={status}
+            className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.045]"
+          >
+            <div className={`text-lg font-semibold ${getStatusTone(status)}`}>
+              {summary?.[status] ?? 0}
+            </div>
+            <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+              {localize(`com_ui_project_meta_ads_rule_performance_${status}`)}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PerformanceComparisonPanel({
   item,
   currency,
   localize,
+  suppressStatus,
 }: {
   item: RulePerformanceComparison;
   currency: string;
   localize: Localize;
+  suppressStatus?: boolean;
 }) {
   const reasons = getComparisonReasons(item);
   const missingItems = getComparisonMissingItems(item);
@@ -588,12 +714,12 @@ function PerformanceComparisonPanel({
     item.evidenceSpendThreshold != null ||
     item.evidenceSpendBasis != null;
   const targetMetricCardClassName = getTargetMetricCardClassName({
-    isNoResultAfterSpend,
-    isAwaitingResults,
+    isNoResultAfterSpend: !suppressStatus && isNoResultAfterSpend,
+    isAwaitingResults: !suppressStatus && isAwaitingResults,
   });
   const targetMetricLabelClassName = getTargetMetricLabelClassName({
-    isNoResultAfterSpend,
-    isAwaitingResults,
+    isNoResultAfterSpend: !suppressStatus && isNoResultAfterSpend,
+    isAwaitingResults: !suppressStatus && isAwaitingResults,
   });
   const finalValueLabel = isNoResultAfterSpend
     ? localize('com_ui_project_meta_ads_no_result_after_spend_short')
@@ -625,7 +751,7 @@ function PerformanceComparisonPanel({
               : localize('com_ui_project_meta_ads_rule_performance_basis_period')}
           </p>
         </div>
-        {item.status && (
+        {item.status && !suppressStatus && (
           <span className={`text-xs font-semibold ${getStatusTone(item.status)}`}>
             {localize(`com_ui_project_meta_ads_rule_performance_${item.status}`)}
           </span>
@@ -644,11 +770,13 @@ function PerformanceComparisonPanel({
                 {targetMetricLabel}
               </div>
             </div>
-            <div className={`text-sm font-semibold ${getStatusTone(item.status)}`}>
-              {item.status
-                ? localize(`com_ui_project_meta_ads_rule_performance_${item.status}`)
-                : '-'}
-            </div>
+            {!suppressStatus && (
+              <div className={`text-sm font-semibold ${getStatusTone(item.status)}`}>
+                {item.status
+                  ? localize(`com_ui_project_meta_ads_rule_performance_${item.status}`)
+                  : '-'}
+              </div>
+            )}
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             <DetailMetric

@@ -569,6 +569,9 @@ export type ProjectMetaAdsRulePerformanceItem = {
   firstActionAt?: string;
   lastActionAt?: string;
   comparisonBasis?: 'period_first_last' | 'real_before_after';
+  entityStatusSummary?: ProjectMetaAdsRulePerformanceStatusSummary;
+  hasEntityLevelEvaluation?: boolean;
+  hasMixedEntityStatuses?: boolean;
   status:
     | 'improved'
     | 'neutral'
@@ -578,6 +581,15 @@ export type ProjectMetaAdsRulePerformanceItem = {
     | 'no_result_after_spend';
   entities?: ProjectMetaAdsRulePerformanceEntity[];
   actions: ProjectMetaAdsAutomationAction[];
+};
+
+export type ProjectMetaAdsRulePerformanceStatusSummary = {
+  improved: number;
+  neutral: number;
+  regressed: number;
+  insufficient_data: number;
+  awaiting_results: number;
+  no_result_after_spend: number;
 };
 
 export type ProjectMetaAdsRulePerformanceEntity = {

@@ -3236,6 +3236,126 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByTestId('meta-ads-overview-tab-panel')).not.toBeInTheDocument();
   });
 
+  it('shows entity-level rule performance without a general conclusion in fullscreen', () => {
+    mockRulePerformanceData.rules = [
+      {
+        ruleKey: 'group:group-1',
+        ruleSourceType: 'group',
+        ruleId: 'group-1',
+        ruleName: 'Multi entity rule',
+        ruleScope: 'campaign:campaign-1,campaign-2',
+        actionCount: 4,
+        aiActionCount: 4,
+        pausedAdCount: 0,
+        totalSpend: 260,
+        totalResults: 10,
+        averageCpa: 26,
+        averageRoas: 8,
+        firstCpa: 20,
+        lastCpa: 25,
+        cpaDelta: 5,
+        firstRoas: 10,
+        lastRoas: 8,
+        roasDelta: -2,
+        targetMetric: 'cpa',
+        targetMetricGoal: 30,
+        firstTargetMetric: 20,
+        lastTargetMetric: 25,
+        targetMetricDelta: 5,
+        firstActionAt: '2026-06-24T13:03:00.000-03:00',
+        lastActionAt: '2026-06-24T14:03:00.000-03:00',
+        comparisonBasis: 'period_first_last',
+        entityStatusSummary: {
+          improved: 1,
+          neutral: 0,
+          regressed: 1,
+          insufficient_data: 0,
+          awaiting_results: 0,
+          no_result_after_spend: 0,
+        },
+        hasEntityLevelEvaluation: true,
+        hasMixedEntityStatuses: true,
+        status: 'regressed',
+        entities: [
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-1',
+            entityName: 'Improved Campaign',
+            campaignName: 'Improved Campaign',
+            actionCount: 2,
+            pausedAdCount: 0,
+            totalSpend: 120,
+            averageCpa: 15,
+            averageRoas: 12,
+            firstCpa: 20,
+            lastCpa: 10,
+            cpaDelta: -10,
+            firstRoas: 10,
+            lastRoas: 14,
+            roasDelta: 4,
+            targetMetric: 'cpa',
+            targetMetricGoal: 30,
+            firstTargetMetric: 20,
+            lastTargetMetric: 10,
+            targetMetricDelta: -10,
+            firstActionAt: '2026-06-24T13:03:00.000-03:00',
+            lastActionAt: '2026-06-24T14:03:00.000-03:00',
+            comparisonBasis: 'period_first_last',
+            status: 'improved',
+          },
+          {
+            entityLevel: 'campaign',
+            entityId: 'campaign-2',
+            entityName: 'Regressed Campaign',
+            campaignName: 'Regressed Campaign',
+            actionCount: 2,
+            pausedAdCount: 0,
+            totalSpend: 140,
+            averageCpa: 35,
+            averageRoas: 4,
+            firstCpa: 20,
+            lastCpa: 40,
+            cpaDelta: 20,
+            firstRoas: 8,
+            lastRoas: 4,
+            roasDelta: -4,
+            targetMetric: 'cpa',
+            targetMetricGoal: 30,
+            firstTargetMetric: 20,
+            lastTargetMetric: 40,
+            targetMetricDelta: 20,
+            firstActionAt: '2026-06-24T13:03:00.000-03:00',
+            lastActionAt: '2026-06-24T14:03:00.000-03:00',
+            comparisonBasis: 'period_first_last',
+            status: 'regressed',
+          },
+        ],
+        actions: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rulePerformance'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_enter_fullscreen'));
+    expect(screen.getByText('com_ui_project_meta_ads_view_entities')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_view_details'));
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveStyle({ zIndex: 10020 });
+    expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10010 });
+    expect(
+      within(dialog).getAllByText('com_ui_project_meta_ads_no_general_conclusion').length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(dialog).getByText('com_ui_project_meta_ads_entity_result_summary'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Improved Campaign').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Regressed Campaign').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/R\$\s*20,00\s*→\s*R\$\s*10,00/).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/R\$\s*20,00\s*→\s*R\$\s*40,00/).length).toBeGreaterThan(0);
+  });
+
   it('shows insufficient rule performance data in rule details when comparison has one record', () => {
     mockRulePerformanceData.rules = [
       {
