@@ -218,6 +218,27 @@ export function useMetaAdsRules({
     );
   };
 
+  const onRuleGroupNoResultSpendCapChange = (
+    key: 'enabled' | 'minSpend',
+    value: boolean | string,
+  ) => {
+    setRuleGroupDraft((current) =>
+      current
+        ? {
+            ...current,
+            rules: {
+              ...current.rules,
+              noResultSpendCap: {
+                ...(current.rules.noResultSpendCap ?? {}),
+                [key]:
+                  key === 'enabled' ? value === true : value === '' ? undefined : Number(value),
+              },
+            },
+          }
+        : current,
+    );
+  };
+
   const onAccountProfileChange = (value: MetaAdsSettingsState['accountProfile']) => {
     const profile = value ?? 'custom';
     const nextSettings = {
@@ -372,6 +393,7 @@ export function useMetaAdsRules({
     onDeleteRuleOverride,
     onRuleGroupRuleChange,
     onRuleGroupRuleTextChange,
+    onRuleGroupNoResultSpendCapChange,
     onRuleGroupEntityToggle,
     onAccountProfileChange,
     onRuleGroupCreativeRuleChange,

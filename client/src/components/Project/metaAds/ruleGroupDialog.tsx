@@ -98,6 +98,7 @@ export function MetaAdsRuleGroupDialog({
   onAccountProfileChange,
   onRuleChange,
   onRuleTextChange,
+  onNoResultSpendCapChange,
   onEntityToggle,
   onCreativeRuleChange,
   onClose,
@@ -115,6 +116,7 @@ export function MetaAdsRuleGroupDialog({
   onAccountProfileChange: (value: MetaAdsSettingsState['accountProfile']) => void;
   onRuleChange: (key: keyof MetaAdsRulesState, value: string) => void;
   onRuleTextChange: (key: keyof MetaAdsRulesState, value: string) => void;
+  onNoResultSpendCapChange: (key: 'enabled' | 'minSpend', value: boolean | string) => void;
   onEntityToggle: (entityId: string) => void;
   onCreativeRuleChange: (
     key:
@@ -373,6 +375,39 @@ export function MetaAdsRuleGroupDialog({
                   />
                 </label>
               ))}
+            </div>
+          </div>
+          <div className={chrome.modalTileClassName}>
+            <h5 className={chrome.labelClassName}>
+              {localize('com_ui_project_meta_ads_no_result_rule')}
+            </h5>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <input
+                  aria-label={localize('com_ui_project_meta_ads_no_result_spend_cap')}
+                  type="checkbox"
+                  checked={draft.rules.noResultSpendCap?.enabled === true}
+                  onChange={(event) => onNoResultSpendCapChange('enabled', event.target.checked)}
+                />
+                <span>{localize('com_ui_project_meta_ads_no_result_spend_cap')}</span>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <RuleFieldLabel
+                  localize={localize}
+                  labelKey="com_ui_project_meta_ads_no_result_spend_cap_min"
+                  hintKey="com_ui_project_meta_ads_no_result_spend_cap_min_hint"
+                />
+                <input
+                  aria-label={localize('com_ui_project_meta_ads_no_result_spend_cap_min')}
+                  disabled={draft.rules.noResultSpendCap?.enabled !== true}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={draft.rules.noResultSpendCap?.minSpend ?? ''}
+                  onChange={(event) => onNoResultSpendCapChange('minSpend', event.target.value)}
+                  className={controls.inputClassName}
+                />
+              </label>
             </div>
           </div>
           <div className={chrome.modalTileClassName}>

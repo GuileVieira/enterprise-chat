@@ -3602,6 +3602,40 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(ruleDrawer).queryByTitle('com_ui_project_meta_ads_cooldown_hint')).toBeNull();
   });
 
+  it('edits the no-result spend cap from the rule editor', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+
+    fireEvent.click(
+      within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_no_result_spend_cap'),
+    );
+    fireEvent.change(
+      within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_no_result_spend_cap_min'),
+      { target: { value: '35' } },
+    );
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          rules: expect.objectContaining({
+            noResultSpendCap: {
+              enabled: true,
+              minSpend: 35,
+            },
+          }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
   it('toggles global, group, and override rules through the unified list', () => {
     const projectWithRules = {
       ...project,
