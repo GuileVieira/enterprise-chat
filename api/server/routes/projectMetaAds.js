@@ -671,7 +671,10 @@ router.post('/run', metaAdsClientActionAccess, async (req, res) => {
     return res.json(await analyzeProject({ projectId: req.params.projectId, actor: 'user' }));
   } catch (error) {
     logger.error('[projectMetaAds] run failed', error);
-    return res.status(500).json({ message: error.message });
+    return res.status(error.statusCode ?? 500).json({
+      message: error.message,
+      ...(error.data ? { details: error.data } : {}),
+    });
   }
 });
 

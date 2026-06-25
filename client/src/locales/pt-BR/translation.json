@@ -1062,7 +1062,7 @@
   "com_ui_project_meta_ads_graph_version_hint": "Deixe vazio para usar a versão global da Meta Graph API.",
   "com_ui_project_meta_ads_mode": "Modo",
   "com_ui_project_meta_ads_mode_recommend": "Só recomendar",
-  "com_ui_project_meta_ads_mode_auto_limited": "Automático limitado",
+  "com_ui_project_meta_ads_mode_auto_limited": "Automático",
   "com_ui_project_meta_ads_schedule": "Frequência de análise",
   "com_ui_project_meta_ads_schedule_30": "30 min",
   "com_ui_project_meta_ads_schedule_60": "1 h",

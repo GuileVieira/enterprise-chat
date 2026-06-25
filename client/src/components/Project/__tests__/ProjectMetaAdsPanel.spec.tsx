@@ -4053,6 +4053,48 @@ describe('ProjectMetaAdsPanel', () => {
     });
   });
 
+  it('shows Meta API diagnostic details when analysis fails', () => {
+    mockMutateRun.mockImplementationOnce(
+      (
+        _projectId,
+        options?: {
+          onError?: (error: {
+            response: {
+              data: {
+                message: string;
+                details: {
+                  code: number;
+                  error_subcode: number;
+                  fbtrace_id: string;
+                };
+              };
+            };
+          }) => void;
+        },
+      ) =>
+        options?.onError?.({
+          response: {
+            data: {
+              message: 'Invalid parameter',
+              details: {
+                code: 100,
+                error_subcode: 2108006,
+                fbtrace_id: 'ABC123',
+              },
+            },
+          },
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_run'));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Invalid parameter (subcode 2108006 | code 100 | trace ABC123)',
+    );
+  });
+
   it('refetches status and shows feedback after applying a recommendation', () => {
     mockStatusData.recommendations = [
       {

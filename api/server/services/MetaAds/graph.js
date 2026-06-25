@@ -314,7 +314,10 @@ function formatMetaPermissionError({ adAccountId }) {
 }
 
 function createMetaGraphError(message, details = {}) {
-  return Object.assign(new Error(message), details);
+  return Object.assign(new Error(message), {
+    ...details,
+    statusCode: details.statusCode ?? details.status,
+  });
 }
 
 function isReduceAmountError(error) {

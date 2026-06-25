@@ -50,6 +50,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
 const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
 const {
+  analyzeProject,
   duplicateProjectMetaAdsEntity,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
@@ -645,6 +646,30 @@ describe('projectMetaAds rankings route', () => {
       },
       currency: 'BRL',
       items: [],
+    });
+  });
+});
+
+describe('projectMetaAds run route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    analyzeProject.mockResolvedValue({ projectId: 'p1', recommendations: [] });
+  });
+
+  it('preserves Meta API error status for client-triggered runs', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+    analyzeProject.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid parameter'), {
+        statusCode: 400,
+        data: { code: 100, message: 'Invalid parameter' },
+      }),
+    );
+
+    const response = await request(createApp()).post('/projects/p1/meta-ads/run').expect(400);
+
+    expect(response.body).toEqual({
+      message: 'Invalid parameter',
+      details: { code: 100, message: 'Invalid parameter' },
     });
   });
 });
