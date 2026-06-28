@@ -638,6 +638,24 @@ describe('Meta Ads Graph client', () => {
     );
   });
 
+  it('passes Meta date presets through without converting them to a custom range', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ data: [] }),
+    });
+
+    await listAdSetInsights({
+      adAccountId: 'act_123',
+      token: 'token',
+      graphVersion: 'v25.0',
+      datePreset: 'last_7d',
+    });
+
+    expect(fetch.mock.calls[0][0]).toContain('date_preset=last_7d');
+    expect(fetch.mock.calls[0][0]).not.toContain('time_range');
+  });
+
   it('requests daily ad insights when time increment is enabled', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,

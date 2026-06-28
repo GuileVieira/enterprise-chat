@@ -76,20 +76,29 @@ export default function ProjectMetaAdsPanel({
   const biPeriod = useMetaAdsPeriodFilter();
   const rulePerformancePeriod = useMetaAdsPeriodFilter();
   const statusQuery = useProjectMetaAdsQuery(project.projectId, overviewPeriod.statusParams);
-  const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams);
+  const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams, {
+    enabled: workspaceTab === 'bi',
+  });
   const rulePerformanceQuery = useProjectMetaAdsRulePerformanceQuery(
     project.projectId,
     rulePerformancePeriod.statusParams,
+    { enabled: workspaceTab === 'rules' },
   );
   const ruleHistoryQuery = useProjectMetaAdsRuleHistoryQuery(project.projectId, {
     enabled: workspaceTab === 'rules',
   });
-  const biRankingsQuery = useProjectMetaAdsRankingsQuery(project.projectId, {
-    ...biPeriod.statusParams,
-    level: biWorkspace.biControls.level,
-    objective: biWorkspace.biControls.objective,
-    resultType: biWorkspace.biControls.resultType,
-  });
+  const biRankingsQuery = useProjectMetaAdsRankingsQuery(
+    project.projectId,
+    {
+      ...biPeriod.statusParams,
+      level: biWorkspace.biControls.level,
+      objective: biWorkspace.biControls.objective,
+      resultType: biWorkspace.biControls.resultType,
+    },
+    {
+      enabled: workspaceTab === 'bi',
+    },
+  );
   const updateSettings = useUpdateProjectMetaAdsMutation();
   const updateTenantToken = useUpdateProjectMetaAdsTenantTokenMutation();
   const updateBudget = useUpdateProjectMetaAdsBudgetMutation();

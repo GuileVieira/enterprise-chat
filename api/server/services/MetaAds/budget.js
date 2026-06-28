@@ -2580,11 +2580,11 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   const timeZone = getMetaAdsTimeZone();
   const today = getMetaAdsDateKey(now, timeZone);
   if (options.datePreset === 'today') {
-    return { since: today, until: today };
+    return { since: today, until: today, datePreset: options.datePreset };
   }
   if (options.datePreset === 'yesterday') {
     const yesterday = getMetaAdsDateKey(addDays(now, -1), timeZone);
-    return { since: yesterday, until: yesterday };
+    return { since: yesterday, until: yesterday, datePreset: options.datePreset };
   }
   const daysByPreset = {
     last_1d: 1,
@@ -2597,7 +2597,7 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   const days = daysByPreset[options.datePreset];
   if (days) {
     const since = getMetaAdsDateKey(addDays(now, -(days - 1)), timeZone);
-    return { since, until: today };
+    return { since, until: today, datePreset: options.datePreset };
   }
   return {};
 }
@@ -2626,6 +2626,7 @@ function getStatusPeriodCacheKey({
     tenantId,
     adAccountId,
     graphVersion,
+    datePreset: period?.datePreset || '',
     since: period?.since || '',
     until: period?.until || '',
     accountProfile: accountProfile || '',
@@ -3325,6 +3326,7 @@ function getRankingCacheKey({
     tenantId,
     adAccountId,
     graphVersion,
+    datePreset: period?.datePreset || '',
     since: period?.since || '',
     until: period?.until || '',
     accountProfile: accountProfile || '',
@@ -3455,6 +3457,7 @@ async function getProjectMetaAdsRankings(projectId, fallbackTenantId, options = 
       token,
       since: period.since,
       until: period.until,
+      datePreset: period.datePreset,
       graphVersion,
     });
   } else if (level === 'adset') {
@@ -3463,6 +3466,7 @@ async function getProjectMetaAdsRankings(projectId, fallbackTenantId, options = 
       token,
       since: period.since,
       until: period.until,
+      datePreset: period.datePreset,
       graphVersion,
     });
   } else {
@@ -3471,6 +3475,7 @@ async function getProjectMetaAdsRankings(projectId, fallbackTenantId, options = 
       token,
       since: period.since,
       until: period.until,
+      datePreset: period.datePreset,
       graphVersion,
     });
     const adIds = [...new Set(insights.map((row) => row.ad_id).filter(Boolean))];
@@ -4068,6 +4073,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     token,
     since,
     until,
+    datePreset: analysisPeriod.datePreset,
     graphVersion,
   }).catch((error) => {
     logger.error('[MetaAdsBudget] insights fetch failed', {
@@ -4085,6 +4091,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     token,
     since,
     until,
+    datePreset: analysisPeriod.datePreset,
     graphVersion,
   }).catch((error) => {
     logger.error('[MetaAdsBudget] campaign insights fetch failed', {
@@ -4111,6 +4118,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     token,
     since,
     until,
+    datePreset: analysisPeriod.datePreset,
     graphVersion,
   }).catch((error) => {
     logger.error('[MetaAdsBudget] ad insights fetch failed', {
@@ -4612,6 +4620,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                   token,
                   since,
                   until,
+                  datePreset: periodRange.datePreset,
                   graphVersion: effectiveGraphVersion,
                 }).catch((error) => {
                   logger.error('[MetaAdsBudget] campaign insights status enrichment failed', {
@@ -4625,6 +4634,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                   token,
                   since,
                   until,
+                  datePreset: periodRange.datePreset,
                   graphVersion: effectiveGraphVersion,
                 }),
                 listAdInsights({
@@ -4632,6 +4642,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                   token,
                   since,
                   until,
+                  datePreset: periodRange.datePreset,
                   graphVersion: effectiveGraphVersion,
                 }).catch((error) => {
                   logger.error('[MetaAdsBudget] ad insights status enrichment failed', {
@@ -4645,6 +4656,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
                   token,
                   since,
                   until,
+                  datePreset: periodRange.datePreset,
                   graphVersion: effectiveGraphVersion,
                   timeIncrement: 1,
                 }).catch((error) => {

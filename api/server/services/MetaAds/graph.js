@@ -93,6 +93,11 @@ function getTimeRangeParam(params) {
 }
 
 function getMetaGraphReadCacheTtlForParams(params) {
+  if (typeof params?.date_preset === 'string' && params.date_preset.trim()) {
+    return params.date_preset === 'yesterday'
+      ? getMetaGraphHistoricalCacheTtlMs()
+      : getMetaGraphTodayCacheTtlMs();
+  }
   const timeRange = getTimeRangeParam(params);
   if (!timeRange?.until) {
     return getMetaGraphReadCacheTtlMs();
@@ -983,6 +988,7 @@ async function fetchInsightsPage({
   token,
   since,
   until,
+  datePreset,
   graphVersion,
   level,
   fields,
@@ -992,9 +998,13 @@ async function fetchInsightsPage({
   const params = {
     level,
     fields,
-    time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
+  if (datePreset) {
+    params.date_preset = datePreset;
+  } else {
+    params.time_range = JSON.stringify({ since, until });
+  }
   if (timeIncrement) {
     params.time_increment = timeIncrement;
   }
@@ -1074,6 +1084,7 @@ async function listInsights({
   token,
   since,
   until,
+  datePreset,
   graphVersion,
   level,
   fields,
@@ -1083,9 +1094,13 @@ async function listInsights({
   const params = {
     level,
     fields,
-    time_range: JSON.stringify({ since, until }),
     limit: DEFAULT_LIMIT,
   };
+  if (datePreset) {
+    params.date_preset = datePreset;
+  } else {
+    params.time_range = JSON.stringify({ since, until });
+  }
   if (timeIncrement) {
     params.time_increment = timeIncrement;
   }
@@ -1095,13 +1110,14 @@ async function listInsights({
       token,
       since,
       until,
+      datePreset,
       graphVersion,
       level,
       fields,
       timeIncrement,
     });
   } catch (error) {
-    if (isReduceAmountError(error)) {
+    if (!datePreset && isReduceAmountError(error)) {
       logger.error('[MetaAdsGraph] retrying insights request in date chunks', {
         adAccountId,
         level,
@@ -1145,13 +1161,28 @@ async function listInsights({
   }
 }
 
-async function listAdInsights({ adAccountId, token, since, until, graphVersion, timeIncrement }) {
-  logger.debug('[MetaAdsGraph] listing ad insights', { adAccountId, since, until, graphVersion });
+async function listAdInsights({
+  adAccountId,
+  token,
+  since,
+  until,
+  datePreset,
+  graphVersion,
+  timeIncrement,
+}) {
+  logger.debug('[MetaAdsGraph] listing ad insights', {
+    adAccountId,
+    since,
+    until,
+    datePreset,
+    graphVersion,
+  });
   return listInsights({
     adAccountId,
     token,
     since,
     until,
+    datePreset,
     graphVersion,
     level: 'ad',
     fields: AD_INSIGHT_FIELDS,
@@ -1164,6 +1195,7 @@ async function listCampaignInsights({
   token,
   since,
   until,
+  datePreset,
   graphVersion,
   timeIncrement,
 }) {
@@ -1171,6 +1203,7 @@ async function listCampaignInsights({
     adAccountId,
     since,
     until,
+    datePreset,
     graphVersion,
   });
   return listInsights({
@@ -1178,6 +1211,7 @@ async function listCampaignInsights({
     token,
     since,
     until,
+    datePreset,
     graphVersion,
     level: 'campaign',
     fields: CAMPAIGN_INSIGHT_FIELDS,
@@ -1190,6 +1224,7 @@ async function listAdSetInsights({
   token,
   since,
   until,
+  datePreset,
   graphVersion,
   timeIncrement,
 }) {
@@ -1199,6 +1234,7 @@ async function listAdSetInsights({
     token,
     since,
     until,
+    datePreset,
     graphVersion,
     level: 'adset',
     fields: ADSET_INSIGHT_FIELDS,

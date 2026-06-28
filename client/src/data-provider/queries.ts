@@ -35,6 +35,7 @@ import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
 const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v2';
 const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
+const projectMetaAdsStatusStaleTimeMs = 10 * 60 * 1000;
 
 type CachedProjectMetaAdsStatus = {
   cachedAt: number;
@@ -63,7 +64,7 @@ function isProjectMetaAdsStatus(value: unknown): value is t.ProjectMetaAdsStatus
   );
 }
 
-function readCachedProjectMetaAdsStatus(cacheKey: string) {
+function readCachedProjectMetaAdsStatus(cacheKey: string): CachedProjectMetaAdsStatus | undefined {
   if (typeof localStorage === 'undefined') {
     return undefined;
   }
@@ -81,7 +82,10 @@ function readCachedProjectMetaAdsStatus(cacheKey: string) {
       localStorage.removeItem(cacheKey);
       return undefined;
     }
-    return cachedValue.data;
+    return {
+      cachedAt: cachedValue.cachedAt,
+      data: cachedValue.data,
+    };
   } catch {
     localStorage.removeItem(cacheKey);
     return undefined;
@@ -284,6 +288,9 @@ export const useProjectMetaAdsQuery = (
   config?: UseQueryOptions<t.ProjectMetaAdsStatus>,
 ): QueryObserverResult<t.ProjectMetaAdsStatus> => {
   const cacheKey = getProjectMetaAdsStatusCacheKey(projectId, params);
+  const cachedStatus = readCachedProjectMetaAdsStatus(cacheKey);
+  const hasConfigInitialData =
+    typeof config?.initialData === 'function' || config?.initialData != null;
   return useQuery<t.ProjectMetaAdsStatus>(
     [QueryKeys.projectMetaAds, projectId, params],
     () => dataService.getProjectMetaAdsStatus(projectId, params),
@@ -291,11 +298,10 @@ export const useProjectMetaAdsQuery = (
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       enabled: !!projectId,
+      staleTime: projectMetaAdsStatusStaleTimeMs,
       ...config,
-      initialData:
-        typeof config?.initialData === 'function' || config?.initialData != null
-          ? config.initialData
-          : readCachedProjectMetaAdsStatus(cacheKey),
+      initialData: hasConfigInitialData ? config.initialData : cachedStatus?.data,
+      initialDataUpdatedAt: config?.initialDataUpdatedAt ?? cachedStatus?.cachedAt,
       onSuccess: (data) => {
         writeCachedProjectMetaAdsStatus(cacheKey, data);
         config?.onSuccess?.(data);

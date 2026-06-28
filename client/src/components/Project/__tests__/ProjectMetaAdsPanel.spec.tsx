@@ -29,6 +29,9 @@ const mockShowToast = jest.fn();
 let mockStatusQueryState = {};
 let mockRankingQueryState = {};
 let mockUserRole = 'USER';
+const mockStatusQueryConfigs: unknown[] = [];
+const mockRankingQueryConfigs: unknown[] = [];
+const mockRulePerformanceQueryConfigs: unknown[] = [];
 const mockUseProjectMetaAdsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
   data: mockStatusData,
   refetch: mockRefetchStatus,
@@ -132,14 +135,24 @@ jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
     data: mockStartupConfig,
   }),
-  useProjectMetaAdsQuery: (projectId: string, params?: unknown) =>
-    mockUseProjectMetaAdsQuery(projectId, params),
-  useProjectMetaAdsRankingsQuery: (projectId: string, params?: unknown) =>
-    mockUseProjectMetaAdsRankingsQuery(projectId, params),
+  useProjectMetaAdsQuery: (projectId: string, params?: unknown, config?: unknown) => {
+    mockStatusQueryConfigs.push(config);
+    return mockUseProjectMetaAdsQuery(projectId, params);
+  },
+  useProjectMetaAdsRankingsQuery: (projectId: string, params?: unknown, config?: unknown) => {
+    mockRankingQueryConfigs.push(config);
+    return mockUseProjectMetaAdsRankingsQuery(projectId, params);
+  },
   useProjectMetaAdsPerformanceQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsPerformanceQuery(projectId, params),
-  useProjectMetaAdsRulePerformanceQuery: (projectId: string, params?: unknown) =>
-    mockUseProjectMetaAdsRulePerformanceQuery(projectId, params),
+  useProjectMetaAdsRulePerformanceQuery: (
+    projectId: string,
+    params?: unknown,
+    config?: unknown,
+  ) => {
+    mockRulePerformanceQueryConfigs.push(config);
+    return mockUseProjectMetaAdsRulePerformanceQuery(projectId, params);
+  },
   useProjectMetaAdsRuleHistoryQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsRuleHistoryQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
@@ -193,6 +206,9 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusQueryState = {};
     mockRankingQueryState = {};
     mockUserRole = 'USER';
+    mockStatusQueryConfigs.length = 0;
+    mockRankingQueryConfigs.length = 0;
+    mockRulePerformanceQueryConfigs.length = 0;
     mockUseProjectMetaAdsQuery.mockClear();
     mockUseProjectMetaAdsRankingsQuery.mockClear();
     mockUseProjectMetaAdsPerformanceQuery.mockClear();
@@ -279,6 +295,25 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByTestId('meta-ads-campaign-row')).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_project_meta_ads_history')).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
+  });
+
+  it('defers BI and rules data requests until their tabs are opened', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(mockStatusQueryConfigs[1]).toMatchObject({ enabled: false });
+    expect(mockRankingQueryConfigs[0]).toMatchObject({ enabled: false });
+    expect(mockRulePerformanceQueryConfigs[0]).toMatchObject({ enabled: false });
+
+    openBiTab();
+
+    expect(mockStatusQueryConfigs).toContainEqual(expect.objectContaining({ enabled: true }));
+    expect(mockRankingQueryConfigs).toContainEqual(expect.objectContaining({ enabled: true }));
+
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+
+    expect(mockRulePerformanceQueryConfigs).toContainEqual(
+      expect.objectContaining({ enabled: true }),
+    );
   });
 
   it('renders BI and unified rules workspaces as dedicated tabs', () => {

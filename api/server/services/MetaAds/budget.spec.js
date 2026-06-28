@@ -719,14 +719,17 @@ describe('Meta Ads budget service', () => {
     expect(_resolveStatusPeriodForTest({ datePreset: 'last_1d' }, now)).toEqual({
       since: '2026-06-23',
       until: '2026-06-23',
+      datePreset: 'last_1d',
     });
     expect(_resolveStatusPeriodForTest({ datePreset: 'last_2d' }, now)).toEqual({
       since: '2026-06-22',
       until: '2026-06-23',
+      datePreset: 'last_2d',
     });
     expect(_resolveStatusPeriodForTest({ datePreset: 'last_3d' }, now)).toEqual({
       since: '2026-06-21',
       until: '2026-06-23',
+      datePreset: 'last_3d',
     });
   });
 
