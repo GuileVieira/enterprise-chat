@@ -194,6 +194,7 @@ export default function ProjectMetaAdsPanel({
     canOpenTrafficAgentChat,
     objectiveOptions: biAdapter.objectiveOptions,
     statusSummary: statusQuery.data?.summary,
+    monthlyBudget: statusQuery.data?.monthlyBudget,
     settingsState: metaAdsSettings,
     entityActions: metaAdsEntityActions,
     rulesState: metaAdsRules,

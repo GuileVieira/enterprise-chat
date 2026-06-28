@@ -1094,6 +1094,8 @@
   "com_ui_project_meta_ads_monthly_budget": "Investimento mensal",
   "com_ui_project_meta_ads_monthly_budget_hint": "Define o teto mensal usado para alertar e bloquear aumentos de orçamento.",
   "com_ui_project_meta_ads_monthly_budget_inherited": "Usando valores de {{0}}. Edite para salvar um orçamento próprio neste mês.",
+  "com_ui_project_meta_ads_monthly_budget_remaining": "Faltam {{0}} de {{1}} ({{2}}% usado)",
+  "com_ui_project_meta_ads_monthly_budget_exceeded": "Excedeu {{0}} de {{1}} ({{2}}% usado)",
   "com_ui_project_meta_ads_month": "Mês",
   "com_ui_project_meta_ads_month_copy_previous": "Copiar mês anterior",
   "com_ui_project_meta_ads_month_picker_clear": "Limpar",

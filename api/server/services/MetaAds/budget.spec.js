@@ -1360,6 +1360,57 @@ describe('Meta Ads budget service persistence safety', () => {
     });
   });
 
+  it('returns monthly budget progress for the configured investment month', async () => {
+    const { budget, listCampaignInsights } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          monthlyBudget: {
+            month: '2026-06',
+            baseAmount: 5000,
+            additionalAmount: 1000,
+            allowedOverspendPct: 10,
+          },
+        },
+      },
+      campaignInsights: [
+        {
+          campaign_id: 'campaign-1',
+          spend: '1200.50',
+        },
+        {
+          campaign_id: 'campaign-2',
+          spend: '299.50',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.monthlyBudget).toEqual({
+      month: '2026-06',
+      baseAmount: 5000,
+      additionalAmount: 1000,
+      allowedOverspendPct: 10,
+      limit: 6600,
+      spend: 1500,
+      remaining: 5100,
+      exceededBy: 0,
+      spentPct: 23,
+      remainingDays: expect.any(Number),
+    });
+    expect(listCampaignInsights).toHaveBeenCalledWith(
+      expect.objectContaining({
+        since: '2026-06-01',
+        until: '2026-06-30',
+      }),
+    );
+  });
+
   it('attaches live ads with creative previews and metrics to their ad sets', async () => {
     const { budget } = loadBudgetWithMocks({
       project: {

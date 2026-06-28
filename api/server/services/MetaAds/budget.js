@@ -241,6 +241,32 @@ function buildMonthlyBudgetState({ monthlyBudget, insightRows = [], now = new Da
   };
 }
 
+function buildMonthlyBudgetStatus({ monthlyBudget, insightRows = [], now = new Date() }) {
+  const state = buildMonthlyBudgetState({ monthlyBudget, insightRows, now });
+  if (!state) {
+    return null;
+  }
+  const baseAmount = Number(monthlyBudget.baseAmount ?? 0);
+  const additionalAmount = Number(monthlyBudget.additionalAmount ?? 0);
+  const allowedOverspendPct = Number(monthlyBudget.allowedOverspendPct ?? 0);
+  const remaining = Math.max(0, Number((state.limit - state.spend).toFixed(2)));
+  const exceededBy = Math.max(0, Number((state.spend - state.limit).toFixed(2)));
+  const spentPct = state.limit > 0 ? Math.round((state.spend / state.limit) * 100) : 0;
+
+  return {
+    month: monthlyBudget.month,
+    baseAmount,
+    additionalAmount,
+    allowedOverspendPct,
+    limit: state.limit,
+    spend: state.spend,
+    remaining,
+    exceededBy,
+    spentPct,
+    remainingDays: state.remainingDays,
+  };
+}
+
 function applyMonthlyBudgetGuard({ proposal, currentDailyBudget, monthlyBudgetState }) {
   if (!monthlyBudgetState || proposal.action !== 'increase') {
     return { proposal, blocked: false };
@@ -4501,6 +4527,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let adDailyInsights = [];
   let liveSnapshots;
   let currency;
+  let monthlyBudgetStatus;
   if (project?.metaAds?.adAccountId) {
     try {
       const metaAds = withImplicitProjectTokenSecret(
@@ -4694,6 +4721,30 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
           }
         }
       }
+      const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);
+      const hasMonthlyBudgetLimit = getMonthlyBudgetLimit(monthlyBudget) != null;
+      if (hasMonthlyBudgetLimit) {
+        const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, getMetaAdsTimeZone());
+        const monthlyCampaignInsights = await listCampaignInsights({
+          adAccountId,
+          token,
+          since: monthlyRange.since,
+          until: monthlyRange.until,
+          graphVersion: effectiveGraphVersion,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] monthly insights status enrichment failed', {
+            projectId,
+            since: monthlyRange.since,
+            until: monthlyRange.until,
+            message: error.message,
+          });
+          return [];
+        });
+        monthlyBudgetStatus = buildMonthlyBudgetStatus({
+          monthlyBudget,
+          insightRows: monthlyCampaignInsights,
+        });
+      }
     } catch (error) {
       logger.error('[MetaAdsBudget] campaign status enrichment failed', {
         projectId,
@@ -4734,6 +4785,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     credentials,
     graphVersion,
     period,
+    monthlyBudget: monthlyBudgetStatus,
     summary: buildDashboardSummary(campaigns),
     trend: buildCampaignTrend({
       snapshots: historicalSnapshots,

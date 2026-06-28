@@ -189,6 +189,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.recommendations = [];
     mockStatusData.changes = [];
     mockStatusData.summary = undefined;
+    mockStatusData.monthlyBudget = undefined;
     mockStatusQueryState = {};
     mockRankingQueryState = {};
     mockUserRole = 'USER';
@@ -1467,6 +1468,43 @@ describe('ProjectMetaAdsPanel', () => {
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_frequency'),
       ).getByText('2.00'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows monthly investment remaining in the total spend card', () => {
+    mockStatusData.monthlyBudget = {
+      month: '2026-06',
+      baseAmount: 5000,
+      additionalAmount: 1000,
+      allowedOverspendPct: 10,
+      limit: 6600,
+      spend: 1500,
+      remaining: 5100,
+      exceededBy: 0,
+      spentPct: 23,
+      remainingDays: 12,
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-a',
+        campaignName: 'Campanha A',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 100,
+        cpa: 10,
+        resultCount: 10,
+        impressions: 1000,
+        dailyBudget: 100,
+        frequency: 2,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getByText('com_ui_project_meta_ads_monthly_budget_remaining'),
     ).toBeInTheDocument();
   });
 

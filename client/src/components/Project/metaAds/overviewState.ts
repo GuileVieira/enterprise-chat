@@ -176,6 +176,7 @@ export function buildMetaAdsSummaryCardItems({
   summaryTotalResults,
   summaryAverageCost,
   summaryAverageFrequency,
+  monthlyBudget,
   summaryMetricContext,
   goalContext,
   summaryResultTypeOptionsLength,
@@ -189,6 +190,7 @@ export function buildMetaAdsSummaryCardItems({
   summaryTotalResults: number | null | undefined;
   summaryAverageCost: number | null | undefined;
   summaryAverageFrequency: number | null | undefined;
+  monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
   summaryMetricContext: string | undefined;
   goalContext?: string;
   summaryResultTypeOptionsLength: number;
@@ -196,6 +198,7 @@ export function buildMetaAdsSummaryCardItems({
   currency: string;
   localize: ReturnType<typeof useLocalize>;
 }): MetaAdsSummaryCardItem[] {
+  const monthlyBudgetContext = getMonthlyBudgetContext({ monthlyBudget, currency, localize });
   if (isEcommerceDashboard) {
     return [
       {
@@ -207,6 +210,7 @@ export function buildMetaAdsSummaryCardItems({
         labelKey: 'com_ui_project_meta_ads_total_spend',
         value: formatMoney(summaryTotalSpend, currency),
         tone: 'border-l-amber-300/35',
+        context: monthlyBudgetContext,
       },
       {
         labelKey: 'com_ui_project_meta_ads_total_results',
@@ -229,6 +233,7 @@ export function buildMetaAdsSummaryCardItems({
       labelKey: 'com_ui_project_meta_ads_total_spend',
       value: formatMoney(summaryTotalSpend, currency),
       tone: 'border-l-amber-300/35',
+      context: monthlyBudgetContext,
     },
     {
       labelKey: 'com_ui_project_meta_ads_total_results',
@@ -252,6 +257,32 @@ export function buildMetaAdsSummaryCardItems({
         : undefined,
     },
   ];
+}
+
+function getMonthlyBudgetContext({
+  monthlyBudget,
+  currency,
+  localize,
+}: {
+  monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
+  currency: string;
+  localize: ReturnType<typeof useLocalize>;
+}) {
+  if (!monthlyBudget) {
+    return undefined;
+  }
+  if (monthlyBudget.exceededBy > 0) {
+    return localize('com_ui_project_meta_ads_monthly_budget_exceeded', {
+      0: formatMoney(monthlyBudget.exceededBy, currency),
+      1: formatMoney(monthlyBudget.limit, currency),
+      2: String(monthlyBudget.spentPct),
+    });
+  }
+  return localize('com_ui_project_meta_ads_monthly_budget_remaining', {
+    0: formatMoney(monthlyBudget.remaining, currency),
+    1: formatMoney(monthlyBudget.limit, currency),
+    2: String(monthlyBudget.spentPct),
+  });
 }
 
 function getScopedObjectiveSummary(

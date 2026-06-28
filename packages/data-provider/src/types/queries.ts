@@ -429,6 +429,18 @@ export type ProjectMetaAdsStatus = {
     since?: string;
     until?: string;
   };
+  monthlyBudget?: {
+    month: string;
+    baseAmount: number;
+    additionalAmount: number;
+    allowedOverspendPct: number;
+    limit: number;
+    spend: number;
+    remaining: number;
+    exceededBy: number;
+    spentPct: number;
+    remainingDays: number;
+  };
   summary?: {
     totalSpend: number;
     totalResults: number | null;

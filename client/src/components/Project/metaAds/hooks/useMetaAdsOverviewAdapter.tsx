@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ComponentProps } from 'react';
-import type { ProjectMetaAdsCampaignSummary } from 'librechat-data-provider';
+import type { ProjectMetaAdsCampaignSummary, ProjectMetaAdsStatus } from 'librechat-data-provider';
 import type {
   useApplyProjectMetaAdsRecommendationMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
@@ -43,6 +43,7 @@ type UseMetaAdsOverviewAdapterParams = {
   canOpenTrafficAgentChat: boolean;
   objectiveOptions: MetaAdsOverviewWorkspaceProps['toolbar']['objectiveOptions'];
   statusSummary: Parameters<typeof buildMetaAdsOverviewState>[0]['summary'];
+  monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
   settingsState: ReturnType<typeof useMetaAdsSettings>;
   entityActions: ReturnType<typeof useMetaAdsEntityActions>;
   rulesState: ReturnType<typeof useMetaAdsRules>;
@@ -65,6 +66,7 @@ export function useMetaAdsOverviewAdapter({
   canOpenTrafficAgentChat,
   objectiveOptions,
   statusSummary,
+  monthlyBudget,
   settingsState,
   entityActions,
   rulesState,
@@ -143,6 +145,7 @@ export function useMetaAdsOverviewAdapter({
     summaryTotalResults,
     summaryAverageCost,
     summaryAverageFrequency,
+    monthlyBudget,
     summaryMetricContext,
     goalContext: (() => {
       const goalTarget = Number(settings.clientGoal?.monthlyTarget ?? 0);
