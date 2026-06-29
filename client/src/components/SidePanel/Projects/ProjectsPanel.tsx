@@ -19,7 +19,7 @@ import {
   useUpdateConversationMutation,
   useConversationsInfiniteQuery,
 } from '~/data-provider';
-import { useLocalize, useNewConvo } from '~/hooks';
+import { useLocalize, useNewConvo, useNavigateToConvo } from '~/hooks';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
@@ -33,6 +33,7 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
   const [renamingConvoId, setRenamingConvoId] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const { newConversation } = useNewConvo();
+  const { navigateToConvo } = useNavigateToConvo();
   const updateConvoMutation = useUpdateConversationMutation(conversationId ?? '');
   const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
   const { data: project } = useProjectByIdQuery(projectId, {
@@ -86,6 +87,20 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
     setRenamingConvoId(convo.conversationId ?? null);
     setTitleInput(convo.title ?? '');
   }, []);
+
+  const handleOpenConversation = useCallback(
+    (convo: TConversation) => {
+      setSelectedProjectId(projectId);
+      navigateToConvo(
+        {
+          ...convo,
+          projectId: convo.projectId ?? projectId,
+        },
+        { currentConvoId: conversationId },
+      );
+    },
+    [conversationId, navigateToConvo, projectId, setSelectedProjectId],
+  );
 
   const cancelRename = useCallback(() => {
     setRenamingConvoId(null);
@@ -196,7 +211,7 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
                         startRename(convo);
                         return;
                       }
-                      navigate(`/c/${convo.conversationId}`);
+                      handleOpenConversation(convo);
                     }}
                     className={cn('min-w-0 flex-1 truncate text-left', isActive && 'cursor-text')}
                   >
