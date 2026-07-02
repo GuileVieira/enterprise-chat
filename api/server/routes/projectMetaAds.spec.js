@@ -711,7 +711,24 @@ describe('projectMetaAds role access', () => {
     await request(createApp()).get('/projects/p1/meta-ads').expect(200);
 
     expect(getProjectMetaAdsStatus).toHaveBeenCalledWith('p1', 'tenant-x', {
+      scope: undefined,
       datePreset: undefined,
+      since: undefined,
+      until: undefined,
+    });
+  });
+
+  it('passes snapshot scope to Meta Ads status', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads')
+      .query({ scope: 'snapshot', datePreset: 'last_7d' })
+      .expect(200);
+
+    expect(getProjectMetaAdsStatus).toHaveBeenCalledWith('p1', 'tenant-x', {
+      scope: 'snapshot',
+      datePreset: 'last_7d',
       since: undefined,
       until: undefined,
     });

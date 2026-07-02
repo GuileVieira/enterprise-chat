@@ -33,7 +33,7 @@ import type {
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
-const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v2';
+const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v3';
 const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
 const projectMetaAdsStatusStaleTimeMs = 10 * 60 * 1000;
 
@@ -46,6 +46,7 @@ function getProjectMetaAdsStatusCacheKey(projectId: string, params?: t.ProjectMe
   return [
     projectMetaAdsStatusCachePrefix,
     projectId,
+    params?.scope ?? 'live',
     params?.datePreset ?? 'default',
     params?.since ?? 'none',
     params?.until ?? 'none',

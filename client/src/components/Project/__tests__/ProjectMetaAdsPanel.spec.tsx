@@ -300,7 +300,11 @@ describe('ProjectMetaAdsPanel', () => {
   it('defers BI and rules data requests until their tabs are opened', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    expect(mockStatusQueryConfigs[1]).toMatchObject({ enabled: false });
+    expect(mockStatusQueryConfigs[1]).toMatchObject({
+      enabled: true,
+      initialData: mockStatusData,
+    });
+    expect(mockStatusQueryConfigs[2]).toMatchObject({ enabled: false });
     expect(mockRankingQueryConfigs[0]).toMatchObject({ enabled: false });
     expect(mockRulePerformanceQueryConfigs[0]).toMatchObject({ enabled: false });
 
@@ -2519,6 +2523,14 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_7d',
+      scope: 'snapshot',
+    });
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_7d',
+      scope: 'live',
+    });
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', { datePreset: 'last_7d' });
     expect(mockUseProjectMetaAdsQuery).not.toHaveBeenCalledWith('p1', undefined);
     expect(mockUseProjectMetaAdsRankingsQuery).toHaveBeenCalledWith(
@@ -2590,6 +2602,11 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
       datePreset: 'last_30d',
+      scope: 'snapshot',
+    });
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'last_30d',
+      scope: 'live',
     });
 
     openBiTab();
@@ -2624,6 +2641,12 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
       since: '2026-06-01',
       until: '2026-06-10',
+      scope: 'snapshot',
+    });
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      since: '2026-06-01',
+      until: '2026-06-10',
+      scope: 'live',
     });
   });
 

@@ -516,12 +516,15 @@ async function prepareMetaAdsSettingsUpdate({
 router.get('/', metaAdsAccess, async (req, res) => {
   try {
     const tenantId = req.user.tenantId || getTenantId();
+    const scope = ['snapshot', 'live'].includes(req.query.scope) ? req.query.scope : undefined;
     logger.debug('[projectMetaAds] status requested', {
       tenantId,
       projectId: req.params.projectId,
+      scope,
     });
     return res.json(
       await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
+        scope,
         datePreset: req.query.datePreset,
         since: req.query.since,
         until: req.query.until,

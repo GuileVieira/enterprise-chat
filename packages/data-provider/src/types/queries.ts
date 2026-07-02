@@ -418,6 +418,7 @@ export type ProjectMetaAdsAdDiagnostics = {
 };
 
 export type ProjectMetaAdsStatus = {
+  source?: 'snapshot' | 'live';
   latestSnapshots: ProjectMetaAdsSnapshot[];
   recommendations: ProjectMetaAdsRecommendation[];
   changes: ProjectMetaAdsBudgetChange[];
@@ -482,6 +483,7 @@ export type ProjectMetaAdsDatePreset =
   | 'last_30d';
 
 export type ProjectMetaAdsStatusParams = {
+  scope?: 'snapshot' | 'live';
   datePreset?: ProjectMetaAdsDatePreset;
   since?: string;
   until?: string;

@@ -4536,7 +4536,8 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let liveSnapshots;
   let currency;
   let monthlyBudgetStatus;
-  if (project?.metaAds?.adAccountId) {
+  const snapshotOnly = options.scope === 'snapshot';
+  if (project?.metaAds?.adAccountId && !snapshotOnly) {
     try {
       const metaAds = withImplicitProjectTokenSecret(
         project.projectId || projectId,
@@ -4788,6 +4789,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
         }
       : undefined;
   return {
+    source: snapshotOnly ? 'snapshot' : 'live',
     latestSnapshots,
     recommendations,
     changes,

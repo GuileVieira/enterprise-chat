@@ -53,7 +53,7 @@ describe('useProjectMetaAdsQuery', () => {
       changes: [],
     };
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v2:p1:last_7d:none:none',
+      'orqest:project-meta-ads-status:v3:p1:live:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data,
@@ -65,6 +65,48 @@ describe('useProjectMetaAdsQuery', () => {
     });
 
     await waitFor(() => expect(result.current.data).toEqual(data));
+    expect(mockGetProjectMetaAdsStatus).not.toHaveBeenCalled();
+  });
+
+  it('keeps snapshot and live status caches separate', async () => {
+    const snapshotData = {
+      source: 'snapshot',
+      latestSnapshots: [],
+      recommendations: [],
+      changes: [],
+    };
+    const liveData = {
+      source: 'live',
+      latestSnapshots: [],
+      recommendations: [],
+      changes: [],
+    };
+    localStorage.setItem(
+      'orqest:project-meta-ads-status:v3:p1:snapshot:last_7d:none:none',
+      JSON.stringify({
+        cachedAt: Date.now() - 5 * 60 * 1000,
+        data: snapshotData,
+      }),
+    );
+    localStorage.setItem(
+      'orqest:project-meta-ads-status:v3:p1:live:last_7d:none:none',
+      JSON.stringify({
+        cachedAt: Date.now() - 5 * 60 * 1000,
+        data: liveData,
+      }),
+    );
+
+    const { result: snapshotResult } = renderHook(
+      () => useProjectMetaAdsQuery('p1', { datePreset: 'last_7d', scope: 'snapshot' }),
+      { wrapper },
+    );
+    const { result: liveResult } = renderHook(
+      () => useProjectMetaAdsQuery('p1', { datePreset: 'last_7d', scope: 'live' }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(snapshotResult.current.data).toEqual(snapshotData));
+    await waitFor(() => expect(liveResult.current.data).toEqual(liveData));
     expect(mockGetProjectMetaAdsStatus).not.toHaveBeenCalled();
   });
 });

@@ -1190,6 +1190,60 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('returns snapshot status without calling Meta Graph', async () => {
+    const {
+      budget,
+      getAdAccountCurrency,
+      listAds,
+      listAdInsights,
+      listCampaignInsights,
+      listCampaigns,
+      listAdSets,
+      listAdSetInsights,
+    } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'Topo',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages Floripa',
+          campaignObjective: 'OUTCOME_ENGAGEMENT',
+          spend: 200,
+          cpa: 20,
+          resultCount: 10,
+          resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          impressions: 1000,
+          frequency: 2,
+          createdAt: '2026-06-03T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+      scope: 'snapshot',
+    });
+
+    expect(status.source).toBe('snapshot');
+    expect(status.period).toEqual({ datePreset: 'last_7d' });
+    expect(status.campaigns).toEqual([
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 200,
+      }),
+    ]);
+    expect(status.summary.totalSpend).toBe(200);
+    expect(getAdAccountCurrency).not.toHaveBeenCalled();
+    expect(listCampaigns).not.toHaveBeenCalled();
+    expect(listAdSets).not.toHaveBeenCalled();
+    expect(listCampaignInsights).not.toHaveBeenCalled();
+    expect(listAdSetInsights).not.toHaveBeenCalled();
+    expect(listAdInsights).not.toHaveBeenCalled();
+    expect(listAds).not.toHaveBeenCalled();
+  });
+
   it('returns campaigns grouped with active ad sets and pending recommendations', async () => {
     const { budget } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: {} },

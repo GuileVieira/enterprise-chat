@@ -75,7 +75,23 @@ export default function ProjectMetaAdsPanel({
   const overviewPeriod = useMetaAdsPeriodFilter();
   const biPeriod = useMetaAdsPeriodFilter();
   const rulePerformancePeriod = useMetaAdsPeriodFilter();
-  const statusQuery = useProjectMetaAdsQuery(project.projectId, overviewPeriod.statusParams);
+  const snapshotStatusQuery = useProjectMetaAdsQuery(project.projectId, {
+    ...overviewPeriod.statusParams,
+    scope: 'snapshot',
+  });
+  const liveStatusQuery = useProjectMetaAdsQuery(
+    project.projectId,
+    {
+      ...overviewPeriod.statusParams,
+      scope: 'live',
+    },
+    {
+      enabled: Boolean(project.projectId && snapshotStatusQuery.data),
+      initialData: snapshotStatusQuery.data,
+      initialDataUpdatedAt: 0,
+    },
+  );
+  const statusQuery = liveStatusQuery.data ? liveStatusQuery : snapshotStatusQuery;
   const biStatusQuery = useProjectMetaAdsQuery(project.projectId, biPeriod.statusParams, {
     enabled: workspaceTab === 'bi',
   });
