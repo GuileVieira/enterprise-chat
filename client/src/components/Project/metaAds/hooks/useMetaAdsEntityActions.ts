@@ -45,6 +45,19 @@ function getDuplicateName(name?: string) {
   return `${baseName} - cópia`;
 }
 
+function parseDailyBudgetInput(value: string) {
+  const trimmed = value.trim();
+  const normalized =
+    trimmed.includes(',') && trimmed.includes('.')
+      ? trimmed.replace(/\./g, '').replace(',', '.')
+      : trimmed.replace(',', '.');
+  return Number(normalized);
+}
+
+function formatDailyBudgetInput(value?: number) {
+  return value == null ? '' : value.toFixed(2).replace('.', ',');
+}
+
 export function useMetaAdsEntityActions({
   project,
   statusQuery,
@@ -126,14 +139,14 @@ export function useMetaAdsEntityActions({
 
   const onOpenBudgetEditor = (editor: BudgetEditor) => {
     setBudgetEditor(editor);
-    setManualDailyBudget(editor.currentBudget == null ? '' : String(editor.currentBudget));
+    setManualDailyBudget(formatDailyBudgetInput(editor.currentBudget));
   };
 
   const onSaveManualBudget = () => {
     if (!budgetEditor) {
       return;
     }
-    const dailyBudget = Number(manualDailyBudget);
+    const dailyBudget = parseDailyBudgetInput(manualDailyBudget);
     if (!Number.isFinite(dailyBudget) || dailyBudget <= 0) {
       showToast({
         message: localize('com_ui_project_meta_ads_invalid_budget'),

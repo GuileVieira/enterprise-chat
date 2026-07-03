@@ -84,9 +84,8 @@ export function MetaAdsBudgetEditorDialog({
                 {localize('com_ui_project_meta_ads_new_budget')}
               </span>
               <input
-                type="number"
-                min="0.01"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={dailyBudget}
                 onChange={(event) => onDailyBudgetChange(event.target.value)}
                 className={controls.inputClassName}
@@ -108,7 +107,9 @@ export function MetaAdsBudgetEditorDialog({
                     key={reference.percent}
                     type="button"
                     aria-label={reference.accessibleLabel}
-                    onClick={() => onDailyBudgetChange(reference.value.toFixed(2))}
+                    onClick={() =>
+                      onDailyBudgetChange(reference.value.toFixed(2).replace('.', ','))
+                    }
                     className={`group flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-[0_14px_34px_-30px_rgba(15,23,42,0.45)] transition duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-amber-300/25 active:translate-y-0 ${reference.tone}`}
                   >
                     <span className="text-sm font-semibold">{reference.label}</span>

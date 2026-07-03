@@ -1644,7 +1644,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(budgetDialog).getByText('+15%')).toBeInTheDocument();
     expect(within(budgetDialog).getByText('R$ 115,00')).toBeInTheDocument();
     fireEvent.click(within(budgetDialog).getByRole('button', { name: /\+15%.*115,00/ }));
-    expect(screen.getByLabelText('com_ui_project_meta_ads_new_budget')).toHaveValue(115);
+    expect(screen.getByLabelText('com_ui_project_meta_ads_new_budget')).toHaveValue('115,00');
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
       target: { value: '125' },
     });
@@ -3092,6 +3092,39 @@ describe('ProjectMetaAdsPanel', () => {
           entityLevel: 'campaign',
           entityId: 'campaign-cbo',
           dailyBudget: 125,
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('accepts Brazilian decimal comma when saving a manual budget change', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('R$ 100,00'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '125,50' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+
+    expect(mockMutateBudget).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        payload: expect.objectContaining({
+          dailyBudget: 125.5,
         }),
       },
       expect.any(Object),
