@@ -3209,6 +3209,9 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
 
     expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('dialog', { name: 'com_ui_project_meta_ads_edit_budget' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_confirm_budget_title')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));

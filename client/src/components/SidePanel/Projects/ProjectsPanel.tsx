@@ -147,7 +147,15 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
       </button>
 
       {isExpanded && (
-        <div className="custom-scrollbar ml-6 flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto border-l border-border-light pl-2">
+        <div className="custom-scrollbar ml-6 flex max-h-[40vh] flex-col gap-0.5 overflow-y-auto border-l border-border-light pl-2 pr-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${projectId}`)}
+            className="mb-1 mt-1 flex w-full items-center justify-center rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-border-medium hover:bg-surface-hover hover:text-text-primary"
+          >
+            {localize('com_ui_details')}
+          </button>
+
           {/* New Chat in Project */}
           <button
             type="button"
@@ -221,13 +229,6 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
               </div>
             );
           })}
-          <button
-            type="button"
-            onClick={() => navigate(`/projects/${projectId}`)}
-            className="mt-1 px-2 py-1 text-left text-[10px] uppercase tracking-wider text-text-tertiary hover:text-text-primary"
-          >
-            {localize('com_ui_details')}
-          </button>
         </div>
       )}
     </div>

@@ -139,6 +139,7 @@ export function useMetaAdsEntityActions({
 
   const onOpenBudgetEditor = (editor: BudgetEditor) => {
     setBudgetEditor(editor);
+    setBudgetConfirmation(null);
     setManualDailyBudget(formatDailyBudgetInput(editor.currentBudget));
   };
 
@@ -162,6 +163,7 @@ export function useMetaAdsEntityActions({
       currentBudget: budgetEditor.currentBudget,
       reason: 'manual-ui',
     });
+    setBudgetEditor(null);
   };
 
   const onConfirmManualBudget = () => {

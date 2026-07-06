@@ -224,7 +224,10 @@ export function MetaAdsDialogsLayer({
             saving={mutations.savingBudget}
             localize={localize}
             onDailyBudgetChange={setManualDailyBudget}
-            onClose={() => setBudgetEditor(null)}
+            onClose={() => {
+              setBudgetEditor(null);
+              setBudgetConfirmation(null);
+            }}
             onSave={onSaveManualBudget}
             chrome={{
               modalOverlayClassName: chrome.modalOverlayClassName,

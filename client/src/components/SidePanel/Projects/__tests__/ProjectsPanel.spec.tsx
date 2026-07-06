@@ -107,4 +107,17 @@ describe('ProjectsPanel', () => {
     );
     expect(mockNavigate).not.toHaveBeenCalledWith('/c/c1');
   });
+
+  it('shows project details before new project chat inside the expanded folder', () => {
+    renderPanel();
+
+    fireEvent.click(screen.getByText('Project Alpha'));
+
+    const detailsButton = screen.getByRole('button', { name: 'com_ui_details' });
+    const newChatButton = screen.getByRole('button', { name: 'com_ui_new_chat_in_project' });
+
+    expect(
+      detailsButton.compareDocumentPosition(newChatButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
