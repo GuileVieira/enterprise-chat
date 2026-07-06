@@ -3262,6 +3262,50 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
+  it('uses the confirmed Meta budget change while status data is stale', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+    mockMutateBudget.mockImplementationOnce(
+      (_payload, options?: { onSuccess?: (response: unknown) => void }) =>
+        options?.onSuccess?.({
+          change: {
+            _id: 'change-confirmed',
+            entityLevel: 'campaign',
+            entityId: 'campaign-cbo',
+            entityName: 'CBO Messages',
+            previousDailyBudget: 100,
+            newDailyBudget: 125,
+            deltaDailyBudget: 25,
+            deltaPercent: 25,
+            actor: 'user',
+            reason: 'manual-ui',
+            createdAt: '2026-07-06T12:00:00.000-03:00',
+          },
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('R$ 100,00'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '125' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+
+    expect(screen.getAllByText('R$ 125,00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('manual-ui').length).toBeGreaterThanOrEqual(1);
+  });
+
   it('shows manual budget errors to the user', () => {
     mockStatusData.campaigns = [
       {

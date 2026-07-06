@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SystemRoles } from 'librechat-data-provider';
 import { useToastContext } from '@librechat/client';
-import type { TProject } from 'librechat-data-provider';
+import type {
+  ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsBudgetChange,
+  TProject,
+} from 'librechat-data-provider';
 import {
   useGetStartupConfig,
   useApplyProjectMetaAdsRecommendationMutation,
@@ -55,6 +59,84 @@ import {
   metaAdsModalTile,
 } from './metaAds/chrome';
 
+function getBudgetChangeCacheKey(change: ProjectMetaAdsBudgetChange): string {
+  return (
+    change._id ??
+    `${change.entityLevel ?? 'campaign'}:${change.entityId}:${change.createdAt ?? ''}:${
+      change.newDailyBudget ?? ''
+    }`
+  );
+}
+
+function mergeBudgetChanges(
+  confirmedChanges: ProjectMetaAdsBudgetChange[],
+  existingChanges: ProjectMetaAdsBudgetChange[],
+): ProjectMetaAdsBudgetChange[] {
+  const seen = new Set<string>();
+  return [...confirmedChanges, ...existingChanges].filter((change) => {
+    const key = getBudgetChangeCacheKey(change);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function applyBudgetChangesToCampaigns(
+  campaigns: ProjectMetaAdsCampaignSummary[],
+  changes: ProjectMetaAdsBudgetChange[],
+): ProjectMetaAdsCampaignSummary[] {
+  if (changes.length === 0) {
+    return campaigns;
+  }
+
+  const campaignBudgets = new Map<string, number>();
+  const adSetBudgets = new Map<string, number>();
+  for (let index = changes.length - 1; index >= 0; index -= 1) {
+    const change = changes[index];
+    const nextBudget = change.newDailyBudget;
+    if (typeof nextBudget !== 'number' || !Number.isFinite(nextBudget)) {
+      continue;
+    }
+    if (change.entityLevel === 'adset') {
+      adSetBudgets.set(change.entityId, nextBudget);
+      continue;
+    }
+    campaignBudgets.set(change.entityId, nextBudget);
+  }
+
+  if (campaignBudgets.size === 0 && adSetBudgets.size === 0) {
+    return campaigns;
+  }
+
+  return campaigns.map((campaign) => {
+    let changed = false;
+    const adSets = campaign.adSets.map((adSet) => {
+      const nextAdSetBudget = adSetBudgets.get(adSet.entityId);
+      if (nextAdSetBudget == null) {
+        return adSet;
+      }
+      changed = true;
+      return { ...adSet, dailyBudget: nextAdSetBudget };
+    });
+
+    if (campaignBudgets.has(campaign.campaignId)) {
+      changed = true;
+    }
+
+    if (!changed) {
+      return campaign;
+    }
+
+    return {
+      ...campaign,
+      dailyBudget: campaignBudgets.get(campaign.campaignId) ?? campaign.dailyBudget,
+      adSets,
+    };
+  });
+}
+
 export default function ProjectMetaAdsPanel({
   project,
   canEdit,
@@ -69,6 +151,9 @@ export default function ProjectMetaAdsPanel({
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
   const [runNoticeMessage, setRunNoticeMessage] = useState<string | null>(null);
   const [runNoticeStatus, setRunNoticeStatus] = useState<'success' | 'error'>('error');
+  const [confirmedBudgetChanges, setConfirmedBudgetChanges] = useState<ProjectMetaAdsBudgetChange[]>(
+    [],
+  );
   const biWorkspace = useMetaAdsBiWorkspace();
   const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
   const startupConfigQuery = useGetStartupConfig();
@@ -141,6 +226,9 @@ export default function ProjectMetaAdsPanel({
     onDiscardSettingsDraft,
     openSettingsDrawer,
   } = metaAdsSettings;
+  const onManualBudgetChange = useCallback((change: ProjectMetaAdsBudgetChange) => {
+    setConfirmedBudgetChanges((current) => mergeBudgetChanges([change], current));
+  }, []);
   const metaAdsEntityActions = useMetaAdsEntityActions({
     project,
     statusQuery,
@@ -148,6 +236,7 @@ export default function ProjectMetaAdsPanel({
     duplicateEntity,
     updateEntityStatus,
     applyRecommendation,
+    onManualBudgetChange,
     localize,
     showToast,
   });
@@ -163,10 +252,14 @@ export default function ProjectMetaAdsPanel({
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
   const latestSnapshots = statusQuery.data?.latestSnapshots.slice(0, 8) ?? [];
-  const campaigns =
+  const baseCampaigns =
     statusQuery.data?.campaigns && statusQuery.data.campaigns.length > 0
       ? statusQuery.data.campaigns
       : buildCampaignFallback(latestSnapshots);
+  const campaigns = useMemo(
+    () => applyBudgetChangesToCampaigns(baseCampaigns, confirmedBudgetChanges),
+    [baseCampaigns, confirmedBudgetChanges],
+  );
   const tokenCredentials = statusQuery.data?.credentials;
   const currency = statusQuery.data?.currency ?? 'BRL';
   const automationMode = settings.automationMode ?? 'recommend';
@@ -198,7 +291,13 @@ export default function ProjectMetaAdsPanel({
     localize,
     showToast,
   });
-  const biCampaigns = biStatusQuery.data?.campaigns ?? campaigns;
+  const biCampaigns = useMemo(
+    () =>
+      biStatusQuery.data?.campaigns
+        ? applyBudgetChangesToCampaigns(biStatusQuery.data.campaigns, confirmedBudgetChanges)
+        : campaigns,
+    [biStatusQuery.data?.campaigns, campaigns, confirmedBudgetChanges],
+  );
   const biAdapter = useMetaAdsBiAdapter({
     campaigns,
     biCampaigns,
@@ -243,6 +342,14 @@ export default function ProjectMetaAdsPanel({
     setRunNoticeMessage,
     setRunNoticeStatus,
   });
+  const budgetChanges = useMemo(
+    () =>
+      mergeBudgetChanges(
+        confirmedBudgetChanges,
+        biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? [],
+      ),
+    [confirmedBudgetChanges, biStatusQuery.data?.changes, statusQuery.data?.changes],
+  );
 
   const content = (
     <>
@@ -275,7 +382,7 @@ export default function ProjectMetaAdsPanel({
             <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />
             <div className="p-5 pt-0">
               <MetaAdsHistoryPanel
-                changes={biStatusQuery.data?.changes ?? statusQuery.data?.changes ?? []}
+                changes={budgetChanges}
                 currency={currency}
                 localize={localize}
               />

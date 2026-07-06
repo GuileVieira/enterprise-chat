@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react';
 import type {
   TProject,
   ProjectMetaAdsAdSummary,
+  ProjectMetaAdsBudgetChange,
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsEntityStatusLevel,
 } from 'librechat-data-provider';
@@ -36,6 +37,7 @@ type UseMetaAdsEntityActionsParams = {
   duplicateEntity: ReturnType<typeof useDuplicateProjectMetaAdsEntityMutation>;
   updateEntityStatus: ReturnType<typeof useUpdateProjectMetaAdsEntityStatusMutation>;
   applyRecommendation: ReturnType<typeof useApplyProjectMetaAdsRecommendationMutation>;
+  onManualBudgetChange?: (change: ProjectMetaAdsBudgetChange) => void;
   localize: Localize;
   showToast: ShowToast;
 };
@@ -65,6 +67,7 @@ export function useMetaAdsEntityActions({
   duplicateEntity,
   updateEntityStatus,
   applyRecommendation,
+  onManualBudgetChange,
   localize,
   showToast,
 }: UseMetaAdsEntityActionsParams) {
@@ -182,7 +185,10 @@ export function useMetaAdsEntityActions({
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (response) => {
+          if (response?.change) {
+            onManualBudgetChange?.(response.change);
+          }
           setBudgetEditor(null);
           setBudgetConfirmation(null);
           setManualDailyBudget('');
