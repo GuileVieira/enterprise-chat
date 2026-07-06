@@ -7,7 +7,14 @@ import type {
 } from '~/data-provider';
 import { logger } from '~/utils';
 import { normalizeSettings } from '../settings';
-import type { Localize, RequestError, MetaAdsSettingsState, SettingsDrawer } from '../types';
+import type {
+  Localize,
+  RequestError,
+  SettingsDrawer,
+  MetaAdsDraftStatus,
+  MetaAdsSettingsState,
+  MetaAdsDraftSummaryItem,
+} from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
 
@@ -67,7 +74,7 @@ function buildSettingsDraftSummary(
   draftSettings: MetaAdsSettingsState,
   localize: Localize,
 ) {
-  const sections = [];
+  const sections: MetaAdsDraftSummaryItem[] = [];
   if (
     hasSettingsChange(savedSettings, draftSettings, [
       'enabled',
@@ -77,7 +84,10 @@ function buildSettingsDraftSummary(
       'credentialMode',
     ])
   ) {
-    sections.push(localize('com_ui_project_meta_ads_account_credentials'));
+    sections.push({
+      key: 'credentials',
+      label: localize('com_ui_project_meta_ads_account_credentials'),
+    });
   }
   if (
     hasSettingsChange(savedSettings, draftSettings, [
@@ -87,20 +97,31 @@ function buildSettingsDraftSummary(
       'clientGoal',
     ])
   ) {
-    sections.push(localize('com_ui_project_meta_ads_automation'));
+    sections.push({ key: 'automation', label: localize('com_ui_project_meta_ads_automation') });
   }
-  if (
-    hasSettingsChange(savedSettings, draftSettings, [
-      'rules',
-      'creativeRules',
-      'ruleGroups',
-      'ruleOverrides',
-    ])
-  ) {
-    sections.push(localize('com_ui_project_meta_ads_rules'));
+  if (hasSettingsChange(savedSettings, draftSettings, ['rules', 'creativeRules'])) {
+    sections.push({
+      key: 'global-rules',
+      label: localize('com_ui_project_meta_ads_global_rules'),
+    });
+  }
+  if (hasSettingsChange(savedSettings, draftSettings, ['ruleGroups'])) {
+    sections.push({
+      key: 'rule-groups',
+      label: localize('com_ui_project_meta_ads_rule_groups'),
+    });
+  }
+  if (hasSettingsChange(savedSettings, draftSettings, ['ruleOverrides'])) {
+    sections.push({
+      key: 'rule-overrides',
+      label: localize('com_ui_project_meta_ads_rule_overrides'),
+    });
   }
   if (hasSettingsChange(savedSettings, draftSettings, ['monthlyBudget', 'monthlyBudgets'])) {
-    sections.push(localize('com_ui_project_meta_ads_monthly_budget'));
+    sections.push({
+      key: 'monthly-budget',
+      label: localize('com_ui_project_meta_ads_monthly_budget'),
+    });
   }
   return sections;
 }
@@ -117,6 +138,8 @@ export function useMetaAdsSettings({
   const [hasUnsavedSettingsDraft, setHasUnsavedSettingsDraft] = useState(false);
   const [settingsDraft, setSettingsDraft] = useState<MetaAdsSettingsState | null>(null);
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
+  const [draftStatus, setDraftStatus] = useState<MetaAdsDraftStatus>('idle');
+  const [discardDraftDialogOpen, setDiscardDraftDialogOpen] = useState(false);
   const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [tenantAccessToken, setTenantAccessToken] = useState('');
@@ -127,6 +150,8 @@ export function useMetaAdsSettings({
     const storedDraft = readStoredSettingsDraft(project.projectId);
     setSettings(storedDraft ?? normalizeSettings(project));
     setHasUnsavedSettingsDraft(Boolean(storedDraft));
+    setDraftStatus(storedDraft ? 'pending' : 'idle');
+    setDiscardDraftDialogOpen(false);
     setSettingsDrawer(null);
     setSettingsDraft(null);
     setSettingsDraftToken('');
@@ -140,6 +165,7 @@ export function useMetaAdsSettings({
     setSettings(nextSettings);
     writeStoredSettingsDraft(project.projectId, nextSettings);
     setHasUnsavedSettingsDraft(true);
+    setDraftStatus('pending');
   };
 
   const closeCredentialsDialog = () => {
@@ -173,6 +199,7 @@ export function useMetaAdsSettings({
       tokenLength: trimmedToken.length,
       tokenSecretName: nextSettings.tokenSecretName,
     });
+    setDraftStatus('publishing');
     setSettings(nextSettings);
     updateSettings.mutate(
       {
@@ -185,6 +212,8 @@ export function useMetaAdsSettings({
           statusQuery.refetch();
           clearStoredSettingsDraft(project.projectId);
           setHasUnsavedSettingsDraft(false);
+          setDraftStatus('published');
+          setDiscardDraftDialogOpen(false);
           setSettingsDraftToken('');
           setShowSettingsDraftToken(false);
           showToast({ message: localize('com_ui_saved'), status: 'success' });
@@ -196,6 +225,7 @@ export function useMetaAdsSettings({
         },
         onError: (error) => {
           setSettings(previousSettings);
+          setDraftStatus('error');
           const details = (error as RequestError)?.response?.data?.details;
           const detailText = Array.isArray(details) ? ` (${details.join(', ')})` : '';
           const message =
@@ -238,23 +268,30 @@ export function useMetaAdsSettings({
     if (!hasUnsavedSettingsDraft) {
       return;
     }
-    const savedSettings = normalizeSettings(project);
-    const summary = buildSettingsDraftSummary(savedSettings, settings, localize);
-    const message = [
-      localize('com_ui_project_meta_ads_discard_draft_confirm'),
-      '',
-      `${localize('com_ui_project_meta_ads_pending_changes_summary')}: ${
-        summary.length > 0 ? summary.join(', ') : localize('com_ui_project_meta_ads_rules')
-      }`,
-    ].join('\n');
-    if (!window.confirm(message)) {
+    setDiscardDraftDialogOpen(true);
+  };
+
+  const onCancelDiscardSettingsDraft = () => {
+    setDiscardDraftDialogOpen(false);
+  };
+
+  const onConfirmDiscardSettingsDraft = () => {
+    if (!hasUnsavedSettingsDraft) {
+      setDiscardDraftDialogOpen(false);
       return;
     }
+    const savedSettings = normalizeSettings(project);
     clearStoredSettingsDraft(project.projectId);
     setSettings(savedSettings);
     setHasUnsavedSettingsDraft(false);
+    setDraftStatus('idle');
+    setDiscardDraftDialogOpen(false);
     closeSettingsDrawer();
   };
+
+  const settingsDraftSummary = hasUnsavedSettingsDraft
+    ? buildSettingsDraftSummary(normalizeSettings(project), settings, localize)
+    : [];
 
   const onClearProjectToken = () => {
     if (!settingsDraft) {
@@ -313,6 +350,9 @@ export function useMetaAdsSettings({
   return {
     settings,
     hasUnsavedSettingsDraft,
+    draftStatus,
+    settingsDraftSummary,
+    discardDraftDialogOpen,
     settingsDraft,
     settingsDraftToken,
     showSettingsDraftToken,
@@ -333,6 +373,8 @@ export function useMetaAdsSettings({
     openSettingsDrawer,
     closeSettingsDrawer,
     onDiscardSettingsDraft,
+    onCancelDiscardSettingsDraft,
+    onConfirmDiscardSettingsDraft,
     openCredentialsDialog,
     closeCredentialsDialog,
     onSaveSettingsDrawer,

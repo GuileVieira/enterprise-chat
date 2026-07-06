@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 
 import { MetaAdsAdPreviewDialog, MetaAdsBiRankDetailsDialog } from './dialogs';
 import {
+  MetaAdsDiscardDraftDialog,
   MetaAdsDuplicateEntityDialog,
   MetaAdsBudgetConfirmationBanner,
   MetaAdsEntityStatusConfirmationBanner,
@@ -97,7 +98,9 @@ export function MetaAdsDialogsLayer({
   const {
     settings,
     settingsDraft,
+    settingsDraftSummary,
     settingsDraftToken,
+    discardDraftDialogOpen,
     showSettingsDraftToken,
     credentialsDialogOpen,
     tenantAccessToken,
@@ -113,6 +116,8 @@ export function MetaAdsDialogsLayer({
     closeSettingsDrawer,
     openCredentialsDialog,
     closeCredentialsDialog,
+    onCancelDiscardSettingsDraft,
+    onConfirmDiscardSettingsDraft,
     onSaveSettingsDrawer,
     onSaveProjectToken,
     onSaveTenantToken,
@@ -199,6 +204,15 @@ export function MetaAdsDialogsLayer({
         onClearProjectToken={onClearProjectToken}
         onSaveProjectToken={onSaveProjectToken}
         chrome={modalChrome}
+        buttons={buttonClasses}
+      />
+      <MetaAdsDiscardDraftDialog
+        open={discardDraftDialogOpen}
+        summary={settingsDraftSummary}
+        localize={localize}
+        onCancel={onCancelDiscardSettingsDraft}
+        onConfirm={onConfirmDiscardSettingsDraft}
+        chrome={drawerChrome}
         buttons={buttonClasses}
       />
       {chrome.overviewActive && (

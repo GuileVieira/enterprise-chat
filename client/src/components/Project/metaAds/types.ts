@@ -118,6 +118,13 @@ export type RequestError = {
   };
 };
 
+export type MetaAdsDraftStatus = 'idle' | 'pending' | 'publishing' | 'published' | 'error';
+
+export type MetaAdsDraftSummaryItem = {
+  key: string;
+  label: string;
+};
+
 export type SettingsDrawer = 'account' | 'automation' | null;
 export type WorkspaceTab = 'overview' | 'bi' | 'rules';
 export type TableView = 'summary' | 'performance' | 'creative' | 'rules';

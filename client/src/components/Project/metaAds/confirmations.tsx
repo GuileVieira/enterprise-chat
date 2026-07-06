@@ -3,6 +3,7 @@ import type {
   Localize,
   DuplicateDraft,
   BudgetConfirmation,
+  MetaAdsDraftSummaryItem,
   EntityStatusConfirmation,
 } from './types';
 
@@ -224,6 +225,79 @@ export function MetaAdsDuplicateEntityDialog({
             className={buttons.primaryClassName}
           >
             {localize('com_ui_project_meta_ads_duplicate_confirm')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MetaAdsDiscardDraftDialog({
+  open,
+  summary,
+  localize,
+  onCancel,
+  onConfirm,
+  chrome,
+  buttons,
+}: {
+  open: boolean;
+  summary: MetaAdsDraftSummaryItem[];
+  localize: Localize;
+  onCancel: () => void;
+  onConfirm: () => void;
+  chrome: ConfirmationChrome;
+  buttons: Pick<ConfirmationButtons, 'primaryClassName' | 'ghostClassName'>;
+}) {
+  if (!open) {
+    return null;
+  }
+
+  const items =
+    summary.length > 0
+      ? summary
+      : [{ key: 'unknown', label: localize('com_ui_project_meta_ads_pending_changes_empty') }];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="meta-ads-discard-draft-title"
+      className={`${chrome.modalOverlayClassName} flex items-center justify-center p-4`}
+    >
+      <div className={`${chrome.drawerShellClassName} max-h-[80vh] max-w-md`}>
+        <div className={chrome.modalHeaderClassName}>
+          <h4
+            id="meta-ads-discard-draft-title"
+            className="text-base font-semibold text-slate-950 dark:text-white"
+          >
+            {localize('com_ui_project_meta_ads_discard_draft_confirm')}
+          </h4>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
+            {localize('com_ui_project_meta_ads_discard_draft_modal_intro')}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_pending_changes_summary')}
+          </div>
+          <ul className="mt-3 space-y-2">
+            {items.map((item) => (
+              <li
+                key={item.key}
+                className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-800 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-100"
+              >
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
+          <button type="button" onClick={onCancel} className={buttons.ghostClassName}>
+            {localize('com_ui_cancel')}
+          </button>
+          <button type="button" onClick={onConfirm} className={buttons.primaryClassName}>
+            {localize('com_ui_project_meta_ads_discard_draft')}
           </button>
         </div>
       </div>

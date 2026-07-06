@@ -135,6 +135,8 @@ export default function ProjectMetaAdsPanel({
     settingsDrawer,
     setSettings,
     hasUnsavedSettingsDraft,
+    draftStatus,
+    settingsDraftSummary,
     onSave,
     onDiscardSettingsDraft,
     openSettingsDrawer,
@@ -255,6 +257,8 @@ export default function ProjectMetaAdsPanel({
         runningAnalysis={runAnalysis.isLoading}
         savingSettings={updateSettings.isLoading}
         hasUnsavedSettingsDraft={hasUnsavedSettingsDraft}
+        draftStatus={draftStatus}
+        settingsDraftSummary={settingsDraftSummary}
         runNoticeMessage={runNoticeMessage}
         runNoticeStatus={runNoticeStatus}
         localize={localize}

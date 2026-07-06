@@ -2421,10 +2421,16 @@ describe('ProjectMetaAdsPanel', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    expect(
+      screen.getByText((content) =>
+        content.includes('com_ui_project_meta_ads_pending_changes_summary'),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTitle('com_ui_project_meta_ads_rule_groups')).toBeInTheDocument();
     expect(screen.getAllByText('Draft local').length).toBeGreaterThan(0);
   });
 
-  it('confirms and discards persisted settings drafts', () => {
+  it('opens a modal before discarding persisted settings drafts', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-1',
@@ -2436,7 +2442,6 @@ describe('ProjectMetaAdsPanel', () => {
         adSets: [],
       },
     ];
-    jest.spyOn(window, 'confirm').mockReturnValueOnce(true);
 
     const { unmount } = render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
@@ -2448,15 +2453,60 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_discard_draft'));
 
-    expect(window.confirm).toHaveBeenCalledWith(
-      expect.stringContaining('com_ui_project_meta_ads_pending_changes_summary'),
-    );
+    let discardDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_discard_draft_confirm',
+    });
+    expect(
+      within(discardDialog).getByText('com_ui_project_meta_ads_rule_groups'),
+    ).toBeInTheDocument();
+    expect(within(discardDialog).queryByText('Draft local')).toBeNull();
+
+    fireEvent.click(within(discardDialog).getByText('com_ui_cancel'));
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_discard_draft'));
+    discardDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_discard_draft_confirm',
+    });
+    fireEvent.click(within(discardDialog).getByText('com_ui_project_meta_ads_discard_draft'));
     expect(screen.queryByText('com_ui_project_meta_ads_publish_draft')).toBeNull();
     unmount();
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.queryByText('Draft local')).toBeNull();
+  });
+
+  it('keeps the local settings draft when publishing fails', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+    mockMutateSettings.mockImplementationOnce(
+      (_payload: unknown, options?: { onError?: (error: Error) => void }) =>
+        options?.onError?.(new Error('Save failed')),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Draft local' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+
+    expect(screen.getByText('com_ui_project_meta_ads_draft_error')).toBeInTheDocument();
+    expect(screen.getByTitle('com_ui_project_meta_ads_rule_groups')).toBeInTheDocument();
+    expect(localStorage.getItem('orqest:metaAds:p1:settingsDraft')).not.toBeNull();
   });
 
   it('filters and sorts campaigns like an operator table', () => {

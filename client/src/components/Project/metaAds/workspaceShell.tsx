@@ -3,7 +3,12 @@ import { workspaceTabOptions } from './constants';
 import { MetaAdsBadge, MetaAdsButton } from './ui';
 import type { useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
-import type { SettingsDrawer, WorkspaceTab } from './types';
+import type {
+  SettingsDrawer,
+  WorkspaceTab,
+  MetaAdsDraftStatus,
+  MetaAdsDraftSummaryItem,
+} from './types';
 
 type MetaAdsWorkspaceShellProps = {
   children: React.ReactNode;
@@ -17,6 +22,8 @@ type MetaAdsWorkspaceShellProps = {
   runningAnalysis: boolean;
   savingSettings: boolean;
   hasUnsavedSettingsDraft: boolean;
+  draftStatus: MetaAdsDraftStatus;
+  settingsDraftSummary: MetaAdsDraftSummaryItem[];
   runNoticeMessage: string | null;
   runNoticeStatus: 'success' | 'error';
   localize: ReturnType<typeof useLocalize>;
@@ -44,6 +51,8 @@ export function MetaAdsWorkspaceShell({
   runningAnalysis,
   savingSettings,
   hasUnsavedSettingsDraft,
+  draftStatus,
+  settingsDraftSummary,
   runNoticeMessage,
   runNoticeStatus,
   localize,
@@ -55,6 +64,17 @@ export function MetaAdsWorkspaceShell({
   onSave,
   onDiscardDraft,
 }: MetaAdsWorkspaceShellProps) {
+  const draftSummaryText =
+    settingsDraftSummary.length > 0
+      ? settingsDraftSummary.map((item) => item.label).join(', ')
+      : localize('com_ui_project_meta_ads_pending_changes_empty');
+  const draftButtonKey =
+    draftStatus === 'publishing'
+      ? 'com_ui_project_meta_ads_draft_publishing'
+      : draftStatus === 'error'
+        ? 'com_ui_project_meta_ads_draft_error'
+        : 'com_ui_project_meta_ads_publish_draft';
+
   return (
     <div
       data-testid="meta-ads-metrics-workspace"
@@ -77,6 +97,11 @@ export function MetaAdsWorkspaceShell({
                 0: String(scheduleIntervalMinutes),
               })}
             </MetaAdsBadge>
+            {hasUnsavedSettingsDraft && (
+              <MetaAdsBadge variant={draftStatus === 'error' ? 'danger' : 'warning'}>
+                {localize('com_ui_project_meta_ads_pending_changes_summary')}: {draftSummaryText}
+              </MetaAdsBadge>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -122,15 +147,14 @@ export function MetaAdsWorkspaceShell({
               variant="primary"
               disabled={!canUseMetaAdsActions || savingSettings}
               onClick={onSave}
+              title={hasUnsavedSettingsDraft ? draftSummaryText : undefined}
               className={
-                hasUnsavedSettingsDraft
+                hasUnsavedSettingsDraft && draftStatus !== 'publishing'
                   ? 'animate-pulse bg-amber-500 text-slate-950 shadow-[0_18px_44px_-26px_rgba(245,158,11,0.75)] hover:bg-amber-400 dark:bg-amber-300 dark:text-slate-950 dark:hover:bg-amber-200'
                   : undefined
               }
             >
-              {localize(
-                hasUnsavedSettingsDraft ? 'com_ui_project_meta_ads_publish_draft' : 'com_ui_save',
-              )}
+              {localize(hasUnsavedSettingsDraft ? draftButtonKey : 'com_ui_save')}
             </MetaAdsButton>
           )}
           {hasUnsavedSettingsDraft && !settingsDrawer && (
