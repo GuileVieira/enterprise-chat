@@ -54,7 +54,6 @@ const DEFAULT_RULES = {
   maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 2000,
-  cooldownHours: 24,
   minSpend: 10,
   primaryMetric: 'cpa',
   enabledSections: {
@@ -92,7 +91,6 @@ const RULE_LIMITS = {
   maxDecreasePct: { min: 0, max: 100 },
   minDailyBudget: { min: 0.01 },
   maxDailyBudget: { min: 0.01 },
-  cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
   minCtr: { min: 0 },
   maxCpc: { min: 0 },
@@ -107,7 +105,6 @@ const PAUSE_HIGH_COST_DEFAULTS = {
   lookbackDays: 3,
   minCreativesInScope: 3,
   minSpend: 10,
-  cooldownHours: 24,
   targetResultType: '',
 };
 
@@ -262,7 +259,6 @@ function validateMetaAdsCreativeRules(rules = {}) {
     const lookbackDays = Number(pauseHighCost.lookbackDays);
     const minCreativesInScope = Number(pauseHighCost.minCreativesInScope);
     const minSpend = Number(pauseHighCost.minSpend);
-    const cooldownHours = Number(pauseHighCost.cooldownHours);
     if (!Number.isFinite(maxCostPerResult) || maxCostPerResult <= 0) {
       errors.push('pauseHighCost.maxCostPerResult');
     }
@@ -275,16 +271,12 @@ function validateMetaAdsCreativeRules(rules = {}) {
     if (!Number.isFinite(minSpend) || minSpend < 0) {
       errors.push('pauseHighCost.minSpend');
     }
-    if (!Number.isFinite(cooldownHours) || cooldownHours < 1 || cooldownHours > 168) {
-      errors.push('pauseHighCost.cooldownHours');
-    }
     validated.pauseHighCost = {
       enabled: pauseHighCost.enabled === true,
       maxCostPerResult,
       lookbackDays,
       minCreativesInScope,
       minSpend,
-      cooldownHours,
       targetResultType:
         typeof pauseHighCost.targetResultType === 'string'
           ? pauseHighCost.targetResultType.trim()

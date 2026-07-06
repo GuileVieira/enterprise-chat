@@ -35,18 +35,12 @@ function getRuleNumberMin(key: keyof MetaAdsRulesState) {
   if (key === 'minRoas' || key === 'minSpend') {
     return '0';
   }
-  if (key === 'cooldownHours') {
-    return '1';
-  }
   return '0.01';
 }
 
 function getRuleNumberMax(key: keyof MetaAdsRulesState) {
   if (key === 'maxIncreasePct' || key === 'maxDecreasePct') {
     return '100';
-  }
-  if (key === 'cooldownHours') {
-    return '168';
   }
   return undefined;
 }
@@ -55,17 +49,10 @@ function getCreativeRuleNumberMin(key: string) {
   if (key === 'pauseHighCost.minCreativesInScope') {
     return '3';
   }
-  if (key === 'pauseHighCost.cooldownHours') {
-    return '1';
-  }
   if (key === 'pauseHighCost.maxCostPerResult') {
     return '0.01';
   }
   return '0';
-}
-
-function getCreativeRuleNumberMax(key: string) {
-  return key === 'pauseHighCost.cooldownHours' ? '168' : undefined;
 }
 
 function getInvalidInputClassName(inputClassName: string, hasError: boolean) {
@@ -84,6 +71,19 @@ const analysisPresetOptions = [
   ['last_7d', 'com_ui_project_meta_ads_analysis_last_7d'],
   ['last_14d', 'com_ui_project_meta_ads_analysis_last_14d'],
   ['last_30d', 'com_ui_project_meta_ads_analysis_last_30d'],
+] as const;
+
+const pauseHighCostNumberFields = [
+  [
+    'pauseHighCost.minCreativesInScope',
+    'com_ui_project_meta_ads_pause_min_creatives',
+    'com_ui_project_meta_ads_pause_min_creatives_hint',
+  ],
+  [
+    'pauseHighCost.minSpend',
+    'com_ui_project_meta_ads_min_spend',
+    'com_ui_project_meta_ads_pause_min_spend_hint',
+  ],
 ] as const;
 
 type RuleGuardrailKey = 'minCtr' | 'maxCpc' | 'maxCpm';
@@ -160,7 +160,6 @@ export function MetaAdsRuleGroupDialog({
       | 'pauseHighCost.lookbackDays'
       | 'pauseHighCost.minCreativesInScope'
       | 'pauseHighCost.minSpend'
-      | 'pauseHighCost.cooldownHours'
       | 'pauseHighCost.targetResultType',
     value: string,
   ) => void;
@@ -226,7 +225,6 @@ export function MetaAdsRuleGroupDialog({
   const fieldErrors = {
     'pauseHighCost.minCreativesInScope': getNumberErrorKey(pauseHighCost?.minCreativesInScope, 3),
     'pauseHighCost.minSpend': getNumberErrorKey(pauseHighCost?.minSpend, 0),
-    'pauseHighCost.cooldownHours': getNumberErrorKey(pauseHighCost?.cooldownHours, 1, 168),
   };
   const entitySectionTitleKey =
     draft.entityLevel === 'campaign'
@@ -706,26 +704,14 @@ export function MetaAdsRuleGroupDialog({
                   ))}
                 </select>
               </label>
-              {[
-                [
-                  'pauseHighCost.minCreativesInScope',
-                  'com_ui_project_meta_ads_pause_min_creatives',
-                  'com_ui_project_meta_ads_pause_min_creatives_hint',
-                ],
-                [
-                  'pauseHighCost.minSpend',
-                  'com_ui_project_meta_ads_min_spend',
-                  'com_ui_project_meta_ads_pause_min_spend_hint',
-                ],
-                [
-                  'pauseHighCost.cooldownHours',
-                  'com_ui_project_meta_ads_cooldown',
-                  'com_ui_project_meta_ads_pause_cooldown_hint',
-                ],
-              ].map(([key, labelKey, hintKey]) => {
-                const errorKey = fieldErrors[key as keyof typeof fieldErrors];
+              {pauseHighCostNumberFields.map(([key, labelKey, hintKey]) => {
+                const fieldKey = key.replace('pauseHighCost.', '') as
+                  | 'minCreativesInScope'
+                  | 'minSpend';
+                const errorKey = fieldErrors[key as keyof typeof fieldErrors] as
+                  | Parameters<typeof localize>[0]
+                  | undefined;
                 const min = getCreativeRuleNumberMin(key);
-                const max = getCreativeRuleNumberMax(key);
                 return (
                   <label
                     key={key}
@@ -741,15 +727,8 @@ export function MetaAdsRuleGroupDialog({
                       aria-invalid={errorKey ? true : undefined}
                       type="number"
                       min={min}
-                      max={max}
                       step="1"
-                      value={
-                        draft.creativeRules.pauseHighCost?.[
-                          key.replace('pauseHighCost.', '') as keyof NonNullable<
-                            typeof draft.creativeRules.pauseHighCost
-                          >
-                        ] ?? ''
-                      }
+                      value={draft.creativeRules.pauseHighCost?.[fieldKey] ?? ''}
                       onChange={(event) =>
                         onCreativeRuleChange(
                           key as Parameters<typeof onCreativeRuleChange>[0],
@@ -760,7 +739,7 @@ export function MetaAdsRuleGroupDialog({
                     />
                     {errorKey && (
                       <span className="text-xs font-medium text-red-600 dark:text-red-300">
-                        {localize(errorKey, max ? { 0: min, 1: max } : { 0: min })}
+                        {localize(errorKey, { 0: min })}
                       </span>
                     )}
                   </label>

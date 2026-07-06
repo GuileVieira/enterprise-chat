@@ -1,8 +1,9 @@
-import { defaultCreativeRules, defaultRules } from './rules';
+import { defaultCreativeRules, defaultRules, numberFields } from './rules';
 
 describe('Meta Ads rule defaults', () => {
-  it('starts cooldown fields at one hour', () => {
-    expect(defaultRules.cooldownHours).toBe(1);
-    expect(defaultCreativeRules.pauseHighCost.cooldownHours).toBe(1);
+  it('does not expose cooldown in rule defaults or numeric fields', () => {
+    expect(defaultRules).not.toHaveProperty('cooldownHours');
+    expect(defaultCreativeRules.pauseHighCost).not.toHaveProperty('cooldownHours');
+    expect(numberFields.map((field) => field.key)).not.toContain('cooldownHours');
   });
 });

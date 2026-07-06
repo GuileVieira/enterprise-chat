@@ -12,7 +12,7 @@ import type {
 } from '~/data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
-import { normalizeSettings } from '../settings';
+import { normalizeSettings, sanitizeMetaAdsEditableSettings } from '../settings';
 import { numberFields, optionalNumberFields } from '../rules';
 import type {
   Localize,
@@ -55,7 +55,9 @@ function readStoredSettingsDraft(projectId: string): MetaAdsSettingsState | null
   }
   try {
     const storedValue = window.localStorage.getItem(getSettingsDraftStorageKey(projectId));
-    return storedValue ? (JSON.parse(storedValue) as MetaAdsSettingsState) : null;
+    return storedValue
+      ? sanitizeMetaAdsEditableSettings(JSON.parse(storedValue) as MetaAdsSettingsState)
+      : null;
   } catch {
     return null;
   }
@@ -65,7 +67,10 @@ function writeStoredSettingsDraft(projectId: string, settings: MetaAdsSettingsSt
   if (typeof window === 'undefined') {
     return;
   }
-  window.localStorage.setItem(getSettingsDraftStorageKey(projectId), JSON.stringify(settings));
+  window.localStorage.setItem(
+    getSettingsDraftStorageKey(projectId),
+    JSON.stringify(sanitizeMetaAdsEditableSettings(settings)),
+  );
 }
 
 function clearStoredSettingsDraft(projectId: string) {
@@ -141,10 +146,18 @@ function addDraftDetail(
   });
 }
 
-function getNamedItems(value: Array<{ id?: string; name?: string; overrideKey?: string }>) {
+type NamedDraftItem = {
+  id?: string;
+  name?: string;
+  entityId?: string;
+  entityName?: string;
+  overrideKey?: string;
+};
+
+function getNamedItems(value: NamedDraftItem[]) {
   return value.map((item, index) => ({
-    id: item.id ?? item.overrideKey ?? item.name ?? `item-${index}`,
-    label: item.name ?? item.overrideKey ?? item.id ?? `#${index + 1}`,
+    id: item.id ?? item.overrideKey ?? item.entityId ?? item.name ?? `item-${index}`,
+    label: item.name ?? item.entityName ?? item.overrideKey ?? item.id ?? `#${index + 1}`,
     raw: item,
   }));
 }
@@ -158,8 +171,8 @@ function buildCollectionDetails({
 }: {
   key: string;
   labelKey: TranslationKeys;
-  savedItems: Array<{ id?: string; name?: string; overrideKey?: string }>;
-  draftItems: Array<{ id?: string; name?: string; overrideKey?: string }>;
+  savedItems: NamedDraftItem[];
+  draftItems: NamedDraftItem[];
   localize: Localize;
 }) {
   const details: MetaAdsDraftDetail[] = [];
@@ -607,8 +620,9 @@ export function useMetaAdsSettings({
   }, [project]);
 
   const setWorkingSettings = (nextSettings: MetaAdsSettingsState) => {
-    setSettings(nextSettings);
-    writeStoredSettingsDraft(project.projectId, nextSettings);
+    const sanitizedSettings = sanitizeMetaAdsEditableSettings(nextSettings);
+    setSettings(sanitizedSettings);
+    writeStoredSettingsDraft(project.projectId, sanitizedSettings);
     setHasUnsavedSettingsDraft(true);
     setDraftStatus('pending');
   };
@@ -653,25 +667,26 @@ export function useMetaAdsSettings({
   ) => {
     const trimmedToken = token.trim();
     const previousSettings = settings;
+    const sanitizedSettings = sanitizeMetaAdsEditableSettings(nextSettings);
     logger.debug('MetaAds', 'Saving project Meta Ads settings', {
       projectId: project.projectId,
       hasMetaAccessToken: trimmedToken.length > 0,
       tokenLength: trimmedToken.length,
-      tokenSecretName: nextSettings.tokenSecretName,
+      tokenSecretName: sanitizedSettings.tokenSecretName,
     });
     setDraftStatus('publishing');
-    setSettings(nextSettings);
+    setSettings(sanitizedSettings);
     updateSettings.mutate(
       {
         projectId: project.projectId,
-        metaAds: nextSettings,
+        metaAds: sanitizedSettings,
         ...(trimmedToken ? { metaAccessToken: trimmedToken } : {}),
       },
       {
         onSuccess: () => {
           statusQuery.refetch();
           clearStoredSettingsDraft(project.projectId);
-          setPublishedSettings(nextSettings);
+          setPublishedSettings(sanitizedSettings);
           setHasUnsavedSettingsDraft(manualBudgetDrafts.length > 0);
           setDraftStatus(manualBudgetDrafts.length > 0 ? 'pending' : 'published');
           setDiscardDraftDialogOpen(false);
@@ -747,8 +762,14 @@ export function useMetaAdsSettings({
 
     let nextWorkingSettings = settings;
     selectedSettingsSummary.forEach((item) => {
-      nextWorkingSettings = restoreDraftSection(nextWorkingSettings, nextPublishedSettings, item.key);
+      nextWorkingSettings = restoreDraftSection(
+        nextWorkingSettings,
+        nextPublishedSettings,
+        item.key,
+      );
     });
+    nextPublishedSettings = sanitizeMetaAdsEditableSettings(nextPublishedSettings);
+    nextWorkingSettings = sanitizeMetaAdsEditableSettings(nextWorkingSettings);
 
     setDraftStatus('publishing');
 
@@ -857,8 +878,8 @@ export function useMetaAdsSettings({
           typeof requestMessage === 'string'
             ? requestMessage
             : error instanceof Error
-            ? error.message
-            : localize('com_ui_project_meta_ads_budget_failed');
+              ? error.message
+              : localize('com_ui_project_meta_ads_budget_failed');
         showToast({ message, status: 'error' });
       }
     };

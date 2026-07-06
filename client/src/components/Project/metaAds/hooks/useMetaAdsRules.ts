@@ -29,7 +29,6 @@ type CreativeRuleChangeKey =
   | 'pauseHighCost.lookbackDays'
   | 'pauseHighCost.minCreativesInScope'
   | 'pauseHighCost.minSpend'
-  | 'pauseHighCost.cooldownHours'
   | 'pauseHighCost.targetResultType';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
@@ -316,8 +315,6 @@ export function useMetaAdsRules({
     if (
       pauseRule &&
       (Number(pauseRule.minCreativesInScope) < 3 ||
-        Number(pauseRule.cooldownHours) < 1 ||
-        Number(pauseRule.cooldownHours) > 168 ||
         ![1, 2, 3, 7].includes(Number(pauseRule.lookbackDays)) ||
         Number(pauseRule.maxCostPerResult) <= 0 ||
         Number(pauseRule.minSpend) < 0)

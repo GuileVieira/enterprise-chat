@@ -83,9 +83,6 @@ export function MetaAdsRulesWorkspace({
               <th className="w-36 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                 {localize('com_ui_project_meta_ads_budget_range')}
               </th>
-              <th className="w-24 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
-                {localize('com_ui_project_meta_ads_cooldown')}
-              </th>
               <th className="w-32 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                 {localize('com_ui_project_meta_ads_actions')}
               </th>
@@ -167,11 +164,6 @@ export function MetaAdsRulesWorkspace({
                 <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
                   {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
                   {formatMoney(row.rules.maxDailyBudget, currency)}
-                </td>
-                <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
-                  {localize('com_ui_project_meta_ads_cooldown_hours_value', {
-                    0: String(row.rules.cooldownHours),
-                  })}
                 </td>
                 <td className="border-b border-white/[0.06] px-3 py-2">
                   <div className="flex justify-end gap-1">

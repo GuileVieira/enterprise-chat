@@ -2252,9 +2252,9 @@ describe('ProjectMetaAdsPanel', () => {
       ).getByText('R$ 300,00'),
     ).toBeInTheDocument();
     expect(
-      within(
-        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_roas'),
-      ).getByText('2.00'),
+      within(screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_roas')).getByText(
+        '2.00',
+      ),
     ).toBeInTheDocument();
     expect(
       within(
@@ -4430,14 +4430,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(English.com_ui_project_meta_ads_min_roas).toBe('Minimum ROAS (optional)');
   });
 
-  it('shows hover hints for rule editor labels including cooldown behavior', () => {
-    expect(PortugueseBrazil.com_ui_project_meta_ads_cooldown_hint).toContain(
-      'aguarda antes de mudar o orçamento da mesma campanha ou conjunto novamente',
-    );
-    expect(English.com_ui_project_meta_ads_cooldown_hint).toContain(
-      'waits before changing the budget for the same campaign or ad set again',
-    );
-
+  it('shows hover hints for visible rule editor labels', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
@@ -4454,10 +4447,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(ruleDrawer).getByText('com_ui_project_meta_ads_min_roas_hint'),
     ).toBeInTheDocument();
-    expect(
-      within(ruleDrawer).getByText('com_ui_project_meta_ads_cooldown_hint'),
-    ).toBeInTheDocument();
-    expect(within(ruleDrawer).queryByTitle('com_ui_project_meta_ads_cooldown_hint')).toBeNull();
+    expect(within(ruleDrawer).queryByLabelText('com_ui_project_meta_ads_cooldown')).toBeNull();
   });
 
   it('edits the no-result spend cap from the rule editor', () => {

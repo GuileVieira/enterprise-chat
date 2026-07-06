@@ -283,7 +283,7 @@ describe('projectMetaAds settings normalization', () => {
     ).toThrow('Invalid Meta Ads monthly budget.');
   });
 
-  it('normalizes creative frequency alert rules separately from budget rules', () => {
+  it('normalizes creative frequency alert rules separately from budget rules without saving cooldown', () => {
     expect(
       router._normalizeMetaAdsForTest({
         creativeRules: {
@@ -309,7 +309,6 @@ describe('projectMetaAds settings normalization', () => {
             lookbackDays: 3,
             minCreativesInScope: 3,
             minSpend: 20,
-            cooldownHours: 48,
             targetResultType: 'thruplay',
           },
         },
@@ -336,7 +335,6 @@ describe('projectMetaAds settings normalization', () => {
             lookbackDays: 3,
             minCreativesInScope: 2,
             minSpend: 10,
-            cooldownHours: 0,
           },
         },
       }),
@@ -365,7 +363,7 @@ describe('projectMetaAds settings normalization', () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       message: 'Invalid Meta Ads creative rules.',
-      details: ['pauseHighCost.minCreativesInScope', 'pauseHighCost.cooldownHours'],
+      details: ['pauseHighCost.minCreativesInScope'],
     });
   });
 

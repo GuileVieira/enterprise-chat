@@ -739,12 +739,6 @@ function RuleCenterDetailPanel({
             value={row.rules.primaryMetric ?? 'cpa'}
           />
           <DetailMetric
-            label={localize('com_ui_project_meta_ads_cooldown')}
-            value={localize('com_ui_project_meta_ads_cooldown_hours_value', {
-              0: String(row.rules.cooldownHours),
-            })}
-          />
-          <DetailMetric
             label={localize('com_ui_project_meta_ads_rule_goal')}
             value={getRuleTargetMetricValue(row.rules, currency)}
           />

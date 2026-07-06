@@ -7,6 +7,27 @@ import type {
   MetaAdsCreativeRules,
 } from './types';
 
+type RuleNumberFieldKey = keyof Pick<
+  MetaAdsRulesState,
+  | 'targetCpa'
+  | 'minRoas'
+  | 'maxIncreasePct'
+  | 'maxDecreasePct'
+  | 'minDailyBudget'
+  | 'maxDailyBudget'
+  | 'minSpend'
+>;
+
+type OptionalRuleNumberFieldKey = keyof Pick<MetaAdsRulesState, 'minCtr' | 'maxCpc' | 'maxCpm'>;
+
+type DefaultPauseHighCostRules = Required<
+  Omit<NonNullable<MetaAdsCreativeRules['pauseHighCost']>, 'cooldownHours'>
+>;
+
+type DefaultCreativeRules = Omit<MetaAdsCreativeRules, 'pauseHighCost'> & {
+  pauseHighCost: DefaultPauseHighCostRules;
+};
+
 export const defaultRules: MetaAdsRulesState = {
   targetCpa: 45,
   targetResultType: '',
@@ -16,7 +37,6 @@ export const defaultRules: MetaAdsRulesState = {
   maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 2000,
-  cooldownHours: 1,
   minSpend: 10,
   enabledSections: {
     performance: true,
@@ -29,15 +49,13 @@ export const defaultRules: MetaAdsRulesState = {
   },
 };
 
-export const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
-  maxFrequency: undefined,
+export const defaultCreativeRules: DefaultCreativeRules = {
   pauseHighCost: {
     enabled: false,
     maxCostPerResult: 45,
     lookbackDays: 3,
     minCreativesInScope: 3,
     minSpend: 10,
-    cooldownHours: 1,
     targetResultType: '',
   },
 };
@@ -106,7 +124,7 @@ export const accountProfileRules: Record<
 };
 
 export const numberFields: Array<{
-  key: keyof MetaAdsRulesState;
+  key: RuleNumberFieldKey;
   labelKey: TranslationKeys;
   hintKey: TranslationKeys;
   step: string;
@@ -148,12 +166,6 @@ export const numberFields: Array<{
     step: '0.01',
   },
   {
-    key: 'cooldownHours',
-    labelKey: 'com_ui_project_meta_ads_cooldown',
-    hintKey: 'com_ui_project_meta_ads_cooldown_hint',
-    step: '1',
-  },
-  {
     key: 'minSpend',
     labelKey: 'com_ui_project_meta_ads_min_spend',
     hintKey: 'com_ui_project_meta_ads_min_spend_hint',
@@ -162,7 +174,7 @@ export const numberFields: Array<{
 ];
 
 export const optionalNumberFields: Array<{
-  key: keyof MetaAdsRulesState;
+  key: OptionalRuleNumberFieldKey;
   labelKey: TranslationKeys;
   hintKey: TranslationKeys;
   step: string;

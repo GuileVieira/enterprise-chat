@@ -29,7 +29,6 @@ export type MetaAdsRulesState = Required<
     | 'maxDecreasePct'
     | 'minDailyBudget'
     | 'maxDailyBudget'
-    | 'cooldownHours'
     | 'minSpend'
   >
 > &

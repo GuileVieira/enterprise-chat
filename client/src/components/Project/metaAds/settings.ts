@@ -1,5 +1,11 @@
 import type { TProject } from 'librechat-data-provider';
-import type { MetaAdsSettingsState } from './types';
+import type {
+  MetaAdsRules,
+  MetaAdsRuleGroup,
+  MetaAdsRuleOverride,
+  MetaAdsCreativeRules,
+  MetaAdsSettingsState,
+} from './types';
 import { defaultRules, defaultCreativeRules } from './rules';
 
 export type MonthlyBudgetValues = {
@@ -74,12 +80,13 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
   const currentMonth = toDateInputValue(new Date()).slice(0, 7);
   const monthlyBudgets = project.metaAds?.monthlyBudgets ?? {};
   const month = project.metaAds?.monthlyBudget?.month ?? currentMonth;
+  const projectCreativeRules = project.metaAds?.creativeRules ?? {};
   const monthlyBudget = resolveMonthlyBudgetForMonth(
     month,
     monthlyBudgets,
     project.metaAds?.monthlyBudget,
   );
-  return {
+  return sanitizeMetaAdsEditableSettings({
     enabled: project.metaAds?.enabled ?? false,
     adAccountId: project.metaAds?.adAccountId ?? '',
     tokenSecretName: project.metaAds?.tokenSecretName ?? '',
@@ -102,16 +109,63 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
       ...monthlyBudget.values,
     },
     monthlyBudgets,
-    ruleGroups: project.metaAds?.ruleGroups ?? [],
-    ruleOverrides: project.metaAds?.ruleOverrides ?? [],
-    rules: {
+    ruleGroups: (project.metaAds?.ruleGroups ?? []).map(stripMetaAdsRuleCollectionCooldown),
+    ruleOverrides: (project.metaAds?.ruleOverrides ?? []).map(stripMetaAdsRuleCollectionCooldown),
+    rules: stripMetaAdsRuleCooldown({
       ...defaultRules,
       ...(project.metaAds?.rules ?? {}),
-    },
-    creativeRules: {
+    }) as MetaAdsSettingsState['rules'],
+    creativeRules: stripMetaAdsCreativeCooldown({
       ...defaultCreativeRules,
-      ...(project.metaAds?.creativeRules ?? {}),
-    },
+      ...projectCreativeRules,
+      pauseHighCost: {
+        ...defaultCreativeRules.pauseHighCost,
+        ...(projectCreativeRules.pauseHighCost ?? {}),
+      },
+    }) as MetaAdsSettingsState['creativeRules'],
+  });
+}
+
+export function sanitizeMetaAdsEditableSettings(
+  settings: MetaAdsSettingsState,
+): MetaAdsSettingsState {
+  return {
+    ...settings,
+    rules: stripMetaAdsRuleCooldown(settings.rules) as MetaAdsSettingsState['rules'],
+    creativeRules: stripMetaAdsCreativeCooldown(
+      settings.creativeRules,
+    ) as MetaAdsSettingsState['creativeRules'],
+    ruleGroups: (settings.ruleGroups ?? []).map(stripMetaAdsRuleCollectionCooldown),
+    ruleOverrides: (settings.ruleOverrides ?? []).map(stripMetaAdsRuleCollectionCooldown),
+  };
+}
+
+export function stripMetaAdsRuleCooldown(rules?: MetaAdsRules) {
+  if (!rules) {
+    return rules;
+  }
+  const { cooldownHours: _cooldownHours, ...nextRules } = rules;
+  return nextRules;
+}
+
+export function stripMetaAdsCreativeCooldown(creativeRules?: MetaAdsCreativeRules) {
+  if (!creativeRules?.pauseHighCost) {
+    return creativeRules;
+  }
+  const { cooldownHours: _cooldownHours, ...pauseHighCost } = creativeRules.pauseHighCost;
+  return {
+    ...creativeRules,
+    pauseHighCost,
+  };
+}
+
+function stripMetaAdsRuleCollectionCooldown<T extends MetaAdsRuleGroup | MetaAdsRuleOverride>(
+  item: T,
+) {
+  return {
+    ...item,
+    rules: stripMetaAdsRuleCooldown(item.rules),
+    creativeRules: stripMetaAdsCreativeCooldown(item.creativeRules),
   };
 }
 

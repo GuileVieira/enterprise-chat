@@ -31,6 +31,10 @@ const STATUS_PERIOD_CACHE_TTL_MS = 10 * 60 * 1000;
 const STATUS_PERIOD_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
 const STATUS_PERIOD_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const statusPeriodCache = new Map();
+const ACTION_COOLDOWN_MINUTES = {
+  budget_change: 60,
+  pause_ad: 60,
+};
 const DEFAULT_RULES = {
   targetCpa: 45,
   minRoas: 2,
@@ -38,7 +42,6 @@ const DEFAULT_RULES = {
   maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 2000,
-  cooldownHours: 1,
   minSpend: MIN_SAMPLE_SPEND,
   conversionEvidenceMultiplier: 2,
   conversionEvidenceMinHours: 6,
@@ -75,7 +78,6 @@ const RULE_LIMITS = {
   maxDecreasePct: { min: 0, max: 100 },
   minDailyBudget: { min: 0.01 },
   maxDailyBudget: { min: 0.01 },
-  cooldownHours: { min: 1, max: 168 },
   minSpend: { min: 0 },
   conversionEvidenceMultiplier: { min: 1, max: 10 },
   conversionEvidenceMinHours: { min: 0, max: 168 },
@@ -92,7 +94,6 @@ const PAUSE_HIGH_COST_DEFAULTS = {
   lookbackDays: 3,
   minCreativesInScope: 3,
   minSpend: MIN_SAMPLE_SPEND,
-  cooldownHours: 1,
   targetResultType: '',
 };
 const AGGREGATE_RESULT_TYPES = new Set([
@@ -1025,7 +1026,6 @@ function validateMetaAdsRules(rules = {}) {
     'maxDecreasePct',
     'minDailyBudget',
     'maxDailyBudget',
-    'cooldownHours',
     'minSpend',
     'conversionEvidenceMultiplier',
     'conversionEvidenceMinHours',
@@ -1112,7 +1112,6 @@ function validateMetaAdsCreativeRules(rules = {}) {
     const lookbackDays = Number(pauseHighCost.lookbackDays);
     const minCreativesInScope = Number(pauseHighCost.minCreativesInScope);
     const minSpend = Number(pauseHighCost.minSpend);
-    const cooldownHours = Number(pauseHighCost.cooldownHours);
     if (!Number.isFinite(maxCostPerResult) || maxCostPerResult <= 0) {
       errors.push('pauseHighCost.maxCostPerResult');
     }
@@ -1125,16 +1124,12 @@ function validateMetaAdsCreativeRules(rules = {}) {
     if (!Number.isFinite(minSpend) || minSpend < 0) {
       errors.push('pauseHighCost.minSpend');
     }
-    if (!Number.isFinite(cooldownHours) || cooldownHours < 1 || cooldownHours > 168) {
-      errors.push('pauseHighCost.cooldownHours');
-    }
     validated.pauseHighCost = {
       enabled: pauseHighCost.enabled === true,
       maxCostPerResult,
       lookbackDays,
       minCreativesInScope,
       minSpend,
-      cooldownHours,
       targetResultType:
         typeof pauseHighCost.targetResultType === 'string'
           ? pauseHighCost.targetResultType.trim()
@@ -1171,6 +1166,13 @@ function normalizeAdAccountId(value) {
 function getScheduleIntervalMinutes(metaAds = {}) {
   const interval = Number(metaAds.scheduleIntervalMinutes);
   return SCHEDULE_INTERVALS.has(interval) ? interval : DEFAULT_SCHEDULE_INTERVAL_MINUTES;
+}
+
+function resolveActionCooldownMinutes({ actionType, metaAds, scheduleIntervalMinutes } = {}) {
+  const interval = SCHEDULE_INTERVALS.has(Number(scheduleIntervalMinutes))
+    ? Number(scheduleIntervalMinutes)
+    : getScheduleIntervalMinutes(metaAds);
+  return Math.max(interval, ACTION_COOLDOWN_MINUTES[actionType] ?? 60);
 }
 
 function getMetaAdsTimeZone() {
@@ -4131,15 +4133,15 @@ async function getAccessToken(tenantId, metaAds = {}) {
   return credentials.accessToken;
 }
 
-async function getRecentChange({ projectId, entityId, cooldownHours }) {
+async function getRecentChange({ projectId, entityId, cooldownMinutes }) {
   const { MetaAdsBudgetChange } = getModels();
-  const since = new Date(Date.now() - cooldownHours * 60 * 60 * 1000);
+  const since = new Date(Date.now() - cooldownMinutes * 60 * 1000);
   return MetaAdsBudgetChange.findOne({ projectId, entityId, createdAt: { $gte: since } }).lean();
 }
 
-async function getRecentAutomationAction({ projectId, entityId, actionType, cooldownHours }) {
+async function getRecentAutomationAction({ projectId, entityId, actionType, cooldownMinutes }) {
   const { MetaAdsAutomationAction } = getModels();
-  const since = new Date(Date.now() - cooldownHours * 60 * 60 * 1000);
+  const since = new Date(Date.now() - cooldownMinutes * 60 * 1000);
   return MetaAdsAutomationAction.findOne({
     projectId,
     entityId,
@@ -4370,6 +4372,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsAutomationAction } = getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const entityConcurrency = getCronEntityConcurrency();
+  const scheduleIntervalMinutes = getScheduleIntervalMinutes(metaAds);
 
   const campaignsPromise = listCampaigns({ adAccountId, token, graphVersion }).catch((error) => {
     logger.error('[MetaAdsBudget] campaigns fetch failed', {
@@ -4765,7 +4768,10 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       const recentChange = await getRecentChange({
         projectId,
         entityId: recommendationEntityId,
-        cooldownHours: rules.cooldownHours,
+        cooldownMinutes: resolveActionCooldownMinutes({
+          actionType: 'budget_change',
+          scheduleIntervalMinutes,
+        }),
       });
       const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
 
@@ -4816,7 +4822,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         ruleId: effectiveRuleContext.ruleId,
         ruleName: effectiveRuleContext.ruleName,
         ruleScope: effectiveRuleContext.ruleScope,
-        reason: blockedByCooldown ? 'Bloqueado por cooldown de orçamento.' : proposal.reason,
+        reason: blockedByCooldown ? 'Bloqueado por trava interna de orçamento.' : proposal.reason,
         mode: metaAds.automationMode || 'recommend',
       });
       const creativePauseRecommendations = [];
@@ -4842,9 +4848,10 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           projectId,
           entityId: pauseProposal.entityId,
           actionType: 'pause_ad',
-          cooldownHours:
-            effectiveRuleContext.creativeRules.pauseHighCost?.cooldownHours ??
-            PAUSE_HIGH_COST_DEFAULTS.cooldownHours,
+          cooldownMinutes: resolveActionCooldownMinutes({
+            actionType: 'pause_ad',
+            scheduleIntervalMinutes,
+          }),
         });
         await MetaAdsRecommendation.updateMany(
           {
@@ -4866,7 +4873,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           adAccountId,
           ...pauseProposal,
           status: recentPause ? 'blocked' : 'pending',
-          reason: recentPause ? 'Bloqueado por cooldown de criativo.' : pauseProposal.reason,
+          reason: recentPause ? 'Bloqueado por trava interna de criativo.' : pauseProposal.reason,
           mode: metaAds.automationMode || 'recommend',
         });
         creativePauseRecommendations.push(pauseRecommendation.toObject());
@@ -5644,6 +5651,7 @@ module.exports = {
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
   _getMetaAdsMonthRangeForTest: getMetaAdsMonthRange,
+  _resolveActionCooldownMinutesForTest: resolveActionCooldownMinutes,
   _resolveMonthlyBudgetForTest: resolveMonthlyBudget,
   _resolveStatusPeriodForTest: resolveStatusPeriod,
   _resolveTargetResultTypeForTest: resolveTargetResultType,
