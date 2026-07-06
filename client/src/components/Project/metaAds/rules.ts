@@ -16,7 +16,7 @@ export const defaultRules: MetaAdsRulesState = {
   maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 2000,
-  cooldownHours: 24,
+  cooldownHours: 1,
   minSpend: 10,
   enabledSections: {
     performance: true,
@@ -37,7 +37,7 @@ export const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
     lookbackDays: 3,
     minCreativesInScope: 3,
     minSpend: 10,
-    cooldownHours: 24,
+    cooldownHours: 1,
     targetResultType: '',
   },
 };

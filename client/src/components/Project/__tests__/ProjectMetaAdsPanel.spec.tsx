@@ -3946,6 +3946,8 @@ describe('ProjectMetaAdsPanel', () => {
     );
     expect(screen.getAllByText(/Ana Media/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Bruno Ads/).length).toBeGreaterThan(0);
+    expect(screen.getByText('bruno@example.com')).toBeInTheDocument();
+    expect(screen.getByText('u2')).toBeInTheDocument();
     expect(
       screen.getByText(
         (content) =>

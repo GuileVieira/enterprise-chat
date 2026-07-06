@@ -1,6 +1,6 @@
 import type { ProjectMetaAdsRuleChange } from 'librechat-data-provider';
 
-import { formatRuleChangeAction, formatRuleHistoryActor } from './ruleAudit';
+import { formatRuleChangeAction } from './ruleAudit';
 import type { Localize } from './types';
 
 function formatRuleChangeDate(value?: string): string {
@@ -57,33 +57,48 @@ export function MetaAdsRuleHistoryPanel({
             {localize('com_ui_project_meta_ads_loading')}
           </div>
         ) : changes.length > 0 ? (
-          changes.slice(0, 12).map((change) => (
-            <div
-              key={change._id ?? change.createdAt}
-              className="grid gap-2 rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-300 md:grid-cols-[160px_1fr_120px]"
-            >
-              <div className="font-mono">{formatRuleChangeDate(change.createdAt)}</div>
-              <div className="min-w-0">
-                <div className="font-medium text-slate-900 dark:text-white">
-                  {formatRuleChangeAction(change, localize) ||
-                    formatChangedFields(change.changedFields ?? [], localize)}
-                </div>
-                {change.ruleChanges?.length ? (
-                  <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    {formatChangedFields(
-                      [
-                        ...new Set(
-                          change.ruleChanges.flatMap((ruleChange) => ruleChange.changedFields),
-                        ),
-                      ],
-                      localize,
-                    )}
+          changes.slice(0, 12).map((change) => {
+            const actorLabel = change.actorUserEmail || change.actorUserName || change.actor || '-';
+            const actorId =
+              change.actorUserId && change.actorUserId !== actorLabel ? change.actorUserId : null;
+
+            return (
+              <div
+                key={change._id ?? change.createdAt}
+                className="grid gap-2 rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-300 md:grid-cols-[160px_minmax(0,1fr)_minmax(180px,240px)]"
+              >
+                <div className="font-mono">{formatRuleChangeDate(change.createdAt)}</div>
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-900 dark:text-white">
+                    {formatRuleChangeAction(change, localize) ||
+                      formatChangedFields(change.changedFields ?? [], localize)}
                   </div>
-                ) : null}
+                  {change.ruleChanges?.length ? (
+                    <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {formatChangedFields(
+                        [
+                          ...new Set(
+                            change.ruleChanges.flatMap((ruleChange) => ruleChange.changedFields),
+                          ),
+                        ],
+                        localize,
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="min-w-0 text-right">
+                  <div className="truncate font-medium text-slate-700 dark:text-slate-200">
+                    {actorLabel}
+                  </div>
+                  {actorId ? (
+                    <div className="mt-1 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
+                      {actorId}
+                    </div>
+                  ) : null}
+                </div>
               </div>
-              <div className="text-right">{formatRuleHistoryActor(change)}</div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-300 py-5 text-center text-sm text-slate-500 dark:border-white/15 dark:text-slate-400">
             {localize('com_ui_project_meta_ads_rule_history_empty')}

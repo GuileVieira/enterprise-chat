@@ -38,7 +38,7 @@ const DEFAULT_RULES = {
   maxDecreasePct: 25,
   minDailyBudget: 20,
   maxDailyBudget: 2000,
-  cooldownHours: 24,
+  cooldownHours: 1,
   minSpend: MIN_SAMPLE_SPEND,
   conversionEvidenceMultiplier: 2,
   conversionEvidenceMinHours: 6,
@@ -92,7 +92,7 @@ const PAUSE_HIGH_COST_DEFAULTS = {
   lookbackDays: 3,
   minCreativesInScope: 3,
   minSpend: MIN_SAMPLE_SPEND,
-  cooldownHours: 24,
+  cooldownHours: 1,
   targetResultType: '',
 };
 const AGGREGATE_RESULT_TYPES = new Set([
@@ -4842,7 +4842,9 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           projectId,
           entityId: pauseProposal.entityId,
           actionType: 'pause_ad',
-          cooldownHours: effectiveRuleContext.creativeRules.pauseHighCost?.cooldownHours ?? 24,
+          cooldownHours:
+            effectiveRuleContext.creativeRules.pauseHighCost?.cooldownHours ??
+            PAUSE_HIGH_COST_DEFAULTS.cooldownHours,
         });
         await MetaAdsRecommendation.updateMany(
           {
