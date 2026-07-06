@@ -19,11 +19,39 @@ export function getMetaAdsEntityRuleLabel(
   settings: MetaAdsSettingsState,
   entityLevel: MetaAdsRuleGroup['entityLevel'],
   entityId: string,
+  globalLabel: string,
+  campaignId?: string,
 ) {
+  const activeOverrides = (settings.ruleOverrides ?? []).filter(
+    (override) => override.enabled !== false,
+  );
+  const adsetOverride =
+    entityLevel === 'adset'
+      ? activeOverrides.find(
+          (override) => override.entityLevel === 'adset' && override.entityId === entityId,
+        )
+      : undefined;
+  const campaignOverride = activeOverrides.find(
+    (override) =>
+      override.entityLevel === 'campaign' &&
+      override.entityId === (entityLevel === 'campaign' ? entityId : campaignId),
+  );
+  const ruleGroup = settings.ruleGroups?.find((group) => {
+    if (group.enabled === false || !Array.isArray(group.entityIds)) {
+      return false;
+    }
+    return group.entityLevel === entityLevel
+      ? group.entityIds.includes(entityId)
+      : group.entityLevel === 'campaign' && group.entityIds.includes(campaignId ?? '');
+  });
+
   return (
-    settings.ruleGroups?.find(
-      (group) => group.entityLevel === entityLevel && group.entityIds?.includes(entityId),
-    )?.name ?? '-'
+    adsetOverride?.entityName ||
+    adsetOverride?.entityId ||
+    campaignOverride?.entityName ||
+    campaignOverride?.entityId ||
+    ruleGroup?.name ||
+    (settings.enabled ? globalLabel : '-')
   );
 }
 

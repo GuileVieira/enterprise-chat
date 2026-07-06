@@ -47,7 +47,11 @@ export type OverviewRendererContext = {
     level: 'campaign' | 'adset' | 'ad',
     isClickable?: boolean,
   ) => string;
-  getEntityRuleLabel: (entityLevel: 'campaign' | 'adset', entityId: string) => string;
+  getEntityRuleLabel: (
+    entityLevel: 'campaign' | 'adset',
+    entityId: string,
+    campaignId?: string,
+  ) => string;
   getManualBudgetDraft: (
     entityLevel: ManualBudgetDraft['entityLevel'],
     entityId: string,

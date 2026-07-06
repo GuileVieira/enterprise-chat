@@ -58,8 +58,18 @@ export function useMetaAdsRules({
 }: UseMetaAdsRulesParams) {
   const [ruleGroupDraft, setRuleGroupDraft] = useState<RuleGroupDraft | null>(null);
   const canCreateRuleGroup = canUseMetaAdsActions;
-  const getEntityRuleLabel = (entityLevel: MetaAdsRuleGroup['entityLevel'], entityId: string) =>
-    getMetaAdsEntityRuleLabel(settings, entityLevel, entityId);
+  const getEntityRuleLabel = (
+    entityLevel: MetaAdsRuleGroup['entityLevel'],
+    entityId: string,
+    campaignId?: string,
+  ) =>
+    getMetaAdsEntityRuleLabel(
+      settings,
+      entityLevel,
+      entityId,
+      localize('com_ui_project_meta_ads_global_rules'),
+      campaignId,
+    );
   const ruleDraftEntityLabels = getMetaAdsRuleDraftEntityLabels(ruleGroupDraft, campaigns);
   const ruleDraftEntityOptions = getMetaAdsRuleDraftEntityOptions(ruleGroupDraft, campaigns);
   const ruleRows = buildMetaAdsRuleRows({ settings, campaigns, localize });

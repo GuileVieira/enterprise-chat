@@ -284,8 +284,7 @@ export function createMetaAdsOverviewRenderers(
           campaignId: campaign.campaignId,
           entityName: adset.entityName,
           currentBudget:
-            context.getManualBudgetDraft('adset', adset.entityId)?.dailyBudget ??
-            adset.dailyBudget,
+            context.getManualBudgetDraft('adset', adset.entityId)?.dailyBudget ?? adset.dailyBudget,
         });
       const onClick = campaign.editableBudgetLevel === 'adset' ? editBudget : undefined;
       const pendingBudget = context.getManualBudgetDraft('adset', adset.entityId);
@@ -313,7 +312,10 @@ export function createMetaAdsOverviewRenderers(
       return metric;
     }
     if (column.key === 'rule') {
-      return textCell(column, context.getEntityRuleLabel('adset', adset.entityId));
+      return textCell(
+        column,
+        context.getEntityRuleLabel('adset', adset.entityId, campaign.campaignId),
+      );
     }
     if (column.key === 'recommendation') {
       return recommendationCell({ column, recommendation, currency: context.currency });
