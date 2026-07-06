@@ -3385,6 +3385,7 @@ function toRankingItem({ level, insight, metrics, meta = {}, adAccountId, thumbn
     spend: metrics.spend,
     resultCount: metrics.resultCount,
     cpa: metrics.cpa,
+    roas: metrics.roas,
     ctr: metrics.ctr,
     clicks: metrics.clicks,
     impressions: metrics.impressions,

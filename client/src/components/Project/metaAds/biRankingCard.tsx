@@ -16,6 +16,7 @@ const sortColumns: Array<[BiRankingSortKey, TranslationKeys]> = [
   ['spend', 'com_ui_project_meta_ads_spend'],
   ['resultCount', 'com_ui_project_meta_ads_results'],
   ['cpa', 'com_ui_project_meta_ads_cpa'],
+  ['roas', 'com_ui_project_meta_ads_roas'],
   ['ctr', 'com_ui_project_meta_ads_ctr'],
   ['frequency', 'com_ui_project_meta_ads_frequency'],
 ];
@@ -133,6 +134,9 @@ export function MetaAdsBiRankingCard({
                       {formatRankingCost(getRankEfficiency(rankItem), currency)}
                     </td>
                     <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
+                      {formatMetric(item.roas)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
                       {formatPercent(item.ctr)}
                     </td>
                     <td className="px-3 py-3 text-right font-mono text-slate-900 dark:text-white">
@@ -143,7 +147,7 @@ export function MetaAdsBiRankingCard({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400">
+                <td colSpan={9} className="px-3 py-5 text-sm text-slate-500 dark:text-slate-400">
                   {localize(emptyMessageKey)}
                 </td>
               </tr>

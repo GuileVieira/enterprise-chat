@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react';
+import type { TranslationKeys } from '~/hooks';
 import { MetaAdsBiControlsPanel } from './biControls';
 import { MetaAdsBiRankingCard } from './biRankingCard';
 import { MetaAdsEvolutionDashboard } from './evolutionDashboard';
@@ -32,6 +33,10 @@ type MetaAdsBiWorkspaceProps = {
   > & {
     adRankingEmptyMessageKey: ComponentProps<typeof MetaAdsBiRankingCard>['emptyMessageKey'];
   };
+  reportCards: Array<{
+    labelKey: TranslationKeys;
+    value: string;
+  }>;
   evolution: Pick<
     ComponentProps<typeof MetaAdsEvolutionDashboard>,
     | 'seriesPaths'
@@ -61,6 +66,7 @@ export function MetaAdsBiWorkspace({
   search,
   options,
   ranking,
+  reportCards,
   evolution,
   inputClassName,
   currency,
@@ -97,6 +103,24 @@ export function MetaAdsBiWorkspace({
           onResultTypeChange={onControlsChange.resultType}
           onMetricChange={onControlsChange.metric}
         />
+        <div
+          data-testid="meta-ads-bi-report-cards"
+          className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6"
+        >
+          {reportCards.map((card) => (
+            <div
+              key={card.labelKey}
+              className="bg-white/82 rounded-2xl border border-slate-200/80 p-4 shadow-[0_14px_38px_-34px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-white/[0.055]"
+            >
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                {localize(card.labelKey)}
+              </div>
+              <div className="mt-3 font-mono text-xl font-semibold tabular-nums text-slate-950 dark:text-white">
+                {card.value}
+              </div>
+            </div>
+          ))}
+        </div>
         <MetaAdsBiRankingCard
           titleKey={ranking.titleKey}
           items={ranking.items}

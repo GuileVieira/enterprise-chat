@@ -8,9 +8,20 @@ import { metaAdsInput } from '../chrome';
 import { buildMetaAdsBiState } from '../biState';
 import { MetaAdsBiWorkspace } from '../biWorkspace';
 import { buildMetaAdsEvolutionState } from '../evolutionState';
-import { getObjectiveLabel, getResultTypeLabel } from '../formatters';
+import {
+  formatMetric,
+  formatMoney,
+  formatPercent,
+  getObjectiveLabel,
+  getResultTypeLabel,
+} from '../formatters';
 import { cleanDashboardName } from '../helpers';
-import type { Localize, MetaAdsBiRankItem, MetaAdsSettingsState } from '../types';
+import type {
+  Localize,
+  MetaAdsBiControls,
+  MetaAdsBiRankItem,
+  MetaAdsSettingsState,
+} from '../types';
 import type { useMetaAdsBiWorkspace } from './useMetaAdsBiWorkspace';
 import type { useMetaAdsPeriodFilter } from './useMetaAdsPeriodFilter';
 
@@ -64,6 +75,69 @@ function filterBiRankingItems(
 
     return searchableText.includes(normalizedQuery);
   });
+}
+
+function getCampaignResultMetrics(campaign: ProjectMetaAdsCampaignSummary, resultType: string) {
+  if (resultType === 'all') {
+    return {
+      spend: campaign.spend,
+      resultCount: campaign.resultCount,
+    };
+  }
+  const breakdown = campaign.resultTypeBreakdown?.find(
+    (item) => (item.resultType || 'UNKNOWN') === resultType,
+  );
+  return {
+    spend: breakdown?.totalSpend ?? campaign.spend,
+    resultCount: breakdown?.totalResults ?? campaign.resultCount,
+  };
+}
+
+function buildBiReportCards({
+  campaigns,
+  controls,
+  currency,
+}: {
+  campaigns: ProjectMetaAdsCampaignSummary[];
+  controls: MetaAdsBiControls;
+  currency: string;
+}): MetaAdsBiWorkspaceProps['reportCards'] {
+  let totalSpend = 0;
+  let totalResults = 0;
+  let clicks = 0;
+  let impressions = 0;
+  let roasWeightedTotal = 0;
+  let roasWeight = 0;
+  for (const campaign of campaigns) {
+    if (controls.objective !== 'all' && (campaign.objective || 'UNKNOWN') !== controls.objective) {
+      continue;
+    }
+    const metrics = getCampaignResultMetrics(campaign, controls.resultType);
+    const spend = Number(metrics.spend ?? 0);
+    const resultCount = Number(metrics.resultCount ?? 0);
+    const campaignClicks = Number(campaign.clicks ?? 0);
+    const campaignImpressions = Number(campaign.impressions ?? 0);
+    const roas = Number(campaign.roas);
+    totalSpend += Number.isFinite(spend) ? spend : 0;
+    totalResults += Number.isFinite(resultCount) ? resultCount : 0;
+    clicks += Number.isFinite(campaignClicks) ? campaignClicks : 0;
+    impressions += Number.isFinite(campaignImpressions) ? campaignImpressions : 0;
+    if (Number.isFinite(roas) && roas > 0 && Number.isFinite(spend) && spend > 0) {
+      roasWeightedTotal += roas * spend;
+      roasWeight += spend;
+    }
+  }
+  const averageCost = totalResults > 0 ? totalSpend / totalResults : null;
+  const averageRoas = roasWeight > 0 ? roasWeightedTotal / roasWeight : null;
+  const ctr = impressions > 0 ? (clicks / impressions) * 100 : null;
+  return [
+    { labelKey: 'com_ui_project_meta_ads_total_spend', value: formatMoney(totalSpend, currency) },
+    { labelKey: 'com_ui_project_meta_ads_total_results', value: formatMetric(totalResults) },
+    { labelKey: 'com_ui_project_meta_ads_average_cost', value: formatMoney(averageCost, currency) },
+    { labelKey: 'com_ui_project_meta_ads_roas', value: formatMetric(averageRoas) },
+    { labelKey: 'com_ui_project_meta_ads_ctr', value: formatPercent(ctr) },
+    { labelKey: 'com_ui_project_meta_ads_clicks', value: formatMetric(clicks) },
+  ];
 }
 
 export function useMetaAdsBiAdapter({
@@ -122,6 +196,11 @@ export function useMetaAdsBiAdapter({
     biSearchQuery,
     localize,
   );
+  const reportCards = buildBiReportCards({
+    campaigns: biCampaigns,
+    controls: biControls,
+    currency,
+  });
 
   return {
     objectiveOptions,
@@ -156,6 +235,7 @@ export function useMetaAdsBiAdapter({
         onSort: onBiRankingSort,
         onSelect: setSelectedBiRankItem,
       },
+      reportCards,
       evolution: {
         enabled: hasEvolutionSection,
         seriesPaths: evolutionSeriesPaths,

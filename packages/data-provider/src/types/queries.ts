@@ -511,6 +511,7 @@ export type ProjectMetaAdsRankingItem = {
   spend: number;
   resultCount: number;
   cpa?: number | null;
+  roas?: number | null;
   ctr?: number | null;
   clicks?: number;
   impressions?: number;

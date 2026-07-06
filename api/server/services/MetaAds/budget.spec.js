@@ -1009,6 +1009,55 @@ describe('Meta Ads budget service persistence safety', () => {
     jest.dontMock('~/server/services/MetaAds/graph');
   });
 
+  it('returns ROAS in campaign BI rankings', async () => {
+    const { budget, listCampaignInsights } = loadBudgetWithMocks({
+      project: {
+        projectId: 'report-p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          tokenSecretName: 'secret',
+          accountProfile: 'ecommerce',
+          rules: { targetResultType: 'purchase' },
+        },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Purchase CBO', objective: 'OUTCOME_SALES' }],
+      campaignInsights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Purchase CBO',
+          spend: '100',
+          impressions: '1000',
+          clicks: '50',
+          ctr: '5',
+          frequency: '1.2',
+          actions: [{ action_type: 'purchase', value: '4' }],
+          cost_per_action_type: [{ action_type: 'purchase', value: '25' }],
+          purchase_roas: [{ value: '3.5' }],
+        },
+      ],
+    });
+
+    const result = await budget.getProjectMetaAdsRankings('report-p1', 'tenant-a', {
+      level: 'campaign',
+      datePreset: 'last_7d',
+      resultType: 'purchase',
+    });
+
+    expect(listCampaignInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ datePreset: 'last_7d' }),
+    );
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        id: 'campaign-1',
+        roas: 3.5,
+        spend: 100,
+        resultCount: 4,
+        cpa: 25,
+      }),
+    ]);
+  });
+
   it('rejects applying a recommendation from another tenant', async () => {
     const { budget, metaPost } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },

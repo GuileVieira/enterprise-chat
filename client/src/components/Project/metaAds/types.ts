@@ -156,6 +156,7 @@ export type MetaAdsBiRankItem = {
   resultType?: string;
   resultCount?: number | null;
   cpa?: number | null;
+  roas?: number | null;
   spend?: number | null;
   ctr?: number | null;
   frequency?: number | null;
@@ -169,7 +170,7 @@ export type MetaAdsBiRankings = {
   ads: MetaAdsBiRankItem[];
 };
 
-export type BiRankingSortKey = 'cpa' | 'spend' | 'resultCount' | 'ctr' | 'frequency';
+export type BiRankingSortKey = 'cpa' | 'roas' | 'spend' | 'resultCount' | 'ctr' | 'frequency';
 export type BiRankingSort = {
   key: BiRankingSortKey;
   direction: 'asc' | 'desc';

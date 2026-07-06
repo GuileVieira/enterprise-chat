@@ -297,6 +297,49 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
   });
 
+  it('shows paid report cards and ROAS in the BI workspace', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Purchase Campaign',
+        objective: 'OUTCOME_SALES',
+        spend: 400,
+        resultCount: 8,
+        cpa: 50,
+        roas: 3.5,
+        ctr: 2.5,
+        clicks: 120,
+        impressions: 4800,
+        resultType: 'purchase',
+        adSets: [],
+      },
+    ];
+    mockRankingData.items = [
+      {
+        id: 'campaign-1',
+        level: 'campaign',
+        name: 'Purchase Campaign',
+        objective: 'OUTCOME_SALES',
+        resultType: 'purchase',
+        spend: 400,
+        resultCount: 8,
+        cpa: 50,
+        roas: 3.5,
+        ctr: 2.5,
+        frequency: 1.4,
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    openBiTab();
+
+    expect(screen.getByTestId('meta-ads-bi-report-cards')).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_project_meta_ads_roas')).not.toHaveLength(0);
+    expect(screen.getAllByText('3.50')).not.toHaveLength(0);
+    expect(screen.getByText('Purchase Campaign')).toBeInTheDocument();
+  });
+
   it('defers BI and rules data requests until their tabs are opened', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
