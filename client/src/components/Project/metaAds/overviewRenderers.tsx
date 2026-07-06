@@ -281,6 +281,7 @@ export function createMetaAdsOverviewRenderers(
         context.onOpenBudgetEditor({
           entityLevel: 'adset',
           entityId: adset.entityId,
+          campaignId: campaign.campaignId,
           entityName: adset.entityName,
           currentBudget:
             context.getManualBudgetDraft('adset', adset.entityId)?.dailyBudget ??

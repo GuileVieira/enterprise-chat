@@ -14,11 +14,14 @@ import type {
 } from '~/data-provider';
 import { logger } from '~/utils';
 import { getRequestErrorMessage } from '../errors';
+import { formatMoney } from '../formatters';
+import { getMetaAdsEffectiveRules } from '../rulesState';
 import type {
   Localize,
   BudgetEditor,
   DuplicateDraft,
   ManualBudgetDraft,
+  MetaAdsSettingsState,
 } from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
@@ -39,6 +42,7 @@ type UseMetaAdsEntityActionsParams = {
   duplicateEntity: ReturnType<typeof useDuplicateProjectMetaAdsEntityMutation>;
   updateEntityStatus: ReturnType<typeof useUpdateProjectMetaAdsEntityStatusMutation>;
   applyRecommendation: ReturnType<typeof useApplyProjectMetaAdsRecommendationMutation>;
+  settings: MetaAdsSettingsState;
   onManualBudgetDraft: (draft: ManualBudgetDraft) => void;
   localize: Localize;
   showToast: ShowToast;
@@ -68,6 +72,7 @@ export function useMetaAdsEntityActions({
   duplicateEntity,
   updateEntityStatus,
   applyRecommendation,
+  settings,
   onManualBudgetDraft,
   localize,
   showToast,
@@ -157,9 +162,26 @@ export function useMetaAdsEntityActions({
       });
       return;
     }
+    const rules = getMetaAdsEffectiveRules(settings, {
+      campaignId:
+        budgetEditor.entityLevel === 'campaign' ? budgetEditor.entityId : budgetEditor.campaignId,
+      adsetId: budgetEditor.entityLevel === 'adset' ? budgetEditor.entityId : undefined,
+    });
+    if (dailyBudget < rules.minDailyBudget || dailyBudget > rules.maxDailyBudget) {
+      const currency = statusQuery.data?.currency ?? 'BRL';
+      showToast({
+        message: `${localize('com_ui_project_meta_ads_budget_outside_effective_limits')}: ${formatMoney(
+          rules.minDailyBudget,
+          currency,
+        )} - ${formatMoney(rules.maxDailyBudget, currency)}`,
+        status: 'error',
+      });
+      return;
+    }
     onManualBudgetDraft({
       entityLevel: budgetEditor.entityLevel,
       entityId: budgetEditor.entityId,
+      campaignId: budgetEditor.campaignId,
       entityName: budgetEditor.entityName,
       dailyBudget,
       currentBudget: budgetEditor.currentBudget,

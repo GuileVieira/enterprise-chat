@@ -51,6 +51,7 @@ export type MetaAdsSettingsState = Omit<MetaAdsSettings, 'rules' | 'creativeRule
 export type BudgetEditor = {
   entityLevel: ProjectMetaAdsManualBudgetPayload['entityLevel'];
   entityId: string;
+  campaignId?: string;
   entityName?: string;
   currentBudget?: number;
 };
@@ -91,6 +92,7 @@ export type RuleRow = {
 };
 
 export type ManualBudgetDraft = ProjectMetaAdsManualBudgetPayload & {
+  campaignId?: string;
   currentBudget?: number;
 };
 

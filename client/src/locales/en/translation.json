@@ -2351,6 +2351,7 @@
   "com_ui_project_meta_ads_pending_budget": "Pending: {{0}}",
   "com_ui_project_meta_ads_budget_queued": "Budget added to pending changes.",
   "com_ui_project_meta_ads_invalid_budget": "Enter a valid daily budget.",
+  "com_ui_project_meta_ads_budget_outside_effective_limits": "Budget outside the effective limit",
   "com_ui_project_meta_ads_budget_success": "Meta Ads budget updated.",
   "com_ui_project_meta_ads_budget_failed": "Could not update Meta Ads budget.",
   "com_ui_project_meta_ads_manual_budget_hint": "Manual update stays pending and is sent to Meta only when changes are published.",

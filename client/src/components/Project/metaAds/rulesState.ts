@@ -27,6 +27,46 @@ export function getMetaAdsEntityRuleLabel(
   );
 }
 
+export function getMetaAdsEffectiveRules(
+  settings: MetaAdsSettingsState,
+  {
+    campaignId,
+    adsetId,
+  }: {
+    campaignId?: string;
+    adsetId?: string;
+  },
+) {
+  const ruleGroup = settings.ruleGroups?.find((group) => {
+    if (group.enabled === false || !Array.isArray(group.entityIds)) {
+      return false;
+    }
+    return group.entityLevel === 'campaign'
+      ? group.entityIds.includes(campaignId ?? '')
+      : group.entityIds.includes(adsetId ?? '');
+  });
+  const campaignOverride = settings.ruleOverrides?.find(
+    (override) =>
+      override.enabled !== false &&
+      override.entityLevel === 'campaign' &&
+      override.entityId === campaignId,
+  );
+  const adsetOverride = settings.ruleOverrides?.find(
+    (override) =>
+      override.enabled !== false &&
+      override.entityLevel === 'adset' &&
+      override.entityId === adsetId,
+  );
+
+  return {
+    ...defaultRules,
+    ...settings.rules,
+    ...(ruleGroup?.rules ?? {}),
+    ...(campaignOverride?.rules ?? {}),
+    ...(adsetOverride?.rules ?? {}),
+  };
+}
+
 export function getMetaAdsCampaignName(
   campaigns: ProjectMetaAdsCampaignSummary[],
   campaignId: string,

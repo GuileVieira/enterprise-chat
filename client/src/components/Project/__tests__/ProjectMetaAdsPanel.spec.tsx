@@ -3398,6 +3398,107 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
   });
 
+  it('blocks manual budget drafts outside the effective rule limit', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        rules: {
+          maxDailyBudget: 120,
+        },
+      },
+    } as TProject;
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('R$ 100,00'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '600' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.queryByText('com_ui_project_meta_ads_pending_budget')).toBeNull();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /^com_ui_project_meta_ads_budget_outside_effective_limits: R\$\s*20,00 - R\$\s*120,00$/,
+      ),
+      status: 'error',
+    });
+  });
+
+  it('blocks ad set budget drafts with campaign group limits', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        ruleGroups: [
+          {
+            id: 'group-abo',
+            name: 'ABO group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-abo'],
+            enabled: true,
+            rules: {
+              maxDailyBudget: 80,
+            },
+          },
+        ],
+      },
+    } as TProject;
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-abo',
+        campaignName: 'ABO Sales',
+        spend: 180,
+        dailyBudget: 70,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-abo',
+            entityName: 'Visible ABO audience',
+            campaignId: 'campaign-abo',
+            campaignName: 'ABO Sales',
+            dailyBudget: 70,
+            spend: 180,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    const aboAdSetRow = screen.getByText('Visible ABO audience').closest('tr');
+    expect(aboAdSetRow).not.toBeNull();
+
+    fireEvent.click(within(aboAdSetRow as HTMLElement).getByText('R$ 70,00'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '90' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.queryByText('com_ui_project_meta_ads_pending_budget')).toBeNull();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: expect.stringMatching(
+        /^com_ui_project_meta_ads_budget_outside_effective_limits: R\$\s*20,00 - R\$\s*80,00$/,
+      ),
+      status: 'error',
+    });
+  });
+
   it('accepts Brazilian decimal comma when publishing a manual budget change', async () => {
     mockStatusData.campaigns = [
       {

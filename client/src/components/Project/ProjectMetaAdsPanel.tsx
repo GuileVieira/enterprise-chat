@@ -239,6 +239,7 @@ export default function ProjectMetaAdsPanel({
     duplicateEntity,
     updateEntityStatus,
     applyRecommendation,
+    settings,
     onManualBudgetDraft: setManualBudgetDraft,
     localize,
     showToast,

@@ -1371,6 +1371,7 @@
   "com_ui_project_meta_ads_pending_budget": "Pendente: {{0}}",
   "com_ui_project_meta_ads_budget_queued": "Orçamento adicionado às alterações pendentes.",
   "com_ui_project_meta_ads_invalid_budget": "Informe um orçamento diário válido.",
+  "com_ui_project_meta_ads_budget_outside_effective_limits": "Orçamento fora do limite efetivo",
   "com_ui_project_meta_ads_budget_success": "Orçamento Meta Ads atualizado.",
   "com_ui_project_meta_ads_budget_failed": "Não foi possível atualizar o orçamento Meta Ads.",
   "com_ui_project_meta_ads_manual_budget_hint": "A mudança manual fica pendente e só é enviada para a Meta ao publicar alterações.",
