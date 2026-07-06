@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { logger, runAsSystem, getTenantId } = require('@librechat/data-schemas');
-const { getProjectById, findProjectById, getTenantSecret } = require('~/models');
+const { getProjectById, findProjectById, getTenantSecret, getUserById } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
   copyMetaEntity,
@@ -3593,7 +3593,38 @@ async function getProjectMetaAdsRuleHistory(projectId, fallbackTenantId) {
   const query = tenantId ? { projectId, tenantId } : { projectId };
   const { MetaAdsRuleChange } = getModels();
   const changes = await MetaAdsRuleChange.find(query).sort({ createdAt: -1 }).limit(100).lean();
-  return { changes };
+  const actorUserIds = [
+    ...new Set(
+      changes
+        .filter(
+          (change) =>
+            change.actorUserId &&
+            !change.actorUserEmail &&
+            mongoose.Types.ObjectId.isValid(change.actorUserId),
+        )
+        .map((change) => change.actorUserId),
+    ),
+  ];
+  if (actorUserIds.length === 0) {
+    return { changes };
+  }
+  const users = await Promise.all(
+    actorUserIds.map(async (userId) => [userId, await getUserById(userId, 'name email')]),
+  );
+  const usersById = new Map(users.filter(([, user]) => user));
+  return {
+    changes: changes.map((change) => {
+      const user = usersById.get(change.actorUserId);
+      if (!user) {
+        return change;
+      }
+      return {
+        ...change,
+        actorUserName: change.actorUserName || user.name,
+        actorUserEmail: user.email,
+      };
+    }),
+  };
 }
 
 function getRankingCacheKey({

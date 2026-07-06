@@ -58,6 +58,7 @@ const {
   getProjectMetaAdsRankings,
   getProjectMetaAdsRulePerformance,
   getProjectMetaAdsStatus,
+  recordProjectMetaAdsRuleChange,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 
@@ -552,6 +553,13 @@ describe('projectMetaAds settings normalization', () => {
   });
 
   it('adds audit metadata when rule settings are saved', async () => {
+    mockRouteUser = {
+      id: 'user-1',
+      name: 'Bruno Ads',
+      email: 'bruno@example.com',
+      role: SystemRoles.ADMIN,
+      tenantId: 'tenant-x',
+    };
     getProjectById.mockResolvedValue({
       projectId: 'p1',
       tenantId: 'tenant-x',
@@ -630,6 +638,13 @@ describe('projectMetaAds settings normalization', () => {
       expect.objectContaining({
         createdBy: expect.objectContaining({ id: 'user-1' }),
         updatedBy: expect.objectContaining({ id: 'user-1' }),
+      }),
+    );
+    expect(recordProjectMetaAdsRuleChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: 'user-1',
+        actorUserName: 'Bruno Ads',
+        actorUserEmail: 'bruno@example.com',
       }),
     );
   });

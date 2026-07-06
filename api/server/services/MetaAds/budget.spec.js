@@ -889,6 +889,7 @@ describe('Meta Ads budget service persistence safety', () => {
     changes = [],
     actions = [],
     projects = [],
+    users = {},
   } = {}) => {
     jest.resetModules();
 
@@ -978,6 +979,11 @@ describe('Meta Ads budget service persistence safety', () => {
         },
       },
       Schema: function Schema() {},
+      Types: {
+        ObjectId: {
+          isValid: (value) => /^[a-f\d]{24}$/i.test(value),
+        },
+      },
       model: jest.fn(),
     }));
 
@@ -995,11 +1001,13 @@ describe('Meta Ads budget service persistence safety', () => {
       return projects.find((item) => item.projectId === projectId) ?? null;
     });
     const getTenantSecret = jest.fn(async () => ({ value: 'meta-token' }));
+    const getUserById = jest.fn(async (userId) => users[userId] ?? null);
 
     jest.doMock('~/models', () => ({
       getProjectById,
       findProjectById,
       getTenantSecret,
+      getUserById,
     }));
     jest.doMock('@librechat/data-schemas', () => ({
       logger: {
@@ -1074,6 +1082,7 @@ describe('Meta Ads budget service persistence safety', () => {
       projectFind,
       projectUpdateOne,
       updateMany,
+      getUserById,
     };
   };
 
@@ -1157,6 +1166,67 @@ describe('Meta Ads budget service persistence safety', () => {
         ]),
       }),
     );
+  });
+
+  it('hydrates legacy rule history actor email from user id', async () => {
+    const actorUserId = '64f1c2a3b4d5e6f789012345';
+    const { budget, getUserById } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a' },
+      actions: [
+        {
+          _id: 'change-1',
+          actor: 'user',
+          actorUserId,
+          changedFields: ['rules'],
+          createdAt: '2026-07-06T13:13:00.000Z',
+        },
+      ],
+      users: {
+        [actorUserId]: {
+          _id: actorUserId,
+          name: 'Bruno Ads',
+          email: 'bruno@example.com',
+        },
+      },
+    });
+
+    const result = await budget.getProjectMetaAdsRuleHistory('p1', 'request-tenant');
+
+    expect(getUserById).toHaveBeenCalledWith(actorUserId, 'name email');
+    expect(result.changes[0]).toEqual(
+      expect.objectContaining({
+        actorUserName: 'Bruno Ads',
+        actorUserEmail: 'bruno@example.com',
+      }),
+    );
+  });
+
+  it('keeps saved rule history actor email without user lookup', async () => {
+    const actorUserId = '64f1c2a3b4d5e6f789012345';
+    const { budget, getUserById } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a' },
+      actions: [
+        {
+          _id: 'change-1',
+          actor: 'user',
+          actorUserId,
+          actorUserEmail: 'saved@example.com',
+          changedFields: ['rules'],
+          createdAt: '2026-07-06T13:13:00.000Z',
+        },
+      ],
+      users: {
+        [actorUserId]: {
+          _id: actorUserId,
+          email: 'fresh@example.com',
+        },
+      },
+    });
+
+    const result = await budget.getProjectMetaAdsRuleHistory('p1', 'request-tenant');
+
+    expect(getUserById).not.toHaveBeenCalled();
+    expect(result.changes[0].actorUserEmail).toBe('saved@example.com');
   });
 
   it('returns ROAS in campaign BI rankings', async () => {
