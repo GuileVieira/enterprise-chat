@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Check } from '@phosphor-icons/react';
 
 import type {
   Localize,
@@ -21,6 +22,32 @@ type ConfirmationButtons = {
   ghostClassName: string;
   inputClassName: string;
 };
+
+function MetaAdsDraftCheckbox({
+  checked,
+  tone,
+}: {
+  checked: boolean;
+  tone: 'blue' | 'red';
+}) {
+  const checkedClass =
+    tone === 'red'
+      ? 'border-red-500 bg-red-600 text-white'
+      : 'border-blue-500 bg-blue-600 text-white';
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+        checked
+          ? checkedClass
+          : 'border-slate-300 bg-white text-transparent dark:border-white/25 dark:bg-white/5'
+      }`}
+    >
+      {checked && <Check className="h-3.5 w-3.5" weight="bold" />}
+    </span>
+  );
+}
 
 export function MetaAdsEntityStatusConfirmationBanner({
   confirmation,
@@ -310,8 +337,9 @@ export function MetaAdsDiscardDraftDialog({
               type="checkbox"
               checked={allSelected}
               onChange={(event) => toggleAll(event.target.checked)}
-              className="h-4 w-4 accent-red-600"
+              className="sr-only"
             />
+            <MetaAdsDraftCheckbox checked={allSelected} tone="red" />
           </label>
           <div className="mt-4 text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
             {localize('com_ui_project_meta_ads_pending_changes_summary')}
@@ -332,8 +360,9 @@ export function MetaAdsDiscardDraftDialog({
                         type="checkbox"
                         checked={selectedKeySet.has(item.key)}
                         onChange={(event) => toggleSection(item.key, event.target.checked)}
-                        className="h-4 w-4 shrink-0 accent-red-600"
+                        className="sr-only"
                       />
+                      <MetaAdsDraftCheckbox checked={selectedKeySet.has(item.key)} tone="red" />
                       <span className="min-w-0 truncate">{item.label}</span>
                     </label>
                     <button
@@ -400,22 +429,44 @@ export function MetaAdsPublishDraftDialog({
   summary: MetaAdsDraftSummaryItem[];
   localize: Localize;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (selectedKeys: MetaAdsDraftSectionKey[]) => void;
   chrome: ConfirmationChrome;
   buttons: Pick<ConfirmationButtons, 'primaryClassName' | 'ghostClassName'>;
 }) {
+  const allKeySignature = useMemo(() => summary.map((item) => item.key).join('|'), [summary]);
+  const allKeys = useMemo(
+    () => (allKeySignature ? (allKeySignature.split('|') as MetaAdsDraftSectionKey[]) : []),
+    [allKeySignature],
+  );
+  const [selectedKeys, setSelectedKeys] = useState<MetaAdsDraftSectionKey[]>(allKeys);
   const [expandedKeys, setExpandedKeys] = useState<MetaAdsDraftSectionKey[]>([]);
+  const selectedKeySet = useMemo(() => new Set(selectedKeys), [selectedKeys]);
   const expandedKeySet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
+  const allSelected = allKeys.length > 0 && selectedKeys.length === allKeys.length;
+  const canConfirm = summary.length === 0 || selectedKeys.length > 0;
 
   useEffect(() => {
     if (open) {
+      setSelectedKeys(allKeys);
       setExpandedKeys([]);
     }
-  }, [open]);
+  }, [allKeys, open]);
 
   if (!open) {
     return null;
   }
+
+  const toggleSection = (key: MetaAdsDraftSectionKey, checked: boolean) => {
+    setSelectedKeys((current) =>
+      checked
+        ? Array.from(new Set([...current, key]))
+        : current.filter((currentKey) => currentKey !== key),
+    );
+  };
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedKeys(checked ? allKeys : []);
+  };
 
   const toggleDetails = (key: MetaAdsDraftSectionKey) => {
     setExpandedKeys((current) =>
@@ -445,15 +496,40 @@ export function MetaAdsPublishDraftDialog({
           </p>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-white/85 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:border-blue-300/60 dark:border-white/10 dark:bg-white/[0.07] dark:text-white">
+            <span>{localize('com_ui_project_meta_ads_publish_select_all')}</span>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(event) => toggleAll(event.target.checked)}
+              className="sr-only"
+            />
+            <MetaAdsDraftCheckbox checked={allSelected} tone="blue" />
+          </label>
+          <div className="mt-4 text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
             {localize('com_ui_project_meta_ads_pending_changes_summary')}
           </div>
           <ul className="mt-3 space-y-2">
             {summary.map((item) => (
               <li key={item.key}>
-                <div className="rounded-xl border border-blue-300/50 bg-blue-50/80 px-3 py-2 text-sm font-medium text-blue-800 dark:border-blue-300/20 dark:bg-blue-400/10 dark:text-blue-100">
+                <div
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    selectedKeySet.has(item.key)
+                      ? 'border-blue-300/50 bg-blue-50/80 text-blue-800 dark:border-blue-300/20 dark:bg-blue-400/10 dark:text-blue-100'
+                      : 'border-slate-200/80 bg-white/70 text-slate-700 dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-300'
+                  }`}
+                >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="min-w-0 truncate">{item.label}</span>
+                    <label className="flex min-w-0 flex-1 items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedKeySet.has(item.key)}
+                        onChange={(event) => toggleSection(item.key, event.target.checked)}
+                        className="sr-only"
+                      />
+                      <MetaAdsDraftCheckbox checked={selectedKeySet.has(item.key)} tone="blue" />
+                      <span className="min-w-0 truncate">{item.label}</span>
+                    </label>
                     <button
                       type="button"
                       onClick={() => toggleDetails(item.key)}
@@ -481,13 +557,23 @@ export function MetaAdsPublishDraftDialog({
               </li>
             )}
           </ul>
+          {summary.length > 0 && selectedKeys.length === 0 && (
+            <p className="mt-3 text-xs font-medium text-blue-600 dark:text-blue-300">
+              {localize('com_ui_project_meta_ads_publish_select_hint')}
+            </p>
+          )}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
           <button type="button" onClick={onCancel} className={buttons.ghostClassName}>
             {localize('com_ui_cancel')}
           </button>
-          <button type="button" onClick={onConfirm} className={buttons.primaryClassName}>
-            {localize('com_ui_project_meta_ads_publish_to_meta')}
+          <button
+            type="button"
+            disabled={!canConfirm}
+            onClick={() => onConfirm(selectedKeys)}
+            className={buttons.primaryClassName}
+          >
+            {localize('com_ui_project_meta_ads_publish_selected')}
           </button>
         </div>
       </div>

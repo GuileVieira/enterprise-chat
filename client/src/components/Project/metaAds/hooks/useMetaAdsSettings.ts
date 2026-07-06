@@ -422,7 +422,9 @@ function buildSettingsDraftSummary(
       details: buildAutomationDetails(savedSettings, draftSettings, localize),
     });
   }
-  if (hasSettingsChange(savedSettings, draftSettings, ['rules', 'creativeRules'])) {
+  if (
+    hasSettingsChange(savedSettings, draftSettings, ['accountProfile', 'rules', 'creativeRules'])
+  ) {
     sections.push({
       key: 'global-rules',
       label: localize('com_ui_project_meta_ads_global_rules'),
@@ -491,6 +493,7 @@ function restoreDraftSection(
     case 'global-rules':
       return {
         ...draftSettings,
+        accountProfile: savedSettings.accountProfile,
         rules: savedSettings.rules,
         creativeRules: savedSettings.creativeRules,
       };
@@ -509,6 +512,51 @@ function restoreDraftSection(
   }
 }
 
+function publishDraftSection(
+  savedSettings: MetaAdsSettingsState,
+  draftSettings: MetaAdsSettingsState,
+  key: MetaAdsDraftSectionKey,
+): MetaAdsSettingsState {
+  switch (key) {
+    case 'credentials':
+      return {
+        ...savedSettings,
+        enabled: draftSettings.enabled,
+        adAccountId: draftSettings.adAccountId,
+        tokenSecretName: draftSettings.tokenSecretName,
+        graphVersion: draftSettings.graphVersion,
+        credentialMode: draftSettings.credentialMode,
+      };
+    case 'automation':
+      return {
+        ...savedSettings,
+        automationMode: draftSettings.automationMode,
+        scheduleIntervalMinutes: draftSettings.scheduleIntervalMinutes,
+        automationAnalysisPreset: draftSettings.automationAnalysisPreset,
+        clientGoal: draftSettings.clientGoal,
+      };
+    case 'global-rules':
+      return {
+        ...savedSettings,
+        accountProfile: draftSettings.accountProfile,
+        rules: draftSettings.rules,
+        creativeRules: draftSettings.creativeRules,
+      };
+    case 'rule-groups':
+      return { ...savedSettings, ruleGroups: draftSettings.ruleGroups };
+    case 'rule-overrides':
+      return { ...savedSettings, ruleOverrides: draftSettings.ruleOverrides };
+    case 'monthly-budget':
+      return {
+        ...savedSettings,
+        monthlyBudget: draftSettings.monthlyBudget,
+        monthlyBudgets: draftSettings.monthlyBudgets,
+      };
+    case 'manual-budgets':
+      return savedSettings;
+  }
+}
+
 function getManualBudgetDraftKey(draft: ManualBudgetDraft) {
   return `${draft.entityLevel}:${draft.entityId}`;
 }
@@ -523,6 +571,7 @@ export function useMetaAdsSettings({
   localize,
   showToast,
 }: UseMetaAdsSettingsParams) {
+  const [publishedSettings, setPublishedSettings] = useState(() => normalizeSettings(project));
   const [settings, setSettings] = useState(() => normalizeSettings(project));
   const [manualBudgetDrafts, setManualBudgetDrafts] = useState<ManualBudgetDraft[]>([]);
   const [hasUnsavedSettingsDraft, setHasUnsavedSettingsDraft] = useState(false);
@@ -538,9 +587,11 @@ export function useMetaAdsSettings({
   const [settingsDrawer, setSettingsDrawer] = useState<SettingsDrawer>(null);
 
   useEffect(() => {
+    const nextPublishedSettings = normalizeSettings(project);
     const storedDraft = readStoredSettingsDraft(project.projectId);
     const storedManualBudgetDrafts = readStoredManualBudgetDrafts(project.projectId);
-    setSettings(storedDraft ?? normalizeSettings(project));
+    setPublishedSettings(nextPublishedSettings);
+    setSettings(storedDraft ?? nextPublishedSettings);
     setManualBudgetDrafts(storedManualBudgetDrafts);
     setHasUnsavedSettingsDraft(Boolean(storedDraft) || storedManualBudgetDrafts.length > 0);
     setDraftStatus(storedDraft || storedManualBudgetDrafts.length > 0 ? 'pending' : 'idle');
@@ -620,6 +671,7 @@ export function useMetaAdsSettings({
         onSuccess: () => {
           statusQuery.refetch();
           clearStoredSettingsDraft(project.projectId);
+          setPublishedSettings(nextSettings);
           setHasUnsavedSettingsDraft(manualBudgetDrafts.length > 0);
           setDraftStatus(manualBudgetDrafts.length > 0 ? 'pending' : 'published');
           setDiscardDraftDialogOpen(false);
@@ -670,15 +722,33 @@ export function useMetaAdsSettings({
     setShowTenantAccessToken(false);
   };
 
-  const publishSettingsDrafts = () => {
-    const savedSettings = normalizeSettings(project);
+  const publishSettingsDrafts = (selectedKeys?: MetaAdsDraftSectionKey[]) => {
+    const savedSettings = publishedSettings;
     const settingsSummary = buildSettingsDraftSummary(savedSettings, settings, localize);
-    const settingsChanged = settingsSummary.length > 0;
+    const selectedKeySet = new Set(selectedKeys ?? settingsDraftSummary.map((item) => item.key));
+    const hasManualBudgetSelection = selectedKeySet.has('manual-budgets');
+    const selectedSettingsSummary = settingsSummary.filter((item) => selectedKeySet.has(item.key));
+    const settingsChanged = selectedSettingsSummary.length > 0;
+    const budgetDraftsToPublish = hasManualBudgetSelection ? manualBudgetDrafts : [];
 
-    if (manualBudgetDrafts.length === 0) {
+    if (!selectedKeys && manualBudgetDrafts.length === 0) {
       saveSettings(settings, '');
       return;
     }
+
+    if (!settingsChanged && budgetDraftsToPublish.length === 0) {
+      return;
+    }
+
+    let nextPublishedSettings = savedSettings;
+    selectedSettingsSummary.forEach((item) => {
+      nextPublishedSettings = publishDraftSection(nextPublishedSettings, settings, item.key);
+    });
+
+    let nextWorkingSettings = settings;
+    selectedSettingsSummary.forEach((item) => {
+      nextWorkingSettings = restoreDraftSection(nextWorkingSettings, nextPublishedSettings, item.key);
+    });
 
     setDraftStatus('publishing');
 
@@ -691,7 +761,7 @@ export function useMetaAdsSettings({
         updateSettings.mutate(
           {
             projectId: project.projectId,
-            metaAds: settings,
+            metaAds: nextPublishedSettings,
           },
           {
             onSuccess: () => resolve(),
@@ -727,7 +797,7 @@ export function useMetaAdsSettings({
         await saveSettingsDraft();
         settingsPublished = settingsChanged;
 
-        for (const draft of manualBudgetDrafts) {
+        for (const draft of budgetDraftsToPublish) {
           const response = await publishBudgetDraft(draft);
           publishedBudgetKeys.add(getManualBudgetDraftKey(draft));
           if (response.change) {
@@ -735,11 +805,26 @@ export function useMetaAdsSettings({
           }
         }
 
-        clearStoredSettingsDraft(project.projectId);
-        writeStoredManualBudgetDrafts(project.projectId, []);
-        setManualBudgetDrafts([]);
-        setHasUnsavedSettingsDraft(false);
-        setDraftStatus('published');
+        const nextManualBudgetDrafts = manualBudgetDrafts.filter(
+          (draft) => !publishedBudgetKeys.has(getManualBudgetDraftKey(draft)),
+        );
+        const nextSummary = buildSettingsDraftSummary(
+          nextPublishedSettings,
+          nextWorkingSettings,
+          localize,
+        );
+        setPublishedSettings(nextPublishedSettings);
+        setSettings(nextWorkingSettings);
+        writeStoredManualBudgetDrafts(project.projectId, nextManualBudgetDrafts);
+        setManualBudgetDrafts(nextManualBudgetDrafts);
+        if (nextSummary.length === 0) {
+          clearStoredSettingsDraft(project.projectId);
+        } else {
+          writeStoredSettingsDraft(project.projectId, nextWorkingSettings);
+        }
+        const hasPendingDraft = nextSummary.length > 0 || nextManualBudgetDrafts.length > 0;
+        setHasUnsavedSettingsDraft(hasPendingDraft);
+        setDraftStatus(hasPendingDraft ? 'pending' : 'published');
         setDiscardDraftDialogOpen(false);
         setPublishDraftDialogOpen(false);
         statusQuery.refetch();
@@ -748,14 +833,24 @@ export function useMetaAdsSettings({
         const remainingBudgetDrafts = manualBudgetDrafts.filter(
           (draft) => !publishedBudgetKeys.has(getManualBudgetDraftKey(draft)),
         );
+        const nextErrorSettings = settingsPublished ? nextWorkingSettings : settings;
+        const nextErrorSummary = buildSettingsDraftSummary(
+          settingsPublished ? nextPublishedSettings : savedSettings,
+          nextErrorSettings,
+          localize,
+        );
         if (settingsPublished) {
-          clearStoredSettingsDraft(project.projectId);
+          setPublishedSettings(nextPublishedSettings);
+          setSettings(nextErrorSettings);
+          if (nextErrorSummary.length === 0) {
+            clearStoredSettingsDraft(project.projectId);
+          } else {
+            writeStoredSettingsDraft(project.projectId, nextErrorSettings);
+          }
         }
         writeStoredManualBudgetDrafts(project.projectId, remainingBudgetDrafts);
         setManualBudgetDrafts(remainingBudgetDrafts);
-        setHasUnsavedSettingsDraft(
-          (!settingsPublished && settingsChanged) || remainingBudgetDrafts.length > 0,
-        );
+        setHasUnsavedSettingsDraft(nextErrorSummary.length > 0 || remainingBudgetDrafts.length > 0);
         setDraftStatus('error');
         const requestMessage = (error as RequestError)?.response?.data?.message;
         const message =
@@ -772,7 +867,7 @@ export function useMetaAdsSettings({
   };
 
   const onSave = () => {
-    const pendingSummary = buildSettingsDraftSummary(normalizeSettings(project), settings, localize);
+    const pendingSummary = buildSettingsDraftSummary(publishedSettings, settings, localize);
     if (pendingSummary.length === 0 && manualBudgetDrafts.length === 0) {
       publishSettingsDrafts();
       return;
@@ -788,9 +883,9 @@ export function useMetaAdsSettings({
     setPublishDraftDialogOpen(false);
   };
 
-  const onConfirmPublishSettingsDraft = () => {
+  const onConfirmPublishSettingsDraft = (selectedKeys: MetaAdsDraftSectionKey[]) => {
     setPublishDraftDialogOpen(false);
-    publishSettingsDrafts();
+    publishSettingsDrafts(selectedKeys);
   };
 
   const onDiscardSettingsDraft = () => {
@@ -809,7 +904,7 @@ export function useMetaAdsSettings({
       setDiscardDraftDialogOpen(false);
       return;
     }
-    const savedSettings = normalizeSettings(project);
+    const savedSettings = publishedSettings;
     const settingsSummary = buildSettingsDraftSummary(savedSettings, settings, localize);
     const hasManualBudgetSelection = selectedKeys.includes('manual-budgets');
     const selectedKeySet = new Set(selectedKeys);
@@ -875,7 +970,7 @@ export function useMetaAdsSettings({
 
   const settingsDraftSummary = hasUnsavedSettingsDraft
     ? [
-        ...buildSettingsDraftSummary(normalizeSettings(project), settings, localize),
+        ...buildSettingsDraftSummary(publishedSettings, settings, localize),
         ...(manualBudgetDrafts.length > 0
           ? [
               {
