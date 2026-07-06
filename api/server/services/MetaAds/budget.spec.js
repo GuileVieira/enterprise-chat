@@ -928,7 +928,9 @@ describe('Meta Ads budget service persistence safety', () => {
     const metaPost = jest.fn(async () => ({}));
     const updateMetaEntityStatus = jest.fn(async () => ({}));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
-    const getEntityDailyBudget = jest.fn(async () => latestEntityBudget);
+    const getEntityDailyBudget = jest.fn(
+      async () => latestEntityBudget ?? { dailyBudget: latestBudget },
+    );
     const getAdAccountCurrency = jest.fn(async () => 'BRL');
     const listCampaigns = jest.fn(async () => campaigns);
     const listAdSets = jest.fn(async () => adsets);
@@ -936,8 +938,12 @@ describe('Meta Ads budget service persistence safety', () => {
     const listAdInsights = jest.fn(async (options) =>
       typeof adInsights === 'function' ? adInsights(options) : adInsights,
     );
-    const listCampaignInsights = jest.fn(async () => campaignInsights);
-    const listAdSetInsights = jest.fn(async () => insights);
+    const listCampaignInsights = jest.fn(async (options) =>
+      typeof campaignInsights === 'function' ? campaignInsights(options) : campaignInsights,
+    );
+    const listAdSetInsights = jest.fn(async (options) =>
+      typeof insights === 'function' ? insights(options) : insights,
+    );
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
       getMetaGraphVersion: (value) => value || 'v25.0',
@@ -1050,6 +1056,45 @@ describe('Meta Ads budget service persistence safety', () => {
       { new: true, lean: true },
     );
     expect(result.status).toBe('blocked');
+  });
+
+  it('checks campaign budgets with the generic entity budget reader before applying', async () => {
+    const { budget, getAdSetDailyBudget, getEntityDailyBudget, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      recommendation: {
+        _id: 'rec1',
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        adAccountId: 'act_123',
+        entityLevel: 'campaign',
+        entityId: 'campaign-cbo',
+        entityName: 'CBO Campaign',
+        action: 'increase',
+        status: 'pending',
+        currentDailyBudget: 100,
+        proposedDailyBudget: 125,
+      },
+      latestBudget: 0,
+      latestEntityBudget: { dailyBudget: 100 },
+    });
+
+    await budget.applyRecommendation({
+      recommendationId: 'rec1',
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      actor: 'user',
+    });
+
+    expect(getEntityDailyBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'campaign-cbo' }),
+    );
+    expect(getAdSetDailyBudget).not.toHaveBeenCalled();
+    expect(metaPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'campaign-cbo',
+        body: { daily_budget: 12500 },
+      }),
+    );
   });
 
   it('retries budget updates with the Meta minimum when a decrease is too low', async () => {
@@ -3356,6 +3401,94 @@ describe('Meta Ads budget service persistence safety', () => {
       expect(listAdSetInsights).toHaveBeenCalledWith(
         expect.objectContaining({
           since: '2026-06-18',
+          until: '2026-06-18',
+        }),
+      );
+    } finally {
+      delete process.env.META_ADS_TIME_ZONE;
+      jest.useRealTimers();
+    }
+  });
+
+  it('fetches separate automation insight windows for rule groups', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-06-18T14:30:00.000Z'));
+    process.env.META_ADS_TIME_ZONE = 'America/Sao_Paulo';
+    try {
+      const { budget, listAdSetInsights } = loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: {
+            adAccountId: 'act_123',
+            automationAnalysisPreset: 'last_7d',
+            rules: { ...DEFAULT_RULES, targetCpa: 45, minSpend: 1 },
+            ruleGroups: [
+              {
+                id: 'group-today',
+                name: 'Aggressive today',
+                entityLevel: 'campaign',
+                entityIds: ['campaign-today'],
+                analysisPreset: 'today',
+                rules: { ...DEFAULT_RULES, targetCpa: 45, minSpend: 1 },
+              },
+            ],
+          },
+        },
+        campaigns: [
+          { id: 'campaign-today', name: 'Today Campaign' },
+          { id: 'campaign-global', name: 'Global Campaign' },
+        ],
+        adsets: [
+          {
+            id: 'adset-today',
+            name: 'Today Ad Set',
+            campaign_id: 'campaign-today',
+            daily_budget: '10000',
+          },
+          {
+            id: 'adset-global',
+            name: 'Global Ad Set',
+            campaign_id: 'campaign-global',
+            daily_budget: '10000',
+          },
+        ],
+        insights: ({ datePreset }) =>
+          datePreset === 'today'
+            ? [
+                {
+                  campaign_id: 'campaign-today',
+                  campaign_name: 'Today Campaign',
+                  adset_id: 'adset-today',
+                  adset_name: 'Today Ad Set',
+                  spend: '10',
+                  actions: [{ action_type: 'lead', value: '1' }],
+                },
+              ]
+            : [
+                {
+                  campaign_id: 'campaign-global',
+                  campaign_name: 'Global Campaign',
+                  adset_id: 'adset-global',
+                  adset_name: 'Global Ad Set',
+                  spend: '70',
+                  actions: [{ action_type: 'lead', value: '1' }],
+                },
+              ],
+      });
+
+      await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+      expect(listAdSetInsights).toHaveBeenCalledWith(
+        expect.objectContaining({
+          datePreset: 'today',
+          since: '2026-06-18',
+          until: '2026-06-18',
+        }),
+      );
+      expect(listAdSetInsights).toHaveBeenCalledWith(
+        expect.objectContaining({
+          datePreset: 'last_7d',
+          since: '2026-06-12',
           until: '2026-06-18',
         }),
       );

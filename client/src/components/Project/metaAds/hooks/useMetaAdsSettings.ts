@@ -52,6 +52,59 @@ function clearStoredSettingsDraft(projectId: string) {
   window.localStorage.removeItem(getSettingsDraftStorageKey(projectId));
 }
 
+function hasSettingsChange(
+  savedSettings: MetaAdsSettingsState,
+  draftSettings: MetaAdsSettingsState,
+  keys: Array<keyof MetaAdsSettingsState>,
+) {
+  return keys.some(
+    (key) => JSON.stringify(savedSettings[key]) !== JSON.stringify(draftSettings[key]),
+  );
+}
+
+function buildSettingsDraftSummary(
+  savedSettings: MetaAdsSettingsState,
+  draftSettings: MetaAdsSettingsState,
+  localize: Localize,
+) {
+  const sections = [];
+  if (
+    hasSettingsChange(savedSettings, draftSettings, [
+      'enabled',
+      'adAccountId',
+      'tokenSecretName',
+      'graphVersion',
+      'credentialMode',
+    ])
+  ) {
+    sections.push(localize('com_ui_project_meta_ads_account_credentials'));
+  }
+  if (
+    hasSettingsChange(savedSettings, draftSettings, [
+      'automationMode',
+      'scheduleIntervalMinutes',
+      'automationAnalysisPreset',
+      'clientGoal',
+    ])
+  ) {
+    sections.push(localize('com_ui_project_meta_ads_automation'));
+  }
+  if (
+    hasSettingsChange(savedSettings, draftSettings, [
+      'rules',
+      'creativeRules',
+      'ruleGroups',
+      'ruleOverrides',
+    ])
+  ) {
+    sections.push(localize('com_ui_project_meta_ads_rules'));
+  }
+  if (hasSettingsChange(savedSettings, draftSettings, ['monthlyBudget', 'monthlyBudgets'])) {
+    sections.push(localize('com_ui_project_meta_ads_monthly_budget'));
+  }
+  return sections;
+}
+
 export function useMetaAdsSettings({
   project,
   statusQuery,
@@ -181,6 +234,28 @@ export function useMetaAdsSettings({
     saveSettings(settings, '');
   };
 
+  const onDiscardSettingsDraft = () => {
+    if (!hasUnsavedSettingsDraft) {
+      return;
+    }
+    const savedSettings = normalizeSettings(project);
+    const summary = buildSettingsDraftSummary(savedSettings, settings, localize);
+    const message = [
+      localize('com_ui_project_meta_ads_discard_draft_confirm'),
+      '',
+      `${localize('com_ui_project_meta_ads_pending_changes_summary')}: ${
+        summary.length > 0 ? summary.join(', ') : localize('com_ui_project_meta_ads_rules')
+      }`,
+    ].join('\n');
+    if (!window.confirm(message)) {
+      return;
+    }
+    clearStoredSettingsDraft(project.projectId);
+    setSettings(savedSettings);
+    setHasUnsavedSettingsDraft(false);
+    closeSettingsDrawer();
+  };
+
   const onClearProjectToken = () => {
     if (!settingsDraft) {
       return;
@@ -257,6 +332,7 @@ export function useMetaAdsSettings({
     onClearProjectToken,
     openSettingsDrawer,
     closeSettingsDrawer,
+    onDiscardSettingsDraft,
     openCredentialsDialog,
     closeCredentialsDialog,
     onSaveSettingsDrawer,

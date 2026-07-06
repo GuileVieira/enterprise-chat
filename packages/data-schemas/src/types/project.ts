@@ -91,6 +91,7 @@ export interface IProjectMetaAds {
     entityLevel: 'campaign' | 'adset';
     entityIds: string[];
     enabled?: boolean;
+    analysisPreset?: IProjectMetaAds['automationAnalysisPreset'];
     rules?: IProjectMetaAdsRules;
     creativeRules?: IProjectMetaAdsCreativeRules;
   }>;
@@ -99,6 +100,7 @@ export interface IProjectMetaAds {
     entityId: string;
     entityName?: string;
     enabled?: boolean;
+    analysisPreset?: IProjectMetaAds['automationAnalysisPreset'];
     rules?: IProjectMetaAdsRules;
     creativeRules?: IProjectMetaAdsCreativeRules;
   }>;

@@ -4,7 +4,6 @@ const { getProjectById, findProjectById, getTenantSecret } = require('~/models')
 const { getAppConfig } = require('~/server/services/Config/app');
 const {
   copyMetaEntity,
-  getAdSetDailyBudget,
   getAdAccountCurrency,
   getEntityDailyBudget,
   getMetaGraphVersion,
@@ -823,6 +822,9 @@ function getEffectiveRuleContext({
   const appliedSource = adsetOverride ?? campaignOverride ?? ruleGroup;
   const ruleSourceType =
     adsetOverride || campaignOverride ? 'override' : ruleGroup ? 'group' : 'global';
+  const analysisPreset = ANALYSIS_PRESETS.has(appliedSource?.analysisPreset)
+    ? appliedSource.analysisPreset
+    : undefined;
   const rules = validateMetaAdsRules({
     ...baseRules,
     ...(ruleGroup?.rules ?? {}),
@@ -841,6 +843,7 @@ function getEffectiveRuleContext({
     ruleSourceType,
     ruleId: appliedSource?.id || appliedSource?.entityId || 'global',
     ruleName: appliedSource?.name || appliedSource?.entityName || 'Global',
+    analysisPreset,
     ruleScope:
       ruleSourceType === 'global'
         ? 'global'
@@ -3905,11 +3908,12 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
       { new: true, lean: true },
     );
   }
-  const currentDailyBudget = await getAdSetDailyBudget({
+  const currentBudget = await getEntityDailyBudget({
     entityId: recommendation.entityId,
     token,
     graphVersion,
   });
+  const currentDailyBudget = currentBudget?.dailyBudget;
   if (
     currentDailyBudget != null &&
     Math.abs(currentDailyBudget - recommendation.currentDailyBudget) > 0.005
@@ -4068,7 +4072,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     throw error;
   });
-  const insightsPromise = listAdSetInsights({
+  const defaultInsightsPromise = listAdSetInsights({
     adAccountId,
     token,
     since,
@@ -4086,7 +4090,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     throw error;
   });
-  const campaignInsightsPromise = listCampaignInsights({
+  const defaultCampaignInsightsPromise = listCampaignInsights({
     adAccountId,
     token,
     since,
@@ -4104,16 +4108,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     });
     return [];
   });
-  const adsPromise = listAds({ adAccountId, token, graphVersion }).catch((error) => {
-    logger.error('[MetaAdsBudget] ads fetch failed', {
-      projectId,
-      adAccountId,
-      message: error.message,
-      stack: error.stack,
-    });
-    return [];
-  });
-  const adInsightsPromise = listAdInsights({
+  const defaultAdInsightsPromise = listAdInsights({
     adAccountId,
     token,
     since,
@@ -4126,6 +4121,15 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       adAccountId,
       since,
       until,
+      message: error.message,
+      stack: error.stack,
+    });
+    return [];
+  });
+  const adsPromise = listAds({ adAccountId, token, graphVersion }).catch((error) => {
+    logger.error('[MetaAdsBudget] ads fetch failed', {
+      projectId,
+      adAccountId,
       message: error.message,
       stack: error.stack,
     });
@@ -4152,26 +4156,20 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         return [];
       })
     : Promise.resolve([]);
-  const [campaigns, adsets, insights, campaignInsights, ads, adInsights, monthlyCampaignInsights] =
-    await Promise.all([
-      campaignsPromise,
-      adsetsPromise,
-      insightsPromise,
-      campaignInsightsPromise,
-      adsPromise,
-      adInsightsPromise,
-      monthlyCampaignInsightsPromise,
-    ]);
+  const [campaigns, adsets, ads, monthlyCampaignInsights] = await Promise.all([
+    campaignsPromise,
+    adsetsPromise,
+    adsPromise,
+    monthlyCampaignInsightsPromise,
+  ]);
   const monthlyBudgetState = buildMonthlyBudgetState({
     monthlyBudget,
     insightRows: monthlyCampaignInsights,
     now,
   });
   const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
-  const campaignInsightById = new Map(campaignInsights.map((row) => [row.campaign_id, row]));
   const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
   const adsetsByCampaignId = new Map();
-  const insightRowsByCampaignId = new Map();
   for (const adset of adsets) {
     const campaignId = adset.campaign_id || adset.campaign?.id;
     if (!campaignId) {
@@ -4179,11 +4177,141 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     }
     adsetsByCampaignId.set(campaignId, [...(adsetsByCampaignId.get(campaignId) ?? []), adset]);
   }
-  for (const row of insights) {
-    const campaignId = row.campaign_id;
-    if (campaignId) {
-      insightRowsByCampaignId.set(campaignId, [
-        ...(insightRowsByCampaignId.get(campaignId) ?? []),
+
+  const defaultAnalysisPreset = analysisPeriod.datePreset;
+  const getEntityAnalysisPreset = ({ campaignId, adsetId }) =>
+    getEffectiveRuleContext({
+      projectRules,
+      projectCreativeRules: creativeRules,
+      ruleGroups: metaAds.ruleGroups,
+      ruleOverrides: metaAds.ruleOverrides,
+      campaignId,
+      adsetId,
+    }).analysisPreset ?? defaultAnalysisPreset;
+  const analysisPresets = new Set([defaultAnalysisPreset]);
+  for (const adset of adsets) {
+    const campaignId = adset.campaign_id || adset.campaign?.id;
+    analysisPresets.add(getEntityAnalysisPreset({ campaignId, adsetId: adset.id }));
+  }
+  const analysisBundles = await Promise.all(
+    Array.from(analysisPresets).map(async (analysisPreset) => {
+      const period = resolveAutomationAnalysisPeriod(
+        { automationAnalysisPreset: analysisPreset },
+        now,
+      );
+      if (analysisPreset === defaultAnalysisPreset) {
+        const [periodInsights, periodCampaignInsights, periodAdInsights] = await Promise.all([
+          defaultInsightsPromise,
+          defaultCampaignInsightsPromise,
+          defaultAdInsightsPromise,
+        ]);
+        return {
+          analysisPreset,
+          insights: periodInsights,
+          campaignInsights: periodCampaignInsights,
+          adInsights: periodAdInsights,
+        };
+      }
+      const [periodInsights, periodCampaignInsights, periodAdInsights] = await Promise.all([
+        listAdSetInsights({
+          adAccountId,
+          token,
+          since: period.since,
+          until: period.until,
+          datePreset: period.datePreset,
+          graphVersion,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] insights fetch failed', {
+            projectId,
+            adAccountId,
+            since: period.since,
+            until: period.until,
+            message: error.message,
+            stack: error.stack,
+          });
+          throw error;
+        }),
+        listCampaignInsights({
+          adAccountId,
+          token,
+          since: period.since,
+          until: period.until,
+          datePreset: period.datePreset,
+          graphVersion,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] campaign insights fetch failed', {
+            projectId,
+            adAccountId,
+            since: period.since,
+            until: period.until,
+            message: error.message,
+            stack: error.stack,
+          });
+          return [];
+        }),
+        listAdInsights({
+          adAccountId,
+          token,
+          since: period.since,
+          until: period.until,
+          datePreset: period.datePreset,
+          graphVersion,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] ad insights fetch failed', {
+            projectId,
+            adAccountId,
+            since: period.since,
+            until: period.until,
+            message: error.message,
+            stack: error.stack,
+          });
+          return [];
+        }),
+      ]);
+      return {
+        analysisPreset,
+        insights: periodInsights,
+        campaignInsights: periodCampaignInsights,
+        adInsights: periodAdInsights,
+      };
+    }),
+  );
+  const campaignInsightByKey = new Map();
+  const insights = [];
+  const insightRowsByCampaignId = new Map();
+  const adInsightsByAdSetId = new Map();
+  for (const bundle of analysisBundles) {
+    for (const row of bundle.campaignInsights) {
+      if (row.campaign_id) {
+        campaignInsightByKey.set(`${bundle.analysisPreset}:${row.campaign_id}`, row);
+      }
+    }
+    for (const row of bundle.insights) {
+      const adset = adsetById.get(row.adset_id);
+      const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
+      if (
+        getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
+      ) {
+        continue;
+      }
+      insights.push(row);
+      if (campaignId) {
+        insightRowsByCampaignId.set(campaignId, [
+          ...(insightRowsByCampaignId.get(campaignId) ?? []),
+          row,
+        ]);
+      }
+    }
+    for (const row of bundle.adInsights) {
+      const adset = adsetById.get(row.adset_id);
+      const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
+      if (
+        getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
+      ) {
+        continue;
+      }
+      adInsightsByAdSetId.set(row.adset_id, [
+        ...(adInsightsByAdSetId.get(row.adset_id) ?? []),
         row,
       ]);
     }
@@ -4193,13 +4321,6 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
     const adSetId = ad.adset_id;
     if (adSetId) {
       adsByAdSetId.set(adSetId, [...(adsByAdSetId.get(adSetId) ?? []), ad]);
-    }
-  }
-  const adInsightsByAdSetId = new Map();
-  for (const row of adInsights) {
-    const adSetId = row.adset_id;
-    if (adSetId) {
-      adInsightsByAdSetId.set(adSetId, [...(adInsightsByAdSetId.get(adSetId) ?? []), row]);
     }
   }
   const handledRecommendationEntities = new Set();
@@ -4227,6 +4348,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         adsetId: entityId,
       });
       const { rules } = effectiveRuleContext;
+      const effectiveAnalysisPreset = effectiveRuleContext.analysisPreset ?? defaultAnalysisPreset;
       const adsetName = row.adset_name || adset.name;
       const recommendationEntityLevel =
         budgetInfo.editableBudgetLevel === 'campaign' ? 'campaign' : 'adset';
@@ -4247,7 +4369,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
       const recommendationMetrics =
         recommendationEntityLevel === 'campaign'
           ? calculateMetrics(
-              campaignInsightById.get(campaignId) ||
+              campaignInsightByKey.get(`${effectiveAnalysisPreset}:${campaignId}`) ||
                 aggregateInsightRows(insightRowsByCampaignId.get(campaignId) ?? [row]),
               resolvedTargetResultType,
             )

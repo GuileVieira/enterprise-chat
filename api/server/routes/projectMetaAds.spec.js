@@ -366,7 +366,7 @@ describe('projectMetaAds settings normalization', () => {
     });
   });
 
-  it('normalizes creative rules inside rule groups and overrides', () => {
+  it('normalizes creative rules and analysis presets inside rule groups and overrides', () => {
     const result = router._normalizeMetaAdsForTest({
       ruleGroups: [
         {
@@ -374,6 +374,7 @@ describe('projectMetaAds settings normalization', () => {
           name: 'Local video',
           entityLevel: 'campaign',
           entityIds: ['campaign-1'],
+          analysisPreset: 'today',
           creativeRules: {
             pauseHighCost: {
               enabled: true,
@@ -387,6 +388,7 @@ describe('projectMetaAds settings normalization', () => {
         {
           entityLevel: 'adset',
           entityId: 'adset-1',
+          analysisPreset: 'last_7d',
           creativeRules: {
             pauseHighCost: {
               enabled: true,
@@ -401,9 +403,35 @@ describe('projectMetaAds settings normalization', () => {
     expect(result.ruleGroups[0].creativeRules.pauseHighCost).toEqual(
       expect.objectContaining({ maxCostPerResult: 35, lookbackDays: 2 }),
     );
+    expect(result.ruleGroups[0].analysisPreset).toBe('today');
     expect(result.ruleOverrides[0].creativeRules.pauseHighCost).toEqual(
       expect.objectContaining({ maxCostPerResult: 40, lookbackDays: 1 }),
     );
+    expect(result.ruleOverrides[0].analysisPreset).toBe('last_7d');
+  });
+
+  it('drops invalid rule analysis presets', () => {
+    const result = router._normalizeMetaAdsForTest({
+      ruleGroups: [
+        {
+          id: 'g1',
+          name: 'Invalid window',
+          entityLevel: 'campaign',
+          entityIds: ['campaign-1'],
+          analysisPreset: 'last_6h',
+        },
+      ],
+      ruleOverrides: [
+        {
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          analysisPreset: 'custom',
+        },
+      ],
+    });
+
+    expect(result.ruleGroups[0]).not.toHaveProperty('analysisPreset');
+    expect(result.ruleOverrides[0]).not.toHaveProperty('analysisPreset');
   });
 
   it('normalizes enabled rule overrides without saving unknown keys', () => {

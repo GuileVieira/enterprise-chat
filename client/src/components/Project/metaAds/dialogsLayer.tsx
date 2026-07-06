@@ -144,6 +144,7 @@ export function MetaAdsDialogsLayer({
     setRuleGroupDraft,
     onRuleGroupRuleChange,
     onRuleGroupRuleTextChange,
+    onRuleGroupAnalysisPresetChange,
     onRuleGroupNoResultSpendCapChange,
     onRuleGroupEntityToggle,
     onAccountProfileChange,
@@ -267,6 +268,7 @@ export function MetaAdsDialogsLayer({
         onAccountProfileChange={onAccountProfileChange}
         onRuleChange={onRuleGroupRuleChange}
         onRuleTextChange={onRuleGroupRuleTextChange}
+        onAnalysisPresetChange={onRuleGroupAnalysisPresetChange}
         onNoResultSpendCapChange={onRuleGroupNoResultSpendCapChange}
         onEntityToggle={onRuleGroupEntityToggle}
         onCreativeRuleChange={onRuleGroupCreativeRuleChange}

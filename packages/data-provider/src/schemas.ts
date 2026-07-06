@@ -983,6 +983,9 @@ export const projectSchema = z.object({
             entityId: z.string(),
             entityName: z.string().optional(),
             enabled: z.boolean().optional(),
+            analysisPreset: z
+              .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+              .optional(),
             rules: z
               .object({
                 targetCpa: z.number().optional(),
@@ -1042,6 +1045,9 @@ export const projectSchema = z.object({
             entityLevel: z.enum(['campaign', 'adset']),
             entityIds: z.array(z.string()),
             enabled: z.boolean().optional(),
+            analysisPreset: z
+              .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+              .optional(),
             rules: z
               .object({
                 targetCpa: z.number().optional(),

@@ -26,6 +26,7 @@ type MetaAdsWorkspaceShellProps = {
   onWorkspaceTabChange: (tab: WorkspaceTab) => void;
   onToggleFullscreen: () => void;
   onSave: () => void;
+  onDiscardDraft: () => void;
 };
 
 const metaAdsSurface =
@@ -52,6 +53,7 @@ export function MetaAdsWorkspaceShell({
   onWorkspaceTabChange,
   onToggleFullscreen,
   onSave,
+  onDiscardDraft,
 }: MetaAdsWorkspaceShellProps) {
   return (
     <div
@@ -129,6 +131,14 @@ export function MetaAdsWorkspaceShell({
               {localize(
                 hasUnsavedSettingsDraft ? 'com_ui_project_meta_ads_publish_draft' : 'com_ui_save',
               )}
+            </MetaAdsButton>
+          )}
+          {hasUnsavedSettingsDraft && !settingsDrawer && (
+            <MetaAdsButton
+              disabled={!canUseMetaAdsActions || savingSettings}
+              onClick={onDiscardDraft}
+            >
+              {localize('com_ui_project_meta_ads_discard_draft')}
             </MetaAdsButton>
           )}
         </div>

@@ -63,6 +63,7 @@ export type RuleGroupDraft = {
   entityLevel: MetaAdsRuleGroup['entityLevel'];
   entityIds: string[];
   entityName?: string;
+  analysisPreset?: MetaAdsSettings['automationAnalysisPreset'];
   rules: MetaAdsRulesState;
   creativeRules: Required<MetaAdsCreativeRules>;
 };

@@ -136,6 +136,7 @@ export default function ProjectMetaAdsPanel({
     setSettings,
     hasUnsavedSettingsDraft,
     onSave,
+    onDiscardSettingsDraft,
     openSettingsDrawer,
   } = metaAdsSettings;
   const metaAdsEntityActions = useMetaAdsEntityActions({
@@ -263,6 +264,7 @@ export default function ProjectMetaAdsPanel({
         onWorkspaceTabChange={setWorkspaceTab}
         onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
+        onDiscardDraft={onDiscardSettingsDraft}
       >
         {workspaceTab === 'overview' && (
           <>

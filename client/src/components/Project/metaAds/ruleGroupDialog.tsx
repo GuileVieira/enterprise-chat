@@ -74,6 +74,16 @@ function getInvalidInputClassName(inputClassName: string, hasError: boolean) {
     : inputClassName;
 }
 
+const analysisPresetOptions = [
+  ['today', 'com_ui_project_meta_ads_analysis_today'],
+  ['yesterday', 'com_ui_project_meta_ads_analysis_yesterday'],
+  ['last_2d', 'com_ui_project_meta_ads_analysis_last_2d'],
+  ['last_3d', 'com_ui_project_meta_ads_analysis_last_3d'],
+  ['last_7d', 'com_ui_project_meta_ads_analysis_last_7d'],
+  ['last_14d', 'com_ui_project_meta_ads_analysis_last_14d'],
+  ['last_30d', 'com_ui_project_meta_ads_analysis_last_30d'],
+] as const;
+
 function getNumberErrorKey(value: unknown, min: number, max?: number) {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue < min) {
@@ -98,6 +108,7 @@ export function MetaAdsRuleGroupDialog({
   onAccountProfileChange,
   onRuleChange,
   onRuleTextChange,
+  onAnalysisPresetChange,
   onNoResultSpendCapChange,
   onEntityToggle,
   onCreativeRuleChange,
@@ -116,6 +127,7 @@ export function MetaAdsRuleGroupDialog({
   onAccountProfileChange: (value: MetaAdsSettingsState['accountProfile']) => void;
   onRuleChange: (key: keyof MetaAdsRulesState, value: string) => void;
   onRuleTextChange: (key: keyof MetaAdsRulesState, value: string) => void;
+  onAnalysisPresetChange: (value: MetaAdsSettingsState['automationAnalysisPreset']) => void;
   onNoResultSpendCapChange: (key: 'enabled' | 'minSpend', value: boolean | string) => void;
   onEntityToggle: (entityId: string) => void;
   onCreativeRuleChange: (
@@ -227,6 +239,27 @@ export function MetaAdsRuleGroupDialog({
                 onChange={(event) => onNameChange(event.target.value)}
                 className={controls.inputClassName}
               />
+            </label>
+          )}
+          {draft.scope !== 'global' && (
+            <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+              {localize('com_ui_project_meta_ads_analysis_window')}
+              <select
+                aria-label={localize('com_ui_project_meta_ads_analysis_window')}
+                value={draft.analysisPreset ?? settings.automationAnalysisPreset ?? 'last_2d'}
+                onChange={(event) =>
+                  onAnalysisPresetChange(
+                    event.target.value as MetaAdsSettingsState['automationAnalysisPreset'],
+                  )
+                }
+                className={controls.inputClassName}
+              >
+                {analysisPresetOptions.map(([value, labelKey]) => (
+                  <option key={value} value={value}>
+                    {localize(labelKey)}
+                  </option>
+                ))}
+              </select>
             </label>
           )}
           {draft.scope === 'group' && (

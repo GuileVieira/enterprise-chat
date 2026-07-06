@@ -115,6 +115,10 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    analysisPreset: {
+      type: String,
+      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
+    },
     rules: {
       type: ProjectMetaAdsRulesSchema,
       default: {},
@@ -149,6 +153,10 @@ const ProjectMetaAdsRuleGroupSchema = new Schema(
     enabled: {
       type: Boolean,
       default: true,
+    },
+    analysisPreset: {
+      type: String,
+      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,

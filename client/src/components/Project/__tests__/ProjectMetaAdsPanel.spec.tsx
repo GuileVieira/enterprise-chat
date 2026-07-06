@@ -2424,6 +2424,41 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('Draft local').length).toBeGreaterThan(0);
   });
 
+  it('confirms and discards persisted settings drafts', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+    jest.spyOn(window, 'confirm').mockReturnValueOnce(true);
+
+    const { unmount } = render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Draft local' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_discard_draft'));
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      expect.stringContaining('com_ui_project_meta_ads_pending_changes_summary'),
+    );
+    expect(screen.queryByText('com_ui_project_meta_ads_publish_draft')).toBeNull();
+    unmount();
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.queryByText('Draft local')).toBeNull();
+  });
+
   it('filters and sorts campaigns like an operator table', () => {
     mockStatusData.campaigns = [
       {
@@ -3868,7 +3903,8 @@ describe('ProjectMetaAdsPanel', () => {
             name: 'Old group',
             entityLevel: 'campaign' as const,
             entityIds: ['campaign-1'],
-            enabled: true,
+            enabled: false,
+            analysisPreset: 'last_7d',
             rules: { targetCpa: 45 },
           },
         ],
@@ -3930,6 +3966,12 @@ describe('ProjectMetaAdsPanel', () => {
     );
     fireEvent.click(within(ruleGroupDialog).getByLabelText('Old Campaign'));
     fireEvent.click(within(ruleGroupDialog).getByLabelText('New Campaign'));
+    fireEvent.change(
+      within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_analysis_window'),
+      {
+        target: { value: 'today' },
+      },
+    );
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
     publishSettingsDraft();
 
@@ -3941,6 +3983,8 @@ describe('ProjectMetaAdsPanel', () => {
             expect.objectContaining({
               id: 'group-1',
               name: 'New group',
+              enabled: false,
+              analysisPreset: 'today',
               entityIds: ['campaign-3'],
             }),
           ],

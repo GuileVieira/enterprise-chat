@@ -87,6 +87,7 @@ export function useMetaAdsRules({
       name: '',
       entityLevel,
       entityIds,
+      analysisPreset: settings.automationAnalysisPreset ?? 'last_2d',
       rules: { ...settings.rules },
       creativeRules: { ...settings.creativeRules },
     });
@@ -110,6 +111,7 @@ export function useMetaAdsRules({
       name: group.name ?? '',
       entityLevel: group.entityLevel,
       entityIds: group.entityIds ?? [],
+      analysisPreset: group.analysisPreset ?? settings.automationAnalysisPreset ?? 'last_2d',
       rules: { ...defaultRules, ...(group.rules ?? {}) },
       creativeRules: { ...settings.creativeRules, ...(group.creativeRules ?? {}) },
     });
@@ -123,6 +125,7 @@ export function useMetaAdsRules({
       entityLevel: ruleOverride.entityLevel,
       entityIds: [ruleOverride.entityId],
       entityName: ruleOverride.entityName,
+      analysisPreset: ruleOverride.analysisPreset ?? settings.automationAnalysisPreset ?? 'last_2d',
       rules: { ...defaultRules, ...(ruleOverride.rules ?? {}) },
       creativeRules: { ...settings.creativeRules, ...(ruleOverride.creativeRules ?? {}) },
     });
@@ -216,6 +219,12 @@ export function useMetaAdsRules({
           }
         : current,
     );
+  };
+
+  const onRuleGroupAnalysisPresetChange = (
+    value: MetaAdsSettingsState['automationAnalysisPreset'],
+  ) => {
+    setRuleGroupDraft((current) => (current ? { ...current, analysisPreset: value } : current));
   };
 
   const onRuleGroupNoResultSpendCapChange = (
@@ -337,6 +346,7 @@ export function useMetaAdsRules({
             ? {
                 ...ruleOverride,
                 entityName: ruleGroupDraft.name.trim() || ruleGroupDraft.entityName,
+                analysisPreset: ruleGroupDraft.analysisPreset,
                 rules: ruleGroupDraft.rules,
                 creativeRules: ruleGroupDraft.creativeRules,
               }
@@ -359,6 +369,7 @@ export function useMetaAdsRules({
         ruleGroupDraft.name.trim() || localize('com_ui_project_meta_ads_rule_group_default_name'),
       entityLevel: ruleGroupDraft.entityLevel,
       entityIds: ruleGroupDraft.entityIds,
+      analysisPreset: ruleGroupDraft.analysisPreset,
       enabled:
         ruleGroupDraft.id == null
           ? true
@@ -393,6 +404,7 @@ export function useMetaAdsRules({
     onDeleteRuleOverride,
     onRuleGroupRuleChange,
     onRuleGroupRuleTextChange,
+    onRuleGroupAnalysisPresetChange,
     onRuleGroupNoResultSpendCapChange,
     onRuleGroupEntityToggle,
     onAccountProfileChange,

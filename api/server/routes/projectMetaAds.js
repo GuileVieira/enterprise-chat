@@ -362,6 +362,9 @@ function normalizeRuleOverrides(ruleOverrides = []) {
             ? override.entityName.trim()
             : undefined,
         enabled: override.enabled !== false,
+        ...(ANALYSIS_PRESETS.has(override.analysisPreset)
+          ? { analysisPreset: override.analysisPreset }
+          : {}),
         rules: validateMetaAdsRules(override.rules),
         creativeRules: validateMetaAdsCreativeRules(override.creativeRules),
       };
@@ -392,6 +395,9 @@ function normalizeRuleGroups(ruleGroups = []) {
         entityLevel,
         entityIds: [...new Set(entityIds.map((entityId) => entityId.trim()))],
         enabled: group.enabled !== false,
+        ...(ANALYSIS_PRESETS.has(group.analysisPreset)
+          ? { analysisPreset: group.analysisPreset }
+          : {}),
         rules: validateMetaAdsRules(group.rules),
         creativeRules: validateMetaAdsCreativeRules(group.creativeRules),
       };
