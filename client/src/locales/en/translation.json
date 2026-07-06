@@ -2052,6 +2052,8 @@
   "com_ui_project_meta_ads_analysis_window": "Period analyzed by AI",
   "com_ui_project_meta_ads_analysis_today": "Today",
   "com_ui_project_meta_ads_analysis_yesterday": "Yesterday",
+  "com_ui_project_meta_ads_analysis_last_6h": "Last 6 hours",
+  "com_ui_project_meta_ads_analysis_last_24h": "Last 24 hours",
   "com_ui_project_meta_ads_analysis_last_2d": "Last 2 days",
   "com_ui_project_meta_ads_analysis_last_3d": "Last 3 days",
   "com_ui_project_meta_ads_analysis_last_7d": "Last 7 days",

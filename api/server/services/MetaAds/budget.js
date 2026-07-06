@@ -57,6 +57,8 @@ const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const ANALYSIS_PRESETS = new Set([
   'today',
   'yesterday',
+  'last_6h',
+  'last_24h',
   'last_2d',
   'last_3d',
   'last_7d',
@@ -2589,6 +2591,17 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
     const yesterday = getMetaAdsDateKey(addDays(now, -1), timeZone);
     return { since: yesterday, until: yesterday, datePreset: options.datePreset };
   }
+  const hoursByPreset = {
+    last_6h: 6,
+    last_24h: 24,
+  };
+  const hours = hoursByPreset[options.datePreset];
+  if (hours) {
+    return {
+      since: new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString(),
+      until: now.toISOString(),
+    };
+  }
   const daysByPreset = {
     last_1d: 1,
     last_2d: 2,
@@ -2611,7 +2624,6 @@ function resolveAutomationAnalysisPeriod(metaAds = {}, now = new Date()) {
     : 'last_2d';
   return {
     ...resolveStatusPeriod({ datePreset: preset }, now),
-    datePreset: preset,
   };
 }
 

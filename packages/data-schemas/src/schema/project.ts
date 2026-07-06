@@ -117,7 +117,17 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
     },
     analysisPreset: {
       type: String,
-      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
+      enum: [
+        'today',
+        'yesterday',
+        'last_6h',
+        'last_24h',
+        'last_2d',
+        'last_3d',
+        'last_7d',
+        'last_14d',
+        'last_30d',
+      ],
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,
@@ -156,7 +166,17 @@ const ProjectMetaAdsRuleGroupSchema = new Schema(
     },
     analysisPreset: {
       type: String,
-      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
+      enum: [
+        'today',
+        'yesterday',
+        'last_6h',
+        'last_24h',
+        'last_2d',
+        'last_3d',
+        'last_7d',
+        'last_14d',
+        'last_30d',
+      ],
     },
     rules: {
       type: ProjectMetaAdsRulesSchema,
@@ -212,7 +232,17 @@ const ProjectMetaAdsSchema = new Schema(
     },
     automationAnalysisPreset: {
       type: String,
-      enum: ['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'],
+      enum: [
+        'today',
+        'yesterday',
+        'last_6h',
+        'last_24h',
+        'last_2d',
+        'last_3d',
+        'last_7d',
+        'last_14d',
+        'last_30d',
+      ],
       default: 'last_2d',
     },
     lastRunAt: {

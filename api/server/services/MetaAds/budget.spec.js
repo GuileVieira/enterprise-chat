@@ -733,6 +733,19 @@ describe('Meta Ads budget service', () => {
     });
   });
 
+  it('resolves short analysis windows as time ranges', () => {
+    const now = new Date('2026-06-23T12:30:00.000Z');
+
+    expect(_resolveStatusPeriodForTest({ datePreset: 'last_6h' }, now)).toEqual({
+      since: '2026-06-23T06:30:00.000Z',
+      until: '2026-06-23T12:30:00.000Z',
+    });
+    expect(_resolveStatusPeriodForTest({ datePreset: 'last_24h' }, now)).toEqual({
+      since: '2026-06-22T12:30:00.000Z',
+      until: '2026-06-23T12:30:00.000Z',
+    });
+  });
+
   it('builds creative pause recommendations without leaving fewer than two active ads', () => {
     const recommendations = _buildCreativePauseRecommendationsForTest({
       ads: [

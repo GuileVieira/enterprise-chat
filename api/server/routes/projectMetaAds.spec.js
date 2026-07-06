@@ -410,6 +410,30 @@ describe('projectMetaAds settings normalization', () => {
     expect(result.ruleOverrides[0].analysisPreset).toBe('last_7d');
   });
 
+  it('preserves short rule analysis presets', () => {
+    const result = router._normalizeMetaAdsForTest({
+      ruleGroups: [
+        {
+          id: 'g1',
+          name: 'Six hours',
+          entityLevel: 'campaign',
+          entityIds: ['campaign-1'],
+          analysisPreset: 'last_6h',
+        },
+      ],
+      ruleOverrides: [
+        {
+          entityLevel: 'adset',
+          entityId: 'adset-1',
+          analysisPreset: 'last_24h',
+        },
+      ],
+    });
+
+    expect(result.ruleGroups[0].analysisPreset).toBe('last_6h');
+    expect(result.ruleOverrides[0].analysisPreset).toBe('last_24h');
+  });
+
   it('drops invalid rule analysis presets', () => {
     const result = router._normalizeMetaAdsForTest({
       ruleGroups: [
@@ -418,7 +442,7 @@ describe('projectMetaAds settings normalization', () => {
           name: 'Invalid window',
           entityLevel: 'campaign',
           entityIds: ['campaign-1'],
-          analysisPreset: 'last_6h',
+          analysisPreset: 'last_90m',
         },
       ],
       ruleOverrides: [

@@ -3969,7 +3969,7 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.change(
       within(ruleGroupDialog).getByLabelText('com_ui_project_meta_ads_analysis_window'),
       {
-        target: { value: 'today' },
+        target: { value: 'last_6h' },
       },
     );
     fireEvent.click(within(ruleGroupDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
@@ -3984,7 +3984,7 @@ describe('ProjectMetaAdsPanel', () => {
               id: 'group-1',
               name: 'New group',
               enabled: false,
-              analysisPreset: 'today',
+              analysisPreset: 'last_6h',
               entityIds: ['campaign-3'],
             }),
           ],

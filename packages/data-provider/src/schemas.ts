@@ -902,7 +902,17 @@ export const projectSchema = z.object({
         ])
         .optional(),
       automationAnalysisPreset: z
-        .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+        .enum([
+          'today',
+          'yesterday',
+          'last_6h',
+          'last_24h',
+          'last_2d',
+          'last_3d',
+          'last_7d',
+          'last_14d',
+          'last_30d',
+        ])
         .optional(),
       lastRunAt: z.string().optional(),
       clientGoal: z
@@ -984,7 +994,17 @@ export const projectSchema = z.object({
             entityName: z.string().optional(),
             enabled: z.boolean().optional(),
             analysisPreset: z
-              .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+              .enum([
+                'today',
+                'yesterday',
+                'last_6h',
+                'last_24h',
+                'last_2d',
+                'last_3d',
+                'last_7d',
+                'last_14d',
+                'last_30d',
+              ])
               .optional(),
             rules: z
               .object({
@@ -1046,7 +1066,17 @@ export const projectSchema = z.object({
             entityIds: z.array(z.string()),
             enabled: z.boolean().optional(),
             analysisPreset: z
-              .enum(['today', 'yesterday', 'last_2d', 'last_3d', 'last_7d', 'last_14d', 'last_30d'])
+              .enum([
+                'today',
+                'yesterday',
+                'last_6h',
+                'last_24h',
+                'last_2d',
+                'last_3d',
+                'last_7d',
+                'last_14d',
+                'last_30d',
+              ])
               .optional(),
             rules: z
               .object({

@@ -72,6 +72,8 @@ const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const ANALYSIS_PRESETS = new Set([
   'today',
   'yesterday',
+  'last_6h',
+  'last_24h',
   'last_2d',
   'last_3d',
   'last_7d',

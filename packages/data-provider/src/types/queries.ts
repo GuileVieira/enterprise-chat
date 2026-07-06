@@ -475,6 +475,8 @@ export type ProjectMetaAdsTenantTokenResponse = {
 export type ProjectMetaAdsDatePreset =
   | 'today'
   | 'yesterday'
+  | 'last_6h'
+  | 'last_24h'
   | 'last_1d'
   | 'last_2d'
   | 'last_3d'

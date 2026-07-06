@@ -77,6 +77,8 @@ function getInvalidInputClassName(inputClassName: string, hasError: boolean) {
 const analysisPresetOptions = [
   ['today', 'com_ui_project_meta_ads_analysis_today'],
   ['yesterday', 'com_ui_project_meta_ads_analysis_yesterday'],
+  ['last_6h', 'com_ui_project_meta_ads_analysis_last_6h'],
+  ['last_24h', 'com_ui_project_meta_ads_analysis_last_24h'],
   ['last_2d', 'com_ui_project_meta_ads_analysis_last_2d'],
   ['last_3d', 'com_ui_project_meta_ads_analysis_last_3d'],
   ['last_7d', 'com_ui_project_meta_ads_analysis_last_7d'],
