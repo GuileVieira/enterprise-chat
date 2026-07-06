@@ -2889,6 +2889,69 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('keeps stored budget values when live period insights omit budget fields', async () => {
+    const { budget } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+      snapshots: [
+        {
+          entityId: 'adset-1',
+          entityName: 'Audience saved',
+          campaignId: 'campaign-1',
+          campaignName: 'Messages saved',
+          dailyBudget: 15,
+          spend: 10,
+          resultCount: 1,
+          createdAt: '2026-06-30T12:00:00.000Z',
+        },
+      ],
+      campaigns: [{ id: 'campaign-1', name: 'Messages live', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [{ id: 'adset-1', name: 'Audience live', campaign_id: 'campaign-1' }],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Messages live',
+          adset_id: 'adset-1',
+          adset_name: 'Audience live',
+          spend: '67.50',
+          impressions: '1000',
+          actions: [
+            {
+              action_type: 'onsite_conversion.messaging_conversation_started_7d',
+              value: '9',
+            },
+          ],
+        },
+      ],
+    });
+
+    const status = await budget.getProjectMetaAdsStatus('p1', 'request-tenant', {
+      datePreset: 'last_7d',
+    });
+
+    expect(status.campaigns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          campaignId: 'campaign-1',
+          budgetMode: 'ABO',
+          editableBudgetLevel: 'adset',
+          dailyBudget: 15,
+          spend: 67.5,
+          resultCount: 9,
+        }),
+      ]),
+    );
+    expect(status.campaigns[0].adSets).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entityId: 'adset-1',
+          dailyBudget: 15,
+          spend: 67.5,
+          resultCount: 9,
+        }),
+      ]),
+    );
+  });
+
   it('marks CBO campaigns as campaign-editable and ABO campaigns as adset-editable', async () => {
     const { budget, listCampaigns } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },

@@ -1544,6 +1544,26 @@ function buildSnapshotsFromInsights({
     .filter(Boolean);
 }
 
+function mergeLiveSnapshotBudgetFallback(liveSnapshots = [], storedSnapshots = []) {
+  const storedByEntity = latestByEntity(storedSnapshots);
+  return liveSnapshots.map((snapshot) => {
+    const stored = storedByEntity.get(snapshot.entityId);
+    if (!stored) {
+      return snapshot;
+    }
+    const dailyBudget = Number(snapshot.dailyBudget ?? 0);
+    const storedDailyBudget = Number(stored.dailyBudget ?? 0);
+    if (dailyBudget > 0 || storedDailyBudget <= 0) {
+      return snapshot;
+    }
+    return {
+      ...snapshot,
+      dailyBudget: storedDailyBudget,
+      status: snapshot.status || stored.status,
+    };
+  });
+}
+
 function getCreativeValue(creative, keys = []) {
   for (const key of keys) {
     const value = creative?.[key];
@@ -2637,6 +2657,7 @@ function getStatusPeriodCacheKey({
   targetResultType,
 }) {
   return JSON.stringify({
+    payloadVersion: 2,
     projectId,
     tenantId,
     adAccountId,
@@ -4901,7 +4922,9 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     }
   }
   const campaigns = buildCampaignSummaries({
-    latestSnapshots: liveSnapshots ?? latestSnapshots,
+    latestSnapshots: liveSnapshots
+      ? mergeLiveSnapshotBudgetFallback(liveSnapshots, latestSnapshots)
+      : latestSnapshots,
     recommendations,
     campaignConfigs,
     campaignInsights,

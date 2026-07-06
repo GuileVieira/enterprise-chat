@@ -691,7 +691,7 @@ router.post('/run', metaAdsClientActionAccess, async (req, res) => {
 
 router.post('/budget', metaAdsClientActionAccess, async (req, res) => {
   try {
-    const change = await applyManualBudgetChange({
+    const result = await applyManualBudgetChange({
       projectId: req.params.projectId,
       tenantId: req.user.tenantId || getTenantId(),
       entityLevel: req.body.entityLevel,
@@ -702,7 +702,7 @@ router.post('/budget', metaAdsClientActionAccess, async (req, res) => {
       actor: 'user',
       actorUserId: req.user.id,
     });
-    return res.json(change);
+    return res.json(result);
   } catch (error) {
     logger.error('[projectMetaAds] manual budget failed', error);
     return res.status(error.statusCode ?? 500).json({

@@ -735,6 +735,19 @@ describe('projectMetaAds manual budget route', () => {
     });
   });
 
+  it('returns the manual budget response envelope', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/budget')
+      .send({ entityLevel: 'campaign', entityId: 'campaign-1', dailyBudget: 120 })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      change: { entityLevel: 'campaign', entityId: 'campaign-1', newDailyBudget: 120 },
+    });
+  });
+
   it('preserves Meta API error details for manual budget changes', async () => {
     mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
     applyManualBudgetChange.mockRejectedValueOnce(
