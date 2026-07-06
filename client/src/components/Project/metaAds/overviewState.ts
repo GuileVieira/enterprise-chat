@@ -210,6 +210,8 @@ export function buildMetaAdsSummaryCardItems({
   investmentGoalContext,
   summaryMetricContext,
   goalContext,
+  conversionValueGoalContext,
+  roasGoalContext,
   summaryResultTypeOptionsLength,
   scopedObjectiveSummary,
   currency,
@@ -227,6 +229,8 @@ export function buildMetaAdsSummaryCardItems({
   investmentGoalContext?: string | string[];
   summaryMetricContext: string | undefined;
   goalContext?: string;
+  conversionValueGoalContext?: string | string[];
+  roasGoalContext?: string | string[];
   summaryResultTypeOptionsLength: number;
   scopedObjectiveSummary: ReturnType<typeof getScopedObjectiveSummary>;
   currency: string;
@@ -247,6 +251,7 @@ export function buildMetaAdsSummaryCardItems({
         labelKey: 'com_ui_project_meta_ads_conversion_value',
         value: formatMoney(summaryConversionValue, currency),
         tone: 'border-l-amber-300/35',
+        context: conversionValueGoalContext,
       },
       {
         labelKey: 'com_ui_project_meta_ads_average_cost',
@@ -264,6 +269,7 @@ export function buildMetaAdsSummaryCardItems({
         labelKey: 'com_ui_project_meta_ads_roas',
         value: formatMetric(summaryAverageRoas),
         tone: 'border-l-violet-300/30',
+        context: roasGoalContext,
       },
       {
         labelKey: 'com_ui_project_meta_ads_average_ticket',

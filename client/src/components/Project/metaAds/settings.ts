@@ -100,6 +100,8 @@ export function normalizeSettings(project: TProject): MetaAdsSettingsState {
     clientGoal: project.metaAds?.clientGoal ?? {
       resultType: 'purchase',
       monthlyTarget: 0,
+      monthlyConversionValueTarget: 0,
+      targetRoas: 0,
     },
     budgetLevel: 'adset',
     scheduleIntervalMinutes: project.metaAds?.scheduleIntervalMinutes ?? 180,

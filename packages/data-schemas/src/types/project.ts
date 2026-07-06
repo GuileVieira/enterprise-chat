@@ -97,6 +97,8 @@ export interface IProjectMetaAds {
   clientGoal?: {
     resultType?: string;
     monthlyTarget?: number;
+    monthlyConversionValueTarget?: number;
+    targetRoas?: number;
   };
   monthlyBudget?: IProjectMetaAdsMonthlyBudget;
   monthlyBudgets?: IProjectMetaAdsMonthlyBudgets;

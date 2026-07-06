@@ -222,7 +222,17 @@ function validateClientGoal(clientGoal = undefined) {
   }
   const resultType = typeof clientGoal.resultType === 'string' ? clientGoal.resultType.trim() : '';
   const monthlyTarget = Number(clientGoal.monthlyTarget ?? 0);
-  if (!resultType || !Number.isFinite(monthlyTarget) || monthlyTarget < 0) {
+  const monthlyConversionValueTarget = Number(clientGoal.monthlyConversionValueTarget ?? 0);
+  const targetRoas = Number(clientGoal.targetRoas ?? 0);
+  if (
+    !resultType ||
+    !Number.isFinite(monthlyTarget) ||
+    monthlyTarget < 0 ||
+    !Number.isFinite(monthlyConversionValueTarget) ||
+    monthlyConversionValueTarget < 0 ||
+    !Number.isFinite(targetRoas) ||
+    targetRoas < 0
+  ) {
     throw Object.assign(new Error('Invalid Meta Ads client goal.'), {
       statusCode: 400,
       details: ['clientGoal'],
@@ -231,6 +241,8 @@ function validateClientGoal(clientGoal = undefined) {
   return {
     resultType,
     monthlyTarget,
+    monthlyConversionValueTarget,
+    targetRoas,
   };
 }
 

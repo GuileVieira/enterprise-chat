@@ -942,6 +942,8 @@ export const projectSchema = z.object({
         .object({
           resultType: z.string().optional(),
           monthlyTarget: z.number().optional(),
+          monthlyConversionValueTarget: z.number().optional(),
+          targetRoas: z.number().optional(),
         })
         .optional(),
       monthlyBudget: z

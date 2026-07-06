@@ -410,18 +410,22 @@ describe('Meta Ads budget service', () => {
         clientGoal: {
           resultType: 'purchase',
           monthlyTarget: 250,
+          monthlyConversionValueTarget: 12000,
+          targetRoas: 3,
         },
         accountProfile: 'ecommerce',
         monthlyRows: [
           {
             spend: '1500',
             actions: [{ action_type: 'purchase', value: '7' }],
+            action_values: [{ action_type: 'purchase', value: '6000' }],
           },
         ],
         todayRows: [
           {
             spend: '50',
             actions: [{ action_type: 'purchase', value: '1' }],
+            action_values: [{ action_type: 'purchase', value: '150' }],
           },
         ],
         now: new Date('2026-07-06T12:00:00.000Z'),
@@ -435,6 +439,14 @@ describe('Meta Ads budget service', () => {
         resultType: 'purchase',
         month: { target: 250, actual: 7, remaining: 243, percent: 3 },
         day: { target: 9, actual: 1, remaining: 8, percent: 11 },
+      },
+      conversionValue: {
+        month: { target: 12000, actual: 6000, remaining: 6000, percent: 50 },
+        day: { target: 387.1, actual: 150, remaining: 237.1, percent: 39 },
+      },
+      roas: {
+        month: { target: 3, actual: 4, remaining: 0, percent: 133 },
+        day: { target: 3, actual: 3, remaining: 0, percent: 100 },
       },
     });
   });

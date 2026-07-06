@@ -6,18 +6,22 @@ import { useProjectMetaAdsQuery } from '../queries';
 
 const mockGetProjectMetaAdsStatus = jest.fn();
 
-jest.mock('librechat-data-provider', () => ({
-  QueryKeys: {
-    projectMetaAds: 'projectMetaAds',
-  },
-  dataService: {
-    getProjectMetaAdsStatus: (...args: unknown[]) => mockGetProjectMetaAdsStatus(...args),
-  },
-  EModelEndpoint: {},
-  isAgentsEndpoint: jest.fn(() => false),
-  defaultOrderQuery: {},
-  defaultAssistantsVersion: 'v2',
-}));
+jest.mock(
+  'librechat-data-provider',
+  () => ({
+    QueryKeys: {
+      projectMetaAds: 'projectMetaAds',
+    },
+    dataService: {
+      getProjectMetaAdsStatus: (...args: unknown[]) => mockGetProjectMetaAdsStatus(...args),
+    },
+    EModelEndpoint: {},
+    isAgentsEndpoint: jest.fn(() => false),
+    defaultOrderQuery: {},
+    defaultAssistantsVersion: 'v2',
+  }),
+  { virtual: true },
+);
 
 jest.mock('~/utils', () => ({
   findConversationInInfinite: jest.fn(),
@@ -53,7 +57,7 @@ describe('useProjectMetaAdsQuery', () => {
       changes: [],
     };
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v3:p1:live:last_7d:none:none',
+      'orqest:project-meta-ads-status:v4:p1:live:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data,
@@ -82,14 +86,14 @@ describe('useProjectMetaAdsQuery', () => {
       changes: [],
     };
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v3:p1:snapshot:last_7d:none:none',
+      'orqest:project-meta-ads-status:v4:p1:snapshot:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data: snapshotData,
       }),
     );
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v3:p1:live:last_7d:none:none',
+      'orqest:project-meta-ads-status:v4:p1:live:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data: liveData,

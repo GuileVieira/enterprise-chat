@@ -333,6 +333,7 @@ describe('ProjectMetaAdsPanel', () => {
         resultCount: 8,
         cpa: 50,
         roas: 3.5,
+        conversionValue: 1400,
         ctr: 2.5,
         clicks: 120,
         impressions: 4800,
@@ -356,13 +357,34 @@ describe('ProjectMetaAdsPanel', () => {
       },
     ];
 
-    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    const ecommerceProject = {
+      ...project,
+      metaAds: {
+        accountProfile: 'ecommerce',
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 100,
+          monthlyConversionValueTarget: 5000,
+          targetRoas: 4,
+        },
+        rules: {
+          targetResultType: 'purchase',
+          primaryMetric: 'roas',
+        },
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
 
     openBiTab();
 
     expect(screen.getByTestId('meta-ads-bi-report-cards')).toBeInTheDocument();
     expect(screen.getAllByText('com_ui_project_meta_ads_roas')).not.toHaveLength(0);
     expect(screen.getAllByText('3.50')).not.toHaveLength(0);
+    expect(
+      screen.getByText('com_ui_project_meta_ads_conversion_goal_progress'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_roas_goal_progress')).toBeInTheDocument();
     expect(screen.getByText('Purchase Campaign')).toBeInTheDocument();
   });
 
@@ -524,12 +546,26 @@ describe('ProjectMetaAdsPanel', () => {
       within(automationDialog).getByLabelText('com_ui_project_meta_ads_monthly_allowed_overspend'),
       { target: { value: '10' } },
     );
+    fireEvent.change(
+      within(automationDialog).getByLabelText(
+        'com_ui_project_meta_ads_monthly_conversion_value_goal',
+      ),
+      { target: { value: '12000' } },
+    );
+    fireEvent.change(
+      within(automationDialog).getByLabelText('com_ui_project_meta_ads_target_roas_goal'),
+      { target: { value: '3' } },
+    );
     fireEvent.click(within(automationDialog).getByText('com_ui_save'));
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
         projectId: 'p1',
         metaAds: expect.objectContaining({
+          clientGoal: expect.objectContaining({
+            monthlyConversionValueTarget: 12000,
+            targetRoas: 3,
+          }),
           monthlyBudget: {
             month: '2026-07',
             baseAmount: 5000,
@@ -1628,6 +1664,14 @@ describe('ProjectMetaAdsPanel', () => {
         month: { target: 250, actual: 7, remaining: 243, percent: 3 },
         day: { target: 9, actual: 1, remaining: 8, percent: 11 },
       },
+      conversionValue: {
+        month: { target: 12000, actual: 6000, remaining: 6000, percent: 50 },
+        day: { target: 387.1, actual: 150, remaining: 237.1, percent: 39 },
+      },
+      roas: {
+        month: { target: 3, actual: 4, remaining: 0, percent: 133 },
+        day: { target: 3, actual: 3, remaining: 0, percent: 100 },
+      },
     };
     mockStatusData.campaigns = [
       {
@@ -1647,6 +1691,12 @@ describe('ProjectMetaAdsPanel', () => {
       ...project,
       metaAds: {
         accountProfile: 'ecommerce',
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 250,
+          monthlyConversionValueTarget: 12000,
+          targetRoas: 3,
+        },
         rules: { targetResultType: 'purchase' },
       },
     } as TProject;
@@ -1662,6 +1712,16 @@ describe('ProjectMetaAdsPanel', () => {
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
       ).getAllByText(/com_ui_project_meta_ads_goal_(month|day)_progress/),
+    ).toHaveLength(2);
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_conversion_value'),
+      ).getAllByText(/com_ui_project_meta_ads_goal_(month|day)_progress/),
+    ).toHaveLength(2);
+    expect(
+      within(screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_roas')).getAllByText(
+        /com_ui_project_meta_ads_goal_(month|day)_progress/,
+      ),
     ).toHaveLength(2);
   });
 

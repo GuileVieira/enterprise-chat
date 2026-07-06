@@ -482,6 +482,46 @@ export function MetaAdsSettingsDrawer({
                       className={controls.inputClassName}
                     />
                   </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_monthly_conversion_value_goal')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.clientGoal?.monthlyConversionValueTarget ?? ''}
+                      onChange={(event) =>
+                        updateDraft({
+                          clientGoal: {
+                            ...(draft.clientGoal ?? {}),
+                            monthlyConversionValueTarget:
+                              event.target.value === '' ? undefined : Number(event.target.value),
+                          },
+                        })
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                    {localize('com_ui_project_meta_ads_target_roas_goal')}
+                    <input
+                      disabled={!canUseMetaAdsActions}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={draft.clientGoal?.targetRoas ?? ''}
+                      onChange={(event) =>
+                        updateDraft({
+                          clientGoal: {
+                            ...(draft.clientGoal ?? {}),
+                            targetRoas:
+                              event.target.value === '' ? undefined : Number(event.target.value),
+                          },
+                        })
+                      }
+                      className={controls.inputClassName}
+                    />
+                  </label>
                 </div>
               </div>
               <div className={chrome.modalTileClassName}>

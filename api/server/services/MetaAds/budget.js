@@ -295,6 +295,14 @@ function sumInsightMetric(rows, targetResultType, metric) {
   }, 0);
 }
 
+function calculateRoasProgress(rows, targetResultType) {
+  const spend = sumInsightMetric(rows, targetResultType, 'spend');
+  if (spend <= 0) {
+    return 0;
+  }
+  return sumInsightMetric(rows, targetResultType, 'conversionValue') / spend;
+}
+
 function buildGoalProgress({
   monthlyBudget,
   clientGoal,
@@ -319,6 +327,8 @@ function buildGoalProgress({
           }),
         };
   const resultTarget = Number(clientGoal?.monthlyTarget ?? 0);
+  const conversionValueTarget = Number(clientGoal?.monthlyConversionValueTarget ?? 0);
+  const targetRoas = Number(clientGoal?.targetRoas ?? 0);
   const resultType = clientGoal?.resultType || resolveTargetResultType({ accountProfile });
   const result =
     resultType && Number.isFinite(resultTarget) && resultTarget > 0
@@ -336,9 +346,37 @@ function buildGoalProgress({
           }),
         }
       : undefined;
+  const conversionValue =
+    Number.isFinite(conversionValueTarget) && conversionValueTarget > 0
+      ? {
+          month: buildProgressItem({
+            target: conversionValueTarget,
+            actual: sumInsightMetric(monthlyRows, resultType, 'conversionValue'),
+          }),
+          day: buildProgressItem({
+            target: conversionValueTarget / monthDayCount,
+            actual: sumInsightMetric(todayRows, resultType, 'conversionValue'),
+          }),
+        }
+      : undefined;
+  const roas =
+    Number.isFinite(targetRoas) && targetRoas > 0
+      ? {
+          month: buildProgressItem({
+            target: targetRoas,
+            actual: calculateRoasProgress(monthlyRows, resultType),
+          }),
+          day: buildProgressItem({
+            target: targetRoas,
+            actual: calculateRoasProgress(todayRows, resultType),
+          }),
+        }
+      : undefined;
   return {
     ...(investment?.month && investment?.day ? { investment } : {}),
     ...(result?.month && result?.day ? { result } : {}),
+    ...(conversionValue?.month && conversionValue?.day ? { conversionValue } : {}),
+    ...(roas?.month && roas?.day ? { roas } : {}),
   };
 }
 
@@ -5186,7 +5224,10 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       }
       const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);
       const hasMonthlyBudgetLimit = getMonthlyBudgetLimit(monthlyBudget) != null;
-      const hasClientGoal = Number(metaAds.clientGoal?.monthlyTarget ?? 0) > 0;
+      const hasClientGoal =
+        Number(metaAds.clientGoal?.monthlyTarget ?? 0) > 0 ||
+        Number(metaAds.clientGoal?.monthlyConversionValueTarget ?? 0) > 0 ||
+        Number(metaAds.clientGoal?.targetRoas ?? 0) > 0;
       if (hasMonthlyBudgetLimit || hasClientGoal) {
         const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, getMetaAdsTimeZone());
         const today = getMetaAdsDateKey(new Date(), getMetaAdsTimeZone());

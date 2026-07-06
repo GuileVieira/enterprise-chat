@@ -172,6 +172,8 @@ describe('projectMetaAds settings normalization', () => {
         clientGoal: {
           resultType: 'purchase',
           monthlyTarget: 350,
+          monthlyConversionValueTarget: 12000,
+          targetRoas: 3,
         },
         automationAnalysisPreset: 'today',
         rules: {
@@ -193,6 +195,8 @@ describe('projectMetaAds settings normalization', () => {
         clientGoal: {
           resultType: 'purchase',
           monthlyTarget: 350,
+          monthlyConversionValueTarget: 12000,
+          targetRoas: 3,
         },
         rules: expect.objectContaining({
           targetResultType: 'purchase',
@@ -208,6 +212,29 @@ describe('projectMetaAds settings normalization', () => {
         }),
       }),
     );
+  });
+
+  it('rejects invalid ecommerce control targets', () => {
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 350,
+          monthlyConversionValueTarget: -1,
+          targetRoas: 3,
+        },
+      }),
+    ).toThrow('Invalid Meta Ads client goal.');
+    expect(() =>
+      router._normalizeMetaAdsForTest({
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 350,
+          monthlyConversionValueTarget: 12000,
+          targetRoas: -1,
+        },
+      }),
+    ).toThrow('Invalid Meta Ads client goal.');
   });
 
   it('rejects invalid monthly budget values', () => {

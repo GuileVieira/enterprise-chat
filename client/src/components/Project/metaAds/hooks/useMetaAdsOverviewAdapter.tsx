@@ -158,28 +158,40 @@ export function useMetaAdsOverviewAdapter({
       formatValue: (value) => formatMoney(value, currency),
     }),
     summaryMetricContext,
-    goalContext: getGoalProgressContext({
-      progress: goalProgress?.result,
+    goalContext:
+      getGoalProgressContext({
+        progress: goalProgress?.result,
+        localize,
+        formatValue: formatMetric,
+      }) ??
+      (() => {
+        const goalTarget = Number(settings.clientGoal?.monthlyTarget ?? 0);
+        const goalResultType = settings.clientGoal?.resultType;
+        if (!goalResultType || !Number.isFinite(goalTarget) || goalTarget <= 0) {
+          return summaryMetricContext;
+        }
+        const resultOption = summaryResultTypeOptions.find(
+          (option) => option.resultType === goalResultType,
+        );
+        const reached = Number(resultOption?.totalResults ?? 0);
+        const percent = goalTarget > 0 ? Math.round((reached / goalTarget) * 100) : 0;
+        return localize('com_ui_project_meta_ads_goal_progress', {
+          0: getResultTypeLabel(goalResultType, localize),
+          1: formatMetric(reached),
+          2: formatMetric(goalTarget),
+          3: String(percent),
+        });
+      })(),
+    conversionValueGoalContext: getGoalProgressContext({
+      progress: goalProgress?.conversionValue,
+      localize,
+      formatValue: (value) => formatMoney(value, currency),
+    }),
+    roasGoalContext: getGoalProgressContext({
+      progress: goalProgress?.roas,
       localize,
       formatValue: formatMetric,
-    }) ?? (() => {
-      const goalTarget = Number(settings.clientGoal?.monthlyTarget ?? 0);
-      const goalResultType = settings.clientGoal?.resultType;
-      if (!goalResultType || !Number.isFinite(goalTarget) || goalTarget <= 0) {
-        return summaryMetricContext;
-      }
-      const resultOption = summaryResultTypeOptions.find(
-        (option) => option.resultType === goalResultType,
-      );
-      const reached = Number(resultOption?.totalResults ?? 0);
-      const percent = goalTarget > 0 ? Math.round((reached / goalTarget) * 100) : 0;
-      return localize('com_ui_project_meta_ads_goal_progress', {
-        0: getResultTypeLabel(goalResultType, localize),
-        1: formatMetric(reached),
-        2: formatMetric(goalTarget),
-        3: String(percent),
-      });
-    })(),
+    }),
     summaryResultTypeOptionsLength: summaryResultTypeOptions.length,
     scopedObjectiveSummary,
     currency,
@@ -332,6 +344,8 @@ function getGoalProgressContext({
   progress:
     | NonNullable<ProjectMetaAdsStatus['goalProgress']>['investment']
     | NonNullable<ProjectMetaAdsStatus['goalProgress']>['result']
+    | NonNullable<ProjectMetaAdsStatus['goalProgress']>['conversionValue']
+    | NonNullable<ProjectMetaAdsStatus['goalProgress']>['roas']
     | undefined;
   localize: Localize;
   formatValue: (value: number) => string;

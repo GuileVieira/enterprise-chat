@@ -96,14 +96,17 @@ function getCampaignResultMetrics(campaign: ProjectMetaAdsCampaignSummary, resul
 function buildBiReportCards({
   campaigns,
   controls,
+  settings,
   currency,
 }: {
   campaigns: ProjectMetaAdsCampaignSummary[];
   controls: MetaAdsBiControls;
+  settings: MetaAdsSettingsState;
   currency: string;
 }): MetaAdsBiWorkspaceProps['reportCards'] {
   let totalSpend = 0;
   let totalResults = 0;
+  let totalConversionValue = 0;
   let clicks = 0;
   let impressions = 0;
   let roasWeightedTotal = 0;
@@ -115,11 +118,13 @@ function buildBiReportCards({
     const metrics = getCampaignResultMetrics(campaign, controls.resultType);
     const spend = Number(metrics.spend ?? 0);
     const resultCount = Number(metrics.resultCount ?? 0);
+    const conversionValue = Number(campaign.conversionValue ?? 0);
     const campaignClicks = Number(campaign.clicks ?? 0);
     const campaignImpressions = Number(campaign.impressions ?? 0);
     const roas = Number(campaign.roas);
     totalSpend += Number.isFinite(spend) ? spend : 0;
     totalResults += Number.isFinite(resultCount) ? resultCount : 0;
+    totalConversionValue += Number.isFinite(conversionValue) ? conversionValue : 0;
     clicks += Number.isFinite(campaignClicks) ? campaignClicks : 0;
     impressions += Number.isFinite(campaignImpressions) ? campaignImpressions : 0;
     if (Number.isFinite(roas) && roas > 0 && Number.isFinite(spend) && spend > 0) {
@@ -130,7 +135,9 @@ function buildBiReportCards({
   const averageCost = totalResults > 0 ? totalSpend / totalResults : null;
   const averageRoas = roasWeight > 0 ? roasWeightedTotal / roasWeight : null;
   const ctr = impressions > 0 ? (clicks / impressions) * 100 : null;
-  return [
+  const monthlyConversionValueTarget = Number(settings.clientGoal?.monthlyConversionValueTarget);
+  const targetRoas = Number(settings.clientGoal?.targetRoas);
+  const cards: MetaAdsBiWorkspaceProps['reportCards'] = [
     { labelKey: 'com_ui_project_meta_ads_total_spend', value: formatMoney(totalSpend, currency) },
     { labelKey: 'com_ui_project_meta_ads_total_results', value: formatMetric(totalResults) },
     { labelKey: 'com_ui_project_meta_ads_average_cost', value: formatMoney(averageCost, currency) },
@@ -138,6 +145,19 @@ function buildBiReportCards({
     { labelKey: 'com_ui_project_meta_ads_ctr', value: formatPercent(ctr) },
     { labelKey: 'com_ui_project_meta_ads_clicks', value: formatMetric(clicks) },
   ];
+  if (Number.isFinite(monthlyConversionValueTarget) && monthlyConversionValueTarget > 0) {
+    cards.push({
+      labelKey: 'com_ui_project_meta_ads_conversion_goal_progress',
+      value: formatPercent((totalConversionValue / monthlyConversionValueTarget) * 100),
+    });
+  }
+  if (Number.isFinite(targetRoas) && targetRoas > 0) {
+    cards.push({
+      labelKey: 'com_ui_project_meta_ads_roas_goal_progress',
+      value: formatPercent(((averageRoas ?? 0) / targetRoas) * 100),
+    });
+  }
+  return cards;
 }
 
 export function useMetaAdsBiAdapter({
@@ -199,6 +219,7 @@ export function useMetaAdsBiAdapter({
   const reportCards = buildBiReportCards({
     campaigns: biCampaigns,
     controls: biControls,
+    settings,
     currency,
   });
 

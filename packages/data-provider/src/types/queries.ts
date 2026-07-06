@@ -266,6 +266,7 @@ export type ProjectMetaAdsCampaignSummary = {
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
+  conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
@@ -451,6 +452,14 @@ export type ProjectMetaAdsStatus = {
     };
     result?: {
       resultType: string;
+      month: ProjectMetaAdsGoalProgressItem;
+      day: ProjectMetaAdsGoalProgressItem;
+    };
+    conversionValue?: {
+      month: ProjectMetaAdsGoalProgressItem;
+      day: ProjectMetaAdsGoalProgressItem;
+    };
+    roas?: {
       month: ProjectMetaAdsGoalProgressItem;
       day: ProjectMetaAdsGoalProgressItem;
     };
@@ -697,7 +706,12 @@ export type ProjectMetaAdsRuleChange = {
   before?: {
     enabled?: boolean;
     automationAnalysisPreset?: ProjectMetaAdsDatePreset;
-    clientGoal?: { resultType?: string; monthlyTarget?: number } | null;
+    clientGoal?: {
+      resultType?: string;
+      monthlyTarget?: number;
+      monthlyConversionValueTarget?: number;
+      targetRoas?: number;
+    } | null;
     rules?: Record<string, unknown>;
     creativeRules?: Record<string, unknown>;
     ruleGroups?: unknown[];
@@ -705,7 +719,12 @@ export type ProjectMetaAdsRuleChange = {
   };
   after?: {
     automationAnalysisPreset?: ProjectMetaAdsDatePreset;
-    clientGoal?: { resultType?: string; monthlyTarget?: number } | null;
+    clientGoal?: {
+      resultType?: string;
+      monthlyTarget?: number;
+      monthlyConversionValueTarget?: number;
+      targetRoas?: number;
+    } | null;
     rules?: Record<string, unknown>;
     creativeRules?: Record<string, unknown>;
     ruleGroups?: unknown[];

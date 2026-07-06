@@ -93,6 +93,8 @@ const ProjectMetaAdsClientGoalSchema = new Schema(
   {
     resultType: String,
     monthlyTarget: Number,
+    monthlyConversionValueTarget: Number,
+    targetRoas: Number,
   },
   { _id: false },
 );
