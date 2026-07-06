@@ -10,20 +10,16 @@ import type {
   useUpdateProjectMetaAdsBudgetMutation,
   useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
-import type { TranslationKeys } from '~/hooks';
 import { logger } from '~/utils';
 import { normalizeSettings, sanitizeMetaAdsEditableSettings } from '../settings';
-import { numberFields, optionalNumberFields } from '../rules';
 import type {
   Localize,
   RequestError,
   SettingsDrawer,
   ManualBudgetDraft,
   MetaAdsDraftStatus,
-  MetaAdsDraftDetail,
   MetaAdsDraftSectionKey,
   MetaAdsSettingsState,
-  MetaAdsDraftSummaryItem,
 } from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
@@ -47,30 +43,6 @@ function getSettingsDraftStorageKey(projectId: string) {
 
 function getManualBudgetDraftStorageKey(projectId: string) {
   return `orqest:metaAds:${projectId}:manualBudgetDrafts`;
-}
-
-function readStoredSettingsDraft(projectId: string): MetaAdsSettingsState | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  try {
-    const storedValue = window.localStorage.getItem(getSettingsDraftStorageKey(projectId));
-    return storedValue
-      ? sanitizeMetaAdsEditableSettings(JSON.parse(storedValue) as MetaAdsSettingsState)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredSettingsDraft(projectId: string, settings: MetaAdsSettingsState) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.setItem(
-    getSettingsDraftStorageKey(projectId),
-    JSON.stringify(sanitizeMetaAdsEditableSettings(settings)),
-  );
 }
 
 function clearStoredSettingsDraft(projectId: string) {
@@ -104,293 +76,6 @@ function writeStoredManualBudgetDrafts(projectId: string, drafts: ManualBudgetDr
   window.localStorage.setItem(getManualBudgetDraftStorageKey(projectId), JSON.stringify(drafts));
 }
 
-function hasSettingsChange(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  keys: Array<keyof MetaAdsSettingsState>,
-) {
-  return keys.some(
-    (key) => JSON.stringify(savedSettings[key]) !== JSON.stringify(draftSettings[key]),
-  );
-}
-
-function formatDraftValue(value: unknown, localize: Localize) {
-  if (value === undefined || value === null || value === '') {
-    return '-';
-  }
-  if (typeof value === 'boolean') {
-    return localize(value ? 'com_ui_yes' : 'com_ui_no');
-  }
-  if (Array.isArray(value)) {
-    return value.length > 0 ? String(value.length) : '-';
-  }
-  return String(value);
-}
-
-function addDraftDetail(
-  details: MetaAdsDraftDetail[],
-  localize: Localize,
-  key: string,
-  labelKey: TranslationKeys,
-  savedValue: unknown,
-  draftValue: unknown,
-) {
-  if (JSON.stringify(savedValue) === JSON.stringify(draftValue)) {
-    return;
-  }
-  details.push({
-    key,
-    label: localize(labelKey),
-    savedValue: formatDraftValue(savedValue, localize),
-    draftValue: formatDraftValue(draftValue, localize),
-  });
-}
-
-type NamedDraftItem = {
-  id?: string;
-  name?: string;
-  entityId?: string;
-  entityName?: string;
-  overrideKey?: string;
-};
-
-function getNamedItems(value: NamedDraftItem[]) {
-  return value.map((item, index) => ({
-    id: item.id ?? item.overrideKey ?? item.entityId ?? item.name ?? `item-${index}`,
-    label: item.name ?? item.entityName ?? item.overrideKey ?? item.id ?? `#${index + 1}`,
-    raw: item,
-  }));
-}
-
-function buildCollectionDetails({
-  key,
-  labelKey,
-  savedItems,
-  draftItems,
-  localize,
-}: {
-  key: string;
-  labelKey: TranslationKeys;
-  savedItems: NamedDraftItem[];
-  draftItems: NamedDraftItem[];
-  localize: Localize;
-}) {
-  const details: MetaAdsDraftDetail[] = [];
-  addDraftDetail(details, localize, `${key}-count`, labelKey, savedItems.length, draftItems.length);
-
-  const savedNamedItems = getNamedItems(savedItems);
-  const draftNamedItems = getNamedItems(draftItems);
-  const savedById = new Map(savedNamedItems.map((item) => [item.id, item]));
-  const draftById = new Map(draftNamedItems.map((item) => [item.id, item]));
-  const created = draftNamedItems.filter((item) => !savedById.has(item.id));
-  const removed = savedNamedItems.filter((item) => !draftById.has(item.id));
-  const changed = draftNamedItems.filter((item) => {
-    const savedItem = savedById.get(item.id);
-    return savedItem && JSON.stringify(savedItem.raw) !== JSON.stringify(item.raw);
-  });
-
-  if (created.length > 0) {
-    details.push({
-      key: `${key}-created`,
-      label: localize('com_ui_project_meta_ads_discard_created'),
-      savedValue: '-',
-      draftValue: created.map((item) => item.label).join(', '),
-    });
-  }
-  if (removed.length > 0) {
-    details.push({
-      key: `${key}-removed`,
-      label: localize('com_ui_project_meta_ads_discard_removed'),
-      savedValue: removed.map((item) => item.label).join(', '),
-      draftValue: '-',
-    });
-  }
-  if (changed.length > 0) {
-    details.push({
-      key: `${key}-changed`,
-      label: localize('com_ui_project_meta_ads_discard_changed'),
-      savedValue: '-',
-      draftValue: changed.map((item) => item.label).join(', '),
-    });
-  }
-
-  return details;
-}
-
-function buildCredentialsDetails(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  localize: Localize,
-) {
-  const details: MetaAdsDraftDetail[] = [];
-  addDraftDetail(
-    details,
-    localize,
-    'enabled',
-    'com_ui_project_meta_ads_enabled',
-    savedSettings.enabled,
-    draftSettings.enabled,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'adAccountId',
-    'com_ui_project_meta_ads_account',
-    savedSettings.adAccountId,
-    draftSettings.adAccountId,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'tokenSecretName',
-    'com_ui_project_meta_ads_project_token',
-    savedSettings.tokenSecretName,
-    draftSettings.tokenSecretName,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'graphVersion',
-    'com_ui_project_meta_ads_graph_version',
-    savedSettings.graphVersion,
-    draftSettings.graphVersion,
-  );
-  return details;
-}
-
-function buildAutomationDetails(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  localize: Localize,
-) {
-  const details: MetaAdsDraftDetail[] = [];
-  addDraftDetail(
-    details,
-    localize,
-    'automationMode',
-    'com_ui_project_meta_ads_mode',
-    savedSettings.automationMode,
-    draftSettings.automationMode,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'scheduleIntervalMinutes',
-    'com_ui_project_meta_ads_schedule',
-    savedSettings.scheduleIntervalMinutes,
-    draftSettings.scheduleIntervalMinutes,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'automationAnalysisPreset',
-    'com_ui_project_meta_ads_rule_change_automationAnalysisPreset',
-    savedSettings.automationAnalysisPreset,
-    draftSettings.automationAnalysisPreset,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'clientGoalResultType',
-    'com_ui_project_meta_ads_result_type',
-    savedSettings.clientGoal?.resultType,
-    draftSettings.clientGoal?.resultType,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'clientGoalMonthlyTarget',
-    'com_ui_project_meta_ads_client_goal',
-    savedSettings.clientGoal?.monthlyTarget,
-    draftSettings.clientGoal?.monthlyTarget,
-  );
-  return details;
-}
-
-function buildGlobalRulesDetails(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  localize: Localize,
-) {
-  const details: MetaAdsDraftDetail[] = [];
-  [...numberFields, ...optionalNumberFields].forEach((field) => {
-    addDraftDetail(
-      details,
-      localize,
-      `rules-${String(field.key)}`,
-      field.labelKey,
-      savedSettings.rules[field.key],
-      draftSettings.rules[field.key],
-    );
-  });
-  addDraftDetail(
-    details,
-    localize,
-    'rules-targetResultType',
-    'com_ui_project_meta_ads_target_result_type',
-    savedSettings.rules.targetResultType,
-    draftSettings.rules.targetResultType,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'rules-primaryMetric',
-    'com_ui_project_meta_ads_primary_metric',
-    savedSettings.rules.primaryMetric,
-    draftSettings.rules.primaryMetric,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'creativeRules-maxFrequency',
-    'com_ui_project_meta_ads_max_frequency_alert',
-    savedSettings.creativeRules.maxFrequency,
-    draftSettings.creativeRules.maxFrequency,
-  );
-  return details;
-}
-
-function buildMonthlyBudgetDetails(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  localize: Localize,
-) {
-  const details: MetaAdsDraftDetail[] = [];
-  addDraftDetail(
-    details,
-    localize,
-    'monthlyBudget-month',
-    'com_ui_project_meta_ads_month',
-    savedSettings.monthlyBudget?.month,
-    draftSettings.monthlyBudget?.month,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'monthlyBudget-baseAmount',
-    'com_ui_project_meta_ads_monthly_base_amount',
-    savedSettings.monthlyBudget?.baseAmount,
-    draftSettings.monthlyBudget?.baseAmount,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'monthlyBudget-additionalAmount',
-    'com_ui_project_meta_ads_monthly_additional_amount',
-    savedSettings.monthlyBudget?.additionalAmount,
-    draftSettings.monthlyBudget?.additionalAmount,
-  );
-  addDraftDetail(
-    details,
-    localize,
-    'monthlyBudget-allowedOverspendPct',
-    'com_ui_project_meta_ads_monthly_allowed_overspend',
-    savedSettings.monthlyBudget?.allowedOverspendPct,
-    draftSettings.monthlyBudget?.allowedOverspendPct,
-  );
-  return details;
-}
-
 function buildManualBudgetDraftDetails(drafts: ManualBudgetDraft[]) {
   return drafts.map((draft) => ({
     key: getManualBudgetDraftKey(draft),
@@ -398,176 +83,6 @@ function buildManualBudgetDraftDetails(drafts: ManualBudgetDraft[]) {
     savedValue: draft.currentBudget === undefined ? '-' : String(draft.currentBudget),
     draftValue: String(draft.dailyBudget),
   }));
-}
-
-function buildSettingsDraftSummary(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  localize: Localize,
-) {
-  const sections: MetaAdsDraftSummaryItem[] = [];
-  if (
-    hasSettingsChange(savedSettings, draftSettings, [
-      'enabled',
-      'adAccountId',
-      'tokenSecretName',
-      'graphVersion',
-      'credentialMode',
-    ])
-  ) {
-    sections.push({
-      key: 'credentials',
-      label: localize('com_ui_project_meta_ads_account_credentials'),
-      details: buildCredentialsDetails(savedSettings, draftSettings, localize),
-    });
-  }
-  if (
-    hasSettingsChange(savedSettings, draftSettings, [
-      'automationMode',
-      'scheduleIntervalMinutes',
-      'automationAnalysisPreset',
-      'clientGoal',
-    ])
-  ) {
-    sections.push({
-      key: 'automation',
-      label: localize('com_ui_project_meta_ads_automation'),
-      details: buildAutomationDetails(savedSettings, draftSettings, localize),
-    });
-  }
-  if (
-    hasSettingsChange(savedSettings, draftSettings, ['accountProfile', 'rules', 'creativeRules'])
-  ) {
-    sections.push({
-      key: 'global-rules',
-      label: localize('com_ui_project_meta_ads_global_rules'),
-      details: buildGlobalRulesDetails(savedSettings, draftSettings, localize),
-    });
-  }
-  if (hasSettingsChange(savedSettings, draftSettings, ['ruleGroups'])) {
-    sections.push({
-      key: 'rule-groups',
-      label: localize('com_ui_project_meta_ads_rule_groups'),
-      details: buildCollectionDetails({
-        key: 'rule-groups',
-        labelKey: 'com_ui_project_meta_ads_rule_groups',
-        savedItems: savedSettings.ruleGroups ?? [],
-        draftItems: draftSettings.ruleGroups ?? [],
-        localize,
-      }),
-    });
-  }
-  if (hasSettingsChange(savedSettings, draftSettings, ['ruleOverrides'])) {
-    sections.push({
-      key: 'rule-overrides',
-      label: localize('com_ui_project_meta_ads_rule_overrides'),
-      details: buildCollectionDetails({
-        key: 'rule-overrides',
-        labelKey: 'com_ui_project_meta_ads_rule_overrides',
-        savedItems: savedSettings.ruleOverrides ?? [],
-        draftItems: draftSettings.ruleOverrides ?? [],
-        localize,
-      }),
-    });
-  }
-  if (hasSettingsChange(savedSettings, draftSettings, ['monthlyBudget', 'monthlyBudgets'])) {
-    sections.push({
-      key: 'monthly-budget',
-      label: localize('com_ui_project_meta_ads_monthly_budget'),
-      details: buildMonthlyBudgetDetails(savedSettings, draftSettings, localize),
-    });
-  }
-  return sections;
-}
-
-function restoreDraftSection(
-  draftSettings: MetaAdsSettingsState,
-  savedSettings: MetaAdsSettingsState,
-  key: MetaAdsDraftSectionKey,
-): MetaAdsSettingsState {
-  switch (key) {
-    case 'credentials':
-      return {
-        ...draftSettings,
-        enabled: savedSettings.enabled,
-        adAccountId: savedSettings.adAccountId,
-        tokenSecretName: savedSettings.tokenSecretName,
-        graphVersion: savedSettings.graphVersion,
-        credentialMode: savedSettings.credentialMode,
-      };
-    case 'automation':
-      return {
-        ...draftSettings,
-        automationMode: savedSettings.automationMode,
-        scheduleIntervalMinutes: savedSettings.scheduleIntervalMinutes,
-        automationAnalysisPreset: savedSettings.automationAnalysisPreset,
-        clientGoal: savedSettings.clientGoal,
-      };
-    case 'global-rules':
-      return {
-        ...draftSettings,
-        accountProfile: savedSettings.accountProfile,
-        rules: savedSettings.rules,
-        creativeRules: savedSettings.creativeRules,
-      };
-    case 'rule-groups':
-      return { ...draftSettings, ruleGroups: savedSettings.ruleGroups };
-    case 'rule-overrides':
-      return { ...draftSettings, ruleOverrides: savedSettings.ruleOverrides };
-    case 'monthly-budget':
-      return {
-        ...draftSettings,
-        monthlyBudget: savedSettings.monthlyBudget,
-        monthlyBudgets: savedSettings.monthlyBudgets,
-      };
-    case 'manual-budgets':
-      return draftSettings;
-  }
-}
-
-function publishDraftSection(
-  savedSettings: MetaAdsSettingsState,
-  draftSettings: MetaAdsSettingsState,
-  key: MetaAdsDraftSectionKey,
-): MetaAdsSettingsState {
-  switch (key) {
-    case 'credentials':
-      return {
-        ...savedSettings,
-        enabled: draftSettings.enabled,
-        adAccountId: draftSettings.adAccountId,
-        tokenSecretName: draftSettings.tokenSecretName,
-        graphVersion: draftSettings.graphVersion,
-        credentialMode: draftSettings.credentialMode,
-      };
-    case 'automation':
-      return {
-        ...savedSettings,
-        automationMode: draftSettings.automationMode,
-        scheduleIntervalMinutes: draftSettings.scheduleIntervalMinutes,
-        automationAnalysisPreset: draftSettings.automationAnalysisPreset,
-        clientGoal: draftSettings.clientGoal,
-      };
-    case 'global-rules':
-      return {
-        ...savedSettings,
-        accountProfile: draftSettings.accountProfile,
-        rules: draftSettings.rules,
-        creativeRules: draftSettings.creativeRules,
-      };
-    case 'rule-groups':
-      return { ...savedSettings, ruleGroups: draftSettings.ruleGroups };
-    case 'rule-overrides':
-      return { ...savedSettings, ruleOverrides: draftSettings.ruleOverrides };
-    case 'monthly-budget':
-      return {
-        ...savedSettings,
-        monthlyBudget: draftSettings.monthlyBudget,
-        monthlyBudgets: draftSettings.monthlyBudgets,
-      };
-    case 'manual-budgets':
-      return savedSettings;
-  }
 }
 
 function getManualBudgetDraftKey(draft: ManualBudgetDraft) {
@@ -584,7 +99,6 @@ export function useMetaAdsSettings({
   localize,
   showToast,
 }: UseMetaAdsSettingsParams) {
-  const [publishedSettings, setPublishedSettings] = useState(() => normalizeSettings(project));
   const [settings, setSettings] = useState(() => normalizeSettings(project));
   const [manualBudgetDrafts, setManualBudgetDrafts] = useState<ManualBudgetDraft[]>([]);
   const [hasUnsavedSettingsDraft, setHasUnsavedSettingsDraft] = useState(false);
@@ -601,13 +115,12 @@ export function useMetaAdsSettings({
 
   useEffect(() => {
     const nextPublishedSettings = normalizeSettings(project);
-    const storedDraft = readStoredSettingsDraft(project.projectId);
     const storedManualBudgetDrafts = readStoredManualBudgetDrafts(project.projectId);
-    setPublishedSettings(nextPublishedSettings);
-    setSettings(storedDraft ?? nextPublishedSettings);
+    clearStoredSettingsDraft(project.projectId);
+    setSettings(nextPublishedSettings);
     setManualBudgetDrafts(storedManualBudgetDrafts);
-    setHasUnsavedSettingsDraft(Boolean(storedDraft) || storedManualBudgetDrafts.length > 0);
-    setDraftStatus(storedDraft || storedManualBudgetDrafts.length > 0 ? 'pending' : 'idle');
+    setHasUnsavedSettingsDraft(storedManualBudgetDrafts.length > 0);
+    setDraftStatus(storedManualBudgetDrafts.length > 0 ? 'pending' : 'idle');
     setDiscardDraftDialogOpen(false);
     setPublishDraftDialogOpen(false);
     setSettingsDrawer(null);
@@ -621,10 +134,7 @@ export function useMetaAdsSettings({
 
   const setWorkingSettings = (nextSettings: MetaAdsSettingsState) => {
     const sanitizedSettings = sanitizeMetaAdsEditableSettings(nextSettings);
-    setSettings(sanitizedSettings);
-    writeStoredSettingsDraft(project.projectId, sanitizedSettings);
-    setHasUnsavedSettingsDraft(true);
-    setDraftStatus('pending');
+    saveSettings(sanitizedSettings, '');
   };
 
   const setManualBudgetDraft = (draft: ManualBudgetDraft) => {
@@ -686,7 +196,6 @@ export function useMetaAdsSettings({
         onSuccess: () => {
           statusQuery.refetch();
           clearStoredSettingsDraft(project.projectId);
-          setPublishedSettings(sanitizedSettings);
           setHasUnsavedSettingsDraft(manualBudgetDrafts.length > 0);
           setDraftStatus(manualBudgetDrafts.length > 0 ? 'pending' : 'published');
           setDiscardDraftDialogOpen(false);
@@ -738,58 +247,15 @@ export function useMetaAdsSettings({
   };
 
   const publishSettingsDrafts = (selectedKeys?: MetaAdsDraftSectionKey[]) => {
-    const savedSettings = publishedSettings;
-    const settingsSummary = buildSettingsDraftSummary(savedSettings, settings, localize);
     const selectedKeySet = new Set(selectedKeys ?? settingsDraftSummary.map((item) => item.key));
     const hasManualBudgetSelection = selectedKeySet.has('manual-budgets');
-    const selectedSettingsSummary = settingsSummary.filter((item) => selectedKeySet.has(item.key));
-    const settingsChanged = selectedSettingsSummary.length > 0;
     const budgetDraftsToPublish = hasManualBudgetSelection ? manualBudgetDrafts : [];
 
-    if (!selectedKeys && manualBudgetDrafts.length === 0) {
-      saveSettings(settings, '');
+    if (budgetDraftsToPublish.length === 0) {
       return;
     }
-
-    if (!settingsChanged && budgetDraftsToPublish.length === 0) {
-      return;
-    }
-
-    let nextPublishedSettings = savedSettings;
-    selectedSettingsSummary.forEach((item) => {
-      nextPublishedSettings = publishDraftSection(nextPublishedSettings, settings, item.key);
-    });
-
-    let nextWorkingSettings = settings;
-    selectedSettingsSummary.forEach((item) => {
-      nextWorkingSettings = restoreDraftSection(
-        nextWorkingSettings,
-        nextPublishedSettings,
-        item.key,
-      );
-    });
-    nextPublishedSettings = sanitizeMetaAdsEditableSettings(nextPublishedSettings);
-    nextWorkingSettings = sanitizeMetaAdsEditableSettings(nextWorkingSettings);
 
     setDraftStatus('publishing');
-
-    const saveSettingsDraft = () =>
-      new Promise<void>((resolve, reject) => {
-        if (!settingsChanged) {
-          resolve();
-          return;
-        }
-        updateSettings.mutate(
-          {
-            projectId: project.projectId,
-            metaAds: nextPublishedSettings,
-          },
-          {
-            onSuccess: () => resolve(),
-            onError: reject,
-          },
-        );
-      });
 
     const publishBudgetDraft = (draft: ManualBudgetDraft) =>
       new Promise<ProjectMetaAdsManualBudgetResponse>((resolve, reject) => {
@@ -813,11 +279,7 @@ export function useMetaAdsSettings({
 
     const publishDrafts = async () => {
       const publishedBudgetKeys = new Set<string>();
-      let settingsPublished = false;
       try {
-        await saveSettingsDraft();
-        settingsPublished = settingsChanged;
-
         for (const draft of budgetDraftsToPublish) {
           const response = await publishBudgetDraft(draft);
           publishedBudgetKeys.add(getManualBudgetDraftKey(draft));
@@ -829,21 +291,9 @@ export function useMetaAdsSettings({
         const nextManualBudgetDrafts = manualBudgetDrafts.filter(
           (draft) => !publishedBudgetKeys.has(getManualBudgetDraftKey(draft)),
         );
-        const nextSummary = buildSettingsDraftSummary(
-          nextPublishedSettings,
-          nextWorkingSettings,
-          localize,
-        );
-        setPublishedSettings(nextPublishedSettings);
-        setSettings(nextWorkingSettings);
         writeStoredManualBudgetDrafts(project.projectId, nextManualBudgetDrafts);
         setManualBudgetDrafts(nextManualBudgetDrafts);
-        if (nextSummary.length === 0) {
-          clearStoredSettingsDraft(project.projectId);
-        } else {
-          writeStoredSettingsDraft(project.projectId, nextWorkingSettings);
-        }
-        const hasPendingDraft = nextSummary.length > 0 || nextManualBudgetDrafts.length > 0;
+        const hasPendingDraft = nextManualBudgetDrafts.length > 0;
         setHasUnsavedSettingsDraft(hasPendingDraft);
         setDraftStatus(hasPendingDraft ? 'pending' : 'published');
         setDiscardDraftDialogOpen(false);
@@ -854,24 +304,9 @@ export function useMetaAdsSettings({
         const remainingBudgetDrafts = manualBudgetDrafts.filter(
           (draft) => !publishedBudgetKeys.has(getManualBudgetDraftKey(draft)),
         );
-        const nextErrorSettings = settingsPublished ? nextWorkingSettings : settings;
-        const nextErrorSummary = buildSettingsDraftSummary(
-          settingsPublished ? nextPublishedSettings : savedSettings,
-          nextErrorSettings,
-          localize,
-        );
-        if (settingsPublished) {
-          setPublishedSettings(nextPublishedSettings);
-          setSettings(nextErrorSettings);
-          if (nextErrorSummary.length === 0) {
-            clearStoredSettingsDraft(project.projectId);
-          } else {
-            writeStoredSettingsDraft(project.projectId, nextErrorSettings);
-          }
-        }
         writeStoredManualBudgetDrafts(project.projectId, remainingBudgetDrafts);
         setManualBudgetDrafts(remainingBudgetDrafts);
-        setHasUnsavedSettingsDraft(nextErrorSummary.length > 0 || remainingBudgetDrafts.length > 0);
+        setHasUnsavedSettingsDraft(remainingBudgetDrafts.length > 0);
         setDraftStatus('error');
         const requestMessage = (error as RequestError)?.response?.data?.message;
         const message =
@@ -888,15 +323,13 @@ export function useMetaAdsSettings({
   };
 
   const onSave = () => {
-    const pendingSummary = buildSettingsDraftSummary(publishedSettings, settings, localize);
-    if (pendingSummary.length === 0 && manualBudgetDrafts.length === 0) {
-      publishSettingsDrafts();
-      return;
-    }
-    setPublishDraftDialogOpen(true);
+    saveSettings(settings, '');
   };
 
   const onOpenPublishSettingsDraft = () => {
+    if (settingsDraftSummary.length === 0) {
+      return;
+    }
     setPublishDraftDialogOpen(true);
   };
 
@@ -910,7 +343,7 @@ export function useMetaAdsSettings({
   };
 
   const onDiscardSettingsDraft = () => {
-    if (!hasUnsavedSettingsDraft) {
+    if (manualBudgetDrafts.length === 0) {
       return;
     }
     setDiscardDraftDialogOpen(true);
@@ -921,90 +354,37 @@ export function useMetaAdsSettings({
   };
 
   const onConfirmDiscardSettingsDraft = (selectedKeys: MetaAdsDraftSectionKey[]) => {
-    if (!hasUnsavedSettingsDraft) {
+    if (manualBudgetDrafts.length === 0) {
       setDiscardDraftDialogOpen(false);
       return;
     }
-    const savedSettings = publishedSettings;
-    const settingsSummary = buildSettingsDraftSummary(savedSettings, settings, localize);
     const hasManualBudgetSelection = selectedKeys.includes('manual-budgets');
-    const selectedKeySet = new Set(selectedKeys);
-
-    if (settingsSummary.length === 0 && manualBudgetDrafts.length === 0) {
-      clearStoredSettingsDraft(project.projectId);
-      writeStoredManualBudgetDrafts(project.projectId, []);
-      setSettings(savedSettings);
-      setManualBudgetDrafts([]);
-      setHasUnsavedSettingsDraft(false);
-      setDraftStatus('idle');
+    if (!hasManualBudgetSelection) {
       setDiscardDraftDialogOpen(false);
-      closeSettingsDrawer();
       return;
     }
 
-    if (
-      !hasManualBudgetSelection &&
-      !settingsSummary.some((item) => selectedKeySet.has(item.key))
-    ) {
-      return;
-    }
-
-    if (
-      settingsSummary.every((item) => selectedKeySet.has(item.key)) &&
-      (manualBudgetDrafts.length === 0 || hasManualBudgetSelection)
-    ) {
-      clearStoredSettingsDraft(project.projectId);
-      writeStoredManualBudgetDrafts(project.projectId, []);
-      setSettings(savedSettings);
-      setManualBudgetDrafts([]);
-      setHasUnsavedSettingsDraft(false);
-      setDraftStatus('idle');
-      setDiscardDraftDialogOpen(false);
-      closeSettingsDrawer();
-      return;
-    }
-
-    let nextSettings = settings;
-    settingsSummary.forEach((item) => {
-      if (selectedKeySet.has(item.key)) {
-        nextSettings = restoreDraftSection(nextSettings, savedSettings, item.key);
-      }
-    });
-    const nextManualBudgetDrafts = hasManualBudgetSelection ? [] : manualBudgetDrafts;
+    const nextManualBudgetDrafts: ManualBudgetDraft[] = [];
     writeStoredManualBudgetDrafts(project.projectId, nextManualBudgetDrafts);
     setManualBudgetDrafts(nextManualBudgetDrafts);
-
-    const nextSummary = buildSettingsDraftSummary(savedSettings, nextSettings, localize);
-    if (nextSummary.length === 0 && nextManualBudgetDrafts.length === 0) {
-      clearStoredSettingsDraft(project.projectId);
-      setHasUnsavedSettingsDraft(false);
-      setDraftStatus('idle');
-    } else {
-      writeStoredSettingsDraft(project.projectId, nextSettings);
-      setHasUnsavedSettingsDraft(true);
-      setDraftStatus('pending');
-    }
-    setSettings(nextSettings);
+    setHasUnsavedSettingsDraft(false);
+    setDraftStatus('idle');
     setDiscardDraftDialogOpen(false);
     closeSettingsDrawer();
   };
 
-  const settingsDraftSummary = hasUnsavedSettingsDraft
-    ? [
-        ...buildSettingsDraftSummary(publishedSettings, settings, localize),
-        ...(manualBudgetDrafts.length > 0
-          ? [
-              {
-                key: 'manual-budgets' as const,
-                label: localize('com_ui_project_meta_ads_pending_manual_budgets', {
-                  0: String(manualBudgetDrafts.length),
-                }),
-                details: buildManualBudgetDraftDetails(manualBudgetDrafts),
-              },
-            ]
-          : []),
-      ]
-    : [];
+  const settingsDraftSummary =
+    manualBudgetDrafts.length > 0
+      ? [
+          {
+            key: 'manual-budgets' as const,
+            label: localize('com_ui_project_meta_ads_pending_manual_budgets', {
+              0: String(manualBudgetDrafts.length),
+            }),
+            details: buildManualBudgetDraftDetails(manualBudgetDrafts),
+          },
+        ]
+      : [];
 
   const onClearProjectToken = () => {
     if (!settingsDraft) {

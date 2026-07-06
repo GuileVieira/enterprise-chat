@@ -74,6 +74,7 @@ export function useMetaAdsRules({
         name: localize('com_ui_project_meta_ads_global_rules'),
         entityLevel: 'campaign',
         entityIds: [],
+        accountProfile: settings.accountProfile,
         rules: { ...settings.rules },
         creativeRules: { ...settings.creativeRules },
       });
@@ -98,6 +99,7 @@ export function useMetaAdsRules({
       name: localize('com_ui_project_meta_ads_global_rules'),
       entityLevel: 'campaign',
       entityIds: [],
+      accountProfile: settings.accountProfile,
       rules: { ...settings.rules },
       creativeRules: { ...settings.creativeRules },
     });
@@ -249,20 +251,15 @@ export function useMetaAdsRules({
 
   const onAccountProfileChange = (value: MetaAdsSettingsState['accountProfile']) => {
     const profile = value ?? 'custom';
-    const nextSettings = {
-      ...settings,
-      accountProfile: profile,
-      rules: {
-        ...settings.rules,
-        ...(accountProfileRules[profile] ?? {}),
-      },
-    };
-    setSettings(nextSettings);
     setRuleGroupDraft((current) =>
       current?.scope === 'global'
         ? {
             ...current,
-            rules: nextSettings.rules,
+            accountProfile: profile,
+            rules: {
+              ...settings.rules,
+              ...(accountProfileRules[profile] ?? {}),
+            },
           }
         : current,
     );
@@ -328,6 +325,7 @@ export function useMetaAdsRules({
     if (ruleGroupDraft.scope === 'global') {
       setSettings({
         ...settings,
+        accountProfile: ruleGroupDraft.accountProfile ?? settings.accountProfile,
         rules: ruleGroupDraft.rules,
         creativeRules: ruleGroupDraft.creativeRules,
       });

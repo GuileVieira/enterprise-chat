@@ -373,7 +373,7 @@ export function MetaAdsRuleGroupDialog({
                 />
                 <select
                   aria-label={localize('com_ui_project_meta_ads_account_profile')}
-                  value={settings.accountProfile ?? 'custom'}
+                  value={draft.accountProfile ?? settings.accountProfile ?? 'custom'}
                   onChange={(event) =>
                     onAccountProfileChange(
                       event.target.value as MetaAdsSettingsState['accountProfile'],

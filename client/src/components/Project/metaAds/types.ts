@@ -65,6 +65,7 @@ export type RuleGroupDraft = {
   entityIds: string[];
   entityName?: string;
   analysisPreset?: MetaAdsSettings['automationAnalysisPreset'];
+  accountProfile?: MetaAdsSettings['accountProfile'];
   rules: MetaAdsRulesState;
   creativeRules: Required<MetaAdsCreativeRules>;
 };

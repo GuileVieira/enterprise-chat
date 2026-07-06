@@ -23,13 +23,7 @@ type ConfirmationButtons = {
   inputClassName: string;
 };
 
-function MetaAdsDraftCheckbox({
-  checked,
-  tone,
-}: {
-  checked: boolean;
-  tone: 'blue' | 'red';
-}) {
+function MetaAdsDraftCheckbox({ checked, tone }: { checked: boolean; tone: 'blue' | 'red' }) {
   const checkedClass =
     tone === 'red'
       ? 'border-red-500 bg-red-600 text-white'
@@ -278,7 +272,7 @@ export function MetaAdsDiscardDraftDialog({
   const selectedKeySet = useMemo(() => new Set(selectedKeys), [selectedKeys]);
   const expandedKeySet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
   const allSelected = allKeys.length > 0 && selectedKeys.length === allKeys.length;
-  const canConfirm = summary.length === 0 || selectedKeys.length > 0;
+  const canConfirm = selectedKeys.length > 0;
 
   useEffect(() => {
     if (open) {
@@ -287,7 +281,7 @@ export function MetaAdsDiscardDraftDialog({
     }
   }, [allKeys, open]);
 
-  if (!open) {
+  if (!open || summary.length === 0) {
     return null;
   }
 
@@ -386,11 +380,6 @@ export function MetaAdsDiscardDraftDialog({
                 </div>
               </li>
             ))}
-            {summary.length === 0 && (
-              <li className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-800 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-100">
-                {localize('com_ui_project_meta_ads_pending_changes_empty')}
-              </li>
-            )}
           </ul>
           {summary.length > 0 && selectedKeys.length === 0 && (
             <p className="mt-3 text-xs font-medium text-red-600 dark:text-red-300">
@@ -443,7 +432,7 @@ export function MetaAdsPublishDraftDialog({
   const selectedKeySet = useMemo(() => new Set(selectedKeys), [selectedKeys]);
   const expandedKeySet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
   const allSelected = allKeys.length > 0 && selectedKeys.length === allKeys.length;
-  const canConfirm = summary.length === 0 || selectedKeys.length > 0;
+  const canConfirm = selectedKeys.length > 0;
 
   useEffect(() => {
     if (open) {
@@ -452,7 +441,7 @@ export function MetaAdsPublishDraftDialog({
     }
   }, [allKeys, open]);
 
-  if (!open) {
+  if (!open || summary.length === 0) {
     return null;
   }
 
@@ -551,11 +540,6 @@ export function MetaAdsPublishDraftDialog({
                 </div>
               </li>
             ))}
-            {summary.length === 0 && (
-              <li className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-800 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-100">
-                {localize('com_ui_project_meta_ads_pending_changes_empty')}
-              </li>
-            )}
           </ul>
           {summary.length > 0 && selectedKeys.length === 0 && (
             <p className="mt-3 text-xs font-medium text-blue-600 dark:text-blue-300">
