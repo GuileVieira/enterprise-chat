@@ -20,7 +20,24 @@ const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?
 );
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
-const mockMutateBudget = jest.fn();
+const mockMutateBudget = jest.fn(
+  (_payload: unknown, options?: { onSuccess?: (response: unknown) => void }) =>
+    options?.onSuccess?.({
+      change: {
+        _id: 'change-default',
+        entityLevel: 'campaign',
+        entityId: 'campaign-cbo',
+        entityName: 'CBO Messages',
+        previousDailyBudget: 100,
+        newDailyBudget: 125,
+        deltaDailyBudget: 25,
+        deltaPercent: 25,
+        actor: 'user',
+        reason: 'manual-ui',
+        createdAt: '2026-07-06T12:00:00.000-03:00',
+      },
+    }),
+);
 const mockMutateDuplicate = jest.fn();
 const mockMutateEntityStatus = jest.fn();
 const mockNavigate = jest.fn();
@@ -1590,7 +1607,7 @@ describe('ProjectMetaAdsPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows Ads Manager metrics, CBO/ABO budget modes, and sends manual budget changes', () => {
+  it('shows Ads Manager metrics, CBO/ABO budget modes, and publishes manual budget drafts', async () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -1641,8 +1658,23 @@ describe('ProjectMetaAdsPanel', () => {
         ],
       },
     ];
-    mockMutateBudget.mockImplementationOnce((_payload, options?: { onSuccess?: () => void }) =>
-      options?.onSuccess?.(),
+    mockMutateBudget.mockImplementationOnce(
+      (_payload, options?: { onSuccess?: (response: unknown) => void }) =>
+        options?.onSuccess?.({
+          change: {
+            _id: 'change-confirmed',
+            entityLevel: 'campaign',
+            entityId: 'campaign-cbo',
+            entityName: 'CBO Messages',
+            previousDailyBudget: 100,
+            newDailyBudget: 125,
+            deltaDailyBudget: 25,
+            deltaPercent: 25,
+            actor: 'user',
+            reason: 'manual-ui',
+            createdAt: '2026-07-06T12:00:00.000-03:00',
+          },
+        }),
     );
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -1694,18 +1726,26 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
 
-    expect(mockMutateBudget).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        payload: {
-          entityLevel: 'campaign',
-          entityId: 'campaign-cbo',
-          entityName: 'CBO Messages',
-          dailyBudget: 125,
-          reason: 'manual-ui',
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
+
+    publishSettingsDraft();
+
+    await waitFor(() =>
+      expect(mockMutateBudget).toHaveBeenCalledWith(
+        {
+          projectId: 'p1',
+          payload: {
+            entityLevel: 'campaign',
+            entityId: 'campaign-cbo',
+            entityName: 'CBO Messages',
+            dailyBudget: 125,
+            reason: 'manual-ui',
+          },
         },
-      },
-      expect.any(Object),
+        expect.any(Object),
+      ),
     );
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
@@ -2271,7 +2311,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(resultMetricDialog).queryByText(/Video View/)).not.toBeInTheDocument();
   });
 
-  it('auto-expands ABO campaigns by campaign group and keeps CBO ad sets collapsed', () => {
+  it('auto-expands ABO campaigns by campaign group and keeps CBO ad sets collapsed', async () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -2332,16 +2372,22 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
 
-    expect(mockMutateBudget).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        payload: expect.objectContaining({
-          entityLevel: 'adset',
-          entityId: 'adset-abo',
-          dailyBudget: 90,
-        }),
-      },
-      expect.any(Object),
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
+    publishSettingsDraft();
+
+    await waitFor(() =>
+      expect(mockMutateBudget).toHaveBeenCalledWith(
+        {
+          projectId: 'p1',
+          payload: expect.objectContaining({
+            entityLevel: 'adset',
+            entityId: 'adset-abo',
+            dailyBudget: 90,
+          }),
+        },
+        expect.any(Object),
+      ),
     );
   });
 
@@ -2502,7 +2548,16 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(discardDialog).getByText('com_ui_project_meta_ads_rule_groups'),
     ).toBeInTheDocument();
+    expect(
+      within(discardDialog).getByLabelText('com_ui_project_meta_ads_discard_select_all'),
+    ).toBeChecked();
+    expect(
+      within(discardDialog).getByLabelText('com_ui_project_meta_ads_rule_groups'),
+    ).toBeChecked();
     expect(within(discardDialog).queryByText('Draft local')).toBeNull();
+    expect(
+      within(discardDialog).getByText('com_ui_project_meta_ads_discard_show_changes'),
+    ).toBeInTheDocument();
 
     fireEvent.click(within(discardDialog).getByText('com_ui_cancel'));
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
@@ -2511,13 +2566,85 @@ describe('ProjectMetaAdsPanel', () => {
     discardDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_discard_draft_confirm',
     });
-    fireEvent.click(within(discardDialog).getByText('com_ui_project_meta_ads_discard_draft'));
+    fireEvent.click(within(discardDialog).getByText('com_ui_project_meta_ads_discard_selected'));
     expect(screen.queryByText('com_ui_project_meta_ads_publish_draft')).toBeNull();
     unmount();
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.queryByText('Draft local')).toBeNull();
+  });
+
+  it('discards only selected settings draft sections', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    let ruleDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.change(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
+      target: { value: '44' },
+    });
+    fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    ruleDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_create_rule_group',
+    });
+    fireEvent.change(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Draft local' },
+    });
+    fireEvent.click(within(ruleDialog).getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_discard_draft'));
+
+    const discardDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_discard_draft_confirm',
+    });
+    fireEvent.click(
+      within(discardDialog).getByLabelText('com_ui_project_meta_ads_discard_select_all'),
+    );
+    fireEvent.click(within(discardDialog).getByLabelText('com_ui_project_meta_ads_global_rules'));
+    fireEvent.click(
+      within(discardDialog).getAllByText('com_ui_project_meta_ads_discard_show_changes')[0],
+    );
+    expect(
+      within(discardDialog).getByLabelText('com_ui_project_meta_ads_global_rules'),
+    ).toBeChecked();
+    expect(
+      within(discardDialog).getByLabelText('com_ui_project_meta_ads_rule_groups'),
+    ).not.toBeChecked();
+    expect(discardDialog).toHaveTextContent('com_ui_project_meta_ads_target_cpa');
+    expect(discardDialog).toHaveTextContent('45');
+    expect(discardDialog).toHaveTextContent('44');
+
+    fireEvent.click(within(discardDialog).getByText('com_ui_project_meta_ads_discard_selected'));
+
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
+    publishSettingsDraft();
+
+    const savePayload = mockMutateSettings.mock.calls[0][0] as {
+      metaAds: {
+        rules: { targetCpa?: number };
+        ruleGroups?: Array<{ name?: string }>;
+      };
+    };
+    expect(savePayload.metaAds.rules.targetCpa).not.toBe(44);
+    expect(savePayload.metaAds.ruleGroups).toEqual([
+      expect.objectContaining({ name: 'Draft local' }),
+    ]);
   });
 
   it('keeps the local settings draft when publishing fails', () => {
@@ -3187,7 +3314,7 @@ describe('ProjectMetaAdsPanel', () => {
       .forEach((checkbox) => expect(checkbox).not.toBeChecked());
   });
 
-  it('requires confirmation before sending a manual budget change', () => {
+  it('requires confirmation before queuing a manual budget change', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -3216,20 +3343,12 @@ describe('ProjectMetaAdsPanel', () => {
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
 
-    expect(mockMutateBudget).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        payload: expect.objectContaining({
-          entityLevel: 'campaign',
-          entityId: 'campaign-cbo',
-          dailyBudget: 125,
-        }),
-      },
-      expect.any(Object),
-    );
+    expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
   });
 
-  it('accepts Brazilian decimal comma when saving a manual budget change', () => {
+  it('accepts Brazilian decimal comma when publishing a manual budget change', async () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -3251,18 +3370,22 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
 
-    expect(mockMutateBudget).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        payload: expect.objectContaining({
-          dailyBudget: 125.5,
-        }),
-      },
-      expect.any(Object),
+    publishSettingsDraft();
+
+    await waitFor(() =>
+      expect(mockMutateBudget).toHaveBeenCalledWith(
+        {
+          projectId: 'p1',
+          payload: expect.objectContaining({
+            dailyBudget: 125.5,
+          }),
+        },
+        expect.any(Object),
+      ),
     );
   });
 
-  it('uses the confirmed Meta budget change while status data is stale', () => {
+  it('uses the confirmed Meta budget change after publishing while status data is stale', async () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -3301,12 +3424,13 @@ describe('ProjectMetaAdsPanel', () => {
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+    publishSettingsDraft();
 
+    await waitFor(() => expect(screen.getAllByText('manual-ui').length).toBeGreaterThanOrEqual(1));
     expect(screen.getAllByText('R$ 125,00').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('manual-ui').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows manual budget errors to the user', () => {
+  it('shows manual budget publish errors to the user', async () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -3342,11 +3466,15 @@ describe('ProjectMetaAdsPanel', () => {
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+    publishSettingsDraft();
 
-    expect(mockShowToast).toHaveBeenCalledWith({
-      message: 'Manual Meta Ads budget is outside the effective rule limits.',
-      status: 'error',
-    });
+    await waitFor(() =>
+      expect(mockShowToast).toHaveBeenCalledWith({
+        message: 'Manual Meta Ads budget is outside the effective rule limits.',
+        status: 'error',
+      }),
+    );
+    expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
   });
 
   it('shows budget change history', () => {

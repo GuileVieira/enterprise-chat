@@ -207,11 +207,16 @@ export default function ProjectMetaAdsPanel({
   const updateEntityStatus = useUpdateProjectMetaAdsEntityStatusMutation();
   const runAnalysis = useRunProjectMetaAdsMutation();
   const applyRecommendation = useApplyProjectMetaAdsRecommendationMutation();
+  const onManualBudgetChange = useCallback((change: ProjectMetaAdsBudgetChange) => {
+    setConfirmedBudgetChanges((current) => mergeBudgetChanges([change], current));
+  }, []);
   const metaAdsSettings = useMetaAdsSettings({
     project,
     statusQuery,
     updateSettings,
+    updateBudget,
     updateTenantToken,
+    onManualBudgetChange,
     localize,
     showToast,
   });
@@ -225,18 +230,15 @@ export default function ProjectMetaAdsPanel({
     onSave,
     onDiscardSettingsDraft,
     openSettingsDrawer,
+    setManualBudgetDraft,
   } = metaAdsSettings;
-  const onManualBudgetChange = useCallback((change: ProjectMetaAdsBudgetChange) => {
-    setConfirmedBudgetChanges((current) => mergeBudgetChanges([change], current));
-  }, []);
   const metaAdsEntityActions = useMetaAdsEntityActions({
     project,
     statusQuery,
-    updateBudget,
     duplicateEntity,
     updateEntityStatus,
     applyRecommendation,
-    onManualBudgetChange,
+    onManualBudgetDraft: setManualBudgetDraft,
     localize,
     showToast,
   });
@@ -362,7 +364,7 @@ export default function ProjectMetaAdsPanel({
         metricsFullscreen={biWorkspace.metricsFullscreen}
         canUseMetaAdsActions={canUseMetaAdsActions}
         runningAnalysis={runAnalysis.isLoading}
-        savingSettings={updateSettings.isLoading}
+        savingSettings={updateSettings.isLoading || updateBudget.isLoading}
         hasUnsavedSettingsDraft={hasUnsavedSettingsDraft}
         draftStatus={draftStatus}
         settingsDraftSummary={settingsDraftSummary}

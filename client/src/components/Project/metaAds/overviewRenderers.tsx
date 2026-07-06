@@ -193,15 +193,20 @@ export function createMetaAdsOverviewRenderers(
           entityLevel: 'campaign',
           entityId: campaign.campaignId,
           entityName: campaign.campaignName,
-          currentBudget: campaign.dailyBudget,
+          currentBudget:
+            context.getManualBudgetDraft('campaign', campaign.campaignId)?.dailyBudget ??
+            campaign.dailyBudget,
         });
       const onClick = campaign.editableBudgetLevel === 'campaign' ? editBudget : undefined;
+      const pendingBudget = context.getManualBudgetDraft('campaign', campaign.campaignId);
       return metricCell(
         column,
         <MetaAdsBudgetBadge
           value={campaign.dailyBudget}
+          pendingValue={pendingBudget?.dailyBudget}
           currency={context.currency}
           canUseMetaAdsActions={context.canUseMetaAdsActions}
+          localize={context.localize}
           onClick={onClick}
         />,
       );
@@ -277,15 +282,20 @@ export function createMetaAdsOverviewRenderers(
           entityLevel: 'adset',
           entityId: adset.entityId,
           entityName: adset.entityName,
-          currentBudget: adset.dailyBudget,
+          currentBudget:
+            context.getManualBudgetDraft('adset', adset.entityId)?.dailyBudget ??
+            adset.dailyBudget,
         });
       const onClick = campaign.editableBudgetLevel === 'adset' ? editBudget : undefined;
+      const pendingBudget = context.getManualBudgetDraft('adset', adset.entityId);
       return metricCell(
         column,
         <MetaAdsBudgetBadge
           value={adset.dailyBudget}
+          pendingValue={pendingBudget?.dailyBudget}
           currency={context.currency}
           canUseMetaAdsActions={context.canUseMetaAdsActions}
+          localize={context.localize}
           onClick={onClick}
         />,
       );

@@ -125,15 +125,25 @@ function MetaAdsStatusBadge({ status }: { status?: string }) {
 
 export function MetaAdsBudgetBadge({
   value,
+  pendingValue,
   currency,
   canUseMetaAdsActions,
+  localize,
   onClick,
 }: {
   value: number | null | undefined;
+  pendingValue?: number;
   currency: string;
   canUseMetaAdsActions: boolean;
+  localize: Localize;
   onClick?: () => void;
 }) {
+  const pendingLabel =
+    pendingValue == null
+      ? null
+      : localize('com_ui_project_meta_ads_pending_budget', {
+          0: formatMoney(pendingValue, currency),
+        });
   const content = (
     <>
       <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
@@ -143,21 +153,35 @@ export function MetaAdsBudgetBadge({
 
   if (!onClick) {
     return (
-      <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-slate-800 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
-        {content}
+      <span className="inline-flex flex-col items-end gap-1">
+        <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-slate-800 shadow-[0_10px_28px_-24px_rgba(15,23,42,0.55)] dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-200">
+          {content}
+        </span>
+        {pendingLabel && (
+          <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:text-blue-200">
+            {pendingLabel}
+          </span>
+        )}
       </span>
     );
   }
 
   return (
-    <button
-      type="button"
-      disabled={!canUseMetaAdsActions}
-      onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-xl border border-amber-300/45 bg-amber-300/10 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-amber-900 shadow-[0_14px_30px_-24px_rgba(245,158,11,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/70 hover:bg-amber-300/15 focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 dark:border-amber-300/25 dark:bg-amber-300/[0.08] dark:text-[#fff3d7] dark:shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] dark:hover:border-amber-300/60 dark:hover:bg-amber-300/[0.14]"
-    >
-      {content}
-    </button>
+    <span className="inline-flex flex-col items-end gap-1">
+      <button
+        type="button"
+        disabled={!canUseMetaAdsActions}
+        onClick={onClick}
+        className="inline-flex items-center gap-2 rounded-xl border border-amber-300/45 bg-amber-300/10 px-3 py-1.5 font-mono text-xs font-semibold tabular-nums text-amber-900 shadow-[0_14px_30px_-24px_rgba(245,158,11,0.75)] transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/70 hover:bg-amber-300/15 focus:outline-none focus:ring-2 focus:ring-amber-300/40 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55 dark:border-amber-300/25 dark:bg-amber-300/[0.08] dark:text-[#fff3d7] dark:shadow-[0_12px_26px_-22px_rgba(245,158,11,0.95)] dark:hover:border-amber-300/60 dark:hover:bg-amber-300/[0.14]"
+      >
+        {content}
+      </button>
+      {pendingLabel && (
+        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-blue-700 dark:text-blue-200">
+          {pendingLabel}
+        </span>
+      )}
+    </span>
   );
 }
 

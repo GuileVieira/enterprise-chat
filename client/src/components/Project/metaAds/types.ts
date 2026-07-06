@@ -94,6 +94,10 @@ export type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
   currentBudget?: number;
 };
 
+export type ManualBudgetDraft = ProjectMetaAdsManualBudgetPayload & {
+  currentBudget?: number;
+};
+
 export type EntityStatusConfirmation = {
   entityLevel: ProjectMetaAdsEntityStatusLevel;
   entityId: string;
@@ -120,9 +124,26 @@ export type RequestError = {
 
 export type MetaAdsDraftStatus = 'idle' | 'pending' | 'publishing' | 'published' | 'error';
 
-export type MetaAdsDraftSummaryItem = {
+export type MetaAdsDraftSectionKey =
+  | 'credentials'
+  | 'automation'
+  | 'global-rules'
+  | 'rule-groups'
+  | 'rule-overrides'
+  | 'monthly-budget'
+  | 'manual-budgets';
+
+export type MetaAdsDraftDetail = {
   key: string;
   label: string;
+  savedValue: string;
+  draftValue: string;
+};
+
+export type MetaAdsDraftSummaryItem = {
+  key: MetaAdsDraftSectionKey;
+  label: string;
+  details: MetaAdsDraftDetail[];
 };
 
 export type SettingsDrawer = 'account' | 'automation' | null;

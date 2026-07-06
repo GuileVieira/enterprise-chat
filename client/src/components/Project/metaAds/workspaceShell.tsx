@@ -150,7 +150,7 @@ export function MetaAdsWorkspaceShell({
               title={hasUnsavedSettingsDraft ? draftSummaryText : undefined}
               className={
                 hasUnsavedSettingsDraft && draftStatus !== 'publishing'
-                  ? 'animate-pulse bg-amber-500 text-slate-950 shadow-[0_18px_44px_-26px_rgba(245,158,11,0.75)] hover:bg-amber-400 dark:bg-amber-300 dark:text-slate-950 dark:hover:bg-amber-200'
+                  ? 'bg-blue-600 text-white shadow-[0_18px_44px_-26px_rgba(37,99,235,0.75)] hover:bg-blue-500 dark:bg-blue-400 dark:text-slate-950 dark:hover:bg-blue-300'
                   : undefined
               }
             >
@@ -159,6 +159,7 @@ export function MetaAdsWorkspaceShell({
           )}
           {hasUnsavedSettingsDraft && !settingsDrawer && (
             <MetaAdsButton
+              variant="danger"
               disabled={!canUseMetaAdsActions || savingSettings}
               onClick={onDiscardDraft}
             >

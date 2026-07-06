@@ -3,7 +3,6 @@ import type { MouseEvent } from 'react';
 import type {
   TProject,
   ProjectMetaAdsAdSummary,
-  ProjectMetaAdsBudgetChange,
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsEntityStatusLevel,
 } from 'librechat-data-provider';
@@ -11,12 +10,17 @@ import type {
   useApplyProjectMetaAdsRecommendationMutation,
   useDuplicateProjectMetaAdsEntityMutation,
   useProjectMetaAdsQuery,
-  useUpdateProjectMetaAdsBudgetMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
 } from '~/data-provider';
 import { logger } from '~/utils';
 import { getRequestErrorMessage } from '../errors';
-import type { BudgetConfirmation, BudgetEditor, DuplicateDraft, Localize } from '../types';
+import type {
+  Localize,
+  BudgetEditor,
+  DuplicateDraft,
+  ManualBudgetDraft,
+  BudgetConfirmation,
+} from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
 
@@ -33,11 +37,10 @@ type EntityStatusConfirmation = {
 type UseMetaAdsEntityActionsParams = {
   project: TProject;
   statusQuery: ReturnType<typeof useProjectMetaAdsQuery>;
-  updateBudget: ReturnType<typeof useUpdateProjectMetaAdsBudgetMutation>;
   duplicateEntity: ReturnType<typeof useDuplicateProjectMetaAdsEntityMutation>;
   updateEntityStatus: ReturnType<typeof useUpdateProjectMetaAdsEntityStatusMutation>;
   applyRecommendation: ReturnType<typeof useApplyProjectMetaAdsRecommendationMutation>;
-  onManualBudgetChange?: (change: ProjectMetaAdsBudgetChange) => void;
+  onManualBudgetDraft: (draft: ManualBudgetDraft) => void;
   localize: Localize;
   showToast: ShowToast;
 };
@@ -63,11 +66,10 @@ function formatDailyBudgetInput(value?: number) {
 export function useMetaAdsEntityActions({
   project,
   statusQuery,
-  updateBudget,
   duplicateEntity,
   updateEntityStatus,
   applyRecommendation,
-  onManualBudgetChange,
+  onManualBudgetDraft,
   localize,
   showToast,
 }: UseMetaAdsEntityActionsParams) {
@@ -173,40 +175,14 @@ export function useMetaAdsEntityActions({
     if (!budgetConfirmation) {
       return;
     }
-    updateBudget.mutate(
-      {
-        projectId: project.projectId,
-        payload: {
-          entityLevel: budgetConfirmation.entityLevel,
-          entityId: budgetConfirmation.entityId,
-          entityName: budgetConfirmation.entityName,
-          dailyBudget: budgetConfirmation.dailyBudget,
-          reason: budgetConfirmation.reason,
-        },
-      },
-      {
-        onSuccess: (response) => {
-          if (response?.change) {
-            onManualBudgetChange?.(response.change);
-          }
-          setBudgetEditor(null);
-          setBudgetConfirmation(null);
-          setManualDailyBudget('');
-          statusQuery.refetch();
-          showToast({
-            message: localize('com_ui_project_meta_ads_budget_success'),
-            status: 'success',
-          });
-        },
-        onError: (error) => {
-          const message = getRequestErrorMessage(
-            error,
-            localize('com_ui_project_meta_ads_budget_failed'),
-          );
-          showToast({ message, status: 'error' });
-        },
-      },
-    );
+    onManualBudgetDraft(budgetConfirmation);
+    setBudgetEditor(null);
+    setBudgetConfirmation(null);
+    setManualDailyBudget('');
+    showToast({
+      message: localize('com_ui_project_meta_ads_budget_queued'),
+      status: 'success',
+    });
   };
 
   const onOpenEntityStatusConfirmation = (

@@ -5,7 +5,13 @@ import type {
   ProjectMetaAdsRecommendation,
 } from 'librechat-data-provider';
 
-import type { Localize, TableColumn, DuplicateDraft, BudgetEditor } from './types';
+import type {
+  Localize,
+  TableColumn,
+  BudgetEditor,
+  DuplicateDraft,
+  ManualBudgetDraft,
+} from './types';
 import type { EntityStatusConfirmationPayload } from './overviewCells';
 
 export type OverviewRenderers = {
@@ -42,6 +48,10 @@ export type OverviewRendererContext = {
     isClickable?: boolean,
   ) => string;
   getEntityRuleLabel: (entityLevel: 'campaign' | 'adset', entityId: string) => string;
+  getManualBudgetDraft: (
+    entityLevel: ManualBudgetDraft['entityLevel'],
+    entityId: string,
+  ) => ManualBudgetDraft | undefined;
   getDuplicateName: (name: string) => string;
   onApply: (recommendation: ProjectMetaAdsRecommendation) => void;
   onToggleActionMenu: (menuKey: string) => void;

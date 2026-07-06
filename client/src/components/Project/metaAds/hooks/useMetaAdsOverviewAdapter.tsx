@@ -85,7 +85,7 @@ export function useMetaAdsOverviewAdapter({
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
   const [campaignSort, setCampaignSort] = useState('name_asc');
   const [tableView, setTableView] = useState<TableView>('summary');
-  const { settings } = settingsState;
+  const { settings, manualBudgetDrafts } = settingsState;
   const {
     actionMenuKey,
     setActionMenuKey,
@@ -172,6 +172,10 @@ export function useMetaAdsOverviewAdapter({
   });
   const getEntityRecommendation = (entityId: string) =>
     pendingRecommendations.find((recommendation) => recommendation.entityId === entityId);
+  const getManualBudgetDraft = (entityLevel: 'campaign' | 'adset', entityId: string) =>
+    manualBudgetDrafts.find(
+      (draft) => draft.entityLevel === entityLevel && draft.entityId === entityId,
+    );
   const getTableRowClass = getMetaAdsTableRowClass;
   const { renderCampaignCell, renderAdSetCell, renderAdRow } = createMetaAdsOverviewRenderers({
     columns: tableColumns,
@@ -184,6 +188,7 @@ export function useMetaAdsOverviewAdapter({
     localize,
     getTableRowClass,
     getEntityRuleLabel,
+    getManualBudgetDraft,
     getDuplicateName,
     onApply,
     onToggleActionMenu: (menuKey) =>
