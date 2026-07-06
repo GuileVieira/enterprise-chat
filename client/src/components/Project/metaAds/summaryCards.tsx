@@ -82,9 +82,15 @@ export function MetaAdsSummaryCards({
     ghostButtonClassName: string;
   };
 }) {
+  const baseGridClassName = 'grid gap-4 p-3 sm:grid-cols-2 sm:p-4';
+  const gridClassName =
+    cards.length === 6
+      ? `${baseGridClassName} xl:grid-cols-3`
+      : `${baseGridClassName} xl:grid-cols-4`;
+
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={gridClassName}>
         {cards.map(({ labelKey, value, tone, context, clickable }) => {
           const showResultMetricCta = Boolean(clickable && !initialLoading && value.trim() === '-');
           const content = (

@@ -2222,6 +2222,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     const cards = screen.getAllByTestId(/meta-ads-summary-card-/);
     expect(cards).toHaveLength(6);
+    expect(cards[0].parentElement).toHaveClass('gap-4', 'p-3', 'sm:p-4', 'xl:grid-cols-3');
     expect(cards.map((card) => card.getAttribute('data-testid'))).toEqual([
       'meta-ads-summary-card-com_ui_project_meta_ads_total_results',
       'meta-ads-summary-card-com_ui_project_meta_ads_conversion_value',
