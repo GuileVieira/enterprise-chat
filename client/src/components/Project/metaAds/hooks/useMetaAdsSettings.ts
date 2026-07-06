@@ -530,6 +530,7 @@ export function useMetaAdsSettings({
   const [settingsDraftToken, setSettingsDraftToken] = useState('');
   const [draftStatus, setDraftStatus] = useState<MetaAdsDraftStatus>('idle');
   const [discardDraftDialogOpen, setDiscardDraftDialogOpen] = useState(false);
+  const [publishDraftDialogOpen, setPublishDraftDialogOpen] = useState(false);
   const [showSettingsDraftToken, setShowSettingsDraftToken] = useState(false);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [tenantAccessToken, setTenantAccessToken] = useState('');
@@ -544,6 +545,7 @@ export function useMetaAdsSettings({
     setHasUnsavedSettingsDraft(Boolean(storedDraft) || storedManualBudgetDrafts.length > 0);
     setDraftStatus(storedDraft || storedManualBudgetDrafts.length > 0 ? 'pending' : 'idle');
     setDiscardDraftDialogOpen(false);
+    setPublishDraftDialogOpen(false);
     setSettingsDrawer(null);
     setSettingsDraft(null);
     setSettingsDraftToken('');
@@ -621,6 +623,7 @@ export function useMetaAdsSettings({
           setHasUnsavedSettingsDraft(manualBudgetDrafts.length > 0);
           setDraftStatus(manualBudgetDrafts.length > 0 ? 'pending' : 'published');
           setDiscardDraftDialogOpen(false);
+          setPublishDraftDialogOpen(false);
           setSettingsDraftToken('');
           setShowSettingsDraftToken(false);
           showToast({ message: localize('com_ui_saved'), status: 'success' });
@@ -667,7 +670,7 @@ export function useMetaAdsSettings({
     setShowTenantAccessToken(false);
   };
 
-  const onSave = () => {
+  const publishSettingsDrafts = () => {
     const savedSettings = normalizeSettings(project);
     const settingsSummary = buildSettingsDraftSummary(savedSettings, settings, localize);
     const settingsChanged = settingsSummary.length > 0;
@@ -738,6 +741,7 @@ export function useMetaAdsSettings({
         setHasUnsavedSettingsDraft(false);
         setDraftStatus('published');
         setDiscardDraftDialogOpen(false);
+        setPublishDraftDialogOpen(false);
         statusQuery.refetch();
         showToast({ message: localize('com_ui_saved'), status: 'success' });
       } catch (error) {
@@ -765,6 +769,28 @@ export function useMetaAdsSettings({
     };
 
     void publishDrafts();
+  };
+
+  const onSave = () => {
+    const pendingSummary = buildSettingsDraftSummary(normalizeSettings(project), settings, localize);
+    if (pendingSummary.length === 0 && manualBudgetDrafts.length === 0) {
+      publishSettingsDrafts();
+      return;
+    }
+    setPublishDraftDialogOpen(true);
+  };
+
+  const onOpenPublishSettingsDraft = () => {
+    setPublishDraftDialogOpen(true);
+  };
+
+  const onCancelPublishSettingsDraft = () => {
+    setPublishDraftDialogOpen(false);
+  };
+
+  const onConfirmPublishSettingsDraft = () => {
+    setPublishDraftDialogOpen(false);
+    publishSettingsDrafts();
   };
 
   const onDiscardSettingsDraft = () => {
@@ -925,6 +951,7 @@ export function useMetaAdsSettings({
     draftStatus,
     settingsDraftSummary,
     discardDraftDialogOpen,
+    publishDraftDialogOpen,
     settingsDraft,
     settingsDraftToken,
     showSettingsDraftToken,
@@ -942,6 +969,9 @@ export function useMetaAdsSettings({
     setShowTenantAccessToken,
     saveSettings,
     onSave,
+    onOpenPublishSettingsDraft,
+    onCancelPublishSettingsDraft,
+    onConfirmPublishSettingsDraft,
     onClearProjectToken,
     openSettingsDrawer,
     closeSettingsDrawer,

@@ -228,6 +228,7 @@ export default function ProjectMetaAdsPanel({
     draftStatus,
     settingsDraftSummary,
     onSave,
+    onOpenPublishSettingsDraft,
     onDiscardSettingsDraft,
     openSettingsDrawer,
     setManualBudgetDraft,
@@ -377,6 +378,7 @@ export default function ProjectMetaAdsPanel({
         onWorkspaceTabChange={setWorkspaceTab}
         onToggleFullscreen={() => biWorkspace.setMetricsFullscreen((current) => !current)}
         onSave={onSave}
+        onPublishDraft={onOpenPublishSettingsDraft}
         onDiscardDraft={onDiscardSettingsDraft}
       >
         {workspaceTab === 'overview' && (

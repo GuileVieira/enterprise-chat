@@ -267,6 +267,12 @@ describe('ProjectMetaAdsPanel', () => {
 
   const publishSettingsDraft = () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+    const publishDialog = screen.queryByRole('dialog', {
+      name: 'com_ui_project_meta_ads_publish_draft_confirm',
+    });
+    if (publishDialog) {
+      fireEvent.click(within(publishDialog).getByText('com_ui_project_meta_ads_publish_to_meta'));
+    }
   };
 
   it('shows a loading indicator while Meta Ads status is being fetched', () => {
@@ -2438,7 +2444,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(mockMutateSettings).not.toHaveBeenCalled();
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+    publishSettingsDraft();
 
     expect(mockMutateSettings).toHaveBeenCalledWith(
       {
@@ -2575,6 +2581,56 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByText('Draft local')).toBeNull();
   });
 
+  it('opens a review modal before publishing settings drafts to Meta', async () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_campaign'));
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_rule_group_name'), {
+      target: { value: 'Draft local' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+
+    const publishDialog = await screen.findByRole('dialog', {
+      name: 'com_ui_project_meta_ads_publish_draft_confirm',
+    });
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(
+      within(publishDialog).getByText('com_ui_project_meta_ads_rule_groups'),
+    ).toBeInTheDocument();
+    expect(
+      within(publishDialog).queryByLabelText('com_ui_project_meta_ads_rule_groups'),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(publishDialog).getByText('com_ui_project_meta_ads_discard_show_changes'),
+    );
+    expect(publishDialog).toHaveTextContent('Draft local');
+
+    fireEvent.click(within(publishDialog).getByText('com_ui_cancel'));
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+    fireEvent.click(
+      await screen.findByText('com_ui_project_meta_ads_publish_to_meta'),
+    );
+
+    expect(mockMutateSettings).toHaveBeenCalled();
+  });
+
   it('discards only selected settings draft sections', () => {
     mockStatusData.campaigns = [
       {
@@ -2672,7 +2728,7 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: 'Draft local' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_rule_group'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
+    publishSettingsDraft();
 
     expect(screen.getByText('com_ui_project_meta_ads_draft_error')).toBeInTheDocument();
     expect(screen.getByTitle('com_ui_project_meta_ads_rule_groups')).toBeInTheDocument();
@@ -3345,6 +3401,7 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(mockMutateBudget).not.toHaveBeenCalled();
     expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /R\$\s*125,00/ })).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
   });
 

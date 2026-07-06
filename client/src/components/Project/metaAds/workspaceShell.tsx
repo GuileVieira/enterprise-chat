@@ -33,6 +33,7 @@ type MetaAdsWorkspaceShellProps = {
   onWorkspaceTabChange: (tab: WorkspaceTab) => void;
   onToggleFullscreen: () => void;
   onSave: () => void;
+  onPublishDraft: () => void;
   onDiscardDraft: () => void;
 };
 
@@ -62,6 +63,7 @@ export function MetaAdsWorkspaceShell({
   onWorkspaceTabChange,
   onToggleFullscreen,
   onSave,
+  onPublishDraft,
   onDiscardDraft,
 }: MetaAdsWorkspaceShellProps) {
   const draftSummaryText =
@@ -146,7 +148,7 @@ export function MetaAdsWorkspaceShell({
             <MetaAdsButton
               variant="primary"
               disabled={!canUseMetaAdsActions || savingSettings}
-              onClick={onSave}
+              onClick={hasUnsavedSettingsDraft ? onPublishDraft : onSave}
               title={hasUnsavedSettingsDraft ? draftSummaryText : undefined}
               className={
                 hasUnsavedSettingsDraft && draftStatus !== 'publishing'

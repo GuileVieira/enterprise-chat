@@ -235,6 +235,47 @@ export function MetaAdsDuplicateEntityDialog({
   );
 }
 
+function MetaAdsDraftSummaryDetails({
+  item,
+  localize,
+}: {
+  item: MetaAdsDraftSummaryItem;
+  localize: Localize;
+}) {
+  return (
+    <div className="border-current/10 mt-3 space-y-2 border-t pt-3">
+      {item.details.length > 0 ? (
+        item.details.map((detail) => (
+          <div
+            key={detail.key}
+            className="border-current/10 rounded-lg border bg-white/45 p-2 dark:bg-white/[0.035]"
+          >
+            <div className="text-xs font-semibold">{detail.label}</div>
+            <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
+              <div>
+                <div className="uppercase tracking-[0.12em] opacity-60">
+                  {localize('com_ui_project_meta_ads_discard_saved_value')}
+                </div>
+                <div className="mt-1 break-words font-mono">{detail.savedValue}</div>
+              </div>
+              <div>
+                <div className="uppercase tracking-[0.12em] opacity-60">
+                  {localize('com_ui_project_meta_ads_discard_pending_value')}
+                </div>
+                <div className="mt-1 break-words font-mono">{detail.draftValue}</div>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="text-xs opacity-75">
+          {localize('com_ui_project_meta_ads_discard_no_detail')}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MetaAdsDiscardDraftDialog({
   open,
   summary,
@@ -363,40 +404,7 @@ export function MetaAdsDiscardDraftDialog({
                     </button>
                   </div>
                   {expandedKeySet.has(item.key) && (
-                    <div className="border-current/10 mt-3 space-y-2 border-t pt-3">
-                      {item.details.length > 0 ? (
-                        item.details.map((detail) => (
-                          <div
-                            key={detail.key}
-                            className="border-current/10 rounded-lg border bg-white/45 p-2 dark:bg-white/[0.035]"
-                          >
-                            <div className="text-xs font-semibold">{detail.label}</div>
-                            <div className="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
-                              <div>
-                                <div className="uppercase tracking-[0.12em] opacity-60">
-                                  {localize('com_ui_project_meta_ads_discard_saved_value')}
-                                </div>
-                                <div className="mt-1 break-words font-mono">
-                                  {detail.savedValue}
-                                </div>
-                              </div>
-                              <div>
-                                <div className="uppercase tracking-[0.12em] opacity-60">
-                                  {localize('com_ui_project_meta_ads_discard_pending_value')}
-                                </div>
-                                <div className="mt-1 break-words font-mono">
-                                  {detail.draftValue}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-xs opacity-75">
-                          {localize('com_ui_project_meta_ads_discard_no_detail')}
-                        </div>
-                      )}
-                    </div>
+                    <MetaAdsDraftSummaryDetails item={item} localize={localize} />
                   )}
                 </div>
               </li>
@@ -424,6 +432,114 @@ export function MetaAdsDiscardDraftDialog({
             className={buttons.primaryClassName}
           >
             {localize('com_ui_project_meta_ads_discard_selected')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MetaAdsPublishDraftDialog({
+  open,
+  summary,
+  localize,
+  onCancel,
+  onConfirm,
+  chrome,
+  buttons,
+}: {
+  open: boolean;
+  summary: MetaAdsDraftSummaryItem[];
+  localize: Localize;
+  onCancel: () => void;
+  onConfirm: () => void;
+  chrome: ConfirmationChrome;
+  buttons: Pick<ConfirmationButtons, 'primaryClassName' | 'ghostClassName'>;
+}) {
+  const [expandedKeys, setExpandedKeys] = useState<MetaAdsDraftSectionKey[]>([]);
+  const expandedKeySet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
+
+  useEffect(() => {
+    if (open) {
+      setExpandedKeys([]);
+    }
+  }, [open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const toggleDetails = (key: MetaAdsDraftSectionKey) => {
+    setExpandedKeys((current) =>
+      current.includes(key)
+        ? current.filter((currentKey) => currentKey !== key)
+        : [...current, key],
+    );
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="meta-ads-publish-draft-title"
+      className={`${chrome.modalOverlayClassName} flex items-center justify-center p-4`}
+    >
+      <div className={`${chrome.drawerShellClassName} max-h-[80vh] max-w-md`}>
+        <div className={chrome.modalHeaderClassName}>
+          <h4
+            id="meta-ads-publish-draft-title"
+            className="text-base font-semibold text-slate-950 dark:text-white"
+          >
+            {localize('com_ui_project_meta_ads_publish_draft_confirm')}
+          </h4>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
+            {localize('com_ui_project_meta_ads_publish_draft_modal_intro')}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+            {localize('com_ui_project_meta_ads_pending_changes_summary')}
+          </div>
+          <ul className="mt-3 space-y-2">
+            {summary.map((item) => (
+              <li key={item.key}>
+                <div className="rounded-xl border border-blue-300/50 bg-blue-50/80 px-3 py-2 text-sm font-medium text-blue-800 dark:border-blue-300/20 dark:bg-blue-400/10 dark:text-blue-100">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate">{item.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleDetails(item.key)}
+                      className="border-current/15 shrink-0 rounded-lg border px-2 py-1 text-[11px] font-semibold transition hover:bg-white/55 active:translate-y-px dark:hover:bg-white/10"
+                    >
+                      <span>
+                        {localize(
+                          expandedKeySet.has(item.key)
+                            ? 'com_ui_project_meta_ads_discard_hide_changes'
+                            : 'com_ui_project_meta_ads_discard_show_changes',
+                        )}
+                      </span>{' '}
+                      <span className="font-mono">({item.details.length})</span>
+                    </button>
+                  </div>
+                  {expandedKeySet.has(item.key) && (
+                    <MetaAdsDraftSummaryDetails item={item} localize={localize} />
+                  )}
+                </div>
+              </li>
+            ))}
+            {summary.length === 0 && (
+              <li className="rounded-xl border border-slate-200/80 bg-white/80 px-3 py-2 text-sm font-medium text-slate-800 dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-100">
+                {localize('com_ui_project_meta_ads_pending_changes_empty')}
+              </li>
+            )}
+          </ul>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-200/75 p-4 dark:border-white/10">
+          <button type="button" onClick={onCancel} className={buttons.ghostClassName}>
+            {localize('com_ui_cancel')}
+          </button>
+          <button type="button" onClick={onConfirm} className={buttons.primaryClassName}>
+            {localize('com_ui_project_meta_ads_publish_to_meta')}
           </button>
         </div>
       </div>
