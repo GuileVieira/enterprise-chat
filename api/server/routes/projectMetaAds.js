@@ -705,7 +705,10 @@ router.post('/budget', metaAdsClientActionAccess, async (req, res) => {
     return res.json(change);
   } catch (error) {
     logger.error('[projectMetaAds] manual budget failed', error);
-    return res.status(error.statusCode ?? 500).json({ message: error.message });
+    return res.status(error.statusCode ?? 500).json({
+      message: error.message,
+      ...(error.data ? { details: error.data } : {}),
+    });
   }
 });
 

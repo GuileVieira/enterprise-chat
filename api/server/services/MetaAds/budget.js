@@ -5010,7 +5010,9 @@ async function applyManualBudgetChange({
     nextDailyBudget < rules.minDailyBudget ||
     nextDailyBudget > rules.maxDailyBudget
   ) {
-    throw new Error('Manual Meta Ads budget is outside the effective rule limits.');
+    throw Object.assign(new Error('Manual Meta Ads budget is outside the effective rule limits.'), {
+      statusCode: 400,
+    });
   }
   const currentBudget = await getEntityDailyBudget({ entityId, token, graphVersion });
   const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);

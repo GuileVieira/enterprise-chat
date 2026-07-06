@@ -51,6 +51,7 @@ const router = require('./projectMetaAds');
 const { upsertTenantSecret } = require('~/models');
 const {
   analyzeProject,
+  applyManualBudgetChange,
   duplicateProjectMetaAdsEntity,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
@@ -722,6 +723,35 @@ describe('projectMetaAds run route', () => {
     expect(response.body).toEqual({
       message: 'Invalid parameter',
       details: { code: 100, message: 'Invalid parameter' },
+    });
+  });
+});
+
+describe('projectMetaAds manual budget route', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    applyManualBudgetChange.mockResolvedValue({
+      change: { entityLevel: 'campaign', entityId: 'campaign-1', newDailyBudget: 120 },
+    });
+  });
+
+  it('preserves Meta API error details for manual budget changes', async () => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+    applyManualBudgetChange.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid budget'), {
+        statusCode: 400,
+        data: { code: 100, message: 'Budget too low' },
+      }),
+    );
+
+    const response = await request(createApp())
+      .post('/projects/p1/meta-ads/budget')
+      .send({ entityLevel: 'campaign', entityId: 'campaign-1', dailyBudget: 1 })
+      .expect(400);
+
+    expect(response.body).toEqual({
+      message: 'Invalid budget',
+      details: { code: 100, message: 'Budget too low' },
     });
   });
 });

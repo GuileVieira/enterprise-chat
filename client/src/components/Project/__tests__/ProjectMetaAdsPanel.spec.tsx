@@ -3166,6 +3166,49 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
+  it('shows manual budget errors to the user', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-cbo',
+        campaignName: 'CBO Messages',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'campaign',
+        budgetMode: 'CBO',
+        adSets: [],
+      },
+    ];
+    mockMutateBudget.mockImplementationOnce(
+      (
+        _payload,
+        options?: {
+          onError?: (error: { response: { data: { message: string } } }) => void;
+        },
+      ) =>
+        options?.onError?.({
+          response: {
+            data: {
+              message: 'Manual Meta Ads budget is outside the effective rule limits.',
+            },
+          },
+        }),
+    );
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByText('R$ 100,00'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_new_budget'), {
+      target: { value: '600' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
+
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'Manual Meta Ads budget is outside the effective rule limits.',
+      status: 'error',
+    });
+  });
+
   it('shows budget change history', () => {
     mockStatusData.changes = [
       {

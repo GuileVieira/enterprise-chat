@@ -3029,6 +3029,79 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(result.change).toEqual(expect.objectContaining({ newDailyBudget: 100 }));
   });
 
+  it('applies a manual ad set budget update and records its campaign', async () => {
+    const { budget, createChange, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+      },
+      latestEntityBudget: { dailyBudget: 70 },
+      adsets: [{ id: 'adset-abo', campaign_id: 'campaign-abo' }],
+    });
+
+    const result = await budget.applyManualBudgetChange({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      entityLevel: 'adset',
+      entityId: 'adset-abo',
+      entityName: 'Purchase ABO',
+      dailyBudget: 90,
+      actor: 'user',
+      actorUserId: 'u1',
+      reason: 'Manual scale',
+    });
+
+    expect(metaPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'adset-abo',
+        body: { daily_budget: 9000 },
+      }),
+    );
+    expect(createChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityLevel: 'adset',
+        entityId: 'adset-abo',
+        campaignId: 'campaign-abo',
+        previousDailyBudget: 70,
+        newDailyBudget: 90,
+        deltaDailyBudget: 20,
+        deltaPercent: 28.57,
+        reason: 'Manual scale',
+      }),
+    );
+    expect(result.change).toEqual(expect.objectContaining({ newDailyBudget: 90 }));
+  });
+
+  it('marks manual budget changes outside rule limits as client errors', async () => {
+    const { budget, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+      },
+      latestEntityBudget: { dailyBudget: 70 },
+    });
+
+    await expect(
+      budget.applyManualBudgetChange({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        entityName: 'CBO Campaign',
+        dailyBudget: 600,
+        actor: 'user',
+        actorUserId: 'u1',
+        reason: 'Manual scale',
+      }),
+    ).rejects.toMatchObject({
+      message: 'Manual Meta Ads budget is outside the effective rule limits.',
+      statusCode: 400,
+    });
+    expect(metaPost).not.toHaveBeenCalled();
+  });
+
   it('blocks manual budget increases that exceed the monthly investment cap', async () => {
     const { budget, metaPost } = loadBudgetWithMocks({
       project: {
