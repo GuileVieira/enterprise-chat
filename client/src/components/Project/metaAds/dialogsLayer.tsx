@@ -5,7 +5,6 @@ import {
   MetaAdsDiscardDraftDialog,
   MetaAdsPublishDraftDialog,
   MetaAdsDuplicateEntityDialog,
-  MetaAdsBudgetConfirmationBanner,
   MetaAdsEntityStatusConfirmationBanner,
 } from './confirmations';
 import { MetaAdsRankMedia } from './rankMedia';
@@ -129,19 +128,16 @@ export function MetaAdsDialogsLayer({
   const {
     budgetEditor,
     manualDailyBudget,
-    budgetConfirmation,
     entityStatusConfirmation,
     duplicateDraft,
     duplicateTargetName,
     selectedAdPreview,
     setBudgetEditor,
     setManualDailyBudget,
-    setBudgetConfirmation,
     setEntityStatusConfirmation,
     setDuplicateTargetName,
     setSelectedAdPreview,
     onSaveManualBudget,
-    onConfirmManualBudget,
     onCloseDuplicateDraft,
     onConfirmDuplicate,
     onConfirmEntityStatus,
@@ -239,7 +235,6 @@ export function MetaAdsDialogsLayer({
             onDailyBudgetChange={setManualDailyBudget}
             onClose={() => {
               setBudgetEditor(null);
-              setBudgetConfirmation(null);
             }}
             onSave={onSaveManualBudget}
             chrome={{
@@ -252,14 +247,6 @@ export function MetaAdsDialogsLayer({
               primaryButtonClassName: controls.primaryButtonClassName,
               ghostButtonClassName: controls.ghostButtonClassName,
             }}
-          />
-          <MetaAdsBudgetConfirmationBanner
-            confirmation={budgetConfirmation}
-            currency={currency}
-            saving={mutations.savingBudget}
-            localize={localize}
-            onCancel={() => setBudgetConfirmation(null)}
-            onConfirm={onConfirmManualBudget}
           />
           <MetaAdsEntityStatusConfirmationBanner
             confirmation={entityStatusConfirmation}

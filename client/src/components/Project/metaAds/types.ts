@@ -90,10 +90,6 @@ export type RuleRow = {
   creativeRules?: Required<MetaAdsCreativeRules>;
 };
 
-export type BudgetConfirmation = ProjectMetaAdsManualBudgetPayload & {
-  currentBudget?: number;
-};
-
 export type ManualBudgetDraft = ProjectMetaAdsManualBudgetPayload & {
   currentBudget?: number;
 };

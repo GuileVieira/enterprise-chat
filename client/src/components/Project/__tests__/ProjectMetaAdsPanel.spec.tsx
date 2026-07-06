@@ -1730,8 +1730,6 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '125' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
-
     expect(mockMutateBudget).not.toHaveBeenCalled();
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
@@ -2376,8 +2374,6 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '90' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
-
     expect(mockMutateBudget).not.toHaveBeenCalled();
     expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
     publishSettingsDraft();
@@ -3370,7 +3366,7 @@ describe('ProjectMetaAdsPanel', () => {
       .forEach((checkbox) => expect(checkbox).not.toBeChecked());
   });
 
-  it('requires confirmation before queuing a manual budget change', () => {
+  it('queues a manual budget change from the budget modal', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-cbo',
@@ -3395,11 +3391,8 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       screen.queryByRole('dialog', { name: 'com_ui_project_meta_ads_edit_budget' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('com_ui_project_meta_ads_confirm_budget_title')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
-
     expect(mockMutateBudget).not.toHaveBeenCalled();
+    expect(screen.queryByText('com_ui_project_meta_ads_confirm_budget_title')).toBeNull();
     expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /R\$\s*125,00/ })).toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_publish_draft')).toBeInTheDocument();
@@ -3425,8 +3418,6 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '125,50' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
-
     publishSettingsDraft();
 
     await waitFor(() =>
@@ -3480,7 +3471,6 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '125' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
     publishSettingsDraft();
 
     await waitFor(() => expect(screen.getAllByText('manual-ui').length).toBeGreaterThanOrEqual(1));
@@ -3522,7 +3512,6 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: '600' },
     });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_save_budget'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_confirm_budget'));
     publishSettingsDraft();
 
     await waitFor(() =>

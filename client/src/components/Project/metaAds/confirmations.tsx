@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type {
   Localize,
   DuplicateDraft,
-  BudgetConfirmation,
   MetaAdsDraftSectionKey,
   MetaAdsDraftSummaryItem,
   EntityStatusConfirmation,
@@ -22,57 +21,6 @@ type ConfirmationButtons = {
   ghostClassName: string;
   inputClassName: string;
 };
-
-export function MetaAdsBudgetConfirmationBanner({
-  confirmation,
-  currency,
-  saving,
-  localize,
-  onCancel,
-  onConfirm,
-}: {
-  confirmation: BudgetConfirmation | null;
-  currency: string;
-  saving: boolean;
-  localize: Localize;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  if (!confirmation) {
-    return null;
-  }
-
-  return (
-    <div className="border-b border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-      <div className="font-semibold">
-        {localize('com_ui_project_meta_ads_confirm_budget_title')}
-      </div>
-      <div className="mt-1">
-        {confirmation.entityName ?? confirmation.entityId}:{' '}
-        {formatMoney(confirmation.currentBudget, currency)}
-        {' -> '}
-        {formatMoney(confirmation.dailyBudget, currency)}
-      </div>
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="h-8 border border-amber-300 px-3 text-xs font-medium"
-        >
-          {localize('com_ui_cancel')}
-        </button>
-        <button
-          type="button"
-          disabled={saving}
-          onClick={onConfirm}
-          className="h-8 bg-amber-900 px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {localize('com_ui_project_meta_ads_confirm_budget')}
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export function MetaAdsEntityStatusConfirmationBanner({
   confirmation,

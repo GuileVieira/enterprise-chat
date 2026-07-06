@@ -144,10 +144,11 @@ export function MetaAdsBudgetBadge({
       : localize('com_ui_project_meta_ads_pending_budget', {
           0: formatMoney(pendingValue, currency),
         });
+  const displayValue = pendingValue ?? value;
   const content = (
     <>
       <span className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.7)]" />
-      <span>{formatMoney(value, currency)}</span>
+      <span>{formatMoney(displayValue, currency)}</span>
     </>
   );
 

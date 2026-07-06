@@ -19,7 +19,6 @@ import type {
   BudgetEditor,
   DuplicateDraft,
   ManualBudgetDraft,
-  BudgetConfirmation,
 } from '../types';
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
@@ -75,7 +74,6 @@ export function useMetaAdsEntityActions({
 }: UseMetaAdsEntityActionsParams) {
   const [budgetEditor, setBudgetEditor] = useState<BudgetEditor | null>(null);
   const [manualDailyBudget, setManualDailyBudget] = useState('');
-  const [budgetConfirmation, setBudgetConfirmation] = useState<BudgetConfirmation | null>(null);
   const [entityStatusConfirmation, setEntityStatusConfirmation] =
     useState<EntityStatusConfirmation | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<DuplicateDraft | null>(null);
@@ -144,7 +142,6 @@ export function useMetaAdsEntityActions({
 
   const onOpenBudgetEditor = (editor: BudgetEditor) => {
     setBudgetEditor(editor);
-    setBudgetConfirmation(null);
     setManualDailyBudget(formatDailyBudgetInput(editor.currentBudget));
   };
 
@@ -160,7 +157,7 @@ export function useMetaAdsEntityActions({
       });
       return;
     }
-    setBudgetConfirmation({
+    onManualBudgetDraft({
       entityLevel: budgetEditor.entityLevel,
       entityId: budgetEditor.entityId,
       entityName: budgetEditor.entityName,
@@ -169,15 +166,6 @@ export function useMetaAdsEntityActions({
       reason: 'manual-ui',
     });
     setBudgetEditor(null);
-  };
-
-  const onConfirmManualBudget = () => {
-    if (!budgetConfirmation) {
-      return;
-    }
-    onManualBudgetDraft(budgetConfirmation);
-    setBudgetEditor(null);
-    setBudgetConfirmation(null);
     setManualDailyBudget('');
     showToast({
       message: localize('com_ui_project_meta_ads_budget_queued'),
@@ -289,7 +277,6 @@ export function useMetaAdsEntityActions({
   return {
     budgetEditor,
     manualDailyBudget,
-    budgetConfirmation,
     entityStatusConfirmation,
     duplicateDraft,
     duplicateTargetName,
@@ -297,7 +284,6 @@ export function useMetaAdsEntityActions({
     selectedAdPreview,
     setBudgetEditor,
     setManualDailyBudget,
-    setBudgetConfirmation,
     setEntityStatusConfirmation,
     setDuplicateTargetName,
     setActionMenuKey,
@@ -306,7 +292,6 @@ export function useMetaAdsEntityActions({
     onApply,
     onOpenBudgetEditor,
     onSaveManualBudget,
-    onConfirmManualBudget,
     onOpenEntityStatusConfirmation,
     onOpenDuplicateDraft,
     onCloseDuplicateDraft,
