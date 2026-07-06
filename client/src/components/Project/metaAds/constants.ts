@@ -25,6 +25,8 @@ export const scheduleOptions: Array<{
 export const periodOptions = [
   { value: 'today', labelKey: 'com_ui_project_meta_ads_period_today' },
   { value: 'yesterday', labelKey: 'com_ui_project_meta_ads_period_yesterday' },
+  { value: 'this_month', labelKey: 'com_ui_project_meta_ads_period_this_month' },
+  { value: 'last_month', labelKey: 'com_ui_project_meta_ads_period_last_month' },
   { value: 'last_1d', labelKey: 'com_ui_project_meta_ads_period_last_1d' },
   { value: 'last_2d', labelKey: 'com_ui_project_meta_ads_period_last_2d' },
   { value: 'last_3d', labelKey: 'com_ui_project_meta_ads_period_last_3d' },

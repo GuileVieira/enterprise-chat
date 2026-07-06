@@ -2851,6 +2851,21 @@ describe('ProjectMetaAdsPanel', () => {
 
     openBiTab();
 
+    expect(
+      screen.getByRole('option', { name: 'com_ui_project_meta_ads_period_this_month' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'com_ui_project_meta_ads_period_last_month' }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
+      target: { value: 'this_month' },
+    });
+
+    expect(mockUseProjectMetaAdsQuery).toHaveBeenCalledWith('p1', {
+      datePreset: 'this_month',
+    });
+
     fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_period'), {
       target: { value: 'last_30d' },
     });

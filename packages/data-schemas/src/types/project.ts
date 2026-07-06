@@ -84,6 +84,8 @@ export interface IProjectMetaAds {
   automationAnalysisPreset?:
     | 'today'
     | 'yesterday'
+    | 'this_month'
+    | 'last_month'
     | 'last_6h'
     | 'last_24h'
     | 'last_2d'

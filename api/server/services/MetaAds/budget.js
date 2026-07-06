@@ -57,6 +57,8 @@ const PRIMARY_METRICS = new Set(['cpa', 'roas', 'cpc', 'ctr']);
 const ANALYSIS_PRESETS = new Set([
   'today',
   'yesterday',
+  'this_month',
+  'last_month',
   'last_6h',
   'last_24h',
   'last_2d',
@@ -2649,6 +2651,18 @@ function resolveStatusPeriod(options = {}, now = new Date()) {
   if (options.datePreset === 'yesterday') {
     const yesterday = getMetaAdsDateKey(addDays(now, -1), timeZone);
     return { since: yesterday, until: yesterday, datePreset: options.datePreset };
+  }
+  if (options.datePreset === 'this_month') {
+    const { since, until } = getMetaAdsMonthRange(undefined, timeZone, now);
+    return { since, until, datePreset: options.datePreset };
+  }
+  if (options.datePreset === 'last_month') {
+    const previousMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    const month = `${previousMonth.getUTCFullYear()}-${String(
+      previousMonth.getUTCMonth() + 1,
+    ).padStart(2, '0')}`;
+    const { since, until } = getMetaAdsMonthRange(month, timeZone, now);
+    return { since, until, datePreset: options.datePreset };
   }
   const hoursByPreset = {
     last_6h: 6,

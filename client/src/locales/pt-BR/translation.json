@@ -1131,6 +1131,8 @@
   "com_ui_project_meta_ads_period": "Período",
   "com_ui_project_meta_ads_period_today": "Hoje",
   "com_ui_project_meta_ads_period_yesterday": "Ontem",
+  "com_ui_project_meta_ads_period_this_month": "Este mês",
+  "com_ui_project_meta_ads_period_last_month": "Mês passado",
   "com_ui_project_meta_ads_period_last_1d": "Último 1 dia",
   "com_ui_project_meta_ads_period_last_2d": "Últimos 2 dias",
   "com_ui_project_meta_ads_period_last_3d": "Últimos 3 dias",

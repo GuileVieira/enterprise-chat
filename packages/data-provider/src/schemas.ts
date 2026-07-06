@@ -926,6 +926,8 @@ export const projectSchema = z.object({
         .enum([
           'today',
           'yesterday',
+          'this_month',
+          'last_month',
           'last_6h',
           'last_24h',
           'last_2d',
@@ -1019,6 +1021,8 @@ export const projectSchema = z.object({
               .enum([
                 'today',
                 'yesterday',
+                'this_month',
+                'last_month',
                 'last_6h',
                 'last_24h',
                 'last_2d',
@@ -1092,6 +1096,8 @@ export const projectSchema = z.object({
               .enum([
                 'today',
                 'yesterday',
+                'this_month',
+                'last_month',
                 'last_6h',
                 'last_24h',
                 'last_2d',

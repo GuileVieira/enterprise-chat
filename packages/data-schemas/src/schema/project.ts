@@ -143,6 +143,8 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
       enum: [
         'today',
         'yesterday',
+        'this_month',
+        'last_month',
         'last_6h',
         'last_24h',
         'last_2d',
@@ -195,6 +197,8 @@ const ProjectMetaAdsRuleGroupSchema = new Schema(
       enum: [
         'today',
         'yesterday',
+        'this_month',
+        'last_month',
         'last_6h',
         'last_24h',
         'last_2d',
@@ -264,6 +268,8 @@ const ProjectMetaAdsSchema = new Schema(
       enum: [
         'today',
         'yesterday',
+        'this_month',
+        'last_month',
         'last_6h',
         'last_24h',
         'last_2d',

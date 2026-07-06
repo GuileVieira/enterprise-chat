@@ -152,6 +152,8 @@ export type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 export type DatePreset =
   | 'today'
   | 'yesterday'
+  | 'this_month'
+  | 'last_month'
   | 'last_1d'
   | 'last_2d'
   | 'last_3d'
