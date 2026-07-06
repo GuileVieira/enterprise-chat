@@ -221,6 +221,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.changes = [];
     mockStatusData.summary = undefined;
     mockStatusData.monthlyBudget = undefined;
+    mockStatusData.goalProgress = undefined;
     mockStatusQueryState = {};
     mockRankingQueryState = {};
     mockRunMutationState = { isLoading: false };
@@ -1618,6 +1619,54 @@ describe('ProjectMetaAdsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows monthly and daily goal progress on spend and result cards', () => {
+    mockStatusData.goalProgress = {
+      investment: {
+        month: { target: 6000, actual: 1500, remaining: 4500, percent: 25 },
+        day: { target: 193.55, actual: 50, remaining: 143.55, percent: 26 },
+      },
+      result: {
+        resultType: 'purchase',
+        month: { target: 250, actual: 7, remaining: 243, percent: 3 },
+        day: { target: 9, actual: 1, remaining: 8, percent: 11 },
+      },
+    };
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-a',
+        campaignName: 'Compras',
+        objective: 'OUTCOME_SALES',
+        spend: 1500,
+        conversionValue: 6000,
+        cpa: 214.29,
+        roas: 4,
+        resultCount: 7,
+        resultType: 'purchase',
+        adSets: [],
+      },
+    ];
+    const ecommerceProject = {
+      ...project,
+      metaAds: {
+        accountProfile: 'ecommerce',
+        rules: { targetResultType: 'purchase' },
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
+
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getAllByText(/com_ui_project_meta_ads_goal_(month|day)_progress/),
+    ).toHaveLength(2);
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getAllByText(/com_ui_project_meta_ads_goal_(month|day)_progress/),
+    ).toHaveLength(2);
+  });
+
   it('shows Ads Manager metrics, CBO/ABO budget modes, and publishes manual budget drafts', async () => {
     mockStatusData.campaigns = [
       {
@@ -2144,6 +2193,7 @@ describe('ProjectMetaAdsPanel', () => {
         campaignName: 'Sales High ROAS',
         objective: 'OUTCOME_SALES',
         spend: 100,
+        conversionValue: 400,
         roas: 4,
         cpa: 50,
         resultCount: 2,
@@ -2157,6 +2207,7 @@ describe('ProjectMetaAdsPanel', () => {
         campaignName: 'Sales Low ROAS',
         objective: 'OUTCOME_SALES',
         spend: 200,
+        conversionValue: 200,
         roas: 1,
         cpa: 200,
         resultCount: 1,
@@ -2169,10 +2220,30 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={ecommerceProject} canEdit={true} />);
 
+    const cards = screen.getAllByTestId(/meta-ads-summary-card-/);
+    expect(cards).toHaveLength(6);
+    expect(cards.map((card) => card.getAttribute('data-testid'))).toEqual([
+      'meta-ads-summary-card-com_ui_project_meta_ads_total_results',
+      'meta-ads-summary-card-com_ui_project_meta_ads_conversion_value',
+      'meta-ads-summary-card-com_ui_project_meta_ads_average_cost',
+      'meta-ads-summary-card-com_ui_project_meta_ads_total_spend',
+      'meta-ads-summary-card-com_ui_project_meta_ads_roas',
+      'meta-ads-summary-card-com_ui_project_meta_ads_average_ticket',
+    ]);
     expect(
       within(
-        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_roas'),
-      ).getByText('2.00'),
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('3.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_conversion_value'),
+      ).getByText('R$ 600,00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
+      ).getByText('R$ 100,00'),
     ).toBeInTheDocument();
     expect(
       within(
@@ -2181,13 +2252,13 @@ describe('ProjectMetaAdsPanel', () => {
     ).toBeInTheDocument();
     expect(
       within(
-        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('3.00'),
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_roas'),
+      ).getByText('2.00'),
     ).toBeInTheDocument();
     expect(
       within(
-        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_cost'),
-      ).getByText('R$ 100,00'),
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_average_ticket'),
+      ).getByText('R$ 200,00'),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'com_ui_project_meta_ads_roas' }),

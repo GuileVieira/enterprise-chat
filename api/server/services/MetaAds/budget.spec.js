@@ -16,6 +16,7 @@ const {
   _resolveTargetResultTypeForTest,
   _resolveStatusPeriodForTest,
   _buildCreativePauseRecommendationsForTest,
+  _buildGoalProgressForTest,
   _resolveMonthlyBudgetForTest,
 } = require('./budget');
 
@@ -382,6 +383,60 @@ describe('Meta Ads budget service', () => {
         action_values: [{ action_type: 'purchase', value: '250' }],
       }),
     ).toEqual(expect.objectContaining({ roas: 2.5 }));
+  });
+
+  it('returns purchase conversion value for ecommerce summaries', () => {
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '100',
+          actions: [{ action_type: 'purchase', value: '5' }],
+          action_values: [{ action_type: 'purchase', value: '250' }],
+        },
+        'purchase',
+      ),
+    ).toEqual(expect.objectContaining({ conversionValue: 250 }));
+  });
+
+  it('calculates monthly and daily investment and result progress', () => {
+    expect(
+      _buildGoalProgressForTest({
+        monthlyBudget: {
+          month: '2026-07',
+          baseAmount: 6000,
+          additionalAmount: 0,
+          allowedOverspendPct: 0,
+        },
+        clientGoal: {
+          resultType: 'purchase',
+          monthlyTarget: 250,
+        },
+        accountProfile: 'ecommerce',
+        monthlyRows: [
+          {
+            spend: '1500',
+            actions: [{ action_type: 'purchase', value: '7' }],
+          },
+        ],
+        todayRows: [
+          {
+            spend: '50',
+            actions: [{ action_type: 'purchase', value: '1' }],
+          },
+        ],
+        now: new Date('2026-07-06T12:00:00.000Z'),
+      }),
+    ).toEqual({
+      investment: {
+        month: { target: 6000, actual: 1500, remaining: 4500, percent: 25 },
+        day: { target: 193.55, actual: 50, remaining: 143.55, percent: 26 },
+      },
+      result: {
+        resultType: 'purchase',
+        month: { target: 250, actual: 7, remaining: 243, percent: 3 },
+        day: { target: 9, actual: 1, remaining: 8, percent: 11 },
+      },
+    });
   });
 
   it('prefers Meta purchase_roas over action value ROAS fallback', () => {

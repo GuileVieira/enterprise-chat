@@ -326,6 +326,7 @@ export default function ProjectMetaAdsPanel({
     objectiveOptions: biAdapter.objectiveOptions,
     statusSummary: statusQuery.data?.summary,
     monthlyBudget: statusQuery.data?.monthlyBudget,
+    goalProgress: statusQuery.data?.goalProgress,
     settingsState: metaAdsSettings,
     entityActions: metaAdsEntityActions,
     rulesState: metaAdsRules,

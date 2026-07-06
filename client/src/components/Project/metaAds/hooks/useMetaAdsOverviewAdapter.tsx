@@ -16,7 +16,7 @@ import {
 } from '../chrome';
 import { getMetaAdsTableRowClass } from '../overviewCells';
 import { createMetaAdsOverviewRenderers } from '../overviewRenderers';
-import { formatMetric, getResultTypeLabel } from '../formatters';
+import { formatMetric, formatMoney, getResultTypeLabel } from '../formatters';
 import { MetaAdsOverviewWorkspace } from '../overviewWorkspace';
 import { buildMetaAdsSummaryCardItems, getNextMetaAdsSortDirection } from '../overviewState';
 import { buildMetaAdsOverviewState } from '../overviewState';
@@ -44,6 +44,7 @@ type UseMetaAdsOverviewAdapterParams = {
   objectiveOptions: MetaAdsOverviewWorkspaceProps['toolbar']['objectiveOptions'];
   statusSummary: Parameters<typeof buildMetaAdsOverviewState>[0]['summary'];
   monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
+  goalProgress: ProjectMetaAdsStatus['goalProgress'] | undefined;
   settingsState: ReturnType<typeof useMetaAdsSettings>;
   entityActions: ReturnType<typeof useMetaAdsEntityActions>;
   rulesState: ReturnType<typeof useMetaAdsRules>;
@@ -67,6 +68,7 @@ export function useMetaAdsOverviewAdapter({
   objectiveOptions,
   statusSummary,
   monthlyBudget,
+  goalProgress,
   settingsState,
   entityActions,
   rulesState,
@@ -122,6 +124,8 @@ export function useMetaAdsOverviewAdapter({
     summaryAverageCost,
     summaryAverageFrequency,
     summaryAverageRoas,
+    summaryConversionValue,
+    summaryAverageTicket,
     filteredCampaigns,
   } = buildMetaAdsOverviewState({
     campaigns,
@@ -141,13 +145,24 @@ export function useMetaAdsOverviewAdapter({
   const summaryCards = buildMetaAdsSummaryCardItems({
     isEcommerceDashboard,
     summaryAverageRoas,
+    summaryConversionValue,
+    summaryAverageTicket,
     summaryTotalSpend,
     summaryTotalResults,
     summaryAverageCost,
     summaryAverageFrequency,
     monthlyBudget,
+    investmentGoalContext: getGoalProgressContext({
+      progress: goalProgress?.investment,
+      localize,
+      formatValue: (value) => formatMoney(value, currency),
+    }),
     summaryMetricContext,
-    goalContext: (() => {
+    goalContext: getGoalProgressContext({
+      progress: goalProgress?.result,
+      localize,
+      formatValue: formatMetric,
+    }) ?? (() => {
       const goalTarget = Number(settings.clientGoal?.monthlyTarget ?? 0);
       const goalResultType = settings.clientGoal?.resultType;
       if (!goalResultType || !Number.isFinite(goalTarget) || goalTarget <= 0) {
@@ -307,4 +322,35 @@ export function useMetaAdsOverviewAdapter({
       renderAdRow,
     },
   };
+}
+
+function getGoalProgressContext({
+  progress,
+  localize,
+  formatValue,
+}: {
+  progress:
+    | NonNullable<ProjectMetaAdsStatus['goalProgress']>['investment']
+    | NonNullable<ProjectMetaAdsStatus['goalProgress']>['result']
+    | undefined;
+  localize: Localize;
+  formatValue: (value: number) => string;
+}) {
+  if (!progress?.month || !progress?.day) {
+    return undefined;
+  }
+  return [
+    localize('com_ui_project_meta_ads_goal_month_progress', {
+      0: formatValue(progress.month.actual),
+      1: formatValue(progress.month.target),
+      2: formatValue(progress.month.remaining),
+      3: String(progress.month.percent),
+    }),
+    localize('com_ui_project_meta_ads_goal_day_progress', {
+      0: formatValue(progress.day.actual),
+      1: formatValue(progress.day.target),
+      2: formatValue(progress.day.remaining),
+      3: String(progress.day.percent),
+    }),
+  ];
 }

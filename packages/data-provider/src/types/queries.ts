@@ -81,6 +81,7 @@ export type ProjectMetaAdsSnapshot = {
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
+  conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
@@ -234,6 +235,7 @@ export type ProjectMetaAdsAdSummary = {
   spend?: number;
   cpa?: number | null;
   roas?: number | null;
+  conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
@@ -442,6 +444,17 @@ export type ProjectMetaAdsStatus = {
     spentPct: number;
     remainingDays: number;
   };
+  goalProgress?: {
+    investment?: {
+      month: ProjectMetaAdsGoalProgressItem;
+      day: ProjectMetaAdsGoalProgressItem;
+    };
+    result?: {
+      resultType: string;
+      month: ProjectMetaAdsGoalProgressItem;
+      day: ProjectMetaAdsGoalProgressItem;
+    };
+  };
   summary?: {
     totalSpend: number;
     totalResults: number | null;
@@ -463,6 +476,13 @@ export type ProjectMetaAdsStatus = {
     configured?: string;
     source: 'project' | 'global';
   };
+};
+
+export type ProjectMetaAdsGoalProgressItem = {
+  target: number;
+  actual: number;
+  remaining: number;
+  percent: number;
 };
 
 export type ProjectMetaAdsTenantTokenResponse = {

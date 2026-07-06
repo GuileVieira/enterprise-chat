@@ -96,7 +96,19 @@ export function buildMetaAdsOverviewState({
     visibleSummary?.averageFrequency ??
     scopedObjectiveSummary?.averageFrequency ??
     summary?.averageFrequency;
-  const summaryAverageRoas = isEcommerceDashboard ? calculateWeightedRoas(filteredCampaigns) : null;
+  const summaryConversionValue = isEcommerceDashboard
+    ? calculateConversionValue(filteredCampaigns)
+    : null;
+  const summaryAverageRoas =
+    isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalSpend ?? 0) > 0
+      ? Number((summaryConversionValue / Number(summaryTotalSpend)).toFixed(2))
+      : isEcommerceDashboard
+        ? calculateWeightedRoas(filteredCampaigns)
+        : null;
+  const summaryAverageTicket =
+    isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalResults ?? 0) > 0
+      ? Number((summaryConversionValue / Number(summaryTotalResults)).toFixed(2))
+      : null;
 
   return {
     scopedObjectiveSummary,
@@ -108,6 +120,8 @@ export function buildMetaAdsOverviewState({
     summaryAverageCost,
     summaryAverageFrequency,
     summaryAverageRoas,
+    summaryConversionValue,
+    summaryAverageTicket,
     filteredCampaigns,
   };
 }
@@ -136,6 +150,20 @@ function buildVisibleCampaignSummary(campaigns: ProjectMetaAdsCampaignSummary[])
     averageCostPerResult,
     averageFrequency: resolveAverageFrequency(frequency),
   };
+}
+
+function calculateConversionValue(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  let total = 0;
+  let hasValue = false;
+  for (const campaign of campaigns) {
+    const value = Number(campaign.conversionValue);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    total += value;
+    hasValue = true;
+  }
+  return hasValue ? Number(total.toFixed(2)) : null;
 }
 
 export function getMetaAdsTokenStatusKey(
@@ -172,11 +200,14 @@ export function getNextMetaAdsSortDirection({
 export function buildMetaAdsSummaryCardItems({
   isEcommerceDashboard,
   summaryAverageRoas,
+  summaryConversionValue,
+  summaryAverageTicket,
   summaryTotalSpend,
   summaryTotalResults,
   summaryAverageCost,
   summaryAverageFrequency,
   monthlyBudget,
+  investmentGoalContext,
   summaryMetricContext,
   goalContext,
   summaryResultTypeOptionsLength,
@@ -186,11 +217,14 @@ export function buildMetaAdsSummaryCardItems({
 }: {
   isEcommerceDashboard: boolean;
   summaryAverageRoas: number | null;
+  summaryConversionValue: number | null;
+  summaryAverageTicket: number | null;
   summaryTotalSpend: number | null | undefined;
   summaryTotalResults: number | null | undefined;
   summaryAverageCost: number | null | undefined;
   summaryAverageFrequency: number | null | undefined;
   monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
+  investmentGoalContext?: string | string[];
   summaryMetricContext: string | undefined;
   goalContext?: string;
   summaryResultTypeOptionsLength: number;
@@ -199,31 +233,42 @@ export function buildMetaAdsSummaryCardItems({
   localize: ReturnType<typeof useLocalize>;
 }): MetaAdsSummaryCardItem[] {
   const monthlyBudgetContext = getMonthlyBudgetContext({ monthlyBudget, currency, localize });
+  const spendContext = investmentGoalContext ?? monthlyBudgetContext;
   if (isEcommerceDashboard) {
     return [
       {
-        labelKey: 'com_ui_project_meta_ads_average_roas',
-        value: formatMetric(summaryAverageRoas),
-        tone: 'border-l-emerald-300/35',
-      },
-      {
-        labelKey: 'com_ui_project_meta_ads_total_spend',
-        value: formatMoney(summaryTotalSpend, currency),
-        tone: 'border-l-amber-300/35',
-        context: monthlyBudgetContext,
-      },
-      {
         labelKey: 'com_ui_project_meta_ads_total_results',
         value: formatMetric(summaryTotalResults),
-        tone: 'border-l-sky-300/30',
+        tone: 'border-l-emerald-300/35',
         context: goalContext ?? summaryMetricContext,
         clickable: summaryResultTypeOptionsLength > 0,
       },
       {
+        labelKey: 'com_ui_project_meta_ads_conversion_value',
+        value: formatMoney(summaryConversionValue, currency),
+        tone: 'border-l-amber-300/35',
+      },
+      {
         labelKey: 'com_ui_project_meta_ads_average_cost',
         value: formatMoney(summaryAverageCost, currency),
-        tone: 'border-l-rose-300/30',
+        tone: 'border-l-sky-300/30',
         context: summaryMetricContext,
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_total_spend',
+        value: formatMoney(summaryTotalSpend, currency),
+        tone: 'border-l-rose-300/30',
+        context: spendContext,
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_roas',
+        value: formatMetric(summaryAverageRoas),
+        tone: 'border-l-violet-300/30',
+      },
+      {
+        labelKey: 'com_ui_project_meta_ads_average_ticket',
+        value: formatMoney(summaryAverageTicket, currency),
+        tone: 'border-l-cyan-300/30',
       },
     ];
   }
@@ -233,7 +278,7 @@ export function buildMetaAdsSummaryCardItems({
       labelKey: 'com_ui_project_meta_ads_total_spend',
       value: formatMoney(summaryTotalSpend, currency),
       tone: 'border-l-amber-300/35',
-      context: monthlyBudgetContext,
+      context: spendContext,
     },
     {
       labelKey: 'com_ui_project_meta_ads_total_results',

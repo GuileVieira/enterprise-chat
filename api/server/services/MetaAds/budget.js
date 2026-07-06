@@ -268,6 +268,79 @@ function buildMonthlyBudgetStatus({ monthlyBudget, insightRows = [], now = new D
   };
 }
 
+function buildProgressItem({ target, actual, integerTarget = false }) {
+  if (!Number.isFinite(target) || target <= 0) {
+    return null;
+  }
+  const normalizedTarget = integerTarget ? Math.ceil(target) : Number(target.toFixed(2));
+  const normalizedActual = Number((Number(actual ?? 0) || 0).toFixed(2));
+  return {
+    target: normalizedTarget,
+    actual: normalizedActual,
+    remaining: Math.max(0, Number((normalizedTarget - normalizedActual).toFixed(2))),
+    percent: Math.round((normalizedActual / normalizedTarget) * 100),
+  };
+}
+
+function getMonthDayCount(month, now = new Date()) {
+  const { until } = getMetaAdsMonthRange(month, getMetaAdsTimeZone(), now);
+  return Number(until.slice(-2));
+}
+
+function sumInsightMetric(rows, targetResultType, metric) {
+  return rows.reduce((sum, row) => {
+    const metrics = calculateMetrics(row, targetResultType);
+    return sum + Number(metrics[metric] ?? 0);
+  }, 0);
+}
+
+function buildGoalProgress({
+  monthlyBudget,
+  clientGoal,
+  accountProfile,
+  monthlyRows = [],
+  todayRows = [],
+  now = new Date(),
+}) {
+  const monthDayCount = getMonthDayCount(monthlyBudget?.month, now);
+  const monthlyBudgetLimit = getMonthlyBudgetLimit(monthlyBudget);
+  const investment =
+    monthlyBudgetLimit == null
+      ? undefined
+      : {
+          month: buildProgressItem({
+            target: monthlyBudgetLimit,
+            actual: sumInsightMetric(monthlyRows, undefined, 'spend'),
+          }),
+          day: buildProgressItem({
+            target: monthlyBudgetLimit / monthDayCount,
+            actual: sumInsightMetric(todayRows, undefined, 'spend'),
+          }),
+        };
+  const resultTarget = Number(clientGoal?.monthlyTarget ?? 0);
+  const resultType = clientGoal?.resultType || resolveTargetResultType({ accountProfile });
+  const result =
+    resultType && Number.isFinite(resultTarget) && resultTarget > 0
+      ? {
+          resultType,
+          month: buildProgressItem({
+            target: resultTarget,
+            actual: sumInsightMetric(monthlyRows, resultType, 'resultCount'),
+            integerTarget: true,
+          }),
+          day: buildProgressItem({
+            target: resultTarget / monthDayCount,
+            actual: sumInsightMetric(todayRows, resultType, 'resultCount'),
+            integerTarget: true,
+          }),
+        }
+      : undefined;
+  return {
+    ...(investment?.month && investment?.day ? { investment } : {}),
+    ...(result?.month && result?.day ? { result } : {}),
+  };
+}
+
 function applyMonthlyBudgetGuard({ proposal, currentDailyBudget, monthlyBudgetState }) {
   if (!monthlyBudgetState || proposal.action !== 'increase') {
     return { proposal, blocked: false };
@@ -331,6 +404,9 @@ function getModels() {
         },
       ];
     }
+    if (!existingSnapshotSchema.path('conversionValue')) {
+      missingSnapshotFields.conversionValue = Number;
+    }
     if (Object.keys(missingSnapshotFields).length > 0) {
       existingSnapshotSchema.add(missingSnapshotFields);
     }
@@ -354,6 +430,7 @@ function getModels() {
         spend: Number,
         cpa: Number,
         roas: Number,
+        conversionValue: Number,
         resultCount: Number,
         resultType: String,
         resultTypeBreakdown: [
@@ -1330,6 +1407,7 @@ function calculateMetrics(row, targetResultType) {
         ? spend / resultCount
         : null;
   const roas = calculateRoas(row, spend);
+  const conversionValue = getPurchaseValue(row);
   const videoP75Watched = Array.isArray(row.video_p75_watched_actions)
     ? Number(row.video_p75_watched_actions[0]?.value ?? 0)
     : Number(row.video_p75_watched_actions ?? 0);
@@ -1339,6 +1417,7 @@ function calculateMetrics(row, targetResultType) {
     resultCount,
     cpa,
     roas,
+    conversionValue,
     resultType:
       normalizedTarget === 'thruplay' &&
       !resultAction &&
@@ -1966,6 +2045,7 @@ function buildCampaignSummaries({
       spend: snapshot.spend,
       cpa: snapshot.cpa,
       roas: snapshot.roas,
+      conversionValue: snapshot.conversionValue,
       resultCount: snapshot.resultCount,
       resultType: snapshot.resultType,
       resultTypeBreakdown: snapshot.resultTypeBreakdown,
@@ -2010,6 +2090,7 @@ function buildCampaignSummaries({
       campaign.resultCount = metrics.resultCount;
       campaign.cpa = metrics.cpa;
       campaign.roas = metrics.roas;
+      campaign.conversionValue = metrics.conversionValue;
       campaign.resultType = metrics.resultType;
       campaign.impressions = metrics.impressions;
       campaign.reach = metrics.reach;
@@ -4595,6 +4676,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
         spend: metrics.spend,
         cpa: metrics.cpa,
         roas: metrics.roas,
+        conversionValue: metrics.conversionValue,
         resultCount: metrics.resultCount,
         resultType: metrics.resultType,
         resultTypeBreakdown: metrics.resultTypeBreakdown,
@@ -4863,6 +4945,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let liveSnapshots;
   let currency;
   let monthlyBudgetStatus;
+  let goalProgress;
   const snapshotOnly = options.scope === 'snapshot';
   if (project?.metaAds?.adAccountId && !snapshotOnly) {
     try {
@@ -5063,26 +5146,52 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       }
       const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month);
       const hasMonthlyBudgetLimit = getMonthlyBudgetLimit(monthlyBudget) != null;
-      if (hasMonthlyBudgetLimit) {
+      const hasClientGoal = Number(metaAds.clientGoal?.monthlyTarget ?? 0) > 0;
+      if (hasMonthlyBudgetLimit || hasClientGoal) {
         const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, getMetaAdsTimeZone());
-        const monthlyCampaignInsights = await listCampaignInsights({
-          adAccountId,
-          token,
-          since: monthlyRange.since,
-          until: monthlyRange.until,
-          graphVersion: effectiveGraphVersion,
-        }).catch((error) => {
-          logger.error('[MetaAdsBudget] monthly insights status enrichment failed', {
-            projectId,
+        const today = getMetaAdsDateKey(new Date(), getMetaAdsTimeZone());
+        const [monthlyCampaignInsights, todayCampaignInsights] = await Promise.all([
+          listCampaignInsights({
+            adAccountId,
+            token,
             since: monthlyRange.since,
             until: monthlyRange.until,
-            message: error.message,
-          });
-          return [];
-        });
+            graphVersion: effectiveGraphVersion,
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] monthly insights status enrichment failed', {
+              projectId,
+              since: monthlyRange.since,
+              until: monthlyRange.until,
+              message: error.message,
+            });
+            return [];
+          }),
+          listCampaignInsights({
+            adAccountId,
+            token,
+            since: today,
+            until: today,
+            graphVersion: effectiveGraphVersion,
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] daily goal insights status enrichment failed', {
+              projectId,
+              since: today,
+              until: today,
+              message: error.message,
+            });
+            return [];
+          }),
+        ]);
         monthlyBudgetStatus = buildMonthlyBudgetStatus({
           monthlyBudget,
           insightRows: monthlyCampaignInsights,
+        });
+        goalProgress = buildGoalProgress({
+          monthlyBudget,
+          clientGoal: metaAds.clientGoal,
+          accountProfile,
+          monthlyRows: monthlyCampaignInsights,
+          todayRows: todayCampaignInsights,
         });
       }
     } catch (error) {
@@ -5129,6 +5238,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     graphVersion,
     period,
     monthlyBudget: monthlyBudgetStatus,
+    goalProgress,
     summary: buildDashboardSummary(campaigns),
     trend: buildCampaignTrend({
       snapshots: historicalSnapshots,
@@ -5497,6 +5607,7 @@ async function runCron(options = {}) {
 module.exports = {
   DEFAULT_RULES,
   _buildCreativePauseRecommendationsForTest: buildCreativePauseRecommendations,
+  _buildGoalProgressForTest: buildGoalProgress,
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
   _getMetaAdsMonthRangeForTest: getMetaAdsMonthRange,

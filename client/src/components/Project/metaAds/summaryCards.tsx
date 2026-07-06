@@ -8,7 +8,7 @@ export type MetaAdsSummaryCardItem = {
   labelKey: TranslationKeys;
   value: string;
   tone: string;
-  context?: string;
+  context?: string | string[];
   clickable?: boolean;
 };
 
@@ -102,8 +102,12 @@ export function MetaAdsSummaryCards({
               </div>
               {renderSummaryValue({ value, initialLoading, showResultMetricCta, localize })}
               {context && !initialLoading && (
-                <div className="mt-2 truncate text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {context}
+                <div className="mt-2 space-y-1 text-xs font-medium leading-5 text-slate-500 dark:text-slate-400">
+                  {(Array.isArray(context) ? context : [context]).map((line) => (
+                    <div key={line} className="truncate">
+                      {line}
+                    </div>
+                  ))}
                 </div>
               )}
             </>
