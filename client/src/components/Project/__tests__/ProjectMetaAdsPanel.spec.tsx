@@ -713,6 +713,9 @@ describe('ProjectMetaAdsPanel', () => {
     expect(within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_decrease')).toHaveValue(
       25,
     );
+    fireEvent.click(
+      within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_frequency_alert_enabled'),
+    );
     fireEvent.change(
       within(ruleDialog).getByLabelText('com_ui_project_meta_ads_max_frequency_alert'),
       {
@@ -2620,9 +2623,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockMutateSettings).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_publish_draft'));
-    fireEvent.click(
-      await screen.findByText('com_ui_project_meta_ads_publish_to_meta'),
-    );
+    fireEvent.click(await screen.findByText('com_ui_project_meta_ads_publish_to_meta'));
 
     expect(mockMutateSettings).toHaveBeenCalled();
   });
@@ -4215,6 +4216,9 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(ruleDrawer).getByText('com_ui_project_meta_ads_target_cpa_hint'),
     ).toBeInTheDocument();
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_primary_metric'), {
+      target: { value: 'roas' },
+    });
     expect(
       within(ruleDrawer).getByText('com_ui_project_meta_ads_min_roas_hint'),
     ).toBeInTheDocument();
@@ -4539,6 +4543,9 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
       target: { value: '' },
     });
+    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_primary_metric'), {
+      target: { value: 'roas' },
+    });
     fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
       target: { value: '3' },
     });
@@ -4559,7 +4566,67 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
-  it('saves a rule with only a guardrail metric configured', () => {
+  it('shows only the active target metric in the rules list and details', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        rules: { primaryMetric: 'roas', minRoas: 3, targetCpa: 45 },
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+
+    const row = screen.getAllByTestId('meta-ads-rule-row')[0];
+    expect(within(row).getByText('3.00')).toBeInTheDocument();
+    expect(within(row).queryByText(/R\$\s*45,00\s*\/\s*3/)).not.toBeInTheDocument();
+
+    fireEvent.click(within(row).getByLabelText('com_ui_project_meta_ads_edit_rule'));
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+
+    expect(within(ruleDrawer).queryByLabelText('com_ui_project_meta_ads_target_cpa')).toBeNull();
+    expect(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas')).toBeEnabled();
+  });
+
+  it('disables guardrails by clearing their values', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        rules: { targetCpa: 45, maxCpc: 2 },
+        creativeRules: { maxFrequency: 5 },
+      },
+    } as TProject;
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
+    const ruleDrawer = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_global_rules',
+    });
+    fireEvent.click(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_cpc_enabled'));
+    fireEvent.click(
+      within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_frequency_alert_enabled'),
+    );
+    fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
+    publishSettingsDraft();
+
+    expect(mockMutateSettings).toHaveBeenCalledWith(
+      {
+        projectId: 'p1',
+        metaAds: expect.objectContaining({
+          rules: expect.objectContaining({ maxCpc: undefined }),
+          creativeRules: expect.objectContaining({ maxFrequency: undefined }),
+        }),
+      },
+      expect.any(Object),
+    );
+  });
+
+  it('blocks saving a rule with only a guardrail metric configured', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_create_rule_group')[0]);
@@ -4569,28 +4636,17 @@ describe('ProjectMetaAdsPanel', () => {
     fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
       target: { value: '' },
     });
-    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
-      target: { value: '' },
-    });
+    fireEvent.click(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_cpc_enabled'));
     fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_max_cpc'), {
       target: { value: '1.5' },
     });
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));
-    publishSettingsDraft();
 
-    expect(mockMutateSettings).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        metaAds: expect.objectContaining({
-          rules: expect.objectContaining({
-            targetCpa: undefined,
-            minRoas: undefined,
-            maxCpc: 1.5,
-          }),
-        }),
-      },
-      expect.any(Object),
-    );
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      message: 'com_ui_project_meta_ads_metric_required',
+      status: 'error',
+    });
   });
 
   it('blocks saving a rule without any performance metric', () => {
@@ -4601,9 +4657,6 @@ describe('ProjectMetaAdsPanel', () => {
       name: 'com_ui_project_meta_ads_global_rules',
     });
     fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_target_cpa'), {
-      target: { value: '' },
-    });
-    fireEvent.change(within(ruleDrawer).getByLabelText('com_ui_project_meta_ads_min_roas'), {
       target: { value: '' },
     });
     fireEvent.click(within(ruleDrawer).getByText('com_ui_project_meta_ads_save_rule_group'));

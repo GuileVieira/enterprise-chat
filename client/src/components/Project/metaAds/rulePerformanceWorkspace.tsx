@@ -7,7 +7,12 @@ import type {
 } from 'librechat-data-provider';
 
 import { defaultRules, getRuleRowTypeLabelKey } from './rules';
-import { formatMoney, formatMetric, getResultTypeLabel } from './formatters';
+import {
+  formatMoney,
+  formatMetric,
+  getResultTypeLabel,
+  getRuleTargetMetricValue,
+} from './formatters';
 import { MetaAdsPanel } from './ui';
 import { MetaAdsPeriodControls } from './periodControls';
 import { MetaAdsNameTooltip } from './overviewCells';
@@ -537,6 +542,9 @@ function RuleListItem({
       </td>
       <td className="border-b border-slate-200/60 px-4 py-4 align-top font-mono uppercase text-slate-900 dark:border-white/[0.06] dark:text-white">
         {row.rules.primaryMetric ?? 'cpa'}
+        <div className="mt-1 text-[11px] font-semibold normal-case text-slate-600 dark:text-slate-300">
+          {getRuleTargetMetricValue(row.rules, currency)}
+        </div>
       </td>
       <td className="border-b border-slate-200/60 px-4 py-4 align-top font-mono text-slate-700 dark:border-white/[0.06] dark:text-slate-200">
         {formatRuleDateTime(performance?.lastActionAt)}
@@ -727,7 +735,7 @@ function RuleCenterDetailPanel({
           />
           <DetailMetric
             label={localize('com_ui_project_meta_ads_rule_goal')}
-            value={`${formatMoney(row.rules.targetCpa, currency)} / ${formatMetric(row.rules.minRoas)}`}
+            value={getRuleTargetMetricValue(row.rules, currency)}
           />
           <DetailMetric
             label={localize('com_ui_project_meta_ads_budget_range')}

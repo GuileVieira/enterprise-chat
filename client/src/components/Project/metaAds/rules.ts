@@ -30,7 +30,7 @@ export const defaultRules: MetaAdsRulesState = {
 };
 
 export const defaultCreativeRules: Required<MetaAdsCreativeRules> = {
-  maxFrequency: 5,
+  maxFrequency: undefined,
   pauseHighCost: {
     enabled: false,
     maxCostPerResult: 45,
@@ -187,14 +187,6 @@ export const optionalNumberFields: Array<{
   },
 ];
 
-export const performanceMetricRuleKeys: Array<keyof MetaAdsRulesState> = [
-  'targetCpa',
-  'minRoas',
-  'minCtr',
-  'maxCpc',
-  'maxCpm',
-];
-
 export function getRuleOverrideKey(ruleOverride: MetaAdsRuleOverride) {
   return `${ruleOverride.entityLevel}:${ruleOverride.entityId}`;
 }
@@ -222,8 +214,16 @@ export function getRuleDraftTitleKey(ruleGroupDraft: RuleGroupDraft): Translatio
 }
 
 export function hasRulePerformanceMetric(rules: MetaAdsRulesState) {
-  return performanceMetricRuleKeys.some((key) => {
-    const value = rules[key];
-    return typeof value === 'number' && Number.isFinite(value) && value > 0;
-  });
+  const keyByMetric: Record<
+    NonNullable<MetaAdsRulesState['primaryMetric']>,
+    keyof MetaAdsRulesState
+  > = {
+    cpa: 'targetCpa',
+    roas: 'minRoas',
+    cpc: 'maxCpc',
+    ctr: 'minCtr',
+  };
+  const key = keyByMetric[rules.primaryMetric ?? 'cpa'];
+  const value = rules[key];
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }

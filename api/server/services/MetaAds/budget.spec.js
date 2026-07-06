@@ -3754,6 +3754,48 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(createRecommendation).toHaveBeenCalledTimes(1);
   });
 
+  it('does not apply a max frequency guardrail when no creative max is configured', async () => {
+    const { budget, createRecommendation } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: {
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, targetCpa: 45, minSpend: 1 },
+        },
+      },
+      campaigns: [{ id: 'campaign-high-frequency', name: 'High Frequency', daily_budget: '10000' }],
+      adsets: [
+        {
+          id: 'adset-high-frequency',
+          name: 'High Frequency Ad Set',
+          campaign_id: 'campaign-high-frequency',
+          daily_budget: '10000',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-high-frequency',
+          campaign_name: 'High Frequency',
+          adset_id: 'adset-high-frequency',
+          adset_name: 'High Frequency Ad Set',
+          spend: '100',
+          frequency: '8',
+          actions: [{ action_type: 'lead', value: '5' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityId: 'campaign-high-frequency',
+        action: 'increase',
+      }),
+    );
+  });
+
   it('fails a slow project by timeout and continues the cron run', async () => {
     jest.useFakeTimers();
     const { budget, listAdSets, projectUpdateOne } = loadBudgetWithMocks({

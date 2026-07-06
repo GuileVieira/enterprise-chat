@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   numberFields,
@@ -86,6 +86,26 @@ const analysisPresetOptions = [
   ['last_30d', 'com_ui_project_meta_ads_analysis_last_30d'],
 ] as const;
 
+type RuleGuardrailKey = 'minCtr' | 'maxCpc' | 'maxCpm';
+type GuardrailKey = RuleGuardrailKey | 'maxFrequency';
+
+const guardrailToggleLabelKeys: Record<GuardrailKey, Parameters<Localize>[0]> = {
+  minCtr: 'com_ui_project_meta_ads_min_ctr_enabled',
+  maxCpc: 'com_ui_project_meta_ads_max_cpc_enabled',
+  maxCpm: 'com_ui_project_meta_ads_max_cpm_enabled',
+  maxFrequency: 'com_ui_project_meta_ads_max_frequency_alert_enabled',
+};
+
+const primaryMetricFieldKeys: Record<
+  NonNullable<MetaAdsRulesState['primaryMetric']>,
+  keyof MetaAdsRulesState
+> = {
+  cpa: 'targetCpa',
+  roas: 'minRoas',
+  cpc: 'maxCpc',
+  ctr: 'minCtr',
+};
+
 function getNumberErrorKey(value: unknown, min: number, max?: number) {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue < min) {
@@ -150,6 +170,23 @@ export function MetaAdsRuleGroupDialog({
   controls: RuleGroupDialogControls;
 }) {
   const [entitySearch, setEntitySearch] = useState('');
+  const [activeGuardrails, setActiveGuardrails] = useState<Record<GuardrailKey, boolean>>({
+    minCtr: false,
+    maxCpc: false,
+    maxCpm: false,
+    maxFrequency: false,
+  });
+  const draftKey = draft
+    ? `${draft.scope}:${draft.id ?? draft.overrideKey ?? draft.entityIds.join(',')}`
+    : '';
+  useEffect(() => {
+    setActiveGuardrails({
+      minCtr: draft?.rules.minCtr != null,
+      maxCpc: draft?.rules.maxCpc != null,
+      maxCpm: draft?.rules.maxCpm != null,
+      maxFrequency: draft?.creativeRules.maxFrequency != null,
+    });
+  }, [draftKey]);
   const entitySearchQuery = entitySearch.trim().toLowerCase();
   const filteredEntityOptions = useMemo(
     () =>
@@ -165,8 +202,26 @@ export function MetaAdsRuleGroupDialog({
   if (!draft) {
     return null;
   }
+  const primaryMetric = draft.rules.primaryMetric ?? 'cpa';
+  const primaryMetricFieldKey = primaryMetricFieldKeys[primaryMetric];
+  const primaryMetricField = [...numberFields, ...optionalNumberFields].find(
+    (field) => field.key === primaryMetricFieldKey,
+  );
+  const budgetNumberFields = numberFields.filter(
+    (field) => field.key !== 'targetCpa' && field.key !== 'minRoas',
+  );
+  const guardrailFields = optionalNumberFields.filter(
+    (field) => field.key !== primaryMetricFieldKey,
+  );
+  const hasMissingActiveGuardrail =
+    guardrailFields.some(
+      (field) => activeGuardrails[field.key as RuleGuardrailKey] && draft.rules[field.key] == null,
+    ) ||
+    (activeGuardrails.maxFrequency && draft.creativeRules.maxFrequency == null);
   const pauseHighCost = draft.creativeRules.pauseHighCost;
-  const maxFrequencyErrorKey = getNumberErrorKey(draft.creativeRules.maxFrequency, 0);
+  const maxFrequencyErrorKey = activeGuardrails.maxFrequency
+    ? getNumberErrorKey(draft.creativeRules.maxFrequency, 0)
+    : undefined;
   const maxCostErrorKey = getNumberErrorKey(pauseHighCost?.maxCostPerResult, 0.01);
   const fieldErrors = {
     'pauseHighCost.minCreativesInScope': getNumberErrorKey(pauseHighCost?.minCreativesInScope, 3),
@@ -381,6 +436,25 @@ export function MetaAdsRuleGroupDialog({
                   ))}
                 </select>
               </label>
+              {primaryMetricField && (
+                <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                  <RuleFieldLabel
+                    localize={localize}
+                    labelKey={primaryMetricField.labelKey}
+                    hintKey={primaryMetricField.hintKey}
+                  />
+                  <input
+                    aria-label={localize(primaryMetricField.labelKey)}
+                    type="number"
+                    step={primaryMetricField.step}
+                    min={getRuleNumberMin(primaryMetricField.key)}
+                    max={getRuleNumberMax(primaryMetricField.key)}
+                    value={draft.rules[primaryMetricField.key] ?? ''}
+                    onChange={(event) => onRuleChange(primaryMetricField.key, event.target.value)}
+                    className={controls.inputClassName}
+                  />
+                </label>
+              )}
             </div>
           </div>
           <div className={chrome.modalTileClassName}>
@@ -388,7 +462,7 @@ export function MetaAdsRuleGroupDialog({
               {localize('com_ui_project_meta_ads_rule_section_budget')}
             </h5>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              {numberFields.map((field) => (
+              {budgetNumberFields.map((field) => (
                 <label
                   key={field.key}
                   className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
@@ -450,41 +524,88 @@ export function MetaAdsRuleGroupDialog({
               {localize('com_ui_project_meta_ads_rule_section_guardrails')}
             </h5>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              {optionalNumberFields.map((field) => (
-                <label
-                  key={field.key}
-                  className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
-                >
+              {guardrailFields.map((field) => {
+                const guardrailKey = field.key as RuleGuardrailKey;
+                const active = activeGuardrails[guardrailKey];
+                const errorKey =
+                  active && draft.rules[field.key] == null ? 'com_ui_field_required' : undefined;
+                return (
+                  <div
+                    key={field.key}
+                    className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300"
+                  >
+                    <label className="flex items-center gap-2">
+                      <input
+                        aria-label={localize(guardrailToggleLabelKeys[guardrailKey])}
+                        type="checkbox"
+                        checked={active}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setActiveGuardrails((current) => ({
+                            ...current,
+                            [guardrailKey]: checked,
+                          }));
+                          if (!checked) {
+                            onRuleChange(field.key, '');
+                          }
+                        }}
+                      />
+                      <RuleFieldLabel
+                        localize={localize}
+                        labelKey={field.labelKey}
+                        hintKey={field.hintKey}
+                      />
+                    </label>
+                    <input
+                      aria-label={localize(field.labelKey)}
+                      disabled={!active}
+                      type="number"
+                      step={field.step}
+                      min="0"
+                      value={draft.rules[field.key] ?? ''}
+                      placeholder={localize('com_ui_project_meta_ads_optional_rule')}
+                      onChange={(event) => onRuleChange(field.key, event.target.value)}
+                      className={getInvalidInputClassName(controls.inputClassName, !!errorKey)}
+                    />
+                    {errorKey && (
+                      <span className="text-xs font-medium text-red-600 dark:text-red-300">
+                        {localize(errorKey)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              <div className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
+                <label className="flex items-center gap-2">
+                  <input
+                    aria-label={localize(guardrailToggleLabelKeys.maxFrequency)}
+                    type="checkbox"
+                    checked={activeGuardrails.maxFrequency}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setActiveGuardrails((current) => ({
+                        ...current,
+                        maxFrequency: checked,
+                      }));
+                      if (!checked) {
+                        onCreativeRuleChange('maxFrequency', '');
+                      }
+                    }}
+                  />
                   <RuleFieldLabel
                     localize={localize}
-                    labelKey={field.labelKey}
-                    hintKey={field.hintKey}
-                  />
-                  <input
-                    aria-label={localize(field.labelKey)}
-                    type="number"
-                    step={field.step}
-                    min="0"
-                    value={draft.rules[field.key] ?? ''}
-                    placeholder={localize('com_ui_project_meta_ads_optional_rule')}
-                    onChange={(event) => onRuleChange(field.key, event.target.value)}
-                    className={controls.inputClassName}
+                    labelKey="com_ui_project_meta_ads_max_frequency_alert"
+                    hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
                   />
                 </label>
-              ))}
-              <label className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-300">
-                <RuleFieldLabel
-                  localize={localize}
-                  labelKey="com_ui_project_meta_ads_max_frequency_alert"
-                  hintKey="com_ui_project_meta_ads_max_frequency_alert_hint"
-                />
                 <input
                   aria-label={localize('com_ui_project_meta_ads_max_frequency_alert')}
                   aria-invalid={maxFrequencyErrorKey ? true : undefined}
+                  disabled={!activeGuardrails.maxFrequency}
                   type="number"
                   min="0"
                   step="0.01"
-                  value={draft.creativeRules.maxFrequency}
+                  value={draft.creativeRules.maxFrequency ?? ''}
                   onChange={(event) => onCreativeRuleChange('maxFrequency', event.target.value)}
                   className={getInvalidInputClassName(
                     controls.inputClassName,
@@ -496,7 +617,7 @@ export function MetaAdsRuleGroupDialog({
                     {localize(maxFrequencyErrorKey, { 0: '0' })}
                   </span>
                 )}
-              </label>
+              </div>
             </div>
           </div>
           <div className={chrome.modalTileClassName}>
@@ -654,7 +775,7 @@ export function MetaAdsRuleGroupDialog({
           </button>
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || hasMissingActiveGuardrail}
             onClick={onSave}
             className={controls.primaryButtonClassName}
           >

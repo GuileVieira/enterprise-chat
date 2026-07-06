@@ -1,6 +1,6 @@
 import type { ProjectMetaAdsTrendSeries } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
-import type { EvolutionMetric, Localize } from './types';
+import type { EvolutionMetric, Localize, MetaAdsRulesState } from './types';
 import { objectiveLabelKeys, resultTypeLabelKeys } from './constants';
 
 export function formatMetric(value?: number | null) {
@@ -137,6 +137,24 @@ export function getEvolutionMetricLabel(metric: EvolutionMetric, localize: Local
     clicks: 'com_ui_project_meta_ads_clicks',
   };
   return localize(labelKeys[metric]);
+}
+
+export function getRuleTargetMetric(rules: Pick<MetaAdsRulesState, 'primaryMetric'>) {
+  return rules.primaryMetric ?? 'cpa';
+}
+
+export function getRuleTargetMetricValue(rules: MetaAdsRulesState, currency: string) {
+  const metric = getRuleTargetMetric(rules);
+  if (metric === 'roas') {
+    return formatMetric(rules.minRoas);
+  }
+  if (metric === 'cpc') {
+    return formatMoney(rules.maxCpc, currency);
+  }
+  if (metric === 'ctr') {
+    return formatPercent(rules.minCtr);
+  }
+  return formatMoney(rules.targetCpa, currency);
 }
 
 export function toMetaAdsLabelKey(value?: string | null) {

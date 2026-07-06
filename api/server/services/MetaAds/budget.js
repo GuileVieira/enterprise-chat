@@ -65,9 +65,7 @@ const ANALYSIS_PRESETS = new Set([
   'last_14d',
   'last_30d',
 ]);
-const DEFAULT_CREATIVE_RULES = {
-  maxFrequency: 5,
-};
+const DEFAULT_CREATIVE_RULES = {};
 const RULE_LIMITS = {
   targetCpa: { min: 0.01 },
   minRoas: { min: 0 },
@@ -974,6 +972,9 @@ function validateMetaAdsCreativeRules(rules = {}) {
   const validated = {};
   const errors = [];
   for (const [key, limits] of Object.entries(CREATIVE_RULE_LIMITS)) {
+    if (merged[key] == null || merged[key] === '') {
+      continue;
+    }
     const value = Number(merged[key]);
     validated[key] = value;
     if (

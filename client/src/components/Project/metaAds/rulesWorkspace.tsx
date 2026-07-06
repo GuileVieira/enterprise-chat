@@ -1,7 +1,7 @@
 import { Play, Pause, Trash, PencilSimple } from '@phosphor-icons/react';
 
 import { getRuleRowTypeLabelKey } from './rules';
-import { formatMoney, formatMetric, getResultTypeLabel } from './formatters';
+import { formatMoney, getResultTypeLabel, getRuleTargetMetricValue } from './formatters';
 import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
 
 export function MetaAdsRulesWorkspace({
@@ -77,7 +77,7 @@ export function MetaAdsRulesWorkspace({
                 {localize('com_ui_project_meta_ads_primary_metric')}
               </th>
               <th className="w-32 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
-                {localize('com_ui_project_meta_ads_cpa_roas')}
+                {localize('com_ui_project_meta_ads_rule_goal')}
               </th>
               <th className="w-36 border-b border-slate-200/70 px-3 py-2 text-right dark:border-white/10">
                 {localize('com_ui_project_meta_ads_budget_range')}
@@ -151,7 +151,7 @@ export function MetaAdsRulesWorkspace({
                   {row.rules.primaryMetric ?? 'cpa'}
                 </td>
                 <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
-                  {formatMoney(row.rules.targetCpa, currency)} / {formatMetric(row.rules.minRoas)}
+                  {getRuleTargetMetricValue(row.rules, currency)}
                 </td>
                 <td className="border-b border-slate-200/60 px-3 py-2 text-right font-mono text-slate-900 dark:border-white/[0.06] dark:text-white">
                   {formatMoney(row.rules.minDailyBudget, currency)} -{' '}
