@@ -47,6 +47,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   updateProjectMetaAdsEntityStatus: jest.fn(),
 }));
 
+const { logger } = require('@librechat/data-schemas');
 const router = require('./projectMetaAds');
 const { getProjectById, updateProject, upsertTenantSecret } = require('~/models');
 const {
@@ -792,7 +793,42 @@ describe('projectMetaAds run route', () => {
     analyzeProject.mockResolvedValue({ projectId: 'p1', recommendations: [] });
   });
 
+  it('logs execution timing for client-triggered runs', async () => {
+    const infoSpy = jest.spyOn(logger, 'info').mockImplementation(() => {});
+    analyzeProject.mockResolvedValueOnce({
+      projectId: 'p1',
+      adAccountId: 'act_123',
+      recommendations: [{ entityId: 'adset-1' }, { entityId: 'adset-2' }],
+    });
+
+    try {
+      const response = await request(createApp()).post('/projects/p1/meta-ads/run').expect(200);
+
+      expect(response.body).toEqual({
+        projectId: 'p1',
+        adAccountId: 'act_123',
+        recommendations: [{ entityId: 'adset-1' }, { entityId: 'adset-2' }],
+      });
+      expect(infoSpy).toHaveBeenCalledWith(
+        '[projectMetaAds] run finished',
+        expect.objectContaining({
+          projectId: 'p1',
+          tenantId: 'tenant-x',
+          actorUserId: 'user-1',
+          adAccountId: 'act_123',
+          recommendationCount: 2,
+          startedAt: expect.any(String),
+          finishedAt: expect.any(String),
+          durationMs: expect.any(Number),
+        }),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
+  });
+
   it('preserves Meta API error status for client-triggered runs', async () => {
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
     mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
     analyzeProject.mockRejectedValueOnce(
       Object.assign(new Error('Invalid parameter'), {
@@ -801,12 +837,28 @@ describe('projectMetaAds run route', () => {
       }),
     );
 
-    const response = await request(createApp()).post('/projects/p1/meta-ads/run').expect(400);
+    try {
+      const response = await request(createApp()).post('/projects/p1/meta-ads/run').expect(400);
 
-    expect(response.body).toEqual({
-      message: 'Invalid parameter',
-      details: { code: 100, message: 'Invalid parameter' },
-    });
+      expect(response.body).toEqual({
+        message: 'Invalid parameter',
+        details: { code: 100, message: 'Invalid parameter' },
+      });
+      expect(errorSpy).toHaveBeenCalledWith(
+        '[projectMetaAds] run failed',
+        expect.objectContaining({
+          projectId: 'p1',
+          tenantId: 'tenant-x',
+          actorUserId: 'user-1',
+          message: 'Invalid parameter',
+          startedAt: expect.any(String),
+          finishedAt: expect.any(String),
+          durationMs: expect.any(Number),
+        }),
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });
 

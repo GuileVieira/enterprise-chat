@@ -1028,6 +1028,8 @@
   "com_ui_project_meta_ads_description": "Conecte este projeto a uma conta de anúncio, revise recomendações de orçamento e, se quiser, deixe o cron aplicar mudanças limitadas.",
   "com_ui_project_meta_ads_run": "Rodar análise",
   "com_ui_project_meta_ads_running": "Rodando...",
+  "com_ui_project_meta_ads_running_analysis": "Rodando análise...",
+  "com_ui_project_meta_ads_run_status": "Rodando análise do Meta Ads. Isso pode levar alguns instantes.",
   "com_ui_project_meta_ads_run_success": "Análise Meta Ads concluída.",
   "com_ui_project_meta_ads_run_failed": "Não foi possível rodar a análise Meta Ads.",
   "com_ui_project_meta_ads_settings": "Configurações",

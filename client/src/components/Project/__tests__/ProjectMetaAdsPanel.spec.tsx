@@ -45,6 +45,7 @@ const mockRefetchStatus = jest.fn();
 const mockShowToast = jest.fn();
 let mockStatusQueryState = {};
 let mockRankingQueryState = {};
+let mockRunMutationState = { isLoading: false };
 let mockUserRole = 'USER';
 const mockStatusQueryConfigs: unknown[] = [];
 const mockRankingQueryConfigs: unknown[] = [];
@@ -182,7 +183,7 @@ jest.mock('~/data-provider', () => ({
   }),
   useRunProjectMetaAdsMutation: () => ({
     mutate: mockMutateRun,
-    isLoading: false,
+    ...mockRunMutationState,
   }),
   useApplyProjectMetaAdsRecommendationMutation: () => ({
     mutate: mockMutateApply,
@@ -222,6 +223,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockStatusData.monthlyBudget = undefined;
     mockStatusQueryState = {};
     mockRankingQueryState = {};
+    mockRunMutationState = { isLoading: false };
     mockUserRole = 'USER';
     mockStatusQueryConfigs.length = 0;
     mockRankingQueryConfigs.length = 0;
@@ -4825,6 +4827,17 @@ describe('ProjectMetaAdsPanel', () => {
       message: 'com_ui_project_meta_ads_run_success',
       status: 'success',
     });
+  });
+
+  it('shows loading feedback while Meta Ads analysis is running', () => {
+    mockRunMutationState = { isLoading: true };
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(
+      screen.getByRole('button', { name: 'com_ui_project_meta_ads_running_analysis' }),
+    ).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('com_ui_project_meta_ads_run_status');
   });
 
   it('shows Meta Ads run feedback messages after automatic adjustments', () => {

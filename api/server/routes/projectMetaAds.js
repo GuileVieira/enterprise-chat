@@ -837,10 +837,38 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
 });
 
 router.post('/run', metaAdsClientActionAccess, async (req, res) => {
+  const startedAt = new Date();
+  const startedAtMs = Date.now();
+  const tenantId = req.user.tenantId || getTenantId();
+
   try {
-    return res.json(await analyzeProject({ projectId: req.params.projectId, actor: 'user' }));
+    const result = await analyzeProject({ projectId: req.params.projectId, actor: 'user' });
+    const finishedAt = new Date();
+    logger.info('[projectMetaAds] run finished', {
+      projectId: req.params.projectId,
+      tenantId,
+      actorUserId: req.user.id,
+      adAccountId: result.adAccountId,
+      recommendationCount: Array.isArray(result.recommendations)
+        ? result.recommendations.length
+        : 0,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: Date.now() - startedAtMs,
+    });
+    return res.json(result);
   } catch (error) {
-    logger.error('[projectMetaAds] run failed', error);
+    const finishedAt = new Date();
+    logger.error('[projectMetaAds] run failed', {
+      projectId: req.params.projectId,
+      tenantId,
+      actorUserId: req.user.id,
+      message: error.message,
+      stack: error.stack,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+      durationMs: Date.now() - startedAtMs,
+    });
     return res.status(error.statusCode ?? 500).json({
       message: error.message,
       ...(error.data ? { details: error.data } : {}),

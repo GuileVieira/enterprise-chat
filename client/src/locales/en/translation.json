@@ -2004,6 +2004,8 @@
   "com_ui_project_meta_ads_description": "Connect this project to one Meta ad account, review budget recommendations, and optionally let the cron apply limited changes.",
   "com_ui_project_meta_ads_run": "Run analysis",
   "com_ui_project_meta_ads_running": "Running...",
+  "com_ui_project_meta_ads_running_analysis": "Running analysis...",
+  "com_ui_project_meta_ads_run_status": "Running Meta Ads analysis. This can take a few moments.",
   "com_ui_project_meta_ads_run_success": "Meta Ads analysis completed.",
   "com_ui_project_meta_ads_run_failed": "Could not run Meta Ads analysis.",
   "com_ui_project_meta_ads_settings": "Settings",

@@ -1,5 +1,6 @@
 import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
 import { workspaceTabOptions } from './constants';
+import { MetaAdsRunAnalysisButton, MetaAdsRunAnalysisStatus } from './runAnalysisFeedback';
 import { MetaAdsBadge, MetaAdsButton } from './ui';
 import type { useLocalize } from '~/hooks';
 import type { TranslationKeys } from '~/hooks';
@@ -107,14 +108,12 @@ export function MetaAdsWorkspaceShell({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <MetaAdsButton
-            disabled={!canUseMetaAdsActions || runningAnalysis}
+          <MetaAdsRunAnalysisButton
+            disabled={!canUseMetaAdsActions}
+            running={runningAnalysis}
+            localize={localize}
             onClick={onRunAnalysis}
-          >
-            {localize(
-              runningAnalysis ? 'com_ui_project_meta_ads_running' : 'com_ui_project_meta_ads_run',
-            )}
-          </MetaAdsButton>
+          />
           <MetaAdsButton onClick={() => onOpenSettingsDrawer('account')}>
             {localize('com_ui_project_meta_ads_account_credentials')}
           </MetaAdsButton>
@@ -170,6 +169,7 @@ export function MetaAdsWorkspaceShell({
           )}
         </div>
       </div>
+      <MetaAdsRunAnalysisStatus running={runningAnalysis} localize={localize} />
       {runNoticeMessage && (
         <div
           role="alert"
