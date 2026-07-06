@@ -97,6 +97,29 @@ const ProjectMetaAdsClientGoalSchema = new Schema(
   { _id: false },
 );
 
+const ProjectMetaAdsRuleAuditUserSchema = new Schema(
+  {
+    id: String,
+    name: String,
+    email: String,
+  },
+  { _id: false },
+);
+
+const ProjectMetaAdsRuleAuditSchema = new Schema(
+  {
+    createdAt: String,
+    createdBy: {
+      type: ProjectMetaAdsRuleAuditUserSchema,
+    },
+    updatedAt: String,
+    updatedBy: {
+      type: ProjectMetaAdsRuleAuditUserSchema,
+    },
+  },
+  { _id: false },
+);
+
 const ProjectMetaAdsRuleOverrideSchema = new Schema(
   {
     entityLevel: {
@@ -136,6 +159,9 @@ const ProjectMetaAdsRuleOverrideSchema = new Schema(
     creativeRules: {
       type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
+    },
+    ruleAudit: {
+      type: ProjectMetaAdsRuleAuditSchema,
     },
   },
   { _id: false },
@@ -185,6 +211,9 @@ const ProjectMetaAdsRuleGroupSchema = new Schema(
     creativeRules: {
       type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
+    },
+    ruleAudit: {
+      type: ProjectMetaAdsRuleAuditSchema,
     },
   },
   { _id: false },
@@ -268,6 +297,9 @@ const ProjectMetaAdsSchema = new Schema(
     creativeRules: {
       type: ProjectMetaAdsCreativeRulesSchema,
       default: {},
+    },
+    globalRuleAudit: {
+      type: ProjectMetaAdsRuleAuditSchema,
     },
     ruleOverrides: {
       type: [ProjectMetaAdsRuleOverrideSchema],

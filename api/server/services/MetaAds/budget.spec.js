@@ -837,6 +837,7 @@ describe('Meta Ads budget service persistence safety', () => {
     const createSnapshot = jest.fn(async (payload) => payload);
     const createChange = jest.fn(async (payload) => payload);
     const createAutomationAction = jest.fn(async (payload) => payload);
+    const createRuleChange = jest.fn(async (payload) => payload);
     const findChangeOne = jest.fn(() => ({ lean: async () => null }));
     const makeFindChain = jest.fn((query) => ({
       sort: () => ({
@@ -898,6 +899,11 @@ describe('Meta Ads budget service persistence safety', () => {
         MetaAdsAutomationAction: {
           schema: {},
           create: createAutomationAction,
+          find: findActions,
+        },
+        MetaAdsRuleChange: {
+          schema: {},
+          create: createRuleChange,
           find: findActions,
         },
       },
@@ -978,6 +984,7 @@ describe('Meta Ads budget service persistence safety', () => {
     return {
       budget,
       createChange,
+      createRuleChange,
       createRecommendation,
       createSnapshot,
       createAutomationAction,
@@ -1007,6 +1014,79 @@ describe('Meta Ads budget service persistence safety', () => {
     jest.dontMock('@librechat/data-schemas');
     jest.dontMock('~/server/services/Config/app');
     jest.dontMock('~/server/services/MetaAds/graph');
+  });
+
+  it('records rule change details per rule and actor user snapshot', async () => {
+    const { budget, createRuleChange } = loadBudgetWithMocks();
+
+    await budget.recordProjectMetaAdsRuleChange({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      beforeMetaAds: {
+        rules: { targetCpa: 45 },
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-1'],
+            rules: { targetCpa: 50 },
+          },
+        ],
+      },
+      afterMetaAds: {
+        rules: { targetCpa: 55 },
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-1'],
+            rules: { targetCpa: 65 },
+          },
+          {
+            id: 'group-2',
+            name: 'Remarketing',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-2'],
+            rules: { targetCpa: 35 },
+          },
+        ],
+      },
+      actor: 'user',
+      actorUserId: 'u1',
+      actorUserName: 'Ana Media',
+      actorUserEmail: 'ana@example.com',
+    });
+
+    expect(createRuleChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actorUserId: 'u1',
+        actorUserName: 'Ana Media',
+        actorUserEmail: 'ana@example.com',
+        ruleChanges: expect.arrayContaining([
+          expect.objectContaining({
+            ruleKey: 'global',
+            ruleType: 'global',
+            action: 'updated',
+            changedFields: ['rules'],
+          }),
+          expect.objectContaining({
+            ruleKey: 'group:group-1',
+            ruleType: 'group',
+            ruleName: 'Prospecting',
+            action: 'updated',
+            changedFields: ['rules'],
+          }),
+          expect.objectContaining({
+            ruleKey: 'group:group-2',
+            ruleType: 'group',
+            ruleName: 'Remarketing',
+            action: 'created',
+          }),
+        ]),
+      }),
+    );
   });
 
   it('returns ROAS in campaign BI rankings', async () => {

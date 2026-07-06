@@ -17,6 +17,7 @@ import type { TranslationKeys } from '~/hooks';
 export type MetaAdsRules = NonNullable<NonNullable<TProject['metaAds']>['rules']>;
 export type MetaAdsCreativeRules = NonNullable<NonNullable<TProject['metaAds']>['creativeRules']>;
 export type MetaAdsSettings = NonNullable<TProject['metaAds']>;
+export type MetaAdsRuleAudit = NonNullable<MetaAdsSettings['globalRuleAudit']>;
 export type MetaAdsRuleGroup = NonNullable<MetaAdsSettings['ruleGroups']>[number];
 export type MetaAdsRuleOverride = NonNullable<MetaAdsSettings['ruleOverrides']>[number];
 export type MetaAdsRulesState = Required<
@@ -85,6 +86,7 @@ export type RuleRow = {
   precedenceLabel: string;
   entityLevel?: MetaAdsRuleGroup['entityLevel'];
   entityIds: string[];
+  ruleAudit?: MetaAdsRuleAudit;
   group?: MetaAdsRuleGroup;
   override?: MetaAdsRuleOverride;
   rules: MetaAdsRulesState;

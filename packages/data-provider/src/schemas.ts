@@ -865,6 +865,27 @@ export const tConversationSchema = z.object({
   chatGptLabel: z.string().nullable().optional(),
 });
 
+const projectMetaAdsRuleAuditSchema = z
+  .object({
+    createdAt: z.string().optional(),
+    createdBy: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+      })
+      .optional(),
+    updatedAt: z.string().optional(),
+    updatedBy: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
 export const projectSchema = z.object({
   projectId: z.string(),
   name: z.string(),
@@ -986,6 +1007,7 @@ export const projectSchema = z.object({
             .optional(),
         })
         .optional(),
+      globalRuleAudit: projectMetaAdsRuleAuditSchema,
       ruleOverrides: z
         .array(
           z.object({
@@ -1054,6 +1076,7 @@ export const projectSchema = z.object({
                   .optional(),
               })
               .optional(),
+            ruleAudit: projectMetaAdsRuleAuditSchema,
           }),
         )
         .optional(),
@@ -1126,6 +1149,7 @@ export const projectSchema = z.object({
                   .optional(),
               })
               .optional(),
+            ruleAudit: projectMetaAdsRuleAuditSchema,
           }),
         )
         .optional(),

@@ -48,7 +48,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
 }));
 
 const router = require('./projectMetaAds');
-const { upsertTenantSecret } = require('~/models');
+const { getProjectById, updateProject, upsertTenantSecret } = require('~/models');
 const {
   analyzeProject,
   applyManualBudgetChange,
@@ -546,6 +546,89 @@ describe('projectMetaAds settings normalization', () => {
             rules: expect.objectContaining({ targetCpa: 60 }),
           }),
         ],
+      }),
+    );
+  });
+
+  it('adds audit metadata when rule settings are saved', async () => {
+    getProjectById.mockResolvedValue({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      createdAt: new Date('2026-06-01T10:00:00.000Z'),
+      metaAds: {
+        rules: { targetCpa: 45 },
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Legacy group',
+            entityLevel: 'campaign',
+            entityIds: ['campaign-old'],
+            rules: { targetCpa: 40 },
+          },
+        ],
+      },
+    });
+    updateProject.mockImplementation(async (_projectId, update) => ({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      ...update,
+    }));
+
+    const response = await request(createApp())
+      .put('/projects/p1/meta-ads/settings')
+      .send({
+        metaAds: {
+          rules: { targetCpa: 50 },
+          ruleGroups: [
+            {
+              id: 'group-1',
+              name: 'Legacy group',
+              entityLevel: 'campaign',
+              entityIds: ['campaign-old'],
+              rules: { targetCpa: 40 },
+            },
+            {
+              id: 'group-2',
+              name: 'New group',
+              entityLevel: 'campaign',
+              entityIds: ['campaign-new'],
+              rules: { targetCpa: 60 },
+            },
+          ],
+          ruleOverrides: [
+            {
+              entityLevel: 'adset',
+              entityId: 'adset-1',
+              entityName: 'Adset 1',
+              rules: { targetCpa: 35 },
+            },
+          ],
+        },
+      })
+      .expect(200);
+
+    expect(response.body.metaAds.globalRuleAudit).toEqual(
+      expect.objectContaining({
+        createdAt: '2026-06-01T10:00:00.000Z',
+        updatedBy: expect.objectContaining({ id: 'user-1' }),
+      }),
+    );
+    expect(response.body.metaAds.ruleGroups[0].ruleAudit).toEqual(
+      expect.objectContaining({
+        createdAt: '2026-06-01T10:00:00.000Z',
+        updatedAt: '2026-06-01T10:00:00.000Z',
+      }),
+    );
+    expect(response.body.metaAds.ruleGroups[1].ruleAudit).toEqual(
+      expect.objectContaining({
+        createdBy: expect.objectContaining({ id: 'user-1' }),
+        updatedBy: expect.objectContaining({ id: 'user-1' }),
+      }),
+    );
+    expect(response.body.metaAds.ruleOverrides[0].ruleAudit).toEqual(
+      expect.objectContaining({
+        createdBy: expect.objectContaining({ id: 'user-1' }),
+        updatedBy: expect.objectContaining({ id: 'user-1' }),
       }),
     );
   });

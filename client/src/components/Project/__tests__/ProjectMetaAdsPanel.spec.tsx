@@ -3660,8 +3660,8 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_history')).toBeInTheDocument();
     expect(screen.getAllByText('CBO Messages').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_date').length).toBeGreaterThan(0);
-    expect(screen.getByTitle('CBO Messages')).toBeInTheDocument();
-    expect(screen.getByTitle('manual-ui')).toBeInTheDocument();
+    expect(screen.queryByTitle('CBO Messages')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('manual-ui')).not.toBeInTheDocument();
     expect(screen.getByText(/12\/06\/2026 12:00/)).toBeInTheDocument();
     expect(screen.getByText('R$ 100,00')).toBeInTheDocument();
     expect(screen.getByText('R$ 125,00')).toBeInTheDocument();
@@ -3723,6 +3723,73 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getAllByText('Campaign override').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ad set override').length).toBeGreaterThan(0);
     expect(screen.queryAllByLabelText('com_ui_project_meta_ads_delete_rule')).toHaveLength(3);
+  });
+
+  it('shows rule audit metadata in the rules list and history', () => {
+    const projectWithRules = {
+      ...project,
+      metaAds: {
+        enabled: true,
+        globalRuleAudit: {
+          createdAt: '2026-06-01T10:00:00.000Z',
+          createdBy: { id: 'u1', name: 'Ana Media', email: 'ana@example.com' },
+          updatedAt: '2026-06-05T12:30:00.000Z',
+          updatedBy: { id: 'u2', name: 'Bruno Ads', email: 'bruno@example.com' },
+        },
+        ruleGroups: [
+          {
+            id: 'group-1',
+            name: 'Prospecting group',
+            entityLevel: 'campaign' as const,
+            entityIds: ['campaign-1'],
+            enabled: true,
+            rules: { targetCpa: 45 },
+            ruleAudit: {
+              createdAt: '2026-06-02T09:00:00.000Z',
+              createdBy: { id: 'u1', name: 'Ana Media' },
+              updatedAt: '2026-06-06T14:15:00.000Z',
+              updatedBy: { id: 'u2', name: 'Bruno Ads' },
+            },
+          },
+        ],
+      },
+    } as TProject;
+    mockRuleHistoryData.changes = [
+      {
+        _id: 'change-1',
+        actor: 'user',
+        actorUserId: 'u2',
+        actorUserName: 'Bruno Ads',
+        actorUserEmail: 'bruno@example.com',
+        changedFields: ['ruleGroups'],
+        ruleChanges: [
+          {
+            ruleKey: 'group:group-1',
+            ruleType: 'group',
+            ruleName: 'Prospecting group',
+            action: 'updated',
+            changedFields: ['rules'],
+          },
+        ],
+        createdAt: '2026-06-06T14:15:00.000Z',
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={projectWithRules} canEdit={true} />);
+    fireEvent.click(screen.getByTestId('meta-ads-workspace-tab-rules'));
+
+    expect(screen.getAllByText(/com_ui_project_meta_ads_rule_created_by/).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getAllByText(/Ana Media/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Bruno Ads/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        (content) =>
+          content.includes('Prospecting group') &&
+          content.includes('com_ui_project_meta_ads_rule_action_updated'),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('opens rule performance filtered by the clicked rule row', () => {

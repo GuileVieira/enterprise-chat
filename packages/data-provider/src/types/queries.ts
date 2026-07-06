@@ -662,8 +662,18 @@ export type ProjectMetaAdsRuleChange = {
   _id?: string;
   actor?: 'user' | 'tool' | 'cron';
   actorUserId?: string;
+  actorUserName?: string;
+  actorUserEmail?: string;
   changedFields: string[];
+  ruleChanges?: Array<{
+    ruleKey: string;
+    ruleType: 'global' | 'group' | 'override';
+    ruleName?: string;
+    action: 'created' | 'updated' | 'deleted';
+    changedFields: string[];
+  }>;
   before?: {
+    enabled?: boolean;
     automationAnalysisPreset?: ProjectMetaAdsDatePreset;
     clientGoal?: { resultType?: string; monthlyTarget?: number } | null;
     rules?: Record<string, unknown>;

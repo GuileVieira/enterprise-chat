@@ -28,9 +28,7 @@ function formatChangeDateTime(value?: string): string {
 function TruncatedHoverText({ value, className }: { value: string; className: string }) {
   return (
     <span className="group relative block min-w-0" tabIndex={0}>
-      <span className={className} title={value}>
-        {value}
-      </span>
+      <span className={className}>{value}</span>
       <span className="pointer-events-none absolute left-0 top-full z-30 mt-2 hidden max-w-[min(560px,80vw)] rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium leading-5 text-slate-900 shadow-[0_18px_48px_-28px_rgba(15,23,42,0.65)] group-hover:block group-focus:block dark:border-white/10 dark:bg-[#0f1728] dark:text-white">
         {value}
       </span>

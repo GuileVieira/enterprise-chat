@@ -1,5 +1,6 @@
 import { Play, Pause, Trash, PencilSimple } from '@phosphor-icons/react';
 
+import { formatRuleAuditLine } from './ruleAudit';
 import { getRuleRowTypeLabelKey } from './rules';
 import { formatMoney, getResultTypeLabel, getRuleTargetMetricValue } from './formatters';
 import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
@@ -143,6 +144,16 @@ export function MetaAdsRulesWorkspace({
                   <div className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">
                     {row.scopeLabel}
                   </div>
+                  {row.ruleAudit && (
+                    <div className="mt-1 space-y-0.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                      {formatRuleAuditLine(row.ruleAudit, 'created', localize) && (
+                        <div>{formatRuleAuditLine(row.ruleAudit, 'created', localize)}</div>
+                      )}
+                      {formatRuleAuditLine(row.ruleAudit, 'updated', localize) && (
+                        <div>{formatRuleAuditLine(row.ruleAudit, 'updated', localize)}</div>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="border-b border-slate-200/60 px-3 py-2 text-slate-600 dark:border-white/[0.06] dark:text-slate-300">
                   {getResultTypeLabel(row.rules.targetResultType, localize)}

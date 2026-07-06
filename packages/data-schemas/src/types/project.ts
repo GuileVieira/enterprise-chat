@@ -53,6 +53,19 @@ export interface IProjectMetaAdsMonthlyBudget {
   allowedOverspendPct?: number;
 }
 
+export interface IProjectMetaAdsRuleAuditUser {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
+export interface IProjectMetaAdsRuleAudit {
+  createdAt?: string;
+  createdBy?: IProjectMetaAdsRuleAuditUser;
+  updatedAt?: string;
+  updatedBy?: IProjectMetaAdsRuleAuditUser;
+}
+
 export type IProjectMetaAdsMonthlyBudgets = Record<
   string,
   Omit<IProjectMetaAdsMonthlyBudget, 'month'>
@@ -87,6 +100,7 @@ export interface IProjectMetaAds {
   monthlyBudgets?: IProjectMetaAdsMonthlyBudgets;
   rules?: IProjectMetaAdsRules;
   creativeRules?: IProjectMetaAdsCreativeRules;
+  globalRuleAudit?: IProjectMetaAdsRuleAudit;
   ruleGroups?: Array<{
     id: string;
     name: string;
@@ -96,6 +110,7 @@ export interface IProjectMetaAds {
     analysisPreset?: IProjectMetaAds['automationAnalysisPreset'];
     rules?: IProjectMetaAdsRules;
     creativeRules?: IProjectMetaAdsCreativeRules;
+    ruleAudit?: IProjectMetaAdsRuleAudit;
   }>;
   ruleOverrides?: Array<{
     entityLevel: 'campaign' | 'adset';
@@ -105,6 +120,7 @@ export interface IProjectMetaAds {
     analysisPreset?: IProjectMetaAds['automationAnalysisPreset'];
     rules?: IProjectMetaAdsRules;
     creativeRules?: IProjectMetaAdsCreativeRules;
+    ruleAudit?: IProjectMetaAdsRuleAudit;
   }>;
 }
 

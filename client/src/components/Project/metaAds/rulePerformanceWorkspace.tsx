@@ -14,6 +14,7 @@ import {
   getRuleTargetMetricValue,
 } from './formatters';
 import { MetaAdsPanel } from './ui';
+import { formatRuleAuditLine } from './ruleAudit';
 import { MetaAdsPeriodControls } from './periodControls';
 import { MetaAdsNameTooltip } from './overviewCells';
 import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
@@ -538,6 +539,16 @@ function RuleListItem({
           <div className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
             {row.scopeLabel}
           </div>
+          {row.ruleAudit && (
+            <div className="mt-2 space-y-0.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+              {formatRuleAuditLine(row.ruleAudit, 'created', localize) && (
+                <div>{formatRuleAuditLine(row.ruleAudit, 'created', localize)}</div>
+              )}
+              {formatRuleAuditLine(row.ruleAudit, 'updated', localize) && (
+                <div>{formatRuleAuditLine(row.ruleAudit, 'updated', localize)}</div>
+              )}
+            </div>
+          )}
         </div>
       </td>
       <td className="border-b border-slate-200/60 px-4 py-4 align-top font-mono uppercase text-slate-900 dark:border-white/[0.06] dark:text-white">

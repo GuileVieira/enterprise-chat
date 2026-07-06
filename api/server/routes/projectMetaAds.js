@@ -374,6 +374,156 @@ function normalizeRuleOverrides(ruleOverrides = []) {
     .filter(Boolean);
 }
 
+function getRuleOverrideAuditKey(ruleOverride) {
+  return `${ruleOverride.entityLevel}:${ruleOverride.entityId}`;
+}
+
+function normalizeAuditDate(value) {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function getAuditUser(user = {}) {
+  const id = user.id ?? user._id;
+  if (!id) {
+    return undefined;
+  }
+  return {
+    id: String(id),
+    ...(typeof user.name === 'string' && user.name.trim() ? { name: user.name.trim() } : {}),
+    ...(typeof user.email === 'string' && user.email.trim() ? { email: user.email.trim() } : {}),
+  };
+}
+
+function omitRuleAudit(value) {
+  if (Array.isArray(value)) {
+    return value.map(omitRuleAudit);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  return Object.entries(value).reduce((next, [key, nestedValue]) => {
+    if (key !== 'ruleAudit' && key !== 'globalRuleAudit') {
+      next[key] = omitRuleAudit(nestedValue);
+    }
+    return next;
+  }, {});
+}
+
+function hasRuleAuditChange(previousValue, nextValue) {
+  return (
+    JSON.stringify(omitRuleAudit(previousValue ?? {})) !==
+    JSON.stringify(omitRuleAudit(nextValue ?? {}))
+  );
+}
+
+function buildRuleAudit({ previousAudit, fallbackCreatedAt, actorUser, now, changed, created }) {
+  const createdAt = normalizeAuditDate(previousAudit?.createdAt) ?? fallbackCreatedAt ?? now;
+  const createdBy = previousAudit?.createdBy ?? (created ? actorUser : undefined);
+  const updatedAt =
+    changed || created ? now : (normalizeAuditDate(previousAudit?.updatedAt) ?? createdAt);
+  const updatedBy = changed || created ? actorUser : previousAudit?.updatedBy;
+
+  return {
+    createdAt,
+    ...(createdBy ? { createdBy } : {}),
+    updatedAt,
+    ...(updatedBy ? { updatedBy } : {}),
+  };
+}
+
+function applyMetaAdsRuleAudit({ previousProject, metaAds, user, now = new Date() }) {
+  const actorUser = getAuditUser(user);
+  const nowIso = now.toISOString();
+  const fallbackCreatedAt =
+    normalizeAuditDate(previousProject?.createdAt) ??
+    normalizeAuditDate(previousProject?.updatedAt) ??
+    nowIso;
+  const previousMetaAds = previousProject?.metaAds ?? {};
+  const previousGroups = new Map(
+    (previousMetaAds.ruleGroups ?? []).map((group) => [group.id, group]),
+  );
+  const previousGroupsForCompare = new Map(
+    normalizeRuleGroups(previousMetaAds.ruleGroups ?? []).map((group) => [group.id, group]),
+  );
+  const previousOverrides = new Map(
+    (previousMetaAds.ruleOverrides ?? []).map((ruleOverride) => [
+      getRuleOverrideAuditKey(ruleOverride),
+      ruleOverride,
+    ]),
+  );
+  const previousOverridesForCompare = new Map(
+    normalizeRuleOverrides(previousMetaAds.ruleOverrides ?? []).map((ruleOverride) => [
+      getRuleOverrideAuditKey(ruleOverride),
+      ruleOverride,
+    ]),
+  );
+  const globalBefore = {
+    enabled: previousMetaAds.enabled,
+    automationAnalysisPreset: previousMetaAds.automationAnalysisPreset,
+    clientGoal: previousMetaAds.clientGoal,
+    rules: previousMetaAds.rules,
+    creativeRules: previousMetaAds.creativeRules,
+  };
+  const globalAfter = {
+    enabled: metaAds.enabled,
+    automationAnalysisPreset: metaAds.automationAnalysisPreset,
+    clientGoal: metaAds.clientGoal,
+    rules: metaAds.rules,
+    creativeRules: metaAds.creativeRules,
+  };
+
+  return {
+    ...metaAds,
+    globalRuleAudit: buildRuleAudit({
+      previousAudit: previousMetaAds.globalRuleAudit,
+      fallbackCreatedAt,
+      actorUser,
+      now: nowIso,
+      changed: hasRuleAuditChange(globalBefore, globalAfter),
+      created:
+        !previousMetaAds.globalRuleAudit &&
+        !previousMetaAds.rules &&
+        !previousMetaAds.creativeRules,
+    }),
+    ruleGroups: (metaAds.ruleGroups ?? []).map((group) => {
+      const previousGroup = previousGroups.get(group.id);
+      const previousGroupForCompare = previousGroupsForCompare.get(group.id);
+      return {
+        ...group,
+        ruleAudit: buildRuleAudit({
+          previousAudit: previousGroup?.ruleAudit,
+          fallbackCreatedAt,
+          actorUser,
+          now: nowIso,
+          changed: hasRuleAuditChange(previousGroupForCompare, group),
+          created: !previousGroup,
+        }),
+      };
+    }),
+    ruleOverrides: (metaAds.ruleOverrides ?? []).map((ruleOverride) => {
+      const previousOverride = previousOverrides.get(getRuleOverrideAuditKey(ruleOverride));
+      const previousOverrideForCompare = previousOverridesForCompare.get(
+        getRuleOverrideAuditKey(ruleOverride),
+      );
+      return {
+        ...ruleOverride,
+        ruleAudit: buildRuleAudit({
+          previousAudit: previousOverride?.ruleAudit,
+          fallbackCreatedAt,
+          actorUser,
+          now: nowIso,
+          changed: hasRuleAuditChange(previousOverrideForCompare, ruleOverride),
+          created: !previousOverride,
+        }),
+      };
+    }),
+  };
+}
+
 function normalizeRuleGroups(ruleGroups = []) {
   if (!Array.isArray(ruleGroups)) {
     return [];
@@ -618,6 +768,11 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
     if (!update) {
       return res.status(404).json({ message: 'Project not found' });
     }
+    update.metaAds = applyMetaAdsRuleAudit({
+      previousProject,
+      metaAds: update.metaAds,
+      user: req.user,
+    });
     const project = await updateProject(req.params.projectId, update);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -629,6 +784,8 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
       afterMetaAds: project.metaAds,
       actor: 'user',
       actorUserId: req.user.id,
+      actorUserName: req.user.name,
+      actorUserEmail: req.user.email,
     });
     logger.debug('[projectMetaAds] settings saved', {
       projectId: req.params.projectId,
@@ -781,5 +938,6 @@ router.post(
 router._normalizeMetaAdsForTest = normalizeMetaAds;
 router._prepareMetaAdsSettingsUpdateForTest = prepareMetaAdsSettingsUpdate;
 router._getProjectMetaTokenSecretNameForTest = getProjectMetaTokenSecretName;
+router._applyMetaAdsRuleAuditForTest = applyMetaAdsRuleAudit;
 
 module.exports = router;

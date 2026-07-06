@@ -1,5 +1,6 @@
 import type { ProjectMetaAdsRuleChange } from 'librechat-data-provider';
 
+import { formatRuleChangeAction, formatRuleHistoryActor } from './ruleAudit';
 import type { Localize } from './types';
 
 function formatRuleChangeDate(value?: string): string {
@@ -62,10 +63,25 @@ export function MetaAdsRuleHistoryPanel({
               className="grid gap-2 rounded-2xl border border-slate-200/80 bg-white/80 p-3 text-xs text-slate-600 dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-300 md:grid-cols-[160px_1fr_120px]"
             >
               <div className="font-mono">{formatRuleChangeDate(change.createdAt)}</div>
-              <div className="font-medium text-slate-900 dark:text-white">
-                {formatChangedFields(change.changedFields ?? [], localize)}
+              <div className="min-w-0">
+                <div className="font-medium text-slate-900 dark:text-white">
+                  {formatRuleChangeAction(change, localize) ||
+                    formatChangedFields(change.changedFields ?? [], localize)}
+                </div>
+                {change.ruleChanges?.length ? (
+                  <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    {formatChangedFields(
+                      [
+                        ...new Set(
+                          change.ruleChanges.flatMap((ruleChange) => ruleChange.changedFields),
+                        ),
+                      ],
+                      localize,
+                    )}
+                  </div>
+                ) : null}
               </div>
-              <div className="text-right">{change.actor ?? '-'}</div>
+              <div className="text-right">{formatRuleHistoryActor(change)}</div>
             </div>
           ))
         ) : (

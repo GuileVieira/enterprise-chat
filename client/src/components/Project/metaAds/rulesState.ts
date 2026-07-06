@@ -157,6 +157,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
     scopeLabel: localize('com_ui_project_meta_ads_scope_all_campaigns'),
     precedenceLabel: localize('com_ui_project_meta_ads_precedence_global'),
     entityIds: [],
+    ruleAudit: settings.globalRuleAudit,
     rules: settings.rules,
     creativeRules: settings.creativeRules,
   };
@@ -174,6 +175,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
     precedenceLabel: localize('com_ui_project_meta_ads_precedence_group'),
     entityLevel: group.entityLevel,
     entityIds: group.entityIds ?? [],
+    ruleAudit: group.ruleAudit,
     group,
     rules: { ...defaultRules, ...(group.rules ?? {}) },
     creativeRules: { ...settings.creativeRules, ...(group.creativeRules ?? {}) },
@@ -202,6 +204,7 @@ export function buildMetaAdsRuleRows({ settings, campaigns, localize }: RulesSta
       ),
       entityLevel: override.entityLevel,
       entityIds: [override.entityId],
+      ruleAudit: override.ruleAudit,
       override,
       rules: { ...defaultRules, ...(override.rules ?? {}) },
       creativeRules: { ...settings.creativeRules, ...(override.creativeRules ?? {}) },

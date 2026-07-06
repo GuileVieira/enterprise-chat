@@ -658,6 +658,33 @@ function getModels() {
     );
 
   const existingRuleChangeSchema = mongoose.models.MetaAdsRuleChange?.schema;
+  if (
+    existingRuleChangeSchema &&
+    typeof existingRuleChangeSchema.path === 'function' &&
+    typeof existingRuleChangeSchema.add === 'function'
+  ) {
+    const missingRuleChangeFields = {};
+    if (!existingRuleChangeSchema.path('actorUserName')) {
+      missingRuleChangeFields.actorUserName = String;
+    }
+    if (!existingRuleChangeSchema.path('actorUserEmail')) {
+      missingRuleChangeFields.actorUserEmail = String;
+    }
+    if (!existingRuleChangeSchema.path('ruleChanges')) {
+      missingRuleChangeFields.ruleChanges = [
+        {
+          ruleKey: String,
+          ruleType: String,
+          ruleName: String,
+          action: String,
+          changedFields: [String],
+        },
+      ];
+    }
+    if (Object.keys(missingRuleChangeFields).length > 0) {
+      existingRuleChangeSchema.add(missingRuleChangeFields);
+    }
+  }
   const mixedSchemaType = mongoose.Schema?.Types?.Mixed ?? Object;
   const ruleChangeSchema =
     existingRuleChangeSchema ||
@@ -667,7 +694,18 @@ function getModels() {
         projectId: { type: String, index: true },
         actor: { type: String, enum: ['user', 'tool', 'cron'], default: 'user' },
         actorUserId: String,
+        actorUserName: String,
+        actorUserEmail: String,
         changedFields: [String],
+        ruleChanges: [
+          {
+            ruleKey: String,
+            ruleType: String,
+            ruleName: String,
+            action: String,
+            changedFields: [String],
+          },
+        ],
         before: mixedSchemaType,
         after: mixedSchemaType,
       },
@@ -3291,14 +3329,30 @@ async function getProjectMetaAdsRulePerformance(projectId, fallbackTenantId, opt
   };
 }
 
+function omitRuleAudit(value) {
+  if (Array.isArray(value)) {
+    return value.map(omitRuleAudit);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  return Object.entries(value).reduce((next, [key, nestedValue]) => {
+    if (key !== 'ruleAudit' && key !== 'globalRuleAudit') {
+      next[key] = omitRuleAudit(nestedValue);
+    }
+    return next;
+  }, {});
+}
+
 function normalizeRuleChangeSnapshot(metaAds = {}) {
   return {
+    enabled: metaAds.enabled,
     automationAnalysisPreset: metaAds.automationAnalysisPreset ?? 'last_2d',
     clientGoal: metaAds.clientGoal ?? null,
     rules: metaAds.rules ?? {},
     creativeRules: metaAds.creativeRules ?? {},
-    ruleGroups: metaAds.ruleGroups ?? [],
-    ruleOverrides: metaAds.ruleOverrides ?? [],
+    ruleGroups: omitRuleAudit(metaAds.ruleGroups ?? []),
+    ruleOverrides: omitRuleAudit(metaAds.ruleOverrides ?? []),
   };
 }
 
@@ -3308,6 +3362,103 @@ function getRuleChangeFields(beforeSnapshot, afterSnapshot) {
   );
 }
 
+function getRuleOverrideChangeKey(ruleOverride) {
+  return `${ruleOverride.entityLevel}:${ruleOverride.entityId}`;
+}
+
+function getChangedRuleItemFields(beforeRule = {}, afterRule = {}) {
+  return [
+    'enabled',
+    'analysisPreset',
+    'entityLevel',
+    'entityIds',
+    'entityId',
+    'entityName',
+    'rules',
+    'creativeRules',
+  ].filter((key) => JSON.stringify(beforeRule[key]) !== JSON.stringify(afterRule[key]));
+}
+
+function buildRuleItemChanges({ beforeItems = [], afterItems = [], getKey, ruleType }) {
+  const beforeByKey = new Map(beforeItems.map((item) => [getKey(item), item]));
+  const afterByKey = new Map(afterItems.map((item) => [getKey(item), item]));
+  const keys = new Set([...beforeByKey.keys(), ...afterByKey.keys()]);
+  return [...keys].flatMap((key) => {
+    const beforeItem = beforeByKey.get(key);
+    const afterItem = afterByKey.get(key);
+    if (!beforeItem && afterItem) {
+      return [
+        {
+          ruleKey: `${ruleType}:${key}`,
+          ruleType,
+          ruleName: afterItem.name ?? afterItem.entityName ?? afterItem.entityId,
+          action: 'created',
+          changedFields: getChangedRuleItemFields({}, afterItem),
+        },
+      ];
+    }
+    if (beforeItem && !afterItem) {
+      return [
+        {
+          ruleKey: `${ruleType}:${key}`,
+          ruleType,
+          ruleName: beforeItem.name ?? beforeItem.entityName ?? beforeItem.entityId,
+          action: 'deleted',
+          changedFields: getChangedRuleItemFields(beforeItem, {}),
+        },
+      ];
+    }
+    const changedFields = getChangedRuleItemFields(beforeItem, afterItem);
+    if (changedFields.length === 0) {
+      return [];
+    }
+    return [
+      {
+        ruleKey: `${ruleType}:${key}`,
+        ruleType,
+        ruleName: afterItem.name ?? afterItem.entityName ?? afterItem.entityId,
+        action: 'updated',
+        changedFields,
+      },
+    ];
+  });
+}
+
+function getProjectRuleChanges(before, after) {
+  const globalFields = [
+    'enabled',
+    'automationAnalysisPreset',
+    'clientGoal',
+    'rules',
+    'creativeRules',
+  ].filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+  return [
+    ...(globalFields.length > 0
+      ? [
+          {
+            ruleKey: 'global',
+            ruleType: 'global',
+            ruleName: 'Global rules',
+            action: 'updated',
+            changedFields: globalFields,
+          },
+        ]
+      : []),
+    ...buildRuleItemChanges({
+      beforeItems: before.ruleGroups,
+      afterItems: after.ruleGroups,
+      getKey: (group) => group.id,
+      ruleType: 'group',
+    }),
+    ...buildRuleItemChanges({
+      beforeItems: before.ruleOverrides,
+      afterItems: after.ruleOverrides,
+      getKey: getRuleOverrideChangeKey,
+      ruleType: 'override',
+    }),
+  ];
+}
+
 async function recordProjectMetaAdsRuleChange({
   projectId,
   tenantId,
@@ -3315,6 +3466,8 @@ async function recordProjectMetaAdsRuleChange({
   afterMetaAds,
   actor = 'user',
   actorUserId,
+  actorUserName,
+  actorUserEmail,
 }) {
   const before = normalizeRuleChangeSnapshot(beforeMetaAds);
   const after = normalizeRuleChangeSnapshot(afterMetaAds);
@@ -3328,7 +3481,10 @@ async function recordProjectMetaAdsRuleChange({
     projectId,
     actor,
     actorUserId,
+    actorUserName,
+    actorUserEmail,
     changedFields,
+    ruleChanges: getProjectRuleChanges(before, after),
     before,
     after,
   });
