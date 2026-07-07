@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1783423268.2735636,
-    "ast_hash": "33a9b8556b981ccf41a8df7f30927697",
+    "mtime": 1783430018.5726783,
+    "ast_hash": "c42d4313cab3b208653e93e9a56cdb12",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
@@ -20,14 +20,14 @@
     "semantic_hash": "861e6584598281311a39505317576a9a"
   },
   "api/server/services/MetaAds/graph.js": {
-    "mtime": 1782671888.8970318,
-    "ast_hash": "482af3369624e52efd2fbe51a5370e02",
-    "semantic_hash": "482af3369624e52efd2fbe51a5370e02"
+    "mtime": 1783430011.2611096,
+    "ast_hash": "3b602ca801f7892e73ebba3ae4bdc45d",
+    "semantic_hash": ""
   },
   "api/server/services/MetaAds/graph.spec.js": {
-    "mtime": 1782672003.219043,
-    "ast_hash": "d7c64455593b9c801949c7a61ee53da0",
-    "semantic_hash": "d7c64455593b9c801949c7a61ee53da0"
+    "mtime": 1783430054.506306,
+    "ast_hash": "9ff14f0a29a0d1c35eb0746165e5bc53",
+    "semantic_hash": ""
   },
   "client/src/components/Project/ProjectDetailPage.tsx": {
     "mtime": 1782157384.6966193,
@@ -160,9 +160,9 @@
     "semantic_hash": "5cf840b05e9cccdc99cc556e7eb1ad7f"
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsOverviewAdapter.tsx": {
-    "mtime": 1783370385.174888,
-    "ast_hash": "e056fe1ebc2b32f92c0b2c025b3ce94c",
-    "semantic_hash": "e056fe1ebc2b32f92c0b2c025b3ce94c"
+    "mtime": 1783429519.1936464,
+    "ast_hash": "5bfa555e09affed1600d19910f103a0e",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsPeriodFilter.ts": {
     "mtime": 1782188815.3297296,
@@ -230,9 +230,9 @@
     "semantic_hash": "a6f2f61a7b950042917c8139578ea849"
   },
   "client/src/components/Project/metaAds/overviewState.ts": {
-    "mtime": 1783370036.4754026,
-    "ast_hash": "cac9c6868ab7036bfb215c1e1fa98374",
-    "semantic_hash": "cac9c6868ab7036bfb215c1e1fa98374"
+    "mtime": 1783429567.1498115,
+    "ast_hash": "20cdf7272ab5e8cbeb7601883cb15ab1",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewTable.tsx": {
     "mtime": 1782181776.1091108,
@@ -240,9 +240,9 @@
     "semantic_hash": "f4397f0649a451cb52478c85a8e9deba"
   },
   "client/src/components/Project/metaAds/overviewToolbar.tsx": {
-    "mtime": 1782188880.867142,
-    "ast_hash": "f3b6cbd49b81c918dfc7fbbeaec70608",
-    "semantic_hash": "f3b6cbd49b81c918dfc7fbbeaec70608"
+    "mtime": 1783429495.2052016,
+    "ast_hash": "1245027b550838e4cb6e0f09da3c1a0a",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewWorkspace.tsx": {
     "mtime": 1782348401.2284055,
@@ -375,8 +375,8 @@
     "semantic_hash": "9b547a461f1e53ef63d00e71de187dac"
   },
   "client/src/data-provider/queries.ts": {
-    "mtime": 1783423101.2693598,
-    "ast_hash": "9589b572a2f9ec071abd6946b4e5b758",
+    "mtime": 1783430015.8264947,
+    "ast_hash": "1258b3a29c08f4d661d86f3d3534c869",
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1783423238.3858612,
-    "ast_hash": "7d19a1395d87824d01334a2e3ddbf096",
+    "mtime": 1783429522.7277043,
+    "ast_hash": "acb6308dd27cb99eed0ad33a151c9cb5",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783423187.7910912,
-    "ast_hash": "948ff0d215e17f703a09a847f16fe57c",
+    "mtime": 1783429544.2709446,
+    "ast_hash": "d2e765d966a409bb86bef28f1fc01abe",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783423180.9523816,
-    "ast_hash": "776947aea8584a594b49bcd873033f2b",
+    "mtime": 1783429539.9984317,
+    "ast_hash": "c6ee6b1d46d71a66c8dd1e2d6454b427",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {

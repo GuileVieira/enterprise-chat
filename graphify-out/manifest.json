@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1783423268.2735636,
-    "ast_hash": "33a9b8556b981ccf41a8df7f30927697",
+    "mtime": 1783430018.5726783,
+    "ast_hash": "c42d4313cab3b208653e93e9a56cdb12",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
@@ -20,14 +20,14 @@
     "semantic_hash": "861e6584598281311a39505317576a9a"
   },
   "api/server/services/MetaAds/graph.js": {
-    "mtime": 1782671888.8970318,
-    "ast_hash": "482af3369624e52efd2fbe51a5370e02",
-    "semantic_hash": "482af3369624e52efd2fbe51a5370e02"
+    "mtime": 1783430421.7228284,
+    "ast_hash": "893eab1b89bcf88bbad32a670c504480",
+    "semantic_hash": ""
   },
   "api/server/services/MetaAds/graph.spec.js": {
-    "mtime": 1782672003.219043,
-    "ast_hash": "d7c64455593b9c801949c7a61ee53da0",
-    "semantic_hash": "d7c64455593b9c801949c7a61ee53da0"
+    "mtime": 1783430426.0540538,
+    "ast_hash": "754832fb249d0b5926c7c7f4f55233fd",
+    "semantic_hash": ""
   },
   "client/src/components/Project/ProjectDetailPage.tsx": {
     "mtime": 1782157384.6966193,
@@ -375,8 +375,8 @@
     "semantic_hash": "9b547a461f1e53ef63d00e71de187dac"
   },
   "client/src/data-provider/queries.ts": {
-    "mtime": 1783423101.2693598,
-    "ast_hash": "9589b572a2f9ec071abd6946b4e5b758",
+    "mtime": 1783430015.8264947,
+    "ast_hash": "1258b3a29c08f4d661d86f3d3534c869",
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {

@@ -33,7 +33,7 @@ import type {
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
-const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v4';
+const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v5';
 const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
 const projectMetaAdsStatusStaleTimeMs = 10 * 60 * 1000;
 

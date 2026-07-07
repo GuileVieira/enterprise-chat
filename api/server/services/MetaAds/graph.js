@@ -16,6 +16,7 @@ const DEFAULT_META_GRAPH_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_META_GRAPH_READ_CACHE_MAX_ENTRIES = 250;
 const DEFAULT_META_GRAPH_ACCOUNT_CONCURRENCY = 1;
 const DEFAULT_META_GRAPH_READ_CACHE_VERSION = '2026-06-18-ad-creative-media-v2';
+const RANGE_ONLY_DATE_PRESETS = new Set(['this_month', 'last_month']);
 const metaGraphReadCache = new Map();
 const metaGraphInflightReads = new Map();
 const metaGraphAccountQueues = new Map();
@@ -130,6 +131,13 @@ function getMetaGraphReadCacheKey({ path, params, graphVersion }) {
     version: getMetaGraphReadCacheVersion(),
   });
   return crypto.createHash('sha256').update(rawKey).digest('hex');
+}
+
+function getInsightPeriodParams({ datePreset, since, until }) {
+  if (datePreset && !(RANGE_ONLY_DATE_PRESETS.has(datePreset) && since && until)) {
+    return { date_preset: datePreset };
+  }
+  return { time_range: JSON.stringify({ since, until }) };
 }
 
 function getMetaGraphReadStore() {
@@ -1000,11 +1008,7 @@ async function fetchInsightsPage({
     fields,
     limit: DEFAULT_LIMIT,
   };
-  if (datePreset) {
-    params.date_preset = datePreset;
-  } else {
-    params.time_range = JSON.stringify({ since, until });
-  }
+  Object.assign(params, getInsightPeriodParams({ datePreset, since, until }));
   if (timeIncrement) {
     params.time_increment = timeIncrement;
   }
@@ -1096,11 +1100,7 @@ async function listInsights({
     fields,
     limit: DEFAULT_LIMIT,
   };
-  if (datePreset) {
-    params.date_preset = datePreset;
-  } else {
-    params.time_range = JSON.stringify({ since, until });
-  }
+  Object.assign(params, getInsightPeriodParams({ datePreset, since, until }));
   if (timeIncrement) {
     params.time_increment = timeIncrement;
   }
@@ -1117,6 +1117,7 @@ async function listInsights({
       timeIncrement,
     });
   } catch (error) {
+    let insightsError = error;
     if (!datePreset && isReduceAmountError(error)) {
       logger.error('[MetaAdsGraph] retrying insights request in date chunks', {
         adAccountId,
@@ -1137,7 +1138,7 @@ async function listInsights({
           timeIncrement,
         });
       } catch (chunkError) {
-        error = chunkError;
+        insightsError = chunkError;
       }
     }
     const message = formatMetaFetchError({
@@ -1145,7 +1146,7 @@ async function listInsights({
       adAccountId,
       path,
       params,
-      error,
+      error: insightsError,
     });
     logger.error('[MetaAdsGraph] insights request failed with context', {
       adAccountId,

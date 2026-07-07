@@ -2913,7 +2913,7 @@ function getStatusPeriodCacheKey({
   targetResultType,
 }) {
   return JSON.stringify({
-    payloadVersion: 2,
+    payloadVersion: 3,
     projectId,
     tenantId,
     adAccountId,
