@@ -85,8 +85,8 @@
     "semantic_hash": "3c73575a521bfd0e05ad5240f7defb13"
   },
   "client/src/components/Project/metaAds/constants.ts": {
-    "mtime": 1783433426.3746898,
-    "ast_hash": "220d5475a8ecc9821b3dc5c00e44ed79",
+    "mtime": 1783434278.634968,
+    "ast_hash": "abd0009c47329656ab4dc99478cdff9c",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/credentialsDialog.tsx": {
@@ -230,8 +230,8 @@
     "semantic_hash": "a6f2f61a7b950042917c8139578ea849"
   },
   "client/src/components/Project/metaAds/overviewState.ts": {
-    "mtime": 1783429567.1498115,
-    "ast_hash": "20cdf7272ab5e8cbeb7601883cb15ab1",
+    "mtime": 1783434293.612605,
+    "ast_hash": "c86b0db41cae2f4e16d481e91f7d458b",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewTable.tsx": {
@@ -350,9 +350,9 @@
     "semantic_hash": "538528e71a1ca514db47572f5eb293e3"
   },
   "client/src/components/Project/metaAds/table.ts": {
-    "mtime": 1782158444.0481071,
-    "ast_hash": "7acf3c4d3dfd3ce15a31ff2cad99fb94",
-    "semantic_hash": "7acf3c4d3dfd3ce15a31ff2cad99fb94"
+    "mtime": 1783434283.6410675,
+    "ast_hash": "0ca1c54d291b0edb281fbe21cdb488e4",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/types.ts": {
     "mtime": 1783433419.7194884,
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1783433403.3457034,
-    "ast_hash": "e7aac2e42a1e4dec7b9677efd2f84ce2",
+    "mtime": 1783434478.7314026,
+    "ast_hash": "7d45745c6ed3a9c5ad4d40d00c2defef",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783429544.2709446,
-    "ast_hash": "d2e765d966a409bb86bef28f1fc01abe",
+    "mtime": 1783434435.7251523,
+    "ast_hash": "8a94be56093103afd1fa50d3d353678f",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783429539.9984317,
-    "ast_hash": "c6ee6b1d46d71a66c8dd1e2d6454b427",
+    "mtime": 1783434426.818416,
+    "ast_hash": "53f7ea3f19e8f1b4dceb1b2cfcda9985",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {

@@ -48,16 +48,25 @@ export function buildMetaAdsOverviewState({
     campaignSort,
     localize,
   });
+  const summaryCampaigns = filterAndSortCampaigns({
+    campaigns,
+    campaignSearch,
+    objectiveFilter,
+    resultTypeFilter: 'all',
+    budgetModeFilter,
+    campaignSort,
+    localize,
+  });
   const hasCampaignData = campaigns.length > 0;
   const objectiveSummaries = hasCampaignData
-    ? buildObjectiveSummaries(filteredCampaigns)
+    ? buildObjectiveSummaries(summaryCampaigns)
     : summary?.objectives && summary.objectives.length > 0
       ? summary.objectives
       : buildObjectiveSummaries(campaigns);
-  const visibleSummary = hasCampaignData ? buildVisibleCampaignSummary(filteredCampaigns) : null;
+  const visibleSummary = hasCampaignData ? buildVisibleCampaignSummary(summaryCampaigns) : null;
   const scopedObjectiveSummary = getScopedObjectiveSummary(objectiveSummaries, objectiveFilter);
   const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
-  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, filteredCampaigns);
+  const isEcommerceDashboard = isEcommerceContext(settings, objectiveFilter, summaryCampaigns);
   const summaryResultTypeOptions = buildSummaryResultTypeOptions(
     objectiveSummaries,
     objectiveFilter,
@@ -100,13 +109,13 @@ export function buildMetaAdsOverviewState({
     scopedObjectiveSummary?.averageFrequency ??
     summary?.averageFrequency;
   const summaryConversionValue = isEcommerceDashboard
-    ? calculateConversionValue(filteredCampaigns)
+    ? calculateConversionValue(summaryCampaigns)
     : null;
   const summaryAverageRoas =
     isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalSpend ?? 0) > 0
       ? Number((summaryConversionValue / Number(summaryTotalSpend)).toFixed(2))
       : isEcommerceDashboard
-        ? calculateWeightedRoas(filteredCampaigns)
+        ? calculateWeightedRoas(summaryCampaigns)
         : null;
   const summaryAverageTicket =
     isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalResults ?? 0) > 0

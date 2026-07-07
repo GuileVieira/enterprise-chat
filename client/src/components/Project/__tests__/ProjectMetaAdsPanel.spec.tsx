@@ -1669,7 +1669,7 @@ describe('ProjectMetaAdsPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('filters overview rows and cards by target result type', () => {
+  it('filters overview rows by result type without filtering summary cards', () => {
     mockStatusData.campaigns = [
       {
         campaignId: 'campaign-message',
@@ -1748,12 +1748,12 @@ describe('ProjectMetaAdsPanel', () => {
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
-      ).getByText('10.00'),
+      ).getByText('70.00'),
     ).toBeInTheDocument();
     expect(
       within(
         screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
-      ).getByText('R$ 120,00'),
+      ).getByText('R$ 420,00'),
     ).toBeInTheDocument();
   });
 
