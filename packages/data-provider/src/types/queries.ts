@@ -84,6 +84,7 @@ export type ProjectMetaAdsSnapshot = {
   conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
+  configuredResultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;
@@ -264,6 +265,7 @@ export type ProjectMetaAdsAdSummary = {
   conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
+  configuredResultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;
@@ -295,6 +297,7 @@ export type ProjectMetaAdsCampaignSummary = {
   conversionValue?: number | null;
   resultCount?: number;
   resultType?: string;
+  configuredResultType?: string;
   resultTypeBreakdown?: ProjectMetaAdsResultTypeBreakdown[];
   impressions?: number;
   reach?: number;

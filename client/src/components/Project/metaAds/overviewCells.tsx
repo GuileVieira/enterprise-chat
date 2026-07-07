@@ -8,7 +8,7 @@ import type {
 import type { TranslationKeys } from '~/hooks';
 
 import { getAdThumbnailUrl } from './bi';
-import { formatIntegerMetric, formatMetric, formatMoney } from './formatters';
+import { formatIntegerMetric, formatMetric, formatMoney, getResultTypeLabel } from './formatters';
 import type { Localize, TableColumn } from './types';
 
 export type EntityStatusConfirmationPayload = {
@@ -68,6 +68,46 @@ export function MetaAdsFrequencyValue({
     : undefined;
 
   return <span title={title}>{formatMetric(source.frequency)}</span>;
+}
+
+export function MetaAdsResultMetricValue({
+  source,
+  localize,
+}: {
+  source: {
+    resultCount?: number | null;
+    resultType?: string | null;
+    configuredResultType?: string | null;
+    resultTypeBreakdown?: Array<{ resultType?: string; totalResults?: number | null }>;
+  };
+  localize: Localize;
+}) {
+  const configuredResultType = source.configuredResultType || undefined;
+  const breakdown = (source.resultTypeBreakdown ?? [])
+    .filter((item) => item.resultType && Number(item.totalResults ?? 0) > 0)
+    .sort((left, right) => Number(right.totalResults ?? 0) - Number(left.totalResults ?? 0))
+    .slice(0, 3)
+    .map(
+      (item) =>
+        `${getResultTypeLabel(item.resultType, localize)} ${formatMetric(item.totalResults)}`,
+    );
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <span>{formatMetric(source.resultCount)}</span>
+      {configuredResultType && (
+        <span className="max-w-56 truncate text-[10px] font-semibold uppercase tracking-normal text-teal-700 dark:text-teal-200">
+          {localize('com_ui_project_meta_ads_configured_in_manager')}{' '}
+          {getResultTypeLabel(configuredResultType, localize)}
+        </span>
+      )}
+      {breakdown.length > 0 && (
+        <span className="max-w-64 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
+          {localize('com_ui_project_meta_ads_detected_results')} {breakdown.join(' · ')}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function MetaAdsLevelCell({

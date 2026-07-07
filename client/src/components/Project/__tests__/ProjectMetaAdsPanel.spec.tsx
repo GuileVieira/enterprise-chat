@@ -335,6 +335,47 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
   });
 
+  it('shows configured and detected Meta result metrics in the campaign table', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Engagement Campaign',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 104.19,
+        resultCount: 40,
+        cpa: 2.6,
+        configuredResultType: 'post_engagement',
+        resultType: 'post_engagement',
+        resultTypeBreakdown: [
+          {
+            resultType: 'link_click',
+            totalSpend: 104.19,
+            totalResults: 52,
+            averageCostPerResult: 2,
+          },
+          {
+            resultType: 'post_engagement',
+            totalSpend: 104.19,
+            totalResults: 40,
+            averageCostPerResult: 2.6,
+          },
+        ],
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getByText(/com_ui_project_meta_ads_configured_in_manager/)).toBeInTheDocument();
+    expect(screen.getByText(/com_ui_project_meta_ads_detected_results/)).toBeInTheDocument();
+    expect(
+      screen.getAllByText('com_ui_project_meta_ads_result_type_post_engagement').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/com_ui_project_meta_ads_result_type_link_click 52/),
+    ).toBeInTheDocument();
+  });
+
   it('shows automation analysis history when the automation held without changes', () => {
     mockAutomationRunsData.runs = [
       {

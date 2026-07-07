@@ -288,6 +288,7 @@ describe('Meta Ads Graph client', () => {
     await listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' });
 
     expect(fetch.mock.calls[0][0]).toContain('campaign_id');
+    expect(fetch.mock.calls[0][0]).toContain('optimization_goal');
     expect(fetch.mock.calls[0][0]).toContain('campaign%7Bid%2Cname%7D');
   });
 

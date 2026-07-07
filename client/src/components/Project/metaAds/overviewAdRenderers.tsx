@@ -9,6 +9,7 @@ import {
   MetaAdsEmptyCell,
   MetaAdsLevelCell,
   MetaAdsFrequencyValue,
+  MetaAdsResultMetricValue,
   MetaAdsEntityStatusToggleCell,
 } from './overviewCells';
 import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
@@ -92,7 +93,7 @@ function renderAdCell({
     return metricCell(column, <MetaAdsFrequencyValue source={ad} localize={context.localize} />);
   }
   if (column.key === 'result') {
-    return metricCell(column, formatMetric(ad.resultCount));
+    return metricCell(column, <MetaAdsResultMetricValue source={ad} localize={context.localize} />);
   }
   if (column.key === 'resultType') {
     return textCell(column, getResultTypeLabel(ad.resultType, context.localize));

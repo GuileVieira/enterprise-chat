@@ -3311,6 +3311,55 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('uses the ad set configured optimization goal before action-priority fallbacks', async () => {
+    const { budget, createSnapshot } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', rules: { ...DEFAULT_RULES, targetCpa: 10 } },
+      },
+      campaigns: [{ id: 'campaign-1', name: 'Engagement', objective: 'OUTCOME_ENGAGEMENT' }],
+      adsets: [
+        {
+          id: 'adset-1',
+          name: 'Comments set',
+          daily_budget: '5000',
+          campaign_id: 'campaign-1',
+          optimization_goal: 'POST_ENGAGEMENT',
+        },
+      ],
+      insights: [
+        {
+          campaign_id: 'campaign-1',
+          campaign_name: 'Engagement',
+          adset_id: 'adset-1',
+          adset_name: 'Comments set',
+          spend: '104.19',
+          actions: [
+            { action_type: 'link_click', value: '52' },
+            { action_type: 'post_engagement', value: '40' },
+          ],
+          cost_per_action_type: [{ action_type: 'post_engagement', value: '2.60' }],
+        },
+      ],
+    });
+
+    await budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
+
+    expect(createSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configuredResultType: 'post_engagement',
+        resultType: 'post_engagement',
+        resultCount: 40,
+        cpa: 2.6,
+        resultTypeBreakdown: expect.arrayContaining([
+          expect.objectContaining({ resultType: 'link_click', totalResults: 52 }),
+          expect.objectContaining({ resultType: 'post_engagement', totalResults: 40 }),
+        ]),
+      }),
+    );
+  });
+
   it('uses the insight ad set name when the ad set listing repeats the campaign name', async () => {
     const { budget, createRecommendation, createSnapshot } = loadBudgetWithMocks({
       project: {

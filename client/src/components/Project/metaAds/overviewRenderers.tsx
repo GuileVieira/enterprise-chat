@@ -9,6 +9,7 @@ import {
   MetaAdsBudgetBadge,
   MetaAdsAdSetNameCell,
   MetaAdsFrequencyValue,
+  MetaAdsResultMetricValue,
   MetaAdsCampaignNameCell,
   MetaAdsEntityStatusToggleCell,
 } from './overviewCells';
@@ -109,7 +110,10 @@ function sharedCampaignMetricCell({
     return metricCell(column, <MetaAdsFrequencyValue source={valueSource} localize={localize} />);
   }
   if (column.key === 'result') {
-    return metricCell(column, formatMetric(valueSource.resultCount));
+    return metricCell(
+      column,
+      <MetaAdsResultMetricValue source={valueSource} localize={localize} />,
+    );
   }
   if (column.key === 'resultType') {
     return textCell(column, getResultTypeLabel(valueSource.resultType, localize));

@@ -846,7 +846,8 @@ async function listAdSets({ adAccountId, token, graphVersion, includeInactive = 
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
   const params = {
-    fields: 'id,name,daily_budget,lifetime_budget,effective_status,campaign_id,campaign{id,name}',
+    fields:
+      'id,name,daily_budget,lifetime_budget,effective_status,optimization_goal,campaign_id,campaign{id,name}',
     limit: DEFAULT_LIMIT,
   };
   try {

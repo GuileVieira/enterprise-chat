@@ -306,6 +306,8 @@ export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
     'com_ui_project_meta_ads_result_type_message',
   onsite_conversion_messaging_first_reply: 'com_ui_project_meta_ads_result_type_message',
   post_engagement: 'com_ui_project_meta_ads_result_type_post_engagement',
+  page_engagement: 'com_ui_project_meta_ads_result_type_page_engagement',
+  comment: 'com_ui_project_meta_ads_result_type_comment',
   offsite_conversion_fb_pixel_lead: 'com_ui_project_meta_ads_result_type_lead',
   offsite_conversion_fb_pixel_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',

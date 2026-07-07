@@ -124,6 +124,19 @@ const CANONICAL_RESULT_TYPES = {
   'onsite_conversion.messaging_first_reply': 'onsite_conversion.messaging_conversation_started_7d',
   onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
 };
+const OPTIMIZATION_GOAL_RESULT_TYPES = {
+  MESSAGING_CONVERSATIONS: 'onsite_conversion.messaging_conversation_started_7d',
+  CONVERSATIONS: 'onsite_conversion.messaging_conversation_started_7d',
+  LEAD_GENERATION: 'lead',
+  OFFSITE_CONVERSIONS: 'purchase',
+  VALUE: 'purchase',
+  THRUPLAY: 'thruplay',
+  VIDEO_VIEWS: 'thruplay',
+  POST_ENGAGEMENT: 'post_engagement',
+  PAGE_LIKES: 'page_engagement',
+  LANDING_PAGE_VIEWS: 'landing_page_view',
+  LINK_CLICKS: 'link_click',
+};
 const RESULT_ACTION_PRIORITY = [
   'onsite_conversion.messaging_conversation_started_7d',
   'instagram_profile_visit',
@@ -443,6 +456,9 @@ function getModels() {
         },
       ];
     }
+    if (!existingSnapshotSchema.path('configuredResultType')) {
+      missingSnapshotFields.configuredResultType = String;
+    }
     if (!existingSnapshotSchema.path('conversionValue')) {
       missingSnapshotFields.conversionValue = Number;
     }
@@ -472,6 +488,7 @@ function getModels() {
         conversionValue: Number,
         resultCount: Number,
         resultType: String,
+        configuredResultType: String,
         resultTypeBreakdown: [
           {
             resultType: String,
@@ -1391,11 +1408,23 @@ function canonicalizeMetaActionType(actionType) {
   return CANONICAL_RESULT_TYPES[normalized] ?? normalized;
 }
 
+function canonicalizeMetaOptimizationGoal(optimizationGoal) {
+  if (typeof optimizationGoal !== 'string' || !optimizationGoal.trim()) {
+    return '';
+  }
+  const normalized = optimizationGoal.trim().toUpperCase();
+  return (
+    OPTIMIZATION_GOAL_RESULT_TYPES[normalized] ??
+    canonicalizeMetaActionType(normalized.toLowerCase())
+  );
+}
+
 function resolveTargetResultType({
   targetResultType,
   rules,
   accountProfile,
   campaignObjective,
+  configuredResultType,
 } = {}) {
   const configuredTarget =
     typeof targetResultType === 'string' && targetResultType.trim()
@@ -1405,6 +1434,9 @@ function resolveTargetResultType({
         : '';
   if (configuredTarget) {
     return canonicalizeMetaActionType(configuredTarget);
+  }
+  if (configuredResultType) {
+    return canonicalizeMetaActionType(configuredResultType);
   }
   if (accountProfile === 'ecommerce' || campaignObjective === 'OUTCOME_SALES') {
     return 'purchase';
@@ -1479,6 +1511,7 @@ function calculateMetrics(row, targetResultType) {
   const spend = Number(row.spend ?? 0);
   const actions = Array.isArray(row.actions) ? row.actions : [];
   const costPerAction = Array.isArray(row.cost_per_action_type) ? row.cost_per_action_type : [];
+  const normalizedTarget = canonicalizeMetaActionType(targetResultType);
   const resultTypeBreakdown = filterAggregateResultTypes(
     getCanonicalBreakdownActions(actions).map((action) => ({
       resultType: action.resultType,
@@ -1487,8 +1520,8 @@ function calculateMetrics(row, targetResultType) {
       averageCostPerResult:
         action.totalResults > 0 ? Number((spend / action.totalResults).toFixed(2)) : null,
     })),
+    normalizedTarget,
   );
-  const normalizedTarget = canonicalizeMetaActionType(targetResultType);
   const rawThruplays = Array.isArray(row.video_thruplay_watched_actions)
     ? Number(row.video_thruplay_watched_actions[0]?.value ?? 0)
     : Number(row.video_thruplay_watched_actions ?? 0);
@@ -1561,20 +1594,23 @@ function calculateMetrics(row, targetResultType) {
       impressions > 0 ? Number(((Number(videoP75Watched) / impressions) * 100).toFixed(2)) : 0,
     resultTypeBreakdown:
       Number.isFinite(thruplays) && thruplays > 0
-        ? filterAggregateResultTypes([
-            ...resultTypeBreakdown.filter((resultType) => resultType.resultType !== 'thruplay'),
-            {
-              resultType: 'thruplay',
-              totalSpend: spend,
-              totalResults: thruplays,
-              averageCostPerResult: thruplays > 0 ? Number((spend / thruplays).toFixed(2)) : null,
-            },
-          ])
+        ? filterAggregateResultTypes(
+            [
+              ...resultTypeBreakdown.filter((resultType) => resultType.resultType !== 'thruplay'),
+              {
+                resultType: 'thruplay',
+                totalSpend: spend,
+                totalResults: thruplays,
+                averageCostPerResult: thruplays > 0 ? Number((spend / thruplays).toFixed(2)) : null,
+              },
+            ],
+            normalizedTarget,
+          )
         : resultTypeBreakdown,
   };
 }
 
-function filterAggregateResultTypes(resultTypeBreakdown) {
+function filterAggregateResultTypes(resultTypeBreakdown, preservedResultType = '') {
   if (!Array.isArray(resultTypeBreakdown) || resultTypeBreakdown.length <= 1) {
     return resultTypeBreakdown;
   }
@@ -1583,7 +1619,9 @@ function filterAggregateResultTypes(resultTypeBreakdown) {
   );
   if (hasLeafResultType) {
     return resultTypeBreakdown.filter(
-      (resultType) => !AGGREGATE_RESULT_TYPES.has(resultType.resultType),
+      (resultType) =>
+        resultType.resultType === preservedResultType ||
+        !AGGREGATE_RESULT_TYPES.has(resultType.resultType),
     );
   }
   if (resultTypeBreakdown.some((resultType) => resultType.resultType === 'post_engagement')) {
@@ -1762,10 +1800,12 @@ function buildSnapshotsFromInsights({
       const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
       const campaign = campaignById.get(campaignId);
       const campaignName = row.campaign_name || campaign?.name || adset?.campaign?.name;
+      const configuredResultType = canonicalizeMetaOptimizationGoal(adset?.optimization_goal);
       const resolvedTargetResultType = resolveTargetResultType({
         targetResultType,
         accountProfile,
         campaignObjective: campaign?.objective,
+        configuredResultType,
       });
       const metrics = calculateMetrics(row, resolvedTargetResultType);
       return {
@@ -1775,6 +1815,7 @@ function buildSnapshotsFromInsights({
         campaignId,
         campaignName,
         campaignObjective: campaign?.objective,
+        configuredResultType: configuredResultType || undefined,
         dailyBudget: centsToDailyBudget(adset?.daily_budget),
         status: adset?.effective_status,
         currency,
@@ -1989,6 +2030,15 @@ function buildAdSummaries({
   return [...listedAdSummaries, ...insightOnlySummaries];
 }
 
+function getSingleConfiguredResultType(adSets = []) {
+  const values = new Set(
+    adSets
+      .map((adSet) => adSet.configuredResultType)
+      .filter((value) => typeof value === 'string' && value),
+  );
+  return values.size === 1 ? Array.from(values)[0] : undefined;
+}
+
 function buildCreativePauseRecommendations({
   ads = [],
   adInsights = [],
@@ -2120,6 +2170,7 @@ function buildCampaignSummaries({
         spend: 0,
         resultCount: 0,
         resultType: snapshot.resultType,
+        configuredResultType: snapshot.configuredResultType,
         currency: snapshot.currency,
         dailyBudget: 0,
         impressions: 0,
@@ -2170,6 +2221,7 @@ function buildCampaignSummaries({
       conversionValue: snapshot.conversionValue,
       resultCount: snapshot.resultCount,
       resultType: snapshot.resultType,
+      configuredResultType: snapshot.configuredResultType,
       resultTypeBreakdown: snapshot.resultTypeBreakdown,
       currency: snapshot.currency,
       impressions: snapshot.impressions,
@@ -2225,6 +2277,8 @@ function buildCampaignSummaries({
       campaign.videoP75Rate = metrics.videoP75Rate;
       campaign.resultTypeBreakdown = metrics.resultTypeBreakdown;
     }
+    campaign.configuredResultType =
+      getSingleConfiguredResultType(campaign.adSets) || campaign.configuredResultType;
     delete campaign.frequencyWeightedTotal;
     delete campaign.frequencyWeight;
     delete campaign.frequencyTotal;
@@ -4947,10 +5001,12 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           recommendationEntityLevel === 'campaign'
             ? centsToDailyBudget(campaign?.daily_budget)
             : centsToDailyBudget(adset.daily_budget);
+        const configuredResultType = canonicalizeMetaOptimizationGoal(adset.optimization_goal);
         const resolvedTargetResultType = resolveTargetResultType({
           rules,
           accountProfile: metaAds.accountProfile,
           campaignObjective: campaign?.objective,
+          configuredResultType,
         });
         const metrics = calculateMetrics(row, resolvedTargetResultType);
         const recommendationMetrics =
@@ -4972,6 +5028,7 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           campaignId,
           campaignName,
           campaignObjective: campaign?.objective,
+          configuredResultType: configuredResultType || undefined,
           status: adset.effective_status,
           dailyBudget: currentDailyBudget,
           spend: metrics.spend,
