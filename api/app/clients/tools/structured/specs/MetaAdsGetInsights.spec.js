@@ -40,12 +40,15 @@ function createResponse(data, ok = true, status = 200) {
 describe('MetaAdsGetInsights', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    getTenantSecret.mockImplementation(async (tenantId, name) => ({
-      tenantId,
-      name,
-      type: 'bearer',
-      value: name === 'project-secret' ? 'project-token' : 'meta-token',
-    }));
+    getTenantSecret.mockImplementation(async (tenantId, name) => {
+      if (name === 'project-secret') {
+        return { tenantId, name, type: 'bearer', value: 'project-token' };
+      }
+      if (name === 'meta_graph_access_token') {
+        return { tenantId, name, type: 'bearer', value: 'meta-token' };
+      }
+      return null;
+    });
     findProjectForRequest.mockResolvedValue({
       _id: 'project-mongo-1',
       projectId: 'project-1',
@@ -68,6 +71,10 @@ describe('MetaAdsGetInsights', () => {
       user: expect.objectContaining({ id: 'user-x' }),
     });
     expect(userCanAccessProject).toHaveBeenCalled();
+    expect(getTenantSecret).toHaveBeenCalledWith(
+      'tenant-x',
+      'meta_graph_access_token_project_project-1',
+    );
     expect(getTenantSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
@@ -128,6 +135,51 @@ describe('MetaAdsGetInsights', () => {
       expect.any(Object),
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, accountId: 'act_123' }));
+  });
+
+  it('uses the implicit project-local token secret before the tenant token', async () => {
+    getTenantSecret.mockImplementation(async (tenantId, name) => {
+      if (name === 'meta_graph_access_token_project_project-1') {
+        return { tenantId, name, type: 'bearer', value: 'project-token' };
+      }
+      return null;
+    });
+
+    await createTool().call({
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(getTenantSecret).toHaveBeenCalledWith(
+      'tenant-x',
+      'meta_graph_access_token_project_project-1',
+    );
+    expect(getTenantSecret).not.toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer project-token' },
+      }),
+    );
+  });
+
+  it('falls back to the tenant token when the implicit project token is missing', async () => {
+    await createTool().call({
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(getTenantSecret).toHaveBeenCalledWith(
+      'tenant-x',
+      'meta_graph_access_token_project_project-1',
+    );
+    expect(getTenantSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer meta-token' },
+      }),
+    );
   });
 
   it('fetches campaign-level insights without ad delivery filtering', async () => {
@@ -316,8 +368,8 @@ describe('MetaAdsGetInsights', () => {
     );
   });
 
-  it('returns a safe error when tenant token is missing', async () => {
-    getTenantSecret.mockResolvedValueOnce(null);
+  it('returns a safe error when project and tenant tokens are missing', async () => {
+    getTenantSecret.mockResolvedValue(null);
 
     const result = await createTool().call({
       ad_account_id: 'act_123',
@@ -329,7 +381,7 @@ describe('MetaAdsGetInsights', () => {
     expect(JSON.parse(result)).toEqual({
       ok: false,
       error: {
-        message: 'Meta access token not configured for tenant.',
+        message: 'Meta access token not configured for project or tenant.',
       },
     });
   });

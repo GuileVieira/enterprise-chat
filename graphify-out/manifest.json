@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
-    "mtime": 1783452994.1133814,
-    "ast_hash": "d933470247141fd9798be1f92816eef3",
+    "mtime": 1783454174.05366,
+    "ast_hash": "e024693c5886580c59bbf189acad641e",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/OpenAIImageTools.js": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsGetInsights.spec.js": {
-    "mtime": 1783452958.0726736,
-    "ast_hash": "4c562420686bdaba17484654c1c5ec8b",
+    "mtime": 1783454136.1673498,
+    "ast_hash": "24d9ba8299973ecf73f286a68100c252",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/OpenRouterGeminiImageGen.spec.js": {

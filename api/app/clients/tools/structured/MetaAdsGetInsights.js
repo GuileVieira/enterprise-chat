@@ -4,7 +4,10 @@ const {
   findProjectForRequest,
   userCanAccessProject,
 } = require('~/server/services/Projects/access');
-const { resolveMetaAccessToken } = require('~/server/services/MetaAds/budget');
+const {
+  resolveMetaAccessToken,
+  withImplicitProjectTokenSecret,
+} = require('~/server/services/MetaAds/budget');
 const {
   DEFAULT_META_GRAPH_VERSION,
   getMetaGraphVersion,
@@ -211,9 +214,13 @@ class MetaAdsGetInsights extends Tool {
       projectId,
       adAccountId,
     );
+    const metaAds = withImplicitProjectTokenSecret(
+      project.projectId || projectId,
+      project.metaAds ?? {},
+    );
     const credentials = await resolveMetaAccessToken({
       tenantId: this.tenantId,
-      metaAds: project.metaAds ?? {},
+      metaAds,
       getSecret: this.getTenantSecret,
     });
     return { accessToken: credentials.accessToken, adAccountId: resolvedAdAccountId };
