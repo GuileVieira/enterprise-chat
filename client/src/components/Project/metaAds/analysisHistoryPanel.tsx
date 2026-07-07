@@ -68,7 +68,7 @@ export function MetaAdsAnalysisHistoryPanel({
           {localize('com_ui_project_meta_ads_analysis_history')}
         </h4>
       </div>
-      <div className="space-y-2 p-4">
+      <div className="max-h-[360px] space-y-2 overflow-y-auto p-4 pr-3">
         {runs.length > 0 ? (
           runs.slice(0, 8).map((run) => {
             const { Icon, className } = getRunVisual(run.outcome);
