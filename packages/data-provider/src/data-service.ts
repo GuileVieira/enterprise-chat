@@ -906,6 +906,13 @@ export const getProjectMetaAdsRuleHistory = (
   return request.get(endpoints.projectMetaAdsRuleHistory(id));
 };
 
+export const getProjectMetaAdsRuns = (
+  id: string,
+  params?: { limit?: number },
+): Promise<q.ProjectMetaAdsRunsResponse> => {
+  return request.get(endpoints.projectMetaAdsRuns(id), { params });
+};
+
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],

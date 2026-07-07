@@ -141,6 +141,7 @@ export const projectMetaAdsPerformance = (id: string) => `${projectMetaAds(id)}/
 export const projectMetaAdsRulePerformance = (id: string) =>
   `${projectMetaAds(id)}/rules/performance`;
 export const projectMetaAdsRuleHistory = (id: string) => `${projectMetaAds(id)}/rules/history`;
+export const projectMetaAdsRuns = (id: string) => `${projectMetaAds(id)}/runs`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;

@@ -920,6 +920,15 @@ describe('Meta Ads budget service persistence safety', () => {
     const createSnapshot = jest.fn(async (payload) => payload);
     const createChange = jest.fn(async (payload) => payload);
     const createAutomationAction = jest.fn(async (payload) => payload);
+    const createAutomationRun = jest.fn(async (payload) => ({
+      _id: 'run-1',
+      ...payload,
+      toObject: () => ({ _id: 'run-1', ...payload }),
+    }));
+    const findByIdAndUpdateAutomationRun = jest.fn(async (_id, update) => ({
+      _id,
+      ...update.$set,
+    }));
     const createRuleChange = jest.fn(async (payload) => payload);
     const findChangeOne = jest.fn(() => ({ lean: async () => null }));
     const makeFindChain = jest.fn((query) => ({
@@ -984,6 +993,12 @@ describe('Meta Ads budget service persistence safety', () => {
           create: createAutomationAction,
           find: findActions,
         },
+        MetaAdsAutomationRun: {
+          schema: {},
+          create: createAutomationRun,
+          find: findActions,
+          findByIdAndUpdate: findByIdAndUpdateAutomationRun,
+        },
         MetaAdsRuleChange: {
           schema: {},
           create: createRuleChange,
@@ -1042,7 +1057,9 @@ describe('Meta Ads budget service persistence safety', () => {
     );
     const getAdAccountCurrency = jest.fn(async () => 'BRL');
     const listCampaigns = jest.fn(async () => campaigns);
-    const listAdSets = jest.fn(async () => adsets);
+    const listAdSets = jest.fn(async (options) =>
+      typeof adsets === 'function' ? adsets(options) : adsets,
+    );
     const listAds = jest.fn(async () => ads);
     const listAdInsights = jest.fn(async (options) =>
       typeof adInsights === 'function' ? adInsights(options) : adInsights,
@@ -1078,6 +1095,8 @@ describe('Meta Ads budget service persistence safety', () => {
       createRecommendation,
       createSnapshot,
       createAutomationAction,
+      createAutomationRun,
+      findByIdAndUpdateAutomationRun,
       findByIdAndUpdate,
       getAdSetDailyBudget,
       getEntityDailyBudget,
@@ -3331,6 +3350,143 @@ describe('Meta Ads budget service persistence safety', () => {
     );
   });
 
+  it('records a held automation run and links generated recommendations to it', async () => {
+    const { budget, createAutomationRun, createRecommendation, findByIdAndUpdateAutomationRun } =
+      loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: {
+            adAccountId: 'act_123',
+            automationMode: 'recommend',
+            automationAnalysisPreset: 'last_7d',
+            rules: { ...DEFAULT_RULES, targetCpa: 10, maxDailyBudget: 100 },
+          },
+        },
+        adsets: [
+          {
+            id: 'adset-1',
+            name: 'Prospecting',
+            daily_budget: '10000',
+          },
+        ],
+        insights: [
+          {
+            adset_id: 'adset-1',
+            adset_name: 'Prospecting',
+            spend: '120',
+            actions: [{ action_type: 'purchase', value: '20' }],
+          },
+        ],
+      });
+
+    const result = await budget.analyzeProject({
+      projectId: 'p1',
+      actor: 'cron',
+      applyAuto: false,
+    });
+
+    expect(createAutomationRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-a',
+        projectId: 'p1',
+        adAccountId: 'act_123',
+        actor: 'cron',
+        mode: 'recommend',
+        status: 'running',
+        outcome: 'no_data',
+        since: expect.any(String),
+        until: expect.any(String),
+        datePreset: 'last_7d',
+      }),
+    );
+    expect(createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        automationRunId: 'run-1',
+        action: 'hold',
+        reason: 'CPA dentro da regra.',
+      }),
+    );
+    expect(findByIdAndUpdateAutomationRun).toHaveBeenCalledWith(
+      'run-1',
+      {
+        $set: expect.objectContaining({
+          status: 'completed',
+          outcome: 'held',
+          evaluatedCount: 1,
+          recommendationCount: 1,
+          holdCount: 1,
+          blockedCount: 0,
+          appliedCount: 0,
+          reasonSamples: ['CPA dentro da regra.'],
+        }),
+      },
+      { new: true, lean: true },
+    );
+    expect(result.run).toEqual(expect.objectContaining({ outcome: 'held' }));
+  });
+
+  it('records a no-data automation run when no entity is evaluated', async () => {
+    const { budget, findByIdAndUpdateAutomationRun } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', automationMode: 'recommend' },
+      },
+      adsets: [{ id: 'adset-1', name: 'No Insights', daily_budget: '10000' }],
+      insights: [],
+    });
+
+    const result = await budget.analyzeProject({
+      projectId: 'p1',
+      actor: 'cron',
+      applyAuto: false,
+    });
+
+    expect(findByIdAndUpdateAutomationRun).toHaveBeenCalledWith(
+      'run-1',
+      {
+        $set: expect.objectContaining({
+          status: 'completed',
+          outcome: 'no_data',
+          evaluatedCount: 0,
+          recommendationCount: 0,
+          holdCount: 0,
+        }),
+      },
+      { new: true, lean: true },
+    );
+    expect(result.run).toEqual(expect.objectContaining({ outcome: 'no_data' }));
+  });
+
+  it('marks an automation run as failed when analysis errors after the run starts', async () => {
+    const { budget, findByIdAndUpdateAutomationRun } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123', automationMode: 'recommend' },
+      },
+      adsets: async () => {
+        throw new Error('Meta unavailable');
+      },
+    });
+
+    await expect(
+      budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false }),
+    ).rejects.toThrow('Meta unavailable');
+    expect(findByIdAndUpdateAutomationRun).toHaveBeenCalledWith(
+      'run-1',
+      {
+        $set: expect.objectContaining({
+          status: 'failed',
+          outcome: 'failed',
+          errorMessage: 'Meta unavailable',
+        }),
+      },
+      { new: true, lean: true },
+    );
+  });
+
   it('applies a manual campaign budget update and records the change', async () => {
     const { budget, createChange, metaPost } = loadBudgetWithMocks({
       project: {
@@ -4142,7 +4298,7 @@ describe('Meta Ads budget service persistence safety', () => {
     listAdSetInsights.mockReturnValueOnce(insights.promise);
 
     const analysis = budget.analyzeProject({ projectId: 'p1', actor: 'cron', applyAuto: false });
-    for (let i = 0; i < 5; i += 1) {
+    for (let i = 0; i < 10; i += 1) {
       await Promise.resolve();
     }
 

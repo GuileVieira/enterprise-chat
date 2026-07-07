@@ -106,6 +106,7 @@ export type ProjectMetaAdsResultTypeBreakdown = {
 
 export type ProjectMetaAdsRecommendation = {
   _id?: string;
+  automationRunId?: string;
   entityLevel?: 'campaign' | 'adset' | 'ad';
   entityId: string;
   entityName?: string;
@@ -144,6 +145,31 @@ export type ProjectMetaAdsRecommendation = {
   reason?: string;
   mode?: string;
   createdAt?: string;
+};
+
+export type ProjectMetaAdsAutomationRun = {
+  _id?: string;
+  tenantId?: string;
+  projectId: string;
+  adAccountId?: string;
+  actor?: 'cron' | 'user' | 'tool';
+  mode?: string;
+  status: 'running' | 'completed' | 'failed';
+  outcome: 'applied' | 'recommended' | 'held' | 'blocked' | 'no_data' | 'failed';
+  since?: string;
+  until?: string;
+  datePreset?: ProjectMetaAdsDatePreset;
+  startedAt?: string;
+  finishedAt?: string;
+  durationMs?: number;
+  evaluatedCount?: number;
+  recommendationCount?: number;
+  holdCount?: number;
+  blockedCount?: number;
+  appliedCount?: number;
+  reasonSamples?: string[];
+  errorMessage?: string;
+  recommendations?: ProjectMetaAdsRecommendation[];
 };
 
 export type ProjectMetaAdsAutomationAction = {
@@ -744,6 +770,7 @@ export type ProjectMetaAdsRunResponse = {
   since: string;
   until: string;
   recommendations: ProjectMetaAdsRecommendation[];
+  run?: ProjectMetaAdsAutomationRun;
   autoApplySummary?: {
     appliedCount: number;
     adjustedToMetaMinimumCount: number;
@@ -751,6 +778,10 @@ export type ProjectMetaAdsRunResponse = {
     messages: string[];
   };
   messages?: string[];
+};
+
+export type ProjectMetaAdsRunsResponse = {
+  runs: ProjectMetaAdsAutomationRun[];
 };
 
 export type ProjectMetaAdsApplyResponse = {

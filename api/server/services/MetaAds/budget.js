@@ -523,6 +523,7 @@ function getModels() {
       'ruleScope',
       'primaryMetric',
       'decisionReason',
+      'automationRunId',
     ]) {
       if (!existingRecommendationSchema.path(key)) {
         missingRecommendationFields[key] = String;
@@ -625,6 +626,7 @@ function getModels() {
         ruleScope: String,
         reason: String,
         mode: String,
+        automationRunId: { type: String, index: true },
       },
       { timestamps: true },
     );
@@ -804,6 +806,84 @@ function getModels() {
     }
   }
   const mixedSchemaType = mongoose.Schema?.Types?.Mixed ?? Object;
+  const existingRunSchema = mongoose.models.MetaAdsAutomationRun?.schema;
+  if (
+    existingRunSchema &&
+    typeof existingRunSchema.path === 'function' &&
+    typeof existingRunSchema.add === 'function'
+  ) {
+    const missingRunFields = {};
+    for (const key of [
+      'adAccountId',
+      'actor',
+      'mode',
+      'status',
+      'outcome',
+      'since',
+      'until',
+      'datePreset',
+      'errorMessage',
+    ]) {
+      if (!existingRunSchema.path(key)) {
+        missingRunFields[key] = String;
+      }
+    }
+    for (const key of [
+      'durationMs',
+      'evaluatedCount',
+      'recommendationCount',
+      'holdCount',
+      'blockedCount',
+      'appliedCount',
+    ]) {
+      if (!existingRunSchema.path(key)) {
+        missingRunFields[key] = Number;
+      }
+    }
+    if (!existingRunSchema.path('startedAt')) {
+      missingRunFields.startedAt = Date;
+    }
+    if (!existingRunSchema.path('finishedAt')) {
+      missingRunFields.finishedAt = Date;
+    }
+    if (!existingRunSchema.path('reasonSamples')) {
+      missingRunFields.reasonSamples = [String];
+    }
+    if (Object.keys(missingRunFields).length > 0) {
+      existingRunSchema.add(missingRunFields);
+    }
+  }
+  const runSchema =
+    existingRunSchema ||
+    new mongoose.Schema(
+      {
+        tenantId: { type: String, index: true },
+        projectId: { type: String, index: true },
+        adAccountId: { type: String, index: true },
+        actor: { type: String, enum: ['cron', 'user', 'tool'], required: true },
+        mode: String,
+        status: { type: String, enum: ['running', 'completed', 'failed'], index: true },
+        outcome: {
+          type: String,
+          enum: ['applied', 'recommended', 'held', 'blocked', 'no_data', 'failed'],
+          index: true,
+        },
+        since: String,
+        until: String,
+        datePreset: String,
+        startedAt: Date,
+        finishedAt: Date,
+        durationMs: Number,
+        evaluatedCount: Number,
+        recommendationCount: Number,
+        holdCount: Number,
+        blockedCount: Number,
+        appliedCount: Number,
+        reasonSamples: [String],
+        errorMessage: String,
+      },
+      { timestamps: true },
+    );
   const ruleChangeSchema =
     existingRuleChangeSchema ||
     new mongoose.Schema(
@@ -841,6 +921,8 @@ function getModels() {
     MetaAdsAutomationAction:
       mongoose.models.MetaAdsAutomationAction ||
       mongoose.model('MetaAdsAutomationAction', actionSchema),
+    MetaAdsAutomationRun:
+      mongoose.models.MetaAdsAutomationRun || mongoose.model('MetaAdsAutomationRun', runSchema),
     MetaAdsRuleChange:
       mongoose.models.MetaAdsRuleChange || mongoose.model('MetaAdsRuleChange', ruleChangeSchema),
   };
@@ -3347,6 +3429,45 @@ async function getProjectMetaAdsPerformance(projectId, fallbackTenantId, options
   };
 }
 
+async function getProjectMetaAdsAutomationRuns(projectId, fallbackTenantId, options = {}) {
+  const { MetaAdsAutomationRun, MetaAdsRecommendation } = getModels();
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  const tenantId = project ? getProjectTenantId(project, fallbackTenantId) : fallbackTenantId;
+  const limit = Math.min(50, Math.max(1, Number(options.limit ?? 20) || 20));
+  const query = {
+    projectId,
+    ...(tenantId ? { tenantId } : {}),
+  };
+  const runs = await MetaAdsAutomationRun.find(query).sort({ startedAt: -1 }).limit(limit).lean();
+  const runIds = runs.map((run) => String(run._id)).filter(Boolean);
+  const recommendations =
+    runIds.length > 0
+      ? await MetaAdsRecommendation.find({ ...query, automationRunId: { $in: runIds } })
+          .sort({ createdAt: -1 })
+          .limit(500)
+          .lean()
+      : [];
+  const recommendationsByRunId = new Map();
+  for (const recommendation of recommendations) {
+    const runId = recommendation.automationRunId;
+    if (!runId) {
+      continue;
+    }
+    recommendationsByRunId.set(runId, [
+      ...(recommendationsByRunId.get(runId) ?? []),
+      recommendation,
+    ]);
+  }
+  return {
+    runs: runs.map((run) => ({
+      ...run,
+      recommendations: recommendationsByRunId.get(String(run._id)) ?? [],
+    })),
+  };
+}
+
 function buildRulePerformanceEntities(actions = []) {
   const groups = new Map();
   for (const action of actions) {
@@ -4384,6 +4505,90 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
   );
 }
 
+function getAutomationRunId(run) {
+  return run?._id ? String(run._id) : undefined;
+}
+
+function summarizeAutomationRun(recommendations = [], appliedCount = 0) {
+  const recommendationCount = recommendations.length;
+  const holdCount = recommendations.filter((item) => item.action === 'hold').length;
+  const blockedCount = recommendations.filter((item) => item.status === 'blocked').length;
+  const recommendedCount = recommendations.filter(
+    (item) => item.status === 'pending' && item.action !== 'hold',
+  ).length;
+  const reasonSamples = [
+    ...new Set(
+      recommendations
+        .map((item) => (typeof item.reason === 'string' ? item.reason.trim() : ''))
+        .filter(Boolean),
+    ),
+  ].slice(0, 3);
+  let outcome = 'no_data';
+  if (appliedCount > 0) {
+    outcome = 'applied';
+  } else if (recommendedCount > 0) {
+    outcome = 'recommended';
+  } else if (blockedCount > 0) {
+    outcome = 'blocked';
+  } else if (holdCount > 0) {
+    outcome = 'held';
+  }
+  return {
+    outcome,
+    evaluatedCount: recommendationCount,
+    recommendationCount,
+    holdCount,
+    blockedCount,
+    appliedCount,
+    reasonSamples,
+  };
+}
+
+async function finishAutomationRun({
+  MetaAdsAutomationRun,
+  runId,
+  startedAt,
+  recommendations,
+  appliedCount,
+}) {
+  if (!runId) {
+    return undefined;
+  }
+  const finishedAt = new Date();
+  return MetaAdsAutomationRun.findByIdAndUpdate(
+    runId,
+    {
+      $set: {
+        status: 'completed',
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        ...summarizeAutomationRun(recommendations, appliedCount),
+      },
+    },
+    { new: true, lean: true },
+  );
+}
+
+async function failAutomationRun({ MetaAdsAutomationRun, runId, startedAt, error }) {
+  if (!runId) {
+    return undefined;
+  }
+  const finishedAt = new Date();
+  return MetaAdsAutomationRun.findByIdAndUpdate(
+    runId,
+    {
+      $set: {
+        status: 'failed',
+        outcome: 'failed',
+        finishedAt,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        errorMessage: error.message,
+      },
+    },
+    { new: true, lean: true },
+  );
+}
+
 async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const project = await runAsSystem(
     async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
@@ -4402,166 +4607,252 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
   const projectRules = mergeRules(metaAds);
   const creativeRules = validateMetaAdsCreativeRules(metaAds.creativeRules);
   const tenantId = getProjectTenantId(project);
-  const token = await getAccessToken(tenantId, metaAds);
   const now = new Date();
   const timeZone = getMetaAdsTimeZone();
   const analysisPeriod = resolveAutomationAnalysisPeriod(metaAds, now);
   const { since, until } = analysisPeriod;
-  const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsAutomationAction } = getModels();
+  const { MetaAdsSnapshot, MetaAdsRecommendation, MetaAdsAutomationAction, MetaAdsAutomationRun } =
+    getModels();
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
   const entityConcurrency = getCronEntityConcurrency();
   const scheduleIntervalMinutes = getScheduleIntervalMinutes(metaAds);
+  const automationRun = await MetaAdsAutomationRun.create({
+    tenantId,
+    projectId,
+    adAccountId,
+    actor,
+    mode: metaAds.automationMode || 'recommend',
+    status: 'running',
+    outcome: 'no_data',
+    since,
+    until,
+    datePreset: analysisPeriod.datePreset,
+    startedAt: now,
+    evaluatedCount: 0,
+    recommendationCount: 0,
+    holdCount: 0,
+    blockedCount: 0,
+    appliedCount: 0,
+    reasonSamples: [],
+  });
+  const automationRunId = getAutomationRunId(automationRun);
 
-  const campaignsPromise = listCampaigns({ adAccountId, token, graphVersion }).catch((error) => {
-    logger.error('[MetaAdsBudget] campaigns fetch failed', {
-      projectId,
-      adAccountId,
-      message: error.message,
-      stack: error.stack,
-    });
-    return [];
-  });
-  const adsetsPromise = listAdSets({ adAccountId, token, graphVersion }).catch((error) => {
-    logger.error('[MetaAdsBudget] adsets fetch failed', {
-      projectId,
-      adAccountId,
-      message: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  });
-  const defaultInsightsPromise = listAdSetInsights({
-    adAccountId,
-    token,
-    since,
-    until,
-    datePreset: analysisPeriod.datePreset,
-    graphVersion,
-  }).catch((error) => {
-    logger.error('[MetaAdsBudget] insights fetch failed', {
-      projectId,
-      adAccountId,
-      since,
-      until,
-      message: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  });
-  const defaultCampaignInsightsPromise = listCampaignInsights({
-    adAccountId,
-    token,
-    since,
-    until,
-    datePreset: analysisPeriod.datePreset,
-    graphVersion,
-  }).catch((error) => {
-    logger.error('[MetaAdsBudget] campaign insights fetch failed', {
-      projectId,
-      adAccountId,
-      since,
-      until,
-      message: error.message,
-      stack: error.stack,
-    });
-    return [];
-  });
-  const defaultAdInsightsPromise = listAdInsights({
-    adAccountId,
-    token,
-    since,
-    until,
-    datePreset: analysisPeriod.datePreset,
-    graphVersion,
-  }).catch((error) => {
-    logger.error('[MetaAdsBudget] ad insights fetch failed', {
-      projectId,
-      adAccountId,
-      since,
-      until,
-      message: error.message,
-      stack: error.stack,
-    });
-    return [];
-  });
-  const adsPromise = listAds({ adAccountId, token, graphVersion }).catch((error) => {
-    logger.error('[MetaAdsBudget] ads fetch failed', {
-      projectId,
-      adAccountId,
-      message: error.message,
-      stack: error.stack,
-    });
-    return [];
-  });
-  const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month, now);
-  const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, timeZone, now);
-  const monthlyCampaignInsightsPromise = getMonthlyBudgetLimit(monthlyBudget)
-    ? listCampaignInsights({
+  try {
+    const token = await getAccessToken(tenantId, metaAds);
+
+    const campaignsPromise = listCampaigns({ adAccountId, token, graphVersion }).catch((error) => {
+      logger.error('[MetaAdsBudget] campaigns fetch failed', {
+        projectId,
         adAccountId,
-        token,
-        since: monthlyRange.since,
-        until: monthlyRange.until,
-        graphVersion,
-      }).catch((error) => {
-        logger.error('[MetaAdsBudget] monthly insights fetch failed', {
-          projectId,
+        message: error.message,
+        stack: error.stack,
+      });
+      return [];
+    });
+    const adsetsPromise = listAdSets({ adAccountId, token, graphVersion }).catch((error) => {
+      logger.error('[MetaAdsBudget] adsets fetch failed', {
+        projectId,
+        adAccountId,
+        message: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    });
+    const defaultInsightsPromise = listAdSetInsights({
+      adAccountId,
+      token,
+      since,
+      until,
+      datePreset: analysisPeriod.datePreset,
+      graphVersion,
+    }).catch((error) => {
+      logger.error('[MetaAdsBudget] insights fetch failed', {
+        projectId,
+        adAccountId,
+        since,
+        until,
+        message: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    });
+    const defaultCampaignInsightsPromise = listCampaignInsights({
+      adAccountId,
+      token,
+      since,
+      until,
+      datePreset: analysisPeriod.datePreset,
+      graphVersion,
+    }).catch((error) => {
+      logger.error('[MetaAdsBudget] campaign insights fetch failed', {
+        projectId,
+        adAccountId,
+        since,
+        until,
+        message: error.message,
+        stack: error.stack,
+      });
+      return [];
+    });
+    const defaultAdInsightsPromise = listAdInsights({
+      adAccountId,
+      token,
+      since,
+      until,
+      datePreset: analysisPeriod.datePreset,
+      graphVersion,
+    }).catch((error) => {
+      logger.error('[MetaAdsBudget] ad insights fetch failed', {
+        projectId,
+        adAccountId,
+        since,
+        until,
+        message: error.message,
+        stack: error.stack,
+      });
+      return [];
+    });
+    const adsPromise = listAds({ adAccountId, token, graphVersion }).catch((error) => {
+      logger.error('[MetaAdsBudget] ads fetch failed', {
+        projectId,
+        adAccountId,
+        message: error.message,
+        stack: error.stack,
+      });
+      return [];
+    });
+    const monthlyBudget = resolveMonthlyBudget(metaAds, metaAds.monthlyBudget?.month, now);
+    const monthlyRange = getMetaAdsMonthRange(monthlyBudget.month, timeZone, now);
+    const monthlyCampaignInsightsPromise = getMonthlyBudgetLimit(monthlyBudget)
+      ? listCampaignInsights({
           adAccountId,
+          token,
           since: monthlyRange.since,
           until: monthlyRange.until,
-          message: error.message,
-          stack: error.stack,
-        });
-        return [];
-      })
-    : Promise.resolve([]);
-  const [campaigns, adsets, ads, monthlyCampaignInsights] = await Promise.all([
-    campaignsPromise,
-    adsetsPromise,
-    adsPromise,
-    monthlyCampaignInsightsPromise,
-  ]);
-  const monthlyBudgetState = buildMonthlyBudgetState({
-    monthlyBudget,
-    insightRows: monthlyCampaignInsights,
-    now,
-  });
-  const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
-  const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
-  const adsetsByCampaignId = new Map();
-  for (const adset of adsets) {
-    const campaignId = adset.campaign_id || adset.campaign?.id;
-    if (!campaignId) {
-      continue;
+          graphVersion,
+        }).catch((error) => {
+          logger.error('[MetaAdsBudget] monthly insights fetch failed', {
+            projectId,
+            adAccountId,
+            since: monthlyRange.since,
+            until: monthlyRange.until,
+            message: error.message,
+            stack: error.stack,
+          });
+          return [];
+        })
+      : Promise.resolve([]);
+    const [campaigns, adsets, ads, monthlyCampaignInsights] = await Promise.all([
+      campaignsPromise,
+      adsetsPromise,
+      adsPromise,
+      monthlyCampaignInsightsPromise,
+    ]);
+    const monthlyBudgetState = buildMonthlyBudgetState({
+      monthlyBudget,
+      insightRows: monthlyCampaignInsights,
+      now,
+    });
+    const campaignById = new Map(campaigns.map((campaign) => [campaign.id, campaign]));
+    const adsetById = new Map(adsets.map((adset) => [adset.id, adset]));
+    const adsetsByCampaignId = new Map();
+    for (const adset of adsets) {
+      const campaignId = adset.campaign_id || adset.campaign?.id;
+      if (!campaignId) {
+        continue;
+      }
+      adsetsByCampaignId.set(campaignId, [...(adsetsByCampaignId.get(campaignId) ?? []), adset]);
     }
-    adsetsByCampaignId.set(campaignId, [...(adsetsByCampaignId.get(campaignId) ?? []), adset]);
-  }
 
-  const defaultAnalysisPreset = analysisPeriod.datePreset;
-  const getEntityAnalysisPreset = ({ campaignId, adsetId }) =>
-    getEffectiveRuleContext({
-      projectRules,
-      projectCreativeRules: creativeRules,
-      ruleGroups: metaAds.ruleGroups,
-      ruleOverrides: metaAds.ruleOverrides,
-      campaignId,
-      adsetId,
-    }).analysisPreset ?? defaultAnalysisPreset;
-  const analysisPresets = new Set([defaultAnalysisPreset]);
-  for (const adset of adsets) {
-    const campaignId = adset.campaign_id || adset.campaign?.id;
-    analysisPresets.add(getEntityAnalysisPreset({ campaignId, adsetId: adset.id }));
-  }
-  const analysisBundles = await Promise.all(
-    Array.from(analysisPresets).map(async (analysisPreset) => {
-      const period = resolveAutomationAnalysisPeriod(
-        { automationAnalysisPreset: analysisPreset },
-        now,
-      );
-      if (analysisPreset === defaultAnalysisPreset) {
+    const defaultAnalysisPreset = analysisPeriod.datePreset;
+    const getEntityAnalysisPreset = ({ campaignId, adsetId }) =>
+      getEffectiveRuleContext({
+        projectRules,
+        projectCreativeRules: creativeRules,
+        ruleGroups: metaAds.ruleGroups,
+        ruleOverrides: metaAds.ruleOverrides,
+        campaignId,
+        adsetId,
+      }).analysisPreset ?? defaultAnalysisPreset;
+    const analysisPresets = new Set([defaultAnalysisPreset]);
+    for (const adset of adsets) {
+      const campaignId = adset.campaign_id || adset.campaign?.id;
+      analysisPresets.add(getEntityAnalysisPreset({ campaignId, adsetId: adset.id }));
+    }
+    const analysisBundles = await Promise.all(
+      Array.from(analysisPresets).map(async (analysisPreset) => {
+        const period = resolveAutomationAnalysisPeriod(
+          { automationAnalysisPreset: analysisPreset },
+          now,
+        );
+        if (analysisPreset === defaultAnalysisPreset) {
+          const [periodInsights, periodCampaignInsights, periodAdInsights] = await Promise.all([
+            defaultInsightsPromise,
+            defaultCampaignInsightsPromise,
+            defaultAdInsightsPromise,
+          ]);
+          return {
+            analysisPreset,
+            insights: periodInsights,
+            campaignInsights: periodCampaignInsights,
+            adInsights: periodAdInsights,
+          };
+        }
         const [periodInsights, periodCampaignInsights, periodAdInsights] = await Promise.all([
-          defaultInsightsPromise,
-          defaultCampaignInsightsPromise,
-          defaultAdInsightsPromise,
+          listAdSetInsights({
+            adAccountId,
+            token,
+            since: period.since,
+            until: period.until,
+            datePreset: period.datePreset,
+            graphVersion,
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] insights fetch failed', {
+              projectId,
+              adAccountId,
+              since: period.since,
+              until: period.until,
+              message: error.message,
+              stack: error.stack,
+            });
+            throw error;
+          }),
+          listCampaignInsights({
+            adAccountId,
+            token,
+            since: period.since,
+            until: period.until,
+            datePreset: period.datePreset,
+            graphVersion,
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] campaign insights fetch failed', {
+              projectId,
+              adAccountId,
+              since: period.since,
+              until: period.until,
+              message: error.message,
+              stack: error.stack,
+            });
+            return [];
+          }),
+          listAdInsights({
+            adAccountId,
+            token,
+            since: period.since,
+            until: period.until,
+            datePreset: period.datePreset,
+            graphVersion,
+          }).catch((error) => {
+            logger.error('[MetaAdsBudget] ad insights fetch failed', {
+              projectId,
+              adAccountId,
+              since: period.since,
+              until: period.until,
+              message: error.message,
+              stack: error.stack,
+            });
+            return [];
+          }),
         ]);
         return {
           analysisPreset,
@@ -4569,334 +4860,193 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
           campaignInsights: periodCampaignInsights,
           adInsights: periodAdInsights,
         };
+      }),
+    );
+    const campaignInsightByKey = new Map();
+    const insights = [];
+    const insightRowsByCampaignId = new Map();
+    const adInsightsByAdSetId = new Map();
+    for (const bundle of analysisBundles) {
+      for (const row of bundle.campaignInsights) {
+        if (row.campaign_id) {
+          campaignInsightByKey.set(`${bundle.analysisPreset}:${row.campaign_id}`, row);
+        }
       }
-      const [periodInsights, periodCampaignInsights, periodAdInsights] = await Promise.all([
-        listAdSetInsights({
-          adAccountId,
-          token,
-          since: period.since,
-          until: period.until,
-          datePreset: period.datePreset,
-          graphVersion,
-        }).catch((error) => {
-          logger.error('[MetaAdsBudget] insights fetch failed', {
-            projectId,
-            adAccountId,
-            since: period.since,
-            until: period.until,
-            message: error.message,
-            stack: error.stack,
-          });
-          throw error;
-        }),
-        listCampaignInsights({
-          adAccountId,
-          token,
-          since: period.since,
-          until: period.until,
-          datePreset: period.datePreset,
-          graphVersion,
-        }).catch((error) => {
-          logger.error('[MetaAdsBudget] campaign insights fetch failed', {
-            projectId,
-            adAccountId,
-            since: period.since,
-            until: period.until,
-            message: error.message,
-            stack: error.stack,
-          });
-          return [];
-        }),
-        listAdInsights({
-          adAccountId,
-          token,
-          since: period.since,
-          until: period.until,
-          datePreset: period.datePreset,
-          graphVersion,
-        }).catch((error) => {
-          logger.error('[MetaAdsBudget] ad insights fetch failed', {
-            projectId,
-            adAccountId,
-            since: period.since,
-            until: period.until,
-            message: error.message,
-            stack: error.stack,
-          });
-          return [];
-        }),
-      ]);
-      return {
-        analysisPreset,
-        insights: periodInsights,
-        campaignInsights: periodCampaignInsights,
-        adInsights: periodAdInsights,
-      };
-    }),
-  );
-  const campaignInsightByKey = new Map();
-  const insights = [];
-  const insightRowsByCampaignId = new Map();
-  const adInsightsByAdSetId = new Map();
-  for (const bundle of analysisBundles) {
-    for (const row of bundle.campaignInsights) {
-      if (row.campaign_id) {
-        campaignInsightByKey.set(`${bundle.analysisPreset}:${row.campaign_id}`, row);
+      for (const row of bundle.insights) {
+        const adset = adsetById.get(row.adset_id);
+        const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
+        if (
+          getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
+        ) {
+          continue;
+        }
+        insights.push(row);
+        if (campaignId) {
+          insightRowsByCampaignId.set(campaignId, [
+            ...(insightRowsByCampaignId.get(campaignId) ?? []),
+            row,
+          ]);
+        }
       }
-    }
-    for (const row of bundle.insights) {
-      const adset = adsetById.get(row.adset_id);
-      const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
-      if (
-        getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
-      ) {
-        continue;
-      }
-      insights.push(row);
-      if (campaignId) {
-        insightRowsByCampaignId.set(campaignId, [
-          ...(insightRowsByCampaignId.get(campaignId) ?? []),
+      for (const row of bundle.adInsights) {
+        const adset = adsetById.get(row.adset_id);
+        const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
+        if (
+          getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
+        ) {
+          continue;
+        }
+        adInsightsByAdSetId.set(row.adset_id, [
+          ...(adInsightsByAdSetId.get(row.adset_id) ?? []),
           row,
         ]);
       }
     }
-    for (const row of bundle.adInsights) {
-      const adset = adsetById.get(row.adset_id);
-      const campaignId = row.campaign_id || adset?.campaign_id || adset?.campaign?.id;
-      if (
-        getEntityAnalysisPreset({ campaignId, adsetId: row.adset_id }) !== bundle.analysisPreset
-      ) {
-        continue;
+    const adsByAdSetId = new Map();
+    for (const ad of ads) {
+      const adSetId = ad.adset_id;
+      if (adSetId) {
+        adsByAdSetId.set(adSetId, [...(adsByAdSetId.get(adSetId) ?? []), ad]);
       }
-      adInsightsByAdSetId.set(row.adset_id, [
-        ...(adInsightsByAdSetId.get(row.adset_id) ?? []),
-        row,
-      ]);
     }
-  }
-  const adsByAdSetId = new Map();
-  for (const ad of ads) {
-    const adSetId = ad.adset_id;
-    if (adSetId) {
-      adsByAdSetId.set(adSetId, [...(adsByAdSetId.get(adSetId) ?? []), ad]);
-    }
-  }
-  const handledRecommendationEntities = new Set();
+    const handledRecommendationEntities = new Set();
 
-  const recommendations = (
-    await mapWithConcurrency(insights, entityConcurrency, async (row) => {
-      const entityId = row.adset_id;
-      const adset = adsetById.get(entityId);
-      if (!adset) {
-        return null;
-      }
-      const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
-      const campaign = campaignById.get(campaignId);
-      const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
-      const budgetInfo = detectBudgetMode({
-        campaign,
-        adsets: adsetsByCampaignId.get(campaignId) ?? [adset],
-      });
-      const effectiveRuleContext = getEffectiveRuleContext({
-        projectRules,
-        projectCreativeRules: creativeRules,
-        ruleGroups: metaAds.ruleGroups,
-        ruleOverrides: metaAds.ruleOverrides,
-        campaignId,
-        adsetId: entityId,
-      });
-      const { rules } = effectiveRuleContext;
-      const effectiveAnalysisPreset = effectiveRuleContext.analysisPreset ?? defaultAnalysisPreset;
-      const adsetName = row.adset_name || adset.name;
-      const recommendationEntityLevel =
-        budgetInfo.editableBudgetLevel === 'campaign' ? 'campaign' : 'adset';
-      const recommendationEntityId =
-        recommendationEntityLevel === 'campaign' ? campaignId : entityId;
-      const recommendationEntityName =
-        recommendationEntityLevel === 'campaign' ? campaignName : adsetName;
-      const currentDailyBudget =
-        recommendationEntityLevel === 'campaign'
-          ? centsToDailyBudget(campaign?.daily_budget)
-          : centsToDailyBudget(adset.daily_budget);
-      const resolvedTargetResultType = resolveTargetResultType({
-        rules,
-        accountProfile: metaAds.accountProfile,
-        campaignObjective: campaign?.objective,
-      });
-      const metrics = calculateMetrics(row, resolvedTargetResultType);
-      const recommendationMetrics =
-        recommendationEntityLevel === 'campaign'
-          ? calculateMetrics(
-              campaignInsightByKey.get(`${effectiveAnalysisPreset}:${campaignId}`) ||
-                aggregateInsightRows(insightRowsByCampaignId.get(campaignId) ?? [row]),
-              resolvedTargetResultType,
-            )
-          : metrics;
+    const recommendations = (
+      await mapWithConcurrency(insights, entityConcurrency, async (row) => {
+        const entityId = row.adset_id;
+        const adset = adsetById.get(entityId);
+        if (!adset) {
+          return null;
+        }
+        const campaignId = row.campaign_id || adset.campaign_id || adset.campaign?.id;
+        const campaign = campaignById.get(campaignId);
+        const campaignName = row.campaign_name || campaign?.name || adset.campaign?.name;
+        const budgetInfo = detectBudgetMode({
+          campaign,
+          adsets: adsetsByCampaignId.get(campaignId) ?? [adset],
+        });
+        const effectiveRuleContext = getEffectiveRuleContext({
+          projectRules,
+          projectCreativeRules: creativeRules,
+          ruleGroups: metaAds.ruleGroups,
+          ruleOverrides: metaAds.ruleOverrides,
+          campaignId,
+          adsetId: entityId,
+        });
+        const { rules } = effectiveRuleContext;
+        const effectiveAnalysisPreset =
+          effectiveRuleContext.analysisPreset ?? defaultAnalysisPreset;
+        const adsetName = row.adset_name || adset.name;
+        const recommendationEntityLevel =
+          budgetInfo.editableBudgetLevel === 'campaign' ? 'campaign' : 'adset';
+        const recommendationEntityId =
+          recommendationEntityLevel === 'campaign' ? campaignId : entityId;
+        const recommendationEntityName =
+          recommendationEntityLevel === 'campaign' ? campaignName : adsetName;
+        const currentDailyBudget =
+          recommendationEntityLevel === 'campaign'
+            ? centsToDailyBudget(campaign?.daily_budget)
+            : centsToDailyBudget(adset.daily_budget);
+        const resolvedTargetResultType = resolveTargetResultType({
+          rules,
+          accountProfile: metaAds.accountProfile,
+          campaignObjective: campaign?.objective,
+        });
+        const metrics = calculateMetrics(row, resolvedTargetResultType);
+        const recommendationMetrics =
+          recommendationEntityLevel === 'campaign'
+            ? calculateMetrics(
+                campaignInsightByKey.get(`${effectiveAnalysisPreset}:${campaignId}`) ||
+                  aggregateInsightRows(insightRowsByCampaignId.get(campaignId) ?? [row]),
+                resolvedTargetResultType,
+              )
+            : metrics;
 
-      await MetaAdsSnapshot.create({
-        tenantId,
-        projectId,
-        adAccountId,
-        level: 'adset',
-        entityId,
-        entityName: adsetName,
-        campaignId,
-        campaignName,
-        campaignObjective: campaign?.objective,
-        status: adset.effective_status,
-        dailyBudget: currentDailyBudget,
-        spend: metrics.spend,
-        cpa: metrics.cpa,
-        roas: metrics.roas,
-        conversionValue: metrics.conversionValue,
-        resultCount: metrics.resultCount,
-        resultType: metrics.resultType,
-        resultTypeBreakdown: metrics.resultTypeBreakdown,
-        impressions: metrics.impressions,
-        reach: metrics.reach,
-        frequency: metrics.frequency,
-        clicks: metrics.clicks,
-        ctr: metrics.ctr,
-        cpc: metrics.cpc,
-        cpm: metrics.cpm,
-        videoP75Watched: metrics.videoP75Watched,
-        videoP75Rate: metrics.videoP75Rate,
-        raw: row,
-      });
+        await MetaAdsSnapshot.create({
+          tenantId,
+          projectId,
+          adAccountId,
+          level: 'adset',
+          entityId,
+          entityName: adsetName,
+          campaignId,
+          campaignName,
+          campaignObjective: campaign?.objective,
+          status: adset.effective_status,
+          dailyBudget: currentDailyBudget,
+          spend: metrics.spend,
+          cpa: metrics.cpa,
+          roas: metrics.roas,
+          conversionValue: metrics.conversionValue,
+          resultCount: metrics.resultCount,
+          resultType: metrics.resultType,
+          resultTypeBreakdown: metrics.resultTypeBreakdown,
+          impressions: metrics.impressions,
+          reach: metrics.reach,
+          frequency: metrics.frequency,
+          clicks: metrics.clicks,
+          ctr: metrics.ctr,
+          cpc: metrics.cpc,
+          cpm: metrics.cpm,
+          videoP75Watched: metrics.videoP75Watched,
+          videoP75Rate: metrics.videoP75Rate,
+          raw: row,
+        });
 
-      const recommendationKey = `${recommendationEntityLevel}:${recommendationEntityId}`;
-      if (!recommendationEntityId || handledRecommendationEntities.has(recommendationKey)) {
-        return null;
-      }
-      handledRecommendationEntities.add(recommendationKey);
-      const primaryMetric = getPrimaryMetric(effectiveRuleContext.rules);
-      const targetMetricValue = getRuleTargetMetricValue(effectiveRuleContext.rules);
-      const recentAutomationActions = await MetaAdsAutomationAction.find({
-        tenantId,
-        projectId,
-        entityId: recommendationEntityId,
-        primaryMetric,
-        ruleSourceType: effectiveRuleContext.ruleSourceType,
-        ruleId: effectiveRuleContext.ruleId,
-      })
-        .sort({ createdAt: -1 })
-        .limit(1)
-        .lean();
-      const latestAutomationAction = recentAutomationActions[0] || null;
-      const actionSpend = toFiniteMetric(latestAutomationAction?.spend);
-      const evidenceSpend =
-        actionSpend != null
-          ? Math.max(0, Number(recommendationMetrics.spend ?? 0) - actionSpend)
-          : undefined;
-
-      const rawProposal = proposeBudget({
-        currentDailyBudget,
-        ...recommendationMetrics,
-        rules,
-        creativeRules,
-        evidenceSpend,
-        latestActionAt: latestAutomationAction?.createdAt,
-      });
-      const monthlyGuard = applyMonthlyBudgetGuard({
-        proposal: rawProposal,
-        currentDailyBudget,
-        monthlyBudgetState,
-      });
-      const proposal = monthlyGuard.proposal;
-      const recentChange = await getRecentChange({
-        projectId,
-        entityId: recommendationEntityId,
-        cooldownMinutes: resolveActionCooldownMinutes({
-          actionType: 'budget_change',
-          scheduleIntervalMinutes,
-        }),
-      });
-      const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
-
-      await MetaAdsRecommendation.updateMany(
-        {
+        const recommendationKey = `${recommendationEntityLevel}:${recommendationEntityId}`;
+        if (!recommendationEntityId || handledRecommendationEntities.has(recommendationKey)) {
+          return null;
+        }
+        handledRecommendationEntities.add(recommendationKey);
+        const primaryMetric = getPrimaryMetric(effectiveRuleContext.rules);
+        const targetMetricValue = getRuleTargetMetricValue(effectiveRuleContext.rules);
+        const recentAutomationActions = await MetaAdsAutomationAction.find({
           tenantId,
           projectId,
           entityId: recommendationEntityId,
-          status: 'pending',
-        },
-        {
-          $set: {
-            status: 'ignored',
-          },
-        },
-      );
+          primaryMetric,
+          ruleSourceType: effectiveRuleContext.ruleSourceType,
+          ruleId: effectiveRuleContext.ruleId,
+        })
+          .sort({ createdAt: -1 })
+          .limit(1)
+          .lean();
+        const latestAutomationAction = recentAutomationActions[0] || null;
+        const actionSpend = toFiniteMetric(latestAutomationAction?.spend);
+        const evidenceSpend =
+          actionSpend != null
+            ? Math.max(0, Number(recommendationMetrics.spend ?? 0) - actionSpend)
+            : undefined;
 
-      const recommendation = await MetaAdsRecommendation.create({
-        tenantId,
-        projectId,
-        adAccountId,
-        entityLevel: recommendationEntityLevel,
-        entityId: recommendationEntityId,
-        entityName: recommendationEntityName,
-        campaignId,
-        campaignName,
-        action: blockedByCooldown ? 'hold' : proposal.action,
-        status:
-          proposal.status || (blockedByCooldown || monthlyGuard.blocked ? 'blocked' : 'pending'),
-        currentDailyBudget,
-        proposedDailyBudget: proposal.proposedDailyBudget,
-        spend: recommendationMetrics.spend,
-        resultCount: recommendationMetrics.resultCount,
-        cpa: recommendationMetrics.cpa,
-        roas: recommendationMetrics.roas,
-        ctr: recommendationMetrics.ctr,
-        cpc: recommendationMetrics.cpc,
-        frequency: recommendationMetrics.frequency,
-        primaryMetric,
-        targetMetricValue,
-        evidenceSpend: proposal.evidenceSpend,
-        evidenceSpendThreshold: proposal.evidenceSpendThreshold,
-        evidenceSpendBasis: proposal.evidenceSpendBasis,
-        evidenceMultiplier: proposal.evidenceMultiplier,
-        canAct: proposal.canAct,
-        decisionReason: proposal.decisionReason,
-        ruleSourceType: effectiveRuleContext.ruleSourceType,
-        ruleId: effectiveRuleContext.ruleId,
-        ruleName: effectiveRuleContext.ruleName,
-        ruleScope: effectiveRuleContext.ruleScope,
-        reason: blockedByCooldown ? 'Bloqueado por trava interna de orçamento.' : proposal.reason,
-        mode: metaAds.automationMode || 'recommend',
-      });
-      const creativePauseRecommendations = [];
-      const pauseProposals =
-        rules.enabledSections?.creatives === false
-          ? []
-          : buildCreativePauseRecommendations({
-              ads: adsByAdSetId.get(entityId) ?? [],
-              adInsights: adInsightsByAdSetId.get(entityId) ?? [],
-              creativeRules: effectiveRuleContext.creativeRules,
-              targetResultType: resolvedTargetResultType,
-              ruleContext: {
-                ...effectiveRuleContext,
-                ruleSourceType: 'creative',
-                campaignId,
-                campaignName,
-                adsetId: entityId,
-                adsetName,
-              },
-            });
-      for (const pauseProposal of pauseProposals) {
-        const recentPause = await getRecentAutomationAction({
+        const rawProposal = proposeBudget({
+          currentDailyBudget,
+          ...recommendationMetrics,
+          rules,
+          creativeRules,
+          evidenceSpend,
+          latestActionAt: latestAutomationAction?.createdAt,
+        });
+        const monthlyGuard = applyMonthlyBudgetGuard({
+          proposal: rawProposal,
+          currentDailyBudget,
+          monthlyBudgetState,
+        });
+        const proposal = monthlyGuard.proposal;
+        const recentChange = await getRecentChange({
           projectId,
-          entityId: pauseProposal.entityId,
-          actionType: 'pause_ad',
+          entityId: recommendationEntityId,
           cooldownMinutes: resolveActionCooldownMinutes({
-            actionType: 'pause_ad',
+            actionType: 'budget_change',
             scheduleIntervalMinutes,
           }),
         });
+        const blockedByCooldown = proposal.action !== 'hold' && Boolean(recentChange);
+
         await MetaAdsRecommendation.updateMany(
           {
             tenantId,
             projectId,
-            entityId: pauseProposal.entityId,
-            action: 'pause',
+            entityId: recommendationEntityId,
             status: 'pending',
           },
           {
@@ -4905,81 +5055,188 @@ async function analyzeProject({ projectId, actor = 'cron', applyAuto = true }) {
             },
           },
         );
-        const pauseRecommendation = await MetaAdsRecommendation.create({
+
+        const recommendation = await MetaAdsRecommendation.create({
           tenantId,
           projectId,
           adAccountId,
-          ...pauseProposal,
-          status: recentPause ? 'blocked' : 'pending',
-          reason: recentPause ? 'Bloqueado por trava interna de criativo.' : pauseProposal.reason,
+          entityLevel: recommendationEntityLevel,
+          entityId: recommendationEntityId,
+          entityName: recommendationEntityName,
+          campaignId,
+          campaignName,
+          action: blockedByCooldown ? 'hold' : proposal.action,
+          status:
+            proposal.status || (blockedByCooldown || monthlyGuard.blocked ? 'blocked' : 'pending'),
+          currentDailyBudget,
+          proposedDailyBudget: proposal.proposedDailyBudget,
+          spend: recommendationMetrics.spend,
+          resultCount: recommendationMetrics.resultCount,
+          cpa: recommendationMetrics.cpa,
+          roas: recommendationMetrics.roas,
+          ctr: recommendationMetrics.ctr,
+          cpc: recommendationMetrics.cpc,
+          frequency: recommendationMetrics.frequency,
+          primaryMetric,
+          targetMetricValue,
+          evidenceSpend: proposal.evidenceSpend,
+          evidenceSpendThreshold: proposal.evidenceSpendThreshold,
+          evidenceSpendBasis: proposal.evidenceSpendBasis,
+          evidenceMultiplier: proposal.evidenceMultiplier,
+          canAct: proposal.canAct,
+          decisionReason: proposal.decisionReason,
+          ruleSourceType: effectiveRuleContext.ruleSourceType,
+          ruleId: effectiveRuleContext.ruleId,
+          ruleName: effectiveRuleContext.ruleName,
+          ruleScope: effectiveRuleContext.ruleScope,
+          reason: blockedByCooldown ? 'Bloqueado por trava interna de orçamento.' : proposal.reason,
           mode: metaAds.automationMode || 'recommend',
+          automationRunId,
         });
-        creativePauseRecommendations.push(pauseRecommendation.toObject());
-      }
-      return [recommendation.toObject(), ...creativePauseRecommendations];
-    })
-  )
-    .flat()
-    .filter(Boolean);
+        const creativePauseRecommendations = [];
+        const pauseProposals =
+          rules.enabledSections?.creatives === false
+            ? []
+            : buildCreativePauseRecommendations({
+                ads: adsByAdSetId.get(entityId) ?? [],
+                adInsights: adInsightsByAdSetId.get(entityId) ?? [],
+                creativeRules: effectiveRuleContext.creativeRules,
+                targetResultType: resolvedTargetResultType,
+                ruleContext: {
+                  ...effectiveRuleContext,
+                  ruleSourceType: 'creative',
+                  campaignId,
+                  campaignName,
+                  adsetId: entityId,
+                  adsetName,
+                },
+              });
+        for (const pauseProposal of pauseProposals) {
+          const recentPause = await getRecentAutomationAction({
+            projectId,
+            entityId: pauseProposal.entityId,
+            actionType: 'pause_ad',
+            cooldownMinutes: resolveActionCooldownMinutes({
+              actionType: 'pause_ad',
+              scheduleIntervalMinutes,
+            }),
+          });
+          await MetaAdsRecommendation.updateMany(
+            {
+              tenantId,
+              projectId,
+              entityId: pauseProposal.entityId,
+              action: 'pause',
+              status: 'pending',
+            },
+            {
+              $set: {
+                status: 'ignored',
+              },
+            },
+          );
+          const pauseRecommendation = await MetaAdsRecommendation.create({
+            tenantId,
+            projectId,
+            adAccountId,
+            ...pauseProposal,
+            status: recentPause ? 'blocked' : 'pending',
+            reason: recentPause ? 'Bloqueado por trava interna de criativo.' : pauseProposal.reason,
+            mode: metaAds.automationMode || 'recommend',
+            automationRunId,
+          });
+          creativePauseRecommendations.push(pauseRecommendation.toObject());
+        }
+        return [recommendation.toObject(), ...creativePauseRecommendations];
+      })
+    )
+      .flat()
+      .filter(Boolean);
 
-  if (applyAuto && metaAds.automationMode === 'auto_limited') {
-    const appliedRecommendations = new Map();
-    const autoApplySummary = {
-      appliedCount: 0,
-      adjustedToMetaMinimumCount: 0,
-      blockedCount: 0,
-      messages: [],
-    };
-    for (const recommendation of recommendations) {
-      if (recommendation.status !== 'pending' || recommendation.action === 'hold') {
-        continue;
-      }
-      const appliedRecommendation = await applyRecommendation({
-        recommendationId: recommendation._id,
-        projectId,
-        tenantId,
-        actor,
-      });
-      if (appliedRecommendation?._id) {
-        appliedRecommendations.set(String(appliedRecommendation._id), appliedRecommendation);
-      }
-      if (appliedRecommendation?.status === 'applied') {
-        autoApplySummary.appliedCount += 1;
-      }
-      if (appliedRecommendation?.status === 'blocked') {
-        autoApplySummary.blockedCount += 1;
-      }
-      if (typeof appliedRecommendation?.reason === 'string') {
-        autoApplySummary.messages.push(appliedRecommendation.reason);
-        if (appliedRecommendation.reason.includes('Meta exigiu orçamento mínimo')) {
-          autoApplySummary.adjustedToMetaMinimumCount +=
-            appliedRecommendation.status === 'applied' ? 1 : 0;
+    if (applyAuto && metaAds.automationMode === 'auto_limited') {
+      const appliedRecommendations = new Map();
+      const autoApplySummary = {
+        appliedCount: 0,
+        adjustedToMetaMinimumCount: 0,
+        blockedCount: 0,
+        messages: [],
+      };
+      for (const recommendation of recommendations) {
+        if (recommendation.status !== 'pending' || recommendation.action === 'hold') {
+          continue;
+        }
+        const appliedRecommendation = await applyRecommendation({
+          recommendationId: recommendation._id,
+          projectId,
+          tenantId,
+          actor,
+        });
+        if (appliedRecommendation?._id) {
+          appliedRecommendations.set(String(appliedRecommendation._id), appliedRecommendation);
+        }
+        if (appliedRecommendation?.status === 'applied') {
+          autoApplySummary.appliedCount += 1;
+        }
+        if (appliedRecommendation?.status === 'blocked') {
+          autoApplySummary.blockedCount += 1;
+        }
+        if (typeof appliedRecommendation?.reason === 'string') {
+          autoApplySummary.messages.push(appliedRecommendation.reason);
+          if (appliedRecommendation.reason.includes('Meta exigiu orçamento mínimo')) {
+            autoApplySummary.adjustedToMetaMinimumCount +=
+              appliedRecommendation.status === 'applied' ? 1 : 0;
+          }
         }
       }
+      const resolvedRecommendations = recommendations.map(
+        (recommendation) =>
+          appliedRecommendations.get(String(recommendation._id)) ?? recommendation,
+      );
+      const run = await finishAutomationRun({
+        MetaAdsAutomationRun,
+        runId: automationRunId,
+        startedAt: now,
+        recommendations: resolvedRecommendations,
+        appliedCount: autoApplySummary.appliedCount,
+      });
+      return {
+        projectId,
+        adAccountId,
+        graphVersion,
+        since,
+        until,
+        recommendations: resolvedRecommendations,
+        run,
+        autoApplySummary,
+        messages: autoApplySummary.messages,
+      };
     }
-    const resolvedRecommendations = recommendations.map(
-      (recommendation) => appliedRecommendations.get(String(recommendation._id)) ?? recommendation,
-    );
+
+    const run = await finishAutomationRun({
+      MetaAdsAutomationRun,
+      runId: automationRunId,
+      startedAt: now,
+      recommendations,
+      appliedCount: 0,
+    });
     return {
       projectId,
       adAccountId,
       graphVersion,
       since,
       until,
-      recommendations: resolvedRecommendations,
-      autoApplySummary,
-      messages: autoApplySummary.messages,
+      recommendations,
+      run,
     };
+  } catch (error) {
+    await failAutomationRun({
+      MetaAdsAutomationRun,
+      runId: automationRunId,
+      startedAt: now,
+      error,
+    });
+    throw error;
   }
-
-  return {
-    projectId,
-    adAccountId,
-    graphVersion,
-    since,
-    until,
-    recommendations,
-  };
 }
 
 async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}) {
@@ -5707,6 +5964,7 @@ module.exports = {
   getMetaGraphVersion,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsAutomationRuns,
   getProjectMetaAdsRulePerformance,
   getProjectMetaAdsRuleHistory,
   getProjectMetaTokenSecretName,

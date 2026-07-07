@@ -13,6 +13,7 @@ import {
   useDuplicateProjectMetaAdsEntityMutation,
   useProjectMetaAdsRankingsQuery,
   useProjectMetaAdsQuery,
+  useProjectMetaAdsRunsQuery,
   useProjectMetaAdsRuleHistoryQuery,
   useProjectMetaAdsRulePerformanceQuery,
   useRunProjectMetaAdsMutation,
@@ -38,6 +39,7 @@ import { buildCampaignFallback } from './metaAds/table';
 import { getGraphVersionOptions } from './metaAds/settings';
 import { MetaAdsBiWorkspace } from './metaAds/biWorkspace';
 import { MetaAdsHistoryPanel } from './metaAds/historyPanel';
+import { MetaAdsAnalysisHistoryPanel } from './metaAds/analysisHistoryPanel';
 import { MetaAdsDialogsLayer } from './metaAds/dialogsLayer';
 import { MetaAdsOverviewWorkspace } from './metaAds/overviewWorkspace';
 import { MetaAdsRulePerformanceWorkspace } from './metaAds/rulePerformanceWorkspace';
@@ -151,9 +153,9 @@ export default function ProjectMetaAdsPanel({
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('overview');
   const [runNoticeMessage, setRunNoticeMessage] = useState<string | null>(null);
   const [runNoticeStatus, setRunNoticeStatus] = useState<'success' | 'error'>('error');
-  const [confirmedBudgetChanges, setConfirmedBudgetChanges] = useState<ProjectMetaAdsBudgetChange[]>(
-    [],
-  );
+  const [confirmedBudgetChanges, setConfirmedBudgetChanges] = useState<
+    ProjectMetaAdsBudgetChange[]
+  >([]);
   const biWorkspace = useMetaAdsBiWorkspace();
   const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
   const startupConfigQuery = useGetStartupConfig();
@@ -188,6 +190,7 @@ export default function ProjectMetaAdsPanel({
   const ruleHistoryQuery = useProjectMetaAdsRuleHistoryQuery(project.projectId, {
     enabled: workspaceTab === 'rules',
   });
+  const automationRunsQuery = useProjectMetaAdsRunsQuery(project.projectId, { limit: 20 });
   const biRankingsQuery = useProjectMetaAdsRankingsQuery(
     project.projectId,
     {
@@ -387,11 +390,17 @@ export default function ProjectMetaAdsPanel({
           <>
             <MetaAdsOverviewWorkspace {...overviewWorkspaceProps} />
             <div className="p-5 pt-0">
-              <MetaAdsHistoryPanel
-                changes={budgetChanges}
-                currency={currency}
-                localize={localize}
-              />
+              <div className="space-y-4">
+                <MetaAdsAnalysisHistoryPanel
+                  runs={automationRunsQuery.data?.runs ?? []}
+                  localize={localize}
+                />
+                <MetaAdsHistoryPanel
+                  changes={budgetChanges}
+                  currency={currency}
+                  localize={localize}
+                />
+              </div>
             </div>
           </>
         )}

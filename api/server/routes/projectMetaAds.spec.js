@@ -40,6 +40,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
   duplicateProjectMetaAdsEntity: jest.fn(),
   getProjectMetaAdsPerformance: jest.fn(),
   getProjectMetaAdsRankings: jest.fn(),
+  getProjectMetaAdsAutomationRuns: jest.fn(),
   getProjectMetaAdsRuleHistory: jest.fn(),
   getProjectMetaAdsRulePerformance: jest.fn(),
   getProjectMetaAdsStatus: jest.fn(),
@@ -56,6 +57,7 @@ const {
   duplicateProjectMetaAdsEntity,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
+  getProjectMetaAdsAutomationRuns,
   getProjectMetaAdsRulePerformance,
   getProjectMetaAdsStatus,
   recordProjectMetaAdsRuleChange,
@@ -899,6 +901,42 @@ describe('projectMetaAds run route', () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  it('returns Meta Ads automation run history for the project tenant', async () => {
+    getProjectMetaAdsAutomationRuns.mockResolvedValue({
+      runs: [
+        {
+          _id: 'run-1',
+          projectId: 'p1',
+          outcome: 'held',
+          status: 'completed',
+          holdCount: 2,
+          reasonSamples: ['CPA dentro da regra.'],
+          recommendations: [
+            {
+              _id: 'rec-1',
+              automationRunId: 'run-1',
+              entityId: 'adset-1',
+              action: 'hold',
+              status: 'pending',
+              reason: 'CPA dentro da regra.',
+            },
+          ],
+        },
+      ],
+    });
+
+    const response = await request(createApp()).get('/projects/p1/meta-ads/runs?limit=10');
+
+    expect(response.status).toBe(200);
+    expect(getProjectMetaAdsAutomationRuns).toHaveBeenCalledWith('p1', 'tenant-x', { limit: 10 });
+    expect(response.body.runs[0]).toEqual(
+      expect.objectContaining({
+        outcome: 'held',
+        holdCount: 2,
+      }),
+    );
   });
 });
 

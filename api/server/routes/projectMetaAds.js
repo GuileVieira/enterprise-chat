@@ -24,6 +24,7 @@ const {
   applyManualBudgetChange,
   applyRecommendation,
   duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsAutomationRuns,
   getProjectMetaAdsPerformance,
   getProjectMetaAdsRankings,
   getProjectMetaAdsRuleHistory,
@@ -757,6 +758,19 @@ router.get('/rules/history', metaAdsAccess, async (req, res) => {
     return res.json(await getProjectMetaAdsRuleHistory(req.params.projectId, tenantId));
   } catch (error) {
     logger.error('[projectMetaAds] rule history failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.get('/runs', metaAdsAccess, async (req, res) => {
+  try {
+    const tenantId = req.user.tenantId || getTenantId();
+    const limit = Number(req.query.limit ?? 20);
+    return res.json(
+      await getProjectMetaAdsAutomationRuns(req.params.projectId, tenantId, { limit }),
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] automation runs failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });

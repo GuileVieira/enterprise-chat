@@ -378,6 +378,23 @@ export const useProjectMetaAdsRuleHistoryQuery = (
   );
 };
 
+export const useProjectMetaAdsRunsQuery = (
+  projectId: string,
+  params?: { limit?: number },
+  config?: UseQueryOptions<t.ProjectMetaAdsRunsResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRunsResponse> => {
+  return useQuery<t.ProjectMetaAdsRunsResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'runs', params],
+    () => dataService.getProjectMetaAdsRuns(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

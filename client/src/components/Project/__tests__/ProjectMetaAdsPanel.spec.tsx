@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import type {
   ProjectMetaAdsRankingResponse,
   ProjectMetaAdsPerformanceResponse,
+  ProjectMetaAdsRunsResponse,
   ProjectMetaAdsRulePerformanceResponse,
   ProjectMetaAdsRuleHistoryResponse,
   ProjectMetaAdsStatus,
@@ -74,6 +75,10 @@ const mockUseProjectMetaAdsRuleHistoryQuery = jest.fn((_projectId?: string, _par
   data: mockRuleHistoryData,
   isFetching: false,
 }));
+const mockUseProjectMetaAdsRunsQuery = jest.fn((_projectId?: string, _params?: unknown) => ({
+  data: mockAutomationRunsData,
+  isFetching: false,
+}));
 const mockStatusData: ProjectMetaAdsStatus = {
   latestSnapshots: [],
   recommendations: [],
@@ -98,6 +103,9 @@ const mockRulePerformanceData: ProjectMetaAdsRulePerformanceResponse = {
 };
 const mockRuleHistoryData: ProjectMetaAdsRuleHistoryResponse = {
   changes: [],
+};
+const mockAutomationRunsData: ProjectMetaAdsRunsResponse = {
+  runs: [],
 };
 const mockPerformanceData: ProjectMetaAdsPerformanceResponse = {
   period: { datePreset: 'last_7d' },
@@ -173,6 +181,8 @@ jest.mock('~/data-provider', () => ({
   },
   useProjectMetaAdsRuleHistoryQuery: (projectId: string, params?: unknown) =>
     mockUseProjectMetaAdsRuleHistoryQuery(projectId, params),
+  useProjectMetaAdsRunsQuery: (projectId: string, params?: unknown) =>
+    mockUseProjectMetaAdsRunsQuery(projectId, params),
   useUpdateProjectMetaAdsMutation: () => ({
     mutate: mockMutateSettings,
     isLoading: false,
@@ -234,6 +244,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockUseProjectMetaAdsPerformanceQuery.mockClear();
     mockUseProjectMetaAdsRulePerformanceQuery.mockClear();
     mockUseProjectMetaAdsRuleHistoryQuery.mockClear();
+    mockUseProjectMetaAdsRunsQuery.mockClear();
     mockRankingData.level = 'campaign';
     mockRankingData.period = {
       datePreset: 'last_7d',
@@ -244,6 +255,7 @@ describe('ProjectMetaAdsPanel', () => {
     mockRulePerformanceData.currency = 'BRL';
     mockRulePerformanceData.rules = [];
     mockRuleHistoryData.changes = [];
+    mockAutomationRunsData.runs = [];
     mockPerformanceData.period = { datePreset: 'last_7d' };
     mockPerformanceData.currency = 'BRL';
     mockPerformanceData.summary = { actionCount: 0, aiActionCount: 0, pausedAdCount: 0 };
@@ -321,6 +333,47 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByTestId('meta-ads-campaign-row')).not.toBeInTheDocument();
     expect(screen.queryByText('com_ui_project_meta_ads_history')).not.toBeInTheDocument();
     expect(screen.getByText('com_ui_project_meta_ads_bi_rankings')).toBeInTheDocument();
+  });
+
+  it('shows automation analysis history when the automation held without changes', () => {
+    mockAutomationRunsData.runs = [
+      {
+        _id: 'run-1',
+        projectId: 'p1',
+        adAccountId: 'act_123',
+        actor: 'cron',
+        mode: 'recommend',
+        status: 'completed',
+        outcome: 'held',
+        evaluatedCount: 1,
+        recommendationCount: 1,
+        holdCount: 1,
+        blockedCount: 0,
+        appliedCount: 0,
+        reasonSamples: ['CPA dentro da regra.'],
+        startedAt: '2026-07-07T12:00:00.000Z',
+        finishedAt: '2026-07-07T12:00:05.000Z',
+        recommendations: [
+          {
+            _id: 'rec-1',
+            automationRunId: 'run-1',
+            entityId: 'adset-1',
+            entityName: 'Prospecting',
+            action: 'hold',
+            status: 'pending',
+            reason: 'CPA dentro da regra.',
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(mockUseProjectMetaAdsRunsQuery).toHaveBeenCalledWith('p1', { limit: 20 });
+    expect(screen.getByText('com_ui_project_meta_ads_analysis_history')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_project_meta_ads_run_outcome_held')).toBeInTheDocument();
+    expect(screen.getAllByText('CPA dentro da regra.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Prospecting').length).toBeGreaterThan(0);
   });
 
   it('shows paid report cards and ROAS in the BI workspace', () => {
