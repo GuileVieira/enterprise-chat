@@ -79,7 +79,7 @@ describe('MetaAdsGetInsights', () => {
     const url = new URL(fetch.mock.calls[0][0]);
     expect(url.searchParams.get('level')).toBe('ad');
     expect(url.searchParams.get('fields')).toBe(
-      'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
     const filtering = url.searchParams.get('filtering');
     expect(filtering).not.toContain('"values"');
@@ -128,6 +128,49 @@ describe('MetaAdsGetInsights', () => {
       expect.any(Object),
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, accountId: 'act_123' }));
+  });
+
+  it('fetches campaign-level insights without ad delivery filtering', async () => {
+    const result = await createTool().call({
+      level: 'campaign',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    const url = new URL(fetch.mock.calls[0][0]);
+    expect(url.searchParams.get('level')).toBe('campaign');
+    expect(url.searchParams.get('filtering')).toBeNull();
+    expect(url.searchParams.get('fields')).toBe(
+      'campaign_id,campaign_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+    );
+    expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
+  });
+
+  it('fetches adset-level insights without ad delivery filtering', async () => {
+    const result = await createTool().call({
+      level: 'adset',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    const url = new URL(fetch.mock.calls[0][0]);
+    expect(url.searchParams.get('level')).toBe('adset');
+    expect(url.searchParams.get('filtering')).toBeNull();
+    expect(url.searchParams.get('fields')).toBe(
+      'campaign_id,campaign_name,adset_id,adset_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+    );
+    expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'adset' }));
+  });
+
+  it('rejects unsupported insight levels before fetch', async () => {
+    await expect(
+      createTool().call({
+        level: 'account',
+        since: '2026-05-01',
+        until: '2026-05-07',
+      }),
+    ).rejects.toThrow('Received tool input did not match expected schema');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('uses an explicit project token secret when the accessible project has one', async () => {

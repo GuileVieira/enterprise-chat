@@ -386,6 +386,12 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
       pattern: '^\\d{4}-\\d{2}-\\d{2}$',
       description: 'End date in YYYY-MM-DD format.',
     },
+    level: {
+      type: 'string',
+      enum: ['campaign', 'adset', 'ad'],
+      description:
+        'Insight aggregation level. Use campaign for campaigns, adset for ad sets, or ad for ads. Defaults to ad.',
+    },
     limit: {
       type: 'integer',
       minimum: 1,
@@ -527,7 +533,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for active ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. Always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
+      'Read-only Meta Graph API tool for campaign, ad set, or active ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. Supports level=campaign, level=adset, or level=ad. graph_version is optional and must match Meta version format like v25.0.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },

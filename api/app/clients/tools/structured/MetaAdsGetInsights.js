@@ -12,7 +12,14 @@ const {
 } = require('~/server/services/MetaAds/graph');
 
 const META_GRAPH_VERSION_PATTERN = /^v[1-9]\d?\.0$/;
-const META_INSIGHTS_FIELDS = 'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas';
+const DEFAULT_META_INSIGHT_LEVEL = 'ad';
+const META_INSIGHT_LEVELS = ['campaign', 'adset', 'ad'];
+const META_INSIGHTS_FIELDS_BY_LEVEL = {
+  campaign: 'campaign_id,campaign_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+  adset:
+    'campaign_id,campaign_name,adset_id,adset_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+  ad: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+};
 const META_ACTIVE_AD_FILTERING = JSON.stringify([
   { field: 'ad.delivery_info', operator: 'IN', value: ['ACTIVE'] },
 ]);
@@ -37,6 +44,12 @@ const metaAdsGetInsightsJsonSchema = {
     until: {
       type: 'string',
       description: 'End date in YYYY-MM-DD format.',
+    },
+    level: {
+      type: 'string',
+      enum: META_INSIGHT_LEVELS,
+      description:
+        'Insight aggregation level. Use campaign for campaigns, adset for ad sets, or ad for ads. Defaults to ad.',
     },
     limit: {
       type: 'integer',
@@ -125,6 +138,16 @@ function parseGraphVersion(value) {
   return getMetaGraphVersion(value);
 }
 
+function parseInsightLevel(value) {
+  if (value === undefined || value === null || value === '') {
+    return DEFAULT_META_INSIGHT_LEVEL;
+  }
+  if (!META_INSIGHT_LEVELS.includes(value)) {
+    throw new Error('level must be one of campaign, adset, or ad.');
+  }
+  return value;
+}
+
 function extractNextAfter(payload) {
   const after = payload?.paging?.cursors?.after;
   return typeof after === 'string' && after.length > 0 ? after : undefined;
@@ -133,9 +156,9 @@ function extractNextAfter(payload) {
 class MetaAdsGetInsights extends Tool {
   name = 'meta_ads_get_insights';
   description =
-    'Read-only Meta Graph API tool for active ad-level insights. ' +
+    'Read-only Meta Graph API tool for campaign, ad set, or active ad-level insights. ' +
     'Requires an accessible project with Meta Ads credentials. ' +
-    'Always queries active ads with fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas.';
+    'Defaults to the configured project ad account and supports level campaign, adset, or ad.';
 
   schema = metaAdsGetInsightsJsonSchema;
 
@@ -196,11 +219,11 @@ class MetaAdsGetInsights extends Tool {
     return { accessToken: credentials.accessToken, adAccountId: resolvedAdAccountId };
   }
 
-  async fetchPage({ accessToken, graphVersion, adAccountId, since, until, limit, after }) {
+  async fetchPage({ accessToken, graphVersion, adAccountId, since, until, level, limit, after }) {
     const params = {
-      level: 'ad',
-      filtering: META_ACTIVE_AD_FILTERING,
-      fields: META_INSIGHTS_FIELDS,
+      level,
+      ...(level === 'ad' ? { filtering: META_ACTIVE_AD_FILTERING } : {}),
+      fields: META_INSIGHTS_FIELDS_BY_LEVEL[level],
       time_range: JSON.stringify({ since, until }),
       limit,
       ...(after ? { after } : {}),
@@ -210,7 +233,7 @@ class MetaAdsGetInsights extends Tool {
       token: accessToken,
       params,
       graphVersion,
-      resourceLabel: 'ad insights',
+      resourceLabel: `${level} insights`,
     });
     return {
       ok: true,
@@ -232,6 +255,7 @@ class MetaAdsGetInsights extends Tool {
 
       const limit = parsePositiveInteger(args.limit, DEFAULT_LIMIT, MAX_LIMIT);
       const maxPages = parsePositiveInteger(args.max_pages, DEFAULT_MAX_PAGES, MAX_PAGES);
+      const level = parseInsightLevel(args.level);
       const graphVersion = parseGraphVersion(args.graph_version);
       let nextAfter =
         typeof args.after === 'string' && args.after.length > 0 ? args.after : undefined;
@@ -249,6 +273,7 @@ class MetaAdsGetInsights extends Tool {
           adAccountId: metaAccess.adAccountId,
           since,
           until,
+          level,
           limit,
           after: nextAfter,
         });
@@ -271,7 +296,7 @@ class MetaAdsGetInsights extends Tool {
         graphVersion,
         since,
         until,
-        level: 'ad',
+        level,
         rows: data.length,
         pagesFetched,
         hasMore: Boolean(nextAfter),
