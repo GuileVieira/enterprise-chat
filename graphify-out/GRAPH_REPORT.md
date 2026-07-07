@@ -1,280 +1,447 @@
-# Graph Report - packages/client  (2026-07-06)
+# Graph Report - .  (2026-07-07)
 
 ## Corpus Check
-- Corpus is ~47,742 words - fits in a single context window. You may not need a graph.
+- 84 files · ~94,293 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 810 nodes · 1319 edges · 110 communities (86 shown, 24 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 11 edges (avg confidence: 0.53)
+- 1601 nodes · 3033 edges · 75 communities (64 shown, 11 thin omitted)
+- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 76 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Enums Menus Types|Enums Menus Types]]
-- [[_COMMUNITY_Package Peer Dependencies|Package Peer Dependencies]]
-- [[_COMMUNITY_Resizable Icon Components|Resizable Icon Components]]
-- [[_COMMUNITY_Test Build Dependencies|Test Build Dependencies]]
-- [[_COMMUNITY_Dialog Button Components|Dialog Button Components]]
-- [[_COMMUNITY_Theme Selector State|Theme Selector State]]
-- [[_COMMUNITY_Package Exports Config|Package Exports Config]]
-- [[_COMMUNITY_Input Badge Components|Input Badge Components]]
-- [[_COMMUNITY_CloudFront Image Cookies|CloudFront Image Cookies]]
-- [[_COMMUNITY_TypeScript Compiler Config|TypeScript Compiler Config]]
-- [[_COMMUNITY_Data Table Core|Data Table Core]]
-- [[_COMMUNITY_Form Utility Components|Form Utility Components]]
-- [[_COMMUNITY_Data Table Error Boundary|Data Table Error Boundary]]
-- [[_COMMUNITY_Dropdown Menu Components|Dropdown Menu Components]]
-- [[_COMMUNITY_Checkbox Table Components|Checkbox Table Components]]
-- [[_COMMUNITY_Pixel Card Animation|Pixel Card Animation]]
-- [[_COMMUNITY_Dynamic Theme System|Dynamic Theme System]]
-- [[_COMMUNITY_Split Text Segmentation|Split Text Segmentation]]
-- [[_COMMUNITY_Test TypeScript Config|Test TypeScript Config]]
-- [[_COMMUNITY_Alert Dialog Components|Alert Dialog Components]]
-- [[_COMMUNITY_Combobox Select Components|Combobox Select Components]]
-- [[_COMMUNITY_Form Input Components|Form Input Components]]
-- [[_COMMUNITY_Avatar Skeleton Hooks|Avatar Skeleton Hooks]]
-- [[_COMMUNITY_Pagination Button Variants|Pagination Button Variants]]
-- [[_COMMUNITY_Combobox Resize Tests|Combobox Resize Tests]]
-- [[_COMMUNITY_Data Table Types|Data Table Types]]
-- [[_COMMUNITY_Old Theme Context|Old Theme Context]]
-- [[_COMMUNITY_Breadcrumb Components|Breadcrumb Components]]
-- [[_COMMUNITY_Data Table Hooks|Data Table Hooks]]
-- [[_COMMUNITY_Animated Tabs Component|Animated Tabs Component]]
-- [[_COMMUNITY_Multi Select Component|Multi Select Component]]
-- [[_COMMUNITY_Jest Browser Mocks|Jest Browser Mocks]]
-- [[_COMMUNITY_Data Table Tests|Data Table Tests]]
-- [[_COMMUNITY_Hover Info Cards|Hover Info Cards]]
-- [[_COMMUNITY_Input OTP Components|Input OTP Components]]
-- [[_COMMUNITY_Tailwind Color Config|Tailwind Color Config]]
-- [[_COMMUNITY_Accordion Components|Accordion Components]]
-- [[_COMMUNITY_Switch Components|Switch Components]]
-- [[_COMMUNITY_Tabs Components|Tabs Components]]
-- [[_COMMUNITY_Tag Components|Tag Components]]
-- [[_COMMUNITY_Tooltip Components|Tooltip Components]]
-- [[_COMMUNITY_File Upload Component|File Upload Component]]
-- [[_COMMUNITY_Filter Input Component|Filter Input Component]]
-- [[_COMMUNITY_Secret Input Component|Secret Input Component]]
-- [[_COMMUNITY_Slider Component|Slider Component]]
-- [[_COMMUNITY_Textarea Component|Textarea Component]]
-- [[_COMMUNITY_Edit Icon|Edit Icon]]
-- [[_COMMUNITY_Gear Icon|Gear Icon]]
-- [[_COMMUNITY_Save Icon|Save Icon]]
-- [[_COMMUNITY_Speech Icon|Speech Icon]]
-- [[_COMMUNITY_Switch Icon|Switch Icon]]
-- [[_COMMUNITY_Question Mark Icon|Question Mark Icon]]
-- [[_COMMUNITY_BedrockIcon Component|BedrockIcon Component]]
-- [[_COMMUNITY_Blocks Code|Blocks Code]]
-- [[_COMMUNITY_CheckMark Code|CheckMark Code]]
-- [[_COMMUNITY_Clipboard Code|Clipboard Code]]
-- [[_COMMUNITY_GoogleIconChat Code|GoogleIconChat Code]]
-- [[_COMMUNITY_LightningIcon Component|LightningIcon Component]]
-- [[_COMMUNITY_PaLMinimalIcon Component|PaLMinimalIcon Component]]
-- [[_COMMUNITY_Plugin Code|Plugin Code]]
-- [[_COMMUNITY_VolumeMuteIcon Component|VolumeMuteIcon Component]]
-- [[_COMMUNITY_Dynamic Column Widths|Dynamic Column Widths]]
+- [[_COMMUNITY_Shared Data Service|Shared Data Service]]
+- [[_COMMUNITY_Project Zod Schemas|Project Zod Schemas]]
+- [[_COMMUNITY_Shared Query Types|Shared Query Types]]
+- [[_COMMUNITY_API Endpoint Builders|API Endpoint Builders]]
+- [[_COMMUNITY_Meta Graph Client|Meta Graph Client]]
+- [[_COMMUNITY_Meta Ads API Routes|Meta Ads API Routes]]
+- [[_COMMUNITY_Permission Schemas|Permission Schemas]]
+- [[_COMMUNITY_Meta Ads Backend Engine|Meta Ads Backend Engine]]
+- [[_COMMUNITY_Frontend Mutations|Frontend Mutations]]
+- [[_COMMUNITY_Meta Ads Formatting|Meta Ads Formatting]]
+- [[_COMMUNITY_Budget Recommendation Core|Budget Recommendation Core]]
+- [[_COMMUNITY_Ad Preview Rendering|Ad Preview Rendering]]
+- [[_COMMUNITY_Overview State Tables|Overview State Tables]]
+- [[_COMMUNITY_Rule Dialog Fields|Rule Dialog Fields]]
+- [[_COMMUNITY_Meta Ads Query Cache|Meta Ads Query Cache]]
+- [[_COMMUNITY_BI Ranking Dialogs|BI Ranking Dialogs]]
+- [[_COMMUNITY_Rule Performance Aggregation|Rule Performance Aggregation]]
+- [[_COMMUNITY_BI Ranking Logic|BI Ranking Logic]]
+- [[_COMMUNITY_Rules Hook State|Rules Hook State]]
+- [[_COMMUNITY_Campaign Snapshot Builder|Campaign Snapshot Builder]]
+- [[_COMMUNITY_Draft Confirmation Dialogs|Draft Confirmation Dialogs]]
+- [[_COMMUNITY_Meta Ads UI Primitives|Meta Ads UI Primitives]]
+- [[_COMMUNITY_Goal Progress Helpers|Goal Progress Helpers]]
+- [[_COMMUNITY_BI Workspace Adapter|BI Workspace Adapter]]
+- [[_COMMUNITY_Evolution Views|Evolution Views]]
+- [[_COMMUNITY_Creative Asset Mapping|Creative Asset Mapping]]
+- [[_COMMUNITY_Budget Editor Rules UI|Budget Editor Rules UI]]
+- [[_COMMUNITY_Dialogs Selection Layer|Dialogs Selection Layer]]
+- [[_COMMUNITY_Settings Sanitizer|Settings Sanitizer]]
+- [[_COMMUNITY_Run Analysis UI|Run Analysis UI]]
+- [[_COMMUNITY_Evolution Dashboard|Evolution Dashboard]]
+- [[_COMMUNITY_Draft Settings Persistence|Draft Settings Persistence]]
+- [[_COMMUNITY_Role Update Client|Role Update Client]]
+- [[_COMMUNITY_Trend Aggregation|Trend Aggregation]]
+- [[_COMMUNITY_Overview Adapter|Overview Adapter]]
+- [[_COMMUNITY_Settings Drawer|Settings Drawer]]
+- [[_COMMUNITY_Meta Ads Endpoints|Meta Ads Endpoints]]
+- [[_COMMUNITY_Project Mongo Schema|Project Mongo Schema]]
+- [[_COMMUNITY_Period Controls|Period Controls]]
+- [[_COMMUNITY_Meta Ads Constants|Meta Ads Constants]]
+- [[_COMMUNITY_Rule Audit History|Rule Audit History]]
+- [[_COMMUNITY_deletePrompt|deletePrompt]]
+- [[_COMMUNITY_Effective Rules Validation|Effective Rules Validation]]
+- [[_COMMUNITY_Error Run Hook|Error Run Hook]]
+- [[_COMMUNITY_Entity Action Hook|Entity Action Hook]]
+- [[_COMMUNITY_Overview Rows Table|Overview Rows Table]]
+- [[_COMMUNITY_assistants|assistants]]
+- [[_COMMUNITY_History Panel|History Panel]]
+- [[_COMMUNITY_Traffic Agent Hook|Traffic Agent Hook]]
+- [[_COMMUNITY_AI Performance Workspace|AI Performance Workspace]]
+- [[_COMMUNITY_Overview Workspace|Overview Workspace]]
+- [[_COMMUNITY_Recommendations Panel|Recommendations Panel]]
+- [[_COMMUNITY_Project Detail Mount|Project Detail Mount]]
+- [[_COMMUNITY_Production Config Meta Ads|Production Config Meta Ads]]
+- [[_COMMUNITY_getSkill|getSkill]]
+- [[_COMMUNITY_useMetaAdsPeriodFilter|useMetaAdsPeriodFilter]]
+- [[_COMMUNITY_adminConfigActive|adminConfigActive]]
+- [[_COMMUNITY_addTagToConversation|addTagToConversation]]
+- [[_COMMUNITY_adminFunctionById|adminFunctionById]]
+- [[_COMMUNITY_adminGroupById|adminGroupById]]
+- [[_COMMUNITY_adminTenants|adminTenants]]
+- [[_COMMUNITY_agents|agents]]
+- [[_COMMUNITY_buildQuery|buildQuery]]
+- [[_COMMUNITY_deleteCategory|deleteCategory]]
+- [[_COMMUNITY_memories|memories]]
+- [[_COMMUNITY_deleteSkill|deleteSkill]]
+- [[_COMMUNITY_BedrockProviders|BedrockProviders]]
+- [[_COMMUNITY_useDeleteConversationTagMutation|useDeleteConversationTagMutation]]
+- [[_COMMUNITY_useTagConversationMutation|useTagConversationMutation]]
+- [[_COMMUNITY_adminSecretByName|adminSecretByName]]
+- [[_COMMUNITY_adminUsers|adminUsers]]
+- [[_COMMUNITY_deletePromptGroup|deletePromptGroup]]
+- [[_COMMUNITY_postCategory|postCategory]]
+- [[_COMMUNITY_postPrompt|postPrompt]]
+- [[_COMMUNITY_updatePromptGroup|updatePromptGroup]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 161 edges
-2. `compilerOptions` - 20 edges
-3. `useLocalize()` - 16 edges
-4. `installCloudFrontImageRetry()` - 9 edges
-5. `scripts` - 8 edges
-6. `Pixel` - 8 edges
-7. `IThemeRGB` - 8 edges
-8. `compilerOptions` - 8 edges
-9. `OptionWithIcon` - 7 edges
-10. `DataTableErrorBoundaryInner` - 7 edges
+1. `formatMoney()` - 52 edges
+2. `Localize` - 37 edges
+3. `analyzeProject()` - 34 edges
+4. `formatMetric()` - 33 edges
+5. `getProjectMetaAdsStatus()` - 26 edges
+6. `getResultTypeLabel()` - 23 edges
+7. `getObjectiveLabel()` - 20 edges
+8. `calculateMetrics()` - 18 edges
+9. `ProjectMetaAdsPanel()` - 17 edges
+10. `getProjectMetaAdsRankings()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `AlertDialogPortal()` --calls--> `cn()`  [EXTRACTED]
-  src/components/AlertDialog.tsx → src/utils/utils.ts
-- `AlertDialogHeader()` --calls--> `cn()`  [EXTRACTED]
-  src/components/AlertDialog.tsx → src/utils/utils.ts
-- `AlertDialogFooter()` --calls--> `cn()`  [EXTRACTED]
-  src/components/AlertDialog.tsx → src/utils/utils.ts
-- `AnimatedTabs()` --calls--> `cn()`  [EXTRACTED]
-  src/components/AnimatedTabs.tsx → src/utils/utils.ts
-- `Badge()` --calls--> `cn()`  [EXTRACTED]
-  src/components/Badge.tsx → src/utils/utils.ts
+- `useMetaAdsOverviewAdapter()` --indirect_call--> `formatMetric()`  [INFERRED]
+  client/src/components/Project/metaAds/hooks/useMetaAdsOverviewAdapter.tsx → client/src/components/Project/metaAds/formatters.ts
+- `ProjectMetaAdsPanel()` --calls--> `useMetaAdsBiAdapter()`  [EXTRACTED]
+  client/src/components/Project/ProjectMetaAdsPanel.tsx → client/src/components/Project/metaAds/hooks/useMetaAdsBiAdapter.tsx
+- `ProjectMetaAdsPanel()` --calls--> `useMetaAdsBiWorkspace()`  [EXTRACTED]
+  client/src/components/Project/ProjectMetaAdsPanel.tsx → client/src/components/Project/metaAds/hooks/useMetaAdsBiWorkspace.ts
+- `ProjectMetaAdsPanel()` --calls--> `useMetaAdsEntityActions()`  [EXTRACTED]
+  client/src/components/Project/ProjectMetaAdsPanel.tsx → client/src/components/Project/metaAds/hooks/useMetaAdsEntityActions.ts
+- `ProjectMetaAdsPanel()` --calls--> `useMetaAdsOverviewAdapter()`  [EXTRACTED]
+  client/src/components/Project/ProjectMetaAdsPanel.tsx → client/src/components/Project/metaAds/hooks/useMetaAdsOverviewAdapter.tsx
 
 ## Import Cycles
 - None detected.
 
 ## Hyperedges (group relationships)
-- **Dynamic Theme Three Layer Architecture** — packages_client_src_theme_readme_css_variables_layer, packages_client_src_theme_readme_themeprovider, packages_client_src_theme_readme_tailwind_layer [EXTRACTED 1.00]
+- **Meta Ads Feature Surface** — config_librechat_prod_meta_ads_tools, config_librechat_prod_meta_ads_interface, config_librechat_prod_commented_meta_ads_mcp_server [INFERRED 0.85]
 
-## Communities (110 total, 24 thin omitted)
+## Communities (75 total, 11 thin omitted)
 
-### Community 0 - "Enums Menus Types"
-Cohesion: 0.05
-Nodes (38): ESide, NotificationSeverity, MenuItemProps, RenderProp, DropdownValueSetter, MentionOption, Option, OptionWithIcon (+30 more)
+### Community 1 - "Project Zod Schemas"
+Cohesion: 0.02
+Nodes (97): AgentProvider, agentsBaseSchema, agentsSchema, agentsSettings, ANTHROPIC_MAX_OUTPUT, anthropicBaseSchema, AnthropicEffort, anthropicSchema (+89 more)
 
-### Community 1 - "Package Peer Dependencies"
-Cohesion: 0.04
-Nodes (46): peerDependencies, @ariakit/react, @ariakit/react-core, class-variance-authority, clsx, @dicebear/collection, @dicebear/core, dompurify (+38 more)
+### Community 2 - "Shared Query Types"
+Cohesion: 0.02
+Nodes (104): AccessRole, AccessRolesResponse, AdminConfig, AdminConfigListResponse, AdminConfigResponse, AdminGroup, AdminOverviewResponse, AdminUser (+96 more)
 
-### Community 2 - "Resizable Icon Components"
-Cohesion: 0.08
-Nodes (20): ResizableHandle(), ResizableHandleAlt(), ResizablePanelGroup(), AnthropicIcon(), AssistantIcon(), AzureMinimalIcon(), BirthdayIcon(), CircleHelpIcon() (+12 more)
-
-### Community 3 - "Test Build Dependencies"
+### Community 4 - "Meta Graph Client"
 Cohesion: 0.06
-Nodes (36): devDependencies, @babel/core, babel-jest, @babel/preset-env, @babel/preset-react, @babel/preset-typescript, caniuse-lite, concat-with-sourcemaps (+28 more)
+Nodes (72): addActionValues(), addUtcDays(), aggregateInsightRows(), centsToDailyBudget(), clearMetaGraphReadCacheForTests(), copyMetaEntity(), createMetaGraphError(), createMetaGraphTimeoutError() (+64 more)
 
-### Community 4 - "Dialog Button Components"
+### Community 5 - "Meta Ads API Routes"
+Cohesion: 0.06
+Nodes (47): ACCOUNT_PROFILES, ANALYSIS_PRESETS, {
+  analyzeProject,
+  applyManualBudgetChange,
+  applyRecommendation,
+  duplicateProjectMetaAdsEntity,
+  getProjectMetaAdsPerformance,
+  getProjectMetaAdsRankings,
+  getProjectMetaAdsRuleHistory,
+  getProjectMetaAdsRulePerformance,
+  getProjectMetaAdsStatus,
+  recordProjectMetaAdsRuleChange,
+  updateProjectMetaAdsEntityStatus,
+}, applyMetaAdsRuleAudit(), buildRuleAudit(), {
+  canAccessProjectResource,
+}, CREATIVE_RULE_LIMITS, DEFAULT_CREATIVE_RULES (+39 more)
+
+### Community 6 - "Permission Schemas"
+Cohesion: 0.06
+Nodes (46): agentPermissionsSchema, bookmarkPermissionsSchema, fileCitationsPermissionsSchema, fileSearchPermissionsSchema, INTERFACE_PERMISSION_FIELDS, marketplacePermissionsSchema, mcpServersPermissionsSchema, memoryPermissionsSchema (+38 more)
+
+### Community 7 - "Meta Ads Backend Engine"
 Cohesion: 0.07
-Nodes (29): Button, ButtonProps, DialogButton, DialogClose, DialogContent, DialogContentProps, DialogDescription, DialogFooter() (+21 more)
+Nodes (42): ACTION_COOLDOWN_MINUTES, addResultTypeSummary(), ANALYSIS_PRESETS, buildRuleItemChanges(), CANONICAL_RESULT_TYPES, {
+  copyMetaEntity,
+  getAdAccountCurrency,
+  getEntityDailyBudget,
+  getMetaGraphVersion,
+  isSupportedMetaGraphVersion,
+  listAds,
+  listAdInsights,
+  listCampaignInsights,
+  listCampaigns,
+  listAdSetInsights,
+  listAdSets,
+  metaPost,
+  updateMetaEntityName,
+  updateMetaEntityStatus,
+}, createResultTypeSummaryItem(), CREATIVE_RULE_LIMITS (+34 more)
 
-### Community 5 - "Theme Selector State"
+### Community 9 - "Meta Ads Formatting"
 Cohesion: 0.12
-Nodes (26): Theme(), ThemeSelector(), ThemeType, Window, themeColorsAtom, themeModeAtom, themeNameAtom, getInitialTheme() (+18 more)
+Nodes (36): formatMetric(), formatMoney(), getRuleTargetMetric(), getRuleTargetMetricValue(), buildBiReportCards(), buildMetaAdsSummaryCardItems(), getMonthlyBudgetContext(), createRuleRowFromPerformance() (+28 more)
 
-### Community 6 - "Package Exports Config"
-Cohesion: 0.08
-Nodes (24): description, exports, files, import, main, module, name, repository (+16 more)
+### Community 10 - "Budget Recommendation Core"
+Cohesion: 0.11
+Nodes (33): aggregateInsightRows(), analyzeProject(), applyManualBudgetChange(), applyMonthlyBudgetGuard(), applyRecommendation(), calculateBudgetDelta(), dailyBudgetToCents(), DEFAULT_RULES (+25 more)
 
-### Community 7 - "Input Badge Components"
-Cohesion: 0.08
-Nodes (13): Badge(), BadgeProps, CheckboxButton, InputNumber, Progress, Separator, ContinueIcon(), ListeningIcon() (+5 more)
-
-### Community 8 - "CloudFront Image Cookies"
-Cohesion: 0.15
-Nodes (21): CloudFrontCookieRefreshConfig, CloudFrontCookieRefreshOptions, CloudFrontCookieRefreshResponse, configureCloudFrontCookieRefresh(), dispatchImageError(), forwardedImageErrors, getBaseUrl(), getRefreshConfig() (+13 more)
-
-### Community 9 - "TypeScript Compiler Config"
-Cohesion: 0.08
-Nodes (23): compilerOptions, allowSyntheticDefaultImports, declaration, declarationDir, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, jsx (+15 more)
-
-### Community 10 - "Data Table Core"
-Cohesion: 0.15
-Nodes (19): DataTableProps, DeleteButton, getColumnStyle(), MemoizedTableRow, SelectionCheckbox, TableColumn, TableRowComponent(), DataTable() (+11 more)
-
-### Community 11 - "Form Utility Components"
+### Community 11 - "Ad Preview Rendering"
 Cohesion: 0.13
-Nodes (11): AnimatedSearchInput(), DelayedRender(), DelayedRenderProps, Option, Radio, RadioProps, useDelayedRender(), TranslationKeys (+3 more)
+Nodes (28): getAdThumbnailUrl(), AdPreviewMedia(), formatIntegerMetric(), MetaAdsOverviewActionCell(), createMetaAdsAdRenderers(), metricCell(), renderAdCell(), textCell() (+20 more)
 
-### Community 12 - "Data Table Error Boundary"
-Cohesion: 0.14
-Nodes (9): DataTableErrorBoundary(), DataTableErrorBoundaryInner, DataTableErrorBoundaryInnerProps, DataTableErrorBoundaryProps, DataTableErrorBoundaryState, createLogFunction(), LogFunction, logger (+1 more)
+### Community 12 - "Overview State Tables"
+Cohesion: 0.13
+Nodes (29): ecommerceTableViewColumns, tableViewColumns, buildMetaAdsOverviewState(), buildVisibleCampaignSummary(), calculateConversionValue(), filterAndSortCampaigns(), getScopedObjectiveSummary(), getSummaryMetricContext() (+21 more)
 
-### Community 13 - "Dropdown Menu Components"
-Cohesion: 0.12
-Nodes (9): DropdownMenuCheckboxItem(), DropdownMenuContent(), DropdownMenuItem(), DropdownMenuLabel(), DropdownMenuRadioItem(), DropdownMenuSeparator(), DropdownMenuShortcut(), DropdownMenuSubContent() (+1 more)
+### Community 13 - "Rule Dialog Fields"
+Cohesion: 0.09
+Nodes (28): RuleFieldLabel(), analysisPresetOptions, getCreativeRuleNumberMin(), getInvalidInputClassName(), getNumberErrorKey(), getRuleNumberMax(), getRuleNumberMin(), GuardrailKey (+20 more)
 
-### Community 14 - "Checkbox Table Components"
+### Community 14 - "Meta Ads Query Cache"
+Cohesion: 0.07
+Nodes (6): CachedProjectMetaAdsStatus, getProjectMetaAdsStatusCacheKey(), isProjectMetaAdsStatus(), readCachedProjectMetaAdsStatus(), useProjectMetaAdsQuery(), writeCachedProjectMetaAdsStatus()
+
+### Community 15 - "BI Ranking Dialogs"
 Cohesion: 0.16
-Nodes (12): BaseCheckboxProps, Checkbox, CheckboxProps, ForwardTableRowComponent, ForwardTableRowComponentType, GenericRowProps, MemoizedTableRow, SelectionCheckbox (+4 more)
+Nodes (20): cleanRankName(), getSortIndicator(), MetaAdsBiRankingCard(), sortColumns, getAdPreviewFields(), getAdPreviewMetrics(), getBiRankDetails(), getBiRankLevelLabel() (+12 more)
 
-### Community 15 - "Pixel Card Animation"
-Cohesion: 0.24
-Nodes (6): clamp(), getEffectiveSpeed(), Pixel, PixelCard(), PixelCardProps, VARIANTS
-
-### Community 16 - "Dynamic Theme System"
+### Community 16 - "Rule Performance Aggregation"
 Cohesion: 0.15
-Nodes (13): CSS Variables Layer, Dark/Light Mode, Dynamic Color Theming, Dynamic Theme System, Environment Variable Themes, IThemeRGB, localStorage Persistence, RGB Format Requirements (+5 more)
+Nodes (25): averageMetric(), buildEntityStatusSummary(), buildPerformanceSummary(), buildRulePerformanceEntities(), getActionPrimaryMetric(), getAwaitableRuleStatus(), getComparableMetricValue(), getConversionEvidence() (+17 more)
 
-### Community 17 - "Split Text Segmentation"
-Cohesion: 0.18
-Nodes (9): Intl, IntlSegmenter, IntlSegmenterConstructor, SegmentData, SegmenterOptions, Segments, splitGraphemes(), SplitText() (+1 more)
+### Community 17 - "BI Ranking Logic"
+Cohesion: 0.19
+Nodes (20): buildMetaAdsBiRankings(), collectAdThumbnails(), getBiRankingNumericValue(), getRankEfficiency(), getRankMetricForResultType(), getSortedBiRankingItems(), hasRelevantRankVolume(), hasValidRankMetric() (+12 more)
 
-### Community 19 - "Test TypeScript Config"
-Cohesion: 0.17
-Nodes (11): compilerOptions, declaration, declarationDir, declarationMap, noEmit, outDir, rootDir, types (+3 more)
+### Community 18 - "Rules Hook State"
+Cohesion: 0.19
+Nodes (19): CreativeRuleChangeKey, ShowToast, ToastStatus, useMetaAdsRules(), UseMetaAdsRulesParams, accountProfileRules, getRuleOverrideKey(), hasRulePerformanceMetric() (+11 more)
 
-### Community 20 - "Alert Dialog Components"
-Cohesion: 0.18
-Nodes (10): AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay, AlertDialogPortal() (+2 more)
+### Community 19 - "Campaign Snapshot Builder"
+Cohesion: 0.13
+Nodes (21): AGGREGATE_RESULT_TYPES, buildCampaignSummaries(), buildCreativePauseRecommendations(), buildSnapshotsFromInsights(), calculateMetrics(), calculateRoas(), canonicalizeMetaActionType(), centsToDailyBudget() (+13 more)
 
-### Community 21 - "Combobox Select Components"
-Cohesion: 0.24
-Nodes (9): ComboboxComponent(), SelectContent, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger (+1 more)
+### Community 20 - "Draft Confirmation Dialogs"
+Cohesion: 0.15
+Nodes (13): ConfirmationButtons, ConfirmationChrome, MetaAdsDiscardDraftDialog(), MetaAdsDuplicateEntityDialog(), MetaAdsEntityStatusConfirmationBanner(), MetaAdsPublishDraftDialog(), MetaAdsCredentialsDialog(), MetaAdsDialogChrome (+5 more)
 
-### Community 22 - "Form Input Components"
-Cohesion: 0.29
-Nodes (6): FormInput(), Input, InputProps, InputWithDropdown, InputWithDropdownProps, Label
+### Community 21 - "Meta Ads UI Primitives"
+Cohesion: 0.10
+Nodes (16): badgeClassNames, BadgeVariant, buttonClassNames, ButtonVariant, MetaAdsActionMenuButtonProps, MetaAdsBadgeProps, MetaAdsButtonProps, MetaAdsFieldProps (+8 more)
 
-### Community 23 - "Avatar Skeleton Hooks"
-Cohesion: 0.24
-Nodes (6): Avatar(), AvatarProps, Skeleton(), avatarCache, useAvatar(), UserIcon()
+### Community 22 - "Goal Progress Helpers"
+Cohesion: 0.16
+Nodes (20): addDays(), buildAdDiagnostics(), buildGoalProgress(), buildMonthlyBudgetState(), buildMonthlyBudgetStatus(), buildProgressItem(), calculateRoasProgress(), countAttachedAds() (+12 more)
 
-### Community 24 - "Pagination Button Variants"
-Cohesion: 0.22
-Nodes (9): buttonVariants, Pagination(), PaginationContent, PaginationEllipsis(), PaginationItem, PaginationLink(), PaginationLinkProps, PaginationNext() (+1 more)
+### Community 23 - "BI Workspace Adapter"
+Cohesion: 0.16
+Nodes (15): MetaAdsBiControlsPanel(), MetaAdsBiWorkspace(), MetaAdsBiWorkspaceProps, metaAdsInput, cleanDashboardName(), filterBiRankingItems(), getCampaignResultMetrics(), MetaAdsBiWorkspaceProps (+7 more)
 
-### Community 25 - "Combobox Resize Tests"
-Cohesion: 0.20
-Nodes (4): CapturedObserver, CapturingResizeObserver, items, observers
-
-### Community 26 - "Data Table Types"
-Cohesion: 0.24
-Nodes (6): DataTableConfig, DataTableProps, DataTableSearchProps, ProcessedDataRow, TableColumnDef, DataTableSearch
-
-### Community 27 - "Old Theme Context"
-Cohesion: 0.29
-Nodes (8): defaultContextValue, isDark(), ProviderValue, ThemeContext, ThemeProvider(), fontSizeAtom, applyFontSize(), getInitialTheme()
-
-### Community 28 - "Breadcrumb Components"
+### Community 24 - "Evolution Views"
 Cohesion: 0.25
-Nodes (7): Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator()
+Nodes (13): getDeltaEntityId(), getDeltaEntityName(), getEvolutionSeriesTotal(), hasMeaningfulDelta(), matchesBiSeriesFilters(), getEvolutionDeltaClass(), MetaAdsEvolutionDeltaTables(), buildMetaAdsEvolutionState() (+5 more)
 
-### Community 29 - "Data Table Hooks"
-Cohesion: 0.46
-Nodes (6): DataTable(), useColumnStyles(), useDebounced(), useKeyboardNavigation(), useOptimizedRowSelection(), TableColumn
+### Community 25 - "Creative Asset Mapping"
+Cohesion: 0.17
+Nodes (16): buildAdsManagerUrl(), buildAdSummaries(), getAssetFeedCallToActionType(), getAssetFeedLinkUrl(), getAssetFeedMediaUrl(), getAssetFeedValue(), getAssetFeedVideoId(), getCreativeLinkData() (+8 more)
 
-### Community 30 - "Animated Tabs Component"
+### Community 26 - "Budget Editor Rules UI"
+Cohesion: 0.17
+Nodes (13): BudgetEditorChrome, BudgetEditorControls, MetaAdsBudgetEditorDialog(), buildBudgetReferences(), BudgetEditor, EntityStatusConfirmation, MetaAdsAd, MetaAdsAdSet (+5 more)
+
+### Community 27 - "Dialogs Selection Layer"
+Cohesion: 0.19
+Nodes (13): metaAdsInputLg, metaAdsLabel, metaAdsModalTile, metaAdsPrimaryButton, MetaAdsDialogsLayer(), useMetaAdsSelection(), UseMetaAdsSelectionInput, useMetaAdsTableScrollSync() (+5 more)
+
+### Community 28 - "Settings Sanitizer"
+Cohesion: 0.27
+Nodes (13): getGraphVersionOptions(), isSupportedGraphVersion(), MonthlyBudgetResolution, MonthlyBudgetValues, normalizeSettings(), resolveMonthlyBudgetForMonth(), sanitizeMetaAdsEditableSettings(), stripMetaAdsCreativeCooldown() (+5 more)
+
+### Community 29 - "Run Analysis UI"
+Cohesion: 0.18
+Nodes (12): workspaceTabOptions, Localize, MetaAdsRunAnalysisButton(), MetaAdsRunAnalysisButtonProps, MetaAdsRunAnalysisStatus(), MetaAdsDraftStatus, MetaAdsDraftSummaryItem, WorkspaceTab (+4 more)
+
+### Community 30 - "Evolution Dashboard"
+Cohesion: 0.22
+Nodes (12): EvolutionPoint, EvolutionSeriesPath, EvolutionTooltip(), getEvolutionTooltipTransform(), MetaAdsEvolutionDashboard(), formatEvolutionMetricValue(), formatTrendDate(), getEvolutionMetricLabel() (+4 more)
+
+### Community 31 - "Draft Settings Persistence"
+Cohesion: 0.24
+Nodes (13): buildManualBudgetDraftDetails(), clearStoredSettingsDraft(), getManualBudgetDraftKey(), getManualBudgetDraftStorageKey(), getSettingsDraftStorageKey(), readStoredManualBudgetDrafts(), ShowToast, ToastStatus (+5 more)
+
+### Community 32 - "Role Update Client"
+Cohesion: 0.14
+Nodes (14): getRole(), roles(), updateAgentPermissions(), updateFileCitationsPermissions(), updateFileSearchPermissions(), updateMarketplacePermissions(), updateMCPServersPermissions(), updateMemoryPermissions() (+6 more)
+
+### Community 33 - "Trend Aggregation"
+Cohesion: 0.23
+Nodes (13): addFrequencySample(), addSourceResultTypeSummaries(), buildAdSeriesFromInsights(), buildCampaignMetadata(), buildCampaignTrend(), buildDashboardSummary(), buildEvolutionDelta(), buildObjectiveSummary() (+5 more)
+
+### Community 34 - "Overview Adapter"
+Cohesion: 0.21
+Nodes (11): metaAdsButton, metaAdsGhostButton, getGoalProgressContext(), MetaAdsOverviewWorkspaceProps, useMetaAdsOverviewAdapter(), UseMetaAdsOverviewAdapterParams, getMetaAdsTableRowClass(), getNextMetaAdsSortDirection() (+3 more)
+
+### Community 35 - "Settings Drawer"
+Cohesion: 0.26
+Nodes (12): getAdAccountDigits(), toAdAccountId(), formatMonthLabel(), formatMonthValue(), getCurrentMonthValue(), MetaAdsSettingsDrawer(), monthLabels, ParsedMonth (+4 more)
+
+### Community 36 - "Meta Ads Endpoints"
+Cohesion: 0.15
+Nodes (13): projectById(), projectMetaAds(), projectMetaAdsApply(), projectMetaAdsBudget(), projectMetaAdsDuplicate(), projectMetaAdsEntityStatus(), projectMetaAdsPerformance(), projectMetaAdsRankings() (+5 more)
+
+### Community 37 - "Project Mongo Schema"
+Cohesion: 0.15
+Nodes (12): ProjectMemorySchema, ProjectMetaAdsClientGoalSchema, ProjectMetaAdsCreativeRulesSchema, ProjectMetaAdsMonthlyBudgetSchema, ProjectMetaAdsRuleAuditSchema, ProjectMetaAdsRuleAuditUserSchema, ProjectMetaAdsRuleGroupSchema, ProjectMetaAdsRuleOverrideSchema (+4 more)
+
+### Community 38 - "Period Controls"
+Cohesion: 0.27
+Nodes (8): tableViewOptions, MetaAdsPeriodControls(), MetaAdsBiRankLevel, PeriodFilter, TableView, MetaAdsField(), MetaAdsInput, MetaAdsSelect
+
+### Community 39 - "Meta Ads Constants"
+Cohesion: 0.18
+Nodes (10): evolutionColors, objectiveLabelKeys, periodFilterOptions, resultTypeLabelKeys, scheduleOptions, tableColumnMap, tableViewMinWidth, DatePreset (+2 more)
+
+### Community 40 - "Rule Audit History"
 Cohesion: 0.29
-Nodes (5): AnimatedTabs(), AnimatedTabsProps, Tab, TabItem, TabPanel
+Nodes (8): formatRuleAuditDate(), formatRuleAuditLine(), formatRuleAuditUser(), formatRuleChangeAction(), formatChangedFields(), formatRuleChangeDate(), MetaAdsRuleHistoryPanel(), MetaAdsRuleAudit
 
-### Community 31 - "Multi Select Component"
-Cohesion: 0.48
-Nodes (6): defaultRender(), getItemLabel(), getItemValue(), MultiSelect(), MultiSelectItem, MultiSelectProps
+### Community 41 - "deletePrompt"
+Cohesion: 0.18
+Nodes (11): deletePrompt(), getAllPromptGroups(), getPrompt(), getPromptGroup(), getPromptGroupsWithFilters(), getPromptsWithFilters(), getRandomPrompts(), prompts() (+3 more)
 
-### Community 35 - "Input OTP Components"
+### Community 42 - "Effective Rules Validation"
+Cohesion: 0.24
+Nodes (10): findRuleGroup(), getEffectiveRuleContext(), getEffectiveRules(), mergeRules(), validateEnabledSections(), validateMetaAdsCreativeRules(), validateMetaAdsRules(), validateNoResultSpendCap() (+2 more)
+
+### Community 43 - "Error Run Hook"
+Cohesion: 0.31
+Nodes (8): formatRequestDetails(), getNumberField(), getRequestErrorMessage(), getStringField(), ToastStatus, useMetaAdsRunAnalysis(), UseMetaAdsRunAnalysisParams, RequestError
+
+### Community 44 - "Entity Action Hook"
+Cohesion: 0.29
+Nodes (9): EntityStatusConfirmation, formatDailyBudgetInput(), getDuplicateName(), parseDailyBudgetInput(), ShowToast, ToastStatus, useMetaAdsEntityActions(), UseMetaAdsEntityActionsParams (+1 more)
+
+### Community 45 - "Overview Rows Table"
+Cohesion: 0.31
+Nodes (8): getCampaignExpanded(), OverviewRowsProps, renderOverviewRows(), getHeaderStickyClass(), MetaAdsOverviewTable(), MetaAdsOverviewTableProps, renderHeaderContent(), SortableHeaderArgs
+
+### Community 46 - "assistants"
+Cohesion: 0.20
+Nodes (10): assistants(), avatar(), files(), getCustomConfigSpeech(), images(), speech(), speechToText(), textToSpeech() (+2 more)
+
+### Community 47 - "History Panel"
+Cohesion: 0.43
+Nodes (6): formatSignedMoney(), formatSignedPercent(), formatChangeDateTime(), getBudgetChangeVisual(), MetaAdsHistoryPanel(), getBudgetChangeDelta()
+
+### Community 48 - "Traffic Agent Hook"
+Cohesion: 0.38
+Nodes (5): createMetaAdsBriefStorageKey(), MetaAdsStatusData, StartupConfigQuery, useMetaAdsTrafficAgent(), UseMetaAdsTrafficAgentInput
+
+### Community 49 - "AI Performance Workspace"
 Cohesion: 0.40
-Nodes (4): InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot
+Nodes (5): formatActionDateTime(), MetaAdsAiPerformanceWorkspace(), MetaAdsPeriodControlProps, MetaAdsMetricCard(), MetaAdsPanel()
 
-### Community 36 - "Tailwind Color Config"
+### Community 50 - "Overview Workspace"
+Cohesion: 0.40
+Nodes (5): MetaAdsOverviewToolbar(), MetaAdsOverviewWorkspace(), MetaAdsOverviewWorkspaceProps, renderSortableHeader(), SortableHeaderArgs
+
+### Community 51 - "Recommendations Panel"
 Cohesion: 0.60
-Nodes (3): createTailwindColors(), withOpacity(), { createTailwindColors }
+Nodes (4): MetaAdsPendingRecommendationsPanel(), MetaAdsPendingRecommendationsPanelProps, canApplyRecommendation(), getRecommendationLabel()
 
-### Community 37 - "Accordion Components"
+### Community 52 - "Project Detail Mount"
+Cohesion: 0.40
+Nodes (5): isProjectTab(), ProjectDetailPage(), Tab, tabIcons, tabs
+
+### Community 53 - "Production Config Meta Ads"
+Cohesion: 0.40
+Nodes (6): Commented Meta Ads MCP Server, Included Tools, Interface, LibreChat Production Config, Meta Ads Interface, Meta Ads Tools
+
+### Community 54 - "getSkill"
+Cohesion: 0.33
+Nodes (6): getSkill(), importSkill(), listSkillsWithFilters(), skillFile(), skillFiles(), skills()
+
+### Community 55 - "useMetaAdsPeriodFilter"
+Cohesion: 1.00
+Nodes (3): useMetaAdsPeriodFilter(), getDateInputDaysAgo(), toDateInputValue()
+
+### Community 56 - "adminConfigActive"
 Cohesion: 0.50
-Nodes (3): AccordionContent, AccordionItem, AccordionTrigger
+Nodes (4): adminConfigActive(), adminConfigBase(), adminConfigByPrincipal(), adminConfigs()
 
-### Community 38 - "Switch Components"
-Cohesion: 0.50
-Nodes (3): BaseSwitchProps, Switch, SwitchProps
-
-### Community 39 - "Tabs Components"
-Cohesion: 0.50
-Nodes (3): TabsContent, TabsList, TabsTrigger
-
-### Community 40 - "Tag Components"
-Cohesion: 0.50
-Nodes (3): Tag, TagPrimitiveRoot, TagProps
-
-### Community 41 - "Tooltip Components"
+### Community 57 - "addTagToConversation"
 Cohesion: 0.67
-Nodes (3): TooltipAnchor, TooltipAnchorProps, TooltipPopup
+Nodes (3): addTagToConversation(), conversationTags(), conversationTagsList()
+
+### Community 58 - "adminFunctionById"
+Cohesion: 0.67
+Nodes (3): adminFunctionById(), adminFunctions(), adminFunctionToggle()
+
+### Community 59 - "adminGroupById"
+Cohesion: 0.67
+Nodes (3): adminGroupById(), adminGroupMembers(), adminGroups()
+
+### Community 60 - "adminTenants"
+Cohesion: 0.67
+Nodes (3): adminTenants(), adminTenantStats(), adminTenantUsers()
+
+### Community 61 - "agents"
+Cohesion: 0.67
+Nodes (3): agents(), cloneAgentToTenant(), revertAgentVersion()
+
+### Community 62 - "buildQuery"
+Cohesion: 0.67
+Nodes (3): buildQuery(), conversations(), messages()
+
+### Community 63 - "deleteCategory"
+Cohesion: 0.67
+Nodes (3): deleteCategory(), getCategories(), updateCategory()
+
+### Community 64 - "memories"
+Cohesion: 0.67
+Nodes (3): memories(), memory(), memoryPreferences()
+
+### Community 65 - "deleteSkill"
+Cohesion: 0.67
+Nodes (3): deleteSkill(), getSkill(), updateSkill()
+
+### Community 66 - "BedrockProviders"
+Cohesion: 0.67
+Nodes (3): BedrockProviders, getModelKey(), getSettingsKeys()
+
+## Ambiguous Edges - Review These
+- `Meta Ads Tools` → `Commented Meta Ads MCP Server`  [AMBIGUOUS]
+  config/librechat.prod.yaml · relation: conceptually_related_to
 
 ## Knowledge Gaps
-- **295 isolated node(s):** `name`, `version`, `description`, `type`, `url` (+290 more)
+- **387 isolated node(s):** `express`, `{
+  PermissionBits,
+  PermissionTypes,
+  Permissions,
+  SystemRoles,
+}`, `{ logger, getTenantId, SystemCapabilities }`, `{
+  findProjectById,
+  getProjectById,
+  getRoleByName,
+  updateProject,
+  upsertTenantSecret,
+}`, `{ requireJwtAuth }` (+382 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **24 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `Resizable Icon Components` to `Enums Menus Types`, `Dialog Button Components`, `Input Badge Components`, `Data Table Core`, `Form Utility Components`, `Dropdown Menu Components`, `Checkbox Table Components`, `Pixel Card Animation`, `Alert Dialog Components`, `Combobox Select Components`, `Form Input Components`, `Avatar Skeleton Hooks`, `Pagination Button Variants`, `Data Table Types`, `Breadcrumb Components`, `Data Table Hooks`, `Animated Tabs Component`, `Multi Select Component`, `Hover Info Cards`, `Input OTP Components`, `Accordion Components`, `Switch Components`, `Tabs Components`, `Tag Components`, `Tooltip Components`, `Filter Input Component`, `Secret Input Component`, `Slider Component`, `Textarea Component`, `Edit Icon`, `Speech Icon`, `Question Mark Icon`, `BedrockIcon Component`, `Blocks Code`, `CheckMark Code`, `Clipboard Code`, `GoogleIconChat Code`, `LightningIcon Component`, `PaLMinimalIcon Component`, `Plugin Code`, `VolumeMuteIcon Component`?**
-  _High betweenness centrality (0.172) - this node is a cross-community bridge._
-- **Why does `peerDependencies` connect `Package Peer Dependencies` to `Package Exports Config`?**
-  _High betweenness centrality (0.012) - this node is a cross-community bridge._
-- **Why does `useLocalize()` connect `Form Utility Components` to `Dialog Button Components`, `Theme Selector State`, `Data Table Core`, `Data Table Error Boundary`, `Data Table Types`, `Data Table Hooks`?**
-  _High betweenness centrality (0.011) - this node is a cross-community bridge._
-- **What connects `name`, `version`, `description` to the rest of the system?**
-  _296 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Enums Menus Types` be split into smaller, more focused modules?**
-  _Cohesion score 0.05367231638418079 - nodes in this community are weakly interconnected._
-- **Should `Package Peer Dependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.043478260869565216 - nodes in this community are weakly interconnected._
-- **Should `Resizable Icon Components` be split into smaller, more focused modules?**
-  _Cohesion score 0.08258258258258258 - nodes in this community are weakly interconnected._
+- **What is the exact relationship between `Meta Ads Tools` and `Commented Meta Ads MCP Server`?**
+  _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
+- **Why does `Localize` connect `Draft Confirmation Dialogs` to `Meta Ads Formatting`, `Ad Preview Rendering`, `Rule Dialog Fields`, `BI Ranking Dialogs`, `Rules Hook State`, `BI Workspace Adapter`, `Evolution Views`, `Budget Editor Rules UI`, `Evolution Dashboard`, `Draft Settings Persistence`, `Overview Adapter`, `Settings Drawer`, `Period Controls`, `Rule Audit History`, `Error Run Hook`, `Entity Action Hook`, `Overview Rows Table`, `History Panel`, `AI Performance Workspace`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **Why does `formatMoney()` connect `Meta Ads Formatting` to `Overview Adapter`, `Ad Preview Rendering`, `Entity Action Hook`, `Overview State Tables`, `BI Ranking Dialogs`, `History Panel`, `AI Performance Workspace`, `Recommendations Panel`, `Draft Confirmation Dialogs`, `BI Workspace Adapter`, `Budget Editor Rules UI`, `Evolution Dashboard`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
+- **Why does `formatMetric()` connect `Meta Ads Formatting` to `Overview Adapter`, `Ad Preview Rendering`, `Overview State Tables`, `BI Ranking Dialogs`, `AI Performance Workspace`, `BI Workspace Adapter`, `Evolution Dashboard`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
+- **What connects `express`, `{
+  PermissionBits,
+  PermissionTypes,
+  Permissions,
+  SystemRoles,
+}`, `{ logger, getTenantId, SystemCapabilities }` to the rest of the system?**
+  _389 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Shared Data Service` be split into smaller, more focused modules?**
+  _Cohesion score 0.008298755186721992 - nodes in this community are weakly interconnected._
+- **Should `Project Zod Schemas` be split into smaller, more focused modules?**
+  _Cohesion score 0.01904761904761905 - nodes in this community are weakly interconnected._
