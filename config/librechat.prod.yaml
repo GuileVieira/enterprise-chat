@@ -45,6 +45,23 @@ interface:
     share: true
     public: false
 
+mcpServers:
+  metaAds:
+    type: streamable-http
+    url: https://mcp.facebook.com/ads
+    serverInstructions: true
+    timeout: 60000
+    requiresOAuth: true
+    oauth:
+      authorization_url: https://www.facebook.com/v25.0/dialog/oauth
+      token_url: https://graph.facebook.com/v25.0/oauth/access_token
+      client_id: '${META_MCP_CLIENT_ID}'
+      scope: ads_management ads_read catalog_management business_management pages_show_list instagram_basic
+      token_endpoint_auth_methods_supported:
+        - none
+      code_challenge_methods_supported:
+        - S256
+
 endpoints:
   agents:
     recursionLimit: 50
