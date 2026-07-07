@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewCells.tsx": {
-    "mtime": 1783443596.0055015,
-    "ast_hash": "a2f65f5cf2ca179b17ee9e6808ccb360",
+    "mtime": 1783443799.2554255,
+    "ast_hash": "67485f9e8f365d325f66252217ffaa1b",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewRendererTypes.ts": {
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1783443596.1646922,
-    "ast_hash": "e6c43121a07dc55f8116e63b19078f10",
+    "mtime": 1783443785.4780633,
+    "ast_hash": "84b25bac7cb9ad3858ac4408caf24e73",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {

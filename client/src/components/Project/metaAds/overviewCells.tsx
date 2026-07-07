@@ -146,7 +146,7 @@ export function MetaAdsNameTooltip({ value }: { value: string }) {
     <span
       aria-hidden="true"
       data-tooltip={value}
-      className="pointer-events-none absolute bottom-full left-0 z-[1000] mb-2 hidden max-w-[640px] whitespace-normal rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium leading-5 text-slate-800 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-teal-300/25 dark:bg-[#101827] dark:text-teal-100"
+      className="pointer-events-none absolute left-0 top-full z-[1000] mt-2 hidden max-w-[640px] whitespace-normal rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium leading-5 text-slate-800 shadow-xl before:content-[attr(data-tooltip)] group-focus-within:block group-hover:block dark:border-teal-300/25 dark:bg-[#101827] dark:text-teal-100"
     />
   );
 }

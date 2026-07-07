@@ -1,11 +1,11 @@
 # Graph Report - orqest  (2026-07-07)
 
 ## Corpus Check
-- 3152 files · ~2,316,262 words
+- 3152 files · ~2,316,268 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 19365 nodes · 36862 edges · 922 communities (826 shown, 96 thin omitted)
+- 19365 nodes · 36862 edges · 916 communities (820 shown, 96 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 1008 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
@@ -549,7 +549,6 @@
 - [[_COMMUNITY_MCPConnection.test.ts|MCPConnection.test.ts]]
 - [[_COMMUNITY_compilerOptions|compilerOptions]]
 - [[_COMMUNITY_ControlCombobox.spec.tsx|ControlCombobox.spec.tsx]]
-- [[_COMMUNITY_ThemeContext.old.tsx|ThemeContext.old.tsx]]
 - [[_COMMUNITY_scripts|scripts]]
 - [[_COMMUNITY_compilerOptions|compilerOptions]]
 - [[_COMMUNITY_peerDependencies|peerDependencies]]
@@ -603,7 +602,6 @@
 - [[_COMMUNITY_importLimiters.js|importLimiters.js]]
 - [[_COMMUNITY_useMermaid.ts|useMermaid.ts]]
 - [[_COMMUNITY_registerLimiter.js|registerLimiter.js]]
-- [[_COMMUNITY_resetPasswordLimiter.js|resetPasswordLimiter.js]]
 - [[_COMMUNITY_sttLimiters.js|sttLimiters.js]]
 - [[_COMMUNITY_toolCallLimiter.js|toolCallLimiter.js]]
 - [[_COMMUNITY_ttsLimiters.js|ttsLimiters.js]]
@@ -706,12 +704,10 @@
 - [[_COMMUNITY_systemGrant.spec.js|systemGrant.spec.js]]
 - [[_COMMUNITY_ldapStrategy.spec.js|ldapStrategy.spec.js]]
 - [[_COMMUNITY_FunctionsPage.tsx|FunctionsPage.tsx]]
-- [[_COMMUNITY_CreateFunctionModal.tsx|CreateFunctionModal.tsx]]
 - [[_COMMUNITY_ProjectConversationsTab.spec.tsx|ProjectConversationsTab.spec.tsx]]
 - [[_COMMUNITY_ProjectForm.spec.tsx|ProjectForm.spec.tsx]]
 - [[_COMMUNITY_useFileHandling.test.ts|useFileHandling.test.ts]]
 - [[_COMMUNITY_SetConvoContext.tsx|SetConvoContext.tsx]]
-- [[_COMMUNITY_permissions.ts|permissions.ts]]
 - [[_COMMUNITY_projectContext.ts|projectContext.ts]]
 - [[_COMMUNITY_resetPasswordLimiter.js|resetPasswordLimiter.js]]
 - [[_COMMUNITY_OutputRenderer.tsx|OutputRenderer.tsx]]
@@ -792,7 +788,6 @@
 - [[_COMMUNITY_Orqest Helm Chart|Orqest Helm Chart]]
 - [[_COMMUNITY_7. PROVA E RESULTADOS (Social Proof)|7. PROVA E RESULTADOS (Social Proof)]]
 - [[_COMMUNITY_rollup.config.js|rollup.config.js]]
-- [[_COMMUNITY_dependencies|dependencies]]
 - [[_COMMUNITY_responses-api.live.test.sh|responses-api.live.test.sh]]
 - [[_COMMUNITY_standardCache.namespace_isolation.spec.ts|standardCache.namespace_isolation.spec.ts]]
 - [[_COMMUNITY_index.metrics.spec.js|index.metrics.spec.js]]
@@ -874,7 +869,6 @@
 - [[_COMMUNITY_ContentParts.integration.test.tsx|ContentParts.integration.test.tsx]]
 - [[_COMMUNITY_conversationByIndex|conversationByIndex]]
 - [[_COMMUNITY_markdown.ts|markdown.ts]]
-- [[_COMMUNITY_index.js|index.js]]
 - [[_COMMUNITY_user.ts|user.ts]]
 - [[_COMMUNITY_access.ts|access.ts]]
 - [[_COMMUNITY_projectContext.ts|projectContext.ts]]
@@ -910,35 +904,35 @@
 - 3-file cycle: `packages/data-provider/src/config.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts`
 - 3-file cycle: `packages/api/src/storage/types.ts -> packages/api/src/types/index.ts -> packages/api/src/types/files.ts -> packages/api/src/storage/types.ts`
 - 3-file cycle: `client/src/components/Chat/Menus/Endpoints/ModelSelectorContext.tsx -> client/src/components/Chat/Menus/Endpoints/utils.ts -> client/src/components/Chat/Menus/Endpoints/components/EndpointModelItem.tsx -> client/src/components/Chat/Menus/Endpoints/ModelSelectorContext.tsx`
+- 3-file cycle: `client/src/components/Chat/Messages/Content/ParallelContent.tsx -> client/src/utils/index.ts -> client/src/utils/groupToolCalls.ts -> client/src/components/Chat/Messages/Content/ParallelContent.tsx`
+- 3-file cycle: `client/src/hooks/Endpoint/index.ts -> client/src/hooks/Endpoint/useEndpoints.ts -> client/src/hooks/index.ts -> client/src/hooks/Endpoint/index.ts`
+- 3-file cycle: `client/src/hooks/Conversations/index.ts -> client/src/hooks/Conversations/useExportConversation.ts -> client/src/hooks/index.ts -> client/src/hooks/Conversations/index.ts`
+- 3-file cycle: `client/src/hooks/Conversations/index.ts -> client/src/hooks/Conversations/usePresets.ts -> client/src/hooks/index.ts -> client/src/hooks/Conversations/index.ts`
 - 3-file cycle: `client/src/hooks/Input/index.ts -> client/src/hooks/Input/useQueryParams.ts -> client/src/hooks/index.ts -> client/src/hooks/Input/index.ts`
 - 3-file cycle: `client/src/hooks/Input/index.ts -> client/src/hooks/Input/useTextarea.ts -> client/src/hooks/index.ts -> client/src/hooks/Input/index.ts`
-- 3-file cycle: `client/src/hooks/Endpoint/index.ts -> client/src/hooks/Endpoint/useEndpoints.ts -> client/src/hooks/index.ts -> client/src/hooks/Endpoint/index.ts`
-- 3-file cycle: `client/src/hooks/MCP/index.ts -> client/src/hooks/MCP/useMCPServerManager.ts -> client/src/hooks/index.ts -> client/src/hooks/MCP/index.ts`
-- 3-file cycle: `client/src/hooks/MCP/index.ts -> client/src/hooks/MCP/useRemoveMCPTool.ts -> client/src/hooks/index.ts -> client/src/hooks/MCP/index.ts`
-- 3-file cycle: `client/src/components/Chat/Messages/Content/Parts/SubagentCall.tsx -> client/src/components/Chat/Messages/Content/ToolCall.tsx -> client/src/components/Chat/Messages/Content/Parts/index.ts -> client/src/components/Chat/Messages/Content/Parts/SubagentCall.tsx`
+- 3-file cycle: `client/src/hooks/Config/index.ts -> client/src/hooks/Config/useAppStartup.ts -> client/src/hooks/index.ts -> client/src/hooks/Config/index.ts`
 - 3-file cycle: `client/src/hooks/Input/useTextToSpeech.ts -> client/src/hooks/Input/useTextToSpeechExternal.ts -> client/src/hooks/index.ts -> client/src/hooks/Input/useTextToSpeech.ts`
-- 3-file cycle: `client/src/hooks/Input/useSpeechToText.ts -> client/src/hooks/Input/useSpeechToTextBrowser.ts -> client/src/hooks/index.ts -> client/src/hooks/Input/useSpeechToText.ts`
-- 3-file cycle: `client/src/components/Prompts/index.ts -> client/src/components/Prompts/sidebar/index.ts -> client/src/components/Prompts/sidebar/PromptsAccordion.tsx -> client/src/components/Prompts/index.ts`
-- 3-file cycle: `client/src/hooks/Messages/index.ts -> client/src/hooks/Messages/useMessageActions.tsx -> client/src/hooks/index.ts -> client/src/hooks/Messages/index.ts`
-- 3-file cycle: `client/src/hooks/Prompts/index.ts -> client/src/hooks/Prompts/useCategories.tsx -> client/src/hooks/index.ts -> client/src/hooks/Prompts/index.ts`
-- 3-file cycle: `client/src/components/Prompts/fields/CategorySelector.tsx -> client/src/components/Prompts/index.ts -> client/src/components/Prompts/fields/index.ts -> client/src/components/Prompts/fields/CategorySelector.tsx`
-- 3-file cycle: `client/src/hooks/Conversations/index.ts -> client/src/hooks/Conversations/usePresets.ts -> client/src/hooks/index.ts -> client/src/hooks/Conversations/index.ts`
-- 3-file cycle: `client/src/hooks/Files/index.ts -> client/src/hooks/Files/useSharePointPicker.ts -> client/src/hooks/index.ts -> client/src/hooks/Files/index.ts`
+- 3-file cycle: `client/src/hooks/Agents/index.ts -> client/src/hooks/Agents/useSelectAgent.ts -> client/src/hooks/useNewConvo.ts -> client/src/hooks/Agents/index.ts`
 - 4-file cycle: `packages/data-provider/src/api-endpoints.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts -> packages/data-provider/src/api-endpoints.ts`
 - 4-file cycle: `packages/data-provider/src/config.ts -> packages/data-provider/src/file-config.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts`
+- 4-file cycle: `packages/data-provider/src/config.ts -> packages/data-provider/src/models.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts`
+- 4-file cycle: `packages/data-provider/src/config.ts -> packages/data-provider/src/generate.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts`
+- 4-file cycle: `packages/data-provider/src/config.ts -> packages/data-provider/src/types.ts -> packages/data-provider/src/schemas.ts -> packages/data-provider/src/types/web.ts -> packages/data-provider/src/config.ts`
+- 4-file cycle: `client/src/components/Chat/Menus/Endpoints/ModelSelectorContext.tsx -> client/src/components/Chat/Menus/Endpoints/utils.ts -> client/src/components/Chat/Menus/Endpoints/components/SpecIcon.tsx -> client/src/components/Chat/Menus/Endpoints/components/EndpointModelItem.tsx -> client/src/components/Chat/Menus/Endpoints/ModelSelectorContext.tsx`
+- 4-file cycle: `client/src/hooks/AuthContext.tsx -> client/src/utils/index.ts -> client/src/utils/favoritesError.ts -> client/src/hooks/index.ts -> client/src/hooks/AuthContext.tsx`
 
 ## Hyperedges (group relationships)
 - **Meta Ads Feature Surface** — config_librechat_prod_meta_ads_tools, config_librechat_prod_meta_ads_interface, config_librechat_prod_commented_meta_ads_mcp_server [INFERRED 0.85]
 
-## Communities (922 total, 96 thin omitted)
+## Communities (916 total, 96 thin omitted)
 
 ### Community 0 - "Shared Data Service"
 Cohesion: 0.01
-Nodes (42): ActiveJobsResponse, createAgentApiKey(), createConversationTag(), createMCPServer(), createMemory(), createProject(), createSkill(), deleteAction() (+34 more)
+Nodes (39): ActiveJobsResponse, createAgentApiKey(), createConversationTag(), createMCPServer(), createProject(), createSkill(), deleteAction(), deleteAgentApiKey() (+31 more)
 
 ### Community 1 - "Project Zod Schemas"
 Cohesion: 0.02
-Nodes (116): alternateName, EndpointURLs, specialVariables, createPayload(), specsConfigSchema, TModelSpec, tModelSpecSchema, TSpecsConfig (+108 more)
+Nodes (103): alternateName, specialVariables, CompactEndpointSchema, compactEndpointSchemas, EndpointSchema, EndpointSchemaKey, EndpointSchemaLookupKey, endpointSchemas (+95 more)
 
 ### Community 2 - "Shared Query Types"
 Cohesion: 0.02
@@ -1002,23 +996,23 @@ Nodes (53): ACTION_COOLDOWN_MINUTES, addResultTypeSummary(), ANALYSIS_PRESETS, b
 
 ### Community 8 - "Frontend Mutations"
 Cohesion: 0.07
-Nodes (42): MentionOption, PromptOption, MentionContent(), MentionPopoverContainer, MentionProps, MentionItem(), MentionItemProps, PopoverContainer (+34 more)
+Nodes (41): MentionOption, PromptOption, MentionContent(), MentionPopoverContainer, MentionProps, MentionItem(), MentionItemProps, PopoverContainer (+33 more)
 
 ### Community 9 - "Meta Ads Formatting"
-Cohesion: 0.09
-Nodes (42): formatMoney(), getRuleTargetMetricValue(), formatRuleAuditDate(), formatRuleAuditLine(), formatRuleAuditUser(), formatRuleChangeAction(), formatChangedFields(), formatRuleChangeDate() (+34 more)
+Cohesion: 0.10
+Nodes (41): formatMetric(), formatMoney(), getRuleTargetMetricValue(), buildMetaAdsSummaryCardItems(), getMonthlyBudgetContext(), formatRuleAuditDate(), formatRuleAuditLine(), formatRuleAuditUser() (+33 more)
 
 ### Community 10 - "Budget Recommendation Core"
 Cohesion: 0.11
 Nodes (30): aggregateInsightRows(), analyzeProject(), applyManualBudgetChange(), applyMonthlyBudgetGuard(), applyRecommendation(), buildMonthlyBudgetState(), calculateBudgetDelta(), dailyBudgetToCents() (+22 more)
 
 ### Community 11 - "Ad Preview Rendering"
-Cohesion: 0.08
-Nodes (41): getAdThumbnailUrl(), AdPreviewMedia(), MetaAdsOverviewActionCell(), createMetaAdsAdRenderers(), metricCell(), renderAdCell(), textCell(), EntityStatusConfirmationPayload (+33 more)
+Cohesion: 0.07
+Nodes (46): getAdThumbnailUrl(), AdPreviewMedia(), MetaAdsOverviewActionCell(), createMetaAdsAdRenderers(), metricCell(), renderAdCell(), textCell(), EntityStatusConfirmationPayload (+38 more)
 
 ### Community 12 - "Overview State Tables"
-Cohesion: 0.07
-Nodes (47): BudgetEditorChrome, BudgetEditorControls, MetaAdsBudgetEditorDialog(), ecommerceTableViewColumns, tableViewColumns, formatSignedPercent(), formatChangeDateTime(), getBudgetChangeVisual() (+39 more)
+Cohesion: 0.06
+Nodes (58): metaAdsButton, metaAdsGhostButton, metaAdsInput, ecommerceTableViewColumns, evolutionColors, objectiveLabelKeys, periodFilterOptions, resultTypeLabelKeys (+50 more)
 
 ### Community 13 - "Rule Dialog Fields"
 Cohesion: 0.07
@@ -1026,23 +1020,23 @@ Nodes (47): CreativeRuleChangeKey, ShowToast, ToastStatus, useMetaAdsRules(), Us
 
 ### Community 14 - "Meta Ads Query Cache"
 Cohesion: 0.02
-Nodes (137): NotificationSeverity, LoginForm(), TLoginFormProps, RequestPasswordReset(), BookmarkEditDialog(), BookmarkEditDialogProps, BookmarkForm(), TBookmarkFormProps (+129 more)
+Nodes (124): NavLink, NotificationSeverity, LoginForm(), TLoginFormProps, RequestPasswordReset(), DeleteBookmarkButton(), ExportAndShareMenu(), Header() (+116 more)
 
 ### Community 15 - "BI Ranking Dialogs"
 Cohesion: 0.02
-Nodes (114): MenuItemProps, RenderProp, AugmentedColumnDef, ExtendedFile, FileSetter, GenericSetter, isEphemeralAgent(), ChatForm (+106 more)
+Nodes (111): MenuItemProps, RenderProp, ExtendedFile, FileSetter, GenericSetter, isEphemeralAgent(), TAskFunction, ChatForm (+103 more)
 
 ### Community 16 - "Rule Performance Aggregation"
 Cohesion: 0.18
 Nodes (22): averageMetric(), buildEntityStatusSummary(), buildPerformanceSummary(), buildRulePerformanceEntities(), getActionPrimaryMetric(), getAwaitableRuleStatus(), getComparableMetricValue(), getConversionEvidence() (+14 more)
 
 ### Community 17 - "BI Ranking Logic"
-Cohesion: 0.06
-Nodes (67): buildMetaAdsBiRankings(), collectAdThumbnails(), getBiRankingNumericValue(), getRankEfficiency(), getRankMetricForResultType(), getSortedBiRankingItems(), hasRelevantRankVolume(), hasValidRankMetric() (+59 more)
+Cohesion: 0.07
+Nodes (54): buildMetaAdsBiRankings(), collectAdThumbnails(), getBiRankingNumericValue(), getRankEfficiency(), getRankMetricForResultType(), getSortedBiRankingItems(), hasRelevantRankVolume(), hasValidRankMetric() (+46 more)
 
 ### Community 18 - "Rules Hook State"
-Cohesion: 0.07
-Nodes (29): AccessRolesPicker(), AccessRolesPickerProps, getFallbackRoleId(), getRoleIdFromRole(), resourceRoleIds, GenericGrantAccessDialog(), PeoplePickerSearchItem, PeoplePickerSearchItemProps (+21 more)
+Cohesion: 0.03
+Nodes (71): BadgeItem, BookmarkForm(), BookmarkItem(), MenuItemProps, BookmarkItems(), BookmarkItemsProps, Artifacts(), ArtifactsToggleState (+63 more)
 
 ### Community 19 - "Campaign Snapshot Builder"
 Cohesion: 0.11
@@ -1062,23 +1056,23 @@ Nodes (16): addDays(), buildAdDiagnostics(), buildMonthlyBudgetStatus(), countAt
 
 ### Community 23 - "BI Workspace Adapter"
 Cohesion: 0.01
-Nodes (204): TDangerButtonProps, TLoginLayoutContext, SearchBar(), SearchBarProps, DownloadArtifact(), BrowserVoiceDropdown(), ExternalVoiceDropdown(), ErrorMessage() (+196 more)
+Nodes (259): AugmentedColumnDef, PromptsEditorMode, AdminLayout(), AdminNav(), AdminNavProps, navItems, allPermissions, RolesPage() (+251 more)
 
 ### Community 24 - "Evolution Views"
-Cohesion: 0.24
-Nodes (14): getDeltaEntityId(), getDeltaEntityName(), getEvolutionSeriesTotal(), hasMeaningfulDelta(), matchesBiSeriesFilters(), getEvolutionDeltaClass(), MetaAdsEvolutionDeltaTables(), buildMetaAdsEvolutionState() (+6 more)
+Cohesion: 0.10
+Nodes (32): getDeltaEntityId(), getDeltaEntityName(), getEvolutionSeriesTotal(), hasMeaningfulDelta(), matchesBiSeriesFilters(), EvolutionPoint, EvolutionSeriesPath, EvolutionTooltip() (+24 more)
 
 ### Community 25 - "Creative Asset Mapping"
 Cohesion: 0.27
 Nodes (11): buildAdsManagerUrl(), buildAdSummaries(), getAssetFeedCallToActionType(), getAssetFeedLinkUrl(), getAssetFeedMediaUrl(), getAssetFeedValue(), getAssetFeedVideoId(), getCreativeLinkData() (+3 more)
 
 ### Community 26 - "Budget Editor Rules UI"
-Cohesion: 0.15
-Nodes (14): SkillList(), SkillListProps, buildFileTree(), countVisible(), FileNodeData, FileTreeNode(), getNodeData(), InlineFileTree() (+6 more)
+Cohesion: 0.04
+Nodes (39): TLoginLayoutContext, TPluginMap, AuthLayout(), BlinkAnimation(), ErrorMessage(), Login(), LoginLocationState, Registration() (+31 more)
 
 ### Community 27 - "Dialogs Selection Layer"
 Cohesion: 0.05
-Nodes (61): formatRunDateTime(), getRunVisual(), MetaAdsAnalysisHistoryPanel(), metaAdsButton, metaAdsGhostButton, metaAdsInput, metaAdsInputLg, metaAdsLabel (+53 more)
+Nodes (54): formatRunDateTime(), getRunVisual(), MetaAdsAnalysisHistoryPanel(), metaAdsInputLg, metaAdsLabel, metaAdsModalTile, metaAdsPrimaryButton, formatRequestDetails() (+46 more)
 
 ### Community 28 - "Settings Sanitizer"
 Cohesion: 0.08
@@ -1086,11 +1080,11 @@ Nodes (42): scheduleOptions, useMetaAdsPeriodFilter(), buildManualBudgetDraftDet
 
 ### Community 29 - "Run Analysis UI"
 Cohesion: 0.02
-Nodes (132): LocalizeFunction, TDisplayProps, TEditProps, TMessageChatContext, TMessageContentProps, TMessageIcon, TMessageProps, EditMessage() (+124 more)
+Nodes (131): LocalizeFunction, TDisplayProps, TEditProps, TMessageChatContext, TMessageContentProps, TMessageIcon, TMessageProps, EditMessage() (+123 more)
 
 ### Community 30 - "Evolution Dashboard"
-Cohesion: 0.02
-Nodes (146): addParamsSchema, AgentCapabilities, agentsEndpointSchema, allowedAddressEntrySchema, allowedAddressesSchema, anthropicEndpointSchema, assistantEndpointSchema, AuthKeys (+138 more)
+Cohesion: 0.01
+Nodes (159): addParamsSchema, AgentCapabilities, agentsEndpointSchema, allowedAddressEntrySchema, allowedAddressesSchema, anthropicEndpointSchema, assistantEndpointSchema, AuthKeys (+151 more)
 
 ### Community 31 - "Draft Settings Persistence"
 Cohesion: 0.01
@@ -1106,19 +1100,19 @@ Nodes (14): addFrequencySample(), addSourceResultTypeSummaries(), buildCampaignS
 
 ### Community 34 - "Overview Adapter"
 Cohesion: 0.03
-Nodes (90): deleteAssistant(), getBanner(), getPresets(), getTenantFunctions(), AccessRoleMethods, createAccessRoleMethods(), createAclEntryMethods(), ActionMethods (+82 more)
+Nodes (101): createCategory(), createMemory(), deleteAssistant(), deleteMemory(), getBanner(), getPresets(), getTenantFunctions(), listRoles() (+93 more)
 
 ### Community 35 - "Settings Drawer"
-Cohesion: 0.04
-Nodes (60): AgentDetail(), AgentDetailProps, AgentWithSupport, SupportContact, mockAgent, mockLocalize, mockNavigate, mockShowToast (+52 more)
+Cohesion: 0.03
+Nodes (68): AgentCard(), AgentCardProps, AgentDetail(), AgentDetailProps, AgentWithSupport, SupportContact, AgentDetailContent(), AgentDetailContentProps (+60 more)
 
 ### Community 36 - "Meta Ads Endpoints"
 Cohesion: 0.14
 Nodes (14): projectById(), projectMetaAds(), projectMetaAdsApply(), projectMetaAdsBudget(), projectMetaAdsDuplicate(), projectMetaAdsEntityStatus(), projectMetaAdsPerformance(), projectMetaAdsRankings() (+6 more)
 
 ### Community 37 - "Project Mongo Schema"
-Cohesion: 0.04
-Nodes (69): catalogMetrics(), DEFAULT_TIERS, initializeOrgDb(), MODEL_SCHEMAS, psql(), registerModels(), TierResult, WRITE_AMP_DOCS (+61 more)
+Cohesion: 0.03
+Nodes (82): catalogMetrics(), DEFAULT_TIERS, initializeOrgDb(), MODEL_SCHEMAS, psql(), registerModels(), TierResult, WRITE_AMP_DOCS (+74 more)
 
 ### Community 38 - "Period Controls"
 Cohesion: 0.02
@@ -1126,11 +1120,11 @@ Nodes (117): updateConversationTag(), ParentMessage, TMessage, EventSubmission, 
 
 ### Community 39 - "Meta Ads Constants"
 Cohesion: 0.10
-Nodes (41): s3Strategy(), getCloudFrontFileStream(), getStorageMetadata(), StorageMetadataInput, extractKeyFromS3Url(), getDefaultStorageRegion(), getInlinePathPrefix(), getNewS3URL() (+33 more)
+Nodes (43): s3Strategy(), deleteFileFromCloudFront(), getOrCreateCloudFrontClient(), getStorageMetadata(), StorageMetadataInput, deleteFileFromS3(), extractKeyFromS3Url(), getDefaultStorageRegion() (+35 more)
 
 ### Community 40 - "Rule Audit History"
 Cohesion: 0.02
-Nodes (193): Actions, ActionsEndpoint, AssistantForm, TAssistantOption, ActionWithNullableMetadata, AgentIconComponent, AgentListItem, AssistantPanelProps (+185 more)
+Nodes (139): AgentForm, Actions, ActionsEndpoint, AssistantForm, TAssistantOption, ApiKeyFormData, ActionAuthForm, ActionWithNullableMetadata (+131 more)
 
 ### Community 41 - "deletePrompt"
 Cohesion: 0.18
@@ -1161,8 +1155,8 @@ Cohesion: 0.04
 Nodes (79): RFC-4380, RFC-5736, RFC-6750, RFC-7009, RFC-7235, AgentInternal, buildSSRFSafeLookup(), getConnectionPort() (+71 more)
 
 ### Community 48 - "Traffic Agent Hook"
-Cohesion: 0.33
-Nodes (9): ErrorController(), handleDuplicateKeyError(), handleValidationError(), isCustomError(), isMongoServerError(), isValidationError(), CustomError, MongoServerError (+1 more)
+Cohesion: 0.11
+Nodes (20): ErrorController(), handleDuplicateKeyError(), handleValidationError(), isCustomError(), isMongoServerError(), isValidationError(), MINIMAL_PNG, AzureOptions (+12 more)
 
 ### Community 49 - "AI Performance Workspace"
 Cohesion: 0.13
@@ -1170,7 +1164,7 @@ Nodes (20): RFC-7540, createSSRFSafeUndiciConnect(), buildFetchInit(), CircuitBr
 
 ### Community 50 - "Overview Workspace"
 Cohesion: 0.05
-Nodes (67): getRequestId(), getTenantId(), getUserId(), runAsSystem(), scopedCacheKey(), TenantContext, tenantStorage, deleteMessages (+59 more)
+Nodes (72): createAccessRoleModel(), createAclEntryModel(), createActionModel(), createAgentModel(), createAgentApiKeyModel(), createAgentCategoryModel(), createAssistantModel(), createBalanceModel() (+64 more)
 
 ### Community 51 - "Recommendations Panel"
 Cohesion: 0.02
@@ -1189,8 +1183,8 @@ Cohesion: 0.25
 Nodes (8): useUploadSkillFileMutation(), buildPager(), getSkill(), importSkill(), listSkillsWithFilters(), skillFile(), skillFiles(), skills()
 
 ### Community 55 - "useMetaAdsPeriodFilter"
-Cohesion: 0.07
-Nodes (24): TConfigProps, TDialogProps, FileUpload(), FileUploadProps, CredentialsSchema, GoogleConfig(), validateCredentials(), InputWithLabel (+16 more)
+Cohesion: 0.11
+Nodes (17): TConfigProps, FileUpload(), FileUploadProps, CredentialsSchema, GoogleConfig(), validateCredentials(), InputWithLabel, InputWithLabelProps (+9 more)
 
 ### Community 56 - "adminConfigActive"
 Cohesion: 0.50
@@ -1245,28 +1239,28 @@ Cohesion: 0.10
 Nodes (33): ViolationData, waitForRedisClients(), createMCPServerOnPort(), createStreamableServer(), CapturedRequest, closeMCPSessions(), collectErrorMessages(), createCrossOriginRedirectingServer() (+25 more)
 
 ### Community 69 - "adminSecretByName"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (13): createMessageMethods(), MessageMethods, IMessage, CreateShareResult, DeleteAllSharesResult, DeleteShareResult, GetShareLinkResult, ISharedLink (+5 more)
 
 ### Community 70 - "adminUsers"
-Cohesion: 0.03
-Nodes (62): listRoles(), updateUserKey(), updateUserPlugins(), RoleBits, CursorPaginationParams, CursorPaginationResponse, decrypt(), decryptV2() (+54 more)
+Cohesion: 0.04
+Nodes (55): updateUserPlugins(), RoleBits, CursorPaginationParams, CursorPaginationResponse, decrypt(), decryptV2(), encrypt(), encryptV2() (+47 more)
 
 ### Community 75 - "DataTable.tsx"
 Cohesion: 0.04
 Nodes (61): AnimatedSearchInput(), Avatar(), AvatarProps, BaseCheckboxProps, Checkbox, CheckboxProps, DataTable(), useColumnStyles() (+53 more)
 
 ### Community 76 - "Root.tsx"
-Cohesion: 0.05
-Nodes (59): formatActionDateTime(), MetaAdsAiPerformanceWorkspace(), evolutionColors, objectiveLabelKeys, periodFilterOptions, resultTypeLabelKeys, resultTypeTableViewMinWidth, tableColumnMap (+51 more)
+Cohesion: 0.08
+Nodes (33): formatActionDateTime(), MetaAdsAiPerformanceWorkspace(), MetaAdsPeriodControlProps, MetaAdsPeriodControls(), Localize, MetaAdsBiRankLevel, PeriodFilter, badgeClassNames (+25 more)
 
 ### Community 77 - "useMCPServerForm.ts"
-Cohesion: 0.11
-Nodes (22): AuthConfig, AuthorizationTypeEnum, AuthTypeEnum, MCPServerFormData, useMCPServerForm(), UseMCPServerFormProps, MCPServerForm(), MCPServerFormProps (+14 more)
+Cohesion: 0.05
+Nodes (48): MCPServerMenuItem(), MCPServerMenuItemProps, CompactStatusDot(), CompactStatusDotProps, InitializingStatusProps, MCPServerStatusIconProps, StatusIconProps, ConnectionStatusMap (+40 more)
 
 ### Community 78 - "FlowStateManager"
-Cohesion: 0.04
-Nodes (48): Artifact(), ArtifactButton(), AuthLayout(), BlinkAnimation(), Banner(), FileContainer(), FilePreview(), ImagePreview() (+40 more)
+Cohesion: 0.01
+Nodes (170): IconContext, TDangerButtonProps, TEditPresetProps, TModelSelectProps, Artifact(), ArtifactButton(), BookmarkEditDialog(), BookmarkEditDialogProps (+162 more)
 
 ### Community 79 - "MCPOAuthTokens"
 Cohesion: 0.08
@@ -1286,7 +1280,7 @@ Nodes (56): cacheConfig, BaseRegistryCache, AGGREGATE_KEY_NAMESPACES, APP_CACHE_
 
 ### Community 83 - "aclEntry.ts"
 Cohesion: 0.05
-Nodes (32): createAgent(), deleteAgent(), updateAgent(), MAX_PERM_BITS, AclEntryMethods, EMPTY_SUPERSETS, normalizeAclFilter(), seedVariedPermissions() (+24 more)
+Nodes (35): createAgent(), deleteAgent(), updateAgent(), MAX_PERM_BITS, AclEntryMethods, createAclEntryMethods(), EMPTY_SUPERSETS, normalizeAclFilter() (+27 more)
 
 ### Community 84 - "Response"
 Cohesion: 0.12
@@ -1309,8 +1303,8 @@ Cohesion: 0.04
 Nodes (60): dynamicConfigs, CODE_ENV_KINDS, CodeEnvKind, CodeEnvRef, CodeEnvRefBase, assistantsFileConfig, BedrockDocumentFormat, bedrockDocumentFormats (+52 more)
 
 ### Community 89 - "useMCPServerManager.ts"
-Cohesion: 0.13
-Nodes (13): ConfirmationButtons, ConfirmationChrome, MetaAdsDiscardDraftDialog(), MetaAdsDuplicateEntityDialog(), MetaAdsEntityStatusConfirmationBanner(), MetaAdsPublishDraftDialog(), MetaAdsCredentialsDialog(), MetaAdsDialogChrome (+5 more)
+Cohesion: 0.06
+Nodes (34): BudgetEditorChrome, BudgetEditorControls, MetaAdsBudgetEditorDialog(), ConfirmationButtons, ConfirmationChrome, MetaAdsDiscardDraftDialog(), MetaAdsDuplicateEntityDialog(), MetaAdsEntityStatusConfirmationBanner() (+26 more)
 
 ### Community 90 - "index.ts"
 Cohesion: 0.08
@@ -1333,8 +1327,8 @@ Cohesion: 0.04
 Nodes (42): FlowStateManager, normalizeExpiresAt(), MockKeyv, TokenResult, FlowManagerOptions, FlowMetadata, FlowState, FlowStatus (+34 more)
 
 ### Community 95 - "conversation.spec.ts"
-Cohesion: 0.04
-Nodes (55): ApiKeyFormData, CodeBarProps, CodeWindowHeader(), CodeWindowHeaderProps, collectSources(), getUniqueDomainSources(), ProgressKeys, SourceFaviconStack() (+47 more)
+Cohesion: 0.05
+Nodes (48): CodeBarProps, CodeWindowHeader(), CodeWindowHeaderProps, collectSources(), getUniqueDomainSources(), ProgressKeys, SourceFaviconStack(), WebSearch() (+40 more)
 
 ### Community 96 - "Artifacts.tsx"
 Cohesion: 0.07
@@ -1354,7 +1348,7 @@ Nodes (34): ESide, NotificationSeverity, MenuItemProps, RenderProp, DropdownValu
 
 ### Community 100 - "skills.ts"
 Cohesion: 0.04
-Nodes (73): appendAdditionalInstructions(), getToolName(), hasTemporalSpecialVars(), hasToolDefinition(), initializeAgent(), InitializeAgentDbMethods, resolveAnthropicToolConflicts(), addFileToResource() (+65 more)
+Nodes (69): appendAdditionalInstructions(), getToolName(), hasTemporalSpecialVars(), hasToolDefinition(), initializeAgent(), InitializeAgentDbMethods, resolveAnthropicToolConflicts(), addFileToResource() (+61 more)
 
 ### Community 101 - "index.ts"
 Cohesion: 0.13
@@ -1374,7 +1368,7 @@ Nodes (18): Markdown, extractPrompt(), extractSubagentType(), SubagentCall(), Su
 
 ### Community 105 - "logger"
 Cohesion: 0.04
-Nodes (58): agentsConfigSetup(), assistantsConfigSetup(), azureAssistantsDefaults(), azureConfigSetup(), loadEndpoints(), loadDefaultInterface(), hasValidAgent(), isDisabled() (+50 more)
+Nodes (56): winston, agentsConfigSetup(), assistantsConfigSetup(), azureAssistantsDefaults(), azureConfigSetup(), loadEndpoints(), loadDefaultInterface(), hasValidAgent() (+48 more)
 
 ### Community 106 - "actions.ts"
 Cohesion: 0.05
@@ -1389,8 +1383,8 @@ Cohesion: 0.40
 Nodes (4): LANG_ALIASES, LangIconProps, NAME_MAP, LANG_ICON_PATHS
 
 ### Community 109 - "config.ts"
-Cohesion: 0.07
-Nodes (44): openai, Fetch, getDefaultParams(), getOpenAIConfig(), includesOpenRouter(), mergeHeadersPreservingAnthropicBeta(), OPENROUTER_DEFAULT_PARAMS, applyDefaultParams() (+36 more)
+Cohesion: 0.08
+Nodes (37): Fetch, getDefaultParams(), getOpenAIConfig(), includesOpenRouter(), mergeHeadersPreservingAnthropicBeta(), OPENROUTER_DEFAULT_PARAMS, initializeOpenAI(), mockGetOpenAIConfig (+29 more)
 
 ### Community 110 - "index.ts"
 Cohesion: 0.12
@@ -1425,8 +1419,8 @@ Cohesion: 0.12
 Nodes (17): createInMemoryServices(), createStreamServices(), StreamServices, StreamServicesConfig, GenerationJobManager, GenerationJobManagerOptions, IMPORTANT: The emitterProxy.on('allSubscribersLeft') handler registration, StreamState (+9 more)
 
 ### Community 117 - "utils.ts"
-Cohesion: 0.01
-Nodes (142): TAuthConfig, TAuthContext, TResError, TUserContext, AdminLayout(), AdminNav(), AdminNavProps, navItems (+134 more)
+Cohesion: 0.04
+Nodes (42): AgentFooter(), MCPServerDialog(), ShareSkill(), ShareSkillProps, SkillDetail(), SkillDetailProps, SKIP_KEYS, ViewToggle() (+34 more)
 
 ### Community 118 - "App.jsx"
 Cohesion: 0.06
@@ -1437,8 +1431,8 @@ Cohesion: 0.05
 Nodes (30): TThread, TVectorStore, DeleteIconButton(), DeleteIconButtonProps, FileList(), FileListProps, FileListItem2(), FileListItemProps (+22 more)
 
 ### Community 120 - "types.ts"
-Cohesion: 0.03
-Nodes (73): AgentForm, AgentQueryResult, TAgentCapabilities, TAgentOption, AgentModelPanelProps, AgentPanelProps, DropdownValueSetter, OptionWithIcon (+65 more)
+Cohesion: 0.04
+Nodes (58): AgentQueryResult, TAgentCapabilities, TAgentOption, AgentPanelProps, DropdownValueSetter, Panel, AdminSettings(), permissions (+50 more)
 
 ### Community 121 - "RetrievalCall.tsx"
 Cohesion: 0.10
@@ -1449,8 +1443,8 @@ Cohesion: 0.06
 Nodes (35): checkAzureVariables(), checkConfig(), checkHealth(), checkInterfaceConfig(), checkPasswordReset(), checkVariables(), checkWebSearchConfig(), conflictingAzureVariables (+27 more)
 
 ### Community 123 - "models.ts"
-Cohesion: 0.11
-Nodes (32): tokenConfigCache(), createLoadConfigModels(), LoadConfigModelsDeps, ResolvedEndpoint, buildCustomOptions(), initializeCustom(), mockGetCustomEndpointConfig, mockGetOpenAIConfig (+24 more)
+Cohesion: 0.07
+Nodes (42): tokenConfigCache(), createEndpointsConfigService(), DefaultEndpointsResult, EndpointsConfigDeps, MutableEndpointsConfig, PartialEndpointEntry, createLoadConfigModels(), LoadConfigModelsDeps (+34 more)
 
 ### Community 124 - "Dynamic Theme System for @librechat/client"
 Cohesion: 0.04
@@ -1482,7 +1476,7 @@ Nodes (44): AttachmentData, buildResponse(), buildResponsesNonStreamingResponse(
 
 ### Community 131 - "transactions.ts"
 Cohesion: 0.10
-Nodes (34): BaseTxData, BulkWriteDeps, bulkWriteTransactions(), calculateStructuredTokenValue(), calculateTokenValue(), GetCacheMultiplierParams, GetMultiplierParams, PreparedEntry (+26 more)
+Nodes (35): BaseTxData, BulkWriteDeps, bulkWriteTransactions(), calculateStructuredTokenValue(), calculateTokenValue(), GetCacheMultiplierParams, GetMultiplierParams, PreparedEntry (+27 more)
 
 ### Community 132 - "GenerationJobManagerClass"
 Cohesion: 0.08
@@ -1505,8 +1499,8 @@ Cohesion: 0.09
 Nodes (38): ArtifactFiles, CodeBlock, ArtifactPreview, useArtifactProps(), artifactFilename, artifactTemplate, bareNameFromBasename(), bareNameOf() (+30 more)
 
 ### Community 137 - "ExpandedPanel.tsx"
-Cohesion: 0.09
-Nodes (21): createCategory(), AgentCategoryMethods, createAgentCategoryMethods(), ConversationMethods, createConversationMethods(), ConversationTagMethods, IConversationTag, FileMethods (+13 more)
+Cohesion: 0.04
+Nodes (47): getRequestId(), getTenantId(), getUserId(), runAsSystem(), scopedCacheKey(), TenantContext, tenantStorage, AgentCategoryMethods (+39 more)
 
 ### Community 138 - "subagentContent.ts"
 Cohesion: 0.10
@@ -1567,8 +1561,8 @@ Cohesion: 0.05
 Nodes (40): devDependencies, autoprefixer, babel-plugin-replace-ts-export-assignment, babel-plugin-root-import, babel-plugin-transform-import-meta, @babel/plugin-transform-runtime, babel-plugin-transform-vite-meta-env, @babel/preset-env (+32 more)
 
 ### Community 150 - "AgentGrid.tsx"
-Cohesion: 0.04
-Nodes (53): AgentCard(), AgentCardProps, AgentDetailContent(), AgentDetailContentProps, AgentWithSupport, SupportContact, AgentGrid(), AgentGridProps (+45 more)
+Cohesion: 0.05
+Nodes (41): AgentGrid(), AgentGridProps, CategoryTabs(), CategoryTabsProps, ApiError, ErrorDisplay(), ErrorDisplayProps, AgentMarketplace() (+33 more)
 
 ### Community 151 - "Backlog — Projects Feature"
 Cohesion: 0.05
@@ -1579,8 +1573,8 @@ Cohesion: 0.06
 Nodes (9): MCPConnection, ConnectionsRepository, MCPConnectionFactory, ToolDiscoveryResult, mockLogger, mockRegistry, mockRegistryInstance, teardownConnection() (+1 more)
 
 ### Community 153 - "crud.ts"
-Cohesion: 0.09
-Nodes (42): azureMistralOCRStrategy(), mistralOCRStrategy(), vertexMistralOCRStrategy(), AuthConfig, axios, createJWT(), createOCRError(), deleteMistralFile() (+34 more)
+Cohesion: 0.10
+Nodes (39): azureMistralOCRStrategy(), mistralOCRStrategy(), vertexMistralOCRStrategy(), AuthConfig, axios, createJWT(), createOCRError(), deleteMistralFile() (+31 more)
 
 ### Community 154 - "mcp.ts"
 Cohesion: 0.06
@@ -1616,8 +1610,8 @@ Cohesion: 0.05
 Nodes (36): abortScrollFamily, activeHiddenPromptByIndex, activePromptByIndex, activeRunFamily, allConversationsSelector, anySubmittingSelector, audioRunFamily, conversationAgentIdByIndex (+28 more)
 
 ### Community 157 - "Sources.tsx"
-Cohesion: 0.26
-Nodes (16): deterministicHexSuffix(), embedDisambiguatorInLeaf(), flattenArtifactPath(), ReadFileOptions, ReadFileResult, resolveUploadErrorMessage(), sanitizeArtifactPath(), sanitizeFilename() (+8 more)
+Cohesion: 0.17
+Nodes (21): deterministicHexSuffix(), embedDisambiguatorInLeaf(), flattenArtifactPath(), readFileAsBuffer(), readFileAsString(), ReadFileOptions, ReadFileResult, readJsonFile() (+13 more)
 
 ### Community 158 - "Backlog Orqest Meta Ads - Regras, Publicacao, Tokens, Relatorios E Criativos"
 Cohesion: 0.05
@@ -1632,8 +1626,13 @@ Cohesion: 0.19
 Nodes (14): SharePointPickerDialogProps, getMimeTypeFromFileName(), SharePointBatchProgress, SharePointDownloadProgress, SharePointFile, useSharePointBatchDownload(), useSharePointFileDownload(), FileHandlingState (+6 more)
 
 ### Community 162 - "winston.js"
-Cohesion: 0.07
-Nodes (30): condenseArray(), debugTraverse, extractMetaObject(), formatConsoleMeta(), jsonTruncateFormat, { klona }, LOG_CONTEXT_KEYS, MESSAGE_SYMBOL (+22 more)
+Cohesion: 0.06
+Nodes (33): { EventSource }, logger, {
+  MCPManager,
+  FlowStateManager,
+  MCPServersRegistry,
+  OAuthReconnectionManager,
+}, { Time }, condenseArray(), debugTraverse, extractMetaObject(), formatConsoleMeta() (+25 more)
 
 ### Community 163 - "callbacks.js"
 Cohesion: 0.08
@@ -1648,12 +1647,12 @@ Cohesion: 0.14
 Nodes (28): useCreatePrompt(), useDeletePrompt(), useDeletePromptGroup(), useMakePromptProduction(), useUpdatePromptGroup(), addData(), addToCacheList(), deleteData() (+20 more)
 
 ### Community 166 - "run.ts"
-Cohesion: 0.10
-Nodes (34): anyAgentHasCodeEnv(), assertSubagentDepth(), buildSubagentConfigs(), computeEffectiveMaxContextTokens(), countSubagentConfig(), createRun(), customProviders, extractDiscoveredToolsFromHistory() (+26 more)
+Cohesion: 0.07
+Nodes (43): anyAgentHasCodeEnv(), assertSubagentDepth(), buildSubagentConfigs(), computeEffectiveMaxContextTokens(), countSubagentConfig(), createRun(), customProviders, extractDiscoveredToolsFromHistory() (+35 more)
 
 ### Community 167 - "llm.ts"
-Cohesion: 0.10
-Nodes (32): appendAnthropicBetaHeader(), checkPromptCacheSupport(), configureReasoning(), getClaudeHeaders(), TODO: Remove the cast once `@librechat/agents` updates its, initializeAnthropic(), applyDefaultParams(), getLLMConfig() (+24 more)
+Cohesion: 0.11
+Nodes (30): appendAnthropicBetaHeader(), checkPromptCacheSupport(), configureReasoning(), getClaudeHeaders(), TODO: Remove the cast once `@librechat/agents` updates its, initializeAnthropic(), applyDefaultParams(), getLLMConfig() (+22 more)
 
 ### Community 168 - "MarkdownComponents.tsx"
 Cohesion: 0.08
@@ -1700,8 +1699,8 @@ Cohesion: 0.29
 Nodes (8): useGetToolCalls(), ToolCallsMap, useToolCallsMap(), ToolCallsMapContext, ToolCallsMapContextType, ToolCallsMapProvider(), ToolCallsMapProviderProps, mapToolCalls()
 
 ### Community 180 - "providers.ts"
-Cohesion: 0.08
-Nodes (26): initializeBedrock(), BEDROCK_CLAUDE_4_BETAS, mockedCheckUserKeyExpiry, getProviderConfig(), InitializeFn, isKnownCustomProvider(), providerConfigMap, ProviderConfigResult (+18 more)
+Cohesion: 0.07
+Nodes (37): initializeBedrock(), BEDROCK_CLAUDE_4_BETAS, mockedCheckUserKeyExpiry, getProviderConfig(), InitializeFn, isKnownCustomProvider(), providerConfigMap, ProviderConfigResult (+29 more)
 
 ### Community 181 - "experimental.js"
 Cohesion: 0.06
@@ -1759,12 +1758,12 @@ Cohesion: 0.06
 Nodes (26): dalle3JsonSchema, { FileContext, ContentTypes }, { getImageBasename, extractBaseURL }, { logger }, OpenAI, path, { ProxyAgent, fetch }, { Tool } (+18 more)
 
 ### Community 189 - "OpenAIImageGen.tsx"
-Cohesion: 0.12
-Nodes (20): loadAddedAgent(), LoadAddedAgentDeps, LoadAddedAgentParams, loadAgent(), LoadAgentDeps, LoadAgentParams, loadEphemeralAgent(), ModelParametersWithPromptPrefix (+12 more)
+Cohesion: 0.13
+Nodes (19): loadAddedAgent(), LoadAddedAgentDeps, LoadAddedAgentParams, loadAgent(), LoadAgentDeps, LoadAgentParams, loadEphemeralAgent(), ModelParametersWithPromptPrefix (+11 more)
 
 ### Community 190 - "useFavorites"
-Cohesion: 0.08
-Nodes (26): TokenConfig, aggregateModels, ai21Models, amazonModels, anthropicMaxOutputs, anthropicModels, bedrockModels, cohereModels (+18 more)
+Cohesion: 0.09
+Nodes (24): aggregateModels, ai21Models, amazonModels, anthropicMaxOutputs, anthropicModels, bedrockModels, cohereModels, deepseekMaxOutputs (+16 more)
 
 ### Community 191 - "ProjectMetaAdsPanel.spec.tsx"
 Cohesion: 0.06
@@ -1799,8 +1798,8 @@ Cohesion: 0.11
 Nodes (27): cleanCodeToolOutput(), addLineNumbers(), BINARY_EXTENSIONS_NEVER_READABLE, buildBinaryFileError(), createToolExecuteHandler(), createToolExecuteHandlers(), handleReadFileCall(), handleSandboxFileFallback() (+19 more)
 
 ### Community 199 - "llm.ts"
-Cohesion: 0.16
-Nodes (18): applyDefaultParams(), applyVertexMultiRegionEndpoint(), BlockedModelOptionParam, blockedModelOptionParams, getGoogleConfig(), getSafetySettings(), getThresholdMapping(), getVertexMultiRegionEndpoint() (+10 more)
+Cohesion: 0.15
+Nodes (15): BASH_TOOL_DEF_WITH_OUTPUT_REFS, BASH_TOOL_DEF_WITHOUT_OUTPUT_REFS, buildBashToolDef(), buildReadFileDef(), buildToolSet(), BuildToolSetConfig, CODE_READ_FILE_DEF, CODE_READ_FILE_PARAMETERS (+7 more)
 
 ### Community 200 - "package.json"
 Cohesion: 0.07
@@ -1865,8 +1864,8 @@ Cohesion: 0.06
 Nodes (30): USE_REDIS, inMemoryCacheMap, KeyvRedis, standardCache(), violationCache(), logFile, violationFile, batchDeleteKeys() (+22 more)
 
 ### Community 208 - "service.ts"
-Cohesion: 0.13
-Nodes (15): ApiKeyHandlerDependencies, AuthenticatedRequest, createApiKeyHandlers(), ApiKeyAuthDependencies, ApiKeyAuthRequest, createCheckRemoteAgentAccess(), createRequireApiKeyAuth(), RemoteAgentAccessDependencies (+7 more)
+Cohesion: 0.09
+Nodes (20): ApiKeyHandlerDependencies, AuthenticatedRequest, createApiKeyHandlers(), ApiKeyAuthDependencies, ApiKeyAuthRequest, createCheckRemoteAgentAccess(), createRequireApiKeyAuth(), RemoteAgentAccessDependencies (+12 more)
 
 ### Community 209 - "MCPServersRegistry"
 Cohesion: 0.12
@@ -1877,8 +1876,8 @@ Cohesion: 0.19
 Nodes (7): DuplicateKeyError, serializeFrontmatter(), serializeSkill(), serializeSkillSummary(), serializeSourceMetadata(), SkillsHandlers, SkillValidationError
 
 ### Community 211 - "tokens.ts"
-Cohesion: 0.13
-Nodes (8): SkillFileEditor(), SkillFileEditorProps, SkillFilePreview(), SkillFilePreviewProps, TreeToolbar(), TreeToolbarProps, useUpdateSkillNodeContentMutation(), useGetSkillNodeContentQuery()
+Cohesion: 0.25
+Nodes (7): chatBadges, conversationAttachmentsSelector, hideBannerHint, isEditingBadges, messageAttachmentsMap, queriesEnabled, selectedProjectId
 
 ### Community 212 - "OGDialogTemplate.tsx"
 Cohesion: 0.11
@@ -1889,8 +1888,8 @@ Cohesion: 0.12
 Nodes (26): Theme(), ThemeSelector(), ThemeType, Window, themeColorsAtom, themeModeAtom, themeNameAtom, getInitialTheme() (+18 more)
 
 ### Community 214 - "package.json"
-Cohesion: 0.07
-Nodes (28): author, bugs, url, import, require, types, description, exports (+20 more)
+Cohesion: 0.13
+Nodes (14): author, bugs, url, description, files, homepage, keywords, license (+6 more)
 
 ### Community 215 - "v1.js"
 Cohesion: 0.08
@@ -1986,8 +1985,8 @@ Nodes (24): bulkUpdateResourcePermissions(), checkPermission(), db, {
 }, findAccessibleResources(), findPubliclyAccessibleResources(), getAvailableRoles(), getEffectivePermissions() (+16 more)
 
 ### Community 230 - "SetKeyDialog.tsx"
-Cohesion: 0.04
-Nodes (64): TAskFunction, ProjectPromptSnippets, ProjectPromptSnippetsProps, PromptSnippet, SendButton, SendButtonProps, SubmitButton, Action() (+56 more)
+Cohesion: 0.25
+Nodes (8): import, require, types, exports, ./capabilities, import, require, types
 
 ### Community 231 - "dependencies"
 Cohesion: 0.07
@@ -2198,8 +2197,8 @@ Cohesion: 0.08
 Nodes (23): compilerOptions, allowSyntheticDefaultImports, declaration, declarationDir, declarationMap, esModuleInterop, forceConsistentCasingInFileNames, jsx (+15 more)
 
 ### Community 258 - "share.ts"
-Cohesion: 0.05
-Nodes (37): getSharedLinks(), deleteSharedLink(), getSharedMessages(), getTenantSharedMessages(), consoleFormat, fileFormat, levels, logDir (+29 more)
+Cohesion: 0.11
+Nodes (14): getSharedLinks(), deleteSharedLink(), getSharedMessages(), getTenantSharedMessages(), anonymizeAssistantId, anonymizeConvo(), anonymizeConvoId, anonymizeMessageId() (+6 more)
 
 ### Community 259 - "🚀 Adding a New Entity"
 Cohesion: 0.08
@@ -2294,7 +2293,7 @@ Nodes (22): appendVisibleCodeFileContext(), axios, checkIfActive(), { convertIma
 
 ### Community 263 - "crud.js"
 Cohesion: 0.08
-Nodes (37): cloudfrontStrategy(), processCloudFrontAvatar(), processS3Avatar(), uploadImageToCloudFront(), uploadImageToS3(), AvatarConfig, sharedAvatarBasePathStrategies, appendDownloadOverrides() (+29 more)
+Nodes (35): cloudfrontStrategy(), processCloudFrontAvatar(), processS3Avatar(), uploadImageToCloudFront(), uploadImageToS3(), AvatarConfig, sharedAvatarBasePathStrategies, appendDownloadOverrides() (+27 more)
 
 ### Community 264 - "files.ts"
 Cohesion: 0.09
@@ -2330,7 +2329,7 @@ Nodes (9): { Constants }, { FakeClient, initializeFakeClient }, fakeMessages, { 
 
 ### Community 273 - "openai.js"
 Cohesion: 0.12
-Nodes (20): {
+Nodes (21): openai, {
   buildSummarizationHandlers,
   markSummarizationUsage,
   createToolEndCallback,
@@ -2341,10 +2340,7 @@ Nodes (20): {
   PermissionBits,
   hasPermissions,
   AgentCapabilities,
-}, {
-  findAccessibleResources,
-  getEffectivePermissions,
-} (+12 more)
+} (+13 more)
 
 ### Community 274 - "maybeUninstallOAuthMCP.spec.js"
 Cohesion: 0.09
@@ -2403,7 +2399,7 @@ Nodes (28): AdminActionButtonProps, AdminBadgeProps, AdminConfirmDialogProps, Ad
 
 ### Community 280 - "VersionPanel.tsx"
 Cohesion: 0.02
-Nodes (131): ActionAuthForm, AgentPanelContextType, BadgeItem, ConfigFieldDetail, MCPServerInfo, ToolDialogProps, Artifacts(), ArtifactsToggleState (+123 more)
+Nodes (116): AgentPanelContextType, ConfigFieldDetail, MCPServerInfo, ToolDialogProps, DragDropModal(), DragDropModalProps, FileOption, MCPConfigDialog() (+108 more)
 
 ### Community 281 - "Citation.tsx"
 Cohesion: 0.13
@@ -2453,8 +2449,8 @@ Nodes (19): { ContentTypes }, convertImagesToContent(), createOpenRouterGeminiIm
 }, getImageUrl(), getOpenRouterKey(), { getStrategyFunctions } (+11 more)
 
 ### Community 292 - "package.json"
-Cohesion: 0.10
-Nodes (20): author, bugs, url, description, devDependencies, jest, mongodb-memory-server, nodemon (+12 more)
+Cohesion: 0.13
+Nodes (14): author, bugs, url, description, homepage, imports, keywords, license (+6 more)
 
 ### Community 293 - "chatV1.js"
 Cohesion: 0.10
@@ -2508,8 +2504,8 @@ Cohesion: 0.13
 Nodes (16): BasicToolEndHandler, createDeleteMemoryTool(), createMemoryCallback(), createMemoryProcessor(), createMemoryTool(), getDefaultInstructions(), handleMemoryArtifact(), MemoryConfig (+8 more)
 
 ### Community 299 - "text.ts"
-Cohesion: 0.07
-Nodes (25): generateShortLivedToken(), AgentUploadAuthDeps, AgentUploadAuthParams, AgentUploadAuthResult, checkAgentUploadAuth(), verifyAgentUploadPermission(), filterFilesByEndpointConfig(), isMimeTypeSupported() (+17 more)
+Cohesion: 0.08
+Nodes (23): generateShortLivedToken(), AgentUploadAuthDeps, AgentUploadAuthParams, AgentUploadAuthResult, checkAgentUploadAuth(), verifyAgentUploadPermission(), deleteRagFile(), DeleteRagFileParams (+15 more)
 
 ### Community 300 - "libreoffice.ts"
 Cohesion: 0.18
@@ -2619,8 +2615,8 @@ Cohesion: 0.10
 Nodes (19): 10. Métricas de Sucesso (OKRs iniciais), 11. Próximos Passos Sugeridos, 1. Visão & Propósito, 2. Modelo de Negócio, 3. Público-Alvo (ICP), 4. Diferencial Competitivo, 5. Proposta de Valor, 6. Posicionamento de Marca (+11 more)
 
 ### Community 314 - "endpoints.spec.ts"
-Cohesion: 0.09
-Nodes (20): AppConfigService, AppConfigServiceDeps, CacheStore, createAppConfigService(), _resetOverrideStrictCache(), createDeps(), createMockCache(), TestConfig (+12 more)
+Cohesion: 0.13
+Nodes (13): AppConfigService, AppConfigServiceDeps, CacheStore, createAppConfigService(), _resetOverrideStrictCache(), createDeps(), createMockCache(), TestConfig (+5 more)
 
 ### Community 315 - "azure.ts"
 Cohesion: 0.10
@@ -2707,8 +2703,8 @@ Cohesion: 0.11
 Nodes (20): createSSRFSafeAgents(), httpAgentPrototype, LookupCallback, mockedDnsLookup, actionOAuthAgents, actionOAuthAgentsByAddress, createHandleOAuthToken(), getAccessToken() (+12 more)
 
 ### Community 329 - "Artifact.tsx"
-Cohesion: 0.16
-Nodes (13): isActiveVersion(), mockAgentData, AgentState, AgentWithVersions, VersionContext, VersionRecord, VersionWithId, VersionContent() (+5 more)
+Cohesion: 0.39
+Nodes (6): TokenMethods, IToken, TokenCreateData, TokenDeleteResult, TokenQuery, TokenUpdateData
 
 ### Community 330 - "SkillFileEditor.tsx"
 Cohesion: 0.07
@@ -2933,12 +2929,12 @@ Cohesion: 0.12
 Nodes (15): Acceptance Criteria, Backend, Compatibilidade, Decisao de Arquitetura, Editor Visual, Executor V1, Fora do Escopo V1, Logs e Auditoria (+7 more)
 
 ### Community 373 - "package.json"
-Cohesion: 0.12
-Nodes (15): author, bugs, url, description, homepage, license, name, nodemonConfig (+7 more)
+Cohesion: 0.08
+Nodes (23): author, bugs, url, dependencies, lucide-react, @opentelemetry/api, @opentelemetry/core, @opentelemetry/exporter-trace-otlp-http (+15 more)
 
 ### Community 374 - "validation.ts"
-Cohesion: 0.24
-Nodes (9): RESERVED_NAME_PREFIXES, RESERVED_NAME_WORDS, skillSchema, skillFileSchema, ISkill, ISkillDocument, ISkillFile, ISkillFileDocument (+1 more)
+Cohesion: 0.33
+Nodes (6): devDependencies, jest, mongodb-memory-server, nodemon, supertest, @types/sanitize-html
 
 ### Community 375 - "isEnabled"
 Cohesion: 0.29
@@ -2979,8 +2975,8 @@ Cohesion: 0.19
 Nodes (12): decodeBase32(), encodeBase32(), generateTOTP(), generateTOTPSecret(), getTOTPSecret(), { hashBackupCode, decryptV3, decryptV2 }, { updateUser }, verifyBackupCode() (+4 more)
 
 ### Community 382 - "prompts.ts"
-Cohesion: 0.12
-Nodes (14): TOptionSettings, lang, chatBadges, conversationAttachmentsSelector, hideBannerHint, isEditingBadges, messageAttachmentsMap, queriesEnabled (+6 more)
+Cohesion: 0.21
+Nodes (7): TOptionSettings, lang, localStorageAtoms, staticAtoms, defaultTemporaryChat, isTemporary, atomWithLocalStorage()
 
 ### Community 383 - "MessageNav.spec.tsx"
 Cohesion: 0.14
@@ -3059,8 +3055,8 @@ Cohesion: 0.21
 Nodes (6): createChunk(), OpenAIMessageDeltaHandler, OpenAIReasoningDeltaHandler, OpenAIRunStepDeltaHandler, sendFinalChunk(), writeSSE()
 
 ### Community 403 - "useSharePointDownload.ts"
-Cohesion: 0.24
-Nodes (9): components, essentialComponents, extraComponents, moreExtraComponents, ShadcnComponent, generateShadcnPrompt(), artifactsOpenAIPrompt, artifactsPrompt (+1 more)
+Cohesion: 0.67
+Nodes (3): publishConfig, access, registry
 
 ### Community 404 - "ExpandedPanel.spec.tsx"
 Cohesion: 0.22
@@ -3204,8 +3200,8 @@ Cohesion: 0.17
 Nodes (5): EventHandler, OpenAIChatModelStreamHandler, OpenAIModelEndHandler, OpenAIRunStepHandler, OpenAIToolEndHandler
 
 ### Community 431 - "Markdown.mcpui.test.tsx"
-Cohesion: 0.16
-Nodes (12): IconProps, avatarCache, failedUrls, Icon, ResolvedAvatar, UserAvatar, UserAvatarProps, EndpointIcon (+4 more)
+Cohesion: 0.03
+Nodes (62): AgentIconComponent, AgentListItem, AudioChunk, ChatFormValues, DataColumnMeta, IconComponent, IconComponentTypes, IconProps (+54 more)
 
 ### Community 432 - "index.ts"
 Cohesion: 0.13
@@ -3343,8 +3339,8 @@ Cohesion: 0.17
 Nodes (10): { bulkIncrementTagCounts, bulkSaveConvos, bulkSaveMessages }, { EModelEndpoint, Constants, openAISettings }, { FALLBACK_MODEL_BY_ENDPOINT }, { logger }, { v4: uuidv4 }, { Constants }, { getImporter }, { ImportBatchBuilder } (+2 more)
 
 ### Community 460 - "AttachFileMenu.spec.tsx"
-Cohesion: 0.24
-Nodes (10): Avatar(), AvatarEditorRef, Position, Avatar(), AssistantAvatar(), AvatarMenu(), NoImage(), useUploadAssistantAvatarMutation() (+2 more)
+Cohesion: 0.67
+Nodes (3): repository, type, url
 
 ### Community 461 - "SkillsCommand.spec.tsx"
 Cohesion: 0.17
@@ -3399,8 +3395,8 @@ Cohesion: 0.20
 Nodes (5): { getEnvironmentVariable }, { logger }, { Tool }, TraversaalSearch, traversaalSearchJsonSchema
 
 ### Community 475 - "openai.spec.js"
-Cohesion: 0.27
-Nodes (7): PromptDeps, PromptMethods, promptSchema, IPrompt, IPromptGroup, IPromptGroupDocument, isValidObjectIdString()
+Cohesion: 0.13
+Nodes (14): CategoriesMethods, CategoryOption, createCategoriesMethods(), defaultMarketingCategories, PromptDeps, PromptMethods, categoriesSchema, promptSchema (+6 more)
 
 ### Community 476 - "createAgentHandler"
 Cohesion: 0.33
@@ -3539,7 +3535,7 @@ Nodes (5): agentsRouter, app, express, mockGenerationJobManager, request
 
 ### Community 498 - "useToolCallsMap.ts"
 Cohesion: 0.02
-Nodes (116): AgentIconMapProps, AssistantListItem, ConvoGenerator, IconMapProps, IconsRecord, NewConversationParams, MarketplaceProvider(), MarketplaceProviderProps (+108 more)
+Nodes (111): AgentIconMapProps, AssistantListItem, ConvoGenerator, IconMapProps, IconsRecord, NewConversationParams, MarketplaceProvider(), MarketplaceProviderProps (+103 more)
 
 ### Community 499 - "useClientResize.ts"
 Cohesion: 0.40
@@ -3723,10 +3719,6 @@ Nodes (9): compilerOptions, declarationMap, inlineSources, noEmit, preserveConst
 ### Community 534 - "ControlCombobox.spec.tsx"
 Cohesion: 0.20
 Nodes (4): CapturedObserver, CapturingResizeObserver, items, observers
-
-### Community 535 - "ThemeContext.old.tsx"
-Cohesion: 0.21
-Nodes (8): buildHandlers(), getDefaultModel(), PayloadMessage, runFullTurn(), RunFullTurnParams, Spies, hydrateMissingIndexTokenCounts(), TokenCounter
 
 ### Community 536 - "scripts"
 Cohesion: 0.20
@@ -3978,10 +3970,6 @@ Nodes (6): PluginAuthForm(), TPluginAuthFormProps, PluginPagination(), TPluginPa
 ### Community 588 - "registerLimiter.js"
 Cohesion: 0.43
 Nodes (7): createFileLimiters(), createFileUploadHandler(), getEnvironmentVariables(), { limiterCache, removePorts }, logViolation, rateLimit, { ViolationTypes }
-
-### Community 589 - "resetPasswordLimiter.js"
-Cohesion: 0.27
-Nodes (8): MetaAdsOverviewWorkspace(), MetaAdsOverviewWorkspaceProps, renderSortableHeader(), SortableHeaderArgs, MetaAdsSummaryCardItem, MetaAdsSummaryCards(), renderSummaryValue(), SummaryResultTypeOption
 
 ### Community 590 - "sttLimiters.js"
 Cohesion: 0.43
@@ -4397,10 +4385,6 @@ Nodes (5): { createModels, createMethods }, { MongoMemoryServer }, mongoose, { S
 Cohesion: 0.33
 Nodes (4): { ErrorTypes }, { findUser, createUser, updateUser, countUsers }, { getAppConfig }, { isEmailDomainAllowed, resolveAppConfigForUser }
 
-### Community 692 - "CreateFunctionModal.tsx"
-Cohesion: 0.07
-Nodes (24): ProjectDeps, ProjectMethods, ProjectMemorySchema, ProjectMetaAdsClientGoalSchema, ProjectMetaAdsCreativeRulesSchema, ProjectMetaAdsMonthlyBudgetSchema, ProjectMetaAdsRuleAuditSchema, ProjectMetaAdsRuleAuditUserSchema (+16 more)
-
 ### Community 693 - "ProjectConversationsTab.spec.tsx"
 Cohesion: 0.40
 Nodes (5): createQueryClient(), mockFetchNextPage, mockNavigate, mockNewConversation, renderTab()
@@ -4412,10 +4396,6 @@ Nodes (5): createQueryClient(), mockCreateMutateAsync, mockNavigate, mockUpdateM
 ### Community 695 - "useFileHandling.test.ts"
 Cohesion: 0.33
 Nodes (5): mockConversation, mockInvalidateQueries, mockMutate, mockSetFilesLoading, mockShowToast
-
-### Community 697 - "permissions.ts"
-Cohesion: 0.36
-Nodes (5): backfillRemoteAgentPermissions(), EnricherDependencies, enrichRemoteAgentPrincipals(), EnrichResult, Principal
 
 ### Community 698 - "projectContext.ts"
 Cohesion: 0.43
@@ -4454,8 +4434,8 @@ Cohesion: 0.33
 Nodes (6): Padrao de Componente React, Padrao de Hook (Frontend), Padrao de Route (Backend), Padrao de Schema (Data-Schemas), Padrao de Service (Backend), Padroes do Projeto
 
 ### Community 707 - "pluginAuth.ts"
-Cohesion: 0.24
-Nodes (9): createPluginAuthMethods(), PluginAuthMethods, pluginAuthSchema, DeletePluginAuthParams, FindPluginAuthParams, FindPluginAuthsByKeysParams, IPluginAuth, PluginAuthQuery (+1 more)
+Cohesion: 0.31
+Nodes (7): createPluginAuthMethods(), PluginAuthMethods, DeletePluginAuthParams, FindPluginAuthParams, FindPluginAuthsByKeysParams, PluginAuthQuery, UpdatePluginAuthParams
 
 ### Community 708 - "10. OBJEÇÕES / FAQ"
 Cohesion: 0.33
@@ -4681,10 +4661,6 @@ Nodes (4): 7. PROVA E RESULTADOS (Social Proof), Bullets de resultado (substitui
 Cohesion: 0.50
 Nodes (3): cjsBuild, pkg, plugins
 
-### Community 779 - "dependencies"
-Cohesion: 0.25
-Nodes (8): dependencies, lucide-react, @opentelemetry/api, @opentelemetry/core, @opentelemetry/exporter-trace-otlp-http, @opentelemetry/sdk-trace-base, winston, winston-daily-rotate-file
-
 ### Community 781 - "standardCache.namespace_isolation.spec.ts"
 Cohesion: 0.50
 Nodes (3): MockKeyvRedis, mockKeyvRedisClient, mockKeyvRedisInstance
@@ -4785,15 +4761,6 @@ Nodes (4): conversationByIndex, latestMessageFamily, useClearConvoState(), useCl
 Cohesion: 0.52
 Nodes (5): escapeForTemplateLiteral(), generateMarkdownHtml(), getMarkdownFiles(), isSafeUrl(), SAFE_PROTOCOLS
 
-### Community 915 - "index.js"
-Cohesion: 0.33
-Nodes (4): { EventSource }, logger, {
-  MCPManager,
-  FlowStateManager,
-  MCPServersRegistry,
-  OAuthReconnectionManager,
-}, { Time }
-
 ### Community 918 - "user.ts"
 Cohesion: 0.47
 Nodes (3): localUser, DEFAULT_USER, User
@@ -4828,15 +4795,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Meta Ads Tools` and `Commented Meta Ads MCP Server`?**
   _Edge tagged AMBIGUOUS (relation: conceptually_related_to) - confidence is low._
-- **Why does `useLocalize()` connect `BI Workspace Adapter` to `publisher.ts`, `Attachment.tsx`, `useSkillFavorites.ts`, `Frontend Mutations`, `files.ts`, `memory.ts`, `Overview State Tables`, `Ad Preview Rendering`, `Meta Ads Query Cache`, `BI Ranking Dialogs`, `Rule Dialog Fields`, `BI Ranking Logic`, `Rules Hook State`, `MermaidErrorBoundary`, `AgentGrid.tsx`, `common.tsx`, `VersionPanel.tsx`, `openIdJwtStrategy.js`, `Budget Editor Rules UI`, `Dialogs Selection Layer`, `Run Analysis UI`, `Settings Drawer`, `BashCall.tsx`, `Rule Audit History`, `MarkdownComponents.tsx`, `Markdown.mcpui.test.tsx`, `Error.tsx`, `ConfigPage.tsx`, `CreateUserModal.tsx`, `useMetaAdsPeriodFilter`, `azure.ts`, `OutputRenderer.tsx`, `Artifact.tsx`, `SkillFileEditor.tsx`, `useMermaid.ts`, `MCPUIResource.test.tsx`, `AttachFileMenu.spec.tsx`, `FlowStateManager`, `Root.tsx`, `CategoryAdminModal.tsx`, `uploadLimiters.js`, `useMCPServerForm.ts`, `tokens.ts`, `OGDialogTemplate.tsx`, `RouteErrorBoundary.tsx`, `conversation.spec.ts`, `Artifacts.tsx`, `SetKeyDialog.tsx`, `useTextToSpeech.ts`, `SubagentCall.tsx`, `EndpointItem.tsx`, `FilePreviewDialog.tsx`, `index.ts`, `GroupsPage.tsx`, `SecretsPage.tsx`, `useToolCallsMap.ts`, `utils.ts`, `App.jsx`, `VectorStoreSidePanel.tsx`, `types.ts`, `RetrievalCall.tsx`?**
+- **Why does `useLocalize()` connect `BI Workspace Adapter` to `publisher.ts`, `Attachment.tsx`, `useSkillFavorites.ts`, `Frontend Mutations`, `files.ts`, `memory.ts`, `Overview State Tables`, `Ad Preview Rendering`, `Meta Ads Query Cache`, `BI Ranking Dialogs`, `Rule Dialog Fields`, `BI Ranking Logic`, `Rules Hook State`, `MermaidErrorBoundary`, `AgentGrid.tsx`, `common.tsx`, `VersionPanel.tsx`, `openIdJwtStrategy.js`, `Budget Editor Rules UI`, `Dialogs Selection Layer`, `Run Analysis UI`, `Settings Drawer`, `BashCall.tsx`, `Rule Audit History`, `MarkdownComponents.tsx`, `Markdown.mcpui.test.tsx`, `Error.tsx`, `ConfigPage.tsx`, `CreateUserModal.tsx`, `useMetaAdsPeriodFilter`, `azure.ts`, `OutputRenderer.tsx`, `SkillFileEditor.tsx`, `useMermaid.ts`, `MCPUIResource.test.tsx`, `useMCPServerForm.ts`, `FlowStateManager`, `CategoryAdminModal.tsx`, `uploadLimiters.js`, `RouteErrorBoundary.tsx`, `OGDialogTemplate.tsx`, `useMCPServerManager.ts`, `conversation.spec.ts`, `Artifacts.tsx`, `useTextToSpeech.ts`, `SubagentCall.tsx`, `EndpointItem.tsx`, `FilePreviewDialog.tsx`, `index.ts`, `GroupsPage.tsx`, `SecretsPage.tsx`, `useToolCallsMap.ts`, `utils.ts`, `App.jsx`, `VectorStoreSidePanel.tsx`, `types.ts`, `RetrievalCall.tsx`?**
   _High betweenness centrality (0.168) - this node is a cross-community bridge._
-- **Why does `resolve()` connect `useTagConversationMutation` to `share.ts`, `Meta Graph Client`, `GenerationJobManagerClass`, `batchResetMeiliFlags`, `index.metrics.spec.js`, `reset-password.js`, `cleanupUser`, `Meta Ads UI Primitives`, `VersionPanel.tsx`, `MCPReinitRecovery.integration.test.ts`, `AuthService.js`, `process.ts`, `Settings Sanitizer`, `FluxAPI.js`, `Project Mongo Schema`, `images.js`, `Overview Rows Table`, `SearchResults.tsx`, `index.ts`, `GraphApiService.js`, `handlers.ts`, `useMermaid.ts`, `uploadLimiters.js`, `MCPManager.ts`, `migrate-prompt-permissions.js`, `TTSService.js`, `index.spec.js`, `codeapi.ts`, `PermissionsController.js`, `migrate-agent-permissions.js`, `ModelSelectorContext.tsx`, `gemini.ts`, `env.ts`?**
-  _High betweenness centrality (0.152) - this node is a cross-community bridge._
-- **Why does `useMCPServerManager()` connect `VersionPanel.tsx` to `projectContext.ts`, `BI Workspace Adapter`, `SetKeyDialog.tsx`, `BI Ranking Dialogs`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+- **Why does `resolve()` connect `useTagConversationMutation` to `Meta Graph Client`, `GenerationJobManagerClass`, `batchResetMeiliFlags`, `index.metrics.spec.js`, `reset-password.js`, `cleanupUser`, `Meta Ads UI Primitives`, `VersionPanel.tsx`, `MCPReinitRecovery.integration.test.ts`, `AuthService.js`, `process.ts`, `Settings Sanitizer`, `FluxAPI.js`, `Project Mongo Schema`, `images.js`, `Overview Rows Table`, `SearchResults.tsx`, `index.ts`, `Overview Workspace`, `GraphApiService.js`, `handlers.ts`, `useMermaid.ts`, `uploadLimiters.js`, `MCPManager.ts`, `migrate-prompt-permissions.js`, `TTSService.js`, `index.spec.js`, `codeapi.ts`, `PermissionsController.js`, `migrate-agent-permissions.js`, `ModelSelectorContext.tsx`, `gemini.ts`, `env.ts`?**
+  _High betweenness centrality (0.166) - this node is a cross-community bridge._
+- **Why does `useMCPServerManager()` connect `VersionPanel.tsx` to `useMCPServerForm.ts`, `Rules Hook State`, `useToolCallsMap.ts`, `BI Workspace Adapter`, `projectContext.ts`?**
+  _High betweenness centrality (0.076) - this node is a cross-community bridge._
 - **What connects `entrypoint.sh script`, `NODE_OPTIONS`, `path` to the rest of the system?**
   _8137 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Shared Data Service` be split into smaller, more focused modules?**
-  _Cohesion score 0.008978675645342313 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.00906555090655509 - nodes in this community are weakly interconnected._
 - **Should `Project Zod Schemas` be split into smaller, more focused modules?**
-  _Cohesion score 0.019347705914870093 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.021079618287993162 - nodes in this community are weakly interconnected._
