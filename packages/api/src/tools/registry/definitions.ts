@@ -373,7 +373,8 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
     ad_account_id: {
       type: 'string',
       pattern: '^act_\\d+$',
-      description: 'Meta ad account id in act_<number> format.',
+      description:
+        'Optional Meta ad account id in act_<number> format. Defaults to the configured project account.',
     },
     since: {
       type: 'string',
@@ -412,7 +413,7 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
         'Optional project id. Defaults to the active conversation project. Required through either source; the project controls access to Meta Ads credentials.',
     },
   },
-  required: ['ad_account_id', 'since', 'until'],
+  required: ['since', 'until'],
 };
 
 /** Meta Ads budget manager tool JSON schema */
@@ -526,7 +527,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for active ad-level insights. Requires an accessible project with Meta Ads credentials and always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
+      'Read-only Meta Graph API tool for active ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. Always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },

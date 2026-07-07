@@ -14,7 +14,7 @@ const {
 const META_GRAPH_VERSION_PATTERN = /^v[1-9]\d?\.0$/;
 const META_INSIGHTS_FIELDS = 'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas';
 const META_ACTIVE_AD_FILTERING = JSON.stringify([
-  { field: 'ad.delivery_info', operator: 'IN', values: ['ACTIVE'] },
+  { field: 'ad.delivery_info', operator: 'IN', value: ['ACTIVE'] },
 ]);
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -27,7 +27,8 @@ const metaAdsGetInsightsJsonSchema = {
   properties: {
     ad_account_id: {
       type: 'string',
-      description: 'Meta ad account id in act_<number> format.',
+      description:
+        'Optional Meta ad account id in act_<number> format. Defaults to the configured project account.',
     },
     since: {
       type: 'string',
@@ -63,7 +64,7 @@ const metaAdsGetInsightsJsonSchema = {
         'Optional project id. Defaults to the active conversation project. Required through either source; the project controls access to Meta Ads credentials.',
     },
   },
-  required: ['ad_account_id', 'since', 'until'],
+  required: ['since', 'until'],
 };
 
 function parsePositiveInteger(value, defaultValue, maxValue) {
@@ -173,23 +174,26 @@ class MetaAdsGetInsights extends Tool {
     if (!projectAdAccountId) {
       throw new Error('Project Meta Ads account is not configured.');
     }
-    if (projectAdAccountId !== adAccountId) {
+    if (adAccountId && projectAdAccountId !== adAccountId) {
       throw new Error('ad_account_id does not match the project Meta Ads account.');
     }
-    return project;
+    return { project, adAccountId: projectAdAccountId };
   }
 
   async getAccessToken(projectId, adAccountId) {
     if (!this.tenantId || typeof this.getTenantSecret !== 'function') {
       throw new Error('Tenant context is required for Meta Ads insights.');
     }
-    const project = await this.getProject(projectId, adAccountId);
+    const { project, adAccountId: resolvedAdAccountId } = await this.getProject(
+      projectId,
+      adAccountId,
+    );
     const credentials = await resolveMetaAccessToken({
       tenantId: this.tenantId,
       metaAds: project.metaAds ?? {},
       getSecret: this.getTenantSecret,
     });
-    return credentials.accessToken;
+    return { accessToken: credentials.accessToken, adAccountId: resolvedAdAccountId };
   }
 
   async fetchPage({ accessToken, graphVersion, adAccountId, since, until, limit, after }) {
@@ -218,9 +222,12 @@ class MetaAdsGetInsights extends Tool {
 
   async _call(args) {
     try {
-      const adAccountId = args.ad_account_id;
+      const adAccountId =
+        typeof args.ad_account_id === 'string' && args.ad_account_id ? args.ad_account_id : '';
       const { since, until } = args;
-      validateAdAccountId(adAccountId);
+      if (adAccountId) {
+        validateAdAccountId(adAccountId);
+      }
       validateDateRange(since, until);
 
       const limit = parsePositiveInteger(args.limit, DEFAULT_LIMIT, MAX_LIMIT);
@@ -230,16 +237,16 @@ class MetaAdsGetInsights extends Tool {
         typeof args.after === 'string' && args.after.length > 0 ? args.after : undefined;
       const projectId =
         typeof args.project_id === 'string' && args.project_id ? args.project_id : this.projectId;
-      const accessToken = await this.getAccessToken(projectId, adAccountId);
+      const metaAccess = await this.getAccessToken(projectId, adAccountId);
       const data = [];
       let status = 200;
       let pagesFetched = 0;
 
       while (pagesFetched < maxPages) {
         const page = await this.fetchPage({
-          accessToken,
+          accessToken: metaAccess.accessToken,
           graphVersion,
-          adAccountId,
+          adAccountId: metaAccess.adAccountId,
           since,
           until,
           limit,
@@ -260,7 +267,7 @@ class MetaAdsGetInsights extends Tool {
       return JSON.stringify({
         ok: true,
         status,
-        accountId: adAccountId,
+        accountId: metaAccess.adAccountId,
         graphVersion,
         since,
         until,

@@ -81,8 +81,10 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('fields')).toBe(
       'ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
-    expect(JSON.parse(url.searchParams.get('filtering'))).toEqual([
-      { field: 'ad.delivery_info', operator: 'IN', values: ['ACTIVE'] },
+    const filtering = url.searchParams.get('filtering');
+    expect(filtering).not.toContain('"values"');
+    expect(JSON.parse(filtering)).toEqual([
+      { field: 'ad.delivery_info', operator: 'IN', value: ['ACTIVE'] },
     ]);
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
       since: '2026-05-01',
@@ -102,6 +104,30 @@ describe('MetaAdsGetInsights', () => {
       hasMore: false,
       data: [{ ad_name: 'Ad 1', spend: '10.00' }],
     });
+  });
+
+  it('does not send unsupported values key in active ad filtering', async () => {
+    await createTool().call({
+      ad_account_id: 'act_123',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    const filtering = new URL(fetch.mock.calls[0][0]).searchParams.get('filtering');
+    expect(filtering).not.toContain('"values"');
+  });
+
+  it('uses the configured project ad account when ad_account_id is omitted', async () => {
+    const result = await createTool().call({
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
+      expect.any(Object),
+    );
+    expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, accountId: 'act_123' }));
   });
 
   it('uses an explicit project token secret when the accessible project has one', async () => {
