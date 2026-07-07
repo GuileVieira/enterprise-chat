@@ -177,7 +177,7 @@
   {
     "name": "Meta Ads Insights",
     "pluginKey": "meta_ads_get_insights",
-    "description": "Read active ad-level insights from Meta Graph API using the tenant Meta access token.",
+    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials.",
     "icon": "assets/logo.svg",
     "authConfig": []
   },

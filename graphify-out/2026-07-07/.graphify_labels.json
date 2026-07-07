@@ -771,6 +771,7 @@
   "769": "SubRow.tsx",
   "770": "Account.spec.tsx",
   "771": "useVirtualGrid.ts",
+  "772": "LangIcon.tsx",
   "773": "convos.fakeData.ts",
   "774": "Accessibility.spec.tsx",
   "775": "repository",
@@ -923,5 +924,7 @@
   "922": "playwright.config.a11y.ts",
   "923": "publishConfig",
   "924": "repository",
+  "925": "search.ts",
+  "926": "handleJsonParseError",
   "929": "list-users.js"
 }

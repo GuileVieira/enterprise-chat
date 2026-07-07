@@ -200,6 +200,18 @@ describe('definitions.ts', () => {
         expect(calcDef?.parameters).toBeDefined();
       });
 
+      it('exposes Meta Ads insights without requiring ad_account_id', () => {
+        const metaAdsDef = getToolDefinition('meta_ads_get_insights');
+
+        expect(metaAdsDef?.schema.required).toEqual(['since', 'until']);
+        expect(metaAdsDef?.schema.properties?.level).toEqual(
+          expect.objectContaining({
+            type: 'string',
+            enum: ['campaign', 'adset', 'ad'],
+          }),
+        );
+      });
+
       it('does not resolve `execute_code` as a builtin tool definition (registered by initializeAgent instead)', async () => {
         /* Phase 8: the legacy `CodeExecutionToolDefinition` is no longer in
            the registry. `execute_code` stays in `agent.tools` as the
@@ -262,7 +274,6 @@ describe('definitions.ts', () => {
         const deps: LoadToolDefinitionsDeps = {
           getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
           isBuiltInTool: mockIsBuiltInTool,
-          loadAuthValues: mockLoadAuthValues,
         };
 
         const result = await loadToolDefinitions(params, deps);

@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/manifest.json": {
-    "mtime": 1781219412.7579439,
-    "ast_hash": "1ad2592da3591a2003135feac5d06bc5",
+    "mtime": 1783453428.5255022,
+    "ast_hash": "bc34dcd9a5058269653cef311e4d04fe",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/AzureAISearch.js": {
@@ -12075,8 +12075,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/tools/definitions.spec.ts": {
-    "mtime": 1779203841.3100288,
-    "ast_hash": "cbcdce0765513693a7ebc3de1e10e7f8",
+    "mtime": 1783453682.4889002,
+    "ast_hash": "d02674dc859a2f289e6d383b3342cafd",
     "semantic_hash": ""
   },
   "packages/api/src/tools/definitions.ts": {
