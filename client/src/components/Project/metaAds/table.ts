@@ -31,6 +31,9 @@ export function getMetricValue(campaign: ProjectMetaAdsCampaignSummary, key: str
   if (key === 'result') {
     return campaign.resultCount ?? 0;
   }
+  if (key === 'resultType') {
+    return campaign.resultType ?? 'UNKNOWN';
+  }
   if (key === 'ctr') {
     return campaign.ctr ?? 0;
   }

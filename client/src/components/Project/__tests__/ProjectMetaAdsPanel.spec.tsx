@@ -1678,7 +1678,15 @@ describe('ProjectMetaAdsPanel', () => {
         spend: 120,
         cpa: 12,
         resultCount: 10,
-        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+        resultType: 'video_view',
+        resultTypeBreakdown: [
+          {
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+            totalSpend: 120,
+            totalResults: 10,
+            averageCostPerResult: 12,
+          },
+        ],
         dailyBudget: 100,
         budgetMode: 'ABO',
         adSets: [
@@ -1723,6 +1731,11 @@ describe('ProjectMetaAdsPanel', () => {
 
     expect(
       screen.getByRole('columnheader', { name: 'com_ui_project_meta_ads_result_type' }),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('columnheader', { name: 'com_ui_project_meta_ads_result_type' }),
+      ).getByRole('button', { name: /com_ui_project_meta_ads_result_type/ }),
     ).toBeInTheDocument();
 
     const rows = screen.getAllByTestId('meta-ads-campaign-row');

@@ -427,10 +427,16 @@ function filterAndSortCampaigns({
     })
     .sort((first, second) => {
       const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
-      if (key === 'name') {
-        const result = String(getMetricValue(first, 'name')).localeCompare(
-          String(getMetricValue(second, 'name')),
-        );
+      if (key === 'name' || key === 'resultType') {
+        const firstValue =
+          key === 'resultType'
+            ? getResultTypeLabel(String(getMetricValue(first, key)), localize)
+            : String(getMetricValue(first, key));
+        const secondValue =
+          key === 'resultType'
+            ? getResultTypeLabel(String(getMetricValue(second, key)), localize)
+            : String(getMetricValue(second, key));
+        const result = firstValue.localeCompare(secondValue);
         return direction === 'desc' ? -result : result;
       }
       return compareNumberSort(first, second, key, direction);
@@ -503,6 +509,7 @@ function applyResultTypeMetrics(
   if (breakdown) {
     return {
       ...campaign,
+      resultType: breakdown.resultType || resultTypeFilter,
       spend: breakdown.totalSpend,
       resultCount: breakdown.totalResults,
       cpa: breakdown.averageCostPerResult,
@@ -520,6 +527,7 @@ function applyResultTypeMetrics(
   );
   return {
     ...campaign,
+    resultType: resultTypeFilter,
     spend: Number(totals.spend.toFixed(2)),
     resultCount: Number(totals.results.toFixed(2)),
     cpa: totals.results > 0 ? Number((totals.spend / totals.results).toFixed(2)) : campaign.cpa,

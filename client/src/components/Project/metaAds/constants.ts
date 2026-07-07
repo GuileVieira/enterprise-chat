@@ -113,6 +113,7 @@ export const tableColumnMap: Record<TableColumnKey, TableColumn> = {
     key: 'resultType',
     labelKey: 'com_ui_project_meta_ads_result_type',
     widthClass: 'w-36',
+    sortableKey: 'resultType',
   },
   cpa: {
     key: 'cpa',
