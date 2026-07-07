@@ -1,19 +1,31 @@
 const fetch = require('node-fetch');
 const MetaAdsGetInsights = require('../MetaAdsGetInsights');
+const {
+  findProjectForRequest,
+  userCanAccessProject,
+} = require('~/server/services/Projects/access');
 
 jest.mock('node-fetch', () => jest.fn());
-
-const getTenantSecret = jest.fn(async () => ({
-  tenantId: 'tenant-x',
-  name: 'meta_graph_access_token',
-  type: 'bearer',
-  value: 'meta-token',
+jest.mock('~/server/services/Projects/access', () => ({
+  findProjectForRequest: jest.fn(),
+  userCanAccessProject: jest.fn(),
 }));
 
-function createTool() {
+const getTenantSecret = jest.fn();
+
+function createTool(fields = {}) {
   return new MetaAdsGetInsights({
+    req: {
+      user: {
+        id: 'user-x',
+        tenantId: 'tenant-x',
+        role: 'USER',
+      },
+    },
     tenantId: 'tenant-x',
     getTenantSecret,
+    projectId: 'project-1',
+    ...fields,
   });
 }
 
@@ -28,16 +40,34 @@ function createResponse(data, ok = true, status = 200) {
 describe('MetaAdsGetInsights', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getTenantSecret.mockImplementation(async (tenantId, name) => ({
+      tenantId,
+      name,
+      type: 'bearer',
+      value: name === 'project-secret' ? 'project-token' : 'meta-token',
+    }));
+    findProjectForRequest.mockResolvedValue({
+      _id: 'project-mongo-1',
+      projectId: 'project-1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123' },
+    });
+    userCanAccessProject.mockResolvedValue(true);
     fetch.mockResolvedValue(createResponse({ data: [{ ad_name: 'Ad 1', spend: '10.00' }] }));
   });
 
-  it('forces Meta Graph insight params and tenant bearer auth', async () => {
+  it('forces Meta Graph insight params and project-scoped tenant bearer auth', async () => {
     const result = await createTool().call({
       ad_account_id: 'act_123',
       since: '2026-05-01',
       until: '2026-05-07',
     });
 
+    expect(findProjectForRequest).toHaveBeenCalledWith({
+      projectId: 'project-1',
+      user: expect.objectContaining({ id: 'user-x' }),
+    });
+    expect(userCanAccessProject).toHaveBeenCalled();
     expect(getTenantSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
@@ -72,6 +102,75 @@ describe('MetaAdsGetInsights', () => {
       hasMore: false,
       data: [{ ad_name: 'Ad 1', spend: '10.00' }],
     });
+  });
+
+  it('uses an explicit project token secret when the accessible project has one', async () => {
+    findProjectForRequest.mockResolvedValueOnce({
+      _id: 'project-mongo-1',
+      projectId: 'project-1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123', tokenSecretName: 'project-secret' },
+    });
+
+    await createTool().call({
+      ad_account_id: 'act_123',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(getTenantSecret).toHaveBeenCalledWith('tenant-x', 'project-secret');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer project-token' },
+      }),
+    );
+  });
+
+  it('rejects calls without an active or explicit project context', async () => {
+    const result = await createTool({ projectId: undefined }).call({
+      ad_account_id: 'act_123',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(findProjectForRequest).not.toHaveBeenCalled();
+    expect(getTenantSecret).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(result)).toEqual({
+      ok: false,
+      error: {
+        message: 'Project context is required for Meta Ads insights.',
+      },
+    });
+  });
+
+  it('rejects project access before reading secrets', async () => {
+    userCanAccessProject.mockResolvedValueOnce(false);
+
+    const result = await createTool().call({
+      ad_account_id: 'act_123',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(getTenantSecret).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(result).error.message).toBe('Project access denied.');
+  });
+
+  it('rejects ad accounts outside the project Meta Ads configuration', async () => {
+    const result = await createTool().call({
+      ad_account_id: 'act_456',
+      since: '2026-05-01',
+      until: '2026-05-07',
+    });
+
+    expect(getTenantSecret).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.parse(result).error.message).toBe(
+      'ad_account_id does not match the project Meta Ads account.',
+    );
   });
 
   it('defaults to the current graph version and allows version-format overrides only', async () => {

@@ -280,6 +280,7 @@ const loadTools = async ({
       req: options.req,
       tenantId: options.req?.user?.tenantId,
       getTenantSecret,
+      projectId: options.projectId,
     },
     meta_ads_budget_manager: {
       req: options.req,

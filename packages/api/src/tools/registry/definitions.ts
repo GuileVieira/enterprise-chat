@@ -409,7 +409,7 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
     project_id: {
       type: 'string',
       description:
-        'Optional project id. When provided, uses the project Meta Ads token secret before the tenant default.',
+        'Optional project id. Defaults to the active conversation project. Required through either source; the project controls access to Meta Ads credentials.',
     },
   },
   required: ['ad_account_id', 'since', 'until'],
@@ -421,13 +421,7 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
   properties: {
     action: {
       type: 'string',
-      enum: [
-        'get_status',
-        'list_recommendations',
-        'run_now',
-        'approve_change',
-        'pause_automation',
-      ],
+      enum: ['get_status', 'list_recommendations', 'run_now', 'approve_change', 'pause_automation'],
       description:
         'Action to run. Use approve_change only after showing the recommendation to the user.',
     },
@@ -532,7 +526,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for active ad-level insights. Uses the tenant secret "meta_graph_access_token" and always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
+      'Read-only Meta Graph API tool for active ad-level insights. Requires an accessible project with Meta Ads credentials and always queries level=ad with active ad filtering and fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas. graph_version is optional and must match Meta version format like v25.0.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },

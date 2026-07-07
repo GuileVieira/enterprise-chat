@@ -60,7 +60,7 @@ const metaAdsGetInsightsJsonSchema = {
     project_id: {
       type: 'string',
       description:
-        'Optional project id. When provided, the tool uses the project Meta Ads token secret before falling back to the tenant token.',
+        'Optional project id. Defaults to the active conversation project. Required through either source; the project controls access to Meta Ads credentials.',
     },
   },
   required: ['ad_account_id', 'since', 'until'],
@@ -106,6 +106,14 @@ function validateAdAccountId(adAccountId) {
   }
 }
 
+function normalizeAdAccountId(adAccountId) {
+  if (typeof adAccountId !== 'string') {
+    return '';
+  }
+  const digits = adAccountId.replace(/^act_/i, '').replace(/\D/g, '');
+  return digits ? `act_${digits}` : '';
+}
+
 function parseGraphVersion(value) {
   if (value === undefined || value === null || value === '') {
     return getMetaGraphVersion();
@@ -125,7 +133,7 @@ class MetaAdsGetInsights extends Tool {
   name = 'meta_ads_get_insights';
   description =
     'Read-only Meta Graph API tool for active ad-level insights. ' +
-    'Requires tenant secret "meta_graph_access_token". ' +
+    'Requires an accessible project with Meta Ads credentials. ' +
     'Always queries active ads with fields ad_name, spend, cpm, ctr, cpc, actions, action_values, purchase_roas.';
 
   schema = metaAdsGetInsightsJsonSchema;
@@ -139,11 +147,12 @@ class MetaAdsGetInsights extends Tool {
     this.req = fields.req;
     this.tenantId = fields.tenantId;
     this.getTenantSecret = fields.getTenantSecret;
+    this.projectId = fields.projectId;
   }
 
-  async getProjectMetaAds(projectId) {
+  async getProject(projectId, adAccountId) {
     if (!projectId) {
-      return {};
+      throw new Error('Project context is required for Meta Ads insights.');
     }
     if (!this.req?.user) {
       throw new Error('User context is required for project Meta Ads credentials.');
@@ -160,17 +169,24 @@ class MetaAdsGetInsights extends Tool {
     if (!hasAccess) {
       throw new Error('Project access denied.');
     }
-    return project.metaAds ?? {};
+    const projectAdAccountId = normalizeAdAccountId(project.metaAds?.adAccountId);
+    if (!projectAdAccountId) {
+      throw new Error('Project Meta Ads account is not configured.');
+    }
+    if (projectAdAccountId !== adAccountId) {
+      throw new Error('ad_account_id does not match the project Meta Ads account.');
+    }
+    return project;
   }
 
-  async getAccessToken(projectId) {
+  async getAccessToken(projectId, adAccountId) {
     if (!this.tenantId || typeof this.getTenantSecret !== 'function') {
       throw new Error('Tenant context is required for Meta Ads insights.');
     }
-    const metaAds = await this.getProjectMetaAds(projectId);
+    const project = await this.getProject(projectId, adAccountId);
     const credentials = await resolveMetaAccessToken({
       tenantId: this.tenantId,
-      metaAds,
+      metaAds: project.metaAds ?? {},
       getSecret: this.getTenantSecret,
     });
     return credentials.accessToken;
@@ -212,7 +228,9 @@ class MetaAdsGetInsights extends Tool {
       const graphVersion = parseGraphVersion(args.graph_version);
       let nextAfter =
         typeof args.after === 'string' && args.after.length > 0 ? args.after : undefined;
-      const accessToken = await this.getAccessToken(args.project_id);
+      const projectId =
+        typeof args.project_id === 'string' && args.project_id ? args.project_id : this.projectId;
+      const accessToken = await this.getAccessToken(projectId, adAccountId);
       const data = [];
       let status = 200;
       let pagesFetched = 0;

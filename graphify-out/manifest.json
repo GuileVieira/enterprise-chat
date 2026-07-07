@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
-    "mtime": 1781219412.758854,
-    "ast_hash": "0bca00cc4fbe3ba9abacbf217da8055a",
+    "mtime": 1783451235.5731542,
+    "ast_hash": "67900f73d2b450320aaeaa3f03bfef10",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/OpenAIImageTools.js": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsGetInsights.spec.js": {
-    "mtime": 1781219412.759176,
-    "ast_hash": "304bd91806fb5e7328e57c23b541c560",
+    "mtime": 1783451162.0312254,
+    "ast_hash": "7afe2e5bd8a9920e559cd0cfb8420df8",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/OpenRouterGeminiImageGen.spec.js": {
@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/util/handleTools.js": {
-    "mtime": 1781820110.9427943,
-    "ast_hash": "1ee08308f55395f6be29be2edc9dd556",
+    "mtime": 1783451179.0035975,
+    "ast_hash": "65dabc55e1e83ad673949757037e90e8",
     "semantic_hash": ""
   },
   "api/app/clients/tools/util/handleTools.test.js": {
@@ -12100,8 +12100,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/definitions.ts": {
-    "mtime": 1781219412.767865,
-    "ast_hash": "cd8b0e5c2d8f25fb38eabb7263b715e2",
+    "mtime": 1783451258.0962875,
+    "ast_hash": "2241da786da5d030f44eb5aff30103f3",
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/index.ts": {
