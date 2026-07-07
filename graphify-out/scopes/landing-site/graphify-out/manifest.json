@@ -1,0 +1,227 @@
+{
+  "sites/orqest-landing/.eslintrc.json": {
+    "mtime": 1779201635.5594168,
+    "ast_hash": "5cc89077d438e3d0d0a8308ab7e06a5a",
+    "semantic_hash": "5cc89077d438e3d0d0a8308ab7e06a5a"
+  },
+  "sites/orqest-landing/.vercel/project.json": {
+    "mtime": 1777438459.5766253,
+    "ast_hash": "2e3bc1d9375beec24f8a0c499f06189c",
+    "semantic_hash": "2e3bc1d9375beec24f8a0c499f06189c"
+  },
+  "sites/orqest-landing/next-env.d.ts": {
+    "mtime": 1777428233.8212647,
+    "ast_hash": "b5ed9dd8b4c5ba8e5ab8e6a379c15838",
+    "semantic_hash": "b5ed9dd8b4c5ba8e5ab8e6a379c15838"
+  },
+  "sites/orqest-landing/next.config.mjs": {
+    "mtime": 1779201635.560431,
+    "ast_hash": "5154f1b86b8be7236e30807b49c411b2",
+    "semantic_hash": "5154f1b86b8be7236e30807b49c411b2"
+  },
+  "sites/orqest-landing/package.json": {
+    "mtime": 1779201635.5615404,
+    "ast_hash": "7c5da1b9e2ce262168af327294201526",
+    "semantic_hash": "7c5da1b9e2ce262168af327294201526"
+  },
+  "sites/orqest-landing/postcss.config.mjs": {
+    "mtime": 1779201635.5617132,
+    "ast_hash": "b7941c02b947e17ae32f67ae7e664ec8",
+    "semantic_hash": "b7941c02b947e17ae32f67ae7e664ec8"
+  },
+  "sites/orqest-landing/src/app/layout.tsx": {
+    "mtime": 1779409439.0203214,
+    "ast_hash": "8fab19414011c6c585ec1dec4093c1df",
+    "semantic_hash": "8fab19414011c6c585ec1dec4093c1df"
+  },
+  "sites/orqest-landing/src/app/obrigado/page.tsx": {
+    "mtime": 1779409447.5195434,
+    "ast_hash": "64c04a091622632032e864a57e34c4e5",
+    "semantic_hash": "64c04a091622632032e864a57e34c4e5"
+  },
+  "sites/orqest-landing/src/app/page.tsx": {
+    "mtime": 1779202875.2143424,
+    "ast_hash": "e179dcf8d4ee01c7b9560c10d3ca926e",
+    "semantic_hash": "e179dcf8d4ee01c7b9560c10d3ca926e"
+  },
+  "sites/orqest-landing/src/app/providers.tsx": {
+    "mtime": 1779203545.3088658,
+    "ast_hash": "a3de25a2679ee619c88555e64e24a4f8",
+    "semantic_hash": "a3de25a2679ee619c88555e64e24a4f8"
+  },
+  "sites/orqest-landing/src/app/v2/components.tsx": {
+    "mtime": 1779203545.309486,
+    "ast_hash": "e93d7d26ce9c7c5fd20e1c61e5a180f6",
+    "semantic_hash": "e93d7d26ce9c7c5fd20e1c61e5a180f6"
+  },
+  "sites/orqest-landing/src/app/v2/data.ts": {
+    "mtime": 1779202875.2698658,
+    "ast_hash": "d218f24e6758dfd595924b4835767969",
+    "semantic_hash": "d218f24e6758dfd595924b4835767969"
+  },
+  "sites/orqest-landing/src/app/v2/page.tsx": {
+    "mtime": 1779409443.2352374,
+    "ast_hash": "3ba7dcedbbcbff13a13632e022d161ac",
+    "semantic_hash": "3ba7dcedbbcbff13a13632e022d161ac"
+  },
+  "sites/orqest-landing/src/components/icons/OrqestIcon.tsx": {
+    "mtime": 1779202875.2457075,
+    "ast_hash": "2094a76274a7be1ef93127b53ef93717",
+    "semantic_hash": "2094a76274a7be1ef93127b53ef93717"
+  },
+  "sites/orqest-landing/src/components/icons/OrqestLogo.tsx": {
+    "mtime": 1779203545.309652,
+    "ast_hash": "1bcce95f5349c1e3e5f28b1a09324749",
+    "semantic_hash": "1bcce95f5349c1e3e5f28b1a09324749"
+  },
+  "sites/orqest-landing/src/components/sections/AgentsBento.tsx": {
+    "mtime": 1779202875.2460268,
+    "ast_hash": "0193fdf9b05a9c86721ce84640ca2680",
+    "semantic_hash": "0193fdf9b05a9c86721ce84640ca2680"
+  },
+  "sites/orqest-landing/src/components/sections/Closing.tsx": {
+    "mtime": 1779203545.3098896,
+    "ast_hash": "41c8a449184838106edee6864ffcc385",
+    "semantic_hash": "41c8a449184838106edee6864ffcc385"
+  },
+  "sites/orqest-landing/src/components/sections/FAQ.tsx": {
+    "mtime": 1779409472.9800205,
+    "ast_hash": "48c8989b7c46ac5d9fc3b7232e6a5c9a",
+    "semantic_hash": "48c8989b7c46ac5d9fc3b7232e6a5c9a"
+  },
+  "sites/orqest-landing/src/components/sections/FalseHope.tsx": {
+    "mtime": 1779203545.310359,
+    "ast_hash": "8315b20a184e0f748b5e69c65b970ecf",
+    "semantic_hash": "8315b20a184e0f748b5e69c65b970ecf"
+  },
+  "sites/orqest-landing/src/components/sections/Footer.tsx": {
+    "mtime": 1779202875.246746,
+    "ast_hash": "7254f4335f86852a6c79f23791b9395b",
+    "semantic_hash": "7254f4335f86852a6c79f23791b9395b"
+  },
+  "sites/orqest-landing/src/components/sections/Hero.tsx": {
+    "mtime": 1779203545.3105304,
+    "ast_hash": "fd1eb5a7ccd466c919896eb17fe3597a",
+    "semantic_hash": "fd1eb5a7ccd466c919896eb17fe3597a"
+  },
+  "sites/orqest-landing/src/components/sections/HowItWorks.tsx": {
+    "mtime": 1779203545.3106654,
+    "ast_hash": "705b324a5618366deadc5ce0cc4ff9ad",
+    "semantic_hash": "705b324a5618366deadc5ce0cc4ff9ad"
+  },
+  "sites/orqest-landing/src/components/sections/Problem.tsx": {
+    "mtime": 1779409465.9183617,
+    "ast_hash": "e059fd1db6a34dc425466e94adf92d33",
+    "semantic_hash": "e059fd1db6a34dc425466e94adf92d33"
+  },
+  "sites/orqest-landing/src/components/sections/Proof.tsx": {
+    "mtime": 1779409484.666071,
+    "ast_hash": "7e679658cbb0e1a3dd0720f0a4c85d18",
+    "semantic_hash": "7e679658cbb0e1a3dd0720f0a4c85d18"
+  },
+  "sites/orqest-landing/src/components/sections/Solution.tsx": {
+    "mtime": 1779202875.247817,
+    "ast_hash": "b83e6a109a81267390823911ee7484e8",
+    "semantic_hash": "b83e6a109a81267390823911ee7484e8"
+  },
+  "sites/orqest-landing/src/components/sections/WhoIsFor.tsx": {
+    "mtime": 1779409478.6975217,
+    "ast_hash": "ee7009f46e6db7189cf6a023e3287776",
+    "semantic_hash": "ee7009f46e6db7189cf6a023e3287776"
+  },
+  "sites/orqest-landing/src/components/ui/AgentCard.tsx": {
+    "mtime": 1779202875.2792828,
+    "ast_hash": "59d472755b4bfc50d46d777527627bd2",
+    "semantic_hash": "59d472755b4bfc50d46d777527627bd2"
+  },
+  "sites/orqest-landing/src/components/ui/AgentSimulation.tsx": {
+    "mtime": 1779203545.3113167,
+    "ast_hash": "845989ddcde99f15873c77d494cbc218",
+    "semantic_hash": "845989ddcde99f15873c77d494cbc218"
+  },
+  "sites/orqest-landing/src/components/ui/GlassNav.tsx": {
+    "mtime": 1779202875.2487307,
+    "ast_hash": "34cba845b2288c75cf05d3d60b3e60e4",
+    "semantic_hash": "34cba845b2288c75cf05d3d60b3e60e4"
+  },
+  "sites/orqest-landing/src/components/ui/MagneticButton.tsx": {
+    "mtime": 1779202875.248896,
+    "ast_hash": "23c28301809bb576d79e65d7586e3f08",
+    "semantic_hash": "23c28301809bb576d79e65d7586e3f08"
+  },
+  "sites/orqest-landing/src/components/ui/QualificationModal.tsx": {
+    "mtime": 1779202875.2491744,
+    "ast_hash": "9649d66d31b343eaad5a6b49ac228ee3",
+    "semantic_hash": "9649d66d31b343eaad5a6b49ac228ee3"
+  },
+  "sites/orqest-landing/src/components/ui/ScrollReveal.tsx": {
+    "mtime": 1779203545.3114953,
+    "ast_hash": "3c999e5f0abab64cd70887729e38edf4",
+    "semantic_hash": "3c999e5f0abab64cd70887729e38edf4"
+  },
+  "sites/orqest-landing/src/fix_accents.sh": {
+    "mtime": 1779409272.210561,
+    "ast_hash": "20825f43d03315ae8e8db89e5c53343d",
+    "semantic_hash": "20825f43d03315ae8e8db89e5c53343d"
+  },
+  "sites/orqest-landing/src/hooks/useQualification.ts": {
+    "mtime": 1779409512.4532006,
+    "ast_hash": "1984a8685298abdeaed763ab8d92e1fd",
+    "semantic_hash": "1984a8685298abdeaed763ab8d92e1fd"
+  },
+  "sites/orqest-landing/src/lib/analytics.ts": {
+    "mtime": 1779203545.3116803,
+    "ast_hash": "822fab2dc0d842db430af0c493e16c0e",
+    "semantic_hash": "822fab2dc0d842db430af0c493e16c0e"
+  },
+  "sites/orqest-landing/src/lib/utils.ts": {
+    "mtime": 1779203545.3118665,
+    "ast_hash": "a40ab276f43a0e0a273926a9fa5055cc",
+    "semantic_hash": "a40ab276f43a0e0a273926a9fa5055cc"
+  },
+  "sites/orqest-landing/tailwind.config.ts": {
+    "mtime": 1779203545.3121083,
+    "ast_hash": "ac70774ceb8c7b134cf3da91362ed563",
+    "semantic_hash": "ac70774ceb8c7b134cf3da91362ed563"
+  },
+  "sites/orqest-landing/tsconfig.json": {
+    "mtime": 1779201635.570663,
+    "ast_hash": "3bd7a3770c6b44dbcaab1d2f175db8bd",
+    "semantic_hash": "3bd7a3770c6b44dbcaab1d2f175db8bd"
+  },
+  "sites/orqest-landing/.vercel/README.txt": {
+    "mtime": 1777438459.5770633,
+    "ast_hash": "2b13c79d37d6ed82a3255b83b6815034",
+    "semantic_hash": "2b13c79d37d6ed82a3255b83b6815034"
+  },
+  "sites/orqest-landing/README.md": {
+    "mtime": 1779201635.5601435,
+    "ast_hash": "f15aaa42d5d299d091b1171097ea56ad",
+    "semantic_hash": "f15aaa42d5d299d091b1171097ea56ad"
+  },
+  "sites/orqest-landing/docker-compose.yml": {
+    "mtime": 1779201635.560292,
+    "ast_hash": "1351d47950c655ab58cd16006e330d30",
+    "semantic_hash": "1351d47950c655ab58cd16006e330d30"
+  },
+  "sites/orqest-landing/public/brand/operations-map.svg": {
+    "mtime": 1779202875.2448092,
+    "ast_hash": "f893a39aa8e0412ab7fbc6cd4753cd0e",
+    "semantic_hash": "f893a39aa8e0412ab7fbc6cd4753cd0e"
+  },
+  "sites/orqest-landing/public/icon-white.svg": {
+    "mtime": 1779202853.8868415,
+    "ast_hash": "edadce8dd2b730ef8a83d9d236f3ee85",
+    "semantic_hash": "edadce8dd2b730ef8a83d9d236f3ee85"
+  },
+  "sites/orqest-landing/public/icon.svg": {
+    "mtime": 1779202853.8262827,
+    "ast_hash": "9a11939769b9045b3f528fee96731ebb",
+    "semantic_hash": "9a11939769b9045b3f528fee96731ebb"
+  },
+  "sites/orqest-landing/public/logo.svg": {
+    "mtime": 1779202853.8271582,
+    "ast_hash": "53cce6483b4cd95065420f2a19dda389",
+    "semantic_hash": "53cce6483b4cd95065420f2a19dda389"
+  }
+}
