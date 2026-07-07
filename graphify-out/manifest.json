@@ -160,9 +160,9 @@
     "semantic_hash": "5cf840b05e9cccdc99cc556e7eb1ad7f"
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsOverviewAdapter.tsx": {
-    "mtime": 1783370385.174888,
-    "ast_hash": "e056fe1ebc2b32f92c0b2c025b3ce94c",
-    "semantic_hash": "e056fe1ebc2b32f92c0b2c025b3ce94c"
+    "mtime": 1783429519.1936464,
+    "ast_hash": "5bfa555e09affed1600d19910f103a0e",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsPeriodFilter.ts": {
     "mtime": 1782188815.3297296,
@@ -230,9 +230,9 @@
     "semantic_hash": "a6f2f61a7b950042917c8139578ea849"
   },
   "client/src/components/Project/metaAds/overviewState.ts": {
-    "mtime": 1783370036.4754026,
-    "ast_hash": "cac9c6868ab7036bfb215c1e1fa98374",
-    "semantic_hash": "cac9c6868ab7036bfb215c1e1fa98374"
+    "mtime": 1783429567.1498115,
+    "ast_hash": "20cdf7272ab5e8cbeb7601883cb15ab1",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewTable.tsx": {
     "mtime": 1782181776.1091108,
@@ -240,9 +240,9 @@
     "semantic_hash": "f4397f0649a451cb52478c85a8e9deba"
   },
   "client/src/components/Project/metaAds/overviewToolbar.tsx": {
-    "mtime": 1782188880.867142,
-    "ast_hash": "f3b6cbd49b81c918dfc7fbbeaec70608",
-    "semantic_hash": "f3b6cbd49b81c918dfc7fbbeaec70608"
+    "mtime": 1783429495.2052016,
+    "ast_hash": "1245027b550838e4cb6e0f09da3c1a0a",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewWorkspace.tsx": {
     "mtime": 1782348401.2284055,
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1783423238.3858612,
-    "ast_hash": "7d19a1395d87824d01334a2e3ddbf096",
+    "mtime": 1783429522.7277043,
+    "ast_hash": "acb6308dd27cb99eed0ad33a151c9cb5",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {
@@ -5955,8 +5955,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/analysisHistoryPanel.tsx": {
-    "mtime": 1783423141.4363217,
-    "ast_hash": "df9782d1880fc684c94bbd21b34e4730",
+    "mtime": 1783429069.8750498,
+    "ast_hash": "64bfbfd23695e853e85ef7ea783993f2",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAdsChatBrief.spec.ts": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783423187.7910912,
-    "ast_hash": "948ff0d215e17f703a09a847f16fe57c",
+    "mtime": 1783429544.2709446,
+    "ast_hash": "d2e765d966a409bb86bef28f1fc01abe",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783423180.9523816,
-    "ast_hash": "776947aea8584a594b49bcd873033f2b",
+    "mtime": 1783429539.9984317,
+    "ast_hash": "c6ee6b1d46d71a66c8dd1e2d6454b427",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
