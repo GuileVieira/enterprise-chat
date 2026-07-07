@@ -91,21 +91,34 @@ export function MetaAdsResultMetricValue({
       (item) =>
         `${getResultTypeLabel(item.resultType, localize)} ${formatMetric(item.totalResults)}`,
     );
+  const configuredLabel = configuredResultType
+    ? getResultTypeLabel(configuredResultType, localize)
+    : '';
+  const title = [
+    configuredLabel
+      ? `${localize('com_ui_project_meta_ads_configured_in_manager')}: ${configuredLabel}`
+      : '',
+    breakdown.length
+      ? `${localize('com_ui_project_meta_ads_detected_results')}: ${breakdown.join(' · ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="group relative ml-auto flex w-full min-w-0 max-w-32 flex-col items-end gap-0.5">
       <span>{formatMetric(source.resultCount)}</span>
       {configuredResultType && (
-        <span className="max-w-56 truncate text-[10px] font-semibold uppercase tracking-normal text-teal-700 dark:text-teal-200">
-          {localize('com_ui_project_meta_ads_configured_in_manager')}{' '}
-          {getResultTypeLabel(configuredResultType, localize)}
+        <span className="block w-full truncate text-right text-[10px] font-medium text-teal-700 dark:text-teal-200">
+          {localize('com_ui_project_meta_ads_manager_short')}: {configuredLabel}
         </span>
       )}
       {breakdown.length > 0 && (
-        <span className="max-w-64 truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
-          {localize('com_ui_project_meta_ads_detected_results')} {breakdown.join(' · ')}
+        <span className="block w-full truncate text-right text-[10px] font-medium text-slate-500 dark:text-slate-400">
+          {localize('com_ui_project_meta_ads_detected_short')}: {breakdown.join(' · ')}
         </span>
       )}
+      {title && <MetaAdsNameTooltip value={title} />}
     </div>
   );
 }

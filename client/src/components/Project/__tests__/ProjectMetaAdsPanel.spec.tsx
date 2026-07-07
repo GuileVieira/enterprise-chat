@@ -366,8 +366,11 @@ describe('ProjectMetaAdsPanel', () => {
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
-    expect(screen.getByText(/com_ui_project_meta_ads_configured_in_manager/)).toBeInTheDocument();
-    expect(screen.getByText(/com_ui_project_meta_ads_detected_results/)).toBeInTheDocument();
+    expect(screen.getByText(/com_ui_project_meta_ads_manager_short/)).toBeInTheDocument();
+    expect(screen.getByText(/com_ui_project_meta_ads_detected_short/)).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-tooltip*="com_ui_project_meta_ads_configured_in_manager"]'),
+    ).toBeInTheDocument();
     expect(
       screen.getAllByText('com_ui_project_meta_ads_result_type_post_engagement').length,
     ).toBeGreaterThan(0);

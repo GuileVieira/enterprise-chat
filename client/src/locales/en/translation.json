@@ -2411,6 +2411,8 @@
   "com_ui_project_meta_ads_result_type": "Detected result",
   "com_ui_project_meta_ads_configured_in_manager": "Configured in Manager",
   "com_ui_project_meta_ads_detected_results": "Detected",
+  "com_ui_project_meta_ads_manager_short": "Manager",
+  "com_ui_project_meta_ads_detected_short": "Detect.",
   "com_ui_project_meta_ads_result_type_landing_page_view": "Landing page view",
   "com_ui_project_meta_ads_result_type_lead": "Lead",
   "com_ui_project_meta_ads_result_type_link_click": "Link click",
