@@ -1,4 +1,4 @@
-import { getObjectiveLabel } from './formatters';
+import { getObjectiveLabel, getResultTypeLabel } from './formatters';
 import { tableViewOptions } from './constants';
 import { MetaAdsPeriodControls } from './periodControls';
 import type { Localize, TableView } from './types';
@@ -10,6 +10,7 @@ export function MetaAdsOverviewToolbar({
   campaignSearch,
   budgetModeFilter,
   objectiveFilter,
+  resultTypeFilter,
   campaignSort,
   tableView,
   period,
@@ -18,10 +19,12 @@ export function MetaAdsOverviewToolbar({
   canCreateRuleGroup,
   canOpenTrafficAgentChat,
   objectiveOptions,
+  resultTypeOptions,
   localize,
   onCampaignSearchChange,
   onBudgetModeFilterChange,
   onObjectiveFilterChange,
+  onResultTypeFilterChange,
   onCampaignSortChange,
   onTableViewChange,
   onClearSelection,
@@ -34,6 +37,7 @@ export function MetaAdsOverviewToolbar({
   campaignSearch: string;
   budgetModeFilter: string;
   objectiveFilter: string;
+  resultTypeFilter: string;
   campaignSort: string;
   tableView: TableView;
   period: Omit<MetaAdsPeriodControlProps, 'localize' | 'testIdPrefix'>;
@@ -42,10 +46,12 @@ export function MetaAdsOverviewToolbar({
   canCreateRuleGroup: boolean;
   canOpenTrafficAgentChat: boolean;
   objectiveOptions: string[];
+  resultTypeOptions: string[];
   localize: Localize;
   onCampaignSearchChange: (value: string) => void;
   onBudgetModeFilterChange: (value: string) => void;
   onObjectiveFilterChange: (value: string) => void;
+  onResultTypeFilterChange: (value: string) => void;
   onCampaignSortChange: (value: string) => void;
   onTableViewChange: (value: TableView) => void;
   onClearSelection: () => void;
@@ -67,7 +73,7 @@ export function MetaAdsOverviewToolbar({
       )}
       <MetaAdsPanel className="p-3">
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-8">
             <MetaAdsPeriodControls
               {...period}
               localize={localize}
@@ -99,6 +105,19 @@ export function MetaAdsOverviewToolbar({
                 {objectiveOptions.map((objective) => (
                   <option key={objective} value={objective}>
                     {getObjectiveLabel(objective, localize)}
+                  </option>
+                ))}
+              </MetaAdsSelect>
+            </MetaAdsField>
+            <MetaAdsField label={localize('com_ui_project_meta_ads_target_metric_filter')}>
+              <MetaAdsSelect
+                value={resultTypeFilter}
+                onChange={(event) => onResultTypeFilterChange(event.target.value)}
+              >
+                <option value="all">{localize('com_ui_all')}</option>
+                {resultTypeOptions.map((resultType) => (
+                  <option key={resultType} value={resultType}>
+                    {getResultTypeLabel(resultType, localize)}
                   </option>
                 ))}
               </MetaAdsSelect>

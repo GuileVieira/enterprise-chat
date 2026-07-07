@@ -1669,6 +1669,76 @@ describe('ProjectMetaAdsPanel', () => {
     ).toBeInTheDocument();
   });
 
+  it('filters overview rows and cards by target result type', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-message',
+        campaignName: 'Engajamento mensagens',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 120,
+        cpa: 12,
+        resultCount: 10,
+        resultType: 'onsite_conversion.messaging_conversation_started_7d',
+        dailyBudget: 100,
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-message',
+            entityName: 'Conversas WhatsApp',
+            campaignId: 'campaign-message',
+            campaignName: 'Engajamento mensagens',
+            spend: 120,
+            resultCount: 10,
+            resultType: 'onsite_conversion.messaging_conversation_started_7d',
+          },
+          {
+            entityId: 'adset-video',
+            entityName: 'Video dentro da campanha',
+            campaignId: 'campaign-message',
+            campaignName: 'Engajamento mensagens',
+            spend: 80,
+            resultCount: 20,
+            resultType: 'video_view',
+          },
+        ],
+      },
+      {
+        campaignId: 'campaign-video',
+        campaignName: 'Engajamento video',
+        objective: 'OUTCOME_ENGAGEMENT',
+        spend: 300,
+        cpa: 5,
+        resultCount: 60,
+        resultType: 'video_view',
+        dailyBudget: 100,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_target_metric_filter'), {
+      target: { value: 'onsite_conversion.messaging_conversation_started_7d' },
+    });
+
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Engajamento mensagens');
+    expect(rows[0]).not.toHaveTextContent('Engajamento video');
+    expect(screen.getByText('Conversas WhatsApp')).toBeInTheDocument();
+    expect(screen.queryByText('Video dentro da campanha')).not.toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_results'),
+      ).getByText('10.00'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByTestId('meta-ads-summary-card-com_ui_project_meta_ads_total_spend'),
+      ).getByText('R$ 120,00'),
+    ).toBeInTheDocument();
+  });
+
   it('shows monthly investment remaining in the total spend card', () => {
     mockStatusData.monthlyBudget = {
       month: '2026-06',

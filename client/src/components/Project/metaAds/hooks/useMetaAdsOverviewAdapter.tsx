@@ -18,8 +18,12 @@ import { getMetaAdsTableRowClass } from '../overviewCells';
 import { createMetaAdsOverviewRenderers } from '../overviewRenderers';
 import { formatMetric, formatMoney, getResultTypeLabel } from '../formatters';
 import { MetaAdsOverviewWorkspace } from '../overviewWorkspace';
-import { buildMetaAdsSummaryCardItems, getNextMetaAdsSortDirection } from '../overviewState';
-import { buildMetaAdsOverviewState } from '../overviewState';
+import {
+  buildMetaAdsSummaryCardItems,
+  buildMetaAdsOverviewState,
+  collectMetaAdsOverviewResultTypes,
+  getNextMetaAdsSortDirection,
+} from '../overviewState';
 import { getTableViewColumns } from '../table';
 import type { TableView, Localize } from '../types';
 import type { useMetaAdsEntityActions } from './useMetaAdsEntityActions';
@@ -82,6 +86,7 @@ export function useMetaAdsOverviewAdapter({
 }: UseMetaAdsOverviewAdapterParams): MetaAdsOverviewWorkspaceProps {
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
+  const [resultTypeFilter, setResultTypeFilter] = useState('all');
   const [resultTypeSelectorOpen, setResultTypeSelectorOpen] = useState(false);
   const [selectedSummaryResultType, setSelectedSummaryResultType] = useState<string | null>(null);
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
@@ -133,11 +138,15 @@ export function useMetaAdsOverviewAdapter({
     summary: statusSummary,
     campaignSearch,
     objectiveFilter,
+    resultTypeFilter,
     budgetModeFilter,
     campaignSort,
     selectedSummaryResultType,
     localize,
   });
+  const resultTypeOptions = collectMetaAdsOverviewResultTypes(campaigns).sort((left, right) =>
+    getResultTypeLabel(left, localize).localeCompare(getResultTypeLabel(right, localize), 'pt-BR'),
+  );
   const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
     (key) => tableColumnMap[key],
   );
@@ -238,6 +247,7 @@ export function useMetaAdsOverviewAdapter({
       campaignSearch,
       budgetModeFilter,
       objectiveFilter,
+      resultTypeFilter,
       campaignSort,
       tableView,
       period: {
@@ -257,10 +267,12 @@ export function useMetaAdsOverviewAdapter({
       canCreateRuleGroup,
       canOpenTrafficAgentChat,
       objectiveOptions,
+      resultTypeOptions,
       localize,
       onCampaignSearchChange: setCampaignSearch,
       onBudgetModeFilterChange: setBudgetModeFilter,
       onObjectiveFilterChange: setObjectiveFilter,
+      onResultTypeFilterChange: setResultTypeFilter,
       onCampaignSortChange: setCampaignSort,
       onTableViewChange: setTableView,
       onClearSelection: clearSelection,

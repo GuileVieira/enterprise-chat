@@ -20,6 +20,7 @@ type OverviewStateInput = {
   summary: ProjectMetaAdsStatus['summary'] | undefined;
   campaignSearch: string;
   objectiveFilter: string;
+  resultTypeFilter: string;
   budgetModeFilter: string;
   campaignSort: string;
   selectedSummaryResultType: string | null;
@@ -32,6 +33,7 @@ export function buildMetaAdsOverviewState({
   summary,
   campaignSearch,
   objectiveFilter,
+  resultTypeFilter,
   budgetModeFilter,
   campaignSort,
   selectedSummaryResultType,
@@ -41,6 +43,7 @@ export function buildMetaAdsOverviewState({
     campaigns,
     campaignSearch,
     objectiveFilter,
+    resultTypeFilter,
     budgetModeFilter,
     campaignSort,
     localize,
@@ -195,6 +198,20 @@ export function getNextMetaAdsSortDirection({
     return defaultDirection;
   }
   return defaultDirection === 'asc' ? 'desc' : 'asc';
+}
+
+export function collectMetaAdsOverviewResultTypes(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  const resultTypes = new Set<string>();
+  for (const campaign of campaigns) {
+    addEntityResultTypes(resultTypes, campaign);
+    for (const adset of campaign.adSets) {
+      addEntityResultTypes(resultTypes, adset);
+      for (const ad of adset.ads ?? []) {
+        addEntityResultTypes(resultTypes, ad);
+      }
+    }
+  }
+  return Array.from(resultTypes);
 }
 
 export function buildMetaAdsSummaryCardItems({
@@ -371,6 +388,7 @@ function filterAndSortCampaigns({
   campaigns,
   campaignSearch,
   objectiveFilter,
+  resultTypeFilter,
   budgetModeFilter,
   campaignSort,
   localize,
@@ -379,25 +397,33 @@ function filterAndSortCampaigns({
   | 'campaigns'
   | 'campaignSearch'
   | 'objectiveFilter'
+  | 'resultTypeFilter'
   | 'budgetModeFilter'
   | 'campaignSort'
   | 'localize'
 >) {
   return campaigns
-    .filter((campaign) => {
+    .flatMap((campaign) => {
+      const filteredCampaign = filterCampaignByResultType(campaign, resultTypeFilter);
+      if (!filteredCampaign) {
+        return [];
+      }
       const query = campaignSearch.trim().toLowerCase();
       const matchesSearch =
         !query ||
-        (campaign.campaignName ?? campaign.campaignId).toLowerCase().includes(query) ||
-        getObjectiveLabel(campaign.objective, localize).toLowerCase().includes(query) ||
-        campaign.adSets.some((adset) =>
+        (filteredCampaign.campaignName ?? filteredCampaign.campaignId)
+          .toLowerCase()
+          .includes(query) ||
+        getObjectiveLabel(filteredCampaign.objective, localize).toLowerCase().includes(query) ||
+        filteredCampaign.adSets.some((adset) =>
           (adset.entityName ?? adset.entityId).toLowerCase().includes(query),
         );
       const matchesObjective =
-        objectiveFilter === 'all' || (campaign.objective || 'UNKNOWN') === objectiveFilter;
+        objectiveFilter === 'all' || (filteredCampaign.objective || 'UNKNOWN') === objectiveFilter;
       const matchesMode =
-        budgetModeFilter === 'all' || (campaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
-      return matchesSearch && matchesObjective && matchesMode;
+        budgetModeFilter === 'all' ||
+        (filteredCampaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
+      return matchesSearch && matchesObjective && matchesMode ? [filteredCampaign] : [];
     })
     .sort((first, second) => {
       const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
@@ -409,4 +435,93 @@ function filterAndSortCampaigns({
       }
       return compareNumberSort(first, second, key, direction);
     });
+}
+
+type ResultTypeEntity = {
+  resultType?: string;
+  resultTypeBreakdown?: Array<{
+    resultType?: string;
+    totalSpend?: number;
+    totalResults?: number;
+    averageCostPerResult?: number | null;
+  }>;
+};
+
+function addEntityResultTypes(resultTypes: Set<string>, entity: ResultTypeEntity) {
+  if (entity.resultType) {
+    resultTypes.add(entity.resultType || 'UNKNOWN');
+  }
+  for (const breakdown of entity.resultTypeBreakdown ?? []) {
+    resultTypes.add(breakdown.resultType || 'UNKNOWN');
+  }
+}
+
+function matchesResultType(entity: ResultTypeEntity, resultTypeFilter: string) {
+  if (resultTypeFilter === 'all') {
+    return true;
+  }
+  if ((entity.resultType || 'UNKNOWN') === resultTypeFilter) {
+    return true;
+  }
+  return (entity.resultTypeBreakdown ?? []).some(
+    (breakdown) => (breakdown.resultType || 'UNKNOWN') === resultTypeFilter,
+  );
+}
+
+function filterCampaignByResultType(
+  campaign: ProjectMetaAdsCampaignSummary,
+  resultTypeFilter: string,
+) {
+  if (resultTypeFilter === 'all') {
+    return campaign;
+  }
+
+  const adSets = campaign.adSets
+    .map((adset) => {
+      const ads = (adset.ads ?? []).filter((ad) => matchesResultType(ad, resultTypeFilter));
+      if (!matchesResultType(adset, resultTypeFilter) && ads.length === 0) {
+        return null;
+      }
+      return { ...adset, ads };
+    })
+    .filter((adset): adset is ProjectMetaAdsCampaignSummary['adSets'][number] => adset !== null);
+
+  if (!matchesResultType(campaign, resultTypeFilter) && adSets.length === 0) {
+    return null;
+  }
+
+  return applyResultTypeMetrics({ ...campaign, adSets }, resultTypeFilter);
+}
+
+function applyResultTypeMetrics(
+  campaign: ProjectMetaAdsCampaignSummary,
+  resultTypeFilter: string,
+): ProjectMetaAdsCampaignSummary {
+  const breakdown = campaign.resultTypeBreakdown?.find(
+    (item) => (item.resultType || 'UNKNOWN') === resultTypeFilter,
+  );
+  if (breakdown) {
+    return {
+      ...campaign,
+      spend: breakdown.totalSpend,
+      resultCount: breakdown.totalResults,
+      cpa: breakdown.averageCostPerResult,
+    };
+  }
+  if ((campaign.resultType || 'UNKNOWN') === resultTypeFilter) {
+    return campaign;
+  }
+  const totals = campaign.adSets.reduce(
+    (total, adset) => ({
+      spend: total.spend + Number(adset.spend ?? 0),
+      results: total.results + Number(adset.resultCount ?? 0),
+    }),
+    { spend: 0, results: 0 },
+  );
+  return {
+    ...campaign,
+    spend: Number(totals.spend.toFixed(2)),
+    resultCount: Number(totals.results.toFixed(2)),
+    cpa: totals.results > 0 ? Number((totals.spend / totals.results).toFixed(2)) : campaign.cpa,
+  };
 }
