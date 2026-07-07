@@ -1721,9 +1721,14 @@ describe('ProjectMetaAdsPanel', () => {
       target: { value: 'onsite_conversion.messaging_conversation_started_7d' },
     });
 
+    expect(
+      screen.getByRole('columnheader', { name: 'com_ui_project_meta_ads_result_type' }),
+    ).toBeInTheDocument();
+
     const rows = screen.getAllByTestId('meta-ads-campaign-row');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('Engajamento mensagens');
+    expect(rows[0]).toHaveTextContent('com_ui_project_meta_ads_result_type_message');
     expect(rows[0]).not.toHaveTextContent('Engajamento video');
     expect(screen.getByText('Conversas WhatsApp')).toBeInTheDocument();
     expect(screen.queryByText('Video dentro da campanha')).not.toBeInTheDocument();
@@ -3184,6 +3189,14 @@ describe('ProjectMetaAdsPanel', () => {
       until: '2026-06-10',
       scope: 'live',
     });
+  });
+
+  it('bottom-aligns overview filter controls when labels wrap', () => {
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(
+      screen.getByText('com_ui_project_meta_ads_target_metric_filter').closest('label'),
+    ).toHaveClass('justify-end');
   });
 
   it('renders campaign evolution dashboard from historical trend data', () => {

@@ -92,7 +92,7 @@ export function MetaAdsField({
 }: MetaAdsFieldProps) {
   return (
     <label
-      className={cn('flex min-w-0 flex-col gap-1 text-xs text-[#bdb5a6]', className)}
+      className={cn('flex min-w-0 flex-col justify-end gap-1 text-xs text-[#bdb5a6]', className)}
       {...props}
     >
       <MetaAdsHintLabel label={label} hint={hint} cooldown={cooldown} />

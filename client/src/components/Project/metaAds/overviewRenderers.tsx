@@ -12,7 +12,7 @@ import {
   MetaAdsCampaignNameCell,
   MetaAdsEntityStatusToggleCell,
 } from './overviewCells';
-import { formatMetric, formatMoney, getObjectiveLabel } from './formatters';
+import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
 import { createMetaAdsAdRenderers } from './overviewAdRenderers';
 import { getRecommendationLabel } from './recommendations';
 import { MetaAdsOverviewActionCell } from './overviewActionCell';
@@ -110,6 +110,9 @@ function sharedCampaignMetricCell({
   }
   if (column.key === 'result') {
     return metricCell(column, formatMetric(valueSource.resultCount));
+  }
+  if (column.key === 'resultType') {
+    return textCell(column, getResultTypeLabel(valueSource.resultType, localize));
   }
   if (column.key === 'cpa') {
     return metricCell(column, formatMoney(valueSource.cpa, currency));

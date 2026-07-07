@@ -5,7 +5,7 @@ import type {
   useApplyProjectMetaAdsRecommendationMutation,
   useUpdateProjectMetaAdsEntityStatusMutation,
 } from '~/data-provider';
-import { tableColumnMap, tableViewMinWidth } from '../constants';
+import { tableColumnMap, tableViewMinWidth, resultTypeTableViewMinWidth } from '../constants';
 import {
   metaAdsButton,
   metaAdsGhostButton,
@@ -25,7 +25,7 @@ import {
   getNextMetaAdsSortDirection,
 } from '../overviewState';
 import { getTableViewColumns } from '../table';
-import type { TableView, Localize } from '../types';
+import type { TableView, Localize, TableColumnKey } from '../types';
 import type { useMetaAdsEntityActions } from './useMetaAdsEntityActions';
 import type { useMetaAdsPeriodFilter } from './useMetaAdsPeriodFilter';
 import type { useMetaAdsRules } from './useMetaAdsRules';
@@ -147,9 +147,14 @@ export function useMetaAdsOverviewAdapter({
   const resultTypeOptions = collectMetaAdsOverviewResultTypes(campaigns).sort((left, right) =>
     getResultTypeLabel(left, localize).localeCompare(getResultTypeLabel(right, localize), 'pt-BR'),
   );
-  const tableColumns = getTableViewColumns(tableView, isEcommerceDashboard).map(
-    (key) => tableColumnMap[key],
-  );
+  const showResultTypeColumn = resultTypeFilter !== 'all';
+  const baseTableColumnKeys = getTableViewColumns(tableView, isEcommerceDashboard);
+  const tableColumnKeys = showResultTypeColumn
+    ? baseTableColumnKeys.flatMap((key): TableColumnKey[] =>
+        key === 'result' ? [key, 'resultType'] : [key],
+      )
+    : baseTableColumnKeys;
+  const tableColumns = tableColumnKeys.map((key) => tableColumnMap[key]);
   const tableColumnCount = tableColumns.length + 2;
   const summaryCards = buildMetaAdsSummaryCardItems({
     isEcommerceDashboard,
@@ -327,7 +332,9 @@ export function useMetaAdsOverviewAdapter({
       collapsedAboCampaignIds,
       collapsedAdSetAdsIds,
       tableColumnCount,
-      tableMinWidthClassName: tableViewMinWidth[tableView],
+      tableMinWidthClassName: showResultTypeColumn
+        ? resultTypeTableViewMinWidth[tableView]
+        : tableViewMinWidth[tableView],
       stickyCellClassName: metaAdsStickyCell,
       isInitialStatusLoading,
       localize,

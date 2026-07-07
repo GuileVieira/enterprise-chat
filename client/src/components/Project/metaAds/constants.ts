@@ -109,6 +109,11 @@ export const tableColumnMap: Record<TableColumnKey, TableColumn> = {
     align: 'right',
     sortableKey: 'result',
   },
+  resultType: {
+    key: 'resultType',
+    labelKey: 'com_ui_project_meta_ads_result_type',
+    widthClass: 'w-36',
+  },
   cpa: {
     key: 'cpa',
     labelKey: 'com_ui_project_meta_ads_cost_result',
@@ -265,6 +270,13 @@ export const tableViewMinWidth: Record<TableView, string> = {
   summary: 'min-w-[1948px]',
   performance: 'min-w-[1588px]',
   creative: 'min-w-[1208px]',
+  rules: 'min-w-[1108px]',
+};
+
+export const resultTypeTableViewMinWidth: Record<TableView, string> = {
+  summary: 'min-w-[2092px]',
+  performance: 'min-w-[1732px]',
+  creative: 'min-w-[1352px]',
   rules: 'min-w-[1108px]',
 };
 

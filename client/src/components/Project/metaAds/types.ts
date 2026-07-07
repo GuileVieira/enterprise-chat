@@ -229,6 +229,7 @@ export type TableColumnKey =
   | 'frequency'
   | 'roas'
   | 'result'
+  | 'resultType'
   | 'cpa'
   | 'spend'
   | 'ctr'

@@ -11,7 +11,7 @@ import {
   MetaAdsFrequencyValue,
   MetaAdsEntityStatusToggleCell,
 } from './overviewCells';
-import { formatMetric, formatMoney, getObjectiveLabel } from './formatters';
+import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
 import type { TableColumn } from './types';
 import type { OverviewRendererContext } from './overviewRendererTypes';
 
@@ -93,6 +93,9 @@ function renderAdCell({
   }
   if (column.key === 'result') {
     return metricCell(column, formatMetric(ad.resultCount));
+  }
+  if (column.key === 'resultType') {
+    return textCell(column, getResultTypeLabel(ad.resultType, context.localize));
   }
   if (column.key === 'cpa') {
     return metricCell(column, formatMoney(ad.cpa, ad.currency ?? context.currency));
