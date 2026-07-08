@@ -23,7 +23,6 @@ import {
   useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
-import { MAX_META_ADS_CHAT_BRIEF_ENTITIES } from './metaAdsChatBrief';
 import { useMetaAdsSelection } from './metaAds/hooks/useMetaAdsSelection';
 import { useMetaAdsTableScrollSync } from './metaAds/hooks/useMetaAdsTableScrollSync';
 import { useMetaAdsSettings } from './metaAds/hooks/useMetaAdsSettings';
@@ -157,7 +156,7 @@ export default function ProjectMetaAdsPanel({
     ProjectMetaAdsBudgetChange[]
   >([]);
   const biWorkspace = useMetaAdsBiWorkspace();
-  const selection = useMetaAdsSelection({ maxSelectedEntities: MAX_META_ADS_CHAT_BRIEF_ENTITIES });
+  const selection = useMetaAdsSelection();
   const startupConfigQuery = useGetStartupConfig();
   const overviewPeriod = useMetaAdsPeriodFilter();
   const biPeriod = useMetaAdsPeriodFilter();

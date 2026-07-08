@@ -1,11 +1,14 @@
 import { useCallback, useState } from 'react';
 import type { ProjectMetaAdsCampaignSummary } from 'librechat-data-provider';
 
-type UseMetaAdsSelectionInput = {
-  maxSelectedEntities: number;
-};
+export function getMetaAdsSelectableEntityIds(campaigns: ProjectMetaAdsCampaignSummary[]) {
+  return campaigns.flatMap((campaign) => [
+    `campaign:${campaign.campaignId}`,
+    ...campaign.adSets.map((adset) => `adset:${adset.entityId}`),
+  ]);
+}
 
-export function useMetaAdsSelection({ maxSelectedEntities }: UseMetaAdsSelectionInput) {
+export function useMetaAdsSelection() {
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<string[]>([]);
   const [collapsedAboCampaignIds, setCollapsedAboCampaignIds] = useState<string[]>([]);
@@ -22,34 +25,42 @@ export function useMetaAdsSelection({ maxSelectedEntities }: UseMetaAdsSelection
     setSelectedEntityIds([]);
   }, []);
 
-  const onToggleCampaign = useCallback(
-    (campaign: ProjectMetaAdsCampaignSummary) => {
-      setSelectedEntityIds((current) => {
-        const campaignId = `campaign:${campaign.campaignId}`;
-        const adSetIds = campaign.adSets.map((adset) => `adset:${adset.entityId}`);
-        const campaignIds = [campaignId, ...adSetIds];
-        if (current.includes(campaignId)) {
-          return current.filter((selectedId) => !campaignIds.includes(selectedId));
-        }
-        const next = new Set(current);
-        campaignIds.forEach((selectedId) => next.add(selectedId));
-        return Array.from(next).slice(0, maxSelectedEntities);
-      });
-    },
-    [maxSelectedEntities],
-  );
+  const onToggleCampaign = useCallback((campaign: ProjectMetaAdsCampaignSummary) => {
+    setSelectedEntityIds((current) => {
+      const campaignIds = getMetaAdsSelectableEntityIds([campaign]);
+      if (current.includes(`campaign:${campaign.campaignId}`)) {
+        return current.filter((selectedId) => !campaignIds.includes(selectedId));
+      }
+      const next = new Set(current);
+      campaignIds.forEach((selectedId) => next.add(selectedId));
+      return Array.from(next);
+    });
+  }, []);
 
-  const onToggleAdSet = useCallback(
-    (entityId: string) => {
-      setSelectedEntityIds((current) => {
-        const id = `adset:${entityId}`;
-        return current.includes(id)
-          ? current.filter((selectedId) => selectedId !== id)
-          : [...current, id].slice(0, maxSelectedEntities);
-      });
-    },
-    [maxSelectedEntities],
-  );
+  const onToggleAdSet = useCallback((entityId: string) => {
+    setSelectedEntityIds((current) => {
+      const id = `adset:${entityId}`;
+      return current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id];
+    });
+  }, []);
+
+  const onToggleVisibleSelection = useCallback((campaigns: ProjectMetaAdsCampaignSummary[]) => {
+    setSelectedEntityIds((current) => {
+      const visibleIds = getMetaAdsSelectableEntityIds(campaigns);
+      const currentIds = new Set(current);
+      const allVisibleSelected =
+        visibleIds.length > 0 && visibleIds.every((selectedId) => currentIds.has(selectedId));
+      if (allVisibleSelected) {
+        const visibleIdSet = new Set(visibleIds);
+        return current.filter((selectedId) => !visibleIdSet.has(selectedId));
+      }
+      const next = new Set(currentIds);
+      visibleIds.forEach((selectedId) => next.add(selectedId));
+      return Array.from(next);
+    });
+  }, []);
 
   const onToggleCampaignExpanded = useCallback((campaign: ProjectMetaAdsCampaignSummary) => {
     if (campaign.budgetMode === 'ABO') {
@@ -107,6 +118,7 @@ export function useMetaAdsSelection({ maxSelectedEntities }: UseMetaAdsSelection
     clearSelection,
     onToggleCampaign,
     onToggleAdSet,
+    onToggleVisibleSelection,
     onToggleCampaignExpanded,
     onToggleAdSetAds,
     expandAllRows,

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ReactNode, RefObject, UIEvent } from 'react';
 
 import type {
@@ -7,6 +8,7 @@ import type {
 } from 'librechat-data-provider';
 import type { Localize, TableColumn } from './types';
 import { renderOverviewRows } from './overviewRows';
+import { getMetaAdsSelectableEntityIds } from './hooks/useMetaAdsSelection';
 
 type SortableHeaderArgs = {
   key: string;
@@ -32,6 +34,7 @@ type MetaAdsOverviewTableProps = {
   onTableScroll: (event: UIEvent<HTMLDivElement>) => void;
   onStickyHorizontalScroll: (event: UIEvent<HTMLDivElement>) => void;
   onToggleCampaign: (campaign: ProjectMetaAdsCampaignSummary) => void;
+  onToggleVisibleSelection: (campaigns: ProjectMetaAdsCampaignSummary[]) => void;
   onToggleCampaignExpanded: (campaign: ProjectMetaAdsCampaignSummary) => void;
   onToggleAdSet: (entityId: string) => void;
   onToggleAdSetAds: (entityId: string) => void;
@@ -93,6 +96,44 @@ function renderHeaderContent({
   return label;
 }
 
+function HeaderSelectionCheckbox({
+  checked,
+  indeterminate,
+  disabled,
+  localize,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate: boolean;
+  disabled: boolean;
+  localize: Localize;
+  onChange: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      aria-label={localize(
+        checked
+          ? 'com_ui_project_meta_ads_deselect_visible'
+          : 'com_ui_project_meta_ads_select_visible',
+      )}
+      onChange={onChange}
+      className="h-4 w-4 border-border-light bg-surface-primary text-text-primary disabled:opacity-50"
+    />
+  );
+}
+
 export function MetaAdsOverviewTable({
   columns,
   campaigns,
@@ -110,6 +151,7 @@ export function MetaAdsOverviewTable({
   onTableScroll,
   onStickyHorizontalScroll,
   onToggleCampaign,
+  onToggleVisibleSelection,
   onToggleCampaignExpanded,
   onToggleAdSet,
   onToggleAdSetAds,
@@ -120,6 +162,13 @@ export function MetaAdsOverviewTable({
   renderAdSetCell,
   renderAdRow,
 }: MetaAdsOverviewTableProps) {
+  const visibleEntityIds = getMetaAdsSelectableEntityIds(campaigns);
+  const selectedEntitySet = new Set(selectedEntityIds);
+  const selectedVisibleCount = visibleEntityIds.filter((id) => selectedEntitySet.has(id)).length;
+  const allVisibleSelected =
+    visibleEntityIds.length > 0 && selectedVisibleCount === visibleEntityIds.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+
   return (
     <>
       <div
@@ -133,7 +182,13 @@ export function MetaAdsOverviewTable({
           <thead className="sticky top-0 z-30 border-b border-slate-200 bg-slate-100/95 text-[11px] uppercase tracking-[0.12em] text-slate-500 shadow-[0_16px_36px_-32px_rgba(15,23,42,0.45)] backdrop-blur dark:border-white/10 dark:bg-[#1a2438]/95 dark:text-slate-400 dark:shadow-[0_16px_40px_-32px_rgba(0,0,0,0.9)]">
             <tr>
               <th className="sticky left-0 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 dark:border-white/10 dark:bg-[#1a2438]">
-                <span className="sr-only">{localize('com_ui_project_meta_ads_select_ad_set')}</span>
+                <HeaderSelectionCheckbox
+                  checked={allVisibleSelected}
+                  indeterminate={someVisibleSelected}
+                  disabled={visibleEntityIds.length === 0}
+                  localize={localize}
+                  onChange={() => onToggleVisibleSelection(campaigns)}
+                />
               </th>
               <th className="sticky left-10 z-40 w-10 border-b border-slate-200 bg-slate-100/95 px-2 py-3 shadow-[10px_0_18px_-18px_rgba(20,184,166,0.55)] dark:border-white/10 dark:bg-[#1a2438]">
                 <span className="sr-only">

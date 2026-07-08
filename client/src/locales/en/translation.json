@@ -2186,6 +2186,8 @@
   "com_ui_project_meta_ads_insufficient_evolution": "Not enough evolution data for a chart yet.",
   "com_ui_project_meta_ads_selection_count": "{{0}} selected",
   "com_ui_project_meta_ads_clear_selection": "Clear selection",
+  "com_ui_project_meta_ads_select_visible": "Select all visible",
+  "com_ui_project_meta_ads_deselect_visible": "Deselect all visible",
   "com_ui_project_meta_ads_target_cpa": "Target CPA (optional)",
   "com_ui_project_meta_ads_target_cpa_hint": "Desired maximum cost per result. Use it when CPA is the primary metric or when cost per conversion should be capped.",
   "com_ui_project_meta_ads_min_roas": "Minimum ROAS (optional)",

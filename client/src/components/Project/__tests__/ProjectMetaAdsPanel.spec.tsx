@@ -3595,6 +3595,114 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByText('com_ui_project_meta_ads_clear_selection')).toBeDisabled();
   });
 
+  it('selects and deselects visible Meta Ads rows from the table header', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Remarketing',
+            spend: 120,
+            dailyBudget: 50,
+          },
+          {
+            entityId: 'adset-2',
+            entityName: 'Lookalike',
+            spend: 110,
+            dailyBudget: 50,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_visible'));
+
+    expect(screen.getByLabelText('com_ui_project_meta_ads_deselect_visible')).toBeChecked();
+    expect(screen.getByLabelText('com_ui_project_meta_ads_select_campaign')).toBeChecked();
+    screen
+      .getAllByLabelText('com_ui_project_meta_ads_select_ad_set')
+      .forEach((checkbox) => expect(checkbox).toBeChecked());
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_deselect_visible'));
+
+    expect(screen.getByLabelText('com_ui_project_meta_ads_select_visible')).not.toBeChecked();
+    expect(screen.getByLabelText('com_ui_project_meta_ads_select_campaign')).not.toBeChecked();
+    screen
+      .getAllByLabelText('com_ui_project_meta_ads_select_ad_set')
+      .forEach((checkbox) => expect(checkbox).not.toBeChecked());
+  });
+
+  it('keeps hidden selections when deselecting filtered visible Meta Ads rows', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-1',
+        campaignName: 'Messages Floripa',
+        spend: 230,
+        dailyBudget: 100,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-1',
+            entityName: 'Floripa Remarketing',
+            spend: 120,
+            dailyBudget: 50,
+          },
+        ],
+      },
+      {
+        campaignId: 'campaign-2',
+        campaignName: 'Blumenau Leads',
+        spend: 180,
+        dailyBudget: 80,
+        editableBudgetLevel: 'adset',
+        budgetMode: 'ABO',
+        adSets: [
+          {
+            entityId: 'adset-2',
+            entityName: 'Blumenau Lookalike',
+            spend: 90,
+            dailyBudget: 40,
+          },
+        ],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_select_visible'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_search'), {
+      target: { value: 'Floripa' },
+    });
+    fireEvent.click(screen.getByLabelText('com_ui_project_meta_ads_deselect_visible'));
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_search'), {
+      target: { value: '' },
+    });
+
+    const floripaRow = screen
+      .getAllByTestId('meta-ads-campaign-row')
+      .find((row) => within(row).queryByText('Messages Floripa'));
+    const blumenauRow = screen
+      .getAllByTestId('meta-ads-campaign-row')
+      .find((row) => within(row).queryByText('Blumenau Leads'));
+    expect(floripaRow).toBeDefined();
+    expect(blumenauRow).toBeDefined();
+    expect(
+      within(floripaRow as HTMLElement).getByLabelText('com_ui_project_meta_ads_select_campaign'),
+    ).not.toBeChecked();
+    expect(
+      within(blumenauRow as HTMLElement).getByLabelText('com_ui_project_meta_ads_select_campaign'),
+    ).toBeChecked();
+  });
+
   it('expands the metrics workspace without using sticky filters', () => {
     mockStatusData.changes = [
       {
