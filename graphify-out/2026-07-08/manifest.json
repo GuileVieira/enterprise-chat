@@ -160,8 +160,8 @@
     "semantic_hash": "5cf840b05e9cccdc99cc556e7eb1ad7f"
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsOverviewAdapter.tsx": {
-    "mtime": 1783539882.6204777,
-    "ast_hash": "14c845f478c6c9b4f3368b5040dd4c03",
+    "mtime": 1783433448.8424034,
+    "ast_hash": "25b4465cfcf4767eea7103aaa2a5be3a",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsPeriodFilter.ts": {
@@ -230,8 +230,8 @@
     "semantic_hash": "a6f2f61a7b950042917c8139578ea849"
   },
   "client/src/components/Project/metaAds/overviewState.ts": {
-    "mtime": 1783539882.4168363,
-    "ast_hash": "e8a0ab118f77b346e70e19e682029caf",
+    "mtime": 1783436417.227376,
+    "ast_hash": "e45fd0bf4f938f25db5a00785306bbb7",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewTable.tsx": {
@@ -240,8 +240,8 @@
     "semantic_hash": "f4397f0649a451cb52478c85a8e9deba"
   },
   "client/src/components/Project/metaAds/overviewToolbar.tsx": {
-    "mtime": 1783539882.51876,
-    "ast_hash": "231f8d0bcec1b8bff8701214e289986f",
+    "mtime": 1783429495.2052016,
+    "ast_hash": "1245027b550838e4cb6e0f09da3c1a0a",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewWorkspace.tsx": {
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1783539900.344623,
-    "ast_hash": "24cf4b999bca1c231fcf420b531ce262",
+    "mtime": 1783443785.4780633,
+    "ast_hash": "84b25bac7cb9ad3858ac4408caf24e73",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783539882.8236103,
-    "ast_hash": "1ec3dc2e19358cf998f6fb014d17c4d6",
+    "mtime": 1783443574.0483835,
+    "ast_hash": "bea6f55034908734ce87d9e1f322bb8f",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783539882.722337,
-    "ast_hash": "3df1f06d358d9da139f7b20e8b0d09fd",
+    "mtime": 1783443573.950375,
+    "ast_hash": "f8781b96461643638e2ecef722d63772",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {

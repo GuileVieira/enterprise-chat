@@ -1386,6 +1386,8 @@
   "com_ui_project_meta_ads_budget_defined": "Orçamento definido",
   "com_ui_project_meta_ads_budget_mode": "Modo orçamento",
   "com_ui_project_meta_ads_budget_mode_filter": "Modo orçamento",
+  "com_ui_project_meta_ads_campaign_status_filter": "Status da campanha",
+  "com_ui_project_meta_ads_inactive_campaigns": "Desativadas",
   "com_ui_project_meta_ads_edit_budget": "Editar orçamento",
   "com_ui_project_meta_ads_new_budget": "Novo orçamento diário",
   "com_ui_project_meta_ads_budget_quick_adjustments": "Ajustes rápidos",

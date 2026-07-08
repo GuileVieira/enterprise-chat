@@ -87,6 +87,7 @@ export function useMetaAdsOverviewAdapter({
   const [campaignSearch, setCampaignSearch] = useState('');
   const [objectiveFilter, setObjectiveFilter] = useState('all');
   const [resultTypeFilter, setResultTypeFilter] = useState('all');
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState('all');
   const [resultTypeSelectorOpen, setResultTypeSelectorOpen] = useState(false);
   const [selectedSummaryResultType, setSelectedSummaryResultType] = useState<string | null>(null);
   const [budgetModeFilter, setBudgetModeFilter] = useState('all');
@@ -139,6 +140,7 @@ export function useMetaAdsOverviewAdapter({
     campaignSearch,
     objectiveFilter,
     resultTypeFilter,
+    campaignStatusFilter,
     budgetModeFilter,
     campaignSort,
     selectedSummaryResultType,
@@ -253,6 +255,7 @@ export function useMetaAdsOverviewAdapter({
       budgetModeFilter,
       objectiveFilter,
       resultTypeFilter,
+      campaignStatusFilter,
       campaignSort,
       tableView,
       period: {
@@ -278,6 +281,7 @@ export function useMetaAdsOverviewAdapter({
       onBudgetModeFilterChange: setBudgetModeFilter,
       onObjectiveFilterChange: setObjectiveFilter,
       onResultTypeFilterChange: setResultTypeFilter,
+      onCampaignStatusFilterChange: setCampaignStatusFilter,
       onCampaignSortChange: setCampaignSort,
       onTableViewChange: setTableView,
       onClearSelection: clearSelection,

@@ -21,6 +21,7 @@ type OverviewStateInput = {
   campaignSearch: string;
   objectiveFilter: string;
   resultTypeFilter: string;
+  campaignStatusFilter: string;
   budgetModeFilter: string;
   campaignSort: string;
   selectedSummaryResultType: string | null;
@@ -34,6 +35,7 @@ export function buildMetaAdsOverviewState({
   campaignSearch,
   objectiveFilter,
   resultTypeFilter,
+  campaignStatusFilter,
   budgetModeFilter,
   campaignSort,
   selectedSummaryResultType,
@@ -44,6 +46,7 @@ export function buildMetaAdsOverviewState({
     campaignSearch,
     objectiveFilter,
     resultTypeFilter,
+    campaignStatusFilter,
     budgetModeFilter,
     campaignSort,
     localize,
@@ -53,6 +56,7 @@ export function buildMetaAdsOverviewState({
     campaignSearch,
     objectiveFilter,
     resultTypeFilter: 'all',
+    campaignStatusFilter,
     budgetModeFilter,
     campaignSort,
     localize,
@@ -398,6 +402,7 @@ function filterAndSortCampaigns({
   campaignSearch,
   objectiveFilter,
   resultTypeFilter,
+  campaignStatusFilter,
   budgetModeFilter,
   campaignSort,
   localize,
@@ -407,6 +412,7 @@ function filterAndSortCampaigns({
   | 'campaignSearch'
   | 'objectiveFilter'
   | 'resultTypeFilter'
+  | 'campaignStatusFilter'
   | 'budgetModeFilter'
   | 'campaignSort'
   | 'localize'
@@ -429,10 +435,16 @@ function filterAndSortCampaigns({
         );
       const matchesObjective =
         objectiveFilter === 'all' || (filteredCampaign.objective || 'UNKNOWN') === objectiveFilter;
+      const matchesStatus =
+        campaignStatusFilter === 'all' ||
+        (campaignStatusFilter === 'active' && isActiveMetaAdsStatus(filteredCampaign.status)) ||
+        (campaignStatusFilter === 'inactive' && !isActiveMetaAdsStatus(filteredCampaign.status));
       const matchesMode =
         budgetModeFilter === 'all' ||
         (filteredCampaign.budgetMode ?? 'UNKNOWN') === budgetModeFilter;
-      return matchesSearch && matchesObjective && matchesMode ? [filteredCampaign] : [];
+      return matchesSearch && matchesObjective && matchesStatus && matchesMode
+        ? [filteredCampaign]
+        : [];
     })
     .sort((first, second) => {
       const [key, direction = 'asc'] = campaignSort.split('_') as [string, 'asc' | 'desc'];
@@ -450,6 +462,11 @@ function filterAndSortCampaigns({
       }
       return compareNumberSort(first, second, key, direction);
     });
+}
+
+function isActiveMetaAdsStatus(status: string | undefined) {
+  const normalizedStatus = typeof status === 'string' ? status.trim().toUpperCase() : '';
+  return !normalizedStatus || normalizedStatus === 'ACTIVE';
 }
 
 type ResultTypeEntity = {

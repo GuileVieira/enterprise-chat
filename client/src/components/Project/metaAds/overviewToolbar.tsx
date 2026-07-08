@@ -11,6 +11,7 @@ export function MetaAdsOverviewToolbar({
   budgetModeFilter,
   objectiveFilter,
   resultTypeFilter,
+  campaignStatusFilter,
   campaignSort,
   tableView,
   period,
@@ -25,6 +26,7 @@ export function MetaAdsOverviewToolbar({
   onBudgetModeFilterChange,
   onObjectiveFilterChange,
   onResultTypeFilterChange,
+  onCampaignStatusFilterChange,
   onCampaignSortChange,
   onTableViewChange,
   onClearSelection,
@@ -38,6 +40,7 @@ export function MetaAdsOverviewToolbar({
   budgetModeFilter: string;
   objectiveFilter: string;
   resultTypeFilter: string;
+  campaignStatusFilter: string;
   campaignSort: string;
   tableView: TableView;
   period: Omit<MetaAdsPeriodControlProps, 'localize' | 'testIdPrefix'>;
@@ -52,6 +55,7 @@ export function MetaAdsOverviewToolbar({
   onBudgetModeFilterChange: (value: string) => void;
   onObjectiveFilterChange: (value: string) => void;
   onResultTypeFilterChange: (value: string) => void;
+  onCampaignStatusFilterChange: (value: string) => void;
   onCampaignSortChange: (value: string) => void;
   onTableViewChange: (value: TableView) => void;
   onClearSelection: () => void;
@@ -94,6 +98,18 @@ export function MetaAdsOverviewToolbar({
                 <option value="CBO">CBO</option>
                 <option value="ABO">ABO</option>
                 <option value="UNKNOWN">UNKNOWN</option>
+              </MetaAdsSelect>
+            </MetaAdsField>
+            <MetaAdsField label={localize('com_ui_project_meta_ads_campaign_status_filter')}>
+              <MetaAdsSelect
+                value={campaignStatusFilter}
+                onChange={(event) => onCampaignStatusFilterChange(event.target.value)}
+              >
+                <option value="all">{localize('com_ui_all')}</option>
+                <option value="active">{localize('com_ui_project_meta_ads_active')}</option>
+                <option value="inactive">
+                  {localize('com_ui_project_meta_ads_inactive_campaigns')}
+                </option>
               </MetaAdsSelect>
             </MetaAdsField>
             <MetaAdsField label={localize('com_ui_project_meta_ads_objective_filter')}>

@@ -2366,6 +2366,8 @@
   "com_ui_project_meta_ads_budget_defined": "Defined budget",
   "com_ui_project_meta_ads_budget_mode": "Budget mode",
   "com_ui_project_meta_ads_budget_mode_filter": "Budget mode",
+  "com_ui_project_meta_ads_campaign_status_filter": "Campaign status",
+  "com_ui_project_meta_ads_inactive_campaigns": "Inactive",
   "com_ui_project_meta_ads_edit_budget": "Edit budget",
   "com_ui_project_meta_ads_new_budget": "New daily budget",
   "com_ui_project_meta_ads_budget_quick_adjustments": "Quick adjustments",

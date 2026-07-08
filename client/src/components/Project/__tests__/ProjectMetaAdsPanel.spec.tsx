@@ -3057,6 +3057,56 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByText('Hidden CBO')).not.toBeInTheDocument();
   });
 
+  it('filters campaigns by active status', () => {
+    mockStatusData.campaigns = [
+      {
+        campaignId: 'campaign-active',
+        campaignName: 'Campanha ativa',
+        status: 'ACTIVE',
+        spend: 50,
+        dailyBudget: 100,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-empty-status',
+        campaignName: 'Campanha sem status',
+        spend: 70,
+        dailyBudget: 100,
+        adSets: [],
+      },
+      {
+        campaignId: 'campaign-paused',
+        campaignName: 'Campanha pausada',
+        status: 'PAUSED',
+        spend: 300,
+        dailyBudget: 70,
+        adSets: [],
+      },
+    ];
+
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+
+    expect(screen.getAllByTestId('meta-ads-campaign-row')).toHaveLength(3);
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_campaign_status_filter'), {
+      target: { value: 'active' },
+    });
+
+    expect(screen.getAllByTestId('meta-ads-campaign-row')).toHaveLength(2);
+    expect(screen.getByText('Campanha ativa')).toBeInTheDocument();
+    expect(screen.getByText('Campanha sem status')).toBeInTheDocument();
+    expect(screen.queryByText('Campanha pausada')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('com_ui_project_meta_ads_campaign_status_filter'), {
+      target: { value: 'inactive' },
+    });
+
+    const rows = screen.getAllByTestId('meta-ads-campaign-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Campanha pausada');
+    expect(rows[0]).not.toHaveTextContent('Campanha ativa');
+  });
+
   it('sorts campaigns from the table header', () => {
     mockStatusData.campaigns = [
       {
