@@ -76,13 +76,21 @@ export function buildSummaryResultTypeOptions(
     onsite_conversion_messaging_first_reply: 'onsite_conversion.messaging_conversation_started_7d',
     'onsite_conversion.messaging_first_reply':
       'onsite_conversion.messaging_conversation_started_7d',
+    'onsite_conversion.instagram_profile_visit': 'instagram_profile_visit',
+    onsite_conversion_instagram_profile_visit: 'instagram_profile_visit',
     profile_visit: 'instagram_profile_visit',
+    'onsite_conversion.instagram_profile_follow': 'instagram_profile_follow',
+    onsite_conversion_instagram_profile_follow: 'instagram_profile_follow',
+    profile_follow: 'instagram_profile_follow',
+    instagram_profile_follows: 'instagram_profile_follow',
+    ig_profile_follow: 'instagram_profile_follow',
     video_view: 'thruplay',
     video_thruplay: 'thruplay',
     video_thruplay_watched_actions: 'thruplay',
   };
   const allowedResultTypes = new Set([
     'instagram_profile_visit',
+    'instagram_profile_follow',
     'lead',
     'leadgen_grouped',
     'link_click',

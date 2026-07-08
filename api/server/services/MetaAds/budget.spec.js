@@ -362,6 +362,54 @@ describe('Meta Ads budget service', () => {
     ).toEqual(expect.objectContaining({ resultType: 'lead', resultCount: 6 }));
   });
 
+  it('canonicalizes Instagram profile visit and follower actions for target results', () => {
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '120',
+          actions: [{ action_type: 'onsite_conversion.instagram_profile_visit', value: '12' }],
+        },
+        'instagram_profile_visit',
+      ),
+    ).toEqual(expect.objectContaining({ resultType: 'instagram_profile_visit', resultCount: 12 }));
+
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '90',
+          actions: [{ action_type: 'onsite_conversion.instagram_profile_follow', value: '9' }],
+        },
+        'instagram_profile_follow',
+      ),
+    ).toEqual(expect.objectContaining({ resultType: 'instagram_profile_follow', resultCount: 9 }));
+  });
+
+  it('does not add overlapping Instagram profile follower aliases to result breakdowns', () => {
+    const result = _calculateMetricsForTest(
+      {
+        spend: '80',
+        actions: [
+          { action_type: 'instagram_profile_follow', value: '8' },
+          { action_type: 'onsite_conversion.instagram_profile_follow', value: '10' },
+          { action_type: 'profile_follow', value: '8' },
+        ],
+      },
+      'instagram_profile_follow',
+    );
+
+    expect(result.resultType).toBe('instagram_profile_follow');
+    expect(result.resultCount).toBe(8);
+    expect(result.cpa).toBe(10);
+    expect(result.resultTypeBreakdown).toEqual([
+      {
+        resultType: 'instagram_profile_follow',
+        totalSpend: 80,
+        totalResults: 8,
+        averageCostPerResult: 10,
+      },
+    ]);
+  });
+
   it('resolves purchase as the default target for ecommerce and sales campaigns', () => {
     expect(_resolveTargetResultTypeForTest({ accountProfile: 'ecommerce' })).toBe('purchase');
     expect(_resolveTargetResultTypeForTest({ campaignObjective: 'OUTCOME_SALES' })).toBe(

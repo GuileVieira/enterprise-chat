@@ -298,6 +298,7 @@ export const objectiveLabelKeys: Record<string, TranslationKeys> = {
 export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   landing_page_view: 'com_ui_project_meta_ads_result_type_landing_page_view',
   lead: 'com_ui_project_meta_ads_result_type_lead',
+  instagram_profile_follow: 'com_ui_project_meta_ads_result_type_instagram_profile_follow',
   instagram_profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   leadgen_grouped: 'com_ui_project_meta_ads_result_type_lead',
   link_click: 'com_ui_project_meta_ads_result_type_link_click',
@@ -312,6 +313,11 @@ export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   offsite_conversion_fb_pixel_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   omni_purchase: 'com_ui_project_meta_ads_result_type_purchase',
   purchase: 'com_ui_project_meta_ads_result_type_purchase',
+  onsite_conversion_instagram_profile_follow:
+    'com_ui_project_meta_ads_result_type_instagram_profile_follow',
+  onsite_conversion_instagram_profile_visit:
+    'com_ui_project_meta_ads_result_type_instagram_profile_visit',
+  profile_follow: 'com_ui_project_meta_ads_result_type_instagram_profile_follow',
   profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   thruplay: 'com_ui_project_meta_ads_result_type_thruplay',
   video_view: 'com_ui_project_meta_ads_result_type_video_view',

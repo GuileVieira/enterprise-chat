@@ -80,6 +80,10 @@ export const resultTypeOptions = [
     value: 'instagram_profile_visit',
     labelKey: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   },
+  {
+    value: 'instagram_profile_follow',
+    labelKey: 'com_ui_project_meta_ads_result_type_instagram_profile_follow',
+  },
   { value: 'thruplay', labelKey: 'com_ui_project_meta_ads_result_type_thruplay' },
   {
     value: 'landing_page_view',

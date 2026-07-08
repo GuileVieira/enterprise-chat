@@ -5,13 +5,13 @@
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1783440648.3914616,
-    "ast_hash": "9310afbabaef288ef79c137a7c97c793",
+    "mtime": 1783541011.1977255,
+    "ast_hash": "a8b1f7ff100a36c34a8dcde43081285d",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
-    "mtime": 1783440298.9601645,
-    "ast_hash": "d615c98bce40714fa39bce5a01fc0186",
+    "mtime": 1783541054.3199253,
+    "ast_hash": "7a7779dd9630facde3a4a3f385cccb62",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/defaults.spec.js": {
@@ -85,8 +85,8 @@
     "semantic_hash": "3c73575a521bfd0e05ad5240f7defb13"
   },
   "client/src/components/Project/metaAds/constants.ts": {
-    "mtime": 1783440569.9481792,
-    "ast_hash": "2cd746e8acf9f6e68223b85208ac6f42",
+    "mtime": 1783541024.1788518,
+    "ast_hash": "e800939434753374ce2552d47214a8e4",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/credentialsDialog.tsx": {
@@ -300,9 +300,9 @@
     "semantic_hash": "49811288ef8726dd97206d1b70cee4b4"
   },
   "client/src/components/Project/metaAds/rules.ts": {
-    "mtime": 1783367795.1334965,
-    "ast_hash": "6c2fdb785164a93bc93c8e051b665c69",
-    "semantic_hash": "6c2fdb785164a93bc93c8e051b665c69"
+    "mtime": 1783541027.938594,
+    "ast_hash": "f11770e02e4a775cea9955134e551904",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/rulesState.spec.ts": {
     "mtime": 1783372675.1027472,
@@ -340,9 +340,9 @@
     "semantic_hash": "848c6da652951f007817703b4d2dde40"
   },
   "client/src/components/Project/metaAds/summary.ts": {
-    "mtime": 1782232583.3708107,
-    "ast_hash": "db927bf8012662b8bf2bea6f97cfac6d",
-    "semantic_hash": "db927bf8012662b8bf2bea6f97cfac6d"
+    "mtime": 1783541018.2447517,
+    "ast_hash": "13121b3b65f0a1ff69808249d19da590",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/summaryCards.tsx": {
     "mtime": 1783365594.9529243,
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783539882.8236103,
-    "ast_hash": "1ec3dc2e19358cf998f6fb014d17c4d6",
+    "mtime": 1783541040.303848,
+    "ast_hash": "d84b235deb9fc70d4351831b1f01d0c3",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783539882.722337,
-    "ast_hash": "3df1f06d358d9da139f7b20e8b0d09fd",
+    "mtime": 1783541037.0570652,
+    "ast_hash": "a82fc2c31c301d25f053505abc58426c",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
