@@ -6250,8 +6250,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareArtifacts.tsx": {
-    "mtime": 1783556436.1070738,
-    "ast_hash": "44329025cab421f051580ef5dd2afb25",
+    "mtime": 1783558486.2832437,
+    "ast_hash": "ad2fe7a7e8dbff1fc1bd15467a32b469",
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareMessagesProvider.tsx": {
@@ -6260,8 +6260,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareView.tsx": {
-    "mtime": 1779911301.92654,
-    "ast_hash": "01b1bd423f345f5af6a0be53812b3727",
+    "mtime": 1783558544.5600097,
+    "ast_hash": "3722f289c4ea946f075bb5dcd7b5a55c",
     "semantic_hash": ""
   },
   "client/src/components/SharePoint/SharePointPickerDialog.tsx": {
@@ -9210,8 +9210,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/share.test.ts": {
-    "mtime": 1783556654.9130952,
-    "ast_hash": "65a0908eef4fcb3e839dfdfaa2ab983d",
+    "mtime": 1783558619.130833,
+    "ast_hash": "3af6ab1f71558e23b9743ac8d2dda901",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/subagentContent.test.ts": {
@@ -9240,8 +9240,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/artifacts.ts": {
-    "mtime": 1779206733.8283834,
-    "ast_hash": "acafdcd763f77c78eb7f8319ffeb51be",
+    "mtime": 1783558544.6560276,
+    "ast_hash": "f5402d6e8c1070d2d64c5fc23b2d7170",
     "semantic_hash": ""
   },
   "client/src/utils/buildDefaultConvo.ts": {
@@ -9500,8 +9500,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/share.ts": {
-    "mtime": 1783556645.7040224,
-    "ast_hash": "a00f8ac044f0ab7157e6fd92b3370e9e",
+    "mtime": 1783558486.1893706,
+    "ast_hash": "e7efbf2b543b44c9b6cbf1fbedc691ad",
     "semantic_hash": ""
   },
   "client/src/utils/speech.spec.ts": {
@@ -16417,6 +16417,11 @@
   "packages/data-schemas/src/methods/share.spec.ts": {
     "mtime": 1783556979.2875838,
     "ast_hash": "3e573511dee091ec391f78702e9eba41",
+    "semantic_hash": ""
+  },
+  "client/src/components/Share/ShareArtifactView.tsx": {
+    "mtime": 1783558507.2746644,
+    "ast_hash": "a86134b6232ec2721085b31d668cb3e3",
     "semantic_hash": ""
   }
 }

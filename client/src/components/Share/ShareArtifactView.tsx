@@ -45,6 +45,7 @@ export default function ShareArtifactView({
   const targetId = findShareArtifactId(
     artifacts,
     searchParams.get('artifact'),
+    searchParams.get('artifactHash'),
     searchParams.get('artifactIndex'),
   );
   const artifact = targetId ? artifacts?.[targetId] : undefined;

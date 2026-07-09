@@ -5,6 +5,7 @@ import type { Artifact } from '~/common';
 import type { ShareLinkSearch } from '~/utils';
 import { useArtifactsContext, useShareContext } from '~/Providers';
 import { useGetStartupConfig } from '~/data-provider';
+import { buildShareArtifactHash } from '~/utils';
 import { useLocalize } from '~/hooks';
 import { ShareButton } from '~/components/Conversations/ConvoOptions';
 
@@ -16,8 +17,8 @@ export default function ShareArtifact({ artifact }: { artifact: Artifact }) {
   const [open, setOpen] = useState(false);
 
   const linkSearch = useMemo<ShareLinkSearch>(() => {
-    return { artifactId: artifact.id };
-  }, [artifact.id]);
+    return { artifactHash: buildShareArtifactHash(artifact), artifactId: artifact.id };
+  }, [artifact.content, artifact.id, artifact.identifier, artifact.title, artifact.type]);
 
   if (
     isSharedConvo ||

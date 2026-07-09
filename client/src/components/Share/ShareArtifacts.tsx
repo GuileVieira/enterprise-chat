@@ -99,7 +99,12 @@ export function ShareArtifactsContainer({
     }
 
     const artifactId = searchParams.get('artifact');
-    const targetId = findShareArtifactId(artifacts, artifactId, searchParams.get('artifactIndex'));
+    const targetId = findShareArtifactId(
+      artifacts,
+      artifactId,
+      searchParams.get('artifactHash'),
+      searchParams.get('artifactIndex'),
+    );
 
     if (!targetId) {
       return;

@@ -6250,8 +6250,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareArtifacts.tsx": {
-    "mtime": 1783558486.2832437,
-    "ast_hash": "ad2fe7a7e8dbff1fc1bd15467a32b469",
+    "mtime": 1783559559.5824556,
+    "ast_hash": "862a8429c1a7de19ab1ce728bd16e5c7",
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareMessagesProvider.tsx": {
@@ -9210,8 +9210,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/share.test.ts": {
-    "mtime": 1783558619.130833,
-    "ast_hash": "3af6ab1f71558e23b9743ac8d2dda901",
+    "mtime": 1783559574.2372973,
+    "ast_hash": "2890a3b8807747b65a756849fa946032",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/subagentContent.test.ts": {
@@ -9500,8 +9500,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/share.ts": {
-    "mtime": 1783558486.1893706,
-    "ast_hash": "e7efbf2b543b44c9b6cbf1fbedc691ad",
+    "mtime": 1783559544.2754042,
+    "ast_hash": "bb74303b7ca571feb463560f8a8f5061",
     "semantic_hash": ""
   },
   "client/src/utils/speech.spec.ts": {
@@ -16410,8 +16410,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Artifacts/ShareArtifact.tsx": {
-    "mtime": 1783556651.2628145,
-    "ast_hash": "8e55e2f6a211c60d31167aed90ebb2ea",
+    "mtime": 1783559582.0775087,
+    "ast_hash": "4c756fcc234ddf6f349b3f05c7162fdf",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/share.spec.ts": {
@@ -16420,8 +16420,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Share/ShareArtifactView.tsx": {
-    "mtime": 1783558507.2746644,
-    "ast_hash": "a86134b6232ec2721085b31d668cb3e3",
+    "mtime": 1783559559.6832783,
+    "ast_hash": "2abd47a9e910c66a1adcaf1581b509b5",
     "semantic_hash": ""
   }
 }

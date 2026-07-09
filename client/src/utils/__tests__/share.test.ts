@@ -7,7 +7,12 @@ jest.mock(
 );
 
 import { apiBaseUrl } from 'librechat-data-provider';
-import { buildShareLinkUrl, buildTenantShareLinkUrl, findShareArtifactId } from '../share';
+import {
+  buildShareLinkUrl,
+  buildTenantShareLinkUrl,
+  findShareArtifactId,
+  buildShareArtifactHash,
+} from '../share';
 
 describe('buildShareLinkUrl', () => {
   it('includes the base path for subdirectory deployments', () => {
@@ -34,8 +39,14 @@ describe('buildShareLinkUrl', () => {
   it('adds artifact deep-link params', () => {
     (apiBaseUrl as jest.Mock).mockReturnValue('');
     expect(
-      buildShareLinkUrl('shareId', { artifactId: 'tool-artifact-file', artifactIndex: 2 }),
-    ).toBe('http://localhost:3080/share/shareId?artifact=tool-artifact-file&artifactIndex=2');
+      buildShareLinkUrl('shareId', {
+        artifactId: 'tool-artifact-file',
+        artifactHash: 'abc123',
+        artifactIndex: 2,
+      }),
+    ).toBe(
+      'http://localhost:3080/share/shareId?artifact=tool-artifact-file&artifactHash=abc123&artifactIndex=2',
+    );
     expect(buildTenantShareLinkUrl('tenantShareId', { artifactIndex: 2 })).toBe(
       'http://localhost:3080/share/tenant/tenantShareId?artifactIndex=2',
     );
@@ -61,8 +72,46 @@ describe('buildShareLinkUrl', () => {
       },
     };
 
-    expect(findShareArtifactId(artifacts, 'stable_html_report_original-message', '0')).toBe(
+    expect(findShareArtifactId(artifacts, 'stable_html_report_original-message', null, '0')).toBe(
       'stable_html_report_msg_anonymized',
     );
+  });
+
+  it('matches shared artifacts by hash before stable id fallback', () => {
+    const sourceArtifact = {
+      id: 'same_text/html_report_original-message',
+      identifier: 'same',
+      type: 'text/html',
+      title: 'report',
+      content: '<main>third report</main>',
+      lastUpdateTime: 1,
+    };
+    const artifacts = {
+      'same_text/html_report_msg_first': {
+        id: 'same_text/html_report_msg_first',
+        identifier: 'same',
+        type: 'text/html',
+        title: 'report',
+        content: '<main>first report</main>',
+        lastUpdateTime: 1,
+      },
+      'same_text/html_report_msg_third': {
+        id: 'same_text/html_report_msg_third',
+        identifier: 'same',
+        type: 'text/html',
+        title: 'report',
+        content: '<main>third report</main>',
+        lastUpdateTime: 1,
+      },
+    };
+
+    expect(
+      findShareArtifactId(
+        artifacts,
+        sourceArtifact.id,
+        buildShareArtifactHash(sourceArtifact),
+        null,
+      ),
+    ).toBe('same_text/html_report_msg_third');
   });
 });

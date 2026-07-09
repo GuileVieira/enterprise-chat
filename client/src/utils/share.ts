@@ -3,6 +3,7 @@ import type { Artifact } from '~/common';
 
 export type ShareLinkSearch = {
   artifactId?: string;
+  artifactHash?: string;
   artifactIndex?: number;
 };
 
@@ -31,15 +32,36 @@ const applyShareSearch = (url: URL, search?: ShareLinkSearch) => {
   if (search?.artifactId) {
     url.searchParams.set('artifact', search.artifactId);
   }
+  if (search?.artifactHash) {
+    url.searchParams.set('artifactHash', search.artifactHash);
+  }
   if (typeof search?.artifactIndex === 'number') {
     url.searchParams.set('artifactIndex', search.artifactIndex.toString());
   }
   return url.toString();
 };
 
+export const buildShareArtifactHash = (
+  artifact: Pick<Artifact, 'content' | 'identifier' | 'title' | 'type'>,
+) => {
+  const value = [
+    artifact.identifier ?? '',
+    artifact.type ?? '',
+    artifact.title ?? '',
+    artifact.content ?? '',
+  ].join('\u001f');
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+};
+
 export const findShareArtifactId = (
   artifacts: SharedArtifacts,
   artifactId: string | null,
+  artifactHashParam?: string | null,
   artifactIndexParam?: string | null,
 ) => {
   if (!artifacts) {
@@ -48,6 +70,13 @@ export const findShareArtifactId = (
 
   const artifactIndex = artifactIndexParam != null ? Number(artifactIndexParam) : null;
   let targetId = artifactId && artifacts[artifactId] ? artifactId : null;
+
+  if (!targetId && artifactHashParam) {
+    const match = Object.entries(artifacts).find(([, artifact]) => {
+      return artifact != null && buildShareArtifactHash(artifact) === artifactHashParam;
+    });
+    targetId = match?.[0] ?? null;
+  }
 
   if (!targetId && artifactId) {
     const stableKey = artifactId.split('_').slice(0, -1).join('_');
