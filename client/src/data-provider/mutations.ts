@@ -206,7 +206,10 @@ export const useCreateSharedLinkMutation = (
     },
     {
       onSuccess: (_data: t.TSharedLinkResponse, vars, context) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, _data.conversationId], _data);
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, _data.conversationId, vars.targetMessageId ?? null],
+          _data,
+        );
 
         onSuccess?.(_data, vars, context);
       },
@@ -250,7 +253,10 @@ export const useUpdateSharedLinkMutation = (
     },
     {
       onSuccess: (_data: t.TSharedLinkResponse, vars, context) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, _data.conversationId], _data);
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, _data.conversationId, _data.targetMessageId ?? null],
+          _data,
+        );
 
         onSuccess?.(_data, vars, context);
       },

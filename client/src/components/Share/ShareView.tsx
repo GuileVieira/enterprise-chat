@@ -2,7 +2,7 @@ import { memo, useState, useCallback, useContext } from 'react';
 import type { ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import { useRecoilState } from 'recoil';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { buildTree } from 'librechat-data-provider';
 import { CalendarDots as CalendarDays, GearSix as Settings } from '@phosphor-icons/react';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@librechat/client';
 import { ThemeSelector, LangSelector } from '~/components/Nav/SettingsTabs/General/General';
 import { ShareArtifactsContainer } from './ShareArtifacts';
+import ShareArtifactView from './ShareArtifactView';
 import { useLocalize, useDocumentTitle } from '~/hooks';
 import { useForkTenantShareMutation, useGetStartupConfig } from '~/data-provider';
 import { ShareContext } from '~/Providers';
@@ -37,11 +38,15 @@ function SharedView({ isTenantShare = false }: { isTenantShare?: boolean }) {
   const { data: config } = useGetStartupConfig();
   const { theme, setTheme } = useContext(ThemeContext);
   const { shareId } = useParams();
+  const [searchParams] = useSearchParams();
+  const artifactId = searchParams.get('artifact');
+  const isArtifactShare = !!shareId && !!artifactId;
+
   const publicShare = useGetSharedMessages(shareId ?? '', {
-    enabled: !isTenantShare && !!shareId,
+    enabled: !isArtifactShare && !isTenantShare && !!shareId,
   });
   const tenantShare = useGetTenantSharedMessages(shareId ?? '', {
-    enabled: isTenantShare && !!shareId,
+    enabled: !isArtifactShare && isTenantShare && !!shareId,
   });
   const forkTenantShare = useForkTenantShareMutation({
     onSuccess: (result) => {
@@ -107,6 +112,14 @@ function SharedView({ isTenantShare = false }: { isTenantShare?: boolean }) {
     },
     [setLangcode],
   );
+
+  if (isArtifactShare) {
+    return (
+      <ShareContext.Provider value={{ isSharedConvo: true }}>
+        <ShareArtifactView shareId={shareId} isTenantShare={isTenantShare} />
+      </ShareContext.Provider>
+    );
+  }
 
   let content: JSX.Element;
   if (isLoading) {

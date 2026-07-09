@@ -4,9 +4,10 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Copy, ClipboardText as CopyCheck } from '@phosphor-icons/react';
 import { useGetSharedLinkQuery } from 'librechat-data-provider/react-query';
 import { OGDialogTemplate, Button, Spinner, OGDialog } from '@librechat/client';
+import type { ShareLinkSearch } from '~/utils';
 import { useLocalize, useCopyToClipboard } from '~/hooks';
 import SharedLinkButton from './SharedLinkButton';
-import { useCreateTenantSharedLinkMutation } from '~/data-provider';
+import { useCreateTenantSharedLinkMutation, useGetStartupConfig } from '~/data-provider';
 import { buildShareLinkUrl, buildTenantShareLinkUrl, cn } from '~/utils';
 import store from '~/store';
 
@@ -15,12 +16,16 @@ export default function ShareButton({
   open,
   onOpenChange,
   triggerRef,
+  targetMessageId,
+  linkSearch,
   children,
 }: {
   conversationId: string;
   open: boolean;
   onOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
   triggerRef?: React.RefObject<HTMLButtonElement>;
+  targetMessageId?: string;
+  linkSearch?: ShareLinkSearch;
   children?: React.ReactNode;
 }) {
   const localize = useLocalize();
@@ -32,6 +37,8 @@ export default function ShareButton({
   const [announcement, setAnnouncement] = useState('');
   const copyLink = useCopyToClipboard({ text: sharedLink });
   const copyTenantLink = useCopyToClipboard({ text: tenantSharedLink });
+  const { data: startupConfig } = useGetStartupConfig();
+  const shareLinkBaseUrl = startupConfig?.shareLinkBaseUrl;
   const copyLinkAndAnnounce = (setIsCopying: React.Dispatch<React.SetStateAction<boolean>>) => {
     setAnnouncement(localize('com_ui_link_copied'));
     copyLink(setIsCopying);
@@ -40,32 +47,36 @@ export default function ShareButton({
     }, 1000);
   };
   const latestMessage = useRecoilValue(store.latestMessageFamily(0));
-  const { data: share, isLoading } = useGetSharedLinkQuery(conversationId);
+  const shareTargetMessageId = targetMessageId ?? latestMessage?.messageId;
+  const { data: share, isLoading } = useGetSharedLinkQuery(conversationId, shareTargetMessageId);
   const tenantShareMutation = useCreateTenantSharedLinkMutation({
-    onSuccess: (data) => setTenantSharedLink(buildTenantShareLinkUrl(data.shareId)),
+    onSuccess: (data) =>
+      setTenantSharedLink(buildTenantShareLinkUrl(data.shareId, linkSearch, shareLinkBaseUrl)),
   });
 
   useEffect(() => {
-    if (share?.shareId !== undefined) {
-      setSharedLink(buildShareLinkUrl(share.shareId));
+    if (share?.shareId) {
+      setSharedLink(buildShareLinkUrl(share.shareId, linkSearch, shareLinkBaseUrl));
     }
-  }, [share]);
+  }, [linkSearch, share, shareLinkBaseUrl]);
 
   const button =
     isLoading === true ? null : (
       <SharedLinkButton
         share={share}
         conversationId={conversationId}
-        targetMessageId={latestMessage?.messageId}
+        targetMessageId={shareTargetMessageId}
         showQR={showQR}
         setShowQR={setShowQR}
         setSharedLink={setSharedLink}
+        linkSearch={linkSearch}
+        shareLinkBaseUrl={shareLinkBaseUrl}
       />
     );
 
   const shareId = share?.shareId ?? '';
   const createTenantShareLink = () => {
-    tenantShareMutation.mutate({ conversationId, targetMessageId: latestMessage?.messageId });
+    tenantShareMutation.mutate({ conversationId, targetMessageId: shareTargetMessageId });
   };
 
   return (

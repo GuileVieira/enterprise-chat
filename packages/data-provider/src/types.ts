@@ -344,7 +344,9 @@ export type TSharedMessagesResponse = Omit<TSharedLink, 'messages'> & {
   messages: TMessage[];
 };
 
-export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'>;
+export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
 
 export type TCreateTenantShareLinkRequest = Pick<TConversation, 'conversationId'> & {
   targetMessageId?: string;

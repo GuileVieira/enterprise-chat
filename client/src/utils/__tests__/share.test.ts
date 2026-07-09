@@ -1,9 +1,13 @@
-jest.mock('librechat-data-provider', () => ({
-  apiBaseUrl: jest.fn(),
-}));
+jest.mock(
+  'librechat-data-provider',
+  () => ({
+    apiBaseUrl: jest.fn(),
+  }),
+  { virtual: true },
+);
 
 import { apiBaseUrl } from 'librechat-data-provider';
-import { buildShareLinkUrl, buildTenantShareLinkUrl } from '../share';
+import { buildShareLinkUrl, buildTenantShareLinkUrl, findShareArtifactId } from '../share';
 
 describe('buildShareLinkUrl', () => {
   it('includes the base path for subdirectory deployments', () => {
@@ -24,6 +28,41 @@ describe('buildShareLinkUrl', () => {
     (apiBaseUrl as jest.Mock).mockReturnValue('/librechat');
     expect(buildTenantShareLinkUrl('tenantShareId')).toBe(
       'http://localhost:3080/librechat/share/tenant/tenantShareId',
+    );
+  });
+
+  it('adds artifact deep-link params', () => {
+    (apiBaseUrl as jest.Mock).mockReturnValue('');
+    expect(
+      buildShareLinkUrl('shareId', { artifactId: 'tool-artifact-file', artifactIndex: 2 }),
+    ).toBe('http://localhost:3080/share/shareId?artifact=tool-artifact-file&artifactIndex=2');
+    expect(buildTenantShareLinkUrl('tenantShareId', { artifactIndex: 2 })).toBe(
+      'http://localhost:3080/share/tenant/tenantShareId?artifactIndex=2',
+    );
+  });
+
+  it('uses configured share base url when provided', () => {
+    (apiBaseUrl as jest.Mock).mockReturnValue('');
+    expect(buildShareLinkUrl('shareId', undefined, 'https://app.orqest.com/app')).toBe(
+      'https://app.orqest.com/app/share/shareId',
+    );
+  });
+
+  it('matches shared artifacts by stable id before index fallback', () => {
+    const artifacts = {
+      stable_html_report_msg_anonymized: {
+        id: 'stable_html_report_msg_anonymized',
+        lastUpdateTime: 1,
+      },
+      other_html_report_msg_anonymized: {
+        id: 'other_html_report_msg_anonymized',
+        index: 0,
+        lastUpdateTime: 1,
+      },
+    };
+
+    expect(findShareArtifactId(artifacts, 'stable_html_report_original-message', '0')).toBe(
+      'stable_html_report_msg_anonymized',
     );
   });
 });

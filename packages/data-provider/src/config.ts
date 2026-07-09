@@ -1092,6 +1092,7 @@ export type TStartupConfig = {
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
+  shareLinkBaseUrl?: string;
   analyticsGtmId?: string;
   bundlerURL?: string;
   staticBundlerURL?: string;

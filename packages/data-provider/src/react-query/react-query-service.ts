@@ -53,12 +53,17 @@ export const useGetTenantSharedMessages = (
 
 export const useGetSharedLinkQuery = (
   conversationId: string,
+  targetMessageIdOrConfig?: string | UseQueryOptions<t.TSharedLinkGetResponse>,
   config?: UseQueryOptions<t.TSharedLinkGetResponse>,
 ): QueryObserverResult<t.TSharedLinkGetResponse> => {
   const queryClient = useQueryClient();
+  const targetMessageId =
+    typeof targetMessageIdOrConfig === 'string' ? targetMessageIdOrConfig : undefined;
+  const queryConfig =
+    typeof targetMessageIdOrConfig === 'string' ? config : targetMessageIdOrConfig;
   return useQuery<t.TSharedLinkGetResponse>(
-    [QueryKeys.sharedLinks, conversationId],
-    () => dataService.getSharedLink(conversationId),
+    [QueryKeys.sharedLinks, conversationId, targetMessageId ?? null],
+    () => dataService.getSharedLink(conversationId, targetMessageId),
     {
       enabled:
         !!conversationId &&
@@ -68,9 +73,12 @@ export const useGetSharedLinkQuery = (
       refetchOnReconnect: false,
       refetchOnMount: false,
       onSuccess: (data) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, conversationId], data);
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, conversationId, targetMessageId ?? null],
+          data,
+        );
       },
-      ...config,
+      ...queryConfig,
     },
   );
 };

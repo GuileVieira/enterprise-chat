@@ -85,7 +85,12 @@ router.get('/', requireJwtAuth, async (req, res) => {
 
 router.get('/link/:conversationId', requireJwtAuth, async (req, res) => {
   try {
-    const share = await getSharedLink(req.user.id, req.params.conversationId);
+    const { targetMessageId } = req.query ?? {};
+    if (targetMessageId !== undefined && typeof targetMessageId !== 'string') {
+      return res.status(400).json({ message: 'targetMessageId must be a string' });
+    }
+
+    const share = await getSharedLink(req.user.id, req.params.conversationId, targetMessageId);
 
     return res.status(200).json({
       success: share.success,

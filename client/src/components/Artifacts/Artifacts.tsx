@@ -8,6 +8,7 @@ import type { SandpackPreviewRef } from '@codesandbox/sandpack-react';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useShareContext, useMutationState } from '~/Providers';
 import useArtifacts from '~/hooks/Artifacts/useArtifacts';
+import ShareArtifact from './ShareArtifact';
 import DownloadArtifact from './DownloadArtifact';
 import ArtifactVersion from './ArtifactVersion';
 import ArtifactTabs from './ArtifactTabs';
@@ -329,6 +330,7 @@ export default function Artifacts() {
                 />
               )}
               <CopyButton isCopied={isCopied} iconOnly onClick={handleCopyArtifact} />
+              <ShareArtifact artifact={currentArtifact} />
               <DownloadArtifact artifact={currentArtifact} />
               <Button
                 size="icon"

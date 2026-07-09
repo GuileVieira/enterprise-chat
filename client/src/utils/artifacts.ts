@@ -80,6 +80,7 @@ export function getTemplate(type: string, language?: string): SandpackPredefined
 
 const standardDependencies = {
   three: '^0.167.1',
+  'lucide-react': '^1.16.0',
   '@phosphor-icons/react': '^2.1.10',
   'react-router-dom': '^6.11.2',
   'class-variance-authority': '^0.6.0',

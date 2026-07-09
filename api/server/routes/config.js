@@ -21,6 +21,7 @@ const sharedLinksEnabled =
 
 const publicSharedLinksEnabled =
   sharedLinksEnabled && isEnabled(process.env.ALLOW_SHARED_LINKS_PUBLIC);
+const shareLinkBaseUrl = process.env.SHARE_LINK_BASE_URL || '';
 
 const sharePointFilePickerEnabled = isEnabled(process.env.ENABLE_SHAREPOINT_FILEPICKER);
 const openidReuseTokens = isEnabled(process.env.OPENID_REUSE_TOKENS);
@@ -81,6 +82,7 @@ function buildSharedPayload() {
     helpAndFaqURL: process.env.HELP_AND_FAQ_URL || '',
     sharedLinksEnabled,
     publicSharedLinksEnabled,
+    shareLinkBaseUrl,
     analyticsGtmId: process.env.ANALYTICS_GTM_ID,
     openidReuseTokens,
     /** Read inline (not module-level) for per-request evaluation and test isolation */
