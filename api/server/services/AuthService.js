@@ -595,7 +595,7 @@ const resolveOpenIDAuthTokenOptions = (optionsOrUserId, existingRefreshToken, te
  * @param {string} [options.userId] - Optional MongoDB user ID for image path validation
  * @param {string} [options.existingRefreshToken] - Optional existing refresh token to preserve
  * @param {string} [options.tenantId] - Optional tenant identifier for CloudFront cookie scoping
- * @returns {String} - id_token (preferred) or access_token as the app auth token
+ * @returns {String | undefined} - id_token suitable for app auth; never returns access_token
  */
 const setOpenIDAuthTokens = (
   tokenset,
@@ -634,17 +634,12 @@ const setOpenIDAuthTokens = (
     }
 
     /**
-     * Use id_token as the app authentication token (Bearer token for JWKS validation).
-     * The id_token is always a standard JWT signed by the IdP's JWKS keys with the app's
-     * client_id as audience. The access_token may be opaque or intended for a different
-     * audience (e.g., Microsoft Graph API), which fails JWKS validation.
-     * Falls back to access_token for providers where id_token is not available.
+     * Use only id_token as the app authentication token (Bearer token for JWKS validation).
+     * access_token is for federated APIs (Graph, SharePoint, etc.) and may be opaque or
+     * resource-bound; returning it as app auth causes protected Orqest routes to 401-loop.
      */
     const sessionIdToken = req.session?.openidTokens?.idToken;
-    const appAuthToken =
-      tokenset.id_token ||
-      getUnexpiredOpenIDSessionIdToken(sessionIdToken) ||
-      tokenset.access_token;
+    const appAuthToken = tokenset.id_token || getUnexpiredOpenIDSessionIdToken(sessionIdToken);
     const logoutIdToken = tokenset.id_token || sessionIdToken;
 
     /**

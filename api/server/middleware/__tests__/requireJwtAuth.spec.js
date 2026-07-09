@@ -40,6 +40,7 @@ jest.mock('@librechat/data-schemas', () => {
   const { AsyncLocalStorage } = require('async_hooks');
   const tenantStorage = new AsyncLocalStorage();
   return {
+    logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
     getTenantId: () => tenantStorage.getStore()?.tenantId,
     getUserId: () => tenantStorage.getStore()?.userId,
     getRequestId: () => tenantStorage.getStore()?.requestId,
@@ -297,6 +298,49 @@ describe('requireJwtAuth tenant context chaining', () => {
       expect.any(Function),
     );
     expect(maybeRefreshCloudFrontAuthCookiesMiddleware).not.toHaveBeenCalled();
+  });
+
+  it('preserves OpenID federated tokens when local JWT fallback authenticates', async () => {
+    isEnabled.mockReturnValue(true);
+    mockRegisteredStrategies.add('openidJwt');
+    const idToken = jwt.sign({ sub: 'user-openid', exp: 12345 }, jwtSecret);
+    const req = mockReq(undefined, {
+      headers: {
+        cookie: `token_provider=openid; openid_user_id=${signedOpenIdUserCookie()}; refreshToken=cookie-refresh`,
+      },
+      session: {
+        openidTokens: {
+          accessToken: 'session-access-token',
+          idToken,
+          refreshToken: 'session-refresh-token',
+        },
+      },
+      _mockStrategies: {
+        openidJwt: { user: false, info: { message: 'invalid issuer' }, status: 401 },
+        jwt: { user: { id: 'user-openid', tenantId: 'tenant-openid', role: 'user' } },
+      },
+    });
+    const res = mockRes();
+    const tenantId = await new Promise((resolve) => {
+      requireJwtAuth(req, res, () => {
+        resolve(getTenantId());
+      });
+    });
+
+    expect(tenantId).toBe('tenant-openid');
+    expect(req.authStrategy).toBe('jwt');
+    expect(req.user.federatedTokens).toEqual({
+      access_token: 'session-access-token',
+      id_token: idToken,
+      refresh_token: 'session-refresh-token',
+      expires_at: 12345,
+    });
+    expect(res.status).not.toHaveBeenCalled();
+    expect(maybeRefreshCloudFrontAuthCookiesMiddleware).toHaveBeenCalledWith(
+      req,
+      res,
+      expect.any(Function),
+    );
   });
 
   it('does not use OpenID JWT when the signed OpenID reuse cookie is missing', () => {

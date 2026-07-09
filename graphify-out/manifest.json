@@ -880,13 +880,13 @@
     "semantic_hash": ""
   },
   "api/server/controllers/AuthController.js": {
-    "mtime": 1779203389.3410504,
-    "ast_hash": "4118136fbf97b286c67f244cccd0ac66",
+    "mtime": 1783624326.1467195,
+    "ast_hash": "4e3fcb594afa2e7d6b9b3fe429f24a5d",
     "semantic_hash": ""
   },
   "api/server/controllers/AuthController.spec.js": {
-    "mtime": 1779199271.356156,
-    "ast_hash": "bbad3244b66e436f9c9d0e890cb7cd40",
+    "mtime": 1783624379.4271207,
+    "ast_hash": "f92edea8acac249e388c9b5daa0d2485",
     "semantic_hash": ""
   },
   "api/server/controllers/Balance.js": {
@@ -1180,8 +1180,8 @@
     "semantic_hash": ""
   },
   "api/server/middleware/__tests__/requireJwtAuth.spec.js": {
-    "mtime": 1779199271.3663437,
-    "ast_hash": "b126aaf8099ee8d85d67a3cf7e76cc0d",
+    "mtime": 1783624302.3189313,
+    "ast_hash": "fb1f3696b3bf039f60294bd8c13d7333",
     "semantic_hash": ""
   },
   "api/server/middleware/__tests__/validateMessageReq.spec.js": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "api/server/middleware/requireJwtAuth.js": {
-    "mtime": 1779199271.3701313,
-    "ast_hash": "575c68981830816ab6c9f63ed6aaedfb",
+    "mtime": 1783624189.6614802,
+    "ast_hash": "ebf736aa799a43897c8f786289e3868e",
     "semantic_hash": ""
   },
   "api/server/middleware/requireLdapAuth.js": {
@@ -2065,13 +2065,13 @@
     "semantic_hash": ""
   },
   "api/server/services/AuthService.js": {
-    "mtime": 1781834197.269456,
-    "ast_hash": "f55e3896c8838c4a56d74a86a48d77a6",
+    "mtime": 1783624152.7135012,
+    "ast_hash": "9c6589fa38cc4279a315d295ef03cf9d",
     "semantic_hash": ""
   },
   "api/server/services/AuthService.spec.js": {
-    "mtime": 1779199271.3829057,
-    "ast_hash": "076b55ad15b0f5887a10cbdf2c8dad19",
+    "mtime": 1783624226.896153,
+    "ast_hash": "a0cd2d3712faafbadabe0bbfbdfc81b8",
     "semantic_hash": ""
   },
   "api/server/services/Config/EndpointService.js": {
@@ -13875,8 +13875,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/specs/request-interceptor.spec.ts": {
-    "mtime": 1777407818.6827893,
-    "ast_hash": "3850fc6f1cf3f9b03ff7d3e2a57603e4",
+    "mtime": 1783624318.4720979,
+    "ast_hash": "4c515eca119dc16b8e0a1971030e77bc",
     "semantic_hash": ""
   },
   "packages/data-provider/specs/utils.spec.ts": {
@@ -14030,8 +14030,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/request.ts": {
-    "mtime": 1777407818.6854892,
-    "ast_hash": "8b1f7f19140fbf2de9c58519c4223a2f",
+    "mtime": 1783624387.9518683,
+    "ast_hash": "67a688cb82ae6f0a43169dc0b622801c",
     "semantic_hash": ""
   },
   "packages/data-provider/src/roles.spec.ts": {

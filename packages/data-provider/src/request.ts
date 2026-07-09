@@ -67,6 +67,14 @@ let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => voi
 const refreshToken = (retry?: boolean): Promise<t.TRefreshTokenResponse | undefined> =>
   _post(endpoints.refreshToken(retry));
 
+const isUnauthorizedError = (error: unknown): error is AxiosError =>
+  (error as AxiosError | undefined)?.response?.status === 401;
+
+const redirectToLogin = () => {
+  setTokenHeader(undefined);
+  window.location.href = endpoints.apiBaseUrl() + endpoints.buildLoginRedirectUrl();
+};
+
 const dispatchTokenUpdatedEvent = (token: string) => {
   setTokenHeader(token);
   window.dispatchEvent(new CustomEvent('tokenUpdated', { detail: token }));
@@ -117,8 +125,16 @@ if (typeof window !== 'undefined') {
             const token = await new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject });
             });
+            originalRequest.headers = originalRequest.headers ?? {};
             originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return await axios(originalRequest);
+            try {
+              return await axios(originalRequest);
+            } catch (retryError) {
+              if (isUnauthorizedError(retryError)) {
+                redirectToLogin();
+              }
+              return Promise.reject(retryError);
+            }
           } catch (err) {
             return Promise.reject(err);
           }
@@ -135,13 +151,21 @@ if (typeof window !== 'undefined') {
           const token = response?.token ?? '';
 
           if (token) {
+            originalRequest.headers = originalRequest.headers ?? {};
             originalRequest.headers['Authorization'] = 'Bearer ' + token;
             dispatchTokenUpdatedEvent(token);
             processQueue(null, token);
-            return await axios(originalRequest);
+            try {
+              return await axios(originalRequest);
+            } catch (retryError) {
+              if (isUnauthorizedError(retryError)) {
+                redirectToLogin();
+              }
+              return Promise.reject(retryError);
+            }
           } else {
             processQueue(error, null);
-            window.location.href = endpoints.apiBaseUrl() + endpoints.buildLoginRedirectUrl();
+            redirectToLogin();
           }
         } catch (err) {
           processQueue(err as AxiosError, null);
