@@ -9125,8 +9125,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/artifacts.test.ts": {
-    "mtime": 1783708506.4213681,
-    "ast_hash": "36970ee590f79e92aefb79b583de68ca",
+    "mtime": 1779199271.5581546,
+    "ast_hash": "17f77acc92b920e3a98f3d5f8c7a6b11",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/buildDefaultConvo.test.ts": {
@@ -11780,8 +11780,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/prompts/artifacts/index.ts": {
-    "mtime": 1783708506.2407742,
-    "ast_hash": "bb27504875108963203ffa5729421b9b",
+    "mtime": 1779206733.8316653,
+    "ast_hash": "d0038627926fecc0c3f81fe9c7d3e4a3",
     "semantic_hash": ""
   },
   "packages/api/src/prompts/format.spec.ts": {
@@ -16427,11 +16427,6 @@
   "client/src/components/Artifacts/FullscreenArtifact.tsx": {
     "mtime": 1783566796.199175,
     "ast_hash": "6fcc9db320d788364b1a98481379bcff",
-    "semantic_hash": ""
-  },
-  "packages/api/src/prompts/artifacts/index.spec.ts": {
-    "mtime": 1783708593.1306143,
-    "ast_hash": "6e54d1ad1d47fd3f9ea349a6df0ce0cc",
     "semantic_hash": ""
   }
 }
