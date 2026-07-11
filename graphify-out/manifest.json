@@ -415,9 +415,9 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1783392992.5166373,
-    "ast_hash": "c129ec020bf990a6143e380f6e351a60",
-    "semantic_hash": "c129ec020bf990a6143e380f6e351a60"
+    "mtime": 1783737876.4212687,
+    "ast_hash": "c7887f80a802b13a727b7f58c43e10c4",
+    "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
     "mtime": 1777407818.4183338,
@@ -5880,8 +5880,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectFileUploader.tsx": {
-    "mtime": 1781809758.76918,
-    "ast_hash": "a427b3ec7e8d89ef6028a51abc1553fc",
+    "mtime": 1783738431.7664306,
+    "ast_hash": "5f2c755c364c8c3e42a67d74ce9f2075",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectForm.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783566631.2304313,
-    "ast_hash": "02ea529d90f522199f916540516103e4",
+    "mtime": 1783738250.638702,
+    "ast_hash": "38f4516721073652cd54eff2f926f492",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783566626.0706882,
-    "ast_hash": "652aeb4d1bd423bf881907246741f576",
+    "mtime": 1783738243.336857,
+    "ast_hash": "423c7de858f3a1146e6ce27c2cf27d1e",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -16432,6 +16432,11 @@
   "packages/api/src/prompts/artifacts/index.spec.ts": {
     "mtime": 1783708593.1306143,
     "ast_hash": "6e54d1ad1d47fd3f9ea349a6df0ce0cc",
+    "semantic_hash": ""
+  },
+  "client/src/components/Project/__tests__/ProjectFileUploader.spec.tsx": {
+    "mtime": 1783738360.148106,
+    "ast_hash": "ef9ddf3d635af164dac072d3767b9bb9",
     "semantic_hash": ""
   }
 }

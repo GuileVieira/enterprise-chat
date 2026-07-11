@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -9,14 +8,16 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
+  Spinner,
 } from '@librechat/client';
+import { Check, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
+import type { TFile } from 'librechat-data-provider';
 import {
   useUploadFileMutation,
   useDeleteFilesMutation,
   useUpdateProjectMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
-import type { TFile } from 'librechat-data-provider';
 
 interface ProjectFileUploaderProps {
   projectId: string;
@@ -34,6 +35,7 @@ export default function ProjectFileUploader({
   const localize = useLocalize();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateProject = useUpdateProjectMutation();
@@ -51,24 +53,13 @@ export default function ProjectFileUploader({
   }, [filesSignature]);
 
   const uploadFile = useUploadFileMutation({
-    onSuccess: (data) => {
+    onSuccess: () => {
       setUploadError(null);
-      const currentFileIds = files.map((f) => f.file_id);
-      updateProject.mutate(
-        {
-          projectId,
-          payload: {
-            fileIds: [...currentFileIds, data.file_id],
-          },
-        },
-        {
-          onSuccess: () => {
-            onFilesChange();
-          },
-        },
-      );
+      setUploadingFileName(null);
+      onFilesChange();
     },
     onError: () => {
+      setUploadingFileName(null);
       setUploadError(localize('com_ui_project_upload_error'));
     },
   });
@@ -80,7 +71,11 @@ export default function ProjectFileUploader({
   });
 
   const handleFileSelect = (file: File) => {
+    if (uploadingFileName) {
+      return;
+    }
     setUploadError(null);
+    setUploadingFileName(file.name);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('file_id', crypto.randomUUID());
@@ -103,6 +98,9 @@ export default function ProjectFileUploader({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (uploadingFileName) {
+      return;
+    }
     setIsDragOver(true);
   };
 
@@ -114,11 +112,16 @@ export default function ProjectFileUploader({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    if (uploadingFileName) {
+      return;
+    }
     const file = e.dataTransfer.files[0];
     if (file) {
       handleFileSelect(file);
     }
   };
+
+  const isUploading = uploadingFileName !== null;
 
   const [fileToDelete, setFileToDelete] = useState<TFile | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -151,24 +154,19 @@ export default function ProjectFileUploader({
     );
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   return (
     <div className="space-y-4">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-10 transition-colors focus-within:ring-2 focus-within:ring-ring-primary active:scale-[0.99] ${
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        aria-busy={isUploading}
+        className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 transition-colors focus-within:ring-2 focus-within:ring-ring-primary ${
           isDragOver
             ? 'border-text-primary bg-surface-hover'
             : 'border-border-light bg-surface-secondary hover:border-border-medium hover:bg-surface-hover'
-        }`}
+        } ${isUploading ? 'cursor-wait opacity-70' : 'cursor-pointer active:scale-[0.99]'}`}
       >
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border-light bg-surface-primary">
           <Upload className="h-6 w-6 text-text-secondary" aria-hidden="true" />
@@ -177,8 +175,25 @@ export default function ProjectFileUploader({
           {localize('com_ui_project_upload_file')}
         </p>
         <p className="mt-1 text-xs text-text-secondary">{localize('com_ui_drag_drop')}</p>
-        <input ref={fileInputRef} type="file" className="hidden" onChange={handleInputChange} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          disabled={isUploading}
+          onChange={handleInputChange}
+        />
       </div>
+
+      {uploadingFileName && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-xl border border-border-light bg-surface-secondary p-3 text-sm text-text-secondary"
+        >
+          <Spinner className="size-4 shrink-0" />
+          {localize('com_ui_project_uploading', { filename: uploadingFileName })}
+        </div>
+      )}
 
       {uploadError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -209,11 +224,13 @@ export default function ProjectFileUploader({
                   <p className="truncate text-sm font-medium text-text-primary">{file.filename}</p>
                   <div className="flex items-center gap-2 text-xs text-text-secondary">
                     <span>{(file.bytes / 1024).toFixed(1)} KB</span>
-                    {file.embedded && (
+                    {file.embedded ? (
                       <span className="flex items-center gap-0.5 text-green-600 dark:text-green-500">
                         <Check className="h-3 w-3" />
                         {localize('com_ui_indexed')}
                       </span>
+                    ) : (
+                      <span>{localize('com_ui_project_file_not_indexed')}</span>
                     )}
                   </div>
                 </div>

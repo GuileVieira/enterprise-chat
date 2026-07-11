@@ -415,9 +415,9 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1783392992.5166373,
-    "ast_hash": "c129ec020bf990a6143e380f6e351a60",
-    "semantic_hash": "c129ec020bf990a6143e380f6e351a60"
+    "mtime": 1783737876.4212687,
+    "ast_hash": "c7887f80a802b13a727b7f58c43e10c4",
+    "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
     "mtime": 1777407818.4183338,
@@ -5880,8 +5880,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectFileUploader.tsx": {
-    "mtime": 1781809758.76918,
-    "ast_hash": "a427b3ec7e8d89ef6028a51abc1553fc",
+    "mtime": 1783738309.0758853,
+    "ast_hash": "14b8fc62905a65a2d2a0619cc29cc0ca",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectForm.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783566631.2304313,
-    "ast_hash": "02ea529d90f522199f916540516103e4",
+    "mtime": 1783738250.638702,
+    "ast_hash": "38f4516721073652cd54eff2f926f492",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783566626.0706882,
-    "ast_hash": "652aeb4d1bd423bf881907246741f576",
+    "mtime": 1783738243.336857,
+    "ast_hash": "423c7de858f3a1146e6ce27c2cf27d1e",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -9125,8 +9125,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/artifacts.test.ts": {
-    "mtime": 1779199271.5581546,
-    "ast_hash": "17f77acc92b920e3a98f3d5f8c7a6b11",
+    "mtime": 1783708506.4213681,
+    "ast_hash": "36970ee590f79e92aefb79b583de68ca",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/buildDefaultConvo.test.ts": {
@@ -11780,8 +11780,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/prompts/artifacts/index.ts": {
-    "mtime": 1779206733.8316653,
-    "ast_hash": "d0038627926fecc0c3f81fe9c7d3e4a3",
+    "mtime": 1783708506.2407742,
+    "ast_hash": "bb27504875108963203ffa5729421b9b",
     "semantic_hash": ""
   },
   "packages/api/src/prompts/format.spec.ts": {
@@ -16427,6 +16427,16 @@
   "client/src/components/Artifacts/FullscreenArtifact.tsx": {
     "mtime": 1783566796.199175,
     "ast_hash": "6fcc9db320d788364b1a98481379bcff",
+    "semantic_hash": ""
+  },
+  "packages/api/src/prompts/artifacts/index.spec.ts": {
+    "mtime": 1783708593.1306143,
+    "ast_hash": "6e54d1ad1d47fd3f9ea349a6df0ce0cc",
+    "semantic_hash": ""
+  },
+  "client/src/components/Project/__tests__/ProjectFileUploader.spec.tsx": {
+    "mtime": 1783738360.148106,
+    "ast_hash": "ef9ddf3d635af164dac072d3767b9bb9",
     "semantic_hash": ""
   }
 }
