@@ -26,6 +26,7 @@ interface:
     public: false
   bookmarks: false
   metaAds: true
+  metaAdsTrafficAgentId: 'agent_qPUED49hR-2e9CLncyY8A'
   multiConvo: false
   agents:
     use: true
