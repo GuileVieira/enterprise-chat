@@ -12,6 +12,7 @@ import type {
 
 import { createMetaAdsBriefStorageKey } from '../helpers';
 import { buildMetaAdsChatBrief, MAX_META_ADS_CHAT_BRIEF_ENTITIES } from '../../metaAdsChatBrief';
+import { buildTrafficDiaryAnalysisBrief } from '../trafficDiaryBrief';
 
 type StartupConfigQuery = {
   data?: TStartupConfig;
@@ -83,15 +84,7 @@ export function useMetaAdsTrafficAgent({
 
   const onOpenTrafficDiaryAnalysis = useCallback(
     (entry: ProjectTrafficDiaryEntry) => {
-      const markdown = [
-        `Analise o diário do gestor de tráfego da semana de ${entry.weekStart} do projeto "${project.name}".`,
-        '',
-        'Confronte o registro com dados atuais de Meta Ads antes de recomendar ações. Cite métricas, riscos e próximos passos práticos.',
-        '',
-        '```json',
-        JSON.stringify(entry, null, 2),
-        '```',
-      ].join('\n');
+      const markdown = buildTrafficDiaryAnalysisBrief({ entry, projectName: project.name });
       const storageKey = createMetaAdsBriefStorageKey();
       sessionStorage.setItem(storageKey, JSON.stringify({ markdown }));
       const params = new URLSearchParams({

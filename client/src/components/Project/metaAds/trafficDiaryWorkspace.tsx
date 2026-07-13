@@ -35,6 +35,15 @@ function formatDate(value: string) {
   );
 }
 
+function formatDateTime(value?: string) {
+  if (!value) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(value),
+  );
+}
+
 export function TrafficDiaryWorkspace({
   project,
   canEdit,
@@ -168,7 +177,57 @@ export function TrafficDiaryWorkspace({
         </div>
       )}
 
+      {entries.length > 0 && (
+        <section className="space-y-3">
+          <h5 className="text-sm font-semibold">
+            {localize('com_ui_project_meta_ads_diary_history')}
+          </h5>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {entries.map((historyEntry) => {
+              const isSelected = historyEntry.weekStart === weekStart;
+              const author =
+                historyEntry.createdBy.name || localize('com_ui_project_meta_ads_diary_manager');
+              return (
+                <button
+                  key={historyEntry._id}
+                  type="button"
+                  onClick={() => setWeekStart(historyEntry.weekStart)}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    isSelected
+                      ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
+                      : 'border-slate-200/70 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-slate-950/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold">{formatDate(historyEntry.weekStart)}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-300">
+                      {localize(
+                        historyEntry.status === 'completed'
+                          ? 'com_ui_project_meta_ads_diary_completed'
+                          : 'com_ui_project_meta_ads_diary_draft',
+                      )}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{author}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {formatDateTime(historyEntry.updatedAt || historyEntry.createdAt)}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="space-y-4">
+        {entry && (
+          <div className="rounded-xl border border-slate-200/70 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+            {localize('com_ui_project_meta_ads_diary_entry_meta', {
+              0: entry.createdBy.name || localize('com_ui_project_meta_ads_diary_manager'),
+              1: formatDateTime(entry.updatedAt || entry.createdAt),
+            })}
+          </div>
+        )}
         {answers.map((item) => (
           <div
             key={item.id}

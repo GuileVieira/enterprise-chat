@@ -5,9 +5,10 @@ import { TrafficDiaryWorkspace } from './trafficDiaryWorkspace';
 const mockSave = jest.fn();
 const mockComplete = jest.fn();
 const mockReopen = jest.fn();
+let mockEntries: unknown[] = [];
 
 jest.mock('~/data-provider', () => ({
-  useProjectMetaAdsDiaryQuery: () => ({ data: { entries: [] } }),
+  useProjectMetaAdsDiaryQuery: () => ({ data: { entries: mockEntries } }),
   useSaveProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockSave, isLoading: false }),
   useCompleteProjectMetaAdsDiaryMutation: () => ({
     mutateAsync: mockComplete,
@@ -23,6 +24,7 @@ jest.mock('~/hooks', () => ({
 describe('TrafficDiaryWorkspace', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockEntries = [];
   });
 
   it('saves six default answers as a weekly draft', async () => {
@@ -51,5 +53,32 @@ describe('TrafficDiaryWorkspace', () => {
         }),
       );
     });
+  });
+
+  it('shows saved weeks with author and update date in history', () => {
+    mockEntries = [
+      {
+        _id: 'entry-1',
+        projectId: 'project-1',
+        weekStart: '2026-07-06',
+        status: 'completed',
+        answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Testar criativo.' }],
+        createdBy: { id: 'user-1', name: 'Guilherme' },
+        events: [],
+        updatedAt: '2026-07-13T10:00:00.000Z',
+      },
+    ];
+
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('com_ui_project_meta_ads_diary_history')).toBeInTheDocument();
+    expect(screen.getAllByText('Guilherme').length).toBeGreaterThan(0);
+    expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
   });
 });
