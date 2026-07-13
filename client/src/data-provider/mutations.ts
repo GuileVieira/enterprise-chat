@@ -1270,6 +1270,58 @@ export const useRunProjectMetaAdsMutation = (): UseMutationResult<
   });
 };
 
+export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; weekStart: string; answers: t.ProjectTrafficDiaryAnswer[] },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, weekStart, answers }) =>
+      dataService.saveProjectMetaAdsDiary(projectId, weekStart, answers),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+      },
+    },
+  );
+};
+
+export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; entryId: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.completeProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+      },
+    },
+  );
+};
+
+export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; entryId: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.reopenProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+      },
+    },
+  );
+};
+
 export const useUpdateProjectMetaAdsBudgetMutation = (): UseMutationResult<
   t.ProjectMetaAdsManualBudgetResponse,
   unknown,

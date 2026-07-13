@@ -916,6 +916,32 @@ export const getProjectMetaAdsRuns = (
   return request.get(endpoints.projectMetaAdsRuns(id), { params });
 };
 
+export const getProjectMetaAdsDiary = (id: string): Promise<q.ProjectTrafficDiaryResponse> => {
+  return request.get(endpoints.projectMetaAdsDiary(id));
+};
+
+export const saveProjectMetaAdsDiary = (
+  id: string,
+  weekStart: string,
+  answers: q.ProjectTrafficDiaryAnswer[],
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.put(endpoints.projectMetaAdsDiaryWeek(id, weekStart), { answers });
+};
+
+export const completeProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryComplete(id, entryId), {});
+};
+
+export const reopenProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryReopen(id, entryId), {});
+};
+
 export const updateProjectMetaAdsSettings = (
   id: string,
   metaAds: s.TProject['metaAds'],

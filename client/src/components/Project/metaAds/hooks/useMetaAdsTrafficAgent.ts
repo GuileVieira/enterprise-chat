@@ -7,6 +7,7 @@ import type {
   ProjectMetaAdsBudgetChange,
   ProjectMetaAdsRecommendation,
   ProjectMetaAdsCampaignSummary,
+  ProjectTrafficDiaryEntry,
 } from 'librechat-data-provider';
 
 import { createMetaAdsBriefStorageKey } from '../helpers';
@@ -80,5 +81,36 @@ export function useMetaAdsTrafficAgent({
     canOpenTrafficAgentChat,
   ]);
 
-  return { canOpenTrafficAgentChat, onOpenTrafficAgentChat };
+  const onOpenTrafficDiaryAnalysis = useCallback(
+    (entry: ProjectTrafficDiaryEntry) => {
+      const markdown = [
+        `Analise o diário do gestor de tráfego da semana de ${entry.weekStart} do projeto "${project.name}".`,
+        '',
+        'Confronte o registro com dados atuais de Meta Ads antes de recomendar ações. Cite métricas, riscos e próximos passos práticos.',
+        '',
+        '```json',
+        JSON.stringify(entry, null, 2),
+        '```',
+      ].join('\n');
+      const storageKey = createMetaAdsBriefStorageKey();
+      sessionStorage.setItem(storageKey, JSON.stringify({ markdown }));
+      const params = new URLSearchParams({
+        project_id: project.projectId,
+        meta_ads_brief: storageKey,
+      });
+      const trafficAgentId = startupConfigQuery.data?.interface?.metaAdsTrafficAgentId;
+      if (trafficAgentId) {
+        params.set('agent_id', trafficAgentId);
+      }
+      navigate(`/c/new?${params.toString()}`);
+    },
+    [
+      navigate,
+      project.name,
+      project.projectId,
+      startupConfigQuery.data?.interface?.metaAdsTrafficAgentId,
+    ],
+  );
+
+  return { canOpenTrafficAgentChat, onOpenTrafficAgentChat, onOpenTrafficDiaryAnalysis };
 }

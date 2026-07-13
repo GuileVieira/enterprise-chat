@@ -43,3 +43,4 @@ export * from './mcp';
 /* Tenant Functions */
 export * from './tenantFunction';
 export * from './tenantSecret';
+export * from './trafficDiary';

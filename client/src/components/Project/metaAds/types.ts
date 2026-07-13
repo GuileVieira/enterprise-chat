@@ -147,7 +147,7 @@ export type MetaAdsDraftSummaryItem = {
 };
 
 export type SettingsDrawer = 'account' | 'automation' | null;
-export type WorkspaceTab = 'overview' | 'bi' | 'rules';
+export type WorkspaceTab = 'overview' | 'bi' | 'rules' | 'diary';
 export type TableView = 'summary' | 'performance' | 'creative' | 'rules';
 export type DatePreset =
   | 'today'

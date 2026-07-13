@@ -34,6 +34,7 @@ const {
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
+const mongoose = require('mongoose');
 
 const router = express.Router({ mergeParams: true });
 
@@ -169,6 +170,67 @@ async function requireMetaAdsRoleAccess(req, res, next) {
 
 const metaAdsAccess = [requireMetaAdsProjectView, requireMetaAdsRoleAccess];
 const metaAdsClientActionAccess = metaAdsAccess;
+const metaAdsDiaryEditAccess = [
+  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
+  requireMetaAdsRoleAccess,
+];
+const REQUIRED_DIARY_QUESTION_IDS = new Set([
+  'measurement',
+  'strategy',
+  'client_feedback',
+  'changes',
+  'creative_learning',
+  'next_steps',
+]);
+
+function getDiaryActor(user) {
+  return {
+    id: user.id,
+    ...(user.name ? { name: user.name } : {}),
+    ...(user.email ? { email: user.email } : {}),
+  };
+}
+
+function validateDiaryWeekStart(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw Object.assign(new Error('weekStart must be an ISO date.'), { statusCode: 400 });
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.getUTCDay() !== 1) {
+    throw Object.assign(new Error('weekStart must be a Monday.'), { statusCode: 400 });
+  }
+  return value;
+}
+
+function validateDiaryAnswers(value, requireComplete) {
+  if (!Array.isArray(value)) {
+    throw Object.assign(new Error('answers must be an array.'), { statusCode: 400 });
+  }
+  const answers = value.map((answer) => {
+    const id = typeof answer?.id === 'string' ? answer.id.trim() : '';
+    const question = typeof answer?.question === 'string' ? answer.question.trim() : '';
+    const text = typeof answer?.answer === 'string' ? answer.answer.trim() : '';
+    const parentQuestionId =
+      typeof answer?.parentQuestionId === 'string' ? answer.parentQuestionId.trim() : undefined;
+    if (!id || !question || text.length > 4000 || question.length > 500) {
+      throw Object.assign(new Error('Invalid diary answer.'), { statusCode: 400 });
+    }
+    return { id, question, answer: text, ...(parentQuestionId ? { parentQuestionId } : {}) };
+  });
+  if (requireComplete) {
+    const completedIds = new Set(
+      answers.filter((answer) => answer.answer).map((answer) => answer.id),
+    );
+    for (const id of REQUIRED_DIARY_QUESTION_IDS) {
+      if (!completedIds.has(id)) {
+        throw Object.assign(new Error('Complete all required diary questions.'), {
+          statusCode: 400,
+        });
+      }
+    }
+  }
+  return answers;
+}
 
 function validateMetaAdsRules(rules = {}) {
   const merged = { ...DEFAULT_RULES, ...(rules ?? {}) };
@@ -771,6 +833,137 @@ router.get('/runs', metaAdsAccess, async (req, res) => {
     );
   } catch (error) {
     logger.error('[projectMetaAds] automation runs failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.get('/diary', metaAdsAccess, async (req, res) => {
+  try {
+    const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+    if (!TrafficDiaryEntry) {
+      throw new Error('Traffic diary model is unavailable.');
+    }
+    const project =
+      (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const entries = await TrafficDiaryEntry.find({
+      projectId: project.projectId,
+      ...(project.tenantId ? { tenantId: project.tenantId } : {}),
+    })
+      .sort({ weekStart: -1 })
+      .limit(52)
+      .lean();
+    return res.json({ entries });
+  } catch (error) {
+    logger.error('[projectMetaAds] diary list failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
+  try {
+    const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+    if (!TrafficDiaryEntry) {
+      throw new Error('Traffic diary model is unavailable.');
+    }
+    const weekStart = validateDiaryWeekStart(req.params.weekStart);
+    const answers = validateDiaryAnswers(req.body.answers, false);
+    const project =
+      (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const existing = await TrafficDiaryEntry.findOne({
+      projectId: project.projectId,
+      weekStart,
+    }).lean();
+    if (existing?.status === 'completed') {
+      return res.status(409).json({ message: 'Reopen the completed diary before editing.' });
+    }
+    const actor = getDiaryActor(req.user);
+    const entry = await TrafficDiaryEntry.findOneAndUpdate(
+      { projectId: project.projectId, weekStart },
+      {
+        $set: { answers, lastEditedBy: actor },
+        $setOnInsert: {
+          projectId: project.projectId,
+          ...(project.tenantId ? { tenantId: project.tenantId } : {}),
+          weekStart,
+          status: 'draft',
+          createdBy: actor,
+          events: [{ type: 'created', actor, at: new Date() }],
+        },
+      },
+      { new: true, upsert: true, lean: true },
+    );
+    return res.json(entry);
+  } catch (error) {
+    logger.error('[projectMetaAds] diary save failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.post('/diary/:entryId/complete', metaAdsDiaryEditAccess, async (req, res) => {
+  try {
+    const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+    if (!TrafficDiaryEntry || !mongoose.Types.ObjectId.isValid(req.params.entryId)) {
+      return res.status(400).json({ message: 'Invalid diary entry' });
+    }
+    const entry = await TrafficDiaryEntry.findOne({
+      _id: req.params.entryId,
+      projectId: req.params.projectId,
+    }).lean();
+    if (!entry) {
+      return res.status(404).json({ message: 'Diary entry not found' });
+    }
+    validateDiaryAnswers(entry.answers, true);
+    if (entry.status === 'completed') {
+      return res.json(entry);
+    }
+    const actor = getDiaryActor(req.user);
+    const completed = await TrafficDiaryEntry.findByIdAndUpdate(
+      entry._id,
+      {
+        $set: {
+          status: 'completed',
+          completedBy: actor,
+          completedAt: new Date(),
+          lastEditedBy: actor,
+        },
+        $push: { events: { type: 'completed', actor, at: new Date() } },
+      },
+      { new: true, lean: true },
+    );
+    return res.json(completed);
+  } catch (error) {
+    logger.error('[projectMetaAds] diary completion failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.post('/diary/:entryId/reopen', metaAdsDiaryEditAccess, async (req, res) => {
+  try {
+    const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+    if (!TrafficDiaryEntry || !mongoose.Types.ObjectId.isValid(req.params.entryId)) {
+      return res.status(400).json({ message: 'Invalid diary entry' });
+    }
+    const actor = getDiaryActor(req.user);
+    const reopened = await TrafficDiaryEntry.findOneAndUpdate(
+      { _id: req.params.entryId, projectId: req.params.projectId, status: 'completed' },
+      {
+        $set: { status: 'draft', lastEditedBy: actor },
+        $push: { events: { type: 'reopened', actor, at: new Date() } },
+      },
+      { new: true, lean: true },
+    );
+    if (!reopened) {
+      return res.status(404).json({ message: 'Completed diary entry not found' });
+    }
+    return res.json(reopened);
+  } catch (error) {
+    logger.error('[projectMetaAds] diary reopen failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });

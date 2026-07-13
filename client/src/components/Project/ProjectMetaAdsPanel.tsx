@@ -31,6 +31,7 @@ import { useMetaAdsRules } from './metaAds/hooks/useMetaAdsRules';
 import { useMetaAdsBiWorkspace } from './metaAds/hooks/useMetaAdsBiWorkspace';
 import { useMetaAdsBiAdapter } from './metaAds/hooks/useMetaAdsBiAdapter';
 import { useMetaAdsTrafficAgent } from './metaAds/hooks/useMetaAdsTrafficAgent';
+import { TrafficDiaryWorkspace } from './metaAds/trafficDiaryWorkspace';
 import { useMetaAdsPeriodFilter } from './metaAds/hooks/useMetaAdsPeriodFilter';
 import { useMetaAdsRunAnalysis } from './metaAds/hooks/useMetaAdsRunAnalysis';
 import { useMetaAdsOverviewAdapter } from './metaAds/hooks/useMetaAdsOverviewAdapter';
@@ -274,15 +275,16 @@ export default function ProjectMetaAdsPanel({
     statusQuery.data?.graphVersion?.effective,
   ).filter((version): version is string => typeof version === 'string');
   const trend = biStatusQuery.data?.trend ?? statusQuery.data?.trend;
-  const { canOpenTrafficAgentChat, onOpenTrafficAgentChat } = useMetaAdsTrafficAgent({
-    project,
-    startupConfigQuery,
-    statusData: statusQuery.data,
-    latestSnapshots,
-    campaigns,
-    selectedEntityIds: selection.selectedEntityIds,
-    selectedCount: selection.selectedCount,
-  });
+  const { canOpenTrafficAgentChat, onOpenTrafficAgentChat, onOpenTrafficDiaryAnalysis } =
+    useMetaAdsTrafficAgent({
+      project,
+      startupConfigQuery,
+      statusData: statusQuery.data,
+      latestSnapshots,
+      campaigns,
+      selectedEntityIds: selection.selectedEntityIds,
+      selectedCount: selection.selectedCount,
+    });
   const tokenStatusKey = getMetaAdsTokenStatusKey(tokenCredentials);
   const hasProjectToken =
     tokenCredentials?.effectiveSource === 'project' ||
@@ -405,6 +407,14 @@ export default function ProjectMetaAdsPanel({
         )}
 
         {workspaceTab === 'bi' && <MetaAdsBiWorkspace {...biAdapter.workspace} />}
+
+        {workspaceTab === 'diary' && (
+          <TrafficDiaryWorkspace
+            project={project}
+            canEdit={canEdit}
+            onAnalyze={onOpenTrafficDiaryAnalysis}
+          />
+        )}
 
         {workspaceTab === 'rules' && (
           <>

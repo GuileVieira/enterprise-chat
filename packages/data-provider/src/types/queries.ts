@@ -98,6 +98,44 @@ export type ProjectMetaAdsSnapshot = {
   createdAt?: string;
 };
 
+export type ProjectTrafficDiaryAnswer = {
+  id: string;
+  question: string;
+  answer: string;
+  parentQuestionId?: string;
+};
+
+export type ProjectTrafficDiaryActor = {
+  id: string;
+  name?: string;
+  email?: string;
+};
+
+export type ProjectTrafficDiaryEvent = {
+  type: 'created' | 'completed' | 'reopened';
+  actor: ProjectTrafficDiaryActor;
+  at: string;
+};
+
+export type ProjectTrafficDiaryEntry = {
+  _id: string;
+  projectId: string;
+  weekStart: string;
+  status: 'draft' | 'completed';
+  answers: ProjectTrafficDiaryAnswer[];
+  createdBy: ProjectTrafficDiaryActor;
+  lastEditedBy?: ProjectTrafficDiaryActor;
+  completedBy?: ProjectTrafficDiaryActor;
+  completedAt?: string;
+  events: ProjectTrafficDiaryEvent[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProjectTrafficDiaryResponse = {
+  entries: ProjectTrafficDiaryEntry[];
+};
+
 export type ProjectMetaAdsResultTypeBreakdown = {
   resultType: string;
   totalSpend: number;

@@ -395,6 +395,22 @@ export const useProjectMetaAdsRunsQuery = (
   );
 };
 
+export const useProjectMetaAdsDiaryQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.ProjectTrafficDiaryResponse>,
+): QueryObserverResult<t.ProjectTrafficDiaryResponse> => {
+  return useQuery<t.ProjectTrafficDiaryResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'diary'],
+    () => dataService.getProjectMetaAdsDiary(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
 /**
  * ASSISTANTS
  */

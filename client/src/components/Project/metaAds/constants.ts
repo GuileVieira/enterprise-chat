@@ -44,6 +44,7 @@ export const workspaceTabOptions: Array<{ value: WorkspaceTab; labelKey: Transla
   { value: 'overview', labelKey: 'com_ui_project_meta_ads_tab_overview' },
   { value: 'bi', labelKey: 'com_ui_project_meta_ads_tab_bi' },
   { value: 'rules', labelKey: 'com_ui_project_meta_ads_rules' },
+  { value: 'diary', labelKey: 'com_ui_project_meta_ads_tab_diary' },
 ];
 
 export const tableViewOptions: Array<{ value: TableView; labelKey: TranslationKeys }> = [

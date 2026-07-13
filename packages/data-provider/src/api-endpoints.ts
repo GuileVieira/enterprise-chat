@@ -143,6 +143,13 @@ export const projectMetaAdsRulePerformance = (id: string) =>
   `${projectMetaAds(id)}/rules/performance`;
 export const projectMetaAdsRuleHistory = (id: string) => `${projectMetaAds(id)}/rules/history`;
 export const projectMetaAdsRuns = (id: string) => `${projectMetaAds(id)}/runs`;
+export const projectMetaAdsDiary = (id: string) => `${projectMetaAds(id)}/diary`;
+export const projectMetaAdsDiaryWeek = (id: string, weekStart: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(weekStart)}`;
+export const projectMetaAdsDiaryComplete = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/complete`;
+export const projectMetaAdsDiaryReopen = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/reopen`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
 export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
 export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;

@@ -4,6 +4,7 @@ const mockGetFiles = jest.fn();
 const mockGetAllUserMemories = jest.fn();
 const mockCheckPermission = jest.fn();
 const mockLoadProjectMemories = jest.fn();
+const mockTrafficDiaryFind = jest.fn();
 
 jest.mock('@librechat/data-schemas', () => ({
   logger: {
@@ -23,6 +24,14 @@ jest.mock('~/server/services/PermissionService', () => ({
   checkPermission: (...args) => mockCheckPermission(...args),
 }));
 
+jest.mock('mongoose', () => ({
+  models: {
+    TrafficDiaryEntry: {
+      find: (...args) => mockTrafficDiaryFind(...args),
+    },
+  },
+}));
+
 jest.mock('~/models', () => ({
   getConvo: (...args) => mockGetConvo(...args),
   getProjectById: (...args) => mockGetProjectById(...args),
@@ -37,6 +46,11 @@ describe('loadProjectContext', () => {
     jest.clearAllMocks();
     mockCheckPermission.mockResolvedValue(true);
     mockLoadProjectMemories.mockResolvedValue('## Project Memories\n\n- key: value');
+    mockTrafficDiaryFind.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([]),
+    });
   });
 
   const req = { user: { id: 'user-1', role: 'USER' } };
@@ -87,6 +101,35 @@ describe('loadProjectContext', () => {
 
     expect(mockGetConvo).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(mockGetProjectById).toHaveBeenCalledWith('proj-123');
+  });
+
+  it('adds recent manager diary entries to project context', async () => {
+    mockGetProjectById.mockResolvedValue({
+      _id: 'mongo-project',
+      projectId: 'proj-123',
+      tenantId: 'tenant-1',
+    });
+    mockGetFiles.mockResolvedValue([]);
+    mockTrafficDiaryFind.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([
+        {
+          weekStart: '2026-07-06',
+          status: 'completed',
+          answers: [{ question: 'Estratégia', answer: 'Validar novo gancho.' }],
+        },
+      ]),
+    });
+
+    const result = await loadProjectContext({ req, projectId: 'proj-123' });
+
+    expect(mockTrafficDiaryFind).toHaveBeenCalledWith({
+      projectId: 'proj-123',
+      tenantId: 'tenant-1',
+    });
+    expect(result.projectMemories).toContain('## Diário do gestor de tráfego');
+    expect(result.projectMemories).toContain('Validar novo gancho.');
   });
 
   it('returns empty context when the user cannot view the project', async () => {
