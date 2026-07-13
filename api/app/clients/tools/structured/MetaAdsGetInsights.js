@@ -23,14 +23,12 @@ const META_INSIGHTS_FIELDS_BY_LEVEL = {
     'campaign_id,campaign_name,adset_id,adset_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
   ad: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
 };
-const META_ACTIVE_AD_FILTERING = JSON.stringify([
-  { field: 'ad.delivery_info', operator: 'IN', value: ['ACTIVE'] },
-]);
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 const DEFAULT_MAX_PAGES = 3;
 const MAX_PAGES = 10;
 const MAX_DATE_RANGE_DAYS = 120;
+const META_AD_IDS_BATCH_SIZE = 50;
 
 const metaAdsGetInsightsJsonSchema = {
   type: 'object',
@@ -159,9 +157,11 @@ function extractNextAfter(payload) {
 class MetaAdsGetInsights extends Tool {
   name = 'meta_ads_get_insights';
   description =
-    'Read-only Meta Graph API tool for campaign, ad set, or active ad-level insights. ' +
+    'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. ' +
     'Requires an accessible project with Meta Ads credentials. ' +
-    'Defaults to the configured project ad account and supports level campaign, adset, or ad.';
+    'Defaults to the configured project ad account and supports level campaign, adset, or ad. ' +
+    'For ad or creative questions, always use level ad: campaign and ad set rows are not creative substitutes. ' +
+    'Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data.';
 
   schema = metaAdsGetInsightsJsonSchema;
 
@@ -229,7 +229,6 @@ class MetaAdsGetInsights extends Tool {
   async fetchPage({ accessToken, graphVersion, adAccountId, since, until, level, limit, after }) {
     const params = {
       level,
-      ...(level === 'ad' ? { filtering: META_ACTIVE_AD_FILTERING } : {}),
       fields: META_INSIGHTS_FIELDS_BY_LEVEL[level],
       time_range: JSON.stringify({ since, until }),
       limit,
@@ -248,6 +247,29 @@ class MetaAdsGetInsights extends Tool {
       data: Array.isArray(payload?.data) ? payload.data : [],
       nextAfter: extractNextAfter(payload),
     };
+  }
+
+  async getCreativeDetails({ accessToken, graphVersion, adIds }) {
+    const details = new Map();
+    for (let index = 0; index < adIds.length; index += META_AD_IDS_BATCH_SIZE) {
+      const ids = adIds.slice(index, index + META_AD_IDS_BATCH_SIZE);
+      const payload = await metaGet({
+        path: '',
+        token: accessToken,
+        params: {
+          ids: ids.join(','),
+          fields: 'id,name,creative{id,name}',
+        },
+        graphVersion,
+        resourceLabel: 'ad creative details',
+      });
+      for (const ad of Object.values(payload ?? {})) {
+        if (ad && typeof ad.id === 'string') {
+          details.set(ad.id, ad);
+        }
+      }
+    }
+    return details;
   }
 
   async _call(args) {
@@ -293,6 +315,30 @@ class MetaAdsGetInsights extends Tool {
         nextAfter = page.nextAfter;
         if (!nextAfter) {
           break;
+        }
+      }
+
+      if (level === 'ad') {
+        const adIds = [...new Set(data.map((row) => row?.ad_id).filter(Boolean))];
+        if (adIds.length > 0) {
+          const creativeDetails = await this.getCreativeDetails({
+            accessToken: metaAccess.accessToken,
+            graphVersion,
+            adIds,
+          });
+          for (const row of data) {
+            const ad = creativeDetails.get(row?.ad_id);
+            if (!ad) {
+              continue;
+            }
+            row.ad_name = ad.name || row.ad_name;
+            if (ad.creative?.id) {
+              row.creative_id = ad.creative.id;
+            }
+            if (ad.creative?.name) {
+              row.creative_name = ad.creative.name;
+            }
+          }
         }
       }
 

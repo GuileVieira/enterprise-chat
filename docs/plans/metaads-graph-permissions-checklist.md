@@ -28,6 +28,8 @@ For each project token, validate without logging or displaying the token:
 - `GET /<AD_ACCOUNT_ID>/ads` returns ad IDs, ad set IDs, campaign IDs, names, status, and creative fields.
 - `GET /<AD_ACCOUNT_ID>/insights` works for `level=campaign`, `level=adset`, and `level=ad`.
 - Insights include spend, impressions, clicks, CTR, actions, cost per action, and ROAS when Meta has data.
+- For creative questions, call insights with `level=ad`, then resolve each returned `ad_id` through the Ads endpoint for `creative.id` and `creative.name`. Never report a campaign or ad set as a creative.
+- Do not filter historical insights to currently active ads; a paused ad may have generated the best result in the requested period.
 - Date presets and custom `time_range` return the expected period.
 
 ## Failure Signals

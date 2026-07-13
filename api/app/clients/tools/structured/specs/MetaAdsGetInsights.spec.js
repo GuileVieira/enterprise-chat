@@ -88,11 +88,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('fields')).toBe(
       'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
-    const filtering = url.searchParams.get('filtering');
-    expect(filtering).not.toContain('"values"');
-    expect(JSON.parse(filtering)).toEqual([
-      { field: 'ad.delivery_info', operator: 'IN', value: ['ACTIVE'] },
-    ]);
+    expect(url.searchParams.get('filtering')).toBeNull();
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
       since: '2026-05-01',
       until: '2026-05-07',
@@ -113,7 +109,7 @@ describe('MetaAdsGetInsights', () => {
     });
   });
 
-  it('does not send unsupported values key in active ad filtering', async () => {
+  it('does not filter ad insights by current delivery status', async () => {
     await createTool().call({
       ad_account_id: 'act_123',
       since: '2026-05-01',
@@ -121,7 +117,41 @@ describe('MetaAdsGetInsights', () => {
     });
 
     const filtering = new URL(fetch.mock.calls[0][0]).searchParams.get('filtering');
-    expect(filtering).not.toContain('"values"');
+    expect(filtering).toBeNull();
+  });
+
+  it('enriches ad-level insights with the real ad and creative identifiers', async () => {
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({ data: [{ ad_id: 'ad-1', ad_name: 'Insight name', spend: '10.00' }] }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          'ad-1': {
+            id: 'ad-1',
+            name: 'Real ad name',
+            creative: { id: 'creative-1', name: 'Real creative' },
+          },
+        }),
+      );
+
+    const result = JSON.parse(
+      await createTool().call({ since: '2026-05-01', until: '2026-05-07' }),
+    );
+
+    expect(result.data).toEqual([
+      {
+        ad_id: 'ad-1',
+        ad_name: 'Real ad name',
+        creative_id: 'creative-1',
+        creative_name: 'Real creative',
+        spend: '10.00',
+      },
+    ]);
+    const url = new URL(fetch.mock.calls[1][0]);
+    expect(url.pathname).toBe('/v25.0/');
+    expect(url.searchParams.get('ids')).toBe('ad-1');
+    expect(url.searchParams.get('fields')).toBe('id,name,creative{id,name}');
   });
 
   it('uses the configured project ad account when ad_account_id is omitted', async () => {
@@ -182,7 +212,7 @@ describe('MetaAdsGetInsights', () => {
     );
   });
 
-  it('fetches campaign-level insights without ad delivery filtering', async () => {
+  it('fetches campaign-level insights without delivery filtering', async () => {
     const result = await createTool().call({
       level: 'campaign',
       since: '2026-05-01',
@@ -198,7 +228,7 @@ describe('MetaAdsGetInsights', () => {
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
   });
 
-  it('fetches adset-level insights without ad delivery filtering', async () => {
+  it('fetches adset-level insights without delivery filtering', async () => {
     const result = await createTool().call({
       level: 'adset',
       since: '2026-05-01',

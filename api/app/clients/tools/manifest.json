@@ -177,7 +177,7 @@
   {
     "name": "Meta Ads Insights",
     "pluginKey": "meta_ads_get_insights",
-    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials.",
+    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials. Use ad level for ad or creative questions; it returns real ad and creative IDs when Meta provides them.",
     "icon": "assets/logo.svg",
     "authConfig": []
   },
