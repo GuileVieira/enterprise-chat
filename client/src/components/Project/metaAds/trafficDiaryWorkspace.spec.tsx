@@ -36,7 +36,7 @@ describe('TrafficDiaryWorkspace', () => {
     });
   });
 
-  it('saves six default answers as a weekly draft', async () => {
+  it('saves partial weekly progress as a draft', async () => {
     render(
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
@@ -45,10 +45,7 @@ describe('TrafficDiaryWorkspace', () => {
       />,
     );
 
-    const fields = screen.getAllByRole('textbox');
-    fields.forEach((field, index) => {
-      fireEvent.change(field, { target: { value: `Resposta ${index + 1}` } });
-    });
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'CPA melhorou.' } });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
 
     await waitFor(() => {
@@ -56,8 +53,10 @@ describe('TrafficDiaryWorkspace', () => {
         expect.objectContaining({
           projectId: 'project-1',
           answers: expect.arrayContaining([
-            expect.objectContaining({ id: 'measurement', answer: 'Resposta 1' }),
-            expect.objectContaining({ id: 'next_steps', answer: 'Resposta 6' }),
+            expect.objectContaining({
+              id: 'measurement',
+              answer: 'CPA melhorou.',
+            }),
           ]),
         }),
       );
@@ -105,6 +104,34 @@ describe('TrafficDiaryWorkspace', () => {
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalled();
       expect(mockComplete).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+    });
+  });
+
+  it('reopens a completed weekly record for editing', async () => {
+    mockEntries = [
+      {
+        _id: 'entry-1',
+        projectId: 'project-1',
+        weekStart: '2026-07-06',
+        status: 'completed',
+        answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Testar criativo.' }],
+        createdBy: { id: 'user-1', name: 'Guilherme' },
+        events: [],
+      },
+    ];
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('6 de jul. de 2026'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_reopen'));
+
+    await waitFor(() => {
+      expect(mockReopen).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
     });
   });
 });

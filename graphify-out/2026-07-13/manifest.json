@@ -415,8 +415,8 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1783954170.120697,
-    "ast_hash": "edcdc8e5dca059e5b297b58e9c48c1f1",
+    "mtime": 1783954105.7547314,
+    "ast_hash": "40ee4d00225fe70fd15950e08a73858c",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
-    "mtime": 1783954572.9943728,
-    "ast_hash": "7473ec9c037c297d0b9bc9f67d8a8411",
+    "mtime": 1783954068.440444,
+    "ast_hash": "822ae3c017cb86f830ac6f5e608926ca",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/OpenAIImageTools.js": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsGetInsights.spec.js": {
-    "mtime": 1783954573.1022353,
-    "ast_hash": "ad1f3169d66bdd1b797b1ab3dab1e95d",
+    "mtime": 1783954105.6960378,
+    "ast_hash": "4d40f176bc984e09d857b0633c71cfb4",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/OpenRouterGeminiImageGen.spec.js": {
@@ -8145,13 +8145,13 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useQueryParams.spec.ts": {
-    "mtime": 1783954266.3169537,
-    "ast_hash": "574217d0d1a73b6d87597fb15b84daf8",
+    "mtime": 1781219412.7646952,
+    "ast_hash": "809a2664ed188696fc6f15b806dd1c5a",
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useQueryParams.ts": {
-    "mtime": 1783954351.740823,
-    "ast_hash": "2b2fa03438b8df889bbe34475229d5d5",
+    "mtime": 1783954143.2186306,
+    "ast_hash": "56ee99f5e3f6c3cb06ee3fa632b01972",
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useRequiresKey.ts": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783954352.0355756,
-    "ast_hash": "a5794356d36266591afbe8086e5793ec",
+    "mtime": 1783954092.536775,
+    "ast_hash": "c7f8437be71cd4d45a53eb90dc0a9d16",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783954351.8998685,
-    "ast_hash": "39da470849ca757b4d239f3f7445d2f0",
+    "mtime": 1783954092.433291,
+    "ast_hash": "0d5f2be43ce97a36457973e35ffd5be5",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -12100,8 +12100,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/definitions.ts": {
-    "mtime": 1783954573.2118201,
-    "ast_hash": "9b85a09c74a141f947d8e146916cdaf2",
+    "mtime": 1783954105.7410555,
+    "ast_hash": "2a3365fa45da167a104d3263e565f02b",
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/index.ts": {
@@ -15905,8 +15905,8 @@
     "semantic_hash": ""
   },
   "docs/plans/metaads-graph-permissions-checklist.md": {
-    "mtime": 1783954578.7560341,
-    "ast_hash": "4f45155a87cbeceaeca7144bc49fef26",
+    "mtime": 1783954069.0580018,
+    "ast_hash": "7a993eba090ed5e4491c61a98d52f72a",
     "semantic_hash": ""
   },
   "docs/workflows-plan.md": {
@@ -16445,8 +16445,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.tsx": {
-    "mtime": 1783954233.1143522,
-    "ast_hash": "849daac591a67ba8455cf4af9aecc29a",
+    "mtime": 1783905540.6322467,
+    "ast_hash": "18d8dea323836939abe5cd5efce9c777",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/trafficDiary.ts": {

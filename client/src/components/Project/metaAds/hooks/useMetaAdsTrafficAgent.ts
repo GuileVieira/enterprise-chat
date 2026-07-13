@@ -90,6 +90,7 @@ export function useMetaAdsTrafficAgent({
       const params = new URLSearchParams({
         project_id: project.projectId,
         meta_ads_brief: storageKey,
+        new_conversation: 'true',
       });
       const trafficAgentId = startupConfigQuery.data?.interface?.metaAdsTrafficAgentId;
       if (trafficAgentId) {

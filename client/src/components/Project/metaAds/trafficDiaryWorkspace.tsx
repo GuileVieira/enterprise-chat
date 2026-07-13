@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Plus, Sparkle } from '@phosphor-icons/react';
 import {
   useCompleteProjectMetaAdsDiaryMutation,
@@ -76,6 +76,8 @@ export function TrafficDiaryWorkspace({
   const completeDiary = useCompleteProjectMetaAdsDiaryMutation();
   const reopenDiary = useReopenProjectMetaAdsDiaryMutation();
   const defaultAnswers = useMemo(() => getDefaultAnswers(localize), [localize]);
+  const defaultAnswersRef = useRef(defaultAnswers);
+  defaultAnswersRef.current = defaultAnswers;
   const [weekStart, setWeekStart] = useState(currentWeekStart);
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +89,10 @@ export function TrafficDiaryWorkspace({
   const isSaving = saveDiary.isLoading || completeDiary.isLoading || reopenDiary.isLoading;
 
   useEffect(() => {
-    setAnswers(entry?.answers.length ? entry.answers : defaultAnswers);
+    setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
     setError(null);
     setNotice(null);
-  }, [defaultAnswers, entry?.answers, entry?.updatedAt, entry?.weekStart]);
+  }, [entry?.answers, entry?.updatedAt, entry?.weekStart]);
 
   const updateAnswer = (id: string, answer: string) => {
     setAnswers((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)));

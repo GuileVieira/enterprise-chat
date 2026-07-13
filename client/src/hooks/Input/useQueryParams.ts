@@ -107,7 +107,7 @@ export default function useQueryParams({
    * Ensures tools compatibility and preserves existing conversation when appropriate.
    */
   const newQueryConvo = useCallback(
-    (_newPreset?: QueryParamPreset) => {
+    (_newPreset?: QueryParamPreset, forceNewConversation = false) => {
       if (!_newPreset) {
         return;
       }
@@ -172,7 +172,7 @@ export default function useQueryParams({
       clearModelForNonEphemeralAgent(template);
 
       const isModular = isCurrentModular && isNewModular && shouldSwitch;
-      if (isExistingConversation && isModular) {
+      if (isExistingConversation && isModular && !forceNewConversation) {
         template.endpointType = newEndpointType as EModelEndpoint | undefined;
 
         const currentConvo = getDefaultConversation({
@@ -197,11 +197,15 @@ export default function useQueryParams({
         return;
       }
 
-      const projectTemplate = newPreset.projectId
-        ? { projectId: newPreset.projectId }
-        : conversation?.projectId
-          ? { projectId: conversation.projectId }
-          : undefined;
+      let projectTemplate: { conversationId?: string; projectId: string } | undefined;
+      if (newPreset.projectId) {
+        projectTemplate = {
+          projectId: newPreset.projectId,
+          ...(forceNewConversation ? { conversationId: 'new' } : {}),
+        };
+      } else if (conversation?.projectId) {
+        projectTemplate = { projectId: conversation.projectId };
+      }
 
       newConversation({
         template: projectTemplate,
@@ -277,6 +281,7 @@ export default function useQueryParams({
         queryParams[META_ADS_BRIEF_PARAM] ?? '',
       );
       const projectId = queryParams[PROJECT_ID_PARAM] ?? '';
+      const forceNewConversation = queryParams.new_conversation === 'true';
 
       // Support both 'prompt' and 'q' as query parameters, with 'prompt' taking precedence
       const decodedPrompt = metaAdsBriefMarkdown || queryParams.prompt || queryParams.q || '';
@@ -284,6 +289,7 @@ export default function useQueryParams({
         !metaAdsBriefMarkdown && queryParams.submit?.toLowerCase() === 'true';
       delete queryParams[META_ADS_BRIEF_PARAM];
       delete queryParams[PROJECT_ID_PARAM];
+      delete queryParams.new_conversation;
       delete queryParams.prompt;
       delete queryParams.q;
       delete queryParams.submit;
@@ -292,7 +298,7 @@ export default function useQueryParams({
         validSettings.projectId = projectId;
       }
 
-      return { decodedPrompt, validSettings, shouldAutoSubmit };
+      return { decodedPrompt, validSettings, shouldAutoSubmit, forceNewConversation };
     };
 
     const intervalId = setInterval(() => {
@@ -314,7 +320,8 @@ export default function useQueryParams({
         return;
       }
 
-      const { decodedPrompt, validSettings, shouldAutoSubmit } = processQueryParams();
+      const { decodedPrompt, validSettings, shouldAutoSubmit, forceNewConversation } =
+        processQueryParams();
       const hasSettings = Object.keys(validSettings).length > 0;
 
       const autoSubmitAllowed = startupConfig.interface?.autoSubmitFromUrl !== false;
@@ -380,7 +387,7 @@ export default function useQueryParams({
       }
 
       if (hasSettings && !areSettingsApplied()) {
-        newQueryConvo(validSettings);
+        newQueryConvo(validSettings, forceNewConversation);
       }
 
       success();

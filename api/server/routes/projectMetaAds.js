@@ -174,15 +174,6 @@ const metaAdsDiaryEditAccess = [
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   requireMetaAdsRoleAccess,
 ];
-const REQUIRED_DIARY_QUESTION_IDS = new Set([
-  'measurement',
-  'strategy',
-  'client_feedback',
-  'changes',
-  'creative_learning',
-  'next_steps',
-]);
-
 function getDiaryActor(user) {
   return {
     id: user.id,
@@ -202,7 +193,7 @@ function validateDiaryWeekStart(value) {
   return value;
 }
 
-function validateDiaryAnswers(value, requireComplete) {
+function validateDiaryAnswers(value) {
   if (!Array.isArray(value)) {
     throw Object.assign(new Error('answers must be an array.'), { statusCode: 400 });
   }
@@ -217,18 +208,6 @@ function validateDiaryAnswers(value, requireComplete) {
     }
     return { id, question, answer: text, ...(parentQuestionId ? { parentQuestionId } : {}) };
   });
-  if (requireComplete) {
-    const completedIds = new Set(
-      answers.filter((answer) => answer.answer).map((answer) => answer.id),
-    );
-    for (const id of REQUIRED_DIARY_QUESTION_IDS) {
-      if (!completedIds.has(id)) {
-        throw Object.assign(new Error('Complete all required diary questions.'), {
-          statusCode: 400,
-        });
-      }
-    }
-  }
   return answers;
 }
 
@@ -869,7 +848,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
       throw new Error('Traffic diary model is unavailable.');
     }
     const weekStart = validateDiaryWeekStart(req.params.weekStart);
-    const answers = validateDiaryAnswers(req.body.answers, false);
+    const answers = validateDiaryAnswers(req.body.answers);
     const project =
       (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
     if (!project) {
@@ -918,7 +897,7 @@ router.post('/diary/:entryId/complete', metaAdsDiaryEditAccess, async (req, res)
     if (!entry) {
       return res.status(404).json({ message: 'Diary entry not found' });
     }
-    validateDiaryAnswers(entry.answers, true);
+    validateDiaryAnswers(entry.answers);
     if (entry.status === 'completed') {
       return res.json(entry);
     }
@@ -1180,5 +1159,6 @@ router._normalizeMetaAdsForTest = normalizeMetaAds;
 router._prepareMetaAdsSettingsUpdateForTest = prepareMetaAdsSettingsUpdate;
 router._getProjectMetaTokenSecretNameForTest = getProjectMetaTokenSecretName;
 router._applyMetaAdsRuleAuditForTest = applyMetaAdsRuleAudit;
+router._validateDiaryAnswersForTest = validateDiaryAnswers;
 
 module.exports = router;

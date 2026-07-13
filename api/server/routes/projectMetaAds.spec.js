@@ -735,6 +735,20 @@ describe('projectMetaAds settings normalization', () => {
   });
 });
 
+describe('projectMetaAds diary validation', () => {
+  it('accepts empty answers so partial weekly progress can be completed and analyzed', () => {
+    expect(
+      router._validateDiaryAnswersForTest([
+        { id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' },
+        { id: 'strategy', question: 'Estratégia', answer: '' },
+      ]),
+    ).toEqual([
+      { id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' },
+      { id: 'strategy', question: 'Estratégia', answer: '' },
+    ]);
+  });
+});
+
 describe('projectMetaAds tenant token route', () => {
   beforeEach(() => {
     jest.clearAllMocks();

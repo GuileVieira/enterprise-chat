@@ -334,6 +334,7 @@ describe('useQueryParams', () => {
         project_id: 'project-1',
         meta_ads_brief: 'meta_ads_brief:test',
         agent_id: 'traffic-agent-1',
+        new_conversation: 'true',
         submit: 'true',
       }),
       mockSetSearchParams,
@@ -378,7 +379,7 @@ describe('useQueryParams', () => {
     expect(mockSubmitMessage).not.toHaveBeenCalled();
     expect(mockNewConversation).toHaveBeenCalledWith(
       expect.objectContaining({
-        template: { projectId: 'project-1' },
+        template: { projectId: 'project-1', conversationId: 'new' },
         preset: expect.objectContaining({ agent_id: 'traffic-agent-1' }),
         keepAddedConvos: true,
       }),
