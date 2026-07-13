@@ -23,7 +23,8 @@ describe('buildTrafficDiaryAnalysisBrief', () => {
     expect(brief).toContain('**Registrado por:** Guilherme');
     expect(brief).toContain('### Estratégia');
     expect(brief).toContain('Testar novo gancho.');
-    expect(brief).toContain('_Não preenchida_');
+    expect(brief).toContain('**Respostas pendentes:** 1');
+    expect(brief).not.toContain('_Não preenchida_');
     expect(brief).not.toContain('internal-id');
     expect(brief).not.toContain('private@example.com');
   });

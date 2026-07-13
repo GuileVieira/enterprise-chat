@@ -25,6 +25,15 @@ describe('TrafficDiaryWorkspace', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockEntries = [];
+    mockSave.mockResolvedValue({
+      _id: 'entry-1',
+      projectId: 'project-1',
+      weekStart: '2026-07-06',
+      status: 'draft',
+      answers: [],
+      createdBy: { id: 'user-1', name: 'Guilherme' },
+      events: [],
+    });
   });
 
   it('saves six default answers as a weekly draft', async () => {
@@ -80,5 +89,22 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_history')).toBeInTheDocument();
     expect(screen.getAllByText('Guilherme').length).toBeGreaterThan(0);
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
+  });
+
+  it('saves a new week before completing it', async () => {
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_complete'));
+
+    await waitFor(() => {
+      expect(mockSave).toHaveBeenCalled();
+      expect(mockComplete).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+    });
   });
 });

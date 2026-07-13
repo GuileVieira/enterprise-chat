@@ -71,12 +71,13 @@ export function MetaAdsWorkspaceShell({
     settingsDraftSummary.length > 0
       ? settingsDraftSummary.map((item) => item.label).join(', ')
       : localize('com_ui_project_meta_ads_pending_changes_empty');
-  const draftButtonKey =
-    draftStatus === 'publishing'
-      ? 'com_ui_project_meta_ads_draft_publishing'
-      : draftStatus === 'error'
-        ? 'com_ui_project_meta_ads_draft_error'
-        : 'com_ui_project_meta_ads_publish_draft';
+  let draftButtonKey = 'com_ui_project_meta_ads_publish_draft';
+  if (draftStatus === 'publishing') {
+    draftButtonKey = 'com_ui_project_meta_ads_draft_publishing';
+  } else if (draftStatus === 'error') {
+    draftButtonKey = 'com_ui_project_meta_ads_draft_error';
+  }
+  const isDiaryWorkspace = workspaceTab === 'diary';
 
   return (
     <div
@@ -87,100 +88,105 @@ export function MetaAdsWorkspaceShell({
           : 'relative overflow-hidden'
       } ${metaAdsSurface}`}
     >
-      <div className="relative flex flex-col gap-5 border-b border-slate-200/70 p-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-white">
-            {localize('com_ui_project_meta_ads_title')}
-          </h3>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
-            <MetaAdsBadge variant="success">{localize(tokenStatusKey)}</MetaAdsBadge>
-            <MetaAdsBadge className="font-normal">{automationMode}</MetaAdsBadge>
-            <MetaAdsBadge className="font-normal">
-              {localize('com_ui_project_meta_ads_schedule_minutes', {
-                0: String(scheduleIntervalMinutes),
-              })}
-            </MetaAdsBadge>
-            {hasUnsavedSettingsDraft && (
-              <MetaAdsBadge variant={draftStatus === 'error' ? 'danger' : 'warning'}>
-                {localize('com_ui_project_meta_ads_pending_changes_summary')}: {draftSummaryText}
-              </MetaAdsBadge>
-            )}
+      {!isDiaryWorkspace && (
+        <>
+          <div className="relative flex flex-col gap-5 border-b border-slate-200/70 p-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-2xl font-semibold leading-tight tracking-tight text-slate-950 dark:text-white">
+                {localize('com_ui_project_meta_ads_title')}
+              </h3>
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+                <MetaAdsBadge variant="success">{localize(tokenStatusKey)}</MetaAdsBadge>
+                <MetaAdsBadge className="font-normal">{automationMode}</MetaAdsBadge>
+                <MetaAdsBadge className="font-normal">
+                  {localize('com_ui_project_meta_ads_schedule_minutes', {
+                    0: String(scheduleIntervalMinutes),
+                  })}
+                </MetaAdsBadge>
+                {hasUnsavedSettingsDraft && (
+                  <MetaAdsBadge variant={draftStatus === 'error' ? 'danger' : 'warning'}>
+                    {localize('com_ui_project_meta_ads_pending_changes_summary')}:{' '}
+                    {draftSummaryText}
+                  </MetaAdsBadge>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <MetaAdsRunAnalysisButton
+                disabled={!canUseMetaAdsActions}
+                running={runningAnalysis}
+                localize={localize}
+                onClick={onRunAnalysis}
+              />
+              <MetaAdsButton onClick={() => onOpenSettingsDrawer('account')}>
+                {localize('com_ui_project_meta_ads_account_credentials')}
+              </MetaAdsButton>
+              <MetaAdsButton onClick={() => onOpenSettingsDrawer('automation')}>
+                {localize('com_ui_project_meta_ads_automation')}
+              </MetaAdsButton>
+              <MetaAdsButton disabled={!canUseMetaAdsActions} onClick={onOpenRuleGroupDraft}>
+                {localize('com_ui_project_meta_ads_rules')}
+              </MetaAdsButton>
+              <MetaAdsButton
+                onClick={onToggleFullscreen}
+                aria-label={localize(
+                  metricsFullscreen
+                    ? 'com_ui_project_meta_ads_exit_fullscreen'
+                    : 'com_ui_project_meta_ads_enter_fullscreen',
+                )}
+                className="inline-flex items-center gap-2"
+              >
+                {metricsFullscreen ? (
+                  <ArrowsIn className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <ArrowsOut className="h-4 w-4" aria-hidden="true" />
+                )}
+                {localize(
+                  metricsFullscreen
+                    ? 'com_ui_project_meta_ads_exit_fullscreen'
+                    : 'com_ui_project_meta_ads_enter_fullscreen',
+                )}
+              </MetaAdsButton>
+              {!settingsDrawer && (
+                <MetaAdsButton
+                  variant="primary"
+                  disabled={!canUseMetaAdsActions || savingSettings}
+                  onClick={hasUnsavedSettingsDraft ? onPublishDraft : onSave}
+                  title={hasUnsavedSettingsDraft ? draftSummaryText : undefined}
+                  className={
+                    hasUnsavedSettingsDraft && draftStatus !== 'publishing'
+                      ? 'bg-blue-600 text-white shadow-[0_18px_44px_-26px_rgba(37,99,235,0.75)] hover:bg-blue-500 dark:bg-blue-400 dark:text-slate-950 dark:hover:bg-blue-300'
+                      : undefined
+                  }
+                >
+                  {localize(hasUnsavedSettingsDraft ? draftButtonKey : 'com_ui_save')}
+                </MetaAdsButton>
+              )}
+              {hasUnsavedSettingsDraft && !settingsDrawer && (
+                <MetaAdsButton
+                  variant="danger"
+                  disabled={!canUseMetaAdsActions || savingSettings}
+                  onClick={onDiscardDraft}
+                >
+                  {localize('com_ui_project_meta_ads_discard_draft')}
+                </MetaAdsButton>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <MetaAdsRunAnalysisButton
-            disabled={!canUseMetaAdsActions}
-            running={runningAnalysis}
-            localize={localize}
-            onClick={onRunAnalysis}
-          />
-          <MetaAdsButton onClick={() => onOpenSettingsDrawer('account')}>
-            {localize('com_ui_project_meta_ads_account_credentials')}
-          </MetaAdsButton>
-          <MetaAdsButton onClick={() => onOpenSettingsDrawer('automation')}>
-            {localize('com_ui_project_meta_ads_automation')}
-          </MetaAdsButton>
-          <MetaAdsButton disabled={!canUseMetaAdsActions} onClick={onOpenRuleGroupDraft}>
-            {localize('com_ui_project_meta_ads_rules')}
-          </MetaAdsButton>
-          <MetaAdsButton
-            onClick={onToggleFullscreen}
-            aria-label={localize(
-              metricsFullscreen
-                ? 'com_ui_project_meta_ads_exit_fullscreen'
-                : 'com_ui_project_meta_ads_enter_fullscreen',
-            )}
-            className="inline-flex items-center gap-2"
-          >
-            {metricsFullscreen ? (
-              <ArrowsIn className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <ArrowsOut className="h-4 w-4" aria-hidden="true" />
-            )}
-            {localize(
-              metricsFullscreen
-                ? 'com_ui_project_meta_ads_exit_fullscreen'
-                : 'com_ui_project_meta_ads_enter_fullscreen',
-            )}
-          </MetaAdsButton>
-          {!settingsDrawer && (
-            <MetaAdsButton
-              variant="primary"
-              disabled={!canUseMetaAdsActions || savingSettings}
-              onClick={hasUnsavedSettingsDraft ? onPublishDraft : onSave}
-              title={hasUnsavedSettingsDraft ? draftSummaryText : undefined}
+          <MetaAdsRunAnalysisStatus running={runningAnalysis} localize={localize} />
+          {runNoticeMessage && (
+            <div
+              role="alert"
               className={
-                hasUnsavedSettingsDraft && draftStatus !== 'publishing'
-                  ? 'bg-blue-600 text-white shadow-[0_18px_44px_-26px_rgba(37,99,235,0.75)] hover:bg-blue-500 dark:bg-blue-400 dark:text-slate-950 dark:hover:bg-blue-300'
-                  : undefined
+                runNoticeStatus === 'success'
+                  ? 'relative m-5 border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-100'
+                  : 'relative m-5 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100'
               }
             >
-              {localize(hasUnsavedSettingsDraft ? draftButtonKey : 'com_ui_save')}
-            </MetaAdsButton>
+              {runNoticeMessage}
+            </div>
           )}
-          {hasUnsavedSettingsDraft && !settingsDrawer && (
-            <MetaAdsButton
-              variant="danger"
-              disabled={!canUseMetaAdsActions || savingSettings}
-              onClick={onDiscardDraft}
-            >
-              {localize('com_ui_project_meta_ads_discard_draft')}
-            </MetaAdsButton>
-          )}
-        </div>
-      </div>
-      <MetaAdsRunAnalysisStatus running={runningAnalysis} localize={localize} />
-      {runNoticeMessage && (
-        <div
-          role="alert"
-          className={
-            runNoticeStatus === 'success'
-              ? 'relative m-5 border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-100'
-              : 'relative m-5 border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-100'
-          }
-        >
-          {runNoticeMessage}
-        </div>
+        </>
       )}
       <div
         role="tablist"
