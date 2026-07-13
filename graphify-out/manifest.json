@@ -365,9 +365,9 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/workspaceShell.tsx": {
-    "mtime": 1783364801.4735348,
-    "ast_hash": "8f0c6bbbde17c594286fd1e735c0a61c",
-    "semantic_hash": "8f0c6bbbde17c594286fd1e735c0a61c"
+    "mtime": 1783905617.7137299,
+    "ast_hash": "d47d45b2215bfd93072533f238dbd946",
+    "semantic_hash": ""
   },
   "client/src/data-provider/mutations.ts": {
     "mtime": 1783903347.0235777,
@@ -415,8 +415,8 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1783737876.4212687,
-    "ast_hash": "c7887f80a802b13a727b7f58c43e10c4",
+    "mtime": 1783904944.7001123,
+    "ast_hash": "7e33cdf56aba36d39855d341e46f6321",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783904417.3885095,
-    "ast_hash": "eb8f14246834542a2922b3992b4c50db",
+    "mtime": 1783905531.0734708,
+    "ast_hash": "d41177f57f8de8a2d412dacacac86b18",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783904417.2712405,
-    "ast_hash": "f8fabeaf18bfbd88b569cdcb787ba583",
+    "mtime": 1783905530.9539409,
+    "ast_hash": "1ed3d463bf611fc4f5230aa30a7155e0",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -16440,13 +16440,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.spec.tsx": {
-    "mtime": 1783904431.5154517,
-    "ast_hash": "1506f366c0b5a788be485c1e86fc94c9",
+    "mtime": 1783905519.531587,
+    "ast_hash": "ff93bc6f14f4319f710b39e8708eed4d",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.tsx": {
-    "mtime": 1783904439.4435303,
-    "ast_hash": "51edc35da351091482053d7abea0b80f",
+    "mtime": 1783905540.6322467,
+    "ast_hash": "18d8dea323836939abe5cd5efce9c777",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/trafficDiary.ts": {
@@ -16465,13 +16465,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryBrief.spec.ts": {
-    "mtime": 1783904351.4567041,
-    "ast_hash": "d0b459b8b4be6b62f821bcd4957651a7",
+    "mtime": 1783905519.4099822,
+    "ast_hash": "a24d168f0852a597d3a4783e8911eabb",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryBrief.ts": {
-    "mtime": 1783904351.3458743,
-    "ast_hash": "47b23a977207c8597656e25a3c141ade",
+    "mtime": 1783905540.641173,
+    "ast_hash": "4207c7d129ee3dee04b06bc18d81f7a8",
     "semantic_hash": ""
   }
 }

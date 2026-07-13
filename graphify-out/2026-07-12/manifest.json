@@ -195,8 +195,8 @@
     "semantic_hash": "696bfc7c6be2028c698ae6d8b7a7c492"
   },
   "client/src/components/Project/metaAds/hooks/useMetaAdsTrafficAgent.ts": {
-    "mtime": 1783903503.726793,
-    "ast_hash": "36fbed9b6dc78315ba69a08846684eed",
+    "mtime": 1783904351.572185,
+    "ast_hash": "a35e17f4beada3aada3a00135f97cb26",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewActionCell.tsx": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1783903496.9187593,
-    "ast_hash": "7aec534f20e0c96ca66b71e61ffb0483",
+    "mtime": 1783904417.3885095,
+    "ast_hash": "eb8f14246834542a2922b3992b4c50db",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1783903496.8222914,
-    "ast_hash": "a0fa5127758418a21013252297adf9f1",
+    "mtime": 1783904417.2712405,
+    "ast_hash": "f8fabeaf18bfbd88b569cdcb787ba583",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -16440,13 +16440,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.spec.tsx": {
-    "mtime": 1783903586.417838,
-    "ast_hash": "c3706fd478ad4ed5cc28c945b7c01c00",
+    "mtime": 1783904431.5154517,
+    "ast_hash": "1506f366c0b5a788be485c1e86fc94c9",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.tsx": {
-    "mtime": 1783903769.7099013,
-    "ast_hash": "780c116c637ad53401eb6ef294f3c251",
+    "mtime": 1783904439.4435303,
+    "ast_hash": "51edc35da351091482053d7abea0b80f",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/trafficDiary.ts": {
@@ -16462,6 +16462,16 @@
   "packages/data-schemas/src/types/trafficDiary.ts": {
     "mtime": 1783903277.4139702,
     "ast_hash": "24053632bb9844ae565786987c1cbe9a",
+    "semantic_hash": ""
+  },
+  "client/src/components/Project/metaAds/trafficDiaryBrief.spec.ts": {
+    "mtime": 1783904351.4567041,
+    "ast_hash": "d0b459b8b4be6b62f821bcd4957651a7",
+    "semantic_hash": ""
+  },
+  "client/src/components/Project/metaAds/trafficDiaryBrief.ts": {
+    "mtime": 1783904351.3458743,
+    "ast_hash": "47b23a977207c8597656e25a3c141ade",
     "semantic_hash": ""
   }
 }
