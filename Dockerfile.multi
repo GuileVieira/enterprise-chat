@@ -2,7 +2,7 @@
 # v0.8.6-rc1
 
 # Set configurable max-old-space-size with default
-ARG NODE_MAX_OLD_SPACE_SIZE=6144
+ARG NODE_MAX_OLD_SPACE_SIZE=4096
 ARG VITE_TERSER_MAX_WORKERS=1
 
 # Base for all builds

@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile.multi
       target: api-build
       args:
-        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
+        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-4096}
         VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
     restart: always
     depends_on:
@@ -79,7 +79,7 @@ services:
       dockerfile: Dockerfile.multi
       target: api-build
       args:
-        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
+        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-4096}
         VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
     depends_on:
       mongodb:
