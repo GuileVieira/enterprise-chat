@@ -144,10 +144,12 @@ export function TrafficDiaryWorkspace({
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isCompleteConfirmOpen, setCompleteConfirmOpen] = useState(false);
   const entries = diaryQuery.data?.entries ?? [];
   const entry = entries.find((item) => getEntryDate(item) === selectedDate);
   const historyEntries = entries.filter((item) => getEntryDate(item) !== currentDate);
   const isCompleted = entry?.status === 'completed';
+  const canAddQuestion = canEdit && !isCompleted;
   const isSaving =
     saveDiary.isLoading ||
     completeDiary.isLoading ||
@@ -202,6 +204,7 @@ export function TrafficDiaryWorkspace({
   };
 
   const complete = async () => {
+    setCompleteConfirmOpen(false);
     const savedEntry = await save(false);
     if (!savedEntry) {
       return;
@@ -355,7 +358,7 @@ export function TrafficDiaryWorkspace({
               </button>
               <button
                 type="button"
-                onClick={() => void complete()}
+                onClick={() => setCompleteConfirmOpen(true)}
                 disabled={isSaving}
                 className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -402,8 +405,62 @@ export function TrafficDiaryWorkspace({
         </div>
       </div>
 
+      {isCompleteConfirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="meta-ads-diary-complete-title"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
+          >
+            <h3
+              id="meta-ads-diary-complete-title"
+              className="text-lg font-semibold text-slate-950 dark:text-white"
+            >
+              {localize('com_ui_project_meta_ads_diary_complete_confirm_title')}
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {localize('com_ui_project_meta_ads_diary_complete_confirm_description', {
+                0: formatDate(selectedDate),
+              })}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCompleteConfirmOpen(false)}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-100"
+              >
+                {localize('com_ui_cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void complete()}
+                disabled={isSaving}
+                className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {localize('com_ui_confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
+          {canAddQuestion && (
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition hover:text-teal-900 dark:text-teal-200 dark:hover:text-teal-100"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {localize('com_ui_project_meta_ads_diary_add_question')}
+            </button>
+          )}
+
           {config.sections.map((section) => {
             const sectionAnswers = answersForSection(section);
             if (sectionAnswers.length === 0) {
@@ -456,17 +513,6 @@ export function TrafficDiaryWorkspace({
               </section>
             );
           })}
-
-          {canEdit && !isCompleted && (
-            <button
-              type="button"
-              onClick={addQuestion}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition hover:text-teal-900 dark:text-teal-200 dark:hover:text-teal-100"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {localize('com_ui_project_meta_ads_diary_add_question')}
-            </button>
-          )}
         </div>
 
         <aside className="min-w-0 xl:sticky xl:top-4 xl:self-start">

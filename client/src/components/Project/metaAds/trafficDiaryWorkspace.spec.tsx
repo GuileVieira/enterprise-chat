@@ -105,6 +105,23 @@ describe('TrafficDiaryWorkspace', () => {
     });
   });
 
+  it('lets the strategist add custom questions near the top of the form', () => {
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_strategy_diary_tab'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_add_question'));
+
+    expect(
+      screen.getByPlaceholderText('com_ui_project_meta_ads_diary_extra_question'),
+    ).toBeVisible();
+  });
+
   it('shows saved weeks with author and update date in history', () => {
     mockEntries = [
       {
@@ -134,7 +151,7 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
   });
 
-  it('saves the current day before completing the week', async () => {
+  it('asks before saving the current day and completing the record', async () => {
     render(
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
@@ -144,6 +161,13 @@ describe('TrafficDiaryWorkspace', () => {
     );
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_complete'));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'com_ui_project_meta_ads_diary_complete_confirm_title',
+    );
+    expect(mockComplete).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_confirm' }));
 
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalled();

@@ -255,9 +255,7 @@ export default function ProjectMetaAdsPanel({
     user?.role === SystemRoles.ADMIN ||
     user?.role === SystemRoles.OWNER ||
     user?.role === SystemRoles.AD_MANAGER;
-  const canEditMetaAdsDiary =
-    user?.role === SystemRoles.AD_MANAGER ||
-    (canEdit && user?.role !== SystemRoles.ADMIN && user?.role !== SystemRoles.OWNER);
+  const canEditMetaAdsDiary = canUseMetaAdsActions;
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];

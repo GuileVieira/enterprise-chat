@@ -936,7 +936,7 @@ describe('projectMetaAds diary route', () => {
     );
   });
 
-  it('blocks owner and admin diary edits while still allowing diary reads', async () => {
+  it('allows owner diary edits when Meta Ads access is allowed', async () => {
     mockRouteUser = { id: 'owner-1', role: SystemRoles.OWNER, tenantId: 'tenant-x' };
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
     const find = jest.fn().mockReturnValue({
@@ -944,13 +944,32 @@ describe('projectMetaAds diary route', () => {
       limit: jest.fn().mockReturnThis(),
       lean: jest.fn().mockResolvedValue([]),
     });
-    mongoose.models.TrafficDiaryEntry = { find, findOne: jest.fn() };
+    const findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+    const findOneAndUpdate = jest.fn().mockResolvedValue({
+      _id: 'entry-owner',
+      projectId: 'p1',
+      userId: 'owner-1',
+      kind: 'strategist',
+      date: '2026-07-14',
+      weekStart: '2026-07-14',
+      status: 'draft',
+      answers: [],
+      createdBy: { id: 'owner-1' },
+      events: [],
+    });
+    mongoose.models.TrafficDiaryEntry = { find, findOne, findOneAndUpdate };
 
     await request(createApp()).get('/projects/p1/meta-ads/diary?kind=strategist').expect(200);
     await request(createApp())
       .put('/projects/p1/meta-ads/diary/2026-07-14')
       .send({ kind: 'strategist', answers: [] })
-      .expect(403);
+      .expect(200);
+
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'owner-1', kind: 'strategist' }),
+      expect.any(Object),
+      expect.any(Object),
+    );
   });
 
   it('filters diary entries by date period', async () => {

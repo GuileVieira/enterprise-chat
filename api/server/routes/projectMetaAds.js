@@ -176,13 +176,7 @@ async function requireMetaAdsRoleAccess(req, res, next) {
 
 const metaAdsAccess = [requireMetaAdsProjectView, requireMetaAdsRoleAccess];
 const metaAdsClientActionAccess = metaAdsAccess;
-function requireMetaAdsDiaryEditAccess(req, res, next) {
-  if (req.user?.role === SystemRoles.ADMIN || req.user?.role === SystemRoles.OWNER) {
-    return res.status(403).json({ message: 'Diary editing is restricted to strategy profiles.' });
-  }
-  return next();
-}
-const metaAdsDiaryEditAccess = [...metaAdsAccess, requireMetaAdsDiaryEditAccess];
+const metaAdsDiaryEditAccess = metaAdsAccess;
 
 function getDiaryActor(user) {
   return {
