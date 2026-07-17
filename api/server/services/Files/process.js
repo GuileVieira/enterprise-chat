@@ -2,14 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
 const os = require('os');
-const OpenAI = require('openai');
 const { v4 } = require('uuid');
 const {
   isUUID,
   megabyte,
   FileContext,
   FileSources,
-  VisionModes,
   imageExtRegex,
   EModelEndpoint,
   EToolResources,
@@ -36,20 +34,13 @@ const {
 const { addResourceFileId, deleteResourceFileId } = require('~/server/controllers/assistants/v2');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
-const { encodeAndFormat } = require('~/server/services/Files/images/encode');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
 const { checkCapability } = require('~/server/services/Config');
 const { LB_QueueAsyncCall } = require('~/server/utils/queue');
 const { getStrategyFunctions } = require('./strategies');
 const { determineFileType } = require('~/server/utils');
 const { STTService } = require('./Audio/STTService');
-const { createVisionPrompt } = require('~/app/clients/prompts');
 const db = require('~/models');
-
-const DEFAULT_IMAGE_RAG_CAPTION_MODEL = 'qwen/qwen3.7-plus';
-const DEFAULT_IMAGE_RAG_CAPTION_MAX_TOKENS = 1200;
-const DEFAULT_IMAGE_RAG_CAPTION_TIMEOUT_MS = 30000;
-const DEFAULT_IMAGE_RAG_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 /**
  * Links a newly uploaded file to a project by adding its file_id to the project's fileIds array.
@@ -66,88 +57,41 @@ const maybeLinkFileToProject = async (req, file_id) => {
   }
 };
 
-const getPositiveInteger = (value, fallback) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-};
-
-const withTimeout = (promise, ms, message) => {
-  let timeout;
-  const timeoutPromise = new Promise((_, reject) => {
-    timeout = setTimeout(() => reject(new Error(message)), ms);
-  });
-  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
-};
-
-const formatImageCaptionText = ({ imageFile, caption }) =>
+const formatImageOcrText = ({ imageFile, text }) =>
   [
-    `Visual description extracted from image "${imageFile.filename}" (${imageFile.file_id}).`,
+    `Text extracted from image "${imageFile.filename}" (${imageFile.file_id}).`,
     '',
-    caption.trim(),
+    text.trim(),
   ].join('\n');
 
-const createImageRagCaption = async ({ req, imageFile }) => {
-  const { image_urls } = await encodeAndFormat(
-    req,
-    [imageFile],
-    {
-      provider: EModelEndpoint.openAI,
-      endpoint: EModelEndpoint.openAI,
-    },
-    VisionModes.generative,
-  );
+const extractImageTextForRag = async ({ req, file }) => {
+  const fileConfig = mergeFileConfig(req.config.fileConfig);
+  const isOCRSupported =
+    req.config?.ocr != null &&
+    fileConfig.checkType(file.mimetype, fileConfig.ocr?.supportedMimeTypes || []);
 
-  if (!image_urls?.length) {
-    throw new Error('No encodable image payload available for vision captioning');
+  if (!isOCRSupported) {
+    throw new Error(`OCR is not configured for image file_search uploads (${file.mimetype})`);
   }
 
-  const model = process.env.IMAGE_RAG_VISION_MODEL || DEFAULT_IMAGE_RAG_CAPTION_MODEL;
-  const apiKey = process.env.IMAGE_RAG_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error('OpenRouter API key not configured for image RAG vision captioning');
+  const canUseOCR = await checkCapability(req, AgentCapabilities.ocr);
+  if (!canUseOCR && !req.body.projectId) {
+    throw new Error('OCR capability is not enabled for Agents');
   }
 
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: process.env.IMAGE_RAG_OPENROUTER_BASE_URL || DEFAULT_IMAGE_RAG_OPENROUTER_BASE_URL,
-    defaultHeaders: removeNullishValues({
-      'HTTP-Referer': process.env.OPENROUTER_SITE_URL,
-      'X-Title': process.env.OPENROUTER_APP_NAME || 'Orqest Image RAG',
-    }),
-  });
-  const maxTokens = getPositiveInteger(
-    process.env.IMAGE_RAG_CAPTION_MAX_TOKENS,
-    DEFAULT_IMAGE_RAG_CAPTION_MAX_TOKENS,
-  );
-  const timeoutMs = getPositiveInteger(
-    process.env.IMAGE_RAG_CAPTION_TIMEOUT_MS,
-    DEFAULT_IMAGE_RAG_CAPTION_TIMEOUT_MS,
-  );
-  const prompt = `${createVisionPrompt(false)}
-
-Return only the extracted visual description. Include visible text, labels, chart values, layout, product names, brand marks, and any concrete details useful for semantic search.`;
-
-  const completion = await withTimeout(
-    openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: 'user',
-          content: [{ type: 'text', text: prompt }, ...image_urls],
-        },
-      ],
-      max_tokens: maxTokens,
-    }),
-    timeoutMs,
-    `Image RAG vision caption timed out after ${timeoutMs}ms`,
-  );
-
-  const caption = completion?.choices?.[0]?.message?.content;
-  if (!caption?.trim()) {
-    throw new Error('Vision caption response was empty');
+  const ocrStrategy = req.config?.ocr?.strategy;
+  if (!ocrStrategy) {
+    throw new Error('OCR strategy is not configured for image file_search uploads');
   }
 
-  return { caption: caption.trim(), model };
+  const { handleFileUpload } = getStrategyFunctions(ocrStrategy);
+  const ocrResult = await handleFileUpload({ req, file, loadAuthValues });
+  const text = ocrResult?.text?.trim();
+  if (!text) {
+    throw new Error(`No text extracted from image "${file.originalname}"`);
+  }
+
+  return { text, source: ocrStrategy };
 };
 
 const createTempTextUpload = async ({ file_id, filename, text }) => {
@@ -505,7 +449,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata }) => {
   });
   const storageMetadata = getStorageMetadata({ filepath, source, storageKey, storageRegion });
   const baseImageRag = {
-    kind: 'vision_caption',
+    kind: 'ocr_text',
     status: 'failed',
   };
   const imageFileInfo = removeNullishValues({
@@ -531,14 +475,17 @@ const processImageFileSearchUpload = async ({ req, res, metadata }) => {
   await maybeLinkFileToProject(req, file_id);
 
   try {
-    const { caption, model } = await createImageRagCaption({ req, imageFile });
-    const derivedFileId = v4();
-    const derivedFilename = `${file.originalname}.vision.txt`;
-    const text = formatImageCaptionText({ imageFile, caption });
+    const { text: extractedText, source: ocrSource } = await extractImageTextForRag({ req, file });
+    const text = formatImageOcrText({ imageFile, text: extractedText });
     const textBytes = Buffer.byteLength(text, 'utf8');
+    if (textBytes > 15 * megabyte) {
+      throw new Error(
+        `Extracted text from "${file.originalname}" exceeds the 15MB storage limit (${Math.round(textBytes / megabyte)}MB). Try a shorter image.`,
+      );
+    }
     const textUpload = await createTempTextUpload({
-      file_id: derivedFileId,
-      filename: derivedFilename,
+      file_id,
+      filename: `${file.originalname}.ocr.txt`,
       text,
     });
     let embeddingResult;
@@ -548,81 +495,59 @@ const processImageFileSearchUpload = async ({ req, res, metadata }) => {
       embeddingResult = await uploadVectors({
         req,
         file: textUpload,
-        file_id: derivedFileId,
+        file_id,
         entity_id: agent_id || req.body.projectId,
       });
     } finally {
       await fs.promises.unlink(textUpload.path).catch((error) => {
-        logger.warn('[processImageFileSearchUpload] Failed to remove temp caption file:', error);
+        logger.warn('[processImageFileSearchUpload] Failed to remove temp OCR text file:', error);
       });
     }
 
     if (!embeddingResult?.embedded) {
-      throw new Error('Image caption was generated but vector embedding was skipped or failed');
+      throw new Error('Image OCR text was extracted but vector embedding was skipped or failed');
     }
 
-    const derivedFileInfo = removeNullishValues({
-      user: req.user.id,
-      file_id: derivedFileId,
-      bytes: textBytes,
-      filepath: embeddingResult?.filepath ?? FileSources.vectordb,
-      filename: derivedFilename,
-      context: FileContext.agents,
-      source: FileSources.text,
-      type: 'text/plain',
+    const imageRagMetadata = {
+      imageRag: {
+        kind: 'ocr_text',
+        status: 'ready',
+        source: ocrSource,
+      },
+    };
+    const indexedImageFile = (await db.updateFile({
+      file_id,
       text,
       textFormat: 'text',
       embedded: Boolean(embeddingResult?.embedded),
-      tenantId: req.user.tenantId,
-      projectId: req.body.projectId,
-      metadata: {
-        imageRag: {
-          kind: 'vision_caption',
-          status: 'ready',
-          model,
-          sourceImageFileId: file_id,
-          sourceImageFileName: imageFile.filename,
-        },
-      },
-    });
-    const derivedFile = await db.createFile(derivedFileInfo, true);
-    await maybeLinkFileToProject(req, derivedFileId);
+      metadata: imageRagMetadata,
+    })) || {
+      ...imageFile,
+      text,
+      textFormat: 'text',
+      embedded: Boolean(embeddingResult?.embedded),
+      metadata: imageRagMetadata,
+    };
 
     if (agent_id) {
       await db.addAgentResourceFile({
-        file_id: derivedFileId,
+        file_id,
         agent_id,
         tool_resource: EToolResources.file_search,
         updatingUserId: req?.user?.id,
       });
     }
 
-    await db
-      .updateFile({
-        file_id,
-        metadata: {
-          imageRag: {
-            kind: 'vision_caption',
-            status: 'ready',
-            model,
-            derivedTextFileId: derivedFileId,
-          },
-        },
-      })
-      .catch((error) => {
-        logger.warn(
-          '[processImageFileSearchUpload] Failed to update source image metadata:',
-          error,
-        );
-      });
-
     return res.status(200).json({
       message: 'Agent file uploaded and processed successfully',
-      ...imageFile,
-      imageRagFile: derivedFile,
+      ...indexedImageFile,
+      imageRag: {
+        textBytes,
+        source: ocrSource,
+      },
     });
   } catch (error) {
-    logger.error('[processImageFileSearchUpload] Image RAG processing failed:', error);
+    logger.error('[processImageFileSearchUpload] Image OCR RAG processing failed:', error);
     await db
       .updateFile({
         file_id,
@@ -641,7 +566,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata }) => {
       });
 
     return res.status(200).json({
-      message: 'Image uploaded, but visual RAG processing failed',
+      message: 'Image uploaded, but OCR RAG processing failed',
       ...imageFile,
     });
   }
