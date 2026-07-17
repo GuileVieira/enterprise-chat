@@ -832,7 +832,6 @@ describe('projectMetaAds diary route', () => {
           userId: 'user-1',
           kind: 'manager',
           date: '2026-07-14',
-          weekStart: '2026-07-14',
           status: 'draft',
         }),
       }),
@@ -860,7 +859,7 @@ describe('projectMetaAds diary route', () => {
     expect(response.body).toEqual(expect.objectContaining({ date: '2026-07-14' }));
   });
 
-  it('updates an existing daily record instead of creating a duplicate', async () => {
+  it('updates an existing daily record, including completed records, instead of duplicating', async () => {
     mockRouteUser = {
       id: 'user-1',
       name: 'Guilherme',
@@ -875,7 +874,7 @@ describe('projectMetaAds diary route', () => {
         userId: 'user-1',
         kind: 'manager',
         date: '2026-07-14',
-        status: 'draft',
+        status: 'completed',
       }),
     });
     const findOneAndUpdate = jest.fn().mockResolvedValue({

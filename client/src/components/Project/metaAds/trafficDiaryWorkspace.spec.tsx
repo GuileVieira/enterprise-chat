@@ -3,19 +3,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TrafficDiaryWorkspace } from './trafficDiaryWorkspace';
 
 const mockSave = jest.fn();
-const mockComplete = jest.fn();
-const mockReopen = jest.fn();
 const mockDelete = jest.fn();
 let mockEntries: unknown[] = [];
 
 jest.mock('~/data-provider', () => ({
   useProjectMetaAdsDiaryQuery: () => ({ data: { entries: mockEntries } }),
   useSaveProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockSave, isLoading: false }),
-  useCompleteProjectMetaAdsDiaryMutation: () => ({
-    mutateAsync: mockComplete,
-    isLoading: false,
-  }),
-  useReopenProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockReopen, isLoading: false }),
   useDeleteProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockDelete, isLoading: false }),
 }));
 
@@ -54,6 +47,8 @@ describe('TrafficDiaryWorkspace', () => {
         onAnalyze={jest.fn()}
       />,
     );
+
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_save')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'CPA melhorou.' } });
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
@@ -151,35 +146,7 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
   });
 
-  it('asks before saving the current day and completing the record', async () => {
-    render(
-      <TrafficDiaryWorkspace
-        project={{ projectId: 'project-1', name: 'Cliente' }}
-        canEdit={true}
-        onAnalyze={jest.fn()}
-      />,
-    );
-
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_complete'));
-
-    expect(screen.getByRole('dialog')).toHaveTextContent(
-      'com_ui_project_meta_ads_diary_complete_confirm_title',
-    );
-    expect(mockComplete).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'com_ui_confirm' }));
-
-    await waitFor(() => {
-      expect(mockSave).toHaveBeenCalled();
-      expect(mockComplete).toHaveBeenCalledWith({
-        projectId: 'project-1',
-        entryId: 'entry-1',
-        kind: 'manager',
-      });
-    });
-  });
-
-  it('reopens a completed daily record for editing', async () => {
+  it('keeps a completed daily record editable and saves it directly', async () => {
     mockEntries = [
       {
         _id: 'entry-1',
@@ -202,15 +169,28 @@ describe('TrafficDiaryWorkspace', () => {
     );
 
     fireEvent.click(screen.getByText('6 de jul. de 2026'));
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_reopen'));
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_save')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByDisplayValue('Testar criativo.'), {
+      target: { value: 'Testar criativo atualizado.' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
 
     await waitFor(() => {
-      expect(mockReopen).toHaveBeenCalledWith({
-        projectId: 'project-1',
-        entryId: 'entry-1',
-        kind: 'manager',
-      });
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'project-1',
+          date: '2026-07-06',
+          answers: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'strategy',
+              answer: 'Testar criativo atualizado.',
+            }),
+          ]),
+        }),
+      );
     });
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_complete')).not.toBeInTheDocument();
   });
 
   it('deletes a selected diary record', async () => {

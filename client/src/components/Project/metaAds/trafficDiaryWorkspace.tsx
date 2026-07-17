@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, Plus, Sparkle, Trash } from '@phosphor-icons/react';
 import {
-  useCompleteProjectMetaAdsDiaryMutation,
   useDeleteProjectMetaAdsDiaryMutation,
   useProjectMetaAdsDiaryQuery,
-  useReopenProjectMetaAdsDiaryMutation,
   useSaveProjectMetaAdsDiaryMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
@@ -116,6 +114,15 @@ function getEntryDate(entry: ProjectTrafficDiaryEntry) {
   return entry.date || entry.weekStart;
 }
 
+function getPersistableAnswers(answers: ProjectTrafficDiaryAnswer[]) {
+  return answers.filter(
+    (answer) =>
+      !answer.parentQuestionId ||
+      answer.question.trim().length > 0 ||
+      answer.answer.trim().length > 0,
+  );
+}
+
 export function TrafficDiaryWorkspace({
   project,
   canEdit,
@@ -130,8 +137,6 @@ export function TrafficDiaryWorkspace({
   const [activeKind, setActiveKind] = useState<ProjectTrafficDiaryKind>('manager');
   const diaryQuery = useProjectMetaAdsDiaryQuery(project.projectId, activeKind);
   const saveDiary = useSaveProjectMetaAdsDiaryMutation();
-  const completeDiary = useCompleteProjectMetaAdsDiaryMutation();
-  const reopenDiary = useReopenProjectMetaAdsDiaryMutation();
   const deleteDiary = useDeleteProjectMetaAdsDiaryMutation();
   const config = diaryConfigs[activeKind];
   const defaultAnswers = useMemo(
@@ -144,17 +149,19 @@ export function TrafficDiaryWorkspace({
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [isCompleteConfirmOpen, setCompleteConfirmOpen] = useState(false);
   const entries = diaryQuery.data?.entries ?? [];
   const entry = entries.find((item) => getEntryDate(item) === selectedDate);
   const historyEntries = entries.filter((item) => getEntryDate(item) !== currentDate);
   const isCompleted = entry?.status === 'completed';
-  const canAddQuestion = canEdit && !isCompleted;
-  const isSaving =
-    saveDiary.isLoading ||
-    completeDiary.isLoading ||
-    reopenDiary.isLoading ||
-    deleteDiary.isLoading;
+  const canAddQuestion = canEdit;
+  const isSaving = saveDiary.isLoading || deleteDiary.isLoading;
+  const hasUnsavedChanges = useMemo(() => {
+    const loadedAnswers = entry?.answers.length ? entry.answers : defaultAnswers;
+    return (
+      JSON.stringify(getPersistableAnswers(answers)) !==
+      JSON.stringify(getPersistableAnswers(loadedAnswers))
+    );
+  }, [answers, defaultAnswers, entry?.answers]);
 
   useEffect(() => {
     setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
@@ -181,12 +188,7 @@ export function TrafficDiaryWorkspace({
   const save = async (showNotice = true) => {
     try {
       setError(null);
-      const savedAnswers = answers.filter(
-        (answer) =>
-          !answer.parentQuestionId ||
-          answer.question.trim().length > 0 ||
-          answer.answer.trim().length > 0,
-      );
+      const savedAnswers = getPersistableAnswers(answers);
       const savedEntry = await saveDiary.mutateAsync({
         projectId: project.projectId,
         date: selectedDate,
@@ -200,42 +202,6 @@ export function TrafficDiaryWorkspace({
     } catch {
       setError(localize('com_ui_project_meta_ads_diary_save_error'));
       return null;
-    }
-  };
-
-  const complete = async () => {
-    setCompleteConfirmOpen(false);
-    const savedEntry = await save(false);
-    if (!savedEntry) {
-      return;
-    }
-    try {
-      setError(null);
-      await completeDiary.mutateAsync({
-        projectId: project.projectId,
-        entryId: savedEntry._id,
-        kind: activeKind,
-      });
-      setNotice(localize('com_ui_project_meta_ads_diary_completed_success'));
-    } catch {
-      setError(localize('com_ui_project_meta_ads_diary_complete_error'));
-    }
-  };
-
-  const reopen = async () => {
-    if (!entry) {
-      return;
-    }
-    try {
-      setError(null);
-      await reopenDiary.mutateAsync({
-        projectId: project.projectId,
-        entryId: entry._id,
-        kind: activeKind,
-      });
-      setNotice(localize('com_ui_project_meta_ads_diary_reopened_success'));
-    } catch {
-      setError(localize('com_ui_project_meta_ads_diary_reopen_error'));
     }
   };
 
@@ -346,34 +312,14 @@ export function TrafficDiaryWorkspace({
 
       <div className="sticky top-0 z-10 -mx-5 border-y border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.8)] backdrop-blur dark:border-white/10 dark:bg-slate-950/95">
         <div className="flex flex-wrap items-center gap-2">
-          {canEdit && !isCompleted && (
-            <>
-              <button
-                type="button"
-                onClick={() => void save()}
-                disabled={isSaving}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:text-slate-100"
-              >
-                {localize('com_ui_project_meta_ads_diary_save')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCompleteConfirmOpen(true)}
-                disabled={isSaving}
-                className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {localize('com_ui_project_meta_ads_diary_complete')}
-              </button>
-            </>
-          )}
-          {canEdit && isCompleted && (
+          {canEdit && hasUnsavedChanges && (
             <button
               type="button"
-              onClick={() => void reopen()}
+              onClick={() => void save()}
               disabled={isSaving}
               className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:text-slate-100"
             >
-              {localize('com_ui_project_meta_ads_diary_reopen')}
+              {localize('com_ui_project_meta_ads_diary_save')}
             </button>
           )}
           {entry && (
@@ -404,49 +350,6 @@ export function TrafficDiaryWorkspace({
           )}
         </div>
       </div>
-
-      {isCompleteConfirmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4"
-          role="presentation"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="meta-ads-diary-complete-title"
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-slate-950"
-          >
-            <h3
-              id="meta-ads-diary-complete-title"
-              className="text-lg font-semibold text-slate-950 dark:text-white"
-            >
-              {localize('com_ui_project_meta_ads_diary_complete_confirm_title')}
-            </h3>
-            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              {localize('com_ui_project_meta_ads_diary_complete_confirm_description', {
-                0: formatDate(selectedDate),
-              })}
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setCompleteConfirmOpen(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-100"
-              >
-                {localize('com_ui_cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => void complete()}
-                disabled={isSaving}
-                className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {localize('com_ui_confirm')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
@@ -482,7 +385,7 @@ export function TrafficDiaryWorkspace({
                       {item.parentQuestionId ? (
                         <input
                           value={item.question}
-                          disabled={isCompleted || !canEdit}
+                          disabled={!canEdit}
                           onChange={(event) =>
                             setAnswers((current) =>
                               current.map((answer) =>
@@ -502,7 +405,7 @@ export function TrafficDiaryWorkspace({
                       )}
                       <textarea
                         value={item.answer}
-                        disabled={isCompleted || !canEdit}
+                        disabled={!canEdit}
                         onChange={(event) => updateAnswer(item.id, event.target.value)}
                         rows={3}
                         className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-white/15 dark:bg-slate-900"

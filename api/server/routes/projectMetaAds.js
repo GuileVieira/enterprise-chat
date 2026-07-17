@@ -923,9 +923,6 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
     const existing = await TrafficDiaryEntry.findOne(
       getDiaryProjectFilter(project, { userId: req.user.id, kind, date }),
     ).lean();
-    if (existing?.status === 'completed') {
-      return res.status(409).json({ message: 'Reopen the completed diary before editing.' });
-    }
     const actor = getDiaryActor(req.user);
     const timeZone = getDiaryTimeZone(req.user);
     const now = new Date();
@@ -940,7 +937,6 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
           userId: req.user.id,
           kind,
           date,
-          weekStart: date,
           status: 'draft',
           createdBy: actor,
           events: [{ type: 'created', actor, at: now }],
