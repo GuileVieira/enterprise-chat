@@ -79,6 +79,16 @@ export interface IMongoFile extends Omit<Document, 'model'> {
       sourceImageFileName?: string;
       derivedTextFileId?: string;
     };
+    trafficDiary?: {
+      entryId?: string;
+      projectId?: string;
+      tenantId?: string;
+      userId?: string;
+      date?: string;
+      weekStart?: string;
+      status?: 'draft' | 'completed';
+      updatedAt?: Date;
+    };
   };
   projectId?: string;
   expiresAt?: Date;

@@ -169,6 +169,22 @@ const file: Schema<IMongoFile> = new Schema(
         ),
         default: undefined,
       },
+      trafficDiary: {
+        type: new Schema(
+          {
+            entryId: { type: String, index: true },
+            projectId: { type: String, index: true },
+            tenantId: { type: String, index: true },
+            userId: { type: String, index: true },
+            date: { type: String, index: true },
+            weekStart: { type: String, index: true },
+            status: { type: String, enum: ['draft', 'completed'] },
+            updatedAt: Date,
+          },
+          { _id: false },
+        ),
+        default: undefined,
+      },
     },
     expiresAt: {
       type: Date,

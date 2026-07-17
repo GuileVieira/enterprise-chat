@@ -19,14 +19,12 @@ function formatTrafficDiary(entries) {
 
   const weeks = entries
     .map((entry) => {
+      const entryDate = entry.date || entry.weekStart;
       const answers = (entry.answers ?? [])
         .filter((answer) => answer.answer?.trim())
         .map((answer) => `- ${answer.question}: ${answer.answer.trim()}`)
         .join('\n');
-      return [
-        `### Semana de ${entry.weekStart}${entry.status === 'draft' ? ' (rascunho)' : ''}`,
-        answers,
-      ]
+      return [`### Dia ${entryDate}${entry.status === 'draft' ? ' (rascunho)' : ''}`, answers]
         .filter(Boolean)
         .join('\n');
     })
@@ -102,7 +100,7 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
           ...(project.tenantId ? { tenantId: project.tenantId } : {}),
         };
         const diaryEntries = await runAsSystem(async () =>
-          TrafficDiaryEntry.find(diaryQuery).sort({ weekStart: -1 }).limit(7).lean(),
+          TrafficDiaryEntry.find(diaryQuery).sort({ date: -1, weekStart: -1 }).limit(7).lean(),
         );
         const trafficDiary = formatTrafficDiary(diaryEntries);
         projectMemories = [projectMemories, trafficDiary].filter(Boolean).join('\n\n');

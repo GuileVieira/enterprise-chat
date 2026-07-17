@@ -22,7 +22,7 @@ const AnswerSchema = new Schema(
 
 const EventSchema = new Schema(
   {
-    type: { type: String, enum: ['created', 'completed', 'reopened'], required: true },
+    type: { type: String, enum: ['created', 'updated', 'completed', 'reopened'], required: true },
     actor: { type: ActorSchema, required: true },
     at: { type: Date, required: true },
   },
@@ -33,7 +33,10 @@ const trafficDiarySchema = new Schema<ITrafficDiaryEntry>(
   {
     projectId: { type: String, required: true, index: true },
     tenantId: { type: String, index: true },
-    weekStart: { type: String, required: true },
+    userId: { type: String, required: true, index: true },
+    date: { type: String, required: true },
+    timeZone: String,
+    weekStart: String,
     status: { type: String, enum: ['draft', 'completed'], default: 'draft', required: true },
     answers: { type: [AnswerSchema], default: [] },
     createdBy: { type: ActorSchema, required: true },
@@ -45,6 +48,6 @@ const trafficDiarySchema = new Schema<ITrafficDiaryEntry>(
   { timestamps: true },
 );
 
-trafficDiarySchema.index({ projectId: 1, weekStart: 1 }, { unique: true });
+trafficDiarySchema.index({ projectId: 1, userId: 1, date: 1 }, { unique: true });
 
 export default trafficDiarySchema;

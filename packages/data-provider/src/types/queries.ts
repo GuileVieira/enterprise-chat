@@ -112,7 +112,7 @@ export type ProjectTrafficDiaryActor = {
 };
 
 export type ProjectTrafficDiaryEvent = {
-  type: 'created' | 'completed' | 'reopened';
+  type: 'created' | 'updated' | 'completed' | 'reopened';
   actor: ProjectTrafficDiaryActor;
   at: string;
 };
@@ -120,6 +120,9 @@ export type ProjectTrafficDiaryEvent = {
 export type ProjectTrafficDiaryEntry = {
   _id: string;
   projectId: string;
+  userId: string;
+  date: string;
+  timeZone?: string;
   weekStart: string;
   status: 'draft' | 'completed';
   answers: ProjectTrafficDiaryAnswer[];

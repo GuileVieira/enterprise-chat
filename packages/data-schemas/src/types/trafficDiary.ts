@@ -1,7 +1,7 @@
 import type { Document } from 'mongoose';
 
 export type TrafficDiaryStatus = 'draft' | 'completed';
-export type TrafficDiaryEventType = 'created' | 'completed' | 'reopened';
+export type TrafficDiaryEventType = 'created' | 'updated' | 'completed' | 'reopened';
 
 export interface ITrafficDiaryActor {
   id: string;
@@ -25,6 +25,9 @@ export interface ITrafficDiaryEvent {
 export interface ITrafficDiaryEntry extends Document {
   projectId: string;
   tenantId?: string;
+  userId: string;
+  date: string;
+  timeZone?: string;
   weekStart: string;
   status: TrafficDiaryStatus;
   answers: ITrafficDiaryAnswer[];

@@ -1,5 +1,6 @@
 const express = require('express');
 const request = require('supertest');
+const mongoose = require('mongoose');
 const { SystemRoles } = require('librechat-data-provider');
 
 let mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
@@ -7,6 +8,8 @@ const mockCanAccessProjectResource = jest.fn(() => (_req, _res, next) => next())
 const mockGetRoleByName = jest.fn();
 
 jest.mock('~/models', () => ({
+  createFile: jest.fn(),
+  deleteFiles: jest.fn(),
   findProjectById: jest.fn(),
   getProjectById: jest.fn(),
   getRoleByName: (...args) => mockGetRoleByName(...args),
@@ -50,7 +53,13 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
 
 const { logger } = require('@librechat/data-schemas');
 const router = require('./projectMetaAds');
-const { getProjectById, updateProject, upsertTenantSecret } = require('~/models');
+const {
+  createFile,
+  deleteFiles,
+  getProjectById,
+  updateProject,
+  upsertTenantSecret,
+} = require('~/models');
 const {
   analyzeProject,
   applyManualBudgetChange,
@@ -746,6 +755,230 @@ describe('projectMetaAds diary validation', () => {
       { id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' },
       { id: 'strategy', question: 'Estratégia', answer: '' },
     ]);
+  });
+
+  it('accepts any ISO day, not only Mondays', () => {
+    expect(router._validateDiaryDateForTest('2026-07-14')).toBe('2026-07-14');
+  });
+});
+
+describe('projectMetaAds diary route', () => {
+  const originalModel = mongoose.models.TrafficDiaryEntry;
+
+  afterEach(() => {
+    if (originalModel) {
+      mongoose.models.TrafficDiaryEntry = originalModel;
+    } else {
+      delete mongoose.models.TrafficDiaryEntry;
+    }
+  });
+
+  it('saves one daily record per project, user, and date', async () => {
+    mockRouteUser = {
+      id: 'user-1',
+      name: 'Guilherme',
+      role: SystemRoles.ADMIN,
+      tenantId: 'tenant-x',
+    };
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+    const findOneAndUpdate = jest.fn().mockResolvedValue({
+      _id: 'entry-1',
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      userId: 'user-1',
+      date: '2026-07-14',
+      weekStart: '2026-07-14',
+      status: 'draft',
+      answers: [{ id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' }],
+      createdBy: { id: 'user-1', name: 'Guilherme' },
+      events: [],
+    });
+    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+
+    const response = await request(createApp())
+      .put('/projects/p1/meta-ads/diary/2026-07-14')
+      .send({ answers: [{ id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' }] })
+      .expect(200);
+
+    expect(findOne).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      userId: 'user-1',
+      date: '2026-07-14',
+    });
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { projectId: 'p1', tenantId: 'tenant-x', userId: 'user-1', date: '2026-07-14' },
+      expect.objectContaining({
+        $set: expect.objectContaining({
+          answers: [{ id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' }],
+          weekStart: '2026-07-14',
+        }),
+        $setOnInsert: expect.objectContaining({
+          projectId: 'p1',
+          tenantId: 'tenant-x',
+          userId: 'user-1',
+          date: '2026-07-14',
+          weekStart: '2026-07-14',
+          status: 'draft',
+        }),
+      }),
+      { new: true, upsert: true, lean: true },
+    );
+    expect(createFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file_id: 'traffic-diary:entry-1',
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        text: expect.stringContaining('Data: 2026-07-14'),
+        metadata: {
+          trafficDiary: expect.objectContaining({
+            date: '2026-07-14',
+            entryId: 'entry-1',
+            projectId: 'p1',
+            tenantId: 'tenant-x',
+            userId: 'user-1',
+          }),
+        },
+      }),
+      true,
+    );
+    expect(response.body).toEqual(expect.objectContaining({ date: '2026-07-14' }));
+  });
+
+  it('updates an existing daily record instead of creating a duplicate', async () => {
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const findOne = jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: 'entry-1',
+        projectId: 'p1',
+        userId: 'user-1',
+        date: '2026-07-14',
+        status: 'draft',
+      }),
+    });
+    const findOneAndUpdate = jest.fn().mockResolvedValue({
+      _id: 'entry-1',
+      projectId: 'p1',
+      userId: 'user-1',
+      date: '2026-07-14',
+      weekStart: '2026-07-14',
+      status: 'draft',
+      answers: [],
+      createdBy: { id: 'user-1' },
+      events: [{ type: 'updated', actor: { id: 'user-1' }, at: new Date() }],
+    });
+    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+
+    await request(createApp())
+      .put('/projects/p1/meta-ads/diary/2026-07-14')
+      .send({ answers: [] })
+      .expect(200);
+
+    expect(findOneAndUpdate.mock.calls[0][1]).toEqual(
+      expect.objectContaining({
+        $push: expect.objectContaining({
+          events: expect.objectContaining({ type: 'updated' }),
+        }),
+      }),
+    );
+  });
+
+  it('filters diary entries by date period', async () => {
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const find = jest.fn().mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mongoose.models.TrafficDiaryEntry = { find };
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/diary')
+      .query({ since: '2026-07-01', until: '2026-07-31' })
+      .expect(200);
+
+    expect(find).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      date: { $gte: '2026-07-01', $lte: '2026-07-31' },
+      $or: [{ userId: 'user-1' }, { userId: { $exists: false }, 'createdBy.id': 'user-1' }],
+    });
+  });
+
+  it('deletes the diary entry and its indexed file', async () => {
+    mockRouteUser = {
+      id: 'user-1',
+      name: 'Guilherme',
+      role: SystemRoles.ADMIN,
+      tenantId: 'tenant-x',
+    };
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const findOneAndDelete = jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        _id: '64f000000000000000000001',
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        userId: 'user-1',
+        date: '2026-07-14',
+      }),
+    });
+    mongoose.models.TrafficDiaryEntry = { findOneAndDelete };
+
+    await request(createApp())
+      .delete('/projects/p1/meta-ads/diary/64f000000000000000000001')
+      .expect(204);
+
+    expect(findOneAndDelete).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      _id: '64f000000000000000000001',
+      $or: [{ userId: 'user-1' }, { userId: { $exists: false }, 'createdBy.id': 'user-1' }],
+    });
+    expect(deleteFiles).toHaveBeenCalledWith(['traffic-diary:64f000000000000000000001']);
+  });
+
+  it('indexes diary text into project-scoped vector search', async () => {
+    const createFileForIndex = jest.fn().mockResolvedValue({});
+    const uploadVectorsFn = jest.fn().mockResolvedValue({
+      embedded: true,
+      filepath: 'vectordb',
+    });
+
+    await router._syncTrafficDiaryIndexForTest({
+      createFile: createFileForIndex,
+      uploadVectorsFn,
+      userId: 'user-1',
+      project: { projectId: 'p1', name: 'Cliente A', tenantId: 'tenant-x' },
+      entry: {
+        _id: 'entry-1',
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        userId: 'user-1',
+        date: '2026-07-14',
+        weekStart: '2026-07-14',
+        status: 'draft',
+        answers: [{ id: 'actions', question: 'Ações', answer: 'Ajustou campanha Leads SP.' }],
+        createdBy: { id: 'user-1' },
+      },
+    });
+
+    expect(uploadVectorsFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file_id: 'traffic-diary:entry-1',
+        entity_id: 'p1',
+      }),
+    );
+    expect(createFileForIndex).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embedded: true,
+        file_id: 'traffic-diary:entry-1',
+        filepath: 'vectordb',
+        projectId: 'p1',
+        text: expect.stringContaining('Ajustou campanha Leads SP.'),
+      }),
+      true,
+    );
   });
 });
 

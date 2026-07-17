@@ -115,6 +115,7 @@ describe('loadProjectContext', () => {
       limit: jest.fn().mockReturnThis(),
       lean: jest.fn().mockResolvedValue([
         {
+          date: '2026-07-13',
           weekStart: '2026-07-06',
           status: 'completed',
           answers: [{ question: 'Estratégia', answer: 'Validar novo gancho.' }],

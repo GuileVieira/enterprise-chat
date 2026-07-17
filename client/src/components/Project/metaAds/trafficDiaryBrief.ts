@@ -28,7 +28,7 @@ export function buildTrafficDiaryAnalysisBrief({
     '# Análise do diário de tráfego',
     '',
     `**Cliente:** ${projectName || 'Projeto'}`,
-    `**Semana:** ${formatDate(`${entry.weekStart}T12:00:00`)}`,
+    `**Dia:** ${formatDate(`${entry.date || entry.weekStart}T12:00:00`)}`,
     `**Registrado por:** ${author}${entry.createdAt ? ` · ${formatDate(entry.createdAt)}` : ''}`,
     ...(pendingAnswers > 0 ? [`**Respostas pendentes:** ${pendingAnswers}`] : []),
     '',

@@ -922,10 +922,10 @@ export const getProjectMetaAdsDiary = (id: string): Promise<q.ProjectTrafficDiar
 
 export const saveProjectMetaAdsDiary = (
   id: string,
-  weekStart: string,
+  date: string,
   answers: q.ProjectTrafficDiaryAnswer[],
 ): Promise<q.ProjectTrafficDiaryEntry> => {
-  return request.put(endpoints.projectMetaAdsDiaryWeek(id, weekStart), { answers });
+  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers });
 };
 
 export const completeProjectMetaAdsDiary = (
@@ -940,6 +940,10 @@ export const reopenProjectMetaAdsDiary = (
   entryId: string,
 ): Promise<q.ProjectTrafficDiaryEntry> => {
   return request.post(endpoints.projectMetaAdsDiaryReopen(id, entryId), {});
+};
+
+export const deleteProjectMetaAdsDiary = (id: string, entryId: string): Promise<void> => {
+  return request.delete(endpoints.projectMetaAdsDiaryDelete(id, entryId));
 };
 
 export const updateProjectMetaAdsSettings = (

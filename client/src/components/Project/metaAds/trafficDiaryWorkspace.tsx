@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle, Plus, Sparkle } from '@phosphor-icons/react';
+import { CheckCircle, Plus, Sparkle, Trash } from '@phosphor-icons/react';
 import {
   useCompleteProjectMetaAdsDiaryMutation,
+  useDeleteProjectMetaAdsDiaryMutation,
   useProjectMetaAdsDiaryQuery,
   useReopenProjectMetaAdsDiaryMutation,
   useSaveProjectMetaAdsDiaryMutation,
@@ -28,11 +29,15 @@ const diarySections = [
   },
 ] as const;
 
-function getWeekStart(date = new Date()) {
-  const local = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const offset = (local.getDay() + 6) % 7;
-  local.setDate(local.getDate() - offset);
-  return local.toISOString().slice(0, 10);
+function getDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
+    year: 'numeric',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function formatDate(value: string) {
@@ -60,6 +65,10 @@ function getDefaultAnswers(localize: ReturnType<typeof useLocalize>) {
   );
 }
 
+function getEntryDate(entry: ProjectTrafficDiaryEntry) {
+  return entry.date || entry.weekStart;
+}
+
 export function TrafficDiaryWorkspace({
   project,
   canEdit,
@@ -70,29 +79,34 @@ export function TrafficDiaryWorkspace({
   onAnalyze: (entry: ProjectTrafficDiaryEntry) => void;
 }) {
   const localize = useLocalize();
-  const currentWeekStart = getWeekStart();
+  const currentDate = getDateKey();
   const diaryQuery = useProjectMetaAdsDiaryQuery(project.projectId);
   const saveDiary = useSaveProjectMetaAdsDiaryMutation();
   const completeDiary = useCompleteProjectMetaAdsDiaryMutation();
   const reopenDiary = useReopenProjectMetaAdsDiaryMutation();
+  const deleteDiary = useDeleteProjectMetaAdsDiaryMutation();
   const defaultAnswers = useMemo(() => getDefaultAnswers(localize), [localize]);
   const defaultAnswersRef = useRef(defaultAnswers);
   defaultAnswersRef.current = defaultAnswers;
-  const [weekStart, setWeekStart] = useState(currentWeekStart);
+  const [selectedDate, setSelectedDate] = useState(currentDate);
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const entries = diaryQuery.data?.entries ?? [];
-  const entry = entries.find((item) => item.weekStart === weekStart);
-  const historyEntries = entries.filter((item) => item.weekStart !== currentWeekStart);
+  const entry = entries.find((item) => getEntryDate(item) === selectedDate);
+  const historyEntries = entries.filter((item) => getEntryDate(item) !== currentDate);
   const isCompleted = entry?.status === 'completed';
-  const isSaving = saveDiary.isLoading || completeDiary.isLoading || reopenDiary.isLoading;
+  const isSaving =
+    saveDiary.isLoading ||
+    completeDiary.isLoading ||
+    reopenDiary.isLoading ||
+    deleteDiary.isLoading;
 
   useEffect(() => {
     setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
     setError(null);
     setNotice(null);
-  }, [entry?.answers, entry?.updatedAt, entry?.weekStart]);
+  }, [entry?.answers, entry?.date, entry?.updatedAt, entry?.weekStart]);
 
   const updateAnswer = (id: string, answer: string) => {
     setAnswers((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)));
@@ -121,7 +135,7 @@ export function TrafficDiaryWorkspace({
       );
       const savedEntry = await saveDiary.mutateAsync({
         projectId: project.projectId,
-        weekStart,
+        date: selectedDate,
         answers: savedAnswers,
       });
       if (showNotice) {
@@ -161,6 +175,20 @@ export function TrafficDiaryWorkspace({
     }
   };
 
+  const deleteEntry = async () => {
+    if (!entry || !window.confirm(localize('com_ui_project_meta_ads_diary_delete_confirm'))) {
+      return;
+    }
+    try {
+      setError(null);
+      await deleteDiary.mutateAsync({ projectId: project.projectId, entryId: entry._id });
+      setSelectedDate(currentDate);
+      setNotice(localize('com_ui_project_meta_ads_diary_deleted_success'));
+    } catch {
+      setError(localize('com_ui_project_meta_ads_diary_delete_error'));
+    }
+  };
+
   const answersForSection = (section: (typeof diarySections)[number]) =>
     answers.filter(
       (answer) =>
@@ -191,7 +219,7 @@ export function TrafficDiaryWorkspace({
             {localize('com_ui_project_meta_ads_diary_description')}
           </p>
           <p className="mt-3 text-sm font-medium text-slate-900 dark:text-white">
-            {formatDate(weekStart)}
+            {formatDate(selectedDate)}
           </p>
           {entry && (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -202,10 +230,10 @@ export function TrafficDiaryWorkspace({
             </p>
           )}
         </div>
-        {weekStart !== currentWeekStart && (
+        {selectedDate !== currentDate && (
           <button
             type="button"
-            onClick={() => setWeekStart(currentWeekStart)}
+            onClick={() => setSelectedDate(currentDate)}
             className="self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-200"
           >
             {localize('com_ui_project_meta_ads_diary_this_week')}
@@ -267,6 +295,17 @@ export function TrafficDiaryWorkspace({
             >
               <Sparkle className="h-4 w-4" aria-hidden="true" />
               {localize('com_ui_project_meta_ads_diary_analyze')}
+            </button>
+          )}
+          {canEdit && entry && (
+            <button
+              type="button"
+              onClick={() => void deleteEntry()}
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-300/20 dark:text-red-200 dark:hover:bg-red-300/10"
+            >
+              <Trash className="h-4 w-4" aria-hidden="true" />
+              {localize('com_ui_project_meta_ads_diary_delete')}
             </button>
           )}
           {entry && !isCompleted && (
@@ -350,36 +389,35 @@ export function TrafficDiaryWorkspace({
             <div className="flex gap-3 overflow-x-auto pb-1 xl:max-h-[460px] xl:flex-col xl:overflow-y-auto xl:pr-1">
               <button
                 type="button"
-                onClick={() => setWeekStart(currentWeekStart)}
+                onClick={() => setSelectedDate(currentDate)}
                 className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
-                  weekStart === currentWeekStart
+                  selectedDate === currentDate
                     ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
                     : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03]'
                 }`}
               >
-                <span className="block text-sm font-semibold">{formatDate(currentWeekStart)}</span>
+                <span className="block text-sm font-semibold">{formatDate(currentDate)}</span>
                 <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
                   {localize('com_ui_project_meta_ads_diary_this_week')}
                 </span>
               </button>
               {historyEntries.map((historyEntry) => {
-                const isSelected = historyEntry.weekStart === weekStart;
+                const historyDate = getEntryDate(historyEntry);
+                const isSelected = historyDate === selectedDate;
                 const author =
                   historyEntry.createdBy.name || localize('com_ui_project_meta_ads_diary_manager');
                 return (
                   <button
                     key={historyEntry._id}
                     type="button"
-                    onClick={() => setWeekStart(historyEntry.weekStart)}
+                    onClick={() => setSelectedDate(historyDate)}
                     className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
                       isSelected
                         ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
                         : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03]'
                     }`}
                   >
-                    <span className="block text-sm font-semibold">
-                      {formatDate(historyEntry.weekStart)}
-                    </span>
+                    <span className="block text-sm font-semibold">{formatDate(historyDate)}</span>
                     <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
                       {localize(
                         historyEntry.status === 'completed'

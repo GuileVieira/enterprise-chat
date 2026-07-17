@@ -5,6 +5,7 @@ import { TrafficDiaryWorkspace } from './trafficDiaryWorkspace';
 const mockSave = jest.fn();
 const mockComplete = jest.fn();
 const mockReopen = jest.fn();
+const mockDelete = jest.fn();
 let mockEntries: unknown[] = [];
 
 jest.mock('~/data-provider', () => ({
@@ -15,6 +16,7 @@ jest.mock('~/data-provider', () => ({
     isLoading: false,
   }),
   useReopenProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockReopen, isLoading: false }),
+  useDeleteProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockDelete, isLoading: false }),
 }));
 
 jest.mock('~/hooks', () => ({
@@ -24,10 +26,13 @@ jest.mock('~/hooks', () => ({
 describe('TrafficDiaryWorkspace', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(window, 'confirm').mockReturnValue(true);
     mockEntries = [];
     mockSave.mockResolvedValue({
       _id: 'entry-1',
       projectId: 'project-1',
+      userId: 'user-1',
+      date: '2026-07-13',
       weekStart: '2026-07-06',
       status: 'draft',
       answers: [],
@@ -36,7 +41,11 @@ describe('TrafficDiaryWorkspace', () => {
     });
   });
 
-  it('saves partial weekly progress as a draft', async () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('saves partial daily progress as a draft', async () => {
     render(
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
@@ -68,6 +77,8 @@ describe('TrafficDiaryWorkspace', () => {
       {
         _id: 'entry-1',
         projectId: 'project-1',
+        userId: 'user-1',
+        date: '2026-07-06',
         weekStart: '2026-07-06',
         status: 'completed',
         answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Testar criativo.' }],
@@ -90,7 +101,7 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
   });
 
-  it('saves a new week before completing it', async () => {
+  it('saves the current day before completing the week', async () => {
     render(
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
@@ -107,11 +118,13 @@ describe('TrafficDiaryWorkspace', () => {
     });
   });
 
-  it('reopens a completed weekly record for editing', async () => {
+  it('reopens a completed daily record for editing', async () => {
     mockEntries = [
       {
         _id: 'entry-1',
         projectId: 'project-1',
+        userId: 'user-1',
+        date: '2026-07-06',
         weekStart: '2026-07-06',
         status: 'completed',
         answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Testar criativo.' }],
@@ -132,6 +145,38 @@ describe('TrafficDiaryWorkspace', () => {
 
     await waitFor(() => {
       expect(mockReopen).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+    });
+  });
+
+  it('deletes a selected diary record', async () => {
+    mockEntries = [
+      {
+        _id: 'entry-1',
+        projectId: 'project-1',
+        userId: 'user-1',
+        date: '2026-07-06',
+        weekStart: '2026-07-06',
+        status: 'draft',
+        answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Testar criativo.' }],
+        createdBy: { id: 'user-1', name: 'Guilherme' },
+        events: [],
+      },
+    ];
+    mockDelete.mockResolvedValue(undefined);
+
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('6 de jul. de 2026'));
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_delete'));
+
+    await waitFor(() => {
+      expect(mockDelete).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
     });
   });
 });
