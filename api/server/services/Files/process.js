@@ -42,6 +42,10 @@ const { determineFileType } = require('~/server/utils');
 const { STTService } = require('./Audio/STTService');
 const db = require('~/models');
 
+const OPENROUTER_IMAGE_OCR_DEFAULT_MODEL = 'google/gemini-3.1-flash-lite';
+const OPENROUTER_IMAGE_OCR_DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1';
+const OPENROUTER_IMAGE_OCR_NO_TEXT = '[NO_TEXT]';
+
 /**
  * Links a newly uploaded file to a project by adding its file_id to the project's fileIds array.
  * Silently fails if the project doesn't exist or the user lacks access.
@@ -64,34 +68,112 @@ const formatImageOcrText = ({ imageFile, text }) =>
     text.trim(),
   ].join('\n');
 
+const getImageOcrOpenRouterConfig = () => {
+  const baseURL =
+    process.env.IMAGE_RAG_OPENROUTER_BASE_URL || OPENROUTER_IMAGE_OCR_DEFAULT_BASE_URL;
+  return {
+    apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY,
+    url: `${baseURL.replace(/\/+$/, '')}/chat/completions`,
+    model:
+      process.env.IMAGE_RAG_OCR_MODEL ||
+      process.env.IMAGE_RAG_VISION_MODEL ||
+      OPENROUTER_IMAGE_OCR_DEFAULT_MODEL,
+    maxTokens: Number(process.env.IMAGE_RAG_OCR_MAX_TOKENS || 2000),
+    timeoutMs: Number(process.env.IMAGE_RAG_OCR_TIMEOUT_MS || 30000),
+  };
+};
+
+const readOpenRouterMessageText = (payload) => {
+  const content = payload?.choices?.[0]?.message?.content;
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  return content
+    .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+    .join('\n')
+    .trim();
+};
+
+const extractImageTextWithOpenRouter = async ({ file }) => {
+  const { apiKey, url, model, maxTokens, timeoutMs } = getImageOcrOpenRouterConfig();
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY or OPENROUTER_KEY is required for image OCR indexing');
+  }
+
+  const imageBuffer = await fs.promises.readFile(file.path);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'X-Title': 'Orqest Image OCR',
+        'X-OpenRouter-Title': 'Orqest Image OCR',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        max_tokens: maxTokens,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: [
+                  'Extract all readable text from this image for search indexing.',
+                  'Preserve line breaks, numbers, punctuation, and reading order.',
+                  `Return only extracted text. If no readable text exists, return exactly ${OPENROUTER_IMAGE_OCR_NO_TEXT}.`,
+                ].join(' '),
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${file.mimetype};base64,${imageBuffer.toString('base64')}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message = payload?.error?.message || response.statusText || 'OpenRouter OCR failed';
+      throw new Error(message);
+    }
+
+    const text = readOpenRouterMessageText(payload);
+    if (!text || text === OPENROUTER_IMAGE_OCR_NO_TEXT) {
+      throw new Error(`No text extracted from image "${file.originalname}"`);
+    }
+
+    return { text, source: `openrouter:${model}` };
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 const extractImageTextForRag = async ({ req, file }) => {
   const fileConfig = mergeFileConfig(req.config.fileConfig);
-  const isOCRSupported =
-    req.config?.ocr != null &&
-    fileConfig.checkType(file.mimetype, fileConfig.ocr?.supportedMimeTypes || []);
+  const supportedImageTypes = fileConfig.image?.supportedMimeTypes || [];
+  const isImageSupported =
+    file.mimetype?.startsWith('image/') &&
+    (supportedImageTypes.length === 0 || fileConfig.checkType(file.mimetype, supportedImageTypes));
 
-  if (!isOCRSupported) {
-    throw new Error(`OCR is not configured for image file_search uploads (${file.mimetype})`);
+  if (!isImageSupported) {
+    throw new Error(`Image OCR indexing is not configured for ${file.mimetype}`);
   }
 
-  const canUseOCR = await checkCapability(req, AgentCapabilities.ocr);
-  if (!canUseOCR && !req.body.projectId) {
-    throw new Error('OCR capability is not enabled for Agents');
-  }
-
-  const ocrStrategy = req.config?.ocr?.strategy;
-  if (!ocrStrategy) {
-    throw new Error('OCR strategy is not configured for image file_search uploads');
-  }
-
-  const { handleFileUpload } = getStrategyFunctions(ocrStrategy);
-  const ocrResult = await handleFileUpload({ req, file, loadAuthValues });
-  const text = ocrResult?.text?.trim();
-  if (!text) {
-    throw new Error(`No text extracted from image "${file.originalname}"`);
-  }
-
-  return { text, source: ocrStrategy };
+  return extractImageTextWithOpenRouter({ file });
 };
 
 const createTempTextUpload = async ({ file_id, filename, text }) => {

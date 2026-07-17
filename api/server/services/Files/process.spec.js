@@ -162,21 +162,53 @@ describe('processAgentFileUpload', () => {
   describe('image file_search uploads', () => {
     const fs = require('fs');
     let createReadStreamSpy;
+    let readFileSpy;
     let writeFileSpy;
     let unlinkSpy;
+    const originalFetch = global.fetch;
+    const originalOpenRouterKey = process.env.OPENROUTER_KEY;
+    const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+    const originalImageRagModel = process.env.IMAGE_RAG_OCR_MODEL;
 
     beforeEach(() => {
+      process.env.OPENROUTER_KEY = 'test-openrouter-key';
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.IMAGE_RAG_OCR_MODEL;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'OCR text from OpenRouter' } }],
+        }),
+      });
       createReadStreamSpy = jest
         .spyOn(fs, 'createReadStream')
         .mockImplementation(() => require('stream').Readable.from(Buffer.from('caption')));
+      readFileSpy = jest.spyOn(fs.promises, 'readFile').mockResolvedValue(Buffer.from('image'));
       writeFileSpy = jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
       unlinkSpy = jest.spyOn(fs.promises, 'unlink').mockResolvedValue();
     });
 
     afterEach(() => {
       createReadStreamSpy.mockRestore();
+      readFileSpy.mockRestore();
       writeFileSpy.mockRestore();
       unlinkSpy.mockRestore();
+      global.fetch = originalFetch;
+      if (originalOpenRouterKey === undefined) {
+        delete process.env.OPENROUTER_KEY;
+      } else {
+        process.env.OPENROUTER_KEY = originalOpenRouterKey;
+      }
+      if (originalOpenRouterApiKey === undefined) {
+        delete process.env.OPENROUTER_API_KEY;
+      } else {
+        process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+      }
+      if (originalImageRagModel === undefined) {
+        delete process.env.IMAGE_RAG_OCR_MODEL;
+      } else {
+        process.env.IMAGE_RAG_OCR_MODEL = originalImageRagModel;
+      }
     });
 
     test('stores the image, extracts OCR text, and indexes the saved image record for file_search', async () => {
@@ -228,11 +260,11 @@ describe('processAgentFileUpload', () => {
         expect.objectContaining({
           file_id: 'image-file-id',
           embedded: true,
-          text: expect.stringContaining('OCR text from image'),
+          text: expect.stringContaining('OCR text from OpenRouter'),
           metadata: expect.objectContaining({
             imageRag: expect.objectContaining({
               status: 'ready',
-              source: FileSources.mistral_ocr,
+              source: 'openrouter:google/gemini-3.1-flash-lite',
             }),
           }),
         }),
@@ -244,7 +276,28 @@ describe('processAgentFileUpload', () => {
           file_id: 'image-file-id',
         }),
       );
-      expect(getStrategyFunctions).toHaveBeenCalledWith(FileSources.mistral_ocr);
+      expect(getStrategyFunctions).not.toHaveBeenCalledWith(FileSources.mistral_ocr);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://openrouter.ai/api/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-openrouter-key',
+          }),
+          body: expect.any(String),
+        }),
+      );
+      const openRouterBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+      expect(openRouterBody).toEqual(
+        expect.objectContaining({
+          model: 'google/gemini-3.1-flash-lite',
+          temperature: 0,
+          max_tokens: 2000,
+        }),
+      );
+      expect(openRouterBody.messages[0].content[1].image_url.url).toBe(
+        'data:image/png;base64,aW1hZ2U=',
+      );
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
 
@@ -279,18 +332,11 @@ describe('processAgentFileUpload', () => {
       });
       req.file.originalname = 'photo.png';
       req.file.size = 123;
-      getStrategyFunctions
-        .mockReturnValueOnce({
-          handleImageUpload: jest.fn().mockResolvedValue({
-            filepath: '/images/photo.png',
-            bytes: 123,
-            width: 640,
-            height: 480,
-          }),
-        })
-        .mockReturnValueOnce({
-          handleFileUpload: jest.fn().mockRejectedValue(new Error('OCR failed')),
-        });
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Bad Request',
+        json: jest.fn().mockResolvedValue({ error: { message: 'OCR failed' } }),
+      });
 
       await processAgentFileUpload({
         req,
