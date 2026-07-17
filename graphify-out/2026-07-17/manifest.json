@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1784314890.0856118,
-    "ast_hash": "35d45090c6723ec0f2549e16cf7a36f0",
+    "mtime": 1784315102.5368419,
+    "ast_hash": "cc48ecf62dcf8e5f6782c20827302d49",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -16440,13 +16440,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.spec.tsx": {
-    "mtime": 1784314133.7531357,
-    "ast_hash": "052b69fd23576b9f7786ff790bb2b67b",
+    "mtime": 1784315133.900634,
+    "ast_hash": "a062c9c5320e0c777abfb7d88433f89f",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.tsx": {
-    "mtime": 1784315034.9796662,
-    "ast_hash": "fe733174adcf32e4da85c09a9bb0d172",
+    "mtime": 1784315068.0853643,
+    "ast_hash": "57680f2a09f3afc2e564c0b04ea1e150",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/trafficDiary.ts": {
