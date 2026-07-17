@@ -1284,19 +1284,30 @@ const mergeProjectMetaAdsDiaryEntry = (
 export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
   t.ProjectTrafficDiaryEntry,
   unknown,
-  { projectId: string; date: string; answers: t.ProjectTrafficDiaryAnswer[] },
+  {
+    projectId: string;
+    date: string;
+    answers: t.ProjectTrafficDiaryAnswer[];
+    kind?: t.ProjectTrafficDiaryKind;
+  },
   unknown
 > => {
   const queryClient = useQueryClient();
   return useMutation(
-    ({ projectId, date, answers }) => dataService.saveProjectMetaAdsDiary(projectId, date, answers),
+    ({ projectId, date, answers, kind }) =>
+      dataService.saveProjectMetaAdsDiary(projectId, date, answers, kind),
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
-        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          vars.kind ?? 'manager',
+        ]);
       },
     },
   );
@@ -1305,7 +1316,7 @@ export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
 export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
   t.ProjectTrafficDiaryEntry,
   unknown,
-  { projectId: string; entryId: string },
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
   unknown
 > => {
   const queryClient = useQueryClient();
@@ -1314,10 +1325,15 @@ export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
-        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          entry.kind ?? 'manager',
+        ]);
       },
     },
   );
@@ -1326,7 +1342,7 @@ export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
 export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
   t.ProjectTrafficDiaryEntry,
   unknown,
-  { projectId: string; entryId: string },
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
   unknown
 > => {
   const queryClient = useQueryClient();
@@ -1335,10 +1351,15 @@ export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
-        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          entry.kind ?? 'manager',
+        ]);
       },
     },
   );
@@ -1347,7 +1368,7 @@ export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
 export const useDeleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
   void,
   unknown,
-  { projectId: string; entryId: string },
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
   unknown
 > => {
   const queryClient = useQueryClient();
@@ -1356,12 +1377,17 @@ export const useDeleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (_, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
           (current) => ({
             entries: (current?.entries ?? []).filter((entry) => entry._id !== vars.entryId),
           }),
         );
-        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId, 'diary']);
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          vars.kind ?? 'manager',
+        ]);
       },
     },
   );

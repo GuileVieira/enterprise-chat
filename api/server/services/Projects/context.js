@@ -12,7 +12,7 @@ const emptyProjectContext = () => ({
   projectFileIds: [],
 });
 
-function formatTrafficDiary(entries) {
+function formatTrafficDiary(entries, kind) {
   if (!entries.length) {
     return '';
   }
@@ -31,7 +31,8 @@ function formatTrafficDiary(entries) {
     .filter(Boolean)
     .join('\n\n');
 
-  return weeks ? `## Diário do gestor de tráfego\n\n${weeks}` : '';
+  const title = kind === 'strategist' ? 'Diário da estrategista' : 'Diário do gestor de tráfego';
+  return weeks ? `## ${title}\n\n${weeks}` : '';
 }
 
 /**
@@ -99,11 +100,23 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
           projectId: project.projectId,
           ...(project.tenantId ? { tenantId: project.tenantId } : {}),
         };
-        const diaryEntries = await runAsSystem(async () =>
-          TrafficDiaryEntry.find(diaryQuery).sort({ date: -1, weekStart: -1 }).limit(7).lean(),
+        const [managerEntries, strategistEntries] = await runAsSystem(() =>
+          Promise.all([
+            TrafficDiaryEntry.find({ ...diaryQuery, kind: 'manager' })
+              .sort({ date: -1, weekStart: -1 })
+              .limit(7)
+              .lean(),
+            TrafficDiaryEntry.find({ ...diaryQuery, kind: 'strategist' })
+              .sort({ date: -1, weekStart: -1 })
+              .limit(7)
+              .lean(),
+          ]),
         );
-        const trafficDiary = formatTrafficDiary(diaryEntries);
-        projectMemories = [projectMemories, trafficDiary].filter(Boolean).join('\n\n');
+        const managerDiary = formatTrafficDiary(managerEntries, 'manager');
+        const strategistDiary = formatTrafficDiary(strategistEntries, 'strategist');
+        projectMemories = [projectMemories, managerDiary, strategistDiary]
+          .filter(Boolean)
+          .join('\n\n');
       } catch (error) {
         logger.error('[loadProjectContext] Traffic diary context failed', error);
       }

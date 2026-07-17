@@ -8,13 +8,15 @@ import {
   useSaveProjectMetaAdsDiaryMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import type { TranslationKeys } from '~/hooks';
 import type {
   ProjectTrafficDiaryAnswer,
   ProjectTrafficDiaryEntry,
+  ProjectTrafficDiaryKind,
   TProject,
 } from 'librechat-data-provider';
 
-const diarySections = [
+const managerDiarySections = [
   {
     key: 'context',
     questionIds: ['measurement', 'strategy', 'client_feedback'],
@@ -28,6 +30,44 @@ const diarySections = [
     questionIds: ['next_steps'],
   },
 ] as const;
+
+const strategistDiarySections = [
+  {
+    key: 'context',
+    questionIds: ['weekly_goal', 'manager_request', 'related_audience_offer'],
+  },
+  {
+    key: 'decisions',
+    questionIds: ['defined_strategy', 'copywriter_guidance', 'hypothesis', 'requested_creatives'],
+  },
+  {
+    key: 'next_steps',
+    questionIds: ['deadline', 'status', 'observed_result', 'learning', 'next_action'],
+  },
+] as const;
+
+const diaryConfigs = {
+  manager: {
+    sections: managerDiarySections,
+    titleKey: 'com_ui_project_meta_ads_diary_title',
+    descriptionKey: 'com_ui_project_meta_ads_diary_description',
+    actorKey: 'com_ui_project_meta_ads_diary_manager',
+    accentClassName: 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10',
+  },
+  strategist: {
+    sections: strategistDiarySections,
+    titleKey: 'com_ui_project_meta_ads_strategy_diary_title',
+    descriptionKey: 'com_ui_project_meta_ads_strategy_diary_description',
+    actorKey: 'com_ui_project_meta_ads_strategy_diary_actor',
+    accentClassName:
+      'border-indigo-400 bg-indigo-50 dark:border-indigo-300/50 dark:bg-indigo-300/10',
+  },
+} as const;
+
+const diaryKinds = ['manager', 'strategist'] as const;
+type DiarySection =
+  | (typeof managerDiarySections)[number]
+  | (typeof strategistDiarySections)[number];
 
 function getDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -55,11 +95,18 @@ function formatDateTime(value?: string) {
   );
 }
 
-function getDefaultAnswers(localize: ReturnType<typeof useLocalize>) {
-  return diarySections.flatMap((section) =>
+function getDefaultAnswers(
+  localize: ReturnType<typeof useLocalize>,
+  kind: ProjectTrafficDiaryKind,
+) {
+  return diaryConfigs[kind].sections.flatMap((section) =>
     section.questionIds.map((id) => ({
       id,
-      question: localize(`com_ui_project_meta_ads_diary_question_${id}`),
+      question: localize(
+        kind === 'strategist'
+          ? (`com_ui_project_meta_ads_strategy_diary_question_${id}` as TranslationKeys)
+          : (`com_ui_project_meta_ads_diary_question_${id}` as TranslationKeys),
+      ),
       answer: '',
     })),
   );
@@ -80,12 +127,17 @@ export function TrafficDiaryWorkspace({
 }) {
   const localize = useLocalize();
   const currentDate = getDateKey();
-  const diaryQuery = useProjectMetaAdsDiaryQuery(project.projectId);
+  const [activeKind, setActiveKind] = useState<ProjectTrafficDiaryKind>('manager');
+  const diaryQuery = useProjectMetaAdsDiaryQuery(project.projectId, activeKind);
   const saveDiary = useSaveProjectMetaAdsDiaryMutation();
   const completeDiary = useCompleteProjectMetaAdsDiaryMutation();
   const reopenDiary = useReopenProjectMetaAdsDiaryMutation();
   const deleteDiary = useDeleteProjectMetaAdsDiaryMutation();
-  const defaultAnswers = useMemo(() => getDefaultAnswers(localize), [localize]);
+  const config = diaryConfigs[activeKind];
+  const defaultAnswers = useMemo(
+    () => getDefaultAnswers(localize, activeKind),
+    [activeKind, localize],
+  );
   const defaultAnswersRef = useRef(defaultAnswers);
   defaultAnswersRef.current = defaultAnswers;
   const [selectedDate, setSelectedDate] = useState(currentDate);
@@ -106,7 +158,7 @@ export function TrafficDiaryWorkspace({
     setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
     setError(null);
     setNotice(null);
-  }, [entry?.answers, entry?.date, entry?.updatedAt, entry?.weekStart]);
+  }, [activeKind, entry?.answers, entry?.date, entry?.updatedAt, entry?.weekStart]);
 
   const updateAnswer = (id: string, answer: string) => {
     setAnswers((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)));
@@ -119,7 +171,7 @@ export function TrafficDiaryWorkspace({
         id: `custom_${Date.now()}`,
         question: '',
         answer: '',
-        parentQuestionId: 'strategy',
+        parentQuestionId: activeKind === 'strategist' ? 'defined_strategy' : 'strategy',
       },
     ]);
   };
@@ -137,6 +189,7 @@ export function TrafficDiaryWorkspace({
         projectId: project.projectId,
         date: selectedDate,
         answers: savedAnswers,
+        kind: activeKind,
       });
       if (showNotice) {
         setNotice(localize('com_ui_project_meta_ads_diary_saved'));
@@ -155,7 +208,11 @@ export function TrafficDiaryWorkspace({
     }
     try {
       setError(null);
-      await completeDiary.mutateAsync({ projectId: project.projectId, entryId: savedEntry._id });
+      await completeDiary.mutateAsync({
+        projectId: project.projectId,
+        entryId: savedEntry._id,
+        kind: activeKind,
+      });
       setNotice(localize('com_ui_project_meta_ads_diary_completed_success'));
     } catch {
       setError(localize('com_ui_project_meta_ads_diary_complete_error'));
@@ -168,7 +225,11 @@ export function TrafficDiaryWorkspace({
     }
     try {
       setError(null);
-      await reopenDiary.mutateAsync({ projectId: project.projectId, entryId: entry._id });
+      await reopenDiary.mutateAsync({
+        projectId: project.projectId,
+        entryId: entry._id,
+        kind: activeKind,
+      });
       setNotice(localize('com_ui_project_meta_ads_diary_reopened_success'));
     } catch {
       setError(localize('com_ui_project_meta_ads_diary_reopen_error'));
@@ -181,7 +242,11 @@ export function TrafficDiaryWorkspace({
     }
     try {
       setError(null);
-      await deleteDiary.mutateAsync({ projectId: project.projectId, entryId: entry._id });
+      await deleteDiary.mutateAsync({
+        projectId: project.projectId,
+        entryId: entry._id,
+        kind: activeKind,
+      });
       setSelectedDate(currentDate);
       setNotice(localize('com_ui_project_meta_ads_diary_deleted_success'));
     } catch {
@@ -189,7 +254,7 @@ export function TrafficDiaryWorkspace({
     }
   };
 
-  const answersForSection = (section: (typeof diarySections)[number]) =>
+  const answersForSection = (section: DiarySection) =>
     answers.filter(
       (answer) =>
         (section.questionIds as readonly string[]).includes(answer.id) ||
@@ -201,10 +266,31 @@ export function TrafficDiaryWorkspace({
     <div id="meta-ads-diary-tab-panel" role="tabpanel" className="space-y-5 p-5">
       <header className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/70 p-5 dark:border-white/10 dark:bg-slate-950/20 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
+          <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950">
+            {diaryKinds.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => {
+                  setActiveKind(kind);
+                  setSelectedDate(currentDate);
+                }}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  activeKind === kind
+                    ? diaryConfigs[kind].accentClassName
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10'
+                }`}
+              >
+                {localize(
+                  kind === 'strategist'
+                    ? 'com_ui_project_meta_ads_strategy_diary_tab'
+                    : 'com_ui_project_meta_ads_manager_diary_tab',
+                )}
+              </button>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-semibold tracking-tight">
-              {localize('com_ui_project_meta_ads_diary_title')}
-            </h3>
+            <h3 className="text-xl font-semibold tracking-tight">{localize(config.titleKey)}</h3>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-200">
               {entry
                 ? localize(
@@ -216,7 +302,7 @@ export function TrafficDiaryWorkspace({
             </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            {localize('com_ui_project_meta_ads_diary_description')}
+            {localize(config.descriptionKey)}
           </p>
           <p className="mt-3 text-sm font-medium text-slate-900 dark:text-white">
             {formatDate(selectedDate)}
@@ -224,7 +310,7 @@ export function TrafficDiaryWorkspace({
           {entry && (
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {localize('com_ui_project_meta_ads_diary_entry_meta', {
-                0: entry.createdBy.name || localize('com_ui_project_meta_ads_diary_manager'),
+                0: entry.createdBy.name || localize(config.actorKey),
                 1: formatDateTime(entry.updatedAt || entry.createdAt),
               })}
             </p>
@@ -318,7 +404,7 @@ export function TrafficDiaryWorkspace({
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
-          {diarySections.map((section) => {
+          {config.sections.map((section) => {
             const sectionAnswers = answersForSection(section);
             if (sectionAnswers.length === 0) {
               return null;
@@ -326,7 +412,9 @@ export function TrafficDiaryWorkspace({
             return (
               <section key={section.key} className="space-y-3">
                 <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                  {localize(`com_ui_project_meta_ads_diary_section_${section.key}`)}
+                  {localize(
+                    `com_ui_project_meta_ads_diary_section_${section.key}` as TranslationKeys,
+                  )}
                 </h4>
                 <div className="space-y-3">
                   {sectionAnswers.map((item) => (
@@ -404,8 +492,7 @@ export function TrafficDiaryWorkspace({
               {historyEntries.map((historyEntry) => {
                 const historyDate = getEntryDate(historyEntry);
                 const isSelected = historyDate === selectedDate;
-                const author =
-                  historyEntry.createdBy.name || localize('com_ui_project_meta_ads_diary_manager');
+                const author = historyEntry.createdBy.name || localize(config.actorKey);
                 return (
                   <button
                     key={historyEntry._id}

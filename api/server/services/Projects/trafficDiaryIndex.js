@@ -10,7 +10,8 @@ function getEntryId(entry) {
 
 function getDiaryIndexFileId(entry) {
   const entryId = getEntryId(entry);
-  return entryId ? `traffic-diary:${entryId}` : '';
+  const kind = entry?.kind === 'strategist' ? 'strategist' : 'manager';
+  return entryId ? `traffic-diary:${kind}:${entryId}` : '';
 }
 
 function getActorLabel(actor) {
@@ -29,6 +30,8 @@ function getCampaignLines(answers = []) {
 }
 
 function formatTrafficDiaryIndexText({ entry, project }) {
+  const kind = entry.kind === 'strategist' ? 'strategist' : 'manager';
+  const title = kind === 'strategist' ? 'Diário da estrategista' : 'Diário do gestor de tráfego';
   const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toISOString() : '';
   const date = entry.completedAt || entry.updatedAt || entry.createdAt;
   const recordDate =
@@ -41,13 +44,14 @@ function formatTrafficDiaryIndexText({ entry, project }) {
     .join('\n');
 
   return [
-    '# Diário do gestor de tráfego',
+    `# ${title}`,
     `Projeto: ${project.projectId}`,
     `Cliente: ${project.name || project.projectId}`,
     `Data: ${recordDate}`,
     `Semana: ${entry.weekStart || entry.date}`,
     `Autor: ${getActorLabel(author)}`,
     `Campanhas relacionadas: ${campaigns.length ? campaigns.join(' | ') : 'não informado'}`,
+    `Tipo de diário: ${kind === 'strategist' ? 'estrategista' : 'gestor de tráfego'}`,
     `Tipo de registro: ${entry.status === 'completed' ? 'fechamento semanal' : 'registro diário'}`,
     `Data da última atualização: ${updatedAt || 'não informado'}`,
     '',
@@ -70,7 +74,8 @@ async function syncTrafficDiaryIndex({
     return null;
   }
   const text = formatTrafficDiaryIndexText({ entry, project });
-  const filename = `diario-gestor-${entry.date || entry.weekStart}.txt`;
+  const kind = entry?.kind === 'strategist' ? 'estrategista' : 'gestor';
+  const filename = `diario-${kind}-${entry.date || entry.weekStart}.txt`;
   const filepath = path.join(os.tmpdir(), `${file_id.replace(/[^a-zA-Z0-9._-]/g, '_')}.txt`);
   await fs.promises.writeFile(filepath, text, 'utf8');
   let embeddingResult;
@@ -111,6 +116,7 @@ async function syncTrafficDiaryIndex({
       metadata: {
         trafficDiary: {
           entryId: getEntryId(entry),
+          kind: entry.kind || 'manager',
           projectId: project.projectId,
           tenantId: project.tenantId,
           userId: entry.userId,

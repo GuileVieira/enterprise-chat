@@ -112,11 +112,60 @@ async function migrateTenantProjectFiles() {
   );
 }
 
+async function migrateTrafficDiaryIndexes() {
+  const collection = mongoose.connection.db?.collection('trafficdiaryentries');
+  if (!collection) {
+    return;
+  }
+  try {
+    const backfill = await collection.updateMany(
+      { $or: [{ kind: { $exists: false } }, { kind: null }] },
+      { $set: { kind: 'manager' } },
+    );
+    if (backfill.modifiedCount > 0) {
+      logger.info(
+        `[trafficDiaryMigration] Backfilled kind=manager in ${backfill.modifiedCount} entries`,
+      );
+    }
+    const indexes = await collection.indexes();
+    const hasOldUniqueIndex = indexes.some((index) => index.name === 'projectId_1_userId_1_date_1');
+    const hasKindUniqueIndex = indexes.some(
+      (index) => index.name === 'projectId_1_userId_1_kind_1_date_1',
+    );
+    if (!hasOldUniqueIndex) {
+      if (!hasKindUniqueIndex) {
+        await collection.createIndex(
+          { projectId: 1, userId: 1, kind: 1, date: 1 },
+          { unique: true },
+        );
+        logger.info('[trafficDiaryMigration] Created project/user/kind/date unique index');
+      }
+      return;
+    }
+    await collection.dropIndex('projectId_1_userId_1_date_1');
+    logger.info('[trafficDiaryMigration] Dropped old project/user/date unique index');
+    if (!hasKindUniqueIndex) {
+      await collection.createIndex({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: true });
+      logger.info('[trafficDiaryMigration] Created project/user/kind/date unique index');
+    }
+  } catch (error) {
+    if (error?.codeName !== 'NamespaceNotFound') {
+      logger.error('[trafficDiaryMigration] Failed to migrate diary indexes:', error);
+    }
+  }
+}
+
 /**
  * Check if permissions migrations are needed for shared resources
  * This runs at the end to ensure all systems are initialized
  */
 async function checkMigrations() {
+  try {
+    await migrateTrafficDiaryIndexes();
+  } catch (error) {
+    logger.error('Failed to migrate traffic diary indexes:', error);
+  }
+
   try {
     await migrateTenantProjectFiles();
   } catch (error) {
@@ -152,4 +201,5 @@ async function checkMigrations() {
 module.exports = {
   checkMigrations,
   migrateTenantProjectFiles,
+  migrateTrafficDiaryIndexes,
 };

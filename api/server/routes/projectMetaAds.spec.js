@@ -593,7 +593,7 @@ describe('projectMetaAds settings normalization', () => {
       id: 'user-1',
       name: 'Bruno Ads',
       email: 'bruno@example.com',
-      role: SystemRoles.ADMIN,
+      role: SystemRoles.AD_MANAGER,
       tenantId: 'tenant-x',
     };
     getProjectById.mockResolvedValue({
@@ -765,6 +765,10 @@ describe('projectMetaAds diary validation', () => {
 describe('projectMetaAds diary route', () => {
   const originalModel = mongoose.models.TrafficDiaryEntry;
 
+  beforeEach(() => {
+    mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
+  });
+
   afterEach(() => {
     if (originalModel) {
       mongoose.models.TrafficDiaryEntry = originalModel;
@@ -777,7 +781,7 @@ describe('projectMetaAds diary route', () => {
     mockRouteUser = {
       id: 'user-1',
       name: 'Guilherme',
-      role: SystemRoles.ADMIN,
+      role: SystemRoles.AD_MANAGER,
       tenantId: 'tenant-x',
     };
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
@@ -787,6 +791,7 @@ describe('projectMetaAds diary route', () => {
       projectId: 'p1',
       tenantId: 'tenant-x',
       userId: 'user-1',
+      kind: 'manager',
       date: '2026-07-14',
       weekStart: '2026-07-14',
       status: 'draft',
@@ -805,10 +810,17 @@ describe('projectMetaAds diary route', () => {
       projectId: 'p1',
       tenantId: 'tenant-x',
       userId: 'user-1',
+      kind: 'manager',
       date: '2026-07-14',
     });
     expect(findOneAndUpdate).toHaveBeenCalledWith(
-      { projectId: 'p1', tenantId: 'tenant-x', userId: 'user-1', date: '2026-07-14' },
+      {
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        userId: 'user-1',
+        kind: 'manager',
+        date: '2026-07-14',
+      },
       expect.objectContaining({
         $set: expect.objectContaining({
           answers: [{ id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' }],
@@ -818,6 +830,7 @@ describe('projectMetaAds diary route', () => {
           projectId: 'p1',
           tenantId: 'tenant-x',
           userId: 'user-1',
+          kind: 'manager',
           date: '2026-07-14',
           weekStart: '2026-07-14',
           status: 'draft',
@@ -827,7 +840,7 @@ describe('projectMetaAds diary route', () => {
     );
     expect(createFile).toHaveBeenCalledWith(
       expect.objectContaining({
-        file_id: 'traffic-diary:entry-1',
+        file_id: 'traffic-diary:manager:entry-1',
         projectId: 'p1',
         tenantId: 'tenant-x',
         text: expect.stringContaining('Data: 2026-07-14'),
@@ -835,6 +848,7 @@ describe('projectMetaAds diary route', () => {
           trafficDiary: expect.objectContaining({
             date: '2026-07-14',
             entryId: 'entry-1',
+            kind: 'manager',
             projectId: 'p1',
             tenantId: 'tenant-x',
             userId: 'user-1',
@@ -847,12 +861,19 @@ describe('projectMetaAds diary route', () => {
   });
 
   it('updates an existing daily record instead of creating a duplicate', async () => {
+    mockRouteUser = {
+      id: 'user-1',
+      name: 'Guilherme',
+      role: SystemRoles.AD_MANAGER,
+      tenantId: 'tenant-x',
+    };
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
     const findOne = jest.fn().mockReturnValue({
       lean: jest.fn().mockResolvedValue({
         _id: 'entry-1',
         projectId: 'p1',
         userId: 'user-1',
+        kind: 'manager',
         date: '2026-07-14',
         status: 'draft',
       }),
@@ -861,6 +882,7 @@ describe('projectMetaAds diary route', () => {
       _id: 'entry-1',
       projectId: 'p1',
       userId: 'user-1',
+      kind: 'manager',
       date: '2026-07-14',
       weekStart: '2026-07-14',
       status: 'draft',
@@ -884,6 +906,53 @@ describe('projectMetaAds diary route', () => {
     );
   });
 
+  it('keeps strategist diary separate from manager diary for the same day', async () => {
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const findOne = jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) });
+    const findOneAndUpdate = jest.fn().mockResolvedValue({
+      _id: 'entry-2',
+      projectId: 'p1',
+      userId: 'user-1',
+      kind: 'strategist',
+      date: '2026-07-14',
+      weekStart: '2026-07-14',
+      status: 'draft',
+      answers: [],
+      createdBy: { id: 'user-1' },
+      events: [],
+    });
+    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+
+    await request(createApp())
+      .put('/projects/p1/meta-ads/diary/2026-07-14')
+      .send({ kind: 'strategist', answers: [] })
+      .expect(200);
+
+    expect(findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'strategist', date: '2026-07-14' }),
+    );
+    expect(findOneAndUpdate.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ kind: 'strategist', date: '2026-07-14' }),
+    );
+  });
+
+  it('blocks owner and admin diary edits while still allowing diary reads', async () => {
+    mockRouteUser = { id: 'owner-1', role: SystemRoles.OWNER, tenantId: 'tenant-x' };
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const find = jest.fn().mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mongoose.models.TrafficDiaryEntry = { find, findOne: jest.fn() };
+
+    await request(createApp()).get('/projects/p1/meta-ads/diary?kind=strategist').expect(200);
+    await request(createApp())
+      .put('/projects/p1/meta-ads/diary/2026-07-14')
+      .send({ kind: 'strategist', answers: [] })
+      .expect(403);
+  });
+
   it('filters diary entries by date period', async () => {
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
     const find = jest.fn().mockReturnValue({
@@ -901,6 +970,7 @@ describe('projectMetaAds diary route', () => {
     expect(find).toHaveBeenCalledWith({
       projectId: 'p1',
       tenantId: 'tenant-x',
+      kind: 'manager',
       date: { $gte: '2026-07-01', $lte: '2026-07-31' },
       $or: [{ userId: 'user-1' }, { userId: { $exists: false }, 'createdBy.id': 'user-1' }],
     });
@@ -910,7 +980,7 @@ describe('projectMetaAds diary route', () => {
     mockRouteUser = {
       id: 'user-1',
       name: 'Guilherme',
-      role: SystemRoles.ADMIN,
+      role: SystemRoles.AD_MANAGER,
       tenantId: 'tenant-x',
     };
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
@@ -920,6 +990,7 @@ describe('projectMetaAds diary route', () => {
         projectId: 'p1',
         tenantId: 'tenant-x',
         userId: 'user-1',
+        kind: 'manager',
         date: '2026-07-14',
       }),
     });
@@ -935,7 +1006,7 @@ describe('projectMetaAds diary route', () => {
       _id: '64f000000000000000000001',
       $or: [{ userId: 'user-1' }, { userId: { $exists: false }, 'createdBy.id': 'user-1' }],
     });
-    expect(deleteFiles).toHaveBeenCalledWith(['traffic-diary:64f000000000000000000001']);
+    expect(deleteFiles).toHaveBeenCalledWith(['traffic-diary:manager:64f000000000000000000001']);
   });
 
   it('indexes diary text into project-scoped vector search', async () => {
@@ -955,6 +1026,7 @@ describe('projectMetaAds diary route', () => {
         projectId: 'p1',
         tenantId: 'tenant-x',
         userId: 'user-1',
+        kind: 'strategist',
         date: '2026-07-14',
         weekStart: '2026-07-14',
         status: 'draft',
@@ -965,20 +1037,42 @@ describe('projectMetaAds diary route', () => {
 
     expect(uploadVectorsFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        file_id: 'traffic-diary:entry-1',
+        file_id: 'traffic-diary:strategist:entry-1',
         entity_id: 'p1',
       }),
     );
     expect(createFileForIndex).toHaveBeenCalledWith(
       expect.objectContaining({
         embedded: true,
-        file_id: 'traffic-diary:entry-1',
+        file_id: 'traffic-diary:strategist:entry-1',
         filepath: 'vectordb',
         projectId: 'p1',
         text: expect.stringContaining('Ajustou campanha Leads SP.'),
       }),
       true,
     );
+  });
+
+  it('removes diary vectors and file record from the index', async () => {
+    const deleteFilesForIndex = jest.fn().mockResolvedValue({ deletedCount: 1 });
+    const deleteVectorsFn = jest.fn().mockResolvedValue(undefined);
+    const req = { user: { id: 'user-1' } };
+
+    await router._deleteTrafficDiaryIndexForTest({
+      req,
+      deleteFiles: deleteFilesForIndex,
+      deleteVectorsFn,
+      entry: {
+        _id: 'entry-1',
+        kind: 'manager',
+      },
+    });
+
+    expect(deleteVectorsFn).toHaveBeenCalledWith(req, {
+      file_id: 'traffic-diary:manager:entry-1',
+      embedded: true,
+    });
+    expect(deleteFilesForIndex).toHaveBeenCalledWith(['traffic-diary:manager:entry-1']);
   });
 });
 

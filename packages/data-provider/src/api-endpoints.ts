@@ -143,7 +143,8 @@ export const projectMetaAdsRulePerformance = (id: string) =>
   `${projectMetaAds(id)}/rules/performance`;
 export const projectMetaAdsRuleHistory = (id: string) => `${projectMetaAds(id)}/rules/history`;
 export const projectMetaAdsRuns = (id: string) => `${projectMetaAds(id)}/runs`;
-export const projectMetaAdsDiary = (id: string) => `${projectMetaAds(id)}/diary`;
+export const projectMetaAdsDiary = (id: string, kind?: string) =>
+  `${projectMetaAds(id)}/diary${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`;
 export const projectMetaAdsDiaryWeek = (id: string, date: string) =>
   `${projectMetaAdsDiary(id)}/${encodeURIComponent(date)}`;
 export const projectMetaAdsDiaryComplete = (id: string, entryId: string) =>

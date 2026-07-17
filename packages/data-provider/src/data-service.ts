@@ -916,16 +916,20 @@ export const getProjectMetaAdsRuns = (
   return request.get(endpoints.projectMetaAdsRuns(id), { params });
 };
 
-export const getProjectMetaAdsDiary = (id: string): Promise<q.ProjectTrafficDiaryResponse> => {
-  return request.get(endpoints.projectMetaAdsDiary(id));
+export const getProjectMetaAdsDiary = (
+  id: string,
+  kind?: q.ProjectTrafficDiaryKind,
+): Promise<q.ProjectTrafficDiaryResponse> => {
+  return request.get(endpoints.projectMetaAdsDiary(id, kind));
 };
 
 export const saveProjectMetaAdsDiary = (
   id: string,
   date: string,
   answers: q.ProjectTrafficDiaryAnswer[],
+  kind?: q.ProjectTrafficDiaryKind,
 ): Promise<q.ProjectTrafficDiaryEntry> => {
-  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers });
+  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers, kind });
 };
 
 export const completeProjectMetaAdsDiary = (

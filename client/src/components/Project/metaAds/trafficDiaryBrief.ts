@@ -14,7 +14,8 @@ export function buildTrafficDiaryAnalysisBrief({
   entry: ProjectTrafficDiaryEntry;
   projectName?: string;
 }) {
-  const author = entry.createdBy.name || 'Gestor de tráfego';
+  const isStrategistDiary = entry.kind === 'strategist';
+  const author = entry.createdBy.name || (isStrategistDiary ? 'Estrategista' : 'Gestor de tráfego');
   const filledAnswers = entry.answers.filter((answer) => answer.answer.trim().length > 0);
   const pendingAnswers = entry.answers.length - filledAnswers.length;
   const answers =
@@ -25,7 +26,7 @@ export function buildTrafficDiaryAnalysisBrief({
       .join('\n\n') || 'Nenhuma resposta preenchida.';
 
   return [
-    '# Análise do diário de tráfego',
+    isStrategistDiary ? '# Análise do diário da estrategista' : '# Análise do diário de tráfego',
     '',
     `**Cliente:** ${projectName || 'Projeto'}`,
     `**Dia:** ${formatDate(`${entry.date || entry.weekStart}T12:00:00`)}`,

@@ -176,10 +176,14 @@ async function requireMetaAdsRoleAccess(req, res, next) {
 
 const metaAdsAccess = [requireMetaAdsProjectView, requireMetaAdsRoleAccess];
 const metaAdsClientActionAccess = metaAdsAccess;
-const metaAdsDiaryEditAccess = [
-  canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
-  requireMetaAdsRoleAccess,
-];
+function requireMetaAdsDiaryEditAccess(req, res, next) {
+  if (req.user?.role === SystemRoles.ADMIN || req.user?.role === SystemRoles.OWNER) {
+    return res.status(403).json({ message: 'Diary editing is restricted to strategy profiles.' });
+  }
+  return next();
+}
+const metaAdsDiaryEditAccess = [...metaAdsAccess, requireMetaAdsDiaryEditAccess];
+
 function getDiaryActor(user) {
   return {
     id: user.id,
@@ -210,6 +214,16 @@ function getDiaryDateKey(date = new Date(), timeZone = getDiaryTimeZone()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function validateDiaryKind(value) {
+  if (value == null || value === '') {
+    return 'manager';
+  }
+  if (value !== 'manager' && value !== 'strategist') {
+    throw Object.assign(new Error('Invalid diary kind.'), { statusCode: 400 });
+  }
+  return value;
+}
+
 function validateDiaryDate(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw Object.assign(new Error('date must be an ISO date.'), { statusCode: 400 });
@@ -237,7 +251,7 @@ function normalizeDiaryEntry(entry) {
     return entry;
   }
   const date = entry.date || entry.weekStart;
-  return { ...entry, date, weekStart: entry.weekStart || date };
+  return { ...entry, kind: entry.kind || 'manager', date, weekStart: entry.weekStart || date };
 }
 
 function validateDiaryAnswers(value) {
@@ -882,8 +896,9 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
+    const kind = validateDiaryKind(req.query.kind);
     const entries = await TrafficDiaryEntry.find({
-      ...getDiaryProjectFilter(project),
+      ...getDiaryProjectFilter(project, { kind }),
       ...getDiaryPeriodQuery(req.query),
       $or: [{ userId: req.user.id }, { userId: { $exists: false }, 'createdBy.id': req.user.id }],
     })
@@ -904,6 +919,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
       throw new Error('Traffic diary model is unavailable.');
     }
     const date = validateDiaryDate(req.params.weekStart);
+    const kind = validateDiaryKind(req.body.kind ?? req.query.kind);
     const answers = validateDiaryAnswers(req.body.answers);
     const project =
       (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
@@ -911,7 +927,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
     const existing = await TrafficDiaryEntry.findOne(
-      getDiaryProjectFilter(project, { userId: req.user.id, date }),
+      getDiaryProjectFilter(project, { userId: req.user.id, kind, date }),
     ).lean();
     if (existing?.status === 'completed') {
       return res.status(409).json({ message: 'Reopen the completed diary before editing.' });
@@ -920,7 +936,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
     const timeZone = getDiaryTimeZone(req.user);
     const now = new Date();
     const entry = await TrafficDiaryEntry.findOneAndUpdate(
-      getDiaryProjectFilter(project, { userId: req.user.id, date }),
+      getDiaryProjectFilter(project, { userId: req.user.id, kind, date }),
       {
         $set: { answers, lastEditedBy: actor, timeZone, weekStart: date },
         ...(existing ? { $push: { events: { type: 'updated', actor, at: now } } } : {}),
@@ -928,6 +944,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
           projectId: project.projectId,
           ...(project.tenantId ? { tenantId: project.tenantId } : {}),
           userId: req.user.id,
+          kind,
           date,
           weekStart: date,
           status: 'draft',
@@ -977,6 +994,7 @@ router.post('/diary/:entryId/complete', metaAdsDiaryEditAccess, async (req, res)
       {
         $set: {
           userId: req.user.id,
+          kind: entry.kind || 'manager',
           date: entryDate,
           weekStart: entryDate,
           timeZone: entry.timeZone || getDiaryTimeZone(req.user),
@@ -1282,5 +1300,6 @@ router._validateDiaryAnswersForTest = validateDiaryAnswers;
 router._validateDiaryDateForTest = validateDiaryDate;
 router._getDiaryDateKeyForTest = getDiaryDateKey;
 router._syncTrafficDiaryIndexForTest = syncTrafficDiaryIndex;
+router._deleteTrafficDiaryIndexForTest = deleteTrafficDiaryIndex;
 
 module.exports = router;

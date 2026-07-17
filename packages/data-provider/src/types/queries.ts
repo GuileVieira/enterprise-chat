@@ -105,6 +105,8 @@ export type ProjectTrafficDiaryAnswer = {
   parentQuestionId?: string;
 };
 
+export type ProjectTrafficDiaryKind = 'manager' | 'strategist';
+
 export type ProjectTrafficDiaryActor = {
   id: string;
   name?: string;
@@ -121,6 +123,7 @@ export type ProjectTrafficDiaryEntry = {
   _id: string;
   projectId: string;
   userId: string;
+  kind: ProjectTrafficDiaryKind;
   date: string;
   timeZone?: string;
   weekStart: string;

@@ -1,7 +1,7 @@
 {
   "api/server/routes/projectMetaAds.js": {
-    "mtime": 1784314932.907163,
-    "ast_hash": "64d89ef939ab3ee6959b8df9b425ca21",
+    "mtime": 1784316249.9410987,
+    "ast_hash": "8b4077919f4a5995caeaddd5f93346c7",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
@@ -35,8 +35,8 @@
     "semantic_hash": "8f8348188e7c7b5c6c2969f6fb58dfa5"
   },
   "client/src/components/Project/ProjectMetaAdsPanel.tsx": {
-    "mtime": 1783903503.7656903,
-    "ast_hash": "aab05edb06d3e41650c1ebc4fdd5981b",
+    "mtime": 1784315603.295069,
+    "ast_hash": "0e84d9ddd282d24f68dec7222d7ed7f9",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/aiPerformanceWorkspace.tsx": {
@@ -370,23 +370,23 @@
     "semantic_hash": ""
   },
   "client/src/data-provider/mutations.ts": {
-    "mtime": 1784314906.5986428,
-    "ast_hash": "19646800beb53c7e3139cf64e5283a23",
+    "mtime": 1784315543.0901206,
+    "ast_hash": "3607b0b3acfb7202f1319df930eaca28",
     "semantic_hash": ""
   },
   "client/src/data-provider/queries.ts": {
-    "mtime": 1783903346.9313796,
-    "ast_hash": "3443f02da88f06ae3e4788dc9b36e7ab",
+    "mtime": 1784315533.115311,
+    "ast_hash": "b2613b4c3e8491d891711705d3dfa0a2",
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {
-    "mtime": 1784314885.499882,
-    "ast_hash": "b3bfc67f8b0932ef86d23507fb6205a9",
+    "mtime": 1784315451.4252234,
+    "ast_hash": "ae02ac0f1fe5a3014b575842885f1a70",
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1784315102.5368419,
-    "ast_hash": "cc48ecf62dcf8e5f6782c20827302d49",
+    "mtime": 1784315451.526702,
+    "ast_hash": "34ca4f12c2755b074e7dbeb6267fc8fc",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -405,8 +405,8 @@
     "semantic_hash": "3c4036529ec185ec6e3b7cefd85a7f04"
   },
   "packages/data-provider/src/types/queries.ts": {
-    "mtime": 1784314039.4483192,
-    "ast_hash": "186897e84503e468dce803c150ef107d",
+    "mtime": 1784315451.3329906,
+    "ast_hash": "904b95d0ff89a9dc20517fc13095de18",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/project.ts": {
@@ -1950,8 +1950,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/projectMetaAds.spec.js": {
-    "mtime": 1784314915.8985574,
-    "ast_hash": "c51266681b74f39d8629efa142462e86",
+    "mtime": 1784316256.6555305,
+    "ast_hash": "9d712f25af0b39e5178f8d72bb5c3fce",
     "semantic_hash": ""
   },
   "api/server/routes/projects.js": {
@@ -2500,13 +2500,13 @@
     "semantic_hash": ""
   },
   "api/server/services/Projects/context.js": {
-    "mtime": 1784314449.2362924,
-    "ast_hash": "2cf5878b5fae1d0a3f15a3239d7a937c",
+    "mtime": 1784315860.4846075,
+    "ast_hash": "3d3b904ba587a4d6dea920a57ebbe0ad",
     "semantic_hash": ""
   },
   "api/server/services/Projects/context.spec.js": {
-    "mtime": 1784314133.9353251,
-    "ast_hash": "adc39f2b41a804073c18de2d5d860406",
+    "mtime": 1784315877.0611818,
+    "ast_hash": "6336d23a1ffdfed69165086caad327e1",
     "semantic_hash": ""
   },
   "api/server/services/Runs/RunManager.js": {
@@ -2615,8 +2615,8 @@
     "semantic_hash": ""
   },
   "api/server/services/start/migration.js": {
-    "mtime": 1779209936.5050094,
-    "ast_hash": "ba81f27728d3e764b6d43dd62f1bf0d3",
+    "mtime": 1784316222.0947597,
+    "ast_hash": "57a194c6b6e7bf646497edcd9d6734b2",
     "semantic_hash": ""
   },
   "api/server/services/start/tools.js": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1784315049.6139688,
-    "ast_hash": "c09e6bbce63219b32fc80ed5b3117da0",
+    "mtime": 1784315655.3204548,
+    "ast_hash": "dfb7d3c9f64b1f7cd892e76bbdc02481",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1784315055.6523695,
-    "ast_hash": "21b525803f64645446f4aa7f62a9c9be",
+    "mtime": 1784315655.2203856,
+    "ast_hash": "162cf4d3e86d75d7f9ff3710d35008a2",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -14975,8 +14975,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/file.ts": {
-    "mtime": 1784314155.1304922,
-    "ast_hash": "0bf1dfee45fc48ec6af39966eeec8a4e",
+    "mtime": 1784315514.5361056,
+    "ast_hash": "c5fb4e9212f8f18db41caa9a248513e6",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/group.ts": {
@@ -15160,8 +15160,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/file.ts": {
-    "mtime": 1784314159.0396616,
-    "ast_hash": "48a7b3552f58c60e73571e04cd2dc1fb",
+    "mtime": 1784315514.6262023,
+    "ast_hash": "1bb14017e60a054d7b2f4485ffcdace0",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/group.ts": {
@@ -16440,13 +16440,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.spec.tsx": {
-    "mtime": 1784315133.900634,
-    "ast_hash": "a062c9c5320e0c777abfb7d88433f89f",
+    "mtime": 1784315812.2834988,
+    "ast_hash": "5caf44baaee4a2a73a7029a6f0f64ef0",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryWorkspace.tsx": {
-    "mtime": 1784315068.0853643,
-    "ast_hash": "57680f2a09f3afc2e564c0b04ea1e150",
+    "mtime": 1784316222.1923199,
+    "ast_hash": "bb351872d81048697edc088a6c8d25a2",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/trafficDiary.ts": {
@@ -16455,28 +16455,33 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/trafficDiary.ts": {
-    "mtime": 1784314142.582544,
-    "ast_hash": "c9e7e8606e87ceca9b347883566f4962",
+    "mtime": 1784315451.2462213,
+    "ast_hash": "bdf7771693cccaaa380fed1f8ab5d5a1",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/trafficDiary.ts": {
-    "mtime": 1784314039.2559729,
-    "ast_hash": "a6e16aaf8b52c3a2d2fe3358ad256751",
+    "mtime": 1784315451.1586459,
+    "ast_hash": "e23c98dbceb69d3191106cc4412f2c95",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryBrief.spec.ts": {
-    "mtime": 1784314133.8432052,
-    "ast_hash": "4bbad51ec767b43461aae038e3773678",
+    "mtime": 1784316005.8577156,
+    "ast_hash": "3c8136f2747176c90d09ca28ecc1b564",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/trafficDiaryBrief.ts": {
-    "mtime": 1784314112.669012,
-    "ast_hash": "e5b6b30d12267ad57fc92063a9ea6f0d",
+    "mtime": 1784315609.5521767,
+    "ast_hash": "179fd5955f3d63123c1888b50dfb724c",
     "semantic_hash": ""
   },
   "api/server/services/Projects/trafficDiaryIndex.js": {
-    "mtime": 1784314634.1882195,
-    "ast_hash": "26ded94b4f24b9afa4dfc152078ee5b1",
+    "mtime": 1784316222.087388,
+    "ast_hash": "8ee880d35c385ef7cf6ebbea8e1faf41",
+    "semantic_hash": ""
+  },
+  "api/server/services/start/migration.spec.js": {
+    "mtime": 1784316204.4087613,
+    "ast_hash": "b76c9384b605e6c55b6a6e3c9d5aede8",
     "semantic_hash": ""
   }
 }

@@ -64,6 +64,7 @@ describe('loadProjectContext', () => {
     });
     mockGetFiles.mockResolvedValue([
       { file_id: 'project-file' },
+      { file_id: 'traffic-diary:manager:entry-1' },
       { file_id: 'linked-file' },
       { file_id: 'project-file' },
     ]);
@@ -88,7 +89,7 @@ describe('loadProjectContext', () => {
       projectId: 'proj-123',
       projectInstructions: 'Project instructions',
       projectMemories: '## Project Memories\n\n- key: value',
-      projectFileIds: ['project-file', 'linked-file'],
+      projectFileIds: ['project-file', 'traffic-diary:manager:entry-1', 'linked-file'],
     });
   });
 
@@ -103,14 +104,14 @@ describe('loadProjectContext', () => {
     expect(mockGetProjectById).toHaveBeenCalledWith('proj-123');
   });
 
-  it('adds recent manager diary entries to project context', async () => {
+  it('adds recent manager and strategist diary entries to project context', async () => {
     mockGetProjectById.mockResolvedValue({
       _id: 'mongo-project',
       projectId: 'proj-123',
       tenantId: 'tenant-1',
     });
     mockGetFiles.mockResolvedValue([]);
-    mockTrafficDiaryFind.mockReturnValue({
+    mockTrafficDiaryFind.mockReturnValueOnce({
       sort: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       lean: jest.fn().mockResolvedValue([
@@ -122,15 +123,36 @@ describe('loadProjectContext', () => {
         },
       ]),
     });
+    mockTrafficDiaryFind.mockReturnValueOnce({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([
+        {
+          kind: 'strategist',
+          date: '2026-07-14',
+          weekStart: '2026-07-14',
+          status: 'draft',
+          answers: [{ question: 'Estratégia definida', answer: 'Enviar briefing para redação.' }],
+        },
+      ]),
+    });
 
     const result = await loadProjectContext({ req, projectId: 'proj-123' });
 
     expect(mockTrafficDiaryFind).toHaveBeenCalledWith({
       projectId: 'proj-123',
       tenantId: 'tenant-1',
+      kind: 'manager',
+    });
+    expect(mockTrafficDiaryFind).toHaveBeenCalledWith({
+      projectId: 'proj-123',
+      tenantId: 'tenant-1',
+      kind: 'strategist',
     });
     expect(result.projectMemories).toContain('## Diário do gestor de tráfego');
     expect(result.projectMemories).toContain('Validar novo gancho.');
+    expect(result.projectMemories).toContain('## Diário da estrategista');
+    expect(result.projectMemories).toContain('Enviar briefing para redação.');
   });
 
   it('returns empty context when the user cannot view the project', async () => {

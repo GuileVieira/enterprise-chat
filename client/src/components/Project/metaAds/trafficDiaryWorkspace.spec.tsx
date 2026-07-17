@@ -32,6 +32,7 @@ describe('TrafficDiaryWorkspace', () => {
       _id: 'entry-1',
       projectId: 'project-1',
       userId: 'user-1',
+      kind: 'manager',
       date: '2026-07-13',
       weekStart: '2026-07-06',
       status: 'draft',
@@ -61,10 +62,42 @@ describe('TrafficDiaryWorkspace', () => {
       expect(mockSave).toHaveBeenCalledWith(
         expect.objectContaining({
           projectId: 'project-1',
+          kind: 'manager',
           answers: expect.arrayContaining([
             expect.objectContaining({
               id: 'measurement',
               answer: 'CPA melhorou.',
+            }),
+          ]),
+        }),
+      );
+    });
+  });
+
+  it('saves strategist answers without touching manager diary answers', async () => {
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_strategy_diary_tab'));
+    fireEvent.change(screen.getAllByRole('textbox')[0], {
+      target: { value: 'Focar oferta de avaliação.' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
+
+    await waitFor(() => {
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'project-1',
+          kind: 'strategist',
+          answers: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'weekly_goal',
+              answer: 'Focar oferta de avaliação.',
             }),
           ]),
         }),
@@ -114,7 +147,11 @@ describe('TrafficDiaryWorkspace', () => {
 
     await waitFor(() => {
       expect(mockSave).toHaveBeenCalled();
-      expect(mockComplete).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+      expect(mockComplete).toHaveBeenCalledWith({
+        projectId: 'project-1',
+        entryId: 'entry-1',
+        kind: 'manager',
+      });
     });
   });
 
@@ -144,7 +181,11 @@ describe('TrafficDiaryWorkspace', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_reopen'));
 
     await waitFor(() => {
-      expect(mockReopen).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+      expect(mockReopen).toHaveBeenCalledWith({
+        projectId: 'project-1',
+        entryId: 'entry-1',
+        kind: 'manager',
+      });
     });
   });
 
@@ -176,7 +217,11 @@ describe('TrafficDiaryWorkspace', () => {
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_delete'));
 
     await waitFor(() => {
-      expect(mockDelete).toHaveBeenCalledWith({ projectId: 'project-1', entryId: 'entry-1' });
+      expect(mockDelete).toHaveBeenCalledWith({
+        projectId: 'project-1',
+        entryId: 'entry-1',
+        kind: 'manager',
+      });
     });
   });
 });

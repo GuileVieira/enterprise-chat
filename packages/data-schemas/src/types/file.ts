@@ -81,6 +81,7 @@ export interface IMongoFile extends Omit<Document, 'model'> {
     };
     trafficDiary?: {
       entryId?: string;
+      kind?: 'manager' | 'strategist';
       projectId?: string;
       tenantId?: string;
       userId?: string;

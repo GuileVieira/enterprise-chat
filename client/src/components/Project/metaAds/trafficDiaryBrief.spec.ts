@@ -8,6 +8,7 @@ describe('buildTrafficDiaryAnalysisBrief', () => {
         _id: 'internal-id',
         projectId: 'internal-project',
         userId: 'internal-user',
+        kind: 'manager',
         date: '2026-07-13',
         weekStart: '2026-07-06',
         status: 'draft',

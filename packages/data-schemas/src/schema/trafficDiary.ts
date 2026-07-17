@@ -34,6 +34,7 @@ const trafficDiarySchema = new Schema<ITrafficDiaryEntry>(
     projectId: { type: String, required: true, index: true },
     tenantId: { type: String, index: true },
     userId: { type: String, required: true, index: true },
+    kind: { type: String, enum: ['manager', 'strategist'], default: 'manager', required: true },
     date: { type: String, required: true },
     timeZone: String,
     weekStart: String,
@@ -48,6 +49,6 @@ const trafficDiarySchema = new Schema<ITrafficDiaryEntry>(
   { timestamps: true },
 );
 
-trafficDiarySchema.index({ projectId: 1, userId: 1, date: 1 }, { unique: true });
+trafficDiarySchema.index({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: true });
 
 export default trafficDiarySchema;

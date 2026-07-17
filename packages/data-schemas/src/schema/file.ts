@@ -173,6 +173,7 @@ const file: Schema<IMongoFile> = new Schema(
         type: new Schema(
           {
             entryId: { type: String, index: true },
+            kind: { type: String, enum: ['manager', 'strategist'], index: true },
             projectId: { type: String, index: true },
             tenantId: { type: String, index: true },
             userId: { type: String, index: true },

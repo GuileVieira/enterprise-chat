@@ -255,6 +255,9 @@ export default function ProjectMetaAdsPanel({
     user?.role === SystemRoles.ADMIN ||
     user?.role === SystemRoles.OWNER ||
     user?.role === SystemRoles.AD_MANAGER;
+  const canEditMetaAdsDiary =
+    user?.role === SystemRoles.AD_MANAGER ||
+    (canEdit && user?.role !== SystemRoles.ADMIN && user?.role !== SystemRoles.OWNER);
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -411,7 +414,7 @@ export default function ProjectMetaAdsPanel({
         {workspaceTab === 'diary' && (
           <TrafficDiaryWorkspace
             project={project}
-            canEdit={canEdit}
+            canEdit={canEditMetaAdsDiary}
             onAnalyze={onOpenTrafficDiaryAnalysis}
           />
         )}
