@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1784315655.3204548,
-    "ast_hash": "dfb7d3c9f64b1f7cd892e76bbdc02481",
+    "mtime": 1784316353.1287515,
+    "ast_hash": "cd333d0b9f7d432a06fe060fae2f8847",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1784315655.2203856,
-    "ast_hash": "162cf4d3e86d75d7f9ff3710d35008a2",
+    "mtime": 1784316353.0389128,
+    "ast_hash": "6aeed80f069258b1bc95ddf140249203",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
