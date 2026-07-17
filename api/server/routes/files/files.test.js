@@ -319,6 +319,39 @@ describe('File Routes - Delete with Agent Access', () => {
       expect(processDeleteRequest).not.toHaveBeenCalled();
     });
 
+    it('allows deleting legacy project-linked files without filepath in the request', async () => {
+      const projectId = uuidv4();
+      const project = await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Shared Project',
+        fileIds: [fileId],
+      });
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: otherUserId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_EDITOR,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app)
+        .delete('/files')
+        .send({
+          projectId,
+          files: [{ file_id: fileId }],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Files deleted successfully');
+      expect(processDeleteRequest).toHaveBeenCalledWith({
+        req: expect.anything(),
+        files: [expect.objectContaining({ file_id: fileId })],
+      });
+    });
+
     it('should allow deleting files accessible through shared agent', async () => {
       // Create an agent with the file attached
       const agent = await createAgent({

@@ -263,6 +263,7 @@ export type BatchFile = {
 
 export type DeleteFilesBody = {
   files: BatchFile[];
+  projectId?: string;
   agent_id?: string;
   assistant_id?: string;
   tool_resource?: EToolResources;

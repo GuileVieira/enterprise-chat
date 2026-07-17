@@ -182,14 +182,11 @@ router.get('/config', async (req, res) => {
 
 router.delete('/', async (req, res) => {
   try {
-    const { files: _files } = req.body;
+    const { files: _files, projectId } = req.body;
 
     /** @type {MongoFile[]} */
-    const files = _files.filter((file) => {
+    const files = (Array.isArray(_files) ? _files : []).filter((file) => {
       if (!file.file_id) {
-        return false;
-      }
-      if (!file.filepath) {
         return false;
       }
 
@@ -207,6 +204,14 @@ router.delete('/', async (req, res) => {
 
     const fileIds = files.map((file) => file.file_id);
     const dbFiles = await db.getFiles({ file_id: { $in: fileIds } });
+    const requestedProject =
+      projectId && dbFiles.length > 0
+        ? await hasProjectAccess({
+            req,
+            projectId,
+            requiredPermission: PermissionBits.EDIT,
+          })
+        : { allowed: false, project: null };
 
     const ownedFiles = [];
     const nonOwnedFiles = [];
@@ -220,6 +225,29 @@ router.delete('/', async (req, res) => {
     }
 
     if (nonOwnedFiles.length > 0) {
+      if (requestedProject.allowed) {
+        const linkedFileIds = Array.isArray(requestedProject.project?.fileIds)
+          ? requestedProject.project.fileIds.filter(Boolean)
+          : [];
+        const projectFiles = nonOwnedFiles.filter(
+          (file) =>
+            file.projectId?.toString() === requestedProject.project.projectId ||
+            linkedFileIds.includes(file.file_id),
+        );
+
+        if (projectFiles.length === nonOwnedFiles.length) {
+          await processDeleteRequest({ req, files: dbFiles });
+          logger.debug(
+            `[/files] Project files deleted successfully: ${dbFiles
+              .filter((f) => f.file_id)
+              .map((f) => f.file_id)
+              .join(', ')}`,
+          );
+          res.status(200).json({ message: 'Files deleted successfully' });
+          return;
+        }
+      }
+
       const projectIds = [
         ...new Set(
           nonOwnedFiles
@@ -248,50 +276,6 @@ router.delete('/', async (req, res) => {
           return;
         }
       }
-    }
-
-    if (nonOwnedFiles.length === 0) {
-      await processDeleteRequest({ req, files: ownedFiles });
-      logger.debug(
-        `[/files] Files deleted successfully: ${ownedFiles
-          .filter((f) => f.file_id)
-          .map((f) => f.file_id)
-          .join(', ')}`,
-      );
-      res.status(200).json({ message: 'Files deleted successfully' });
-      return;
-    }
-
-    let authorizedFiles = [...ownedFiles];
-    let unauthorizedFiles = [];
-
-    if (req.body.agent_id && nonOwnedFiles.length > 0) {
-      const nonOwnedFileIds = nonOwnedFiles.map((f) => f.file_id);
-      const accessMap = await hasAccessToFilesViaAgent({
-        userId: req.user.id,
-        role: req.user.role,
-        fileIds: nonOwnedFileIds,
-        agentId: req.body.agent_id,
-        isDelete: true,
-        files: nonOwnedFiles,
-      });
-
-      for (const file of nonOwnedFiles) {
-        if (accessMap.get(file.file_id)) {
-          authorizedFiles.push(file);
-        } else {
-          unauthorizedFiles.push(file);
-        }
-      }
-    } else {
-      unauthorizedFiles = nonOwnedFiles;
-    }
-
-    if (unauthorizedFiles.length > 0) {
-      return res.status(403).json({
-        message: 'You can only delete files you have access to',
-        unauthorizedFiles: unauthorizedFiles.map((f) => f.file_id),
-      });
     }
 
     /* Handle agent unlinking even if no valid files to delete */
@@ -349,6 +333,50 @@ router.delete('/', async (req, res) => {
       return res
         .status(200)
         .json({ message: 'File associations removed successfully from Azure Assistant' });
+    }
+
+    if (nonOwnedFiles.length === 0) {
+      await processDeleteRequest({ req, files: ownedFiles });
+      logger.debug(
+        `[/files] Files deleted successfully: ${ownedFiles
+          .filter((f) => f.file_id)
+          .map((f) => f.file_id)
+          .join(', ')}`,
+      );
+      res.status(200).json({ message: 'Files deleted successfully' });
+      return;
+    }
+
+    let authorizedFiles = [...ownedFiles];
+    let unauthorizedFiles = [];
+
+    if (req.body.agent_id && nonOwnedFiles.length > 0) {
+      const nonOwnedFileIds = nonOwnedFiles.map((f) => f.file_id);
+      const accessMap = await hasAccessToFilesViaAgent({
+        userId: req.user.id,
+        role: req.user.role,
+        fileIds: nonOwnedFileIds,
+        agentId: req.body.agent_id,
+        isDelete: true,
+        files: nonOwnedFiles,
+      });
+
+      for (const file of nonOwnedFiles) {
+        if (accessMap.get(file.file_id)) {
+          authorizedFiles.push(file);
+        } else {
+          unauthorizedFiles.push(file);
+        }
+      }
+    } else {
+      unauthorizedFiles = nonOwnedFiles;
+    }
+
+    if (unauthorizedFiles.length > 0) {
+      return res.status(403).json({
+        message: 'You can only delete files you have access to',
+        unauthorizedFiles: unauthorizedFiles.map((f) => f.file_id),
+      });
     }
 
     await processDeleteRequest({ req, files: authorizedFiles });

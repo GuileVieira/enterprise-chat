@@ -137,18 +137,32 @@ export default function ProjectFileUploader({
     }
     const file = fileToDelete;
     const updatedFileIds = files.map((f) => f.file_id).filter((id) => id !== file.file_id);
-    updateProject.mutate(
+    deleteFiles.mutate(
       {
         projectId,
-        payload: { fileIds: updatedFileIds },
+        files: [
+          {
+            file_id: file.file_id,
+            embedded: Boolean(file.embedded),
+            filepath: file.filepath ?? '',
+            source: file.source,
+          },
+        ],
       },
       {
         onSuccess: () => {
-          deleteFiles.mutate({
-            files: [{ file_id: file.file_id, filepath: file.filepath }],
-          });
-          setFileToDelete(null);
-          setShowDeleteModal(false);
+          updateProject.mutate(
+            {
+              projectId,
+              payload: { fileIds: updatedFileIds },
+            },
+            {
+              onSettled: () => {
+                setFileToDelete(null);
+                setShowDeleteModal(false);
+              },
+            },
+          );
         },
       },
     );
