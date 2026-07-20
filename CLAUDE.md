@@ -149,6 +149,13 @@ Multi-line imports count total character length across all lines. Consolidate va
 
 ---
 
+## Production User Operations
+
+- Prefer `npm run create-user -- <email> "<name>" <username> --tenant=<tenantId> --email-verified=true` from `/app` in the Coolify `api` terminal.
+- Fallback Mongo shell in prod: connect with `mongosh Orqest`. Store only bcrypt hashes (`cost 10`), never plaintext passwords.
+
+---
+
 ## Testing
 
 - Framework: **Jest**, run per-workspace.
