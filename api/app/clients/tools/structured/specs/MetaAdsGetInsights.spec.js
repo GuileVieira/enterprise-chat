@@ -86,7 +86,7 @@ describe('MetaAdsGetInsights', () => {
     const url = new URL(fetch.mock.calls[0][0]);
     expect(url.searchParams.get('level')).toBe('ad');
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
@@ -223,7 +223,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('campaign');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
   });
@@ -239,7 +239,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('adset');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,spend,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'adset' }));
   });

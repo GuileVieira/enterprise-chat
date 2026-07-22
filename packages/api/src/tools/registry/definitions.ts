@@ -533,7 +533,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. For ad or creative questions, use level=ad; campaign and ad set rows are not creative substitutes. Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data. Historical queries include paused ads that had results in the requested period. graph_version is optional and must match Meta version format like v25.0.',
+      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. Returns Meta-reported impressions, reach, frequency, spend, CPM, CTR, CPC, actions, and ROAS. For ad or creative questions, use level=ad; campaign and ad set rows are not creative substitutes. Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data. Historical queries include paused ads that had results in the requested period. graph_version is optional and must match Meta version format like v25.0.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },
