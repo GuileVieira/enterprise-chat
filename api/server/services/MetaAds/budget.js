@@ -105,6 +105,7 @@ const AGGREGATE_RESULT_TYPES = new Set([
 ]);
 const VIDEO_RESULT_TYPES = new Set(['video_view', 'thruplay']);
 const CANONICAL_RESULT_TYPES = {
+  link_click: 'instagram_profile_visit',
   instagram_profile_visit: 'instagram_profile_visit',
   'onsite_conversion.instagram_profile_visit': 'instagram_profile_visit',
   onsite_conversion_instagram_profile_visit: 'instagram_profile_visit',

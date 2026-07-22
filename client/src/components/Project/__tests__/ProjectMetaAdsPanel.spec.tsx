@@ -375,7 +375,7 @@ describe('ProjectMetaAdsPanel', () => {
       screen.getAllByText('com_ui_project_meta_ads_result_type_post_engagement').length,
     ).toBeGreaterThan(0);
     expect(
-      screen.getByText(/com_ui_project_meta_ads_result_type_link_click 52/),
+      screen.getByText(/com_ui_project_meta_ads_result_type_instagram_profile_visit 52/),
     ).toBeInTheDocument();
   });
 
@@ -1599,6 +1599,11 @@ describe('ProjectMetaAdsPanel', () => {
     const resultMetricDialog = screen.getByRole('dialog', {
       name: 'com_ui_project_meta_ads_choose_result_metric',
     });
+    expect(
+      within(resultMetricDialog).getByRole('button', {
+        name: /com_ui_project_meta_ads_result_type_instagram_profile_visit.*10\.00/,
+      }),
+    ).toBeInTheDocument();
     fireEvent.click(
       within(resultMetricDialog).getByRole('button', {
         name: /com_ui_project_meta_ads_result_type_message/,

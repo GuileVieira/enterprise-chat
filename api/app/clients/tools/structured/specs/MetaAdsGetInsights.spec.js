@@ -38,6 +38,12 @@ function createResponse(data, ok = true, status = 200) {
 }
 
 describe('MetaAdsGetInsights', () => {
+  it('documents link_click as the Orqest Instagram profile visit metric', () => {
+    expect(new MetaAdsGetInsights().description).toContain(
+      'use actions.link_click as the Instagram profile visit result metric',
+    );
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     getTenantSecret.mockImplementation(async (tenantId, name) => {
@@ -97,7 +103,7 @@ describe('MetaAdsGetInsights', () => {
     const url = new URL(fetch.mock.calls[0][0]);
     expect(url.searchParams.get('level')).toBe('ad');
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
     );
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
@@ -241,7 +247,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('campaign');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
   });
@@ -257,7 +263,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('adset');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'adset' }));
   });

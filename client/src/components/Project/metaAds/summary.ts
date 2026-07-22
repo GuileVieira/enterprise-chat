@@ -65,6 +65,7 @@ export function buildSummaryResultTypeOptions(
   isEcommerce: boolean,
 ): SummaryResultTypeOption[] {
   const canonicalResultTypes: Record<string, string> = {
+    link_click: 'instagram_profile_visit',
     leadgen_grouped: 'lead',
     offsite_conversion_fb_pixel_lead: 'lead',
     'offsite_conversion.fb_pixel_lead': 'lead',
@@ -93,7 +94,6 @@ export function buildSummaryResultTypeOptions(
     'instagram_profile_follow',
     'lead',
     'leadgen_grouped',
-    'link_click',
     'omni_purchase',
     'offsite_conversion.fb_pixel_lead',
     'offsite_conversion.fb_pixel_purchase',

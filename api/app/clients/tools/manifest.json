@@ -177,7 +177,7 @@
   {
     "name": "Meta Ads Insights",
     "pluginKey": "meta_ads_get_insights",
-    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials, including impressions, reach, frequency, and video_thruplay_watched_actions. Use the dedicated field for ThruPlay, never actions.video_view. Use ad level for ad or creative questions; it returns real ad and creative IDs when Meta provides them.",
+    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials, with the same performance fields used by the project Meta Ads panel, including reach, frequency, clicks, cost per action, video 75%, and ThruPlay. In Orqest, use actions.link_click as the Instagram profile visit result metric. Use video_thruplay_watched_actions for ThruPlay, never actions.video_view. Use ad level for ad or creative questions; it returns real ad and creative IDs when Meta provides them.",
     "icon": "assets/logo.svg",
     "authConfig": []
   },

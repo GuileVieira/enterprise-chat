@@ -294,7 +294,7 @@ describe('Meta Ads budget service', () => {
     expect(result.resultTypeBreakdown).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ resultType: 'purchase', totalResults: 23 }),
-        expect.objectContaining({ resultType: 'link_click', totalResults: 38 }),
+        expect.objectContaining({ resultType: 'instagram_profile_visit', totalResults: 38 }),
       ]),
     );
   });
@@ -363,6 +363,22 @@ describe('Meta Ads budget service', () => {
   });
 
   it('canonicalizes Instagram profile visit and follower actions for target results', () => {
+    expect(
+      _calculateMetricsForTest(
+        {
+          spend: '388.89',
+          actions: [{ action_type: 'link_click', value: '127' }],
+        },
+        'instagram_profile_visit',
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        resultType: 'instagram_profile_visit',
+        resultCount: 127,
+        cpa: 388.89 / 127,
+      }),
+    );
+
     expect(
       _calculateMetricsForTest(
         {
@@ -2901,7 +2917,7 @@ describe('Meta Ads budget service persistence safety', () => {
                 averageCostPerResult: 10.72,
               }),
               expect.objectContaining({
-                resultType: 'link_click',
+                resultType: 'instagram_profile_visit',
                 totalSpend: 85.76,
                 totalResults: 16,
                 averageCostPerResult: 5.36,
@@ -2918,7 +2934,7 @@ describe('Meta Ads budget service persistence safety', () => {
         cpa: 10.72,
         resultType: 'onsite_conversion.messaging_conversation_started_7d',
         resultTypeBreakdown: expect.arrayContaining([
-          expect.objectContaining({ resultType: 'link_click', totalResults: 16 }),
+          expect.objectContaining({ resultType: 'instagram_profile_visit', totalResults: 16 }),
         ]),
         frequency: 4.9,
       }),
@@ -3180,7 +3196,7 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(cachedStatus.summary.objectives[0].resultTypes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          resultType: 'link_click',
+          resultType: 'instagram_profile_visit',
           totalResults: 6,
           averageCostPerResult: 5,
         }),
@@ -3401,7 +3417,7 @@ describe('Meta Ads budget service persistence safety', () => {
         resultCount: 40,
         cpa: 2.6,
         resultTypeBreakdown: expect.arrayContaining([
-          expect.objectContaining({ resultType: 'link_click', totalResults: 52 }),
+          expect.objectContaining({ resultType: 'instagram_profile_visit', totalResults: 52 }),
           expect.objectContaining({ resultType: 'post_engagement', totalResults: 40 }),
         ]),
       }),

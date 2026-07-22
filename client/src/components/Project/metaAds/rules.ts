@@ -75,9 +75,8 @@ export const resultTypeOptions = [
   },
   { value: 'lead', labelKey: 'com_ui_project_meta_ads_result_type_lead' },
   { value: 'purchase', labelKey: 'com_ui_project_meta_ads_result_type_purchase' },
-  { value: 'link_click', labelKey: 'com_ui_project_meta_ads_result_type_link_click' },
   {
-    value: 'instagram_profile_visit',
+    value: 'link_click',
     labelKey: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   },
   {

@@ -302,7 +302,7 @@ export const resultTypeLabelKeys: Record<string, TranslationKeys> = {
   instagram_profile_follow: 'com_ui_project_meta_ads_result_type_instagram_profile_follow',
   instagram_profile_visit: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   leadgen_grouped: 'com_ui_project_meta_ads_result_type_lead',
-  link_click: 'com_ui_project_meta_ads_result_type_link_click',
+  link_click: 'com_ui_project_meta_ads_result_type_instagram_profile_visit',
   onsite_conversion_lead_grouped: 'com_ui_project_meta_ads_result_type_lead',
   onsite_conversion_messaging_conversation_started_7d:
     'com_ui_project_meta_ads_result_type_message',
