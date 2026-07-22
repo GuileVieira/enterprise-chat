@@ -7995,8 +7995,8 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Files/__tests__/useFileHandling.test.ts": {
-    "mtime": 1784747084.9510112,
-    "ast_hash": "0e7d1d0a62f8a3d779cc463c9ed772b1",
+    "mtime": 1781717787.0904853,
+    "ast_hash": "3688214613ae787bf814a50841a367fe",
     "semantic_hash": ""
   },
   "client/src/hooks/Files/index.ts": {
@@ -8200,8 +8200,8 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useTextarea.ts": {
-    "mtime": 1784747084.8591099,
-    "ast_hash": "cdbbb5eaa23d8e0f6291228cfc325411",
+    "mtime": 1779201635.5277944,
+    "ast_hash": "01d68052283c6241dcb6155cc502e87f",
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useUserKey.ts": {
@@ -15755,8 +15755,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1784567018.3209128,
-    "ast_hash": "0768c5e0124a063fa8f4b91bfc8762fd",
+    "mtime": 1783391961.586861,
+    "ast_hash": "9915c87bcdcfb0e08d6487186d3dd42f",
     "semantic_hash": ""
   },
   "DESIGN.md": {

@@ -335,6 +335,7 @@ describe('useFileHandling', () => {
       expect(formData.get('projectId')).toBeNull();
       expect(formData.get('tool_resource')).toBeNull();
       expect(formData.get('agent_id')).toBe('agent-123');
+      expect(formData.get('message_file')).toBe('true');
     });
 
     it('sends the conversation projectId when project saving is explicitly enabled', async () => {
