@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { FileUpload, TooltipAnchor, AttachmentIcon } from '@librechat/client';
+import { Paperclip } from '@phosphor-icons/react';
+import { FileUpload, TooltipAnchor } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import { useFileHandlingNoChatContext, useLocalize } from '~/hooks';
@@ -11,23 +12,28 @@ const AttachFile = ({
   setFiles,
   setFilesLoading,
   conversation,
+  saveUploadsToProject,
 }: {
   disabled?: boolean | null;
   files: Map<string, ExtendedFile>;
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  saveUploadsToProject?: boolean;
 }) => {
   const localize = useLocalize();
   const inputRef = useRef<HTMLInputElement>(null);
   const isUploadDisabled = disabled ?? false;
 
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
-    files,
-    setFiles,
-    setFilesLoading,
-    conversation,
-  });
+  const { handleFileChange } = useFileHandlingNoChatContext(
+    { saveUploadsToProject },
+    {
+      files,
+      setFiles,
+      setFilesLoading,
+      conversation,
+    },
+  );
 
   return (
     <FileUpload ref={inputRef} handleFileChange={handleFileChange}>
@@ -61,7 +67,7 @@ const AttachFile = ({
             }}
           >
             <div className="flex w-full items-center justify-center gap-2">
-              <AttachmentIcon />
+              <Paperclip size={26} aria-hidden="true" />
             </div>
           </button>
         }

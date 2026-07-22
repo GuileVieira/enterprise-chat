@@ -1,13 +1,17 @@
 import React, { forwardRef } from 'react';
 import { useWatch } from 'react-hook-form';
+import { ArrowUp } from '@phosphor-icons/react';
 import type { Control } from 'react-hook-form';
-import { SendIcon, TooltipAnchor } from '@librechat/client';
+import { TooltipAnchor } from '@librechat/client';
+import { useRecoilValue } from 'recoil';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
+import store from '~/store';
 
 type SendButtonProps = {
   disabled: boolean;
   control: Control<{ text: string }>;
+  index: number;
 };
 
 const SubmitButton = React.memo(
@@ -29,7 +33,7 @@ const SubmitButton = React.memo(
             type="submit"
           >
             <span className="" data-state="closed">
-              <SendIcon size={24} />
+              <ArrowUp size={24} weight="bold" className="text-surface-primary" />
             </span>
           </button>
         }
@@ -41,8 +45,11 @@ const SubmitButton = React.memo(
 const SendButton = React.memo(
   forwardRef((props: SendButtonProps, ref: React.ForwardedRef<HTMLButtonElement>) => {
     const data = useWatch({ control: props.control });
+    const activeHiddenPrompt = useRecoilValue(store.activeHiddenPromptByIndex(props.index));
     const content = data?.text?.trim();
-    return <SubmitButton ref={ref} disabled={props.disabled || !content} />;
+    return (
+      <SubmitButton ref={ref} disabled={props.disabled || (!content && !activeHiddenPrompt)} />
+    );
   }),
 );
 

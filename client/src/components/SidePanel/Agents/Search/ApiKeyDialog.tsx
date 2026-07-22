@@ -78,6 +78,20 @@ export default function ApiKeyDialog({
         },
       },
     },
+    {
+      key: SearchProviders.TAVILY,
+      label: localize('com_ui_web_search_provider_tavily'),
+      inputs: {
+        tavilyApiKey: {
+          placeholder: localize('com_ui_enter_api_key'),
+          type: 'password' as const,
+          link: {
+            url: 'https://app.tavily.com/home',
+            text: localize('com_ui_web_search_provider_tavily_key'),
+          },
+        },
+      },
+    },
   ];
 
   const rerankerOptions: DropdownOption[] = [
@@ -148,6 +162,20 @@ export default function ApiKeyDialog({
           link: {
             url: 'https://serper.dev/api-keys',
             text: localize('com_ui_web_search_scraper_serper_key'),
+          },
+        },
+      },
+    },
+    {
+      key: ScraperProviders.TAVILY,
+      label: localize('com_ui_web_search_scraper_tavily'),
+      inputs: {
+        tavilyApiKey: {
+          placeholder: localize('com_ui_enter_api_key'),
+          type: 'password' as const,
+          link: {
+            url: 'https://app.tavily.com/home',
+            text: localize('com_ui_web_search_scraper_tavily_key'),
           },
         },
       },
@@ -245,7 +273,7 @@ export default function ApiKeyDialog({
         }
         selection={{
           selectHandler: handleSubmit(onSubmit),
-          selectClasses: 'bg-green-500 hover:bg-green-600 text-white',
+          selectClasses: 'bg-surface-submit hover:bg-surface-submit-hover text-white',
           selectText: localize('com_ui_save'),
         }}
         buttons={

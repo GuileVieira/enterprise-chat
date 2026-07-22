@@ -1,9 +1,9 @@
 <p align="center">
-  <a href="https://librechat.ai">
+  <a href="#">
     <img src="client/public/assets/logo.svg" height="256">
   </a>
   <h1 align="center">
-    <a href="https://librechat.ai">LibreChat</a>
+    Orqest
   </h1>
 </p>
 
@@ -13,15 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.librechat.ai"> 
+  <a href="#"> 
     <img
       src="https://img.shields.io/discord/1086345563026489514?label=&logo=discord&style=for-the-badge&logoWidth=20&logoColor=white&labelColor=000000&color=blueviolet">
   </a>
-  <a href="https://www.youtube.com/@LibreChat"> 
+  <a href="#"> 
     <img
       src="https://img.shields.io/badge/YOUTUBE-red.svg?style=for-the-badge&logo=youtube&logoColor=white&labelColor=000000&logoWidth=20">
   </a>
-  <a href="https://docs.librechat.ai"> 
+  <a href="#"> 
     <img
       src="https://img.shields.io/badge/DOCS-blue.svg?style=for-the-badge&logo=read-the-docs&logoColor=white&labelColor=000000&logoWidth=20">
   </a>
@@ -58,7 +58,7 @@
 
 - 🤖 **AI Model Selection**:  
   - Anthropic (Claude), AWS Bedrock, OpenAI, Azure OpenAI, Google, Vertex AI, OpenAI Responses API (incl. Azure)
-  - [Custom Endpoints](https://www.librechat.ai/docs/quick_start/custom_endpoints): Use any OpenAI-compatible API with LibreChat, no proxy required
+  - [Custom Endpoints](https://www.librechat.ai/docs/quick_start/custom_endpoints): Use any OpenAI-compatible API with Orqest, no proxy required
   - Compatible with [Local & Remote AI Providers](https://www.librechat.ai/docs/configuration/librechat_yaml/ai_endpoints):
     - Ollama, groq, Cohere, Mistral AI, Apple MLX, koboldcpp, together.ai,
     - OpenRouter, Helicone, Perplexity, ShuttleAI, Deepseek, Qwen, and more
@@ -69,11 +69,13 @@
   - No Privacy Concerns: Fully isolated and secure execution
 
 - 🔦 **Agents & Tools Integration**:  
-  - **[LibreChat Agents](https://www.librechat.ai/docs/features/agents)**:
+  - **Orqest Agents**:
     - No-Code Custom Assistants: Build specialized, AI-driven helpers
     - Agent Marketplace: Discover and deploy community-built agents
     - Collaborative Sharing: Share agents with specific users and groups
     - Flexible & Extensible: Use MCP Servers, tools, file search, code execution, and more
+    - [Skills](https://www.librechat.ai/docs/features/skills): Create reusable `SKILL.md` instruction bundles for manual, automatic, or always-on agent workflows
+    - [Subagents](https://www.librechat.ai/docs/features/subagents): Delegate focused work to isolated child agent runs with their own context windows
     - Compatible with Custom Endpoints, OpenAI, Azure, Anthropic, AWS Bedrock, Google, Vertex AI, Responses API, and more
     - [Model Context Protocol (MCP) Support](https://modelcontextprotocol.io/clients#librechat) for Tools
 
@@ -125,7 +127,7 @@
   - Supports OpenAI, Azure OpenAI, and Elevenlabs
 
 - 📥 **Import & Export Conversations**:  
-  - Import Conversations from LibreChat, ChatGPT, Chatbot UI  
+  - Import Conversations from Orqest, ChatGPT, Chatbot UI  
   - Export conversations as screenshots, markdown, text, json
 
 - 🔍 **Search & Discovery**:  
@@ -137,19 +139,20 @@
 
 - ⚙️ **Configuration & Deployment**:  
   - Configure Proxy, Reverse Proxy, Docker, & many Deployment options  
+  - Use [S3 with CloudFront](https://www.librechat.ai/docs/configuration/cdn/cloudfront) for stable media links, edge delivery, signed cookies, and secured downloads
   - Use completely local or deploy on the cloud
 
 - 📖 **Open-Source & Community**:  
   - Completely Open-Source & Built in Public  
   - Community-driven development, support, and feedback
 
-[For a thorough review of our features, see our docs here](https://docs.librechat.ai/) 📚
+[For a thorough review of our features, see our docs here](#/) 📚
 
-## 🪶 All-In-One AI Conversations with LibreChat
+## 🪶 All-In-One AI Conversations with Orqest
 
-LibreChat is a self-hosted AI chat platform that unifies all major AI providers in a single, privacy-focused interface.
+Orqest is a self-hosted AI chat platform that unifies all major AI providers in a single, privacy-focused interface.
 
-Beyond chat, LibreChat provides AI Agents, Model Context Protocol (MCP) support, Artifacts, Code Interpreter, custom actions, conversation search, and enterprise-ready multi-user authentication.
+Beyond chat, Orqest provides AI Agents, Model Context Protocol (MCP) support, Artifacts, Code Interpreter, custom actions, conversation search, and enterprise-ready multi-user authentication.
 
 Open source, actively developed, and built for anyone who values control over their AI infrastructure.
 
@@ -159,7 +162,7 @@ Open source, actively developed, and built for anyone who values control over th
 
 **GitHub Repo:**
   - **RAG API:** [github.com/danny-avila/rag_api](https://github.com/danny-avila/rag_api)
-  - **Website:** [github.com/LibreChat-AI/librechat.ai](https://github.com/LibreChat-AI/librechat.ai)
+  - **Website:** [github.com/Orqest-AI/librechat.ai](https://github.com/Orqest-AI/librechat.ai)
 
 **Other:**
   - **Website:** [librechat.ai](https://librechat.ai)
@@ -171,28 +174,10 @@ Open source, actively developed, and built for anyone who values control over th
 ## 📝 Changelog
 
 Keep up with the latest updates by visiting the releases page and notes:
-- [Releases](https://github.com/danny-avila/LibreChat/releases)
+
 - [Changelog](https://www.librechat.ai/changelog) 
 
 **⚠️ Please consult the [changelog](https://www.librechat.ai/changelog) for breaking changes before updating.**
-
----
-
-## ⭐ Star History
-
-<p align="center">
-  <a href="https://star-history.com/#danny-avila/LibreChat&Date">
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=danny-avila/LibreChat&type=Date&theme=dark" onerror="this.src='https://api.star-history.com/svg?repos=danny-avila/LibreChat&type=Date'" />
-  </a>
-</p>
-<p align="center">
-  <a href="https://trendshift.io/repositories/4685" target="_blank" style="padding: 10px;">
-    <img src="https://trendshift.io/api/badge/repositories/4685" alt="danny-avila%2FLibreChat | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-  </a>
-  <a href="https://runacap.com/ross-index/q1-24/" target="_blank" rel="noopener" style="margin-left: 20px;">
-    <img style="width: 260px; height: 56px" src="https://runacap.com/wp-content/uploads/2024/04/ROSS_badge_white_Q1_2024.svg" alt="ROSS Index - Fastest Growing Open-Source Startups in Q1 2024 | Runa Capital" width="260" height="56"/>
-  </a>
-</p>
 
 ---
 
@@ -202,24 +187,8 @@ Contributions, suggestions, bug reports and fixes are welcome!
 
 For new features, components, or extensions, please open an issue and discuss before sending a PR.
 
-If you'd like to help translate LibreChat into your language, we'd love your contribution! Improving our translations not only makes LibreChat more accessible to users around the world but also enhances the overall user experience. Please check out our [Translation Guide](https://www.librechat.ai/docs/translation).
-
----
-
-## 💖 This project exists in its current state thanks to all the people who contribute
-
-<a href="https://github.com/danny-avila/LibreChat/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=danny-avila/LibreChat" />
-</a>
-
 ---
 
 ## 🎉 Special Thanks
 
-We thank [Locize](https://locize.com) for their translation management tools that support multiple languages in LibreChat.
-
-<p align="center">
-  <a href="https://locize.com" target="_blank" rel="noopener noreferrer">
-    <img src="https://github.com/user-attachments/assets/d6b70894-6064-475e-bb65-92a9e23e0077" alt="Locize Logo" height="50">
-  </a>
-</p>
+Orqest is built on top of the excellent [Orqest](https://github.com/danny-avila/Orqest) open-source project. We thank all the Orqest contributors for their work.

@@ -1,7 +1,18 @@
 const mongoose = require('mongoose');
 const { isEnabled } = require('@librechat/api');
-const { getTransactionSupport, logger } = require('@librechat/data-schemas');
-const { ResourceType, PrincipalType, PrincipalModel } = require('librechat-data-provider');
+const {
+  getTransactionSupport,
+  tenantStorage,
+  logger,
+  ResourceCapabilityMap,
+  MAX_PERM_BITS,
+} = require('@librechat/data-schemas');
+const {
+  ResourceType,
+  PrincipalType,
+  PrincipalModel,
+  PermissionBits,
+} = require('librechat-data-provider');
 const {
   entraIdPrincipalFeatureEnabled,
   getUserOwnedEntraGroups,
@@ -61,10 +72,10 @@ const grantPermission = async ({
     }
 
     // Validate principalId based on type
-    if (principalId && principalType === PrincipalType.ROLE) {
-      // Role IDs are strings (role names)
+    if (principalId && (principalType === PrincipalType.ROLE || principalType === PrincipalType.TENANT)) {
+      // Role and tenant IDs are strings
       if (typeof principalId !== 'string' || principalId.trim().length === 0) {
-        throw new Error(`Invalid role ID: ${principalId}`);
+        throw new Error(`Invalid ${principalType} ID: ${principalId}`);
       }
     } else if (
       principalType &&
@@ -93,16 +104,23 @@ const grantPermission = async ({
         `Role ${accessRoleId} is for ${role.resourceType} resources, not ${resourceType}`,
       );
     }
-    return await db.grantPermission(
-      principalType,
-      principalId,
-      resourceType,
-      resourceId,
-      role.permBits,
-      grantedBy,
-      session,
-      role._id,
-    );
+    const writeGrant = () =>
+      db.grantPermission(
+        principalType,
+        principalId,
+        resourceType,
+        resourceId,
+        role.permBits,
+        grantedBy,
+        session,
+        role._id,
+      );
+
+    if (principalType === PrincipalType.TENANT && typeof principalId === 'string') {
+      return await tenantStorage.run({ tenantId: principalId }, writeGrant);
+    }
+
+    return await writeGrant();
   } catch (error) {
     logger.error(`[PermissionService.grantPermission] Error: ${error.message}`);
     throw error;
@@ -128,9 +146,16 @@ const checkPermission = async ({ userId, role, resourceType, resourceId, require
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
-
     if (principals.length === 0) {
       return false;
+    }
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        return true;
+      }
     }
 
     return await db.hasPermission(principals, resourceType, resourceId, requiredPermission);
@@ -157,9 +182,16 @@ const getEffectivePermissions = async ({ userId, role, resourceType, resourceId 
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
-
     if (principals.length === 0) {
       return 0;
+    }
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        return MAX_PERM_BITS;
+      }
     }
 
     return await db.getEffectivePermissions(principals, resourceType, resourceId);
@@ -193,6 +225,18 @@ const getResourcePermissionsMap = async ({ userId, role, resourceType, resourceI
   try {
     // Get user principals (user + groups + public)
     const principals = await db.getUserPrincipals({ userId, role });
+
+    const cap = ResourceCapabilityMap[resourceType];
+    if (cap) {
+      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
+      if (hasCap) {
+        const fullMap = new Map();
+        for (const id of resourceIds) {
+          fullMap.set(id.toString(), MAX_PERM_BITS);
+        }
+        return fullMap;
+      }
+    }
 
     // Use batch method from aclEntry
     const permissionsMap = await db.getEffectivePermissionsForResources(
@@ -717,6 +761,7 @@ const bulkUpdateResourcePermissions = async ({
     };
 
     const bulkWrites = [];
+    const tenantBulkWrites = new Map();
 
     for (const principal of updatedPrincipals) {
       try {
@@ -737,6 +782,14 @@ const bulkUpdateResourcePermissions = async ({
           continue;
         }
 
+        if (principal.type === PrincipalType.TENANT && role.permBits !== PermissionBits.VIEW) {
+          results.errors.push({
+            principal,
+            error: 'Tenant-wide agent grants must use viewer access',
+          });
+          continue;
+        }
+
         const query = {
           principalType: principal.type,
           resourceType,
@@ -745,7 +798,7 @@ const bulkUpdateResourcePermissions = async ({
 
         if (principal.type !== PrincipalType.PUBLIC) {
           query.principalId =
-            principal.type === PrincipalType.ROLE
+            principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
               ? principal.id
               : new mongoose.Types.ObjectId(principal.id);
         }
@@ -769,21 +822,31 @@ const bulkUpdateResourcePermissions = async ({
             resourceId,
             ...(principal.type !== PrincipalType.PUBLIC && {
               principalId:
-                principal.type === PrincipalType.ROLE
+                principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
                   ? principal.id
                   : new mongoose.Types.ObjectId(principal.id),
-              principalModel: principalModelMap[principal.type],
+              ...(principalModelMap[principal.type] && {
+                principalModel: principalModelMap[principal.type],
+              }),
             }),
           },
         };
 
-        bulkWrites.push({
+        const bulkWrite = {
           updateOne: {
             filter: query,
             update: update,
             upsert: true,
           },
-        });
+        };
+
+        if (principal.type === PrincipalType.TENANT) {
+          const tenantWrites = tenantBulkWrites.get(principal.id) || [];
+          tenantWrites.push(bulkWrite);
+          tenantBulkWrites.set(principal.id, tenantWrites);
+        } else {
+          bulkWrites.push(bulkWrite);
+        }
 
         results.granted.push({
           type: principal.type,
@@ -806,11 +869,8 @@ const bulkUpdateResourcePermissions = async ({
       }
     }
 
-    if (bulkWrites.length > 0) {
-      await db.bulkWriteAclEntries(bulkWrites, sessionOptions);
-    }
-
     const deleteQueries = [];
+    const tenantDeleteQueries = new Map();
     for (const principal of revokedPrincipals) {
       try {
         const query = {
@@ -821,12 +881,18 @@ const bulkUpdateResourcePermissions = async ({
 
         if (principal.type !== PrincipalType.PUBLIC) {
           query.principalId =
-            principal.type === PrincipalType.ROLE
+            principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
               ? principal.id
               : new mongoose.Types.ObjectId(principal.id);
         }
 
-        deleteQueries.push(query);
+        if (principal.type === PrincipalType.TENANT) {
+          const tenantQueries = tenantDeleteQueries.get(principal.id) || [];
+          tenantQueries.push(query);
+          tenantDeleteQueries.set(principal.id, tenantQueries);
+        } else {
+          deleteQueries.push(query);
+        }
 
         results.revoked.push({
           type: principal.type,
@@ -847,8 +913,28 @@ const bulkUpdateResourcePermissions = async ({
       }
     }
 
+    if (bulkWrites.length > 0) {
+      await db.bulkWriteAclEntries(bulkWrites, sessionOptions);
+    }
+
     if (deleteQueries.length > 0) {
       await db.deleteAclEntries({ $or: deleteQueries }, sessionOptions);
+    }
+
+    const tenantIds = new Set([...tenantBulkWrites.keys(), ...tenantDeleteQueries.keys()]);
+    if (tenantIds.size > 0) {
+      for (const tenantId of tenantIds) {
+        await tenantStorage.run({ tenantId }, async () => {
+          const writes = tenantBulkWrites.get(tenantId) || [];
+          const queries = tenantDeleteQueries.get(tenantId) || [];
+          if (writes.length > 0) {
+            await db.bulkWriteAclEntries(writes, sessionOptions);
+          }
+          if (queries.length > 0) {
+            await db.deleteAclEntries({ $or: queries }, sessionOptions);
+          }
+        });
+      }
     }
 
     if (shouldEndSession && supportsTransactions) {

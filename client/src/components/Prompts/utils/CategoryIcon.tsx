@@ -1,19 +1,19 @@
 import React from 'react';
 import {
-  Dices,
-  BoxIcon,
+  Flask as BeakerIcon,
+  Cube as BoxIcon,
+  DiceFive as Dices,
   FileText,
-  PenLineIcon,
-  LightbulbIcon,
-  LineChartIcon,
-  ShoppingBagIcon,
-  PlaneTakeoffIcon,
-  GraduationCapIcon,
-  TerminalSquareIcon,
+  GraduationCap as GraduationCapIcon,
+  Lightbulb as LightbulbIcon,
+  ChartLine as LineChartIcon,
+  PencilLine as PenLineIcon,
+  AirplaneTakeoff as PlaneTakeoffIcon,
+  GearSix as SettingsIcon,
+  ShoppingBag as ShoppingBagIcon,
+  TerminalWindow as TerminalSquareIcon,
   Users as UsersIcon,
-  Beaker as BeakerIcon,
-  Settings as SettingsIcon,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 const categoryIconMap: Record<string, React.ElementType> = {
@@ -54,11 +54,21 @@ const categoryColorMap: Record<string, string> = {
 
 export default function CategoryIcon({
   category,
+  icon,
   className = '',
 }: {
   category: string;
+  icon?: string;
   className?: string;
 }) {
+  if (icon) {
+    return (
+      <span className={cn('text-base leading-none', className)} aria-hidden="true">
+        {icon}
+      </span>
+    );
+  }
+
   const IconComponent = categoryIconMap[category] ?? FileText;
   const colorClass = categoryColorMap[category] ?? 'text-text-secondary';
   return <IconComponent className={cn('size-4', colorClass, className)} aria-hidden="true" />;

@@ -4,7 +4,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { QueryKeys } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownPopup, Spinner, useToastContext } from '@librechat/client';
-import { Ellipsis, Share2, CopyPlus, Archive, Pen, Trash } from 'lucide-react';
+import {
+  Archive,
+  CopySimple as CopyPlus,
+  DotsThree as Ellipsis,
+  FolderSimplePlus as FolderInput,
+  PencilSimple as Pen,
+  ShareNetwork as Share2,
+  Trash,
+} from '@phosphor-icons/react';
 import type { MouseEvent } from 'react';
 import type { TMessage } from 'librechat-data-provider';
 import {
@@ -12,7 +20,9 @@ import {
   useDeleteConversationMutation,
   useGetStartupConfig,
   useArchiveConvoMutation,
+  useMoveConversationToProjectMutation,
 } from '~/data-provider';
+import MoveToProjectModal from '~/components/Project/MoveToProjectModal';
 import { useLocalize, useNavigateToConvo, useNewConvo } from '~/hooks';
 import { NotificationSeverity } from '~/common';
 import { useChatContext } from '~/Providers';
@@ -23,6 +33,7 @@ import { cn } from '~/utils';
 function ConvoOptions({
   conversationId,
   title,
+  projectId,
   retainView,
   renameHandler,
   isPopoverActive,
@@ -32,6 +43,7 @@ function ConvoOptions({
 }: {
   conversationId: string | null;
   title: string | null;
+  projectId?: string | null;
   retainView: () => void;
   renameHandler: (e: MouseEvent) => void;
   isPopoverActive: boolean;
@@ -55,7 +67,10 @@ function ConvoOptions({
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+
+  const moveMutation = useMoveConversationToProjectMutation();
 
   const archiveConvoMutation = useArchiveConvoMutation();
 
@@ -183,6 +198,42 @@ function ConvoOptions({
     });
   }, [conversationId, duplicateConversation]);
 
+  const handleMoveToProjectClick = useCallback(() => {
+    setShowMoveDialog(true);
+    setIsPopoverActive(false);
+  }, [setIsPopoverActive]);
+
+  const handleMove = useCallback(
+    (targetProjectId: string | null) => {
+      const convoId = conversationId ?? '';
+      if (!convoId) {
+        return;
+      }
+      moveMutation.mutate(
+        { conversationId: convoId, projectId: targetProjectId },
+        {
+          onSuccess: () => {
+            setShowMoveDialog(false);
+            showToast({
+              message: localize('com_ui_move_success'),
+              severity: NotificationSeverity.SUCCESS,
+              showIcon: true,
+            });
+            retainView();
+          },
+          onError: () => {
+            showToast({
+              message: localize('com_ui_move_error'),
+              severity: NotificationSeverity.ERROR,
+              showIcon: true,
+            });
+          },
+        },
+      );
+    },
+    [conversationId, moveMutation, localize, showToast, retainView],
+  );
+
   const dropdownItems = useMemo(
     () => [
       {
@@ -211,6 +262,12 @@ function ConvoOptions({
         ) : (
           <CopyPlus className="icon-sm mr-2 text-text-primary" aria-hidden="true" />
         ),
+      },
+      {
+        label: localize('com_ui_move_to_project'),
+        onClick: handleMoveToProjectClick,
+        hideOnClick: false,
+        icon: <FolderInput className="icon-sm mr-2 text-text-primary" aria-hidden="true" />,
       },
       {
         label: localize('com_ui_archive'),
@@ -244,6 +301,7 @@ function ConvoOptions({
       isDuplicateLoading,
       handleArchiveClick,
       handleDuplicateClick,
+      handleMoveToProjectClick,
     ],
   );
 
@@ -342,6 +400,13 @@ function ConvoOptions({
           setShowDeleteDialog={setShowDeleteDialog}
         />
       )}
+      <MoveToProjectModal
+        open={showMoveDialog}
+        onOpenChange={setShowMoveDialog}
+        currentProjectId={projectId}
+        onMove={handleMove}
+        isLoading={moveMutation.isLoading}
+      />
     </>
   );
 }
@@ -350,6 +415,7 @@ export default memo(ConvoOptions, (prevProps, nextProps) => {
   return (
     prevProps.conversationId === nextProps.conversationId &&
     prevProps.title === nextProps.title &&
+    prevProps.projectId === nextProps.projectId &&
     prevProps.isPopoverActive === nextProps.isPopoverActive &&
     prevProps.isActiveConvo === nextProps.isActiveConvo &&
     prevProps.isShiftHeld === nextProps.isShiftHeld

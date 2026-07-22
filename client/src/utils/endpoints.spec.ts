@@ -1,6 +1,11 @@
 import { EModelEndpoint, getEndpointField } from 'librechat-data-provider';
 import type { TEndpointsConfig, TConfig } from 'librechat-data-provider';
-import { getAvailableEndpoints, getEndpointsFilter, mapEndpoints } from './endpoints';
+import {
+  getAvailableEndpoints,
+  getConvoSwitchLogic,
+  getEndpointsFilter,
+  mapEndpoints,
+} from './endpoints';
 
 const mockEndpointsConfig: TEndpointsConfig = {
   [EModelEndpoint.openAI]: { type: undefined, iconURL: 'openAI_icon.png', order: 0 },
@@ -81,5 +86,32 @@ describe('mapEndpoints', () => {
   it('returns sorted available endpoints', () => {
     const expectedOrder = [EModelEndpoint.openAI, EModelEndpoint.google, 'Mistral'];
     expect(mapEndpoints(mockEndpointsConfig)).toEqual(expectedOrder);
+  });
+});
+
+describe('getConvoSwitchLogic', () => {
+  it('preserves an existing project conversation when endpoint config is not loaded yet', () => {
+    const result = getConvoSwitchLogic({
+      newEndpoint: 'OpenRouter',
+      endpointsConfig: {},
+      conversation: {
+        conversationId: 'conversation-1',
+        title: 'Project chat',
+        endpoint: 'OpenRouter' as EModelEndpoint,
+        model: 'anthropic/claude-opus-4.7',
+        projectId: 'project-1',
+        createdAt: '',
+        updatedAt: '',
+      },
+    });
+
+    expect(result.isExistingConversation).toBe(true);
+    expect(result.template).toEqual(
+      expect.objectContaining({
+        conversationId: 'conversation-1',
+        projectId: 'project-1',
+        endpoint: 'OpenRouter',
+      }),
+    );
   });
 });

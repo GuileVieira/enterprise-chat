@@ -1,24 +1,19 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { TFeedback, TFeedbackTag, getTagsForRating } from 'librechat-data-provider';
+import { Button, OGDialog, OGDialogContent, OGDialogTitle } from '@librechat/client';
 import {
-  Button,
-  OGDialog,
-  OGDialogContent,
-  OGDialogTitle,
-  ThumbUpIcon,
-  ThumbDownIcon,
-} from '@librechat/client';
-import {
-  AlertCircle,
-  PenTool,
-  ImageOff,
-  Ban,
-  HelpCircle,
+  WarningCircle as AlertCircle,
+  Prohibit as Ban,
   CheckCircle,
+  Question as HelpCircle,
+  ImageBroken as ImageOff,
   Lightbulb,
-  Search,
-} from 'lucide-react';
+  PenNib as PenTool,
+  MagnifyingGlass as Search,
+  ThumbsUp,
+  ThumbsDown,
+} from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -37,8 +32,8 @@ const ICONS = {
   CheckCircle,
   Lightbulb,
   Search,
-  ThumbsUp: ThumbUpIcon,
-  ThumbsDown: ThumbDownIcon,
+  ThumbsUp,
+  ThumbsDown,
 };
 
 function FeedbackOptionButton({
@@ -65,7 +60,7 @@ function FeedbackOptionButton({
       aria-label={label}
       aria-pressed={active}
     >
-      <Icon size="19" bold={active} aria-hidden="true" />
+      <Icon size={20} weight={active ? 'fill' : 'regular'} aria-hidden="true" />
       <span>{label}</span>
     </button>
   );
@@ -154,7 +149,11 @@ function FeedbackButtons({
             aria-pressed={feedback?.rating === 'thumbsUp'}
             aria-haspopup="menu"
           >
-            <ThumbUpIcon size="19" bold={feedback?.rating === 'thumbsUp'} />
+            <ThumbsUp
+              size={20}
+              weight={feedback?.rating === 'thumbsUp' ? 'fill' : 'regular'}
+              aria-hidden="true"
+            />
           </button>
         }
       />
@@ -188,7 +187,11 @@ function FeedbackButtons({
             aria-pressed={feedback?.rating === 'thumbsDown'}
             aria-haspopup="menu"
           >
-            <ThumbDownIcon size="19" bold={feedback?.rating === 'thumbsDown'} />
+            <ThumbsDown
+              size={20}
+              weight={feedback?.rating === 'thumbsDown' ? 'fill' : 'regular'}
+              aria-hidden="true"
+            />
           </button>
         }
       />
@@ -278,7 +281,7 @@ export default function Feedback({
   const renderSingleFeedbackButton = () => {
     if (!feedback) return null;
     const isThumbsUp = feedback.rating === 'thumbsUp';
-    const Icon = isThumbsUp ? ThumbUpIcon : ThumbDownIcon;
+    const Icon = isThumbsUp ? ThumbsUp : ThumbsDown;
     const label = isThumbsUp
       ? localize('com_ui_feedback_positive')
       : localize('com_ui_feedback_negative');
@@ -296,7 +299,7 @@ export default function Feedback({
         title={label}
         aria-pressed="true"
       >
-        <Icon size="19" bold />
+        <Icon size={20} weight="fill" aria-hidden="true" />
       </button>
     );
   };

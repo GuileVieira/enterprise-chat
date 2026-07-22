@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X } from '@phosphor-icons/react';
 import type { KeyboardEvent } from 'react';
 
 interface RenameFormProps {

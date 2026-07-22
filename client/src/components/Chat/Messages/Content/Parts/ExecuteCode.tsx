@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useRecoilValue } from 'recoil';
-import { SquareTerminal } from 'lucide-react';
+import { TerminalWindow as SquareTerminal } from '@phosphor-icons/react';
 import type { TAttachment } from 'librechat-data-provider';
 import ProgressText from '~/components/Chat/Messages/Content/ProgressText';
 import { useProgress, useLocalize, useExpandCollapse } from '~/hooks';
@@ -152,7 +152,7 @@ export function useParseArgs(args?: string | Record<string, unknown>): ParsedArg
   }, [args]);
 }
 
-const ERROR_PATTERNS = /^(Traceback|Error:|Exception:|.*Error:)/m;
+export const ERROR_PATTERNS = /^(Traceback|Error:|Exception:|.*Error:)/m;
 
 export default function ExecuteCode({
   isSubmitting,
@@ -160,12 +160,14 @@ export default function ExecuteCode({
   args,
   output = '',
   attachments,
+  hideAttachments = false,
 }: {
   initialProgress: number;
   isSubmitting: boolean;
   args?: string | Record<string, unknown>;
   output?: string;
   attachments?: TAttachment[];
+  hideAttachments?: boolean;
 }) {
   const localize = useLocalize();
   const hasOutput = output.length > 0;
@@ -247,7 +249,9 @@ export default function ExecuteCode({
           </div>
         </div>
       </div>
-      {attachments && attachments.length > 0 && <AttachmentGroup attachments={attachments} />}
+      {!hideAttachments && attachments && attachments.length > 0 && (
+        <AttachmentGroup attachments={attachments} />
+      )}
     </>
   );
 }

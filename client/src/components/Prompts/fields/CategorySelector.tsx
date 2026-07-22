@@ -2,12 +2,14 @@ import React, { useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useTranslation } from 'react-i18next';
 import { DropdownPopup } from '@librechat/client';
-import { LocalStorageKeys } from 'librechat-data-provider';
+import { LocalStorageKeys, SystemRoles } from 'librechat-data-provider';
 import { useFormContext, Controller } from 'react-hook-form';
 import type { MenuItemProps } from '@librechat/client';
 import type { ReactNode } from 'react';
+import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
 import { usePromptGroupsContext } from '~/Providers';
-import { useCategories } from '~/hooks';
+import { useCategories, useAuthContext } from '~/hooks';
+import { CategoryAdminModal } from '~/components/Prompts';
 import { cn } from '~/utils';
 
 interface CategorySelectorProps {
@@ -26,6 +28,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { hasAccess } = usePromptGroupsContext() ?? {};
   const { categories, emptyCategory } = useCategories({ hasAccess });
+  const { user } = useAuthContext();
+  const isAdmin = user?.role === SystemRoles.ADMIN;
 
   const control = formContext?.control;
   const watch = formContext?.watch;
@@ -52,10 +56,12 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     return categoryOption;
   }, [categoryOption, t]);
 
+  const [showAdminModal, setShowAdminModal] = useState(false);
+
   const menuItems: MenuItemProps[] = useMemo(() => {
     if (!categories) return [];
 
-    return categories.map((category) => ({
+    const items: MenuItemProps[] = categories.map((category) => ({
       id: category.value,
       label: category.label,
       icon: 'icon' in category ? category.icon : undefined,
@@ -69,7 +75,22 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         setIsOpen(false);
       },
     }));
-  }, [categories, formContext, setValue, onValueChange]);
+
+    if (isAdmin) {
+      items.push({
+        id: 'manage-categories',
+        label: t('com_ui_manage_categories') as string,
+        icon: <Settings2 className="h-4 w-4" />,
+        separate: true,
+        onClick: () => {
+          setIsOpen(false);
+          setShowAdminModal(true);
+        },
+      });
+    }
+
+    return items;
+  }, [categories, formContext, setValue, onValueChange, isAdmin, t]);
 
   const trigger = (
     <Ariakit.MenuButton
@@ -91,32 +112,25 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     </Ariakit.MenuButton>
   );
 
+  const dialog = (
+    <>
+      <DropdownPopup
+        trigger={trigger}
+        items={menuItems}
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        menuId="category-selector-menu"
+        className="mt-2"
+        portal={true}
+      />
+      <CategoryAdminModal open={showAdminModal} onClose={() => setShowAdminModal(false)} />
+    </>
+  );
+
   return formContext ? (
-    <Controller
-      name="category"
-      control={control}
-      render={() => (
-        <DropdownPopup
-          trigger={trigger}
-          items={menuItems}
-          isOpen={isOpen}
-          setIsOpen={setIsOpen}
-          menuId="category-selector-menu"
-          className="mt-2"
-          portal={true}
-        />
-      )}
-    />
+    <Controller name="category" control={control} render={() => dialog} />
   ) : (
-    <DropdownPopup
-      trigger={trigger}
-      items={menuItems}
-      isOpen={isOpen}
-      setIsOpen={setIsOpen}
-      menuId="category-selector-menu"
-      className="mt-2"
-      portal={true}
-    />
+    dialog
   );
 };
 

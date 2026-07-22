@@ -7,7 +7,6 @@ import {
   FileSources,
   Permissions,
   EModelEndpoint,
-  isParamEndpoint,
   PermissionTypes,
   getEndpointField,
   isAgentsEndpoint,
@@ -31,6 +30,7 @@ import {
   getDefaultEndpoint,
   getModelSpecPreset,
   buildDefaultConvo,
+  prepareNewConvoTemplate,
   logger,
 } from '~/utils';
 import { useDeleteFilesMutation, useGetEndpointsQuery, useGetStartupConfig } from '~/data-provider';
@@ -280,14 +280,7 @@ const useNewConvo = (index = 0) => {
         resetBadges();
       }
 
-      const templateConvoId = _template.conversationId ?? '';
-      const paramEndpoint =
-        isParamEndpoint(_template.endpoint ?? '', _template.endpointType ?? '') === true ||
-        isParamEndpoint(_preset?.endpoint ?? '', _preset?.endpointType ?? '');
-      const template =
-        paramEndpoint === true && templateConvoId && templateConvoId === Constants.NEW_CONVO
-          ? { endpoint: _template.endpoint }
-          : _template;
+      const template = prepareNewConvoTemplate({ template: _template, preset: _preset });
 
       const conversation = {
         conversationId: Constants.NEW_CONVO as string,

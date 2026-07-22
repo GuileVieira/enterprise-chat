@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRecoilValue } from 'recoil';
+import { ChatTeardropDots } from '@phosphor-icons/react';
 import { TooltipAnchor } from '@librechat/client';
-import { MessageCircleDashed } from 'lucide-react';
 import { useRecoilState, useRecoilCallback } from 'recoil';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -43,7 +43,7 @@ export function TemporaryChat() {
                 : 'bg-presentation shadow-sm hover:bg-surface-active-alt',
             )}
           >
-            <MessageCircleDashed className="icon-md" aria-hidden="true" />
+            <ChatTeardropDots className="icon-md" aria-hidden="true" />
           </button>
         }
       />

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Send } from 'lucide-react';
+import { PaperPlaneTilt as Send } from '@phosphor-icons/react';
 import { Button } from '@librechat/client';
 import type { TPromptGroup } from 'librechat-data-provider';
 import { useLocalize, useSubmitMessage } from '~/hooks';
@@ -29,7 +29,7 @@ const PromptActions = ({ group, mainText, onUsePrompt }: PromptActionsProps) => 
     if (hasVariables) {
       setShowVariableDialog(true);
     } else {
-      submitPrompt(mainText);
+      submitPrompt(mainText, group);
       if (group._id) {
         recordUsage(group._id);
       }

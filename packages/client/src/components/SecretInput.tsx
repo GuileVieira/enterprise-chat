@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
-import { Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { Check, Copy, Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 export interface SecretInputProps

@@ -6,7 +6,13 @@ const { getAppConfig } = require('~/server/services/Config');
 
 const getAvailablePluginsController = async (req, res) => {
   try {
-    const appConfig = await getAppConfig({ role: req.user?.role, tenantId: req.user?.tenantId });
+    const appConfig =
+      req.config ??
+      (await getAppConfig({
+        role: req.user?.role,
+        userId: req.user?.id,
+        tenantId: req.user?.tenantId,
+      }));
     const { filteredTools = [], includedTools = [] } = appConfig;
 
     const uniquePlugins = filterUniquePlugins(availableTools);
@@ -41,7 +47,12 @@ const getAvailableTools = async (req, res) => {
     }
 
     const appConfig =
-      req.config ?? (await getAppConfig({ role: req.user?.role, tenantId: req.user?.tenantId }));
+      req.config ??
+      (await getAppConfig({
+        role: req.user?.role,
+        userId: req.user?.id,
+        tenantId: req.user?.tenantId,
+      }));
 
     let toolDefinitions = await getCachedTools();
 
@@ -54,9 +65,19 @@ const getAvailableTools = async (req, res) => {
     const uniquePlugins = filterUniquePlugins(availableTools);
     const toolDefKeysList = toolDefinitions ? Object.keys(toolDefinitions) : null;
     const toolDefKeys = toolDefKeysList ? new Set(toolDefKeysList) : null;
+    const includeSet = new Set(appConfig?.includedTools ?? []);
+    const filterSet = new Set(appConfig?.filteredTools ?? []);
 
     const toolsOutput = [];
     for (const plugin of uniquePlugins) {
+      if (includeSet.size > 0) {
+        if (!includeSet.has(plugin.pluginKey)) {
+          continue;
+        }
+      } else if (filterSet.has(plugin.pluginKey)) {
+        continue;
+      }
+
       const isToolDefined = toolDefKeys?.has(plugin.pluginKey) === true;
       const isToolkit =
         plugin.toolkit === true &&

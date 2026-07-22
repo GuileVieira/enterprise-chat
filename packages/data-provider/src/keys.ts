@@ -30,10 +30,12 @@ export enum QueryKeys {
   mcpConnectionStatus = 'mcpConnectionStatus',
   mcpAuthValues = 'mcpAuthValues',
   agentTools = 'agentTools',
+  tenantFunctions = 'tenantFunctions',
   actions = 'actions',
   assistantDocs = 'assistantDocs',
   agentDocs = 'agentDocs',
   fileDownload = 'fileDownload',
+  filePreview = 'filePreview',
   voices = 'voices',
   customConfigSpeech = 'customConfigSpeech',
   prompts = 'prompts',
@@ -48,6 +50,10 @@ export enum QueryKeys {
   roles = 'roles',
   rolesList = 'rolesList',
   conversationTags = 'conversationTags',
+  projects = 'projects',
+  project = 'project',
+  projectFiles = 'projectFiles',
+  projectMetaAds = 'projectMetaAds',
   health = 'health',
   userTerms = 'userTerms',
   banner = 'banner',
@@ -65,11 +71,41 @@ export enum QueryKeys {
   activeJobs = 'activeJobs',
   /* Agent API Keys */
   agentApiKeys = 'agentApiKeys',
+  /* Skills */
+  skills = 'skills',
+  skill = 'skill',
+  skillFiles = 'skillFiles',
+  skillFileContent = 'skillFileContent',
+  /* Skill tree (phase 2 — filesystem-style node view) */
+  skillTree = 'skillTree',
+  skillNodeContent = 'skillNodeContent',
+  /* Skill favorites (star a skill in the sidebar) */
+  skillFavorites = 'skillFavorites',
+  /* Per-user skill active/inactive overrides */
+  skillStates = 'skillStates',
+  /* General user favorites */
+  favorites = 'favorites',
+  /* Admin */
+  adminUsers = 'adminUsers',
+  adminUsersSearch = 'adminUsersSearch',
+  adminGroups = 'adminGroups',
+  adminGroup = 'adminGroup',
+  adminGroupMembers = 'adminGroupMembers',
+  adminConfigs = 'adminConfigs',
+  adminConfigBase = 'adminConfigBase',
+  adminOverview = 'adminOverview',
+  adminTenants = 'adminTenants',
+  adminTenantUsers = 'adminTenantUsers',
+  adminTenantStats = 'adminTenantStats',
+  adminFunctions = 'adminFunctions',
+  adminSecrets = 'adminSecrets',
 }
 
 // Dynamic query keys that require parameters
 export const DynamicQueryKeys = {
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
+  projectFiles: (projectId: string) => ['projectFiles', projectId] as const,
+  projectMetaAds: (projectId: string) => ['projectMetaAds', projectId] as const,
 } as const;
 
 export enum MutationKeys {
@@ -82,6 +118,7 @@ export enum MutationKeys {
   loginUser = 'loginUser',
   logoutUser = 'logoutUser',
   refreshToken = 'refreshToken',
+  improvePrompt = 'improvePrompt',
   avatarUpload = 'avatarUpload',
   speechToText = 'speechToText',
   textToSpeech = 'textToSpeech',
@@ -97,4 +134,10 @@ export enum MutationKeys {
   enableTwoFactor = 'enableTwoFactor',
   verifyTwoFactor = 'verifyTwoFactor',
   updateMemoryPreferences = 'updateMemoryPreferences',
+  /* Skill mutations from the original UI PR — tree/node operations are
+   * phase 2 and currently stubbed in the data-service layer. */
+  createSkillNode = 'createSkillNode',
+  updateSkillNode = 'updateSkillNode',
+  deleteSkillNode = 'deleteSkillNode',
+  updateSkillNodeContent = 'updateSkillNodeContent',
 }

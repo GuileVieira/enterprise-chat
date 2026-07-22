@@ -84,9 +84,16 @@
     ]
   },
   {
-    "name": "Calculator",
+    "name": "DuckDuckGo Search",
+    "pluginKey": "duckduckgo_search",
+    "description": "Search DuckDuckGo and optionally fetch readable text from open web results.",
+    "icon": "assets/google-search.svg",
+    "authConfig": []
+  },
+  {
+    "name": "Calculadora",
     "pluginKey": "calculator",
-    "description": "Perform simple and complex mathematical calculations.",
+    "description": "Executa cálculos matemáticos simples e complexos.",
     "icon": "assets/calculator.svg",
     "authConfig": []
   },
@@ -163,6 +170,34 @@
         "authField": "GEMINI_API_KEY||GOOGLE_KEY||GOOGLE_SERVICE_KEY_FILE",
         "label": "Gemini API Key (optional)",
         "description": "Your Google Gemini API Key from <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a>. Leave blank to use Vertex AI with a service account (GOOGLE_SERVICE_KEY_FILE or api/data/auth.json).",
+        "optional": true
+      }
+    ]
+  },
+  {
+    "name": "Meta Ads Insights",
+    "pluginKey": "meta_ads_get_insights",
+    "description": "Read campaign, ad set, or ad-level insights from Meta Graph API using project Meta Ads credentials. Use ad level for ad or creative questions; it returns real ad and creative IDs when Meta provides them.",
+    "icon": "assets/logo.svg",
+    "authConfig": []
+  },
+  {
+    "name": "Meta Ads Budget Manager",
+    "pluginKey": "meta_ads_budget_manager",
+    "description": "Review and apply Meta Ads budget recommendations for project-linked ad accounts.",
+    "icon": "assets/logo.svg",
+    "authConfig": []
+  },
+  {
+    "name": "Premium Image Generator",
+    "pluginKey": "openrouter_gemini_image_gen",
+    "description": "Generate premium images with Nano Banana Pro through OpenRouter. Costs 3x tokens.",
+    "icon": "assets/premium-image-generator.svg",
+    "authConfig": [
+      {
+        "authField": "OPENROUTER_KEY",
+        "label": "OpenRouter API Key",
+        "description": "Your OpenRouter API key from <a href='https://openrouter.ai/keys' target='_blank'>OpenRouter</a>. If omitted, the server OPENROUTER_KEY environment variable may be used.",
         "optional": true
       }
     ]

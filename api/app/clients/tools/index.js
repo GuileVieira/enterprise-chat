@@ -8,10 +8,14 @@ const StructuredWolfram = require('./structured/Wolfram');
 const StructuredACS = require('./structured/AzureAISearch');
 const StructuredSD = require('./structured/StableDiffusion');
 const GoogleSearchAPI = require('./structured/GoogleSearch');
+const MetaAdsGetInsights = require('./structured/MetaAdsGetInsights');
+const MetaAdsBudgetManager = require('./structured/MetaAdsBudgetManager');
 const TraversaalSearch = require('./structured/TraversaalSearch');
+const DuckDuckGoSearch = require('./structured/DuckDuckGoSearch');
 const createOpenAIImageTools = require('./structured/OpenAIImageTools');
 const TavilySearchResults = require('./structured/TavilySearchResults');
 const createGeminiImageTool = require('./structured/GeminiImageGen');
+const createOpenRouterGeminiImageTool = require('./structured/OpenRouterGeminiImageGen');
 
 module.exports = {
   ...manifest,
@@ -22,9 +26,13 @@ module.exports = {
   StructuredSD,
   StructuredACS,
   GoogleSearchAPI,
+  MetaAdsGetInsights,
+  MetaAdsBudgetManager,
   TraversaalSearch,
+  DuckDuckGoSearch,
   StructuredWolfram,
   TavilySearchResults,
   createOpenAIImageTools,
   createGeminiImageTool,
+  createOpenRouterGeminiImageTool,
 };

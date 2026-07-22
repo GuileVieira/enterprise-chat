@@ -16,7 +16,12 @@ export interface ConversationMethods {
   saveConvo(
     ctx: { userId: string; isTemporary?: boolean; interfaceConfig?: AppConfig['interfaceConfig'] },
     data: { conversationId: string; newConversationId?: string; [key: string]: unknown },
-    metadata?: { context?: string; unsetFields?: Record<string, number>; noUpsert?: boolean },
+    metadata?: {
+      context?: string;
+      unsetFields?: Record<string, number>;
+      noUpsert?: boolean;
+      createdAtOnInsert?: Date;
+    },
   ): Promise<IConversation | { message: string } | null>;
   bulkSaveConvos(conversations: Array<Record<string, unknown>>): Promise<unknown>;
   getConvosByCursor(
@@ -26,6 +31,7 @@ export interface ConversationMethods {
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -66,7 +72,10 @@ export function createConversationMethods(
   async function searchConversation(conversationId: string) {
     try {
       const Conversation = mongoose.models.Conversation as Model<IConversation>;
-      return await Conversation.findOne({ conversationId }, 'conversationId user').lean();
+      return await Conversation.findOne(
+        { conversationId },
+        'conversationId user',
+      ).lean<IConversation>();
     } catch (error) {
       logger.error('[searchConversation] Error searching conversation', error);
       throw new Error('Error searching conversation');
@@ -79,7 +88,7 @@ export function createConversationMethods(
   async function getConvo(user: string, conversationId: string) {
     try {
       const Conversation = mongoose.models.Conversation as Model<IConversation>;
-      return await Conversation.findOne({ user, conversationId }).lean();
+      return await Conversation.findOne({ user, conversationId }).lean<IConversation>();
     } catch (error) {
       logger.error('[getConvo] Error getting single conversation', error);
       throw new Error('Error getting single conversation');
@@ -125,8 +134,7 @@ export function createConversationMethods(
     try {
       const Conversation = mongoose.models.Conversation as Model<IConversation>;
       return (
-        ((await Conversation.findOne({ conversationId }, 'files').lean()) as IConversation | null)
-          ?.files ?? []
+        (await Conversation.findOne({ conversationId }, 'files').lean<IConversation>())?.files ?? []
       );
     } catch (error) {
       logger.error('[getConvoFiles] Error getting conversation files', error);
@@ -156,7 +164,12 @@ export function createConversationMethods(
       newConversationId?: string;
       [key: string]: unknown;
     },
-    metadata?: { context?: string; unsetFields?: Record<string, number>; noUpsert?: boolean },
+    metadata?: {
+      context?: string;
+      unsetFields?: Record<string, number>;
+      noUpsert?: boolean;
+      createdAtOnInsert?: Date;
+    },
   ) {
     try {
       const Conversation = mongoose.models.Conversation as Model<IConversation>;
@@ -166,7 +179,7 @@ export function createConversationMethods(
         logger.debug(`[saveConvo] ${metadata.context}`);
       }
 
-      const messages = await getMessages({ conversationId }, '_id');
+      const messages = await getMessages({ conversationId, user: userId }, '_id');
       const update: Record<string, unknown> = { ...convo, messages, user: userId };
 
       if (newConversationId) {
@@ -185,9 +198,21 @@ export function createConversationMethods(
         update.expiredAt = null;
       }
 
+      const createdAtOnInsert =
+        metadata?.createdAtOnInsert instanceof Date &&
+        !Number.isNaN(metadata.createdAtOnInsert.getTime())
+          ? metadata.createdAtOnInsert
+          : undefined;
+      if (createdAtOnInsert) {
+        update.updatedAt = new Date();
+      }
+
       const updateOperation: Record<string, unknown> = { $set: update };
       if (metadata?.unsetFields && Object.keys(metadata.unsetFields).length > 0) {
         updateOperation.$unset = metadata.unsetFields;
+      }
+      if (createdAtOnInsert) {
+        updateOperation.$setOnInsert = { createdAt: createdAtOnInsert };
       }
 
       const conversation = await Conversation.findOneAndUpdate(
@@ -196,6 +221,7 @@ export function createConversationMethods(
         {
           new: true,
           upsert: metadata?.noUpsert !== true,
+          ...(createdAtOnInsert ? { timestamps: false } : {}),
         },
       );
 
@@ -250,6 +276,7 @@ export function createConversationMethods(
       limit = 25,
       isArchived = false,
       tags,
+      projectId,
       search,
       sortBy = 'updatedAt',
       sortDirection = 'desc',
@@ -258,6 +285,7 @@ export function createConversationMethods(
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -277,12 +305,20 @@ export function createConversationMethods(
       filters.push({ tags: { $in: tags } } as FilterQuery<IConversation>);
     }
 
+    if (projectId) {
+      filters.push({ projectId } as FilterQuery<IConversation>);
+    }
+
     filters.push({
       $or: [{ expiredAt: null }, { expiredAt: { $exists: false } }],
     } as FilterQuery<IConversation>);
 
     if (search) {
       try {
+        const meiliFilters = [`user = "${user}"`];
+        if (projectId) {
+          meiliFilters.push(`projectId = "${projectId}"`);
+        }
         const meiliResults = await (
           Conversation as unknown as {
             meiliSearch: (
@@ -292,7 +328,7 @@ export function createConversationMethods(
               hits: Array<{ conversationId: string }>;
             }>;
           }
-        ).meiliSearch(search, { filter: `user = "${user}"` });
+        ).meiliSearch(search, { filter: meiliFilters.join(' AND ') });
         const matchingIds = Array.isArray(meiliResults.hits)
           ? meiliResults.hits.map((result) => result.conversationId)
           : [];
@@ -358,16 +394,21 @@ export function createConversationMethods(
         )
         .sort(sortObj)
         .limit(limit + 1)
-        .lean();
+        .lean<IConversation[]>();
 
       let nextCursor: string | null = null;
       if (convos.length > limit) {
         convos.pop();
-        const lastReturned = convos[convos.length - 1] as Record<string, unknown>;
-        const primaryValue = lastReturned[finalSortBy];
+        const lastReturned = convos[convos.length - 1];
+        let primaryValue: string | Date | undefined = lastReturned.updatedAt;
+        if (finalSortBy === 'title') {
+          primaryValue = lastReturned.title;
+        } else if (finalSortBy === 'createdAt') {
+          primaryValue = lastReturned.createdAt;
+        }
         const primaryStr =
-          finalSortBy === 'title' ? primaryValue : (primaryValue as Date).toISOString();
-        const secondaryStr = (lastReturned.updatedAt as Date).toISOString();
+          finalSortBy === 'title' ? primaryValue : new Date(primaryValue ?? 0).toISOString();
+        const secondaryStr = new Date(lastReturned.updatedAt ?? 0).toISOString();
         const composite = { primary: primaryStr, secondary: secondaryStr };
         nextCursor = Buffer.from(JSON.stringify(composite)).toString('base64');
       }
@@ -400,7 +441,7 @@ export function createConversationMethods(
         user,
         conversationId: { $in: conversationIds },
         $or: [{ expiredAt: { $exists: false } }, { expiredAt: null }],
-      }).lean();
+      }).lean<IConversation[]>();
 
       results.sort(
         (a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime(),

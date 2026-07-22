@@ -1,6 +1,11 @@
 const express = require('express');
 const { ObjectId } = require('mongodb');
-const { logger, isValidObjectIdString } = require('@librechat/data-schemas');
+const {
+  logger,
+  runAsSystem,
+  SystemCapabilities,
+  isValidObjectIdString,
+} = require('@librechat/data-schemas');
 const {
   generateCheckAccess,
   markPublicPromptGroups,
@@ -12,13 +17,13 @@ const {
 } = require('@librechat/api');
 const {
   Permissions,
+  SystemRoles,
   ResourceType,
   AccessRoleIds,
   PrincipalType,
   PermissionBits,
   PermissionTypes,
 } = require('librechat-data-provider');
-const { SystemCapabilities } = require('@librechat/data-schemas');
 const {
   getListPromptGroupsByAccess,
   getOwnedPromptGroupIds,
@@ -29,6 +34,8 @@ const {
   createPromptGroup,
   getPromptGroup,
   getRoleByName,
+  findRoleByIdentifier,
+  grantPermission: grantPermissionDirect,
   deletePrompt,
   getPrompts,
   savePrompt,
@@ -49,6 +56,65 @@ const {
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 
 const router = express.Router();
+
+const grantPromptGroupOwnerPermission = async ({ userId, promptGroupId }) => {
+  try {
+    await grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: userId,
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: promptGroupId,
+      accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
+      grantedBy: userId,
+    });
+    return;
+  } catch (permissionError) {
+    logger.error(
+      `[createPromptGroup] Failed to grant owner role for promptGroup ${promptGroupId}:`,
+      permissionError,
+    );
+  }
+
+  const ownerBits =
+    PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE;
+  const ownerRole = await findRoleByIdentifier?.(AccessRoleIds.PROMPTGROUP_OWNER);
+  await grantPermissionDirect(
+    PrincipalType.USER,
+    userId,
+    ResourceType.PROMPTGROUP,
+    promptGroupId,
+    ownerBits,
+    userId,
+    undefined,
+    ownerRole?._id,
+  );
+};
+
+const grantPromptGroupTenantViewerPermission = async ({ userId, promptGroupId, tenantId }) => {
+  await grantPermission({
+    principalType: PrincipalType.TENANT,
+    principalId: tenantId,
+    resourceType: ResourceType.PROMPTGROUP,
+    resourceId: promptGroupId,
+    accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
+    grantedBy: userId,
+  });
+};
+
+const normalizeShareTenantIds = (shareTenantIds) => {
+  if (!Array.isArray(shareTenantIds)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      shareTenantIds
+        .filter((tenantId) => typeof tenantId === 'string')
+        .map((tenantId) => tenantId.trim())
+        .filter(Boolean),
+    ),
+  ];
+};
 
 const checkPromptAccess = generateCheckAccess({
   permissionType: PermissionTypes.PROMPTS,
@@ -83,7 +149,7 @@ router.get(
     const { groupId } = req.params;
 
     try {
-      const group = await getPromptGroup({ _id: groupId });
+      const group = await runAsSystem(() => getPromptGroup({ _id: groupId }));
 
       if (!group) {
         return res.status(404).send({ message: 'Prompt group not found' });
@@ -110,12 +176,22 @@ router.get('/all', async (req, res) => {
       category,
     });
 
-    let accessibleIds = await findAccessibleResources({
-      userId,
-      role: req.user.role,
-      resourceType: ResourceType.PROMPTGROUP,
-      requiredPermissions: PermissionBits.VIEW,
-    });
+    let accessibleIds;
+    const canManagePrompts = await hasCapability(req.user, SystemCapabilities.MANAGE_PROMPTS).catch(
+      () => false,
+    );
+    if (canManagePrompts) {
+      const PromptGroup = require('~/models').PromptGroup || require('mongoose').models.PromptGroup;
+      const groups = await runAsSystem(() => PromptGroup.find({}).select('_id').lean());
+      accessibleIds = groups.map((group) => group._id);
+    } else {
+      accessibleIds = await findAccessibleResources({
+        userId,
+        role: req.user.role,
+        resourceType: ResourceType.PROMPTGROUP,
+        requiredPermissions: PermissionBits.VIEW,
+      });
+    }
 
     const [publiclyAccessibleIds, ownedPromptGroupIds] = await Promise.all([
       findPubliclyAccessibleResources({
@@ -133,10 +209,12 @@ router.get('/all', async (req, res) => {
       ownedPromptGroupIds,
     });
 
-    const result = await getListPromptGroupsByAccess({
-      accessibleIds: filteredAccessibleIds,
-      otherParams: filter,
-    });
+    const result = await runAsSystem(() =>
+      getListPromptGroupsByAccess({
+        accessibleIds: filteredAccessibleIds,
+        otherParams: filter,
+      }),
+    );
 
     if (!result) {
       return res.status(200).send([]);
@@ -183,12 +261,22 @@ router.get('/groups', async (req, res) => {
       actualCursor = null;
     }
 
-    let accessibleIds = await findAccessibleResources({
-      userId,
-      role: req.user.role,
-      resourceType: ResourceType.PROMPTGROUP,
-      requiredPermissions: PermissionBits.VIEW,
-    });
+    let accessibleIds;
+    const canManagePrompts = await hasCapability(req.user, SystemCapabilities.MANAGE_PROMPTS).catch(
+      () => false,
+    );
+    if (canManagePrompts) {
+      const PromptGroup = require('~/models').PromptGroup || require('mongoose').models.PromptGroup;
+      const groups = await runAsSystem(() => PromptGroup.find({}).select('_id').lean());
+      accessibleIds = groups.map((group) => group._id);
+    } else {
+      accessibleIds = await findAccessibleResources({
+        userId,
+        role: req.user.role,
+        resourceType: ResourceType.PROMPTGROUP,
+        requiredPermissions: PermissionBits.VIEW,
+      });
+    }
 
     const [publiclyAccessibleIds, ownedPromptGroupIds] = await Promise.all([
       findPubliclyAccessibleResources({
@@ -207,12 +295,14 @@ router.get('/groups', async (req, res) => {
     });
 
     // Cursor-based pagination only
-    const result = await getListPromptGroupsByAccess({
-      accessibleIds: filteredAccessibleIds,
-      otherParams: filter,
-      limit: actualLimit,
-      after: actualCursor,
-    });
+    const result = await runAsSystem(() =>
+      getListPromptGroupsByAccess({
+        accessibleIds: filteredAccessibleIds,
+        otherParams: filter,
+        limit: actualLimit,
+        after: actualCursor,
+      }),
+    );
 
     if (!result) {
       const emptyResponse = createEmptyPromptGroupsResponse({
@@ -229,7 +319,7 @@ router.get('/groups', async (req, res) => {
     const response = formatPromptGroupsResponse({
       promptGroups: groupsWithPublicFlag,
       pageNumber: '1', // Always 1 for cursor-based pagination
-      pageSize: actualLimit.toString(),
+      pageSize: actualLimit != null ? actualLimit.toString() : undefined,
       hasMore: has_more,
       after,
     });
@@ -249,7 +339,7 @@ router.get('/groups', async (req, res) => {
  */
 const createNewPromptGroup = async (req, res) => {
   try {
-    const { prompt, group } = req.body;
+    const { prompt, group, shareTenantIds } = req.body;
 
     if (!prompt || !group || !group.name) {
       return res.status(400).send({ error: 'Prompt and group name are required' });
@@ -266,17 +356,24 @@ const createNewPromptGroup = async (req, res) => {
 
     if (result.prompt && result.prompt._id && result.prompt.groupId) {
       try {
-        await grantPermission({
-          principalType: PrincipalType.USER,
-          principalId: req.user.id,
-          resourceType: ResourceType.PROMPTGROUP,
-          resourceId: result.prompt.groupId,
-          accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
-          grantedBy: req.user.id,
+        await grantPromptGroupOwnerPermission({
+          userId: req.user.id,
+          promptGroupId: result.prompt.groupId.toString(),
         });
         logger.debug(
           `[createPromptGroup] Granted owner permissions to user ${req.user.id} for promptGroup ${result.prompt.groupId}`,
         );
+        if (req.user.role === SystemRoles.ADMIN) {
+          await Promise.all(
+            normalizeShareTenantIds(shareTenantIds).map((tenantId) =>
+              grantPromptGroupTenantViewerPermission({
+                userId: req.user.id,
+                promptGroupId: result.prompt.groupId.toString(),
+                tenantId,
+              }),
+            ),
+          );
+        }
       } catch (permissionError) {
         logger.error(
           `[createPromptGroup] Failed to grant owner permissions for promptGroup ${result.prompt.groupId}:`,
@@ -363,7 +460,7 @@ router.post(
       if (!isValidObjectIdString(groupId)) {
         return res.status(400).send({ error: 'Invalid groupId' });
       }
-      const result = await incrementPromptGroupUsage(groupId);
+      const result = await runAsSystem(() => incrementPromptGroupUsage(groupId));
       res.status(200).send(result);
     } catch (error) {
       logger.error('[recordPromptUsage]', error);
@@ -444,7 +541,7 @@ router.get(
   }),
   async (req, res) => {
     const { promptId } = req.params;
-    const prompt = await getPrompt({ _id: promptId });
+    const prompt = await runAsSystem(() => getPrompt({ _id: promptId }));
     res.status(200).send(prompt);
   },
 );
@@ -467,14 +564,32 @@ router.get('/', async (req, res) => {
         resourceId: groupId,
       });
 
-      if (!(permissions & PermissionBits.VIEW)) {
+      let hasPromptGroupAccess = (permissions & PermissionBits.VIEW) === PermissionBits.VIEW;
+      if (!hasPromptGroupAccess) {
+        const Project = require('~/models').Project || require('mongoose').models.Project;
+        const projects = await Project.find({ promptGroupIds: groupId }).select('_id').lean();
+        for (const project of projects) {
+          const projectPermissions = await getEffectivePermissions({
+            userId: req.user.id,
+            role: req.user.role,
+            resourceType: ResourceType.PROJECT,
+            resourceId: project._id,
+          });
+          if ((projectPermissions & PermissionBits.VIEW) === PermissionBits.VIEW) {
+            hasPromptGroupAccess = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasPromptGroupAccess) {
         return res
           .status(403)
           .send({ error: 'Insufficient permissions to view prompts in this group' });
       }
 
       // If user has access, fetch all prompts in the group (not just their own)
-      const prompts = await getPrompts({ groupId: new ObjectId(groupId) });
+      const prompts = await runAsSystem(() => getPrompts({ groupId: new ObjectId(groupId) }));
       return res.status(200).send(prompts);
     }
 

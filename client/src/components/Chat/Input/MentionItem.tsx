@@ -1,12 +1,12 @@
 import React from 'react';
-import { Clock4 } from 'lucide-react';
+import { Clock as Clock4 } from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 export interface MentionItemProps {
   name: string;
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
   index: number;
-  type?: 'prompt' | 'mention' | 'add-convo';
+  type?: 'prompt' | 'mention' | 'add-convo' | 'skill';
   icon?: React.ReactNode;
   isActive?: boolean;
   description?: string;

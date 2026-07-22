@@ -125,6 +125,37 @@ describe('discoverConnectedAgents', () => {
     expect(onAgentInitialized.mock.calls.map((c) => c[0])).toEqual(['B', 'C']);
   });
 
+  it('forwards active project file ids to every discovered handoff agent', async () => {
+    const edgesAB: GraphEdge[] = [{ from: 'A', to: 'B', edgeType: 'handoff' }];
+    const primaryConfig = makeConfig('A', edgesAB);
+
+    const getAgent = jest.fn(async () => makeAgent('B', []));
+    const checkPermission = jest.fn().mockResolvedValue(true);
+
+    await discoverConnectedAgents(
+      {
+        req: makeReq(),
+        res: makeRes(),
+        primaryConfig,
+        allowedProviders: new Set(),
+        modelsConfig: { openai: ['gpt-4o'] },
+        loadTools: jest.fn(),
+        projectFileIds: ['project-file'],
+      },
+      {
+        getAgent,
+        checkPermission,
+        logViolation: jest.fn(),
+        db: {} as never,
+      },
+    );
+
+    expect(mockInitializeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ projectFileIds: ['project-file'] }),
+      expect.anything(),
+    );
+  });
+
   it('skips orphaned agents and filters out edges pointing at them', async () => {
     const edges: GraphEdge[] = [
       { from: 'A', to: 'B', edgeType: 'handoff' },
@@ -234,6 +265,75 @@ describe('discoverConnectedAgents', () => {
     expect(mockInitializeAgent).toHaveBeenCalled();
     const initArgs = mockInitializeAgent.mock.calls[0][0];
     expect(initArgs.endpointOption.endpoint).toBe(EModelEndpoint.agents);
+  });
+
+  it('forwards codeEnvAvailable to every handoff initializeAgent call', async () => {
+    /* Pre-Phase 8, a handoff sub-agent with `tools: ['execute_code']`
+       got `CodeExecutionToolDefinition` registered unconditionally via
+       the legacy registry path. Phase 8 replaced that with a
+       `params.codeEnvAvailable`-gated expansion inside `initializeAgent`;
+       if discovery forgets to forward the primary's capability flag,
+       handoff agents lose `bash_tool` + `read_file` even though the
+       primary had them. Pin the pass-through so regressions surface. */
+    const primaryConfig = makeConfig('A', [{ from: 'A', to: 'B', edgeType: 'handoff' }]);
+    const getAgent = jest.fn(async () => makeAgent('B', []));
+    const checkPermission = jest.fn().mockResolvedValue(true);
+
+    await discoverConnectedAgents(
+      {
+        req: makeReq(),
+        res: makeRes(),
+        primaryConfig,
+        allowedProviders: new Set(),
+        modelsConfig: { openai: ['gpt-4o'] },
+        loadTools: jest.fn(),
+        codeEnvAvailable: true,
+      },
+      {
+        getAgent,
+        checkPermission,
+        logViolation: jest.fn(),
+        db: {} as never,
+      },
+    );
+
+    expect(mockInitializeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ codeEnvAvailable: true }),
+      expect.anything(),
+    );
+  });
+
+  it('forwards codeEnvAvailable=false verbatim so handoff agents respect disabled capability', async () => {
+    /* Symmetric to the "true" case: when the primary resolved
+       `codeEnvAvailable = false`, handoffs must NOT accidentally
+       re-enable code execution. The passthrough must preserve `false`
+       distinctly from `undefined`. */
+    const primaryConfig = makeConfig('A', [{ from: 'A', to: 'B', edgeType: 'handoff' }]);
+    const getAgent = jest.fn(async () => makeAgent('B', []));
+    const checkPermission = jest.fn().mockResolvedValue(true);
+
+    await discoverConnectedAgents(
+      {
+        req: makeReq(),
+        res: makeRes(),
+        primaryConfig,
+        allowedProviders: new Set(),
+        modelsConfig: { openai: ['gpt-4o'] },
+        loadTools: jest.fn(),
+        codeEnvAvailable: false,
+      },
+      {
+        getAgent,
+        checkPermission,
+        logViolation: jest.fn(),
+        db: {} as never,
+      },
+    );
+
+    expect(mockInitializeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ codeEnvAvailable: false }),
+      expect.anything(),
+    );
   });
 
   it('passes the configured resourceType (e.g. REMOTE_AGENT) to checkPermission', async () => {

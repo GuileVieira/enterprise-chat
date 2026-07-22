@@ -1,6 +1,6 @@
 import React from 'react';
 import { TooltipAnchor } from '@librechat/client';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { CaretDown as ChevronDown, CaretUp as ChevronUp } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -28,6 +28,7 @@ const CollapseChat = ({
         description={description}
         render={
           <button
+            type="button"
             aria-label={description}
             onClick={(event) => {
               event.preventDefault();

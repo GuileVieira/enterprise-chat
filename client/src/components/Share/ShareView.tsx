@@ -1,10 +1,14 @@
 import { memo, useState, useCallback, useContext } from 'react';
+import type { ReactNode } from 'react';
 import Cookies from 'js-cookie';
 import { useRecoilState } from 'recoil';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { buildTree } from 'librechat-data-provider';
-import { CalendarDays, Settings } from 'lucide-react';
-import { useGetSharedMessages } from 'librechat-data-provider/react-query';
+import { CalendarDots as CalendarDays, GearSix as Settings } from '@phosphor-icons/react';
+import {
+  useGetSharedMessages,
+  useGetTenantSharedMessages,
+} from 'librechat-data-provider/react-query';
 import {
   Spinner,
   Button,
@@ -18,8 +22,9 @@ import {
 } from '@librechat/client';
 import { ThemeSelector, LangSelector } from '~/components/Nav/SettingsTabs/General/General';
 import { ShareArtifactsContainer } from './ShareArtifacts';
+import ShareArtifactView from './ShareArtifactView';
 import { useLocalize, useDocumentTitle } from '~/hooks';
-import { useGetStartupConfig } from '~/data-provider';
+import { useForkTenantShareMutation, useGetStartupConfig } from '~/data-provider';
 import { ShareContext } from '~/Providers';
 import { ShareMessagesProvider } from './ShareMessagesProvider';
 import MessagesView from './MessagesView';
@@ -27,12 +32,30 @@ import Footer from '../Chat/Footer';
 import { cn } from '~/utils';
 import store from '~/store';
 
-function SharedView() {
+function SharedView({ isTenantShare = false }: { isTenantShare?: boolean }) {
   const localize = useLocalize();
+  const navigate = useNavigate();
   const { data: config } = useGetStartupConfig();
   const { theme, setTheme } = useContext(ThemeContext);
   const { shareId } = useParams();
-  const { data, isLoading } = useGetSharedMessages(shareId ?? '');
+  const [searchParams] = useSearchParams();
+  const artifactId = searchParams.get('artifact');
+  const isArtifactShare = !!shareId && !!artifactId;
+
+  const publicShare = useGetSharedMessages(shareId ?? '', {
+    enabled: !isArtifactShare && !isTenantShare && !!shareId,
+  });
+  const tenantShare = useGetTenantSharedMessages(shareId ?? '', {
+    enabled: !isArtifactShare && isTenantShare && !!shareId,
+  });
+  const forkTenantShare = useForkTenantShareMutation({
+    onSuccess: (result) => {
+      if (result.conversation.conversationId) {
+        navigate(`/c/${result.conversation.conversationId}`);
+      }
+    },
+  });
+  const { data, isLoading } = isTenantShare ? tenantShare : publicShare;
   const dataTree = data && buildTree({ messages: data.messages });
   const messagesTree = dataTree?.length === 0 ? null : (dataTree ?? null);
 
@@ -90,6 +113,14 @@ function SharedView() {
     [setLangcode],
   );
 
+  if (isArtifactShare) {
+    return (
+      <ShareContext.Provider value={{ isSharedConvo: true }}>
+        <ShareArtifactView shareId={shareId} isTenantShare={isTenantShare} />
+      </ShareContext.Provider>
+    );
+  }
+
   let content: JSX.Element;
   if (isLoading) {
     content = (
@@ -108,6 +139,22 @@ function SharedView() {
           onThemeChange={handleThemeChange}
           onLangChange={handleLangChange}
           settingsLabel={localize('com_nav_settings')}
+          action={
+            isTenantShare && shareId ? (
+              <Button
+                type="button"
+                variant="submit"
+                disabled={forkTenantShare.isLoading}
+                onClick={() => forkTenantShare.mutate({ shareId })}
+              >
+                {forkTenantShare.isLoading ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  localize('com_ui_fork_to_my_account')
+                )}
+              </Button>
+            ) : null
+          }
         />
         <ShareMessagesProvider messages={data.messages}>
           <MessagesView messagesTree={messagesTree} conversationId="shared-conversation" />
@@ -165,6 +212,7 @@ interface ShareHeaderProps {
   theme: string;
   langcode: string;
   settingsLabel: string;
+  action?: ReactNode;
   onThemeChange: (value: string) => void;
   onLangChange: (value: string) => void;
 }
@@ -175,6 +223,7 @@ function ShareHeader({
   theme,
   langcode,
   settingsLabel,
+  action,
   onThemeChange,
   onLangChange,
 }: ShareHeaderProps) {
@@ -204,44 +253,47 @@ function ShareHeader({
             )}
           </div>
 
-          <OGDialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <OGDialogTrigger asChild>
-              <Button
-                size={isMobile ? 'icon' : 'default'}
-                type="button"
-                variant="outline"
-                aria-label={settingsLabel}
-                className={cn(
-                  'rounded-full border-border-medium text-sm text-text-primary transition-colors',
-                  isMobile
-                    ? 'absolute bottom-4 right-4 justify-center p-0 shadow-lg'
-                    : 'gap-2 self-start px-4 py-2',
-                )}
+          <div className="flex items-center gap-2 self-start">
+            {action}
+            <OGDialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <OGDialogTrigger asChild>
+                <Button
+                  size={isMobile ? 'icon' : 'default'}
+                  type="button"
+                  variant="outline"
+                  aria-label={settingsLabel}
+                  className={cn(
+                    'rounded-full border-border-medium text-sm text-text-primary transition-colors',
+                    isMobile
+                      ? 'absolute bottom-4 right-4 justify-center p-0 shadow-lg'
+                      : 'gap-2 self-start px-4 py-2',
+                  )}
+                >
+                  <Settings className="size-4" aria-hidden="true" />
+                  <span className="hidden md:inline">{settingsLabel}</span>
+                </Button>
+              </OGDialogTrigger>
+              <OGDialogContent
+                className="w-11/12 max-w-lg"
+                showCloseButton={true}
+                onPointerDownOutside={handleDialogOutside}
+                onInteractOutside={handleDialogOutside}
               >
-                <Settings className="size-4" aria-hidden="true" />
-                <span className="hidden md:inline">{settingsLabel}</span>
-              </Button>
-            </OGDialogTrigger>
-            <OGDialogContent
-              className="w-11/12 max-w-lg"
-              showCloseButton={true}
-              onPointerDownOutside={handleDialogOutside}
-              onInteractOutside={handleDialogOutside}
-            >
-              <OGDialogHeader className="text-left">
-                <OGDialogTitle>{settingsLabel}</OGDialogTitle>
-              </OGDialogHeader>
-              <div className="flex flex-col gap-4 pt-2 text-sm">
-                <div className="relative focus-within:z-[100]">
-                  <ThemeSelector theme={theme} onChange={onThemeChange} portal={false} />
+                <OGDialogHeader className="text-left">
+                  <OGDialogTitle>{settingsLabel}</OGDialogTitle>
+                </OGDialogHeader>
+                <div className="flex flex-col gap-4 pt-2 text-sm">
+                  <div className="relative focus-within:z-[100]">
+                    <ThemeSelector theme={theme} onChange={onThemeChange} portal={false} />
+                  </div>
+                  <div className="bg-border-medium/60 h-px w-full" />
+                  <div className="relative focus-within:z-[100]">
+                    <LangSelector langcode={langcode} onChange={onLangChange} portal={false} />
+                  </div>
                 </div>
-                <div className="bg-border-medium/60 h-px w-full" />
-                <div className="relative focus-within:z-[100]">
-                  <LangSelector langcode={langcode} onChange={onLangChange} portal={false} />
-                </div>
-              </div>
-            </OGDialogContent>
-          </OGDialog>
+              </OGDialogContent>
+            </OGDialog>
+          </div>
         </div>
       </div>
     </section>

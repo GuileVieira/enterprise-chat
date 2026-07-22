@@ -1,0 +1,161 @@
+# ATA ESTRATÉGICA DA REUNIÃO
+
+## 1. RESUMO EXECUTIVO
+
+Reunião técnica de homologação e teste de usabilidade da plataforma Orqueste (integração com Meta Ads) entre Marcelo Kuwer e Guilherme Vieira. O encontro revelou graves divergências na consolidação e integridade dos dados exibidos no painel (com cliques no link sendo computados erroneamente como conversões de compra na campanha "Renda"), além de falhas de navegação e acessibilidade (modal de anúncios inoperante e ausência de campo para input de Token Global). Foram definidas correções imediatas na lógica da API de dados e colhidos requisitos de UX/UI específicos para a visão de e-commerce, restando pendente a validação das correções em ambiente de produção após novo deploy.
+
+---
+
+## 2. RESULTADO REAL DA REUNIÃO
+
+**Status da reunião:**
+Parcialmente resolutiva
+
+**Resultado concreto:**
+Mapeamento detalhado de bugs críticos na API de consolidação de métricas (comportamento de fallback incorreto que inflava conversões) e de falhas na interface de credenciais, além do redesenho da hierarquia de métricas prioritárias para e-commerce.
+
+**O que ainda bloqueia avanço:**
+Correção do código de atribuição de resultados por parte do desenvolvimento, ajuste do modal de anúncios que não renderiza na máquina do usuário e implementação do campo de Token Global na interface.
+
+---
+
+## 3. TÓPICOS DISCUTIDOS
+
+* **Divergência Crítica de Métricas (Dashboard vs. Gerenciador):**
+  O painel exibia 69 compras em um período de 7 dias, enquanto o Gerenciador de Anúncios da Meta apontava apenas 23. Identificou-se que a plataforma estava somando cliques no link (38 cliques) e engajamento diretamente na métrica principal de conversão da campanha pausada "Renda".
+
+* **Problemas de Acesso e Falhas de Interface (UX/UI):**
+  Dificuldade operacional de login devido a senhas sobrescritas no deploy, confusão de navegadores e bloqueio de pop-ups. O modal de anúncios (que deveria abrir a miniatura, métricas e texto do criativo) permaneceu inoperante durante os testes de Marcelo.
+
+* **Gerenciamento de Tokens de API:**
+  Discussão sobre a transição do Token Local para o Token Global. Constatou-se que a interface de "Contas e Credenciais" exibe o botão para gerenciar, mas carece do campo de input para que o usuário possa colar e salvar o Token Global.
+
+* **Reestruturação do Layout de Métricas para E-commerce:**
+  Alinhamento sobre a necessidade de personalizar as colunas do dashboard de acordo com o modelo de negócio (e-commerce). Marcelo pontuou que métricas de visualização de vídeo (ex: 75% video view) geram ruído visual e devem ser retiradas dos filtros principais de vendas.
+
+---
+
+## 4. DECISÕES CONFIRMADAS
+
+* **Decisão:** Eliminar a somatória de cliques no link ou engajamento na métrica principal de "Resultados/Conversões".
+  **Impacto:** Correção de distorção matemática grave que inflava falsamente a performance das campanhas no dashboard.
+  **Evidência:** "Ah, é cliques. Tá vendo? Ele entendeu que o clique no link foi um resultado [...] É, mas ele não pode puxar como resultado. Ele não pode linkar junto com a conversão."
+
+* **Decisão:** Ocultar métricas de visualização de vídeo (video view) na visualização de objetivos de e-commerce (Vendas).
+  **Impacto:** Redução de poluição visual e aumento do foco na entrega de performance real para clientes de e-commerce.
+  **Evidência:** "Então esse cara, quando tu clica em e-commerce, ele não tem que puxar isso [visualização de vídeo]. Não é relevante. [Guilherme] Tá. É, vou colocar ele também nos filtros principais."
+
+* **Decisão:** Substituir "Frequência" por "ROI" (ROAS) na visualização rápida e priorizar as colunas principais na sequência: ROI, Gasto, Resultado e Custo por Resultado.
+  **Impacto:** Alinhamento estratégico do dashboard às reais necessidades de tomada de decisão de um gestor de tráfego de e-commerce.
+  **Evidência:** "Sabe o que tu pode botar aqui no lugar de frequência? Coloca ROI. No e-commerce [...] ROI, gasto, resultado e custo por resultado."
+
+---
+
+## 5. INTENÇÕES, HIPÓTESES E SUGESTÕES NÃO FECHADAS
+
+* **Item:** Funcionamento e comportamento do modal de anúncios ao clique (se exibe resumo ou se abre diretamente no Gerenciador).
+  **Tipo:** Discussão aberta
+  **Motivo para não ser decisão:** Não foi possível validar o fluxo esperado do usuário porque a funcionalidade quebrou no ambiente do testador ("Eu mudei hoje... Eu subi antes de testar").
+
+* **Item:** Comportamento de retorno na navegação ao clicar no botão verde de visão.
+  **Tipo:** Discussão aberta
+  **Motivo para não ser decisão:** O sistema travou no teste de usabilidade e não executou o comando de retornar à tela anterior ("cliquei aqui e aqui, ele não voltou").
+
+---
+
+## 6. PLANO DE AÇÃO
+
+* [ ] **Ação:** Corrigir a query/lógica da API para isolar estritamente o evento de conversão configurado (ex: compra) do resultado de cliques e engajamento.
+  **Responsável:** @Guilherme Vieira
+  **Prazo:** [PRAZO AUSENTE - EXIGE DEFINIÇÃO]
+  **Dependência:** [DEPENDÊNCIA NÃO MAPEADA]
+  **Resultado esperado:** Sincronia de 100% nos dados de vendas entre a plataforma Orqueste e o Meta Ads Manager.
+  **Origem na reunião:** Constatação de que 38 cliques da campanha "Renda" foram somados às conversões.
+
+* [ ] **Ação:** Implementar o campo de texto (input) para cadastro do Token Global na tela de Contas e Credenciais.
+  **Responsável:** @Guilherme Vieira
+  **Prazo:** [PRAZO AUSENTE - EXIGE DEFINIÇÃO]
+  **Dependência:** [DEPENDÊNCIA NÃO MAPEADA]
+  **Resultado esperado:** Input funcional que salve o token global e libere a transição "Remover token local e usar token global".
+  **Origem na reunião:** Constatação de que a tela de gerenciamento de tokens não exibe o campo para colar o Token Global.
+
+* [ ] **Ação:** Reestruturar a ordem das colunas e a exibição de métricas na tela de e-commerce conforme o desenho proposto (ROI na primeira coluna, seguido por Gasto, Resultado e Custo por Resultado).
+  **Responsável:** @Guilherme Vieira
+  **Prazo:** [PRAZO AUSENTE - EXIGE DEFINIÇÃO]
+  **Dependência:** [DEPENDÊNCIA NÃO MAPEADA]
+  **Resultado esperado:** Dashboard reorganizado e livre de métricas de engajamento/vídeo secundárias na tela de e-commerce.
+  **Origem na reunião:** Feedback de experiência de usuário e negócio fornecido por Marcelo.
+
+* [ ] **Ação:** Investigar e corrigir a falha de inicialização do modal de anúncios na máquina do usuário.
+  **Responsável:** @Guilherme Vieira
+  **Prazo:** [PRAZO AUSENTE - EXIGE DEFINIÇÃO]
+  **Dependência:** [DEPENDÊNCIA NÃO MAPEADA]
+  **Resultado esperado:** Modal abrindo com metadados do anúncio ao clicar no item da tabela.
+  **Origem na reunião:** Erro no console (ou barreira de pop-up) que impediu o teste da funcionalidade.
+
+---
+
+## 7. PENDÊNCIAS E PERGUNTAS ABERTAS
+
+* **Pendência:** Validação do comportamento do modal de anúncios após correções e novo deploy.
+  **Por que importa:** É uma funcionalidade central de usabilidade para análise de criativos.
+  **Quem deveria decidir:** @Marcelo Kuwer e @Guilherme Vieira
+  **Prioridade:** Alta
+
+* **Pendência:** Definição dos prazos de entrega para os ajustes técnicos discutidos.
+  **Por que importa:** Sem cronograma de correções, o processo de homologação da plataforma fica paralisado.
+  **Quem deveria decidir:** @Guilherme Vieira
+  **Prioridade:** Alta
+
+---
+
+## 8. RISCOS E GARGALOS
+
+* **Risco:** Apresentação de dados financeiros e de conversão falsos/inflados no painel do cliente final.
+  **Tipo:** Operacional
+  **Impacto provável:** Perda de confiança total do cliente na ferramenta e tomada de decisões erradas de investimento publicitário (ex: injetar dinheiro em campanha pausada que "parece" estar vendendo, mas está apenas gerando cliques).
+  **Mitigação recomendada:** Bloquear de forma estrita fallbacks de métricas secundárias. Se a campanha é de conversão, a métrica de resultado deve apontar exclusivamente as conversões rastreadas pela API do Pixel/CAPI, sem mesclar dados de tráfego.
+
+* **Risco:** Ausência de processo de testes básicos de fumaça (QA) pré-reunião.
+  **Tipo:** Técnico
+  **Impacto provável:** Reuniões de homologação de produto são desperdiçadas na resolução de problemas básicos de acesso, erros de login e deploys instáveis.
+  **Mitigação recomendada:** Adotar um fluxo mínimo de validação em ambiente de staging antes de chamar o usuário de negócio para testes assistidos.
+
+---
+
+## 9. INCONSISTÊNCIAS, CONTRADIÇÕES OU PREMISSAS FRACAS
+
+* **Ponto crítico:** O sistema assume que na falta de conversões registradas em uma campanha com custo ativo, qualquer interação (como clique no link) pode ou deve preencher o campo de "resultado".
+  **Por que é problemático:** Falha lógica de negócio grave. No e-commerce, tráfego (clique) e conversão (compra) possuem valores comerciais e significados analíticos completamente distintos. Misturar ambos destrói a integridade dos relatórios.
+  **Correção recomendada:** O campo "Resultado" deve estar atrelado de forma imutável ao objetivo configurado na campanha (ex: se o objetivo é compra, o resultado é o número de compras; se for zero, deve mostrar zero).
+
+---
+
+## 10. AUTÓPSIA ESTRATÉGICA — CONTEÚDO E NEGÓCIO
+
+A premissa da plataforma Orqueste é excelente: centralizar e simplificar a tomada de decisão do gestor de tráfego. No entanto, o valor de um integrador de dados é proporcional à precisão de suas informações. Apresentar dados inconsistentes (69 compras contra as 23 reais da API) é um erro grave que invalida o software para uso comercial imediato. O foco prioritário do desenvolvimento deve ser a integridade matemática da integração; recursos de usabilidade e reorganização estática de colunas (como a ótima sugestão de Marcelo de trazer o ROI para a primeira dobra) devem ser secundários até que os dados estejam 100% blindados de alucinações de mapeamento.
+
+---
+
+## 11. AUTÓPSIA OPERACIONAL — DINÂMICA DA REUNIÃO
+
+A dinâmica da reunião foi prejudicada por problemas operacionais básicos de infraestrutura de TI e falta de testes prévios de QA. Quase metade do tempo de sincronização foi consumido por tentativas de login, buscas por senhas sobrescritas no gerenciador de senhas do navegador, discussão sobre chaves de segurança ausentes e desbloqueio de pop-ups. A declaração do desenvolvedor ("subi antes de testar") resume o caráter reativo da sessão, que se transformou em um laboratório de debug em tempo real em vez de uma homologação estratégica.
+
+---
+
+## 12. PRÓXIMOS PASSOS RECOMENDADOS
+
+1. Corrigir o algoritmo de consolidação de métricas da API (impedir a fusão de cliques e conversões na coluna "Resultado").
+2. Implementar a interface de input do Token Global e realizar teste de fumaça de login no ambiente local do desenvolvedor antes de subir para produção.
+3. Aplicar as alterações de UX/UI sugeridas para e-commerce (substituição de Frequência por ROI e reorganização sequencial das colunas de performance).
+
+---
+
+## 13. DIAGNÓSTICO FINAL
+
+**Nota de objetividade da reunião:** 4/10
+**Nota de qualidade das decisões:** 8/10
+**Nota de clareza dos próximos passos:** 9/10
+
+**Veredito:**
+A reunião expôs falhas de engenharia de dados que tornariam o software comercialmente inviável, mas as decisões de correção e os feedbacks de UX foram cirúrgicos e pavimentaram o caminho exato para salvar a usabilidade do sistema, desde que haja testes reais antes do próximo encontro.

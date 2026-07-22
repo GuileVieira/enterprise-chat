@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileUp } from 'lucide-react';
+import { FileArrowUp as FileUp } from '@phosphor-icons/react';
 import { cn } from '~/utils/';
 import { useLocalize } from '~/hooks';
 

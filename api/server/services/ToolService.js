@@ -1,13 +1,13 @@
 const { logger } = require('@librechat/data-schemas');
-const { tool: toolFn, DynamicStructuredTool } = require('@langchain/core/tools');
+const { tool: toolFn, DynamicStructuredTool } = require('@librechat/agents/langchain/tools');
 const {
   sleep,
-  EnvVar,
   StepTypes,
   GraphEvents,
   createToolSearch,
+  createBashExecutionTool,
   Constants: AgentConstants,
-  createProgrammaticToolCallingTool,
+  createBashProgrammaticToolCallingTool,
 } = require('@librechat/agents');
 const {
   sendEvent,
@@ -18,8 +18,12 @@ const {
   isActionDomainAllowed,
   buildWebSearchContext,
   buildImageToolContext,
-  buildToolClassification,
   buildOAuthToolCallName,
+  buildToolClassification,
+  buildWebSearchDynamicContext,
+  getCodeApiAuthHeaders,
+  getTenantFunctionDefinitions,
+  executeTenantFunction,
 } = require('@librechat/api');
 const {
   Time,
@@ -59,14 +63,14 @@ const { primeFiles: primeSearchFiles } = require('~/app/clients/tools/util/fileS
 const { primeFiles: primeCodeFiles } = require('~/server/services/Files/Code/process');
 const { manifestToolMap, toolkits } = require('~/app/clients/tools/manifest');
 const { createOnSearchResults } = require('~/server/services/Tools/search');
-const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
 const { resolveConfigServers } = require('~/server/services/MCP');
 const { recordUsage } = require('~/server/services/Threads');
 const { loadTools } = require('~/app/clients/tools/util');
 const { redactMessage } = require('~/config/parsers');
-const { findPluginAuthsByKeys } = require('~/models');
+const { findPluginAuthsByKeys, getTenantFunctions, getTenantSecret } = require('~/models');
 const { getFlowStateManager } = require('~/config');
+const { z } = require('zod');
 const { getLogStores } = require('~/cache');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
@@ -95,6 +99,60 @@ const normalizeActionToolName = (toolName) => {
   const prefixEnd = delimiterIndex + actionDelimiter.length;
   const encodedDomain = toolName.slice(prefixEnd);
   return toolName.slice(0, prefixEnd) + encodedDomain.replace(domainSeparatorRegex, '_');
+};
+
+/**
+ * Builds a Zod schema from a simple tenant function input schema.
+ * @param {Object} simpleSchema
+ * @returns {import('zod').ZodObject}
+ */
+const buildTenantFunctionZodSchema = (simpleSchema) => {
+  const buildValidator = (def) => {
+    let validator = z.any();
+    switch (def.type) {
+      case 'string':
+        validator = z.string();
+        break;
+      case 'number':
+      case 'float':
+        validator = z.number();
+        break;
+      case 'integer':
+        validator = z.number().int();
+        break;
+      case 'boolean':
+        validator = z.boolean();
+        break;
+      case 'array':
+        validator = z.array(def.items ? buildValidator(def.items) : z.any());
+        break;
+      case 'object':
+        validator = def.properties
+          ? buildTenantFunctionZodSchema(def.properties)
+          : z.record(z.any());
+        break;
+      default:
+        validator = z.string();
+    }
+    if (Array.isArray(def.enum) && def.enum.length > 0) {
+      validator = validator.refine((value) => def.enum.includes(value), {
+        message: `Must be one of: ${def.enum.join(', ')}`,
+      });
+    }
+    if (def.description) {
+      validator = validator.describe(def.description);
+    }
+    if (def.required !== true) {
+      validator = validator.optional();
+    }
+    return validator;
+  };
+
+  const shape = {};
+  for (const [key, def] of Object.entries(simpleSchema)) {
+    shape[key] = buildValidator(def);
+  }
+  return z.object(shape);
 };
 
 /**
@@ -360,6 +418,7 @@ async function processRequiredActions(client, requiredActions) {
           const isDomainAllowed = await isActionDomainAllowed(
             action.metadata.domain,
             appConfig?.actions?.allowedDomains,
+            appConfig?.actions?.allowedAddresses,
           );
           if (!isDomainAllowed) {
             continue;
@@ -428,6 +487,7 @@ async function processRequiredActions(client, requiredActions) {
 
       // We've already decrypted the metadata, so we can pass it directly
       const _allowedDomains = appConfig?.actions?.allowedDomains;
+      const _allowedAddresses = appConfig?.actions?.allowedAddresses;
       tool = await createActionTool({
         userId: client.req.user.id,
         res: client.res,
@@ -436,6 +496,7 @@ async function processRequiredActions(client, requiredActions) {
         // Note: intentionally not passing zodSchema, name, and description for assistants API
         encrypted, // Pass the encrypted values for OAuth flow
         useSSRFProtection: !Array.isArray(_allowedDomains) || _allowedDomains.length === 0,
+        allowedAddresses: _allowedAddresses,
       });
       if (!tool) {
         logger.warn(
@@ -490,6 +551,7 @@ async function processRequiredActions(client, requiredActions) {
  * @returns {Promise<{
  *   tools?: StructuredTool[];
  *   toolContextMap?: Record<string, unknown>;
+ *   dynamicToolContextMap?: Record<string, unknown>;
  *   userMCPAuthMap?: Record<string, Record<string, string>>;
  *   toolRegistry?: Map<string, import('~/utils/toolClassification').LCTool>;
  *   hasDeferredTools?: boolean;
@@ -522,7 +584,15 @@ const isBuiltInTool = (toolName) =>
  *   hasDeferredTools?: boolean;
  * }>}
  */
-async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, tool_resources }) {
+async function loadToolDefinitionsWrapper({
+  req,
+  res,
+  agent,
+  streamId = null,
+  tool_resources,
+  projectId,
+  projectFileIds,
+}) {
   if (!agent.tools || agent.tools.length === 0) {
     return { toolDefinitions: [] };
   }
@@ -541,6 +611,10 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
   const areToolsEnabled = checkCapability(AgentCapabilities.tools);
   const actionsEnabled = checkCapability(AgentCapabilities.actions);
   const deferredToolsEnabled = checkCapability(AgentCapabilities.deferred_tools);
+  const programmaticToolsEnabled = enabledCapabilities.has(AgentCapabilities.programmatic_tools);
+  const codeExecutionEnabled =
+    agent.tools?.includes(Tools.execute_code) === true &&
+    enabledCapabilities.has(AgentCapabilities.execute_code);
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
@@ -550,6 +624,9 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       return checkCapability(AgentCapabilities.execute_code);
     }
     if (tool === Tools.web_search) {
+      return checkCapability(AgentCapabilities.web_search);
+    }
+    if (tool === Tools.duckduckgo_search) {
       return checkCapability(AgentCapabilities.web_search);
     }
     if (isActionTool(tool)) {
@@ -658,6 +735,7 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
 
     const definitions = [];
     const allowedDomains = appConfig?.actions?.allowedDomains;
+    const allowedAddresses = appConfig?.actions?.allowedAddresses;
     const normalizedToolNames = new Set(
       actionToolNames.map((n) => n.replace(domainSeparatorRegex, '_')),
     );
@@ -669,7 +747,11 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       const legacyDomain = legacyDomainEncode(action.metadata.domain);
       const legacyNormalized = legacyDomain.replace(domainSeparatorRegex, '_');
 
-      const isDomainAllowed = await isActionDomainAllowed(action.metadata.domain, allowedDomains);
+      const isDomainAllowed = await isActionDomainAllowed(
+        action.metadata.domain,
+        allowedDomains,
+        allowedAddresses,
+      );
       if (!isDomainAllowed) {
         logger.warn(
           `[Actions] Domain "${action.metadata.domain}" not in allowedDomains. ` +
@@ -704,6 +786,10 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
     return definitions;
   };
 
+  const getTenantFunctionDefinitionsWrapped = async (tenantId, toolNames) => {
+    return getTenantFunctionDefinitions({ getTenantFunctions }, tenantId, toolNames);
+  };
+
   let { toolDefinitions, toolRegistry, hasDeferredTools } = await loadToolDefinitions(
     {
       userId: req.user.id,
@@ -711,12 +797,15 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       tools: filteredTools,
       toolOptions: agent.tool_options,
       deferredToolsEnabled,
+      programmaticToolsEnabled,
+      codeExecutionEnabled,
+      tenantId: req.user.tenantId,
     },
     {
       isBuiltInTool,
-      loadAuthValues,
       getOrFetchMCPServerTools,
       getActionToolDefinitions,
+      getTenantFunctionDefinitions: getTenantFunctionDefinitionsWrapped,
     },
   );
 
@@ -766,12 +855,15 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
           tools: filteredTools,
           toolOptions: agent.tool_options,
           deferredToolsEnabled,
+          programmaticToolsEnabled,
+          codeExecutionEnabled,
+          tenantId: req.user.tenantId,
         },
         {
           isBuiltInTool,
-          loadAuthValues,
           getOrFetchMCPServerTools,
           getActionToolDefinitions,
+          getTenantFunctionDefinitions: getTenantFunctionDefinitionsWrapped,
         },
       );
       toolDefinitions = reloadResult.toolDefinitions;
@@ -782,30 +874,41 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
 
   /** @type {Record<string, string>} */
   const toolContextMap = {};
+  /** @type {Record<string, string>} */
+  const dynamicToolContextMap = {};
   const hasWebSearch = filteredTools.includes(Tools.web_search);
   const hasFileSearch = filteredTools.includes(Tools.file_search);
   const hasExecuteCode = filteredTools.includes(Tools.execute_code);
 
   if (hasWebSearch) {
     toolContextMap[Tools.web_search] = buildWebSearchContext();
+    dynamicToolContextMap[Tools.web_search] = buildWebSearchDynamicContext(
+      req.conversationCreatedAt,
+    );
   }
 
+  /**
+   * `files` carry the upload session_ids; we surface them so client.js can
+   * seed `Graph.sessions[EXECUTE_CODE]` before run start. Without that seed,
+   * the agents-side `ToolNode.getCodeSessionContext` returns undefined on
+   * call #1, `_injected_files` is never set on the tool call, and the
+   * sandbox can't see the prior turn's generated artifacts on first read.
+   */
+  let primedCodeFiles;
   if (hasExecuteCode && tool_resources) {
     try {
-      const authValues = await loadAuthValues({
-        userId: req.user.id,
-        authFields: [EnvVar.CODE_API_KEY],
+      const { toolContext, files } = await primeCodeFiles({
+        req,
+        tool_resources,
+        agentId: agent.id,
+        projectId,
+        projectFileIds,
       });
-      const codeApiKey = authValues[EnvVar.CODE_API_KEY];
-
-      if (codeApiKey) {
-        const { toolContext } = await primeCodeFiles(
-          { req, tool_resources, agentId: agent.id },
-          codeApiKey,
-        );
-        if (toolContext) {
-          toolContextMap[Tools.execute_code] = toolContext;
-        }
+      if (toolContext) {
+        dynamicToolContextMap[Tools.execute_code] = toolContext;
+      }
+      if (files?.length) {
+        primedCodeFiles = files;
       }
     } catch (error) {
       logger.error('[loadToolDefinitionsWrapper] Error priming code files:', error);
@@ -818,9 +921,11 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
         req,
         tool_resources,
         agentId: agent.id,
+        projectId,
+        projectFileIds,
       });
       if (toolContext) {
-        toolContextMap[Tools.file_search] = toolContext;
+        dynamicToolContextMap[Tools.file_search] = toolContext;
       }
     } catch (error) {
       logger.error('[loadToolDefinitionsWrapper] Error priming search files:', error);
@@ -831,6 +936,7 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
   if (imageFiles.length > 0) {
     const hasOaiImageGen = filteredTools.includes('image_gen_oai');
     const hasGeminiImageGen = filteredTools.includes('gemini_image_gen');
+    const hasOpenRouterGeminiImageGen = filteredTools.includes('openrouter_gemini_image_gen');
 
     if (hasOaiImageGen) {
       const toolContext = buildImageToolContext({
@@ -839,7 +945,7 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
         contextDescription: 'image editing',
       });
       if (toolContext) {
-        toolContextMap.image_edit_oai = toolContext;
+        dynamicToolContextMap.image_edit_oai = toolContext;
       }
     }
 
@@ -850,7 +956,18 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
         contextDescription: 'image context',
       });
       if (toolContext) {
-        toolContextMap.gemini_image_gen = toolContext;
+        dynamicToolContextMap.gemini_image_gen = toolContext;
+      }
+    }
+
+    if (hasOpenRouterGeminiImageGen) {
+      const toolContext = buildImageToolContext({
+        imageFiles,
+        toolName: 'openrouter_gemini_image_gen',
+        contextDescription: 'image context',
+      });
+      if (toolContext) {
+        toolContextMap.openrouter_gemini_image_gen = toolContext;
       }
     }
   }
@@ -859,9 +976,11 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
     toolRegistry,
     userMCPAuthMap,
     toolContextMap,
+    dynamicToolContextMap,
     toolDefinitions,
     hasDeferredTools,
     actionsEnabled,
+    primedCodeFiles,
   };
 }
 
@@ -888,9 +1007,19 @@ async function loadAgentTools({
   openAIApiKey,
   streamId = null,
   definitionsOnly = true,
+  projectId,
+  projectFileIds,
 }) {
   if (definitionsOnly) {
-    return loadToolDefinitionsWrapper({ req, res, agent, streamId, tool_resources });
+    return loadToolDefinitionsWrapper({
+      req,
+      res,
+      agent,
+      streamId,
+      tool_resources,
+      projectId,
+      projectFileIds,
+    });
   }
 
   if (!agent.tools || agent.tools.length === 0) {
@@ -933,6 +1062,8 @@ async function loadAgentTools({
     } else if (tool === Tools.web_search) {
       includesWebSearch = checkCapability(AgentCapabilities.web_search);
       return includesWebSearch;
+    } else if (tool === Tools.duckduckgo_search) {
+      return checkCapability(AgentCapabilities.web_search);
     } else if (isActionTool(tool)) {
       return actionsEnabled;
     } else if (!areToolsEnabled) {
@@ -960,7 +1091,7 @@ async function loadAgentTools({
     });
   }
 
-  const { loadedTools, toolContextMap } = await loadTools({
+  const { loadedTools, toolContextMap, dynamicToolContextMap, primedCodeFiles } = await loadTools({
     agent,
     signal,
     userMCPAuthMap,
@@ -976,6 +1107,8 @@ async function loadAgentTools({
       uploadImageBuffer,
       returnMetadata: true,
       [Tools.web_search]: webSearchCallbacks,
+      projectId,
+      projectFileIds,
     },
     webSearch: appConfig.webSearch,
     fileStrategy: appConfig.fileStrategy,
@@ -984,6 +1117,10 @@ async function loadAgentTools({
 
   /** Build tool registry from MCP tools and create PTC/tool search tools if configured */
   const deferredToolsEnabled = checkCapability(AgentCapabilities.deferred_tools);
+  const programmaticToolsEnabled = enabledCapabilities.has(AgentCapabilities.programmatic_tools);
+  const codeExecutionEnabled =
+    agent.tools?.includes(Tools.execute_code) === true &&
+    enabledCapabilities.has(AgentCapabilities.execute_code);
   const { toolRegistry, toolDefinitions, additionalTools, hasDeferredTools } =
     await buildToolClassification({
       loadedTools,
@@ -991,7 +1128,9 @@ async function loadAgentTools({
       agentId: agent.id,
       agentToolOptions: agent.tool_options,
       deferredToolsEnabled,
-      loadAuthValues,
+      programmaticToolsEnabled,
+      codeExecutionEnabled,
+      authHeaders: () => getCodeApiAuthHeaders(req),
     });
 
   const agentTools = [];
@@ -1046,10 +1185,12 @@ async function loadAgentTools({
       toolRegistry,
       userMCPAuthMap,
       toolContextMap,
+      dynamicToolContextMap,
       toolDefinitions,
       hasDeferredTools,
       actionsEnabled,
       tools: agentTools,
+      primedCodeFiles,
     };
   }
 
@@ -1062,10 +1203,12 @@ async function loadAgentTools({
       toolRegistry,
       userMCPAuthMap,
       toolContextMap,
+      dynamicToolContextMap,
       toolDefinitions,
       hasDeferredTools,
       actionsEnabled,
       tools: agentTools,
+      primedCodeFiles,
     };
   }
 
@@ -1081,6 +1224,7 @@ async function loadAgentTools({
     const isDomainAllowed = await isActionDomainAllowed(
       action.metadata.domain,
       appConfig?.actions?.allowedDomains,
+      appConfig?.actions?.allowedAddresses,
     );
     if (!isDomainAllowed) {
       continue;
@@ -1152,6 +1296,7 @@ async function loadAgentTools({
 
     const { action, encrypted, zodSchema, requestBuilder, functionSignature } = entry;
     const _allowedDomains = appConfig?.actions?.allowedDomains;
+    const _allowedAddresses = appConfig?.actions?.allowedAddresses;
     const tool = await createActionTool({
       userId: req.user.id,
       res,
@@ -1163,6 +1308,7 @@ async function loadAgentTools({
       description: functionSignature.description,
       streamId,
       useSSRFProtection: !Array.isArray(_allowedDomains) || _allowedDomains.length === 0,
+      allowedAddresses: _allowedAddresses,
     });
 
     if (!tool) {
@@ -1184,11 +1330,13 @@ async function loadAgentTools({
   return {
     toolRegistry,
     toolContextMap,
+    dynamicToolContextMap,
     userMCPAuthMap,
     toolDefinitions,
     hasDeferredTools,
     actionsEnabled,
     tools: agentTools,
+    primedCodeFiles,
   };
 }
 
@@ -1223,18 +1371,31 @@ async function loadToolsForExecution({
   tool_resources,
   streamId = null,
   actionsEnabled,
+  projectId,
+  projectFileIds,
 }) {
   const appConfig = req.config;
   const allLoadedTools = [];
   const configurable = { userMCPAuthMap };
 
+  const isToolSearch = toolNames.includes(AgentConstants.TOOL_SEARCH);
+  const ptcToolNames = [
+    AgentConstants.BASH_PROGRAMMATIC_TOOL_CALLING,
+    AgentConstants.PROGRAMMATIC_TOOL_CALLING,
+  ].filter((name) => toolNames.includes(name));
+  const isPTCRequested = ptcToolNames.length > 0;
+
+  const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
   if (actionsEnabled === undefined) {
-    const enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
     actionsEnabled = enabledCapabilities.has(AgentCapabilities.actions);
   }
+  const webSearchEnabled = enabledCapabilities.has(AgentCapabilities.web_search);
 
-  const isToolSearch = toolNames.includes(AgentConstants.TOOL_SEARCH);
-  const isPTC = toolNames.includes(AgentConstants.PROGRAMMATIC_TOOL_CALLING);
+  const isPTC =
+    isPTCRequested &&
+    enabledCapabilities.has(AgentCapabilities.programmatic_tools) &&
+    enabledCapabilities.has(AgentCapabilities.execute_code) &&
+    agent?.tools?.includes(Tools.execute_code) === true;
 
   logger.debug(
     `[loadToolsForExecution] isToolSearch: ${isToolSearch}, toolRegistry: ${toolRegistry?.size ?? 'undefined'}`,
@@ -1252,26 +1413,41 @@ async function loadToolsForExecution({
   if (isPTC && toolRegistry) {
     configurable.toolRegistry = toolRegistry;
     try {
-      const authValues = await loadAuthValues({
-        userId: req.user.id,
-        authFields: [EnvVar.CODE_API_KEY],
-      });
-      const codeApiKey = authValues[EnvVar.CODE_API_KEY];
-
-      if (codeApiKey) {
-        const ptcTool = createProgrammaticToolCallingTool({ apiKey: codeApiKey });
+      /**
+       * LibreChat threads per-request Code API auth through the agents
+       * library so PTC calls share the same managed auth context.
+       */
+      for (const name of ptcToolNames) {
+        const ptcTool = createBashProgrammaticToolCallingTool({
+          authHeaders: () => getCodeApiAuthHeaders(req),
+        });
+        ptcTool.name = name;
         allLoadedTools.push(ptcTool);
-      } else {
-        logger.warn('[loadToolsForExecution] PTC requested but CODE_API_KEY not available');
       }
     } catch (error) {
       logger.error('[loadToolsForExecution] Error creating PTC tool:', error);
     }
   }
 
+  const isBashTool = toolNames.includes(AgentConstants.BASH_TOOL);
+  if (isBashTool) {
+    try {
+      const bashTool = createBashExecutionTool({
+        authHeaders: () => getCodeApiAuthHeaders(req),
+      });
+      allLoadedTools.push(bashTool);
+    } catch (error) {
+      logger.error('[loadToolsForExecution] Failed to create bash_tool', error);
+    }
+  }
+
   const specialToolNames = new Set([
     AgentConstants.TOOL_SEARCH,
     AgentConstants.PROGRAMMATIC_TOOL_CALLING,
+    AgentConstants.BASH_PROGRAMMATIC_TOOL_CALLING,
+    AgentConstants.BASH_TOOL,
+    AgentConstants.SKILL_TOOL,
+    AgentConstants.READ_FILE,
   ]);
 
   let ptcOrchestratedToolNames = [];
@@ -1288,8 +1464,23 @@ async function loadToolsForExecution({
 
   const actionToolNames = [];
   const regularToolNames = [];
+  const tenantFunctionToolNames = [];
+
   for (const name of allToolNamesToLoad) {
-    (isActionTool(name) ? actionToolNames : regularToolNames).push(name);
+    if (name === Tools.duckduckgo_search && !webSearchEnabled) {
+      logger.warn(
+        `[loadToolsForExecution] Capability "${AgentCapabilities.web_search}" disabled. ` +
+          `Skipping DuckDuckGo search. User: ${req.user.id} | Agent: ${agent?.id}`,
+      );
+      continue;
+    }
+    if (isActionTool(name)) {
+      actionToolNames.push(name);
+    } else if (!isBuiltInTool(name) && !name.includes(Constants.mcp_delimiter)) {
+      tenantFunctionToolNames.push(name);
+    } else {
+      regularToolNames.push(name);
+    }
   }
 
   if (regularToolNames.length > 0) {
@@ -1311,6 +1502,8 @@ async function loadToolsForExecution({
         uploadImageBuffer,
         returnMetadata: true,
         [Tools.web_search]: webSearchCallbacks,
+        projectId,
+        projectFileIds,
       },
       webSearch: appConfig?.webSearch,
       fileStrategy: appConfig?.fileStrategy,
@@ -1339,10 +1532,45 @@ async function loadToolsForExecution({
     );
   }
 
+  if (tenantFunctionToolNames.length > 0 && req.user.tenantId) {
+    const tenantFunctions = await getTenantFunctions({
+      tenantId: req.user.tenantId,
+      isActive: true,
+    });
+    const tenantFunctionMap = new Map(tenantFunctions.map((f) => [f.id, f]));
+
+    for (const toolName of tenantFunctionToolNames) {
+      const fn = tenantFunctionMap.get(toolName);
+      if (!fn) {
+        logger.warn(`[TenantFunctions] Function not found or inactive: ${toolName}`);
+        continue;
+      }
+
+      try {
+        const schema = buildTenantFunctionZodSchema(fn.inputSchema);
+        const tenantTool = new DynamicStructuredTool({
+          name: fn.id,
+          description: fn.description,
+          schema,
+          func: async (args) => {
+            return executeTenantFunction(fn, args, { getTenantSecret });
+          },
+        });
+        allLoadedTools.push(tenantTool);
+      } catch (error) {
+        logger.error(`[TenantFunctions] Failed to create tool ${toolName}:`, error);
+      }
+    }
+  }
+
   if (isPTC && allLoadedTools.length > 0) {
     const ptcToolMap = new Map();
     for (const tool of allLoadedTools) {
-      if (tool.name && tool.name !== AgentConstants.PROGRAMMATIC_TOOL_CALLING) {
+      if (
+        tool.name &&
+        tool.name !== AgentConstants.PROGRAMMATIC_TOOL_CALLING &&
+        tool.name !== AgentConstants.BASH_PROGRAMMATIC_TOOL_CALLING
+      ) {
         ptcToolMap.set(tool.name, tool);
       }
     }
@@ -1384,6 +1612,7 @@ async function loadActionToolsForExecution({
   // See registerActionTools for the key-shape rationale.
   const toolToAction = new Map();
   const allowedDomains = appConfig?.actions?.allowedDomains;
+  const allowedAddresses = appConfig?.actions?.allowedAddresses;
 
   for (const action of actionSets) {
     const domain = await domainParser(action.metadata.domain, true);
@@ -1391,7 +1620,11 @@ async function loadActionToolsForExecution({
     const legacyDomain = legacyDomainEncode(action.metadata.domain);
     const legacyNormalized = legacyDomain.replace(domainSeparatorRegex, '_');
 
-    const isDomainAllowed = await isActionDomainAllowed(action.metadata.domain, allowedDomains);
+    const isDomainAllowed = await isActionDomainAllowed(
+      action.metadata.domain,
+      allowedDomains,
+      allowedAddresses,
+    );
     if (!isDomainAllowed) {
       logger.warn(
         `[Actions] Domain "${action.metadata.domain}" not in allowedDomains. ` +
@@ -1465,6 +1698,7 @@ async function loadActionToolsForExecution({
       name: toolName,
       description: functionSignature.description,
       useSSRFProtection: !Array.isArray(allowedDomains) || allowedDomains.length === 0,
+      allowedAddresses,
     });
 
     if (!tool) {

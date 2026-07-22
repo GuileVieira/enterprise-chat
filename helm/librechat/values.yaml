@@ -19,7 +19,7 @@ global:
     existingSecretName: "librechat-credentials-env"
     # Used for Setting the Right Key, can be something like AZURE_API_KEY, if Azure OpenAI is used
     existingSecretApiKey: OPENAI_API_KEY
-    # Optionally add extra globally accessible environment variables here. These can be referenced under ConfigEnv to make them accessible inside LibreChat
+    # Optionally add extra globally accessible environment variables here. These can be referenced under ConfigEnv to make them accessible inside Orqest
     # env:
     #  - name: API_KEY
     #    valueFrom:
@@ -141,7 +141,7 @@ serviceAccount:
   name: ""
 
 lifecycle: {}
-# # base for adding a custom banner // see https://github.com/danny-avila/LibreChat/pull/3952 for an example
+# # base for adding a custom banner // see https://github.com/danny-avila/Orqest/pull/3952 for an example
 #   postStart:
 #     exec:
 #       command: ["/bin/sh", "-c", "npm run update-banner <displayFrom(Format: yyyy-mm-ddTHH:MM:SSZ)> <displayTo(Format: yyyy-mm-ddTHH:MM:SSZ)> <message> <isPublic(true/false)>"]
@@ -274,7 +274,7 @@ dnsConfig: {}
 #     - name: timeout
 #       value: "1"
 
-# Strategy for LibreChat deployment updates
+# Strategy for Orqest deployment updates
 updateStrategy:
   type: RollingUpdate
 
@@ -291,10 +291,14 @@ additionalConfigMaps: {}
 # MongoDB Parameters
 mongodb:
   enabled: true
+  # Bitnami moved versioned image tags to docker.io/bitnamilegacy on 2025-08-28.
+  # See https://github.com/bitnami/charts/issues/35164
+  image:
+    repository: bitnamilegacy/mongodb
   auth:
     enabled: false
   databases:
-   - LibreChat
+   - Orqest
 #  persistence: 
 #    size: 8Gi
 

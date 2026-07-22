@@ -620,10 +620,16 @@ export default function mongoMeili(schema: Schema, options: MongoMeiliOptions): 
     }
 
     try {
+      const baseFilterable = ['user'];
+      if (schema.obj.projectId) {
+        baseFilterable.push('projectId');
+      }
       await index.updateSettings({
-        filterableAttributes: ['user'],
+        filterableAttributes: baseFilterable,
       });
-      logger.debug(`[mongoMeili] Updated index ${indexName} settings to make 'user' filterable`);
+      logger.debug(
+        `[mongoMeili] Updated index ${indexName} settings to make [${baseFilterable.join(', ')}] filterable`,
+      );
     } catch (settingsError) {
       logger.error(`[mongoMeili] Error updating index settings for ${indexName}:`, settingsError);
     }

@@ -293,6 +293,16 @@ export const defaultAgentFormValues = {
     name: '',
     email: '',
   },
+  /** Optional allowlist. Only applies when `skills_enabled === true`.
+   *  Empty/undefined + enabled = full catalog; non-empty + enabled = narrow to ids. */
+  skills: undefined as string[] | undefined,
+  /** Master toggle for skill use on this agent. `true` activates skills
+   *  (full catalog unless `skills` narrows it). Anything else = inactive. */
+  skills_enabled: undefined as boolean | undefined,
+  /** `undefined` = feature disabled by default (no subagent tool injected). */
+  subagents: undefined as
+    | { enabled?: boolean; allowSelf?: boolean; agent_ids?: string[] }
+    | undefined,
 };
 
 export const ImageVisionTool: FunctionTool = {
@@ -675,6 +685,23 @@ export const tMessageSchema = z.object({
         ),
     })
     .optional(),
+  /**
+   * Skill names the user invoked manually via the `$` popover on this turn.
+   * Purely UI metadata — `SkillPills` renders these above the message
+   * bubble so users can see which skills they asked for in history and on
+   * reload. Runtime resolution uses the top-level payload field with the
+   * same name. Empty / absent for model-invoked skills (shown as tool_call
+   * content parts on the assistant message instead).
+   */
+  manualSkills: z.array(z.string()).optional(),
+  /**
+   * Skill names auto-primed on this turn because their `always-apply`
+   * frontmatter flag is set. Persisted at turn time so the pinned-variant
+   * pills on the user bubble survive reload and stay stable across later
+   * edits to the skill's `alwaysApply` flag (the user bubble reflects
+   * what actually ran, not the current catalog).
+   */
+  alwaysAppliedSkills: z.array(z.string()).optional(),
 });
 
 export type MemoryArtifact = {
@@ -826,6 +853,8 @@ export const tConversationSchema = z.object({
   greeting: z.string().optional(),
   spec: z.string().nullable().optional(),
   iconURL: z.string().nullable().optional(),
+  /* projects */
+  projectId: z.string().optional(),
   /* temporary chat */
   expiredAt: z.string().nullable().optional(),
   /* file token limits */
@@ -835,6 +864,322 @@ export const tConversationSchema = z.object({
   /** @deprecated Prefer `modelLabel` over `chatGptLabel` */
   chatGptLabel: z.string().nullable().optional(),
 });
+
+const projectMetaAdsRuleAuditSchema = z
+  .object({
+    createdAt: z.string().optional(),
+    createdBy: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+      })
+      .optional(),
+    updatedAt: z.string().optional(),
+    updatedBy: z
+      .object({
+        id: z.string(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
+export const projectSchema = z.object({
+  projectId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  user: z.string().optional(),
+  endpoint: z.string().nullable().optional(),
+  model: z.string().optional(),
+  instructions: z.string().optional(),
+  memories: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+  memoryKeys: z.array(z.string()).optional(),
+  promptSnippets: z.array(z.object({ title: z.string(), content: z.string() })).optional(),
+  promptGroupIds: z.array(z.string()).optional(),
+  fileIds: z.array(z.string()).optional(),
+  metaAds: z
+    .object({
+      enabled: z.boolean().optional(),
+      adAccountId: z.string().optional(),
+      tokenSecretName: z.string().optional(),
+      graphVersion: z.string().optional(),
+      credentialMode: z.enum(['project_secret', 'tenant_default']).optional(),
+      automationMode: z.enum(['recommend', 'auto_limited']).optional(),
+      accountProfile: z
+        .enum(['local_business', 'ecommerce', 'lead_gen', 'traffic', 'custom'])
+        .optional(),
+      budgetLevel: z.enum(['campaign', 'adset']).optional(),
+      scheduleIntervalMinutes: z
+        .union([
+          z.literal(30),
+          z.literal(60),
+          z.literal(120),
+          z.literal(180),
+          z.literal(360),
+          z.literal(720),
+          z.literal(1440),
+        ])
+        .optional(),
+      automationAnalysisPreset: z
+        .enum([
+          'today',
+          'yesterday',
+          'this_month',
+          'last_month',
+          'last_6h',
+          'last_24h',
+          'last_2d',
+          'last_3d',
+          'last_7d',
+          'last_14d',
+          'last_30d',
+        ])
+        .optional(),
+      lastRunAt: z.string().optional(),
+      clientGoal: z
+        .object({
+          resultType: z.string().optional(),
+          monthlyTarget: z.number().optional(),
+          monthlyConversionValueTarget: z.number().optional(),
+          targetRoas: z.number().optional(),
+        })
+        .optional(),
+      monthlyBudget: z
+        .object({
+          month: z.string().optional(),
+          baseAmount: z.number().optional(),
+          additionalAmount: z.number().optional(),
+          allowedOverspendPct: z.number().optional(),
+        })
+        .optional(),
+      monthlyBudgets: z
+        .record(
+          z.object({
+            baseAmount: z.number().optional(),
+            additionalAmount: z.number().optional(),
+            allowedOverspendPct: z.number().optional(),
+          }),
+        )
+        .optional(),
+      rules: z
+        .object({
+          targetCpa: z.number().optional(),
+          targetResultType: z.string().optional(),
+          primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
+          minRoas: z.number().optional(),
+          minCtr: z.number().optional(),
+          maxCpc: z.number().optional(),
+          maxCpm: z.number().optional(),
+          maxIncreasePct: z.number().optional(),
+          maxDecreasePct: z.number().optional(),
+          minDailyBudget: z.number().optional(),
+          maxDailyBudget: z.number().optional(),
+          cooldownHours: z.number().optional(),
+          minSpend: z.number().optional(),
+          enabledSections: z
+            .object({
+              performance: z.boolean().optional(),
+              creatives: z.boolean().optional(),
+              noResultSpendCap: z.boolean().optional(),
+            })
+            .optional(),
+          noResultSpendCap: z
+            .object({
+              enabled: z.boolean().optional(),
+              minSpend: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      creativeRules: z
+        .object({
+          maxFrequency: z.number().optional(),
+          pauseHighCost: z
+            .object({
+              enabled: z.boolean().optional(),
+              maxCostPerResult: z.number().optional(),
+              lookbackDays: z
+                .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                .optional(),
+              minCreativesInScope: z.number().optional(),
+              minSpend: z.number().optional(),
+              cooldownHours: z.number().optional(),
+              targetResultType: z.string().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      globalRuleAudit: projectMetaAdsRuleAuditSchema,
+      ruleOverrides: z
+        .array(
+          z.object({
+            entityLevel: z.enum(['campaign', 'adset']),
+            entityId: z.string(),
+            entityName: z.string().optional(),
+            enabled: z.boolean().optional(),
+            analysisPreset: z
+              .enum([
+                'today',
+                'yesterday',
+                'this_month',
+                'last_month',
+                'last_6h',
+                'last_24h',
+                'last_2d',
+                'last_3d',
+                'last_7d',
+                'last_14d',
+                'last_30d',
+              ])
+              .optional(),
+            rules: z
+              .object({
+                targetCpa: z.number().optional(),
+                targetResultType: z.string().optional(),
+                primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
+                minRoas: z.number().optional(),
+                minCtr: z.number().optional(),
+                maxCpc: z.number().optional(),
+                maxCpm: z.number().optional(),
+                maxIncreasePct: z.number().optional(),
+                maxDecreasePct: z.number().optional(),
+                minDailyBudget: z.number().optional(),
+                maxDailyBudget: z.number().optional(),
+                cooldownHours: z.number().optional(),
+                minSpend: z.number().optional(),
+                enabledSections: z
+                  .object({
+                    performance: z.boolean().optional(),
+                    creatives: z.boolean().optional(),
+                    noResultSpendCap: z.boolean().optional(),
+                  })
+                  .optional(),
+                noResultSpendCap: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    minSpend: z.number().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            creativeRules: z
+              .object({
+                maxFrequency: z.number().optional(),
+                pauseHighCost: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    maxCostPerResult: z.number().optional(),
+                    lookbackDays: z
+                      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                      .optional(),
+                    minCreativesInScope: z.number().optional(),
+                    minSpend: z.number().optional(),
+                    cooldownHours: z.number().optional(),
+                    targetResultType: z.string().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            ruleAudit: projectMetaAdsRuleAuditSchema,
+          }),
+        )
+        .optional(),
+      ruleGroups: z
+        .array(
+          z.object({
+            id: z.string(),
+            name: z.string(),
+            entityLevel: z.enum(['campaign', 'adset']),
+            entityIds: z.array(z.string()),
+            enabled: z.boolean().optional(),
+            analysisPreset: z
+              .enum([
+                'today',
+                'yesterday',
+                'this_month',
+                'last_month',
+                'last_6h',
+                'last_24h',
+                'last_2d',
+                'last_3d',
+                'last_7d',
+                'last_14d',
+                'last_30d',
+              ])
+              .optional(),
+            rules: z
+              .object({
+                targetCpa: z.number().optional(),
+                targetResultType: z.string().optional(),
+                primaryMetric: z.enum(['cpa', 'roas', 'cpc', 'ctr']).optional(),
+                minRoas: z.number().optional(),
+                minCtr: z.number().optional(),
+                maxCpc: z.number().optional(),
+                maxCpm: z.number().optional(),
+                maxIncreasePct: z.number().optional(),
+                maxDecreasePct: z.number().optional(),
+                minDailyBudget: z.number().optional(),
+                maxDailyBudget: z.number().optional(),
+                cooldownHours: z.number().optional(),
+                minSpend: z.number().optional(),
+                enabledSections: z
+                  .object({
+                    performance: z.boolean().optional(),
+                    creatives: z.boolean().optional(),
+                    noResultSpendCap: z.boolean().optional(),
+                  })
+                  .optional(),
+                noResultSpendCap: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    minSpend: z.number().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            creativeRules: z
+              .object({
+                maxFrequency: z.number().optional(),
+                pauseHighCost: z
+                  .object({
+                    enabled: z.boolean().optional(),
+                    maxCostPerResult: z.number().optional(),
+                    lookbackDays: z
+                      .union([z.literal(1), z.literal(2), z.literal(3), z.literal(7)])
+                      .optional(),
+                    minCreativesInScope: z.number().optional(),
+                    minSpend: z.number().optional(),
+                    cooldownHours: z.number().optional(),
+                    targetResultType: z.string().optional(),
+                  })
+                  .optional(),
+              })
+              .optional(),
+            ruleAudit: projectMetaAdsRuleAuditSchema,
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+  isArchived: z.boolean().optional(),
+  iconURL: z.string().optional(),
+  accessLevel: z.number().optional(),
+  tenantId: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const createProjectSchema = projectSchema.omit({
+  projectId: true,
+  user: true,
+  tenantId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateProjectSchema = createProjectSchema.partial();
 
 export const tPresetSchema = tConversationSchema
   .omit({
@@ -994,9 +1339,12 @@ export type TConversation = z.infer<typeof tConversationSchema> & {
   disableParams?: boolean;
 };
 
+export type TProject = z.infer<typeof projectSchema>;
+
 export const tSharedLinkSchema = z.object({
   conversationId: z.string(),
   shareId: z.string(),
+  targetMessageId: z.string().optional(),
   messages: z.array(z.string()),
   isPublic: z.boolean(),
   title: z.string(),
@@ -1037,6 +1385,7 @@ export const googleBaseSchema = tConversationSchema.pick({
   greeting: true,
   spec: true,
   maxContextTokens: true,
+  projectId: true,
 });
 
 export const googleSchema = googleBaseSchema
@@ -1133,6 +1482,7 @@ const compactAssistantBaseSchema = tConversationSchema.pick({
   iconURL: true,
   greeting: true,
   spec: true,
+  projectId: true,
 });
 
 export const compactAssistantSchema = compactAssistantBaseSchema
@@ -1217,9 +1567,15 @@ export const openAIBaseSchema = tConversationSchema.pick({
   web_search: true,
   disableStreaming: true,
   fileTokenLimit: true,
+  projectId: true,
 });
 
 export const openAISchema = openAIBaseSchema
+  .transform((obj: Partial<TConversation>) => removeNullishValues(obj, true))
+  .catch(() => ({}));
+
+export const openRouterSchema = openAIBaseSchema
+  .merge(tConversationSchema.pick({ promptCache: true }))
   .transform((obj: Partial<TConversation>) => removeNullishValues(obj, true))
   .catch(() => ({}));
 
@@ -1266,6 +1622,7 @@ export const anthropicBaseSchema = tConversationSchema.pick({
   fileTokenLimit: true,
   stop: true,
   stream: true,
+  projectId: true,
 });
 
 export const anthropicSchema = anthropicBaseSchema
@@ -1292,6 +1649,7 @@ export const compactAgentsBaseSchema = tConversationSchema.pick({
   agent_id: true,
   instructions: true,
   additional_instructions: true,
+  projectId: true,
 });
 
 export const compactAgentsSchema = compactAgentsBaseSchema

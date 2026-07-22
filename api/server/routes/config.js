@@ -1,5 +1,10 @@
 const express = require('express');
-const { isEnabled, getBalanceConfig } = require('@librechat/api');
+const {
+  isEnabled,
+  getBalanceConfig,
+  getCloudFrontConfig,
+  sanitizeModelSpecs,
+} = require('@librechat/api');
 const { defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
@@ -16,6 +21,7 @@ const sharedLinksEnabled =
 
 const publicSharedLinksEnabled =
   sharedLinksEnabled && isEnabled(process.env.ALLOW_SHARED_LINKS_PUBLIC);
+const shareLinkBaseUrl = process.env.SHARE_LINK_BASE_URL || '';
 
 const sharePointFilePickerEnabled = isEnabled(process.env.ENABLE_SHAREPOINT_FILEPICKER);
 const openidReuseTokens = isEnabled(process.env.OPENID_REUSE_TOKENS);
@@ -42,7 +48,7 @@ function buildSharedPayload() {
 
   /** @type {Partial<TStartupConfig>} */
   const payload = {
-    appTitle: process.env.APP_TITLE || 'LibreChat',
+    appTitle: process.env.APP_TITLE || 'Orqest',
     discordLoginEnabled: !!process.env.DISCORD_CLIENT_ID && !!process.env.DISCORD_CLIENT_SECRET,
     facebookLoginEnabled: !!process.env.FACEBOOK_CLIENT_ID && !!process.env.FACEBOOK_CLIENT_SECRET,
     githubLoginEnabled: !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET,
@@ -73,9 +79,10 @@ function buildSharedPayload() {
       isBirthday() ||
       isEnabled(process.env.SHOW_BIRTHDAY_ICON) ||
       process.env.SHOW_BIRTHDAY_ICON === '',
-    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || 'https://librechat.ai',
+    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || '',
     sharedLinksEnabled,
     publicSharedLinksEnabled,
+    shareLinkBaseUrl,
     analyticsGtmId: process.env.ANALYTICS_GTM_ID,
     openidReuseTokens,
     /** Read inline (not module-level) for per-request evaluation and test isolation */
@@ -116,9 +123,30 @@ function buildWebSearchConfig(appConfig) {
   };
 }
 
+function buildCloudFrontStartupConfig() {
+  const config = getCloudFrontConfig();
+  if (
+    config?.imageSigning !== 'cookies' ||
+    !config.domain ||
+    !config.cookieDomain ||
+    !config.privateKey ||
+    !config.keyPairId
+  ) {
+    return undefined;
+  }
+
+  return {
+    cookieRefresh: {
+      endpoint: '/api/auth/cloudfront/refresh',
+      domain: config.domain,
+    },
+  };
+}
+
 router.get('/', async function (req, res) {
   try {
     const sharedPayload = buildSharedPayload();
+    const cloudFront = buildCloudFrontStartupConfig();
 
     if (!req.user) {
       const tenantId = getTenantId();
@@ -129,6 +157,7 @@ router.get('/', async function (req, res) {
         ...sharedPayload,
         socialLogins: baseConfig?.registration?.socialLogins ?? defaultSocialLogins,
         turnstile: baseConfig?.turnstileConfig,
+        ...(cloudFront ? { cloudFront } : {}),
       };
 
       const interfaceConfig = baseConfig?.interfaceConfig;
@@ -159,7 +188,7 @@ router.get('/', async function (req, res) {
       socialLogins: appConfig?.registration?.socialLogins ?? defaultSocialLogins,
       interface: appConfig?.interfaceConfig,
       turnstile: appConfig?.turnstileConfig,
-      modelSpecs: appConfig?.modelSpecs,
+      modelSpecs: sanitizeModelSpecs(appConfig?.modelSpecs),
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,
@@ -170,6 +199,7 @@ router.get('/', async function (req, res) {
       conversationImportMaxFileSize: process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES
         ? parseInt(process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES, 10)
         : 0,
+      ...(cloudFront ? { cloudFront } : {}),
     };
 
     const webSearch = buildWebSearchConfig(appConfig);

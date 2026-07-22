@@ -48,8 +48,8 @@ jest.mock('~/utils', () => ({
   cn: (...classes: any[]) => classes.filter(Boolean).join(' '),
 }));
 
-jest.mock('lucide-react', () => ({
-  ChevronDown: () => <span>{'ChevronDown'}</span>,
+jest.mock('@phosphor-icons/react', () => ({
+  CaretDown: () => <span>{'CaretDown'}</span>,
 }));
 
 describe('ToolCallInfo', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ChevronRight } from 'lucide-react';
+import { CaretRight as ChevronRight } from '@phosphor-icons/react';
 import { MCPIcon, PinIcon } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -55,6 +55,7 @@ const MCPSubMenu = React.forwardRef<HTMLDivElement, MCPSubMenuProps>(
             hideOnClick={false}
             render={
               <Ariakit.MenuButton
+                render={<button type="button" />}
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   menuStore.toggle();

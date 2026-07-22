@@ -87,6 +87,7 @@ jest.mock('librechat-data-provider', () => {
       shape: {
         model: { parse: jest.fn((value) => value) },
         endpoint: { parse: jest.fn((value) => value) },
+        agent_id: { parse: jest.fn((value) => value) },
         temperature: { parse: jest.fn((value) => value) },
       },
     },
@@ -194,6 +195,7 @@ describe('useQueryParams', () => {
   });
 
   afterEach(() => {
+    sessionStorage.clear();
     jest.clearAllMocks();
     jest.useRealTimers();
   });
@@ -307,6 +309,85 @@ describe('useQueryParams', () => {
     );
     expect(mockHandleSubmit).toHaveBeenCalled();
     expect(mockSubmitMessage).toHaveBeenCalled();
+  });
+
+  it('should fill a Meta Ads brief draft in the project agent without auto-submitting', () => {
+    const mockSetValue = jest.fn();
+    const mockHandleSubmit = jest.fn((callback) => () => callback({ text: 'brief markdown' }));
+    const mockSubmitMessage = jest.fn();
+    const mockNewConversation = jest.fn();
+    const mockSetSearchParams = jest.fn();
+    const mockTextAreaRef = {
+      current: {
+        focus: jest.fn(),
+        setSelectionRange: jest.fn(),
+      } as unknown as HTMLTextAreaElement,
+    };
+
+    sessionStorage.setItem(
+      'meta_ads_brief:test',
+      JSON.stringify({ markdown: 'Analise estes conjuntos de Meta Ads.' }),
+    );
+
+    (useSearchParams as jest.Mock).mockReturnValue([
+      new URLSearchParams({
+        project_id: 'project-1',
+        meta_ads_brief: 'meta_ads_brief:test',
+        agent_id: 'traffic-agent-1',
+        new_conversation: 'true',
+        submit: 'true',
+      }),
+      mockSetSearchParams,
+    ]);
+    (useChatFormContext as jest.Mock).mockReturnValue({
+      setValue: mockSetValue,
+      getValues: jest.fn().mockReturnValue(''),
+      handleSubmit: mockHandleSubmit,
+    });
+    (useSubmitMessage as jest.Mock).mockReturnValue({
+      submitMessage: mockSubmitMessage,
+    });
+    (useChatContext as jest.Mock).mockReturnValue({
+      conversation: { model: null, endpoint: null },
+      newConversation: mockNewConversation,
+    });
+    (useQueryClient as jest.Mock).mockReturnValue({
+      getQueryData: jest.fn().mockImplementation((key) => {
+        const k = Array.isArray(key) ? key[0] : key;
+        if (k === 'startupConfig') {
+          return { modelSpecs: { list: [] } };
+        }
+        if (k === 'endpoints') {
+          return {};
+        }
+        return null;
+      }),
+    });
+
+    renderHook(() => useQueryParams({ textAreaRef: mockTextAreaRef }));
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(mockSetValue).toHaveBeenCalledWith(
+      'text',
+      'Analise estes conjuntos de Meta Ads.',
+      expect.objectContaining({ shouldValidate: true }),
+    );
+    expect(mockHandleSubmit).not.toHaveBeenCalled();
+    expect(mockSubmitMessage).not.toHaveBeenCalled();
+    expect(mockNewConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: { projectId: 'project-1', conversationId: 'new' },
+        preset: expect.objectContaining({ agent_id: 'traffic-agent-1' }),
+        keepAddedConvos: true,
+      }),
+    );
+    expect(sessionStorage.getItem('meta_ads_brief:test')).toBeNull();
+    expect(mockSetSearchParams).toHaveBeenCalledWith(expect.any(URLSearchParams), {
+      replace: true,
+    });
   });
 
   it('should defer submission when settings need to be applied first', () => {

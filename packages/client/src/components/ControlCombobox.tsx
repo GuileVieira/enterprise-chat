@@ -1,6 +1,6 @@
 import * as Ariakit from '@ariakit/react';
 import { matchSorter } from 'match-sorter';
-import { Search, ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { useMemo, useState, useRef, memo, useEffect } from 'react';
 import { SelectRenderer } from '@ariakit/react-core/select/select-renderer';
 import type { OptionWithIcon } from '~/common';
@@ -80,9 +80,30 @@ function ControlCombobox({
   }, [searchValue, items]);
 
   useEffect(() => {
-    if (buttonRef.current && !isCollapsed) {
-      setButtonWidth(buttonRef.current.offsetWidth);
+    const button = buttonRef.current;
+    if (!button || isCollapsed) {
+      return;
     }
+
+    setButtonWidth(button.offsetWidth);
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+      const width = entry.borderBoxSize?.[0]?.inlineSize ?? button.offsetWidth;
+      if (width > 0) {
+        setButtonWidth(width);
+      }
+    });
+
+    observer.observe(button);
+    return () => observer.disconnect();
   }, [isCollapsed]);
 
   const selectIconClassName = cn(

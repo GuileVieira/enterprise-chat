@@ -57,6 +57,7 @@ const buildDefaultConvo = ({
   const defaultConvo = {
     ...conversation,
     ...convo,
+    projectId: conversation.projectId ?? convo?.projectId,
     endpointType,
     endpoint,
   };

@@ -28,6 +28,7 @@ import { createBannerMethods, type BannerMethods } from './banner';
 import { createToolCallMethods, type ToolCallMethods } from './toolCall';
 import { createCategoriesMethods, type CategoriesMethods } from './categories';
 import { createPresetMethods, type PresetMethods } from './preset';
+import { createProjectMethods, type ProjectMethods } from './project';
 /* Tier 2 — Moderate (service deps injected) */
 import { createConversationTagMethods, type ConversationTagMethods } from './conversationTag';
 import { createMessageMethods, type MessageMethods } from './message';
@@ -45,10 +46,26 @@ import {
 import { createTransactionMethods, type TransactionMethods } from './transaction';
 import { createSpendTokensMethods, type SpendTokensMethods } from './spendTokens';
 import { createPromptMethods, type PromptMethods, type PromptDeps } from './prompt';
+import {
+  createSkillMethods,
+  type SkillMethods,
+  type SkillDeps,
+  type CreateSkillInput,
+  type CreateSkillResult,
+  type UpdateSkillInput,
+  type UpsertSkillFileInput,
+  type ListSkillsByAccessParams,
+  type ListSkillsByAccessResult,
+  type UpdateSkillResult,
+  type ValidationIssue,
+} from './skill';
 /* Tier 5 — Agent */
 import { createAgentMethods, type AgentMethods, type AgentDeps } from './agent';
 /* Config */
 import { createConfigMethods, type ConfigMethods } from './config';
+/* Tenant Functions */
+import { createTenantFunctionMethods, type TenantFunctionMethods } from './tenantFunction';
+import { createTenantSecretMethods, type TenantSecretMethods } from './tenantSecret';
 
 export { RoleConflictError, DEFAULT_REFRESH_TOKEN_EXPIRY, DEFAULT_SESSION_EXPIRY };
 export { tokenValues, cacheTokenValues, premiumTokenValues, defaultRate };
@@ -76,6 +93,7 @@ export type AllMethods = UserMethods &
   ToolCallMethods &
   CategoriesMethods &
   PresetMethods &
+  ProjectMethods &
   ConversationTagMethods &
   MessageMethods &
   ConversationMethods &
@@ -83,8 +101,11 @@ export type AllMethods = UserMethods &
   TransactionMethods &
   SpendTokensMethods &
   PromptMethods &
+  SkillMethods &
   AgentMethods &
-  ConfigMethods;
+  ConfigMethods &
+  TenantFunctionMethods &
+  TenantSecretMethods;
 
 /** Dependencies injected from the api layer into createMethods */
 export interface CreateMethodsDeps {
@@ -155,6 +176,12 @@ export function createMethods(
   };
   const promptMethods = createPromptMethods(mongoose, promptDeps);
 
+  const skillDeps: SkillDeps = {
+    removeAllPermissions,
+    getSoleOwnedResourceIds: aclEntryMethods.getSoleOwnedResourceIds,
+  };
+  const skillMethods = createSkillMethods(mongoose, skillDeps);
+
   // Role methods with optional cache injection
   const roleDeps: RoleDeps = { getCache: deps.getCache };
   const roleMethods = createRoleMethods(mongoose, roleDeps);
@@ -194,6 +221,10 @@ export function createMethods(
     ...createToolCallMethods(mongoose),
     ...createCategoriesMethods(mongoose),
     ...createPresetMethods(mongoose),
+    ...createProjectMethods(mongoose, {
+      removeAllPermissions,
+      grantPermission: aclEntryMethods.grantPermission,
+    }),
     /* Tier 2 */
     ...createConversationTagMethods(mongoose),
     ...messageMethods,
@@ -203,10 +234,14 @@ export function createMethods(
     ...transactionMethods,
     ...spendTokensMethods,
     ...promptMethods,
+    ...skillMethods,
     /* Tier 5 */
     ...agentMethods,
     /* Config */
     ...createConfigMethods(mongoose),
+    /* Tenant Functions */
+    ...createTenantFunctionMethods(mongoose),
+    ...createTenantSecretMethods(mongoose),
   };
 }
 
@@ -233,6 +268,7 @@ export type {
   ToolCallMethods,
   CategoriesMethods,
   PresetMethods,
+  ProjectMethods,
   ConversationTagMethods,
   MessageMethods,
   ConversationMethods,
@@ -240,6 +276,18 @@ export type {
   TransactionMethods,
   SpendTokensMethods,
   PromptMethods,
+  SkillMethods,
+  SkillDeps,
+  CreateSkillInput,
+  CreateSkillResult,
+  UpdateSkillInput,
+  UpsertSkillFileInput,
+  ListSkillsByAccessParams,
+  ListSkillsByAccessResult,
+  UpdateSkillResult,
+  ValidationIssue,
   AgentMethods,
   ConfigMethods,
+  TenantFunctionMethods,
+  TenantSecretMethods,
 };

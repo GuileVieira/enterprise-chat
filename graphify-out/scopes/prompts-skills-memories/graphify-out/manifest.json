@@ -1,0 +1,1062 @@
+{
+  "api/server/controllers/agents/client.js": {
+    "mtime": 1783393987.0169775,
+    "ast_hash": "92e239f63f31e97e7cabb77bd599273e",
+    "semantic_hash": "92e239f63f31e97e7cabb77bd599273e"
+  },
+  "api/server/controllers/agents/client.test.js": {
+    "mtime": 1783393987.0116987,
+    "ast_hash": "c86ad18d3a5acb4494d6f5ddbcf1f178",
+    "semantic_hash": "c86ad18d3a5acb4494d6f5ddbcf1f178"
+  },
+  "api/server/routes/promptImprove.js": {
+    "mtime": 1783393986.9056823,
+    "ast_hash": "abd29767652548ee0a9d591a7254dd46",
+    "semantic_hash": "abd29767652548ee0a9d591a7254dd46"
+  },
+  "api/server/routes/promptImprove.test.js": {
+    "mtime": 1783393986.8989103,
+    "ast_hash": "af441c389e74190020864a5a5952e3c3",
+    "semantic_hash": "af441c389e74190020864a5a5952e3c3"
+  },
+  "api/server/routes/prompts.js": {
+    "mtime": 1783393986.9662366,
+    "ast_hash": "f073e6e28be2920ea8442cd3440edd85",
+    "semantic_hash": "f073e6e28be2920ea8442cd3440edd85"
+  },
+  "api/server/routes/prompts.test.js": {
+    "mtime": 1783393986.9611642,
+    "ast_hash": "bfcd3bf5f09cd593c0fb999c1ae0b6fe",
+    "semantic_hash": "bfcd3bf5f09cd593c0fb999c1ae0b6fe"
+  },
+  "api/server/services/Projects/context.js": {
+    "mtime": 1783393986.885237,
+    "ast_hash": "99437a352c8df71e0040547b3f6aabe8",
+    "semantic_hash": "99437a352c8df71e0040547b3f6aabe8"
+  },
+  "api/server/services/Projects/context.spec.js": {
+    "mtime": 1783393986.8921971,
+    "ast_hash": "f5413154781bfe61202b94561ed99251",
+    "semantic_hash": "f5413154781bfe61202b94561ed99251"
+  },
+  "api/server/utils/import/__data__/chatbotui-export.json": {
+    "mtime": 1783393987.0839891,
+    "ast_hash": "83e31ea976ff4c17952ebbe16c3e4071",
+    "semantic_hash": "83e31ea976ff4c17952ebbe16c3e4071"
+  },
+  "api/server/utils/import/__data__/chatgpt-citations.json": {
+    "mtime": 1783393987.0670238,
+    "ast_hash": "944f0ebde2ec2e92c3dda66676c63997",
+    "semantic_hash": "944f0ebde2ec2e92c3dda66676c63997"
+  },
+  "api/server/utils/import/__data__/chatgpt-export.json": {
+    "mtime": 1783393987.094464,
+    "ast_hash": "461b40f7a5d0869de69e640e66c5d821",
+    "semantic_hash": "461b40f7a5d0869de69e640e66c5d821"
+  },
+  "api/server/utils/import/__data__/chatgpt-tree.json": {
+    "mtime": 1783393987.07368,
+    "ast_hash": "f9eb238cfcd67e90edbd7445148750be",
+    "semantic_hash": "f9eb238cfcd67e90edbd7445148750be"
+  },
+  "api/server/utils/import/__data__/librechat-export.json": {
+    "mtime": 1783393987.062129,
+    "ast_hash": "661dfaeb82f270c55a44f0e40b36e701",
+    "semantic_hash": "661dfaeb82f270c55a44f0e40b36e701"
+  },
+  "api/server/utils/import/__data__/librechat-linear.json": {
+    "mtime": 1783393987.0791261,
+    "ast_hash": "39c2ce47c3f0df5057df3e54b9d1cd0f",
+    "semantic_hash": "39c2ce47c3f0df5057df3e54b9d1cd0f"
+  },
+  "api/server/utils/import/__data__/librechat-opts-nonr-branches.json": {
+    "mtime": 1783393987.0891962,
+    "ast_hash": "016222a7080592a3706ebe25ad38a61d",
+    "semantic_hash": "016222a7080592a3706ebe25ad38a61d"
+  },
+  "api/server/utils/import/__data__/librechat-tree.json": {
+    "mtime": 1783393987.0570192,
+    "ast_hash": "e5ee17c4d372767a6fb19fda8f30b91f",
+    "semantic_hash": "e5ee17c4d372767a6fb19fda8f30b91f"
+  },
+  "api/server/utils/import/defaults.js": {
+    "mtime": 1783393987.026897,
+    "ast_hash": "f39902c568f2ea9dde21407c59fa593f",
+    "semantic_hash": "f39902c568f2ea9dde21407c59fa593f"
+  },
+  "api/server/utils/import/defaults.spec.js": {
+    "mtime": 1783393987.0219111,
+    "ast_hash": "633a025835800c19fd9eedd4d503a1b4",
+    "semantic_hash": "633a025835800c19fd9eedd4d503a1b4"
+  },
+  "api/server/utils/import/fork.js": {
+    "mtime": 1783393987.1092603,
+    "ast_hash": "db12ac12357c7f805aba76424d13bafb",
+    "semantic_hash": "db12ac12357c7f805aba76424d13bafb"
+  },
+  "api/server/utils/import/fork.spec.js": {
+    "mtime": 1783393987.0470335,
+    "ast_hash": "d6fc3c3e92312bb945d7de6854c45456",
+    "semantic_hash": "d6fc3c3e92312bb945d7de6854c45456"
+  },
+  "api/server/utils/import/importBatchBuilder.js": {
+    "mtime": 1783393987.0517187,
+    "ast_hash": "429a0c28b588df3229859b6f9b766dbd",
+    "semantic_hash": "429a0c28b588df3229859b6f9b766dbd"
+  },
+  "api/server/utils/import/importConversations.js": {
+    "mtime": 1783393987.0367572,
+    "ast_hash": "2a865a6a34fd86e2474a31f7a3a149d3",
+    "semantic_hash": "2a865a6a34fd86e2474a31f7a3a149d3"
+  },
+  "api/server/utils/import/importers-timestamp.spec.js": {
+    "mtime": 1783393987.0318174,
+    "ast_hash": "1d29a4ad6f187445535e6f653fb8da66",
+    "semantic_hash": "1d29a4ad6f187445535e6f653fb8da66"
+  },
+  "api/server/utils/import/importers.js": {
+    "mtime": 1783393987.0992367,
+    "ast_hash": "3ba2cfed08763a88e5c79233de048b58",
+    "semantic_hash": "3ba2cfed08763a88e5c79233de048b58"
+  },
+  "api/server/utils/import/importers.spec.js": {
+    "mtime": 1783393987.1044133,
+    "ast_hash": "646c869281906639ae2765759f842e23",
+    "semantic_hash": "646c869281906639ae2765759f842e23"
+  },
+  "api/server/utils/import/index.js": {
+    "mtime": 1783393987.0416927,
+    "ast_hash": "73cd9766af11a7056295782aac3809dd",
+    "semantic_hash": "73cd9766af11a7056295782aac3809dd"
+  },
+  "client/src/Providers/PromptGroupsContext.tsx": {
+    "mtime": 1783393986.8775766,
+    "ast_hash": "a64de95c928e6d7d13749f4d0aae5a20",
+    "semantic_hash": "a64de95c928e6d7d13749f4d0aae5a20"
+  },
+  "client/src/components/Chat/Input/PendingManualSkillsChips.tsx": {
+    "mtime": 1783393987.1835604,
+    "ast_hash": "41066cbacf543ab454ddd5d27301799c",
+    "semantic_hash": "41066cbacf543ab454ddd5d27301799c"
+  },
+  "client/src/components/Chat/Input/ProjectPromptSnippets.tsx": {
+    "mtime": 1783393987.1980612,
+    "ast_hash": "29c6f344974a1417b67688dc866ca77d",
+    "semantic_hash": "29c6f344974a1417b67688dc866ca77d"
+  },
+  "client/src/components/Chat/Input/PromptsCommand.tsx": {
+    "mtime": 1783393987.193072,
+    "ast_hash": "6a2070fc382ff37c553944f34138e8fa",
+    "semantic_hash": "6a2070fc382ff37c553944f34138e8fa"
+  },
+  "client/src/components/Chat/Input/Skills.tsx": {
+    "mtime": 1783393987.1883357,
+    "ast_hash": "ccaa168455c069984b6b8b337663861e",
+    "semantic_hash": "ccaa168455c069984b6b8b337663861e"
+  },
+  "client/src/components/Chat/Input/SkillsCommand.tsx": {
+    "mtime": 1783393987.1788461,
+    "ast_hash": "926ee8a6286f0aad0f99beb44a0250e0",
+    "semantic_hash": "926ee8a6286f0aad0f99beb44a0250e0"
+  },
+  "client/src/components/Chat/Messages/Content/MemoryArtifacts.tsx": {
+    "mtime": 1783393987.2182398,
+    "ast_hash": "36a0e5be8ea7fd479568cdae7a594471",
+    "semantic_hash": "36a0e5be8ea7fd479568cdae7a594471"
+  },
+  "client/src/components/Chat/Messages/Content/MemoryInfo.tsx": {
+    "mtime": 1783393987.2129188,
+    "ast_hash": "458ca3fc72e4d959a608a21c2654a19a",
+    "semantic_hash": "458ca3fc72e4d959a608a21c2654a19a"
+  },
+  "client/src/components/Chat/Messages/Content/SkillPills.tsx": {
+    "mtime": 1783393987.2285893,
+    "ast_hash": "b006cd459b428db1cfcedcf8d024d6bf",
+    "semantic_hash": "b006cd459b428db1cfcedcf8d024d6bf"
+  },
+  "client/src/components/SidePanel/Agents/Code/Action.tsx": {
+    "mtime": 1783393987.2481456,
+    "ast_hash": "c89e14a6e34ef19eca87072bd9a0fddd",
+    "semantic_hash": "c89e14a6e34ef19eca87072bd9a0fddd"
+  },
+  "client/src/components/SidePanel/Agents/Code/ApiKeyDialog.tsx": {
+    "mtime": 1783393987.2383819,
+    "ast_hash": "942e8c6af487f568484a6223e2dc0559",
+    "semantic_hash": "942e8c6af487f568484a6223e2dc0559"
+  },
+  "client/src/components/SidePanel/Agents/Code/Files.tsx": {
+    "mtime": 1783393987.2429848,
+    "ast_hash": "e7ed3fc115ab86250797ebcf357ec7df",
+    "semantic_hash": "e7ed3fc115ab86250797ebcf357ec7df"
+  },
+  "client/src/components/SidePanel/Agents/Code/Form.tsx": {
+    "mtime": 1783393987.2336724,
+    "ast_hash": "2ef4454e8d66fa450bb880625f4cc419",
+    "semantic_hash": "2ef4454e8d66fa450bb880625f4cc419"
+  },
+  "client/src/components/SidePanel/Agents/FileSearch.tsx": {
+    "mtime": 1783393987.2231877,
+    "ast_hash": "0df47c98cca79bb8a1179e4131b2ba9e",
+    "semantic_hash": "0df47c98cca79bb8a1179e4131b2ba9e"
+  },
+  "client/src/components/SidePanel/Agents/FileSearchCheckbox.tsx": {
+    "mtime": 1783393987.207285,
+    "ast_hash": "fb5b2b0be7ebcd1b5a41232c23ed213e",
+    "semantic_hash": "fb5b2b0be7ebcd1b5a41232c23ed213e"
+  },
+  "client/src/components/SidePanel/Agents/Instructions.tsx": {
+    "mtime": 1783393987.2027013,
+    "ast_hash": "41f8a77d0861aaf6d459438aca4f38c5",
+    "semantic_hash": "41f8a77d0861aaf6d459438aca4f38c5"
+  },
+  "client/src/components/SidePanel/Agents/Search/Action.tsx": {
+    "mtime": 1783393987.2716446,
+    "ast_hash": "5793171495623daeffbd1626816f11ee",
+    "semantic_hash": "5793171495623daeffbd1626816f11ee"
+  },
+  "client/src/components/SidePanel/Agents/Search/ApiKeyDialog.test.tsx": {
+    "mtime": 1783393987.2670577,
+    "ast_hash": "49698f95bcbba093758ba11b524b3fc8",
+    "semantic_hash": "49698f95bcbba093758ba11b524b3fc8"
+  },
+  "client/src/components/SidePanel/Agents/Search/ApiKeyDialog.tsx": {
+    "mtime": 1783393987.257582,
+    "ast_hash": "b3074607cb3adc0173b308b81f84de2b",
+    "semantic_hash": "b3074607cb3adc0173b308b81f84de2b"
+  },
+  "client/src/components/SidePanel/Agents/Search/Form.tsx": {
+    "mtime": 1783393987.252753,
+    "ast_hash": "99a9f7db114a956aee8f9836a519f4b7",
+    "semantic_hash": "99a9f7db114a956aee8f9836a519f4b7"
+  },
+  "client/src/components/SidePanel/Agents/Search/InputSection.tsx": {
+    "mtime": 1783393987.2626133,
+    "ast_hash": "756f0421fc005ab6890fedc987b94430",
+    "semantic_hash": "756f0421fc005ab6890fedc987b94430"
+  },
+  "client/src/data-provider/Memories/index.ts": {
+    "mtime": 1783393986.8394175,
+    "ast_hash": "0781cfcd9a53fb80539d612e68f25d38",
+    "semantic_hash": "0781cfcd9a53fb80539d612e68f25d38"
+  },
+  "client/src/data-provider/Memories/queries.ts": {
+    "mtime": 1783393986.8441496,
+    "ast_hash": "88cf98b10ab075229f361e7b36bd3407",
+    "semantic_hash": "88cf98b10ab075229f361e7b36bd3407"
+  },
+  "client/src/data-provider/Skills/index.ts": {
+    "mtime": 1783393986.8544376,
+    "ast_hash": "1e292d738a0e2f92255c7188e8f43de6",
+    "semantic_hash": "1e292d738a0e2f92255c7188e8f43de6"
+  },
+  "client/src/data-provider/Skills/mutations.ts": {
+    "mtime": 1783393986.8590791,
+    "ast_hash": "91da2abdead49a12bbdc39035428f17d",
+    "semantic_hash": "91da2abdead49a12bbdc39035428f17d"
+  },
+  "client/src/data-provider/Skills/queries.ts": {
+    "mtime": 1783393986.8683968,
+    "ast_hash": "5fdd9041ee775525cec4d5f279a30aed",
+    "semantic_hash": "5fdd9041ee775525cec4d5f279a30aed"
+  },
+  "client/src/data-provider/Skills/tree-mutations.ts": {
+    "mtime": 1783393986.849306,
+    "ast_hash": "63b14261489ba9430b3c89f7433f9daf",
+    "semantic_hash": "63b14261489ba9430b3c89f7433f9daf"
+  },
+  "client/src/data-provider/Skills/tree-queries.ts": {
+    "mtime": 1783393986.8637702,
+    "ast_hash": "d4b292ce744afa75eb4b84e6cd0c0058",
+    "semantic_hash": "d4b292ce744afa75eb4b84e6cd0c0058"
+  },
+  "client/src/store/prompts.ts": {
+    "mtime": 1783393986.8346548,
+    "ast_hash": "70909d4978d3a6aecd75eeb2ac00cd30",
+    "semantic_hash": "70909d4978d3a6aecd75eeb2ac00cd30"
+  },
+  "packages/api/src/prompts/artifacts/components.ts": {
+    "mtime": 1783393987.1536171,
+    "ast_hash": "5069cea16675e594803783d8586d1a95",
+    "semantic_hash": "5069cea16675e594803783d8586d1a95"
+  },
+  "packages/api/src/prompts/artifacts/generate.ts": {
+    "mtime": 1783393987.1488712,
+    "ast_hash": "dfb0ab032dae36aa21c9b9d31b85fbe3",
+    "semantic_hash": "dfb0ab032dae36aa21c9b9d31b85fbe3"
+  },
+  "packages/api/src/prompts/artifacts/index.ts": {
+    "mtime": 1783393987.1437187,
+    "ast_hash": "d0038627926fecc0c3f81fe9c7d3e4a3",
+    "semantic_hash": "d0038627926fecc0c3f81fe9c7d3e4a3"
+  },
+  "packages/api/src/prompts/format.spec.ts": {
+    "mtime": 1783393987.1337256,
+    "ast_hash": "22fb2eafe214ad507f655d68037303f1",
+    "semantic_hash": "22fb2eafe214ad507f655d68037303f1"
+  },
+  "packages/api/src/prompts/format.ts": {
+    "mtime": 1783393987.1192627,
+    "ast_hash": "dbd376bc7fa5f9ec7bbddff1e45a5557",
+    "semantic_hash": "dbd376bc7fa5f9ec7bbddff1e45a5557"
+  },
+  "packages/api/src/prompts/improve.spec.ts": {
+    "mtime": 1783393987.1585956,
+    "ast_hash": "1e096f5412968ead1281167fc09deeb8",
+    "semantic_hash": "1e096f5412968ead1281167fc09deeb8"
+  },
+  "packages/api/src/prompts/improve.ts": {
+    "mtime": 1783393987.1241045,
+    "ast_hash": "7f1e6f5004dab5bd0fdcb37e69be753d",
+    "semantic_hash": "7f1e6f5004dab5bd0fdcb37e69be753d"
+  },
+  "packages/api/src/prompts/index.ts": {
+    "mtime": 1783393987.1143506,
+    "ast_hash": "72505b4a5a30e535512b9493b7ec408d",
+    "semantic_hash": "72505b4a5a30e535512b9493b7ec408d"
+  },
+  "packages/api/src/prompts/migration.ts": {
+    "mtime": 1783393987.1386485,
+    "ast_hash": "febe0bfb2632ee4ae64588b182313b7e",
+    "semantic_hash": "febe0bfb2632ee4ae64588b182313b7e"
+  },
+  "packages/api/src/prompts/schemas.spec.ts": {
+    "mtime": 1783393987.1636803,
+    "ast_hash": "f5459c58727d03f6372d2aaa4d601bed",
+    "semantic_hash": "f5459c58727d03f6372d2aaa4d601bed"
+  },
+  "packages/api/src/prompts/schemas.ts": {
+    "mtime": 1783393987.129158,
+    "ast_hash": "b8e67f5073e973596074146ab971799f",
+    "semantic_hash": "b8e67f5073e973596074146ab971799f"
+  },
+  "packages/api/src/utils/projectContext.spec.ts": {
+    "mtime": 1783393987.173256,
+    "ast_hash": "c0504ed4c444e6eb9769070a3d75bf45",
+    "semantic_hash": "c0504ed4c444e6eb9769070a3d75bf45"
+  },
+  "packages/api/src/utils/projectContext.ts": {
+    "mtime": 1783393987.1685808,
+    "ast_hash": "c38964dda97a1b3fd00a0a633a2ead2f",
+    "semantic_hash": "c38964dda97a1b3fd00a0a633a2ead2f"
+  },
+  "packages/data-provider/src/api-endpoints.ts": {
+    "mtime": 1783393987.2763786,
+    "ast_hash": "20946427d8832887ffbd3849c5e10c4c",
+    "semantic_hash": "20946427d8832887ffbd3849c5e10c4c"
+  },
+  "packages/data-provider/src/data-service.ts": {
+    "mtime": 1783393987.282253,
+    "ast_hash": "07bf94ac4197c2f57a2522b0c43db790",
+    "semantic_hash": "07bf94ac4197c2f57a2522b0c43db790"
+  },
+  "packages/data-provider/src/keys.ts": {
+    "mtime": 1783393987.2868004,
+    "ast_hash": "fe53e9316a3fd24b9069d6b59995e0d3",
+    "semantic_hash": "fe53e9316a3fd24b9069d6b59995e0d3"
+  },
+  "packages/data-provider/src/permissions.ts": {
+    "mtime": 1783393987.2917545,
+    "ast_hash": "07790197fef13412e8989d9f07c240d3",
+    "semantic_hash": "07790197fef13412e8989d9f07c240d3"
+  },
+  "packages/data-schemas/src/methods/memory.ts": {
+    "mtime": 1783393986.9870489,
+    "ast_hash": "42aaf9340c692cd28d2b5ecf53b2ec96",
+    "semantic_hash": "42aaf9340c692cd28d2b5ecf53b2ec96"
+  },
+  "packages/data-schemas/src/methods/prompt.spec.ts": {
+    "mtime": 1783393986.9768171,
+    "ast_hash": "195095eff0ebb03fcb349f134348721a",
+    "semantic_hash": "195095eff0ebb03fcb349f134348721a"
+  },
+  "packages/data-schemas/src/methods/prompt.ts": {
+    "mtime": 1783393986.9714568,
+    "ast_hash": "fc7164b397c1afac5cd1598b475d495b",
+    "semantic_hash": "fc7164b397c1afac5cd1598b475d495b"
+  },
+  "packages/data-schemas/src/methods/skill.spec.ts": {
+    "mtime": 1783393986.9917407,
+    "ast_hash": "f3c84fb4d3da93e69005bbb7c0de6bfc",
+    "semantic_hash": "f3c84fb4d3da93e69005bbb7c0de6bfc"
+  },
+  "packages/data-schemas/src/methods/skill.ts": {
+    "mtime": 1783393986.9822376,
+    "ast_hash": "9c96b3e7efc4e825af448ff166531f3a",
+    "semantic_hash": "9c96b3e7efc4e825af448ff166531f3a"
+  },
+  "packages/data-schemas/src/models/memory.ts": {
+    "mtime": 1783393986.9463935,
+    "ast_hash": "25a6b9ff22ce8ea01d12807331f5b1fe",
+    "semantic_hash": "25a6b9ff22ce8ea01d12807331f5b1fe"
+  },
+  "packages/data-schemas/src/models/prompt.ts": {
+    "mtime": 1783393986.955982,
+    "ast_hash": "8d777c14aebf75aafbc7a5ee045cea11",
+    "semantic_hash": "8d777c14aebf75aafbc7a5ee045cea11"
+  },
+  "packages/data-schemas/src/models/promptGroup.ts": {
+    "mtime": 1783393986.941138,
+    "ast_hash": "1380c09847f37b3bb5e48f13cd9284ce",
+    "semantic_hash": "1380c09847f37b3bb5e48f13cd9284ce"
+  },
+  "packages/data-schemas/src/models/skill.ts": {
+    "mtime": 1783393986.9361293,
+    "ast_hash": "93a064465712c4e3096781264585281a",
+    "semantic_hash": "93a064465712c4e3096781264585281a"
+  },
+  "packages/data-schemas/src/models/skillFile.ts": {
+    "mtime": 1783393986.9511952,
+    "ast_hash": "a06193f3887944e551de90080ab5e896",
+    "semantic_hash": "a06193f3887944e551de90080ab5e896"
+  },
+  "packages/data-schemas/src/schema/memory.ts": {
+    "mtime": 1783393986.9216406,
+    "ast_hash": "ac757fc1ce25937734d729426a040384",
+    "semantic_hash": "ac757fc1ce25937734d729426a040384"
+  },
+  "packages/data-schemas/src/schema/prompt.ts": {
+    "mtime": 1783393986.9312208,
+    "ast_hash": "9cd0c1b1c92ee16ab13fd73a81b1a2ed",
+    "semantic_hash": "9cd0c1b1c92ee16ab13fd73a81b1a2ed"
+  },
+  "packages/data-schemas/src/schema/promptGroup.ts": {
+    "mtime": 1783393986.9169424,
+    "ast_hash": "b366236aa2d543f81affef2862e95fc1",
+    "semantic_hash": "b366236aa2d543f81affef2862e95fc1"
+  },
+  "packages/data-schemas/src/schema/skill.ts": {
+    "mtime": 1783393986.9116008,
+    "ast_hash": "b3a43148c923dbd93fe140f1bc6d43a1",
+    "semantic_hash": "b3a43148c923dbd93fe140f1bc6d43a1"
+  },
+  "packages/data-schemas/src/schema/skillFile.ts": {
+    "mtime": 1783393986.9264057,
+    "ast_hash": "95848be7bd8d06bea00fb072957ea7c3",
+    "semantic_hash": "95848be7bd8d06bea00fb072957ea7c3"
+  },
+  "packages/data-schemas/src/types/memory.ts": {
+    "mtime": 1783393987.0014405,
+    "ast_hash": "7493c60761e262aaa7821a6fe9554f7e",
+    "semantic_hash": "7493c60761e262aaa7821a6fe9554f7e"
+  },
+  "packages/data-schemas/src/types/prompts.ts": {
+    "mtime": 1783393987.0062373,
+    "ast_hash": "5dd57871d874aeb6401fa0f1810c0d64",
+    "semantic_hash": "5dd57871d874aeb6401fa0f1810c0d64"
+  },
+  "packages/data-schemas/src/types/skill.ts": {
+    "mtime": 1783393986.9966288,
+    "ast_hash": "69b1d04fe2222435fdbc70f766482216",
+    "semantic_hash": "69b1d04fe2222435fdbc70f766482216"
+  },
+  "api/server/routes/memories.js": {
+    "mtime": 1783394133.1592555,
+    "ast_hash": "86d830b95dc5766b5cca8021df013181",
+    "semantic_hash": "86d830b95dc5766b5cca8021df013181"
+  },
+  "api/server/routes/skills.js": {
+    "mtime": 1783394133.1535685,
+    "ast_hash": "ad1f1f7f7599a9cb443ac6f545d7b2ee",
+    "semantic_hash": "ad1f1f7f7599a9cb443ac6f545d7b2ee"
+  },
+  "api/server/services/Endpoints/agents/skillDeps.js": {
+    "mtime": 1783394133.1900573,
+    "ast_hash": "694e3737510e09168006ffb8c6149924",
+    "semantic_hash": "694e3737510e09168006ffb8c6149924"
+  },
+  "client/src/components/Project/ProjectMemoryEditor.tsx": {
+    "mtime": 1783394133.1956756,
+    "ast_hash": "d7d0bbf5273902d9883eda5c2ef299bb",
+    "semantic_hash": "d7d0bbf5273902d9883eda5c2ef299bb"
+  },
+  "client/src/components/Prompts/buttons/AdminSettings.tsx": {
+    "mtime": 1783394133.1069555,
+    "ast_hash": "e96f9d4b3bd78fd2e4f6549c9ac4855d",
+    "semantic_hash": "e96f9d4b3bd78fd2e4f6549c9ac4855d"
+  },
+  "client/src/components/Prompts/buttons/AlwaysMakeProd.tsx": {
+    "mtime": 1783394133.107826,
+    "ast_hash": "a08ba93b2b65c93f304b528770172948",
+    "semantic_hash": "a08ba93b2b65c93f304b528770172948"
+  },
+  "client/src/components/Prompts/buttons/AutoSendPrompt.tsx": {
+    "mtime": 1783394133.1058226,
+    "ast_hash": "1e1198a874b33d01d4a596a8e3729018",
+    "semantic_hash": "1e1198a874b33d01d4a596a8e3729018"
+  },
+  "client/src/components/Prompts/buttons/CreatePromptButton.tsx": {
+    "mtime": 1783394133.1065068,
+    "ast_hash": "c799da87d8867fe19eba8eac0c92d8e1",
+    "semantic_hash": "c799da87d8867fe19eba8eac0c92d8e1"
+  },
+  "client/src/components/Prompts/buttons/index.ts": {
+    "mtime": 1783394133.1072156,
+    "ast_hash": "cf60426af44893ec6843642d16363dd3",
+    "semantic_hash": "cf60426af44893ec6843642d16363dd3"
+  },
+  "client/src/components/Prompts/dialogs/CategoryAdminModal.tsx": {
+    "mtime": 1783394133.1123176,
+    "ast_hash": "718dbfa1bcc1f32d53e352c36cf14a73",
+    "semantic_hash": "718dbfa1bcc1f32d53e352c36cf14a73"
+  },
+  "client/src/components/Prompts/dialogs/DeletePrompt.tsx": {
+    "mtime": 1783394133.1137817,
+    "ast_hash": "660a92a0f1c1677de824518cdf65dd39",
+    "semantic_hash": "660a92a0f1c1677de824518cdf65dd39"
+  },
+  "client/src/components/Prompts/dialogs/PreviewPrompt.tsx": {
+    "mtime": 1783394133.1125374,
+    "ast_hash": "bb7d64a8ce536eb345cc6f02fc67ad71",
+    "semantic_hash": "bb7d64a8ce536eb345cc6f02fc67ad71"
+  },
+  "client/src/components/Prompts/dialogs/SharePrompt.tsx": {
+    "mtime": 1783394133.1127083,
+    "ast_hash": "e3395237f41ec4ca337ae95d1010fe75",
+    "semantic_hash": "e3395237f41ec4ca337ae95d1010fe75"
+  },
+  "client/src/components/Prompts/dialogs/VariableDialog.tsx": {
+    "mtime": 1783394133.113001,
+    "ast_hash": "4983f16e1fcf49348fa878dd8454afc2",
+    "semantic_hash": "4983f16e1fcf49348fa878dd8454afc2"
+  },
+  "client/src/components/Prompts/dialogs/__tests__/CategoryAdminModal.spec.tsx": {
+    "mtime": 1783394133.1133265,
+    "ast_hash": "aa8ff103fbf48e77f79250164ea8bfad",
+    "semantic_hash": "aa8ff103fbf48e77f79250164ea8bfad"
+  },
+  "client/src/components/Prompts/dialogs/index.ts": {
+    "mtime": 1783394133.113596,
+    "ast_hash": "449cd94ae259435fb4662ca46ee340a4",
+    "semantic_hash": "449cd94ae259435fb4662ca46ee340a4"
+  },
+  "client/src/components/Prompts/display/EmptyPromptPreview.tsx": {
+    "mtime": 1783394133.116316,
+    "ast_hash": "53563dd8404ef181eb1bb43e22aad976",
+    "semantic_hash": "53563dd8404ef181eb1bb43e22aad976"
+  },
+  "client/src/components/Prompts/display/PromptActions.tsx": {
+    "mtime": 1783394133.1169124,
+    "ast_hash": "07850d504a2cd79eb84e305db29522af",
+    "semantic_hash": "07850d504a2cd79eb84e305db29522af"
+  },
+  "client/src/components/Prompts/display/PromptDetailHeader.tsx": {
+    "mtime": 1783394133.1178496,
+    "ast_hash": "0127e13fbd80e643264eda5d9d4f7e81",
+    "semantic_hash": "0127e13fbd80e643264eda5d9d4f7e81"
+  },
+  "client/src/components/Prompts/display/PromptDetails.tsx": {
+    "mtime": 1783394133.117126,
+    "ast_hash": "bd9d004bcb4b445624a9ccccb6b33380",
+    "semantic_hash": "bd9d004bcb4b445624a9ccccb6b33380"
+  },
+  "client/src/components/Prompts/display/PromptTextCard.tsx": {
+    "mtime": 1783394133.11666,
+    "ast_hash": "bc47b5cfd3a9e0fb55646eeb35ffb0f8",
+    "semantic_hash": "bc47b5cfd3a9e0fb55646eeb35ffb0f8"
+  },
+  "client/src/components/Prompts/display/PromptVariables.tsx": {
+    "mtime": 1783394133.1174507,
+    "ast_hash": "ddd987673b2e2b748bb49d078971519b",
+    "semantic_hash": "ddd987673b2e2b748bb49d078971519b"
+  },
+  "client/src/components/Prompts/display/PromptVersions.tsx": {
+    "mtime": 1783394133.1160061,
+    "ast_hash": "b507c2de27b14f7b9b825fc95b944b9b",
+    "semantic_hash": "b507c2de27b14f7b9b825fc95b944b9b"
+  },
+  "client/src/components/Prompts/display/index.ts": {
+    "mtime": 1783394133.1176918,
+    "ast_hash": "8c47dae1542f48699a8f03483c5b75bb",
+    "semantic_hash": "8c47dae1542f48699a8f03483c5b75bb"
+  },
+  "client/src/components/Prompts/editor/Markdown.tsx": {
+    "mtime": 1783394133.1185095,
+    "ast_hash": "fa5dabf96d217585f8cc0ef072ad68ca",
+    "semantic_hash": "fa5dabf96d217585f8cc0ef072ad68ca"
+  },
+  "client/src/components/Prompts/editor/PromptEditor.tsx": {
+    "mtime": 1783394133.1192822,
+    "ast_hash": "d5aa60c145736f9d43b39594e9da31d1",
+    "semantic_hash": "d5aa60c145736f9d43b39594e9da31d1"
+  },
+  "client/src/components/Prompts/editor/VariablesDropdown.tsx": {
+    "mtime": 1783394133.1187751,
+    "ast_hash": "6c24865cec14d4225081a03e187f3beb",
+    "semantic_hash": "6c24865cec14d4225081a03e187f3beb"
+  },
+  "client/src/components/Prompts/editor/index.ts": {
+    "mtime": 1783394133.1190097,
+    "ast_hash": "9477d478aa4fa200918e6749148e3f6e",
+    "semantic_hash": "9477d478aa4fa200918e6749148e3f6e"
+  },
+  "client/src/components/Prompts/fields/CategorySelector.tsx": {
+    "mtime": 1783394133.114234,
+    "ast_hash": "5ea37c23a8b4c837e9e68513687f3e18",
+    "semantic_hash": "5ea37c23a8b4c837e9e68513687f3e18"
+  },
+  "client/src/components/Prompts/fields/Command.tsx": {
+    "mtime": 1783394133.1151955,
+    "ast_hash": "3c7f563df5660c83eb612c3d6b53aaf0",
+    "semantic_hash": "3c7f563df5660c83eb612c3d6b53aaf0"
+  },
+  "client/src/components/Prompts/fields/Description.tsx": {
+    "mtime": 1783394133.1149497,
+    "ast_hash": "f13d703e10cb504ef6a6a28d8fc00c8e",
+    "semantic_hash": "f13d703e10cb504ef6a6a28d8fc00c8e"
+  },
+  "client/src/components/Prompts/fields/PromptName.tsx": {
+    "mtime": 1783394133.114728,
+    "ast_hash": "afb55d28cce05f14004194389333c1fa",
+    "semantic_hash": "afb55d28cce05f14004194389333c1fa"
+  },
+  "client/src/components/Prompts/fields/index.ts": {
+    "mtime": 1783394133.1155045,
+    "ast_hash": "d66adda1d20a60044b0e9fc8bcfb559d",
+    "semantic_hash": "d66adda1d20a60044b0e9fc8bcfb559d"
+  },
+  "client/src/components/Prompts/forms/CreatePromptForm.tsx": {
+    "mtime": 1783394133.1050935,
+    "ast_hash": "9a09624840dfbb6cce307bfc5964df5d",
+    "semantic_hash": "9a09624840dfbb6cce307bfc5964df5d"
+  },
+  "client/src/components/Prompts/forms/PromptForm.tsx": {
+    "mtime": 1783394133.1039155,
+    "ast_hash": "cdada0752826943e77aa415b82250d51",
+    "semantic_hash": "cdada0752826943e77aa415b82250d51"
+  },
+  "client/src/components/Prompts/forms/PromptLabelsForm.tsx": {
+    "mtime": 1783394133.10467,
+    "ast_hash": "33dcbda9f7830581fa69dabfb436e55f",
+    "semantic_hash": "33dcbda9f7830581fa69dabfb436e55f"
+  },
+  "client/src/components/Prompts/forms/VariableForm.tsx": {
+    "mtime": 1783394133.1043813,
+    "ast_hash": "732e0afd832ab84898bde8e82012dca5",
+    "semantic_hash": "732e0afd832ab84898bde8e82012dca5"
+  },
+  "client/src/components/Prompts/forms/index.ts": {
+    "mtime": 1783394133.1053674,
+    "ast_hash": "88b3b0c5bcb0fcc108706ed7ab718bdb",
+    "semantic_hash": "88b3b0c5bcb0fcc108706ed7ab718bdb"
+  },
+  "client/src/components/Prompts/index.ts": {
+    "mtime": 1783394133.1181104,
+    "ast_hash": "681d2163d44181b04c5b0de518b57f98",
+    "semantic_hash": "681d2163d44181b04c5b0de518b57f98"
+  },
+  "client/src/components/Prompts/layouts/InlinePromptsView.tsx": {
+    "mtime": 1783394133.11162,
+    "ast_hash": "e1f1eebf5d42970f0c872c92f6673055",
+    "semantic_hash": "e1f1eebf5d42970f0c872c92f6673055"
+  },
+  "client/src/components/Prompts/layouts/index.ts": {
+    "mtime": 1783394133.1118002,
+    "ast_hash": "b0e482547f201112b76d2a0b2245127c",
+    "semantic_hash": "b0e482547f201112b76d2a0b2245127c"
+  },
+  "client/src/components/Prompts/lists/ChatGroupItem.tsx": {
+    "mtime": 1783394133.1087909,
+    "ast_hash": "11162ef983f976154e870bc691bd1d10",
+    "semantic_hash": "11162ef983f976154e870bc691bd1d10"
+  },
+  "client/src/components/Prompts/lists/List.tsx": {
+    "mtime": 1783394133.109042,
+    "ast_hash": "64d140597b4fdf5c235bf8cdf74a35aa",
+    "semantic_hash": "64d140597b4fdf5c235bf8cdf74a35aa"
+  },
+  "client/src/components/Prompts/lists/ListCard.tsx": {
+    "mtime": 1783394133.1092658,
+    "ast_hash": "e343a8c8d2f54be3fb4705d3546b95c5",
+    "semantic_hash": "e343a8c8d2f54be3fb4705d3546b95c5"
+  },
+  "client/src/components/Prompts/lists/NoPromptGroup.tsx": {
+    "mtime": 1783394133.108362,
+    "ast_hash": "92b241b739aeeae0a3bdf6329c08cbd1",
+    "semantic_hash": "92b241b739aeeae0a3bdf6329c08cbd1"
+  },
+  "client/src/components/Prompts/lists/index.ts": {
+    "mtime": 1783394133.1094878,
+    "ast_hash": "6a43798ae864fd4f33451b684b1b8515",
+    "semantic_hash": "6a43798ae864fd4f33451b684b1b8515"
+  },
+  "client/src/components/Prompts/sidebar/FilterPrompts.tsx": {
+    "mtime": 1783394133.102424,
+    "ast_hash": "fc6a4a7b0fdf8607c70d1ee11f882292",
+    "semantic_hash": "fc6a4a7b0fdf8607c70d1ee11f882292"
+  },
+  "client/src/components/Prompts/sidebar/GroupSidePanel.tsx": {
+    "mtime": 1783394133.1030903,
+    "ast_hash": "47883c905660dd37cee51edf2c9879cf",
+    "semantic_hash": "47883c905660dd37cee51edf2c9879cf"
+  },
+  "client/src/components/Prompts/sidebar/PanelNavigation.tsx": {
+    "mtime": 1783394133.1021006,
+    "ast_hash": "8b6c2a9c509aaac7d7edb48cac68b1c4",
+    "semantic_hash": "8b6c2a9c509aaac7d7edb48cac68b1c4"
+  },
+  "client/src/components/Prompts/sidebar/PromptsAccordion.tsx": {
+    "mtime": 1783394133.1027863,
+    "ast_hash": "209dfc09539465e8f9fd8267964a1b6f",
+    "semantic_hash": "209dfc09539465e8f9fd8267964a1b6f"
+  },
+  "client/src/components/Prompts/sidebar/index.ts": {
+    "mtime": 1783394133.103306,
+    "ast_hash": "fc90cad6f1b2ea75e78571ef48394364",
+    "semantic_hash": "fc90cad6f1b2ea75e78571ef48394364"
+  },
+  "client/src/components/Prompts/utils/CategoryIcon.tsx": {
+    "mtime": 1783394133.11013,
+    "ast_hash": "4ac2751d624f1d9c312bd659a36ad80e",
+    "semantic_hash": "4ac2751d624f1d9c312bd659a36ad80e"
+  },
+  "client/src/components/Prompts/utils/SkeletonForm.tsx": {
+    "mtime": 1783394133.1109703,
+    "ast_hash": "05f99b550db0cd72333d8675f70fb2fe",
+    "semantic_hash": "05f99b550db0cd72333d8675f70fb2fe"
+  },
+  "client/src/components/Prompts/utils/__tests__/CategoryIcon.spec.tsx": {
+    "mtime": 1783394133.1106493,
+    "ast_hash": "690347dd60a7206f8715b3f2b6db26a5",
+    "semantic_hash": "690347dd60a7206f8715b3f2b6db26a5"
+  },
+  "client/src/components/Prompts/utils/index.ts": {
+    "mtime": 1783394133.1113281,
+    "ast_hash": "144d63ce4ee26d6773040762eeb6dc97",
+    "semantic_hash": "144d63ce4ee26d6773040762eeb6dc97"
+  },
+  "client/src/components/Prompts/utils/specialVariables.ts": {
+    "mtime": 1783394133.1098754,
+    "ast_hash": "f62c0848c89568442974712eb1e314a5",
+    "semantic_hash": "f62c0848c89568442974712eb1e314a5"
+  },
+  "client/src/components/SidePanel/Memories/AdminSettings.tsx": {
+    "mtime": 1783394133.1477458,
+    "ast_hash": "9adf5159eea0a97591a54fadab89e09c",
+    "semantic_hash": "9adf5159eea0a97591a54fadab89e09c"
+  },
+  "client/src/components/SidePanel/Memories/MemoryCard.tsx": {
+    "mtime": 1783394133.1464112,
+    "ast_hash": "c9fbdf39b0460393772c65995d312af7",
+    "semantic_hash": "c9fbdf39b0460393772c65995d312af7"
+  },
+  "client/src/components/SidePanel/Memories/MemoryCardActions.tsx": {
+    "mtime": 1783394133.1467261,
+    "ast_hash": "d1d9480cd5f71b056959eb6c5a70856b",
+    "semantic_hash": "d1d9480cd5f71b056959eb6c5a70856b"
+  },
+  "client/src/components/SidePanel/Memories/MemoryCreateDialog.tsx": {
+    "mtime": 1783394133.1482396,
+    "ast_hash": "4a3011b86ff348b9517ab3c2bcb9324b",
+    "semantic_hash": "4a3011b86ff348b9517ab3c2bcb9324b"
+  },
+  "client/src/components/SidePanel/Memories/MemoryEditDialog.tsx": {
+    "mtime": 1783394133.1470137,
+    "ast_hash": "011bc6a9aeceda6cc409e518e9e3b15a",
+    "semantic_hash": "011bc6a9aeceda6cc409e518e9e3b15a"
+  },
+  "client/src/components/SidePanel/Memories/MemoryEmptyState.tsx": {
+    "mtime": 1783394133.1457412,
+    "ast_hash": "de5d3431d6d76c37fe490b5f3592d1a1",
+    "semantic_hash": "de5d3431d6d76c37fe490b5f3592d1a1"
+  },
+  "client/src/components/SidePanel/Memories/MemoryList.tsx": {
+    "mtime": 1783394133.1461368,
+    "ast_hash": "273bb4fbc315f90573cb8401a1763e23",
+    "semantic_hash": "273bb4fbc315f90573cb8401a1763e23"
+  },
+  "client/src/components/SidePanel/Memories/MemoryPanel.tsx": {
+    "mtime": 1783394133.1473243,
+    "ast_hash": "dd1e1dc890e17d867f8b9c1d1762cdd2",
+    "semantic_hash": "dd1e1dc890e17d867f8b9c1d1762cdd2"
+  },
+  "client/src/components/SidePanel/Memories/MemoryUsageBadge.tsx": {
+    "mtime": 1783394133.1475594,
+    "ast_hash": "f5620034cf4142430172c80e2de355d7",
+    "semantic_hash": "f5620034cf4142430172c80e2de355d7"
+  },
+  "client/src/components/SidePanel/Memories/index.ts": {
+    "mtime": 1783394133.1479347,
+    "ast_hash": "e3964c507b65fef3303943996ee7232a",
+    "semantic_hash": "e3964c507b65fef3303943996ee7232a"
+  },
+  "client/src/components/Skills/buttons/AdminSettings.tsx": {
+    "mtime": 1783394133.1306536,
+    "ast_hash": "6dad99416b110b35030e346dee606202",
+    "semantic_hash": "6dad99416b110b35030e346dee606202"
+  },
+  "client/src/components/Skills/buttons/CreateSkillMenu.tsx": {
+    "mtime": 1783394133.1310875,
+    "ast_hash": "615217da17374f07699e27c337b47101",
+    "semantic_hash": "615217da17374f07699e27c337b47101"
+  },
+  "client/src/components/Skills/buttons/ShareSkill.tsx": {
+    "mtime": 1783394133.130003,
+    "ast_hash": "fe7415bd328687941ab41023a95b5b92",
+    "semantic_hash": "fe7415bd328687941ab41023a95b5b92"
+  },
+  "client/src/components/Skills/buttons/SkillToggle.tsx": {
+    "mtime": 1783394133.130261,
+    "ast_hash": "c5a05c873e8a65e976746bfeff995338",
+    "semantic_hash": "c5a05c873e8a65e976746bfeff995338"
+  },
+  "client/src/components/Skills/buttons/index.ts": {
+    "mtime": 1783394133.1308703,
+    "ast_hash": "c9208a73cd417e6709046184b01dfa9b",
+    "semantic_hash": "c9208a73cd417e6709046184b01dfa9b"
+  },
+  "client/src/components/Skills/dialogs/CreateSkillDialog.tsx": {
+    "mtime": 1783394133.1361146,
+    "ast_hash": "486782808cb59f9f30fb4aa5f97bc888",
+    "semantic_hash": "486782808cb59f9f30fb4aa5f97bc888"
+  },
+  "client/src/components/Skills/dialogs/DeleteSkill.tsx": {
+    "mtime": 1783394133.1363425,
+    "ast_hash": "75fd9cc2b236a5f1469941ff9453f0df",
+    "semantic_hash": "75fd9cc2b236a5f1469941ff9453f0df"
+  },
+  "client/src/components/Skills/dialogs/SkillSelectDialog.tsx": {
+    "mtime": 1783394133.1353912,
+    "ast_hash": "d4610756ab39739f1cd72e94caff92da",
+    "semantic_hash": "d4610756ab39739f1cd72e94caff92da"
+  },
+  "client/src/components/Skills/dialogs/UploadSkillDialog.tsx": {
+    "mtime": 1783394133.1357617,
+    "ast_hash": "b403f033fca5eaddc3b86d1b506cd939",
+    "semantic_hash": "b403f033fca5eaddc3b86d1b506cd939"
+  },
+  "client/src/components/Skills/dialogs/__tests__/UploadSkillDialog.spec.tsx": {
+    "mtime": 1783394133.1369288,
+    "ast_hash": "66bcd2ade1f2ef7ce98e74592fa81278",
+    "semantic_hash": "66bcd2ade1f2ef7ce98e74592fa81278"
+  },
+  "client/src/components/Skills/dialogs/index.ts": {
+    "mtime": 1783394133.1371663,
+    "ast_hash": "cab3484b2e03332f96fb22352258a70e",
+    "semantic_hash": "cab3484b2e03332f96fb22352258a70e"
+  },
+  "client/src/components/Skills/display/SkillDetail.tsx": {
+    "mtime": 1783394133.1384912,
+    "ast_hash": "f29293f706c51c963220fed5f221c252",
+    "semantic_hash": "f29293f706c51c963220fed5f221c252"
+  },
+  "client/src/components/Skills/display/SkillDetailHeader.tsx": {
+    "mtime": 1783394133.1379752,
+    "ast_hash": "5a72664e7f1cb17ce6bdff9bff467c19",
+    "semantic_hash": "5a72664e7f1cb17ce6bdff9bff467c19"
+  },
+  "client/src/components/Skills/display/SkillFileViewer.tsx": {
+    "mtime": 1783394133.1376753,
+    "ast_hash": "af5a48e864d8b1d6167bbca60802af58",
+    "semantic_hash": "af5a48e864d8b1d6167bbca60802af58"
+  },
+  "client/src/components/Skills/display/SkillMarkdownRenderer.tsx": {
+    "mtime": 1783394133.138678,
+    "ast_hash": "e6a0233ae5711192606c43829db157f8",
+    "semantic_hash": "e6a0233ae5711192606c43829db157f8"
+  },
+  "client/src/components/Skills/display/SkillState.tsx": {
+    "mtime": 1783394133.1381872,
+    "ast_hash": "f980160069d42f50c47593376d2eeacc",
+    "semantic_hash": "f980160069d42f50c47593376d2eeacc"
+  },
+  "client/src/components/Skills/display/index.ts": {
+    "mtime": 1783394133.1388593,
+    "ast_hash": "7a0663728665e5a482555e8ad6c8bdda",
+    "semantic_hash": "7a0663728665e5a482555e8ad6c8bdda"
+  },
+  "client/src/components/Skills/forms/CategorySelector.tsx": {
+    "mtime": 1783394133.1281579,
+    "ast_hash": "7f4a5b99a38be626c3e4301b6461555d",
+    "semantic_hash": "7f4a5b99a38be626c3e4301b6461555d"
+  },
+  "client/src/components/Skills/forms/CreateSkillForm.tsx": {
+    "mtime": 1783394133.1285663,
+    "ast_hash": "f9d95a6ebeb85cb97758646e9c9613be",
+    "semantic_hash": "f9d95a6ebeb85cb97758646e9c9613be"
+  },
+  "client/src/components/Skills/forms/InvocationModePicker.tsx": {
+    "mtime": 1783394133.127858,
+    "ast_hash": "2b0b676075690ed55143da8e4f369466",
+    "semantic_hash": "2b0b676075690ed55143da8e4f369466"
+  },
+  "client/src/components/Skills/forms/SkillContentEditor.tsx": {
+    "mtime": 1783394133.1295016,
+    "ast_hash": "56367b49916c891877f1e0f3622f72bf",
+    "semantic_hash": "56367b49916c891877f1e0f3622f72bf"
+  },
+  "client/src/components/Skills/forms/SkillForm.tsx": {
+    "mtime": 1783394133.1291893,
+    "ast_hash": "e5ef3c1c7ef2745cd796fbe90ace6c19",
+    "semantic_hash": "e5ef3c1c7ef2745cd796fbe90ace6c19"
+  },
+  "client/src/components/Skills/forms/index.ts": {
+    "mtime": 1783394133.1288497,
+    "ast_hash": "c95d47319c8363b63241d72f37361572",
+    "semantic_hash": "c95d47319c8363b63241d72f37361572"
+  },
+  "client/src/components/Skills/index.ts": {
+    "mtime": 1783394133.1390889,
+    "ast_hash": "80817d813e487750e89686d1dae4510f",
+    "semantic_hash": "80817d813e487750e89686d1dae4510f"
+  },
+  "client/src/components/Skills/layouts/SkillsView.tsx": {
+    "mtime": 1783394133.1343794,
+    "ast_hash": "4fb33b7fd50dcd4f3229649252d20806",
+    "semantic_hash": "4fb33b7fd50dcd4f3229649252d20806"
+  },
+  "client/src/components/Skills/layouts/index.ts": {
+    "mtime": 1783394133.1348586,
+    "ast_hash": "d305540a17f2436ef51185679c0a1f5f",
+    "semantic_hash": "d305540a17f2436ef51185679c0a1f5f"
+  },
+  "client/src/components/Skills/lists/SkillList.tsx": {
+    "mtime": 1783394133.1315556,
+    "ast_hash": "79c7dbd0d944fb5f8e5856d92f638cfa",
+    "semantic_hash": "79c7dbd0d944fb5f8e5856d92f638cfa"
+  },
+  "client/src/components/Skills/lists/SkillListItem.tsx": {
+    "mtime": 1783394133.131877,
+    "ast_hash": "d058e35ccceb590b440102e6852f2763",
+    "semantic_hash": "d058e35ccceb590b440102e6852f2763"
+  },
+  "client/src/components/Skills/lists/index.ts": {
+    "mtime": 1783394133.1322007,
+    "ast_hash": "ec96ce0173edaa546d54840104872e09",
+    "semantic_hash": "ec96ce0173edaa546d54840104872e09"
+  },
+  "client/src/components/Skills/sidebar/FilterSkills.tsx": {
+    "mtime": 1783394133.1259847,
+    "ast_hash": "49300e5614c6c7841e4870793e202510",
+    "semantic_hash": "49300e5614c6c7841e4870793e202510"
+  },
+  "client/src/components/Skills/sidebar/SkillsAccordion.tsx": {
+    "mtime": 1783394133.1251383,
+    "ast_hash": "feb507394022bddb0d60ab2677c0cea1",
+    "semantic_hash": "feb507394022bddb0d60ab2677c0cea1"
+  },
+  "client/src/components/Skills/sidebar/SkillsSidePanel.tsx": {
+    "mtime": 1783394133.12541,
+    "ast_hash": "a1e3516539923ee27510b0cd86e20b82",
+    "semantic_hash": "a1e3516539923ee27510b0cd86e20b82"
+  },
+  "client/src/components/Skills/sidebar/index.ts": {
+    "mtime": 1783394133.1257155,
+    "ast_hash": "1d09e85d5892051b6687d085f63686b4",
+    "semantic_hash": "1d09e85d5892051b6687d085f63686b4"
+  },
+  "client/src/components/Skills/tree/SkillFileEditor.tsx": {
+    "mtime": 1783394133.1265428,
+    "ast_hash": "5ea3091897b3d12a50d8670adb8729e0",
+    "semantic_hash": "5ea3091897b3d12a50d8670adb8729e0"
+  },
+  "client/src/components/Skills/tree/SkillFilePreview.tsx": {
+    "mtime": 1783394133.1269882,
+    "ast_hash": "155ba7e7b4a72505b36d8290682ce339",
+    "semantic_hash": "155ba7e7b4a72505b36d8290682ce339"
+  },
+  "client/src/components/Skills/tree/TreeToolbar.tsx": {
+    "mtime": 1783394133.1267667,
+    "ast_hash": "c47eb6d2cd2234aa690f08ccf46ccd1b",
+    "semantic_hash": "c47eb6d2cd2234aa690f08ccf46ccd1b"
+  },
+  "client/src/components/Skills/tree/index.ts": {
+    "mtime": 1783394133.127307,
+    "ast_hash": "ec5f7dbba60f6fbdc9f3d016b0d8249d",
+    "semantic_hash": "ec5f7dbba60f6fbdc9f3d016b0d8249d"
+  },
+  "client/src/components/Skills/utils/frontmatter.ts": {
+    "mtime": 1783394133.1336498,
+    "ast_hash": "fb26979fdf534ae668807a4913e9eb74",
+    "semantic_hash": "fb26979fdf534ae668807a4913e9eb74"
+  },
+  "client/src/components/Skills/utils/index.ts": {
+    "mtime": 1783394133.132997,
+    "ast_hash": "1609f5ff2a08c2980fbb65913dc66542",
+    "semantic_hash": "1609f5ff2a08c2980fbb65913dc66542"
+  },
+  "client/src/components/Skills/utils/parseSkillMd.ts": {
+    "mtime": 1783394133.1326497,
+    "ast_hash": "fda2125536fe48be1845c971db71c48f",
+    "semantic_hash": "fda2125536fe48be1845c971db71c48f"
+  },
+  "client/src/utils/memory.ts": {
+    "mtime": 1783394133.2113872,
+    "ast_hash": "7d60714e2fe2e99ccf75c61999b05ddb",
+    "semantic_hash": "7d60714e2fe2e99ccf75c61999b05ddb"
+  },
+  "client/src/utils/promptGroups.ts": {
+    "mtime": 1783394133.2064235,
+    "ast_hash": "68314ee434eb00c74bfefbd14ef9d9a0",
+    "semantic_hash": "68314ee434eb00c74bfefbd14ef9d9a0"
+  },
+  "client/src/utils/prompts.ts": {
+    "mtime": 1783394133.201552,
+    "ast_hash": "65ce3eb8a39cafe75a495f0e09a44a7f",
+    "semantic_hash": "65ce3eb8a39cafe75a495f0e09a44a7f"
+  },
+  "packages/api/src/agents/memory.ts": {
+    "mtime": 1783394133.1650517,
+    "ast_hash": "6041e10dfaaa44f3ca4d492d14eb878f",
+    "semantic_hash": "6041e10dfaaa44f3ca4d492d14eb878f"
+  },
+  "packages/api/src/agents/skillConfigurable.ts": {
+    "mtime": 1783394133.1806662,
+    "ast_hash": "23794a3a40e1d51ca0c8df6b02b224f8",
+    "semantic_hash": "23794a3a40e1d51ca0c8df6b02b224f8"
+  },
+  "packages/api/src/agents/skillFiles.ts": {
+    "mtime": 1783394133.1757867,
+    "ast_hash": "d20524f806c758bdac405f703cfd361e",
+    "semantic_hash": "d20524f806c758bdac405f703cfd361e"
+  },
+  "packages/api/src/agents/skills.ts": {
+    "mtime": 1783394133.170571,
+    "ast_hash": "9d2a4bbf6bc14fb3a9c610251bac7411",
+    "semantic_hash": "9d2a4bbf6bc14fb3a9c610251bac7411"
+  },
+  "packages/api/src/skills/__tests__/import.test.ts": {
+    "mtime": 1783394133.0935566,
+    "ast_hash": "3d7b6c1231c0fc55c8e0e48f61ef9716",
+    "semantic_hash": "3d7b6c1231c0fc55c8e0e48f61ef9716"
+  },
+  "packages/api/src/skills/__tests__/skillStates.test.ts": {
+    "mtime": 1783394133.0931563,
+    "ast_hash": "0a96dce3a33f646c177b966241f160ab",
+    "semantic_hash": "0a96dce3a33f646c177b966241f160ab"
+  },
+  "packages/api/src/skills/binary.ts": {
+    "mtime": 1783394133.0951328,
+    "ast_hash": "e4c91373088095b976bbed0dce00b265",
+    "semantic_hash": "e4c91373088095b976bbed0dce00b265"
+  },
+  "packages/api/src/skills/handlers.ts": {
+    "mtime": 1783394133.0941293,
+    "ast_hash": "04e51d705fad61eb2b3191573c0d94cb",
+    "semantic_hash": "04e51d705fad61eb2b3191573c0d94cb"
+  },
+  "packages/api/src/skills/import.ts": {
+    "mtime": 1783394133.0954826,
+    "ast_hash": "ddfb0142c4709aa8e88e046c29b0df1d",
+    "semantic_hash": "ddfb0142c4709aa8e88e046c29b0df1d"
+  },
+  "packages/api/src/skills/index.ts": {
+    "mtime": 1783394133.0947514,
+    "ast_hash": "b5b1e55fe462601e4b755692cb7e2cab",
+    "semantic_hash": "b5b1e55fe462601e4b755692cb7e2cab"
+  },
+  "packages/api/src/skills/skillStates.ts": {
+    "mtime": 1783394133.094445,
+    "ast_hash": "50372a8eed2a3114496d057aa8d882f5",
+    "semantic_hash": "50372a8eed2a3114496d057aa8d882f5"
+  },
+  "packages/api/src/utils/memory.ts": {
+    "mtime": 1783394133.1853693,
+    "ast_hash": "96205abc86aa3ce29aad7cdd0cc29a77",
+    "semantic_hash": "96205abc86aa3ce29aad7cdd0cc29a77"
+  },
+  "packages/data-provider/src/schemas.ts": {
+    "mtime": 1783394133.216467,
+    "ast_hash": "3c4036529ec185ec6e3b7cefd85a7f04",
+    "semantic_hash": "3c4036529ec185ec6e3b7cefd85a7f04"
+  }
+}

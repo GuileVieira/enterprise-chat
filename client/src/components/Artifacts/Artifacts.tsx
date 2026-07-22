@@ -1,16 +1,20 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import copy from 'copy-to-clipboard';
 import * as Tabs from '@radix-ui/react-tabs';
-import { Code, Play, RefreshCw, X } from 'lucide-react';
+import { Code, Play, ArrowsOutSimple, ArrowClockwise as RefreshCw, X } from '@phosphor-icons/react';
 import { useSetRecoilState, useResetRecoilState } from 'recoil';
 import { Button, Spinner, useMediaQuery, Radio } from '@librechat/client';
 import type { SandpackPreviewRef } from '@codesandbox/sandpack-react';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useShareContext, useMutationState } from '~/Providers';
 import useArtifacts from '~/hooks/Artifacts/useArtifacts';
+import ShareArtifact from './ShareArtifact';
 import DownloadArtifact from './DownloadArtifact';
+import FullscreenArtifact from './FullscreenArtifact';
 import ArtifactVersion from './ArtifactVersion';
 import ArtifactTabs from './ArtifactTabs';
+import { isCodeOnlyArtifact, isPreviewOnlyArtifact } from '~/utils/artifacts';
+import { displayFilename } from '~/components/Chat/Messages/Content/Parts/attachmentTypes';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 import store from '~/store';
@@ -32,23 +36,27 @@ export default function Artifacts() {
   const [isDragging, setIsDragging] = useState(false);
   const [blurAmount, setBlurAmount] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(90);
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
   const resetCurrentArtifactId = useResetRecoilState(store.currentArtifactId);
 
-  const tabOptions = [
-    {
-      value: 'code',
-      label: localize('com_ui_code'),
-      icon: <Code className="size-4" />,
-    },
-    {
-      value: 'preview',
-      label: localize('com_ui_preview'),
-      icon: <Play className="size-4" />,
-    },
-  ];
+  const allTabOptions = useMemo(
+    () => [
+      {
+        value: 'code',
+        label: localize('com_ui_code'),
+        icon: <Code className="size-4" />,
+      },
+      {
+        value: 'preview',
+        label: localize('com_ui_preview'),
+        icon: <Play className="size-4" />,
+      },
+    ],
+    [localize],
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -87,6 +95,36 @@ export default function Artifacts() {
     orderedArtifactIds,
     setCurrentArtifactId,
   } = useArtifacts();
+
+  /* Office artifacts have no source view, and source-code artifacts have
+   * no useful rendered preview. Filter each down to the only meaningful
+   * tab and label that tab with the file name instead of generic
+   * "Code" / "Preview" choices. */
+  const isPreviewOnly = isPreviewOnlyArtifact(currentArtifact?.type);
+  const isCodeOnly = isCodeOnlyArtifact(currentArtifact?.type);
+  let constrainedTab: 'preview' | 'code' | null = null;
+  if (isPreviewOnly) {
+    constrainedTab = 'preview';
+  } else if (isCodeOnly) {
+    constrainedTab = 'code';
+  }
+  const displayedTab = constrainedTab ?? activeTab;
+  const tabOptions = useMemo(() => {
+    if (constrainedTab == null) {
+      return allTabOptions;
+    }
+    const filename = displayFilename(currentArtifact?.title);
+    const tab = allTabOptions.find((opt) => opt.value === constrainedTab);
+    if (!tab) {
+      return allTabOptions;
+    }
+    return [filename ? { ...tab, label: filename } : tab];
+  }, [allTabOptions, constrainedTab, currentArtifact?.title]);
+  useEffect(() => {
+    if (constrainedTab != null && activeTab !== constrainedTab) {
+      setActiveTab(constrainedTab);
+    }
+  }, [constrainedTab, activeTab, setActiveTab]);
 
   const handleCopyArtifact = useCallback(() => {
     const content = currentArtifact?.content ?? '';
@@ -172,7 +210,7 @@ export default function Artifacts() {
       : 0;
 
   return (
-    <Tabs.Root value={activeTab} onValueChange={setActiveTab} asChild>
+    <Tabs.Root value={displayedTab} onValueChange={setActiveTab} asChild>
       <div className="flex h-full w-full flex-col">
         {/* Mobile backdrop with dynamic blur */}
         {isMobile && (
@@ -243,9 +281,9 @@ export default function Artifacts() {
               >
                 <Radio
                   options={tabOptions}
-                  value={activeTab}
+                  value={displayedTab}
                   onChange={setActiveTab}
-                  disabled={isMutating && activeTab !== 'code'}
+                  disabled={isMutating && displayedTab !== 'code'}
                   buttonClassName="h-9 px-3 gap-1.5"
                 />
               </div>
@@ -258,7 +296,7 @@ export default function Artifacts() {
                 isVisible && !isClosing ? 'translate-x-0 opacity-100' : 'translate-x-2 opacity-0',
               )}
             >
-              {activeTab === 'preview' && (
+              {displayedTab === 'preview' && (
                 <Button
                   size="icon"
                   variant="ghost"
@@ -278,7 +316,7 @@ export default function Artifacts() {
                   )}
                 </Button>
               )}
-              {activeTab !== 'preview' && isMutating && (
+              {displayedTab !== 'preview' && isMutating && (
                 <RefreshCw size={16} className="animate-spin text-text-secondary" />
               )}
               {orderedArtifactIds.length > 1 && (
@@ -294,6 +332,16 @@ export default function Artifacts() {
                 />
               )}
               <CopyButton isCopied={isCopied} iconOnly onClick={handleCopyArtifact} />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9"
+                onClick={() => setIsFullscreenOpen(true)}
+                aria-label={localize('com_ui_fullscreen_artifact')}
+              >
+                <ArrowsOutSimple size={16} aria-hidden="true" />
+              </Button>
+              <ShareArtifact artifact={currentArtifact} />
               <DownloadArtifact artifact={currentArtifact} />
               <Button
                 size="icon"
@@ -340,12 +388,18 @@ export default function Artifacts() {
               <Radio
                 fullWidth
                 options={tabOptions}
-                value={activeTab}
+                value={displayedTab}
                 onChange={setActiveTab}
-                disabled={isMutating && activeTab !== 'code'}
+                disabled={isMutating && displayedTab !== 'code'}
               />
             </div>
           )}
+          <FullscreenArtifact
+            open={isFullscreenOpen}
+            artifact={currentArtifact}
+            initialTab={displayedTab === 'preview' ? 'preview' : 'code'}
+            onClose={() => setIsFullscreenOpen(false)}
+          />
         </div>
       </div>
     </Tabs.Root>

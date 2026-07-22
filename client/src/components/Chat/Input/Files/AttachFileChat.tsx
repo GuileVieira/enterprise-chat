@@ -11,6 +11,7 @@ import {
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import { useGetFileConfig, useGetEndpointsQuery, useGetAgentByIdQuery } from '~/data-provider';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { useAgentsMapContext } from '~/Providers';
 import AttachFileMenu from './AttachFileMenu';
 import AttachFile from './AttachFile';
@@ -30,8 +31,10 @@ function AttachFileChat({
 }) {
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
+  const projectId = conversation?.projectId ?? undefined;
   const isAgents = useMemo(() => isAgentsEndpoint(endpoint), [endpoint]);
   const isAssistants = useMemo(() => isAssistantsEndpoint(endpoint), [endpoint]);
+  const { permissions: projectPermissions } = useProjectPermissions(projectId);
 
   const agentsMap = useAgentsMapContext();
 
@@ -48,11 +51,13 @@ function AttachFileChat({
   });
 
   const useResponsesApi = useMemo(() => {
-    if (!isAgents || !conversation?.agent_id || conversation?.useResponsesApi) {
+    if (!isAgents || !conversation?.agent_id || conversation?.useResponsesApi !== undefined) {
       return conversation?.useResponsesApi;
     }
-    const agent = agentData || agentsMap?.[conversation.agent_id];
-    return agent?.model_parameters?.useResponsesApi;
+    return (
+      agentData?.model_parameters?.useResponsesApi ??
+      agentsMap?.[conversation.agent_id]?.model_parameters?.useResponsesApi
+    );
   }, [isAgents, conversation?.agent_id, conversation?.useResponsesApi, agentData, agentsMap]);
 
   const { data: fileConfig = null } = useGetFileConfig({
@@ -65,8 +70,7 @@ function AttachFileChat({
     if (!isAgents || !conversation?.agent_id) {
       return undefined;
     }
-    const agent = agentData || agentsMap?.[conversation.agent_id];
-    return agent?.provider;
+    return agentData?.provider ?? agentsMap?.[conversation.agent_id]?.provider;
   }, [isAgents, conversation?.agent_id, agentData, agentsMap]);
 
   const endpointType = useMemo(
@@ -95,32 +99,39 @@ function AttachFileChat({
     () => (disableInputs || endpointFileConfig?.disabled) ?? false,
     [disableInputs, endpointFileConfig?.disabled],
   );
+  const saveUploadsToProject = Boolean(projectId && projectPermissions.canEdit);
 
   if (isAssistants && endpointSupportsFiles && !isUploadDisabled) {
     return (
-      <AttachFile
-        disabled={disableInputs}
-        files={files}
-        setFiles={setFiles}
-        setFilesLoading={setFilesLoading}
-        conversation={conversation}
-      />
+      <div className="flex items-center gap-0.5">
+        <AttachFile
+          disabled={disableInputs}
+          files={files}
+          setFiles={setFiles}
+          setFilesLoading={setFilesLoading}
+          conversation={conversation}
+          saveUploadsToProject={saveUploadsToProject}
+        />
+      </div>
     );
   } else if ((isAgents || endpointSupportsFiles) && !isUploadDisabled) {
     return (
-      <AttachFileMenu
-        endpoint={endpoint}
-        disabled={disableInputs}
-        endpointType={endpointType}
-        conversationId={conversationId}
-        agentId={conversation?.agent_id}
-        endpointFileConfig={endpointFileConfig}
-        useResponsesApi={useResponsesApi}
-        files={files}
-        setFiles={setFiles}
-        setFilesLoading={setFilesLoading}
-        conversation={conversation}
-      />
+      <div className="flex items-center gap-0.5">
+        <AttachFileMenu
+          endpoint={endpoint}
+          disabled={disableInputs}
+          endpointType={endpointType}
+          conversationId={conversationId}
+          agentId={conversation?.agent_id}
+          endpointFileConfig={endpointFileConfig}
+          useResponsesApi={useResponsesApi}
+          files={files}
+          setFiles={setFiles}
+          setFilesLoading={setFilesLoading}
+          conversation={conversation}
+          saveUploadsToProject={saveUploadsToProject}
+        />
+      </div>
     );
   }
   return null;

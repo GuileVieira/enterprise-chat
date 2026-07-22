@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookmarkPlusIcon } from 'lucide-react';
+import { BookmarkSimple as BookmarkPlusIcon } from '@phosphor-icons/react';
 import { OGDialogTrigger } from '@librechat/client';
 import type { FC } from 'react';
 import { BookmarkEditDialog, BookmarkItems, BookmarkItem } from '~/components/Bookmarks';

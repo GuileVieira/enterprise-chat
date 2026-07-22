@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { SquareSlash } from 'lucide-react';
+import { Command as SquareSlash } from '@phosphor-icons/react';
 import { replaceSpecialVars } from 'librechat-data-provider';
 import type { TPromptGroup } from 'librechat-data-provider';
 import { useLocalize, useAuthContext } from '~/hooks';

@@ -1,7 +1,11 @@
 import React, { useState, useRef } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { SettingsTabValues } from 'librechat-data-provider';
-import { MessageSquare, Command, DollarSign } from 'lucide-react';
+import {
+  Command,
+  CurrencyDollar as DollarSign,
+  ChatCircle as MessageSquare,
+} from '@phosphor-icons/react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import {
   GearIcon,

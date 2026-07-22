@@ -8,6 +8,7 @@ import type {
   TMessage,
   TBanner,
 } from './schemas';
+import type { RefillIntervalUnit } from './balance';
 import type { SettingDefinition } from './generate';
 import type { TMinimalFeedback } from './feedback';
 import type { ContentTypes } from './types/runs';
@@ -102,6 +103,7 @@ export type TEphemeralAgent = {
   file_search?: boolean;
   execute_code?: boolean;
   artifacts?: string;
+  skills?: boolean;
 };
 
 export type TPayload = Partial<TMessage> &
@@ -109,12 +111,21 @@ export type TPayload = Partial<TMessage> &
     isContinued: boolean;
     isRegenerate?: boolean;
     conversationId: string | null;
+    projectId?: string;
     messages?: TMessages;
     isTemporary: boolean;
     ephemeralAgent?: TEphemeralAgent | null;
     editedContent?: TEditedContent | null;
+    hiddenPromptContext?: THiddenPromptContext | null;
     /** Added conversation for multi-convo feature */
     addedConvo?: TConversation;
+    /**
+     * Skills the user selected via the `$` popover for this turn. Names, not IDs
+     * — the backend resolves them against the user's ACL-accessible skill set,
+     * loads each SKILL.md body, and prepends one meta user message per skill
+     * before the LLM turn runs.
+     */
+    manualSkills?: string[];
   };
 
 export type TEditedContent =
@@ -142,11 +153,22 @@ export type TSubmission = {
   clientTimestamp?: string;
   ephemeralAgent?: TEphemeralAgent | null;
   editedContent?: TEditedContent | null;
+  hiddenPromptContext?: THiddenPromptContext | null;
   /** Added conversation for multi-convo feature */
   addedConvo?: TConversation;
+  /** Skills the user invoked via the `$` popover for this submission. */
+  manualSkills?: string[];
 };
 
 export type EventSubmission = Omit<TSubmission, 'initialResponse'> & { initialResponse: TMessage };
+
+export type THiddenPromptContext = {
+  promptGroupId?: string;
+  promptId?: string;
+  name: string;
+  description?: string;
+  content: string;
+};
 
 export type TPluginAction = {
   pluginKey: string;
@@ -171,6 +193,27 @@ export type TCategory = {
   label: string;
   description?: string;
   custom?: boolean;
+  icon?: string;
+  order?: number;
+  isDefault?: boolean;
+};
+
+export type TCreateCategoryRequest = {
+  label: string;
+  value: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TUpdateCategoryRequest = {
+  label?: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TDeleteCategoryResponse = {
+  message: string;
+  usageCount?: number;
 };
 
 export type TMarketplaceCategory = TCategory & {
@@ -268,7 +311,8 @@ export type TAgentApiKeyListResponse = {
 
 export type TUpdateConversationRequest = {
   conversationId: string;
-  title: string;
+  title?: string;
+  projectId?: string | null;
 };
 
 export type TUpdateConversationResponse = TConversation;
@@ -300,14 +344,22 @@ export type TSharedMessagesResponse = Omit<TSharedLink, 'messages'> & {
   messages: TMessage[];
 };
 
-export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'>;
+export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
 
-export type TUpdateShareLinkRequest = Pick<TSharedLink, 'shareId'>;
+export type TCreateTenantShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
+
+export type TUpdateShareLinkRequest = Pick<TSharedLink, 'shareId' | 'targetMessageId'>;
 
 export type TSharedLinkResponse = Pick<TSharedLink, 'shareId'> &
+  Pick<TSharedLink, 'targetMessageId'> &
   Pick<TConversation, 'conversationId'>;
 
-export type TSharedLinkGetResponse = TSharedLinkResponse & {
+export type TSharedLinkGetResponse = Omit<TSharedLinkResponse, 'shareId'> & {
+  shareId: string | null;
   success: boolean;
 };
 
@@ -350,6 +402,12 @@ export type TForkConvoRequest = {
 export type TForkConvoResponse = {
   conversation: TConversation;
   messages: TMessage[];
+};
+
+export type TForkTenantShareRequest = {
+  shareId: string;
+  targetMessageId?: string;
+  option?: string;
 };
 
 export type TSearchResults = {
@@ -549,6 +607,7 @@ export type TPromptGroup = {
 export type TCreatePrompt = {
   prompt: Pick<TPrompt, 'prompt' | 'type'> & { groupId?: string };
   group?: { name: string; category?: string; oneliner?: string; command?: string };
+  shareTenantIds?: string[];
 };
 
 export type TCreatePromptRecord = TCreatePrompt & Pick<TPromptGroup, 'author' | 'authorName'>;
@@ -673,7 +732,59 @@ export type TBalanceResponse = {
   // Automatic refill settings
   autoRefillEnabled: boolean;
   refillIntervalValue?: number;
-  refillIntervalUnit?: 'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
-  lastRefill?: Date;
+  refillIntervalUnit?: RefillIntervalUnit;
+  lastRefill?: Date | string;
   refillAmount?: number;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Skill UI extensions (not yet persisted — phase 2 backend will fill these)  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @deprecated Superseded by the persisted `userInvocable` /
+ * `disableModelInvocation` pair derived from frontmatter. Retained for the
+ * transition window so older UI forms and tests still type-check; the
+ * backend no longer reads or writes it.
+ */
+export enum InvocationMode {
+  auto = 'auto',
+  manual = 'manual',
+  both = 'both',
+}
+
+/**
+ * Node in the filesystem-style skill tree view. Phase 1 derives these from
+ * the flat `TSkillFile[]` list; phase 2 will have the backend serve them
+ * directly from a persisted folder hierarchy. Kept in the shared types so
+ * tree UI helpers can be imported from both client and server.
+ */
+export type TSkillNode = {
+  _id: string;
+  skillId: string;
+  parentId: string | null;
+  type: 'file' | 'folder';
+  name: string;
+  fileId?: string;
+  order: number;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TSkillTreeResponse = {
+  nodes: TSkillNode[];
+};
+
+export type TCreateSkillNodeRequest = {
+  type: 'file' | 'folder';
+  name: string;
+  parentId?: string | null;
+  order?: number;
+};
+
+export type TUpdateSkillNodeRequest = {
+  name?: string;
+  parentId?: string | null;
+  order?: number;
 };

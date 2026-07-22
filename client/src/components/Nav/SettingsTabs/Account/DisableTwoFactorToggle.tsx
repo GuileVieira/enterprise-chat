@@ -1,6 +1,6 @@
 import React from 'react';
 // import { motion } from 'framer-motion';
-// import { LockIcon, UnlockIcon } from 'lucide-react';
+// import { Lock as LockIcon, LockKeyOpen as UnlockIcon } from '@phosphor-icons/react';
 import { Label, Button } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 

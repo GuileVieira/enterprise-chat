@@ -1,10 +1,16 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRecoilValue } from 'recoil';
-import { ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { ContentTypes, ToolCallTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, Agents, FunctionToolCall } from 'librechat-data-provider';
+import type {
+  Agents,
+  TAttachment,
+  FunctionToolCall,
+  TMessageContentParts,
+} from 'librechat-data-provider';
 import type { PartWithIndex } from './ParallelContent';
 import type { TranslationKeys } from '~/hooks';
+import { AttachmentGroup } from './Parts/Attachment';
 import { StackedToolIcons, getMCPServerName } from './ToolOutput';
 import { useLocalize, useExpandCollapse } from '~/hooks';
 import { useMCPIconMap } from '~/hooks/MCP';
@@ -19,6 +25,7 @@ const FRIENDLY_NAME_KEYS: Record<string, TranslationKeys> = {
   image_gen_oai: 'com_ui_tool_name_image_gen',
   image_edit_oai: 'com_ui_tool_name_image_edit',
   gemini_image_gen: 'com_ui_tool_name_image_gen',
+  openrouter_gemini_image_gen: 'com_ui_tool_name_premium_image_gen',
   file_search: 'com_ui_tool_name_file_search',
   code_interpreter: 'com_ui_tool_name_code_analysis',
   retrieval: 'com_ui_tool_name_file_search',
@@ -68,6 +75,7 @@ interface ToolCallGroupProps {
   isLast: boolean;
   renderPart: (part: TMessageContentParts, idx: number, isLastPart: boolean) => React.ReactNode;
   lastContentIdx: number;
+  groupAttachments?: TAttachment[];
 }
 
 export default function ToolCallGroup({
@@ -76,6 +84,7 @@ export default function ToolCallGroup({
   isLast,
   renderPart,
   lastContentIdx,
+  groupAttachments,
 }: ToolCallGroupProps) {
   const localize = useLocalize();
   const mcpIconMap = useMCPIconMap();
@@ -173,6 +182,9 @@ export default function ToolCallGroup({
           </div>
         </div>
       </div>
+      {groupAttachments && groupAttachments.length > 0 && (
+        <AttachmentGroup attachments={groupAttachments} />
+      )}
     </div>
   );
 }

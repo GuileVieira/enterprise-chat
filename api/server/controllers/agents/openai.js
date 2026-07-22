@@ -6,28 +6,33 @@ const {
   ResourceType,
   PermissionBits,
   hasPermissions,
+  AgentCapabilities,
 } = require('librechat-data-provider');
 const {
   writeSSE,
   createRun,
   createChunk,
   buildToolSet,
+  loadSkillStates,
   sendFinalChunk,
   createSafeUser,
   validateRequest,
   initializeAgent,
   getBalanceConfig,
+  injectSkillPrimes,
+  extractManualSkills,
   createErrorResponse,
   recordCollectedUsage,
   getTransactionsConfig,
   resolveRecursionLimit,
+  discoverConnectedAgents,
+  getRemoteAgentPermissions,
   createToolExecuteHandler,
   buildNonStreamingResponse,
   createOpenAIStreamTracker,
+  resolveAgentScopedSkillIds,
   createOpenAIContentAggregator,
   isChatCompletionValidationFailure,
-  discoverConnectedAgents,
-  getRemoteAgentPermissions,
 } = require('@librechat/api');
 const {
   buildSummarizationHandlers,
@@ -40,6 +45,12 @@ const {
   findAccessibleResources,
   getEffectivePermissions,
 } = require('~/server/services/PermissionService');
+const {
+  getSkillToolDeps,
+  enrichWithSkillConfigurable,
+  buildSkillPrimedIdsByName,
+} = require('~/server/services/Endpoints/agents/skillDeps');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { logViolation } = require('~/cache');
 const db = require('~/models');
@@ -60,6 +71,8 @@ function createToolLoader(signal, definitionsOnly = true) {
     provider,
     tool_options,
     tool_resources,
+    projectId,
+    projectFileIds,
   }) {
     const agent = { id: agentId, tools, provider, model, tool_options };
     try {
@@ -71,6 +84,8 @@ function createToolLoader(signal, definitionsOnly = true) {
         tool_resources,
         definitionsOnly,
         streamId: null, // No resumable stream for OpenAI compat
+        projectId,
+        projectFileIds,
       });
     } catch (error) {
       logger.error('Error loading tools for agent ' + agentId, error);
@@ -218,6 +233,19 @@ const OpenAIChatCompletionController = async (req, res) => {
       endpoint: agent.provider,
       model_parameters: agent.model_parameters ?? {},
     };
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: request.conversation_id,
+      projectId: req.body.projectId,
+    });
+    const projectFileIds = projectContext.projectFileIds;
+    const contextParts = [
+      projectContext.projectInstructions,
+      projectContext.projectMemories,
+    ].filter(Boolean);
+    if (contextParts.length > 0) {
+      agent.instructions = `${contextParts.join('\n\n')}\n\n${agent.instructions ?? ''}`;
+    }
 
     // `filterFilesByAgentAccess` is intentionally omitted: it calls
     // `checkPermission` with `resourceType: AGENT`, but this route
@@ -235,7 +263,31 @@ const OpenAIChatCompletionController = async (req, res) => {
       getUserCodeFiles: db.getUserCodeFiles,
       getToolFilesByIds: db.getToolFilesByIds,
       getCodeGeneratedFiles: db.getCodeGeneratedFiles,
+      listSkillsByAccess: db.listSkillsByAccess,
+      listAlwaysApplySkills: db.listAlwaysApplySkills,
+      getSkillByName: db.getSkillByName,
     };
+
+    const enabledCapabilities = new Set(agentsEConfig?.capabilities);
+    const skillsCapabilityEnabled = enabledCapabilities.has(AgentCapabilities.skills);
+    const ephemeralSkillsToggle = req.body?.ephemeralAgent?.skills === true;
+    const accessibleSkillIds = skillsCapabilityEnabled
+      ? await findAccessibleResources({
+          userId: req.user.id,
+          role: req.user.role,
+          resourceType: ResourceType.SKILL,
+          requiredPermissions: PermissionBits.VIEW,
+        })
+      : [];
+
+    const { skillStates, defaultActiveOnShare } = await loadSkillStates({
+      userId: req.user.id,
+      appConfig,
+      getUserById: db.getUserById,
+      accessibleSkillIds,
+    });
+
+    const manualSkills = extractManualSkills(req.body);
 
     const primaryConfig = await initializeAgent(
       {
@@ -249,6 +301,18 @@ const OpenAIChatCompletionController = async (req, res) => {
         endpointOption,
         allowedProviders,
         isInitialAgent: true,
+        accessibleSkillIds: resolveAgentScopedSkillIds({
+          agent,
+          accessibleSkillIds,
+          skillsCapabilityEnabled,
+          ephemeralSkillsToggle,
+        }),
+        codeEnvAvailable: enabledCapabilities.has(AgentCapabilities.execute_code),
+        skillStates,
+        defaultActiveOnShare,
+        manualSkills,
+        projectFileIds,
+        projectId: projectContext.projectId,
       },
       dbMethods,
     );
@@ -272,6 +336,9 @@ const OpenAIChatCompletionController = async (req, res) => {
       userMCPAuthMap: primaryConfig.userMCPAuthMap,
       tool_resources: primaryConfig.tool_resources,
       actionsEnabled: primaryConfig.actionsEnabled,
+      codeEnvAvailable: primaryConfig.codeEnvAvailable,
+      projectId: projectContext.projectId,
+      projectFileIds,
     });
 
     // Only run BFS discovery (and pay `getModelsConfig` upfront) when the
@@ -301,6 +368,10 @@ const OpenAIChatCompletionController = async (req, res) => {
           // sub-agent must clear the same sharing boundary, not the looser
           // in-app AGENT one.
           resourceType: ResourceType.REMOTE_AGENT,
+          /** @see DiscoverConnectedAgentsParams.codeEnvAvailable */
+          codeEnvAvailable: enabledCapabilities.has(AgentCapabilities.execute_code),
+          projectId: projectContext.projectId,
+          projectFileIds,
         },
         {
           getAgent: db.getAgent,
@@ -327,6 +398,9 @@ const OpenAIChatCompletionController = async (req, res) => {
               userMCPAuthMap: config.userMCPAuthMap,
               tool_resources: config.tool_resources,
               actionsEnabled: config.actionsEnabled,
+              codeEnvAvailable: config.codeEnvAvailable,
+              projectId: projectContext.projectId,
+              projectFileIds,
             });
           },
           initializeAgent,
@@ -372,10 +446,22 @@ const OpenAIChatCompletionController = async (req, res) => {
 
     const toolEndCallback = createToolEndCallback({ req, res, artifactPromises, streamId: null });
 
+    /* Stable for the turn: the prime lists are fixed once
+       `initializeAgent` resolves. Hoisted out of `loadTools` so tool
+       execution doesn't recompute them. `codeEnvAvailable` is read
+       per-agent from the stored tool context (admin cap AND that
+       agent's `tools` list includes `execute_code`) — a skills-only
+       agent never gains sandbox access even if the admin enabled the
+       capability globally. */
+    const skillPrimedIdsByName = buildSkillPrimedIdsByName(
+      primaryConfig.manualSkillPrimes,
+      primaryConfig.alwaysApplySkillPrimes,
+    );
+
     const toolExecuteOptions = {
       loadTools: async (toolNames, agentId) => {
         const ctx = agentToolContexts.get(agentId) ?? agentToolContexts.get(primaryConfig.id) ?? {};
-        return loadToolsForExecution({
+        const result = await loadToolsForExecution({
           req,
           res,
           toolNames,
@@ -385,9 +471,19 @@ const OpenAIChatCompletionController = async (req, res) => {
           userMCPAuthMap: ctx.userMCPAuthMap,
           tool_resources: ctx.tool_resources,
           actionsEnabled: ctx.actionsEnabled,
+          projectId: ctx.projectId,
+          projectFileIds: ctx.projectFileIds,
         });
+        return enrichWithSkillConfigurable(
+          result,
+          req,
+          primaryConfig.accessibleSkillIds,
+          ctx.codeEnvAvailable === true,
+          skillPrimedIdsByName,
+        );
       },
       toolEndCallback,
+      ...getSkillToolDeps(),
     };
 
     const summarizationConfig = appConfig?.summarization;
@@ -395,11 +491,42 @@ const OpenAIChatCompletionController = async (req, res) => {
     const openaiMessages = convertMessages(request.messages);
 
     const toolSet = buildToolSet(primaryConfig);
-    const {
-      messages: formattedMessages,
-      indexTokenCountMap,
-      summary: initialSummary,
-    } = formatAgentMessages(openaiMessages, {}, toolSet);
+    const formatted = formatAgentMessages(openaiMessages, {}, toolSet);
+    const formattedMessages = formatted.messages;
+    const initialSummary = formatted.summary;
+    let indexTokenCountMap = formatted.indexTokenCountMap;
+
+    /**
+     * Inject manual + always-apply skill primes so the model sees SKILL.md
+     * bodies for this turn — parity with AgentClient's chat path. OpenAI-
+     * compatible streaming uses its own tracker/aggregator shape, so the
+     * LibreChat-style card SSE events don't apply here; only the
+     * message-context part carries over.
+     */
+    const manualSkillPrimes = primaryConfig.manualSkillPrimes;
+    const alwaysApplySkillPrimes = primaryConfig.alwaysApplySkillPrimes;
+    if (
+      (manualSkillPrimes && manualSkillPrimes.length > 0) ||
+      (alwaysApplySkillPrimes && alwaysApplySkillPrimes.length > 0)
+    ) {
+      const primeResult = injectSkillPrimes({
+        initialMessages: formattedMessages,
+        indexTokenCountMap,
+        manualSkillPrimes,
+        alwaysApplySkillPrimes,
+      });
+      indexTokenCountMap = primeResult.indexTokenCountMap;
+      /* Surface the cap-driven always-apply truncation at the controller
+         layer too — `injectSkillPrimes` already logs internally, but the
+         controller-level warn includes endpoint context so operators can
+         tell at a glance which path hit the cap. Mirrors AgentClient's
+         warn in `client.js`. */
+      if (primeResult.alwaysApplyDropped > 0) {
+        logger.warn(
+          `[OpenAI API] Dropped ${primeResult.alwaysApplyDropped} always-apply prime(s) to stay within MAX_PRIMED_SKILLS_PER_TURN.`,
+        );
+      }
+    }
 
     /**
      * Create a simple handler that processes data

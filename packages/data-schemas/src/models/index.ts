@@ -7,6 +7,7 @@ import { createMessageModel } from './message';
 import { createAgentModel } from './agent';
 import { createAgentApiKeyModel } from './agentApiKey';
 import { createAgentCategoryModel } from './agentCategory';
+import { createCategoryModel } from './categories';
 import { createMCPServerModel } from './mcpServer';
 import { createRoleModel } from './role';
 import { createActionModel } from './action';
@@ -17,8 +18,11 @@ import { createKeyModel } from './key';
 import { createPluginAuthModel } from './pluginAuth';
 import { createTransactionModel } from './transaction';
 import { createPresetModel } from './preset';
+import { createProjectModel } from './project';
 import { createPromptModel } from './prompt';
 import { createPromptGroupModel } from './promptGroup';
+import { createSkillModel } from './skill';
+import { createSkillFileModel } from './skillFile';
 import { createConversationTagModel } from './conversationTag';
 import { createSharedLinkModel } from './sharedLink';
 import { createToolCallModel } from './toolCall';
@@ -28,6 +32,9 @@ import { createAclEntryModel } from './aclEntry';
 import { createSystemGrantModel } from './systemGrant';
 import { createGroupModel } from './group';
 import { createConfigModel } from './config';
+import { createTenantFunctionModel } from './tenantFunction';
+import { createTenantSecretModel } from './tenantSecret';
+import { createTrafficDiaryModel } from './trafficDiary';
 
 /**
  * Creates all database models for all collections
@@ -43,6 +50,7 @@ export function createModels(mongoose: typeof import('mongoose')) {
     Agent: createAgentModel(mongoose),
     AgentApiKey: createAgentApiKeyModel(mongoose),
     AgentCategory: createAgentCategoryModel(mongoose),
+    Category: createCategoryModel(mongoose),
     MCPServer: createMCPServerModel(mongoose),
     Role: createRoleModel(mongoose),
     Action: createActionModel(mongoose),
@@ -53,8 +61,11 @@ export function createModels(mongoose: typeof import('mongoose')) {
     PluginAuth: createPluginAuthModel(mongoose),
     Transaction: createTransactionModel(mongoose),
     Preset: createPresetModel(mongoose),
+    Project: createProjectModel(mongoose),
     Prompt: createPromptModel(mongoose),
     PromptGroup: createPromptGroupModel(mongoose),
+    Skill: createSkillModel(mongoose),
+    SkillFile: createSkillFileModel(mongoose),
     ConversationTag: createConversationTagModel(mongoose),
     SharedLink: createSharedLinkModel(mongoose),
     ToolCall: createToolCallModel(mongoose),
@@ -64,5 +75,8 @@ export function createModels(mongoose: typeof import('mongoose')) {
     SystemGrant: createSystemGrantModel(mongoose),
     Group: createGroupModel(mongoose),
     Config: createConfigModel(mongoose),
+    TenantFunction: createTenantFunctionModel(mongoose),
+    TenantSecret: createTenantSecretModel(mongoose),
+    TrafficDiaryEntry: createTrafficDiaryModel(mongoose),
   };
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ShieldEllipsis } from 'lucide-react';
+import { ShieldStar as ShieldEllipsis } from '@phosphor-icons/react';
 import { useForm, Controller } from 'react-hook-form';
 import { Permissions, SystemRoles, PermissionTypes } from 'librechat-data-provider';
 import {
@@ -194,7 +194,7 @@ const PeoplePickerAdminSettings = () => {
                   isLoading ||
                   (isSelectedCustomRole && (isCustomRoleLoading || isCustomRoleError))
                 }
-                className="btn rounded bg-green-500 font-bold text-white transition-all hover:bg-green-600"
+                className="btn rounded bg-surface-submit font-bold text-white transition-all hover:bg-surface-submit-hover"
               >
                 {localize('com_ui_save')}
               </button>

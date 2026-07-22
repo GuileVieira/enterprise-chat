@@ -4,13 +4,13 @@ import debounce from 'lodash/debounce';
 import { useRecoilValue } from 'recoil';
 import { Link } from 'react-router-dom';
 import {
-  ArrowUp,
-  TrashIcon,
+  Archive as ArchiveRestore,
   ArrowDown,
-  ArrowUpDown,
-  ExternalLink,
-  ArchiveRestore,
-} from 'lucide-react';
+  ArrowUp,
+  ArrowsDownUp as ArrowUpDown,
+  ArrowSquareOut as ExternalLink,
+  Trash as TrashIcon,
+} from '@phosphor-icons/react';
 import {
   Label,
   Button,

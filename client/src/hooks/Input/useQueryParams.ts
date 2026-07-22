@@ -23,6 +23,35 @@ import { startupConfigKey, useGetAgentByIdQuery } from '~/data-provider';
 import { useChatContext, useChatFormContext } from '~/Providers';
 import store from '~/store';
 
+const META_ADS_BRIEF_PARAM = 'meta_ads_brief';
+const PROJECT_ID_PARAM = 'project_id';
+
+type QueryParamPreset = TPreset & {
+  iconURL?: string | null;
+  projectId?: string;
+  spec?: string | null;
+};
+
+const readStoredMetaAdsBriefMarkdown = (storageKey: string) => {
+  if (!storageKey) {
+    return '';
+  }
+
+  try {
+    const storedBrief = sessionStorage.getItem(storageKey);
+    if (!storedBrief) {
+      return '';
+    }
+
+    const parsedBrief = JSON.parse(storedBrief) as { markdown?: unknown };
+    sessionStorage.removeItem(storageKey);
+    return typeof parsedBrief.markdown === 'string' ? parsedBrief.markdown : '';
+  } catch (error) {
+    logger.warn('conversation', 'Failed to read Meta Ads brief from session storage', error);
+    return '';
+  }
+};
+
 const injectAgentIntoAgentsMap = (queryClient: QueryClient, agent: any) => {
   const editCacheKey = [QueryKeys.agents, { requiredPermission: PermissionBits.EDIT }];
   const editCache = queryClient.getQueryData<AgentListResponse>(editCacheKey);
@@ -56,7 +85,7 @@ export default function useQueryParams({
   const settingsAppliedRef = useRef(false);
   const submissionHandledRef = useRef(false);
   const promptTextRef = useRef<string | null>(null);
-  const validSettingsRef = useRef<TPreset | null>(null);
+  const validSettingsRef = useRef<QueryParamPreset | null>(null);
   const settingsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const methods = useChatFormContext();
@@ -78,11 +107,11 @@ export default function useQueryParams({
    * Ensures tools compatibility and preserves existing conversation when appropriate.
    */
   const newQueryConvo = useCallback(
-    (_newPreset?: TPreset) => {
+    (_newPreset?: QueryParamPreset, forceNewConversation = false) => {
       if (!_newPreset) {
         return;
       }
-      let newPreset = removeUnavailableTools(_newPreset, availableTools);
+      let newPreset = removeUnavailableTools(_newPreset, availableTools) as QueryParamPreset;
       if (newPreset.spec != null && newPreset.spec !== '') {
         const startupConfig = queryClient.getQueryData<TStartupConfig>(startupConfigKey(true));
         const modelSpecs = startupConfig?.modelSpecs?.list ?? [];
@@ -90,10 +119,11 @@ export default function useQueryParams({
         if (!spec) {
           return;
         }
-        const { preset } = spec;
-        preset.iconURL = getModelSpecIconURL(spec);
-        preset.spec = spec.name;
-        newPreset = preset;
+        newPreset = {
+          ...spec.preset,
+          iconURL: getModelSpecIconURL(spec),
+          spec: spec.name,
+        } as QueryParamPreset;
       }
 
       let newEndpoint = newPreset.endpoint ?? '';
@@ -142,7 +172,7 @@ export default function useQueryParams({
       clearModelForNonEphemeralAgent(template);
 
       const isModular = isCurrentModular && isNewModular && shouldSwitch;
-      if (isExistingConversation && isModular) {
+      if (isExistingConversation && isModular && !forceNewConversation) {
         template.endpointType = newEndpointType as EModelEndpoint | undefined;
 
         const currentConvo = getDefaultConversation({
@@ -167,7 +197,21 @@ export default function useQueryParams({
         return;
       }
 
-      newConversation({ preset: newPreset, keepAddedConvos: true });
+      let projectTemplate: { conversationId?: string; projectId: string } | undefined;
+      if (newPreset.projectId) {
+        projectTemplate = {
+          projectId: newPreset.projectId,
+          ...(forceNewConversation ? { conversationId: 'new' } : {}),
+        };
+      } else if (conversation?.projectId) {
+        projectTemplate = { projectId: conversation.projectId };
+      }
+
+      newConversation({
+        template: projectTemplate,
+        preset: newPreset,
+        keepAddedConvos: true,
+      });
     },
     [
       queryClient,
@@ -233,15 +277,28 @@ export default function useQueryParams({
         queryParams[key] = value;
       });
 
+      const metaAdsBriefMarkdown = readStoredMetaAdsBriefMarkdown(
+        queryParams[META_ADS_BRIEF_PARAM] ?? '',
+      );
+      const projectId = queryParams[PROJECT_ID_PARAM] ?? '';
+      const forceNewConversation = queryParams.new_conversation === 'true';
+
       // Support both 'prompt' and 'q' as query parameters, with 'prompt' taking precedence
-      const decodedPrompt = queryParams.prompt || queryParams.q || '';
-      const shouldAutoSubmit = queryParams.submit?.toLowerCase() === 'true';
+      const decodedPrompt = metaAdsBriefMarkdown || queryParams.prompt || queryParams.q || '';
+      const shouldAutoSubmit =
+        !metaAdsBriefMarkdown && queryParams.submit?.toLowerCase() === 'true';
+      delete queryParams[META_ADS_BRIEF_PARAM];
+      delete queryParams[PROJECT_ID_PARAM];
+      delete queryParams.new_conversation;
       delete queryParams.prompt;
       delete queryParams.q;
       delete queryParams.submit;
-      const validSettings = processValidSettings(queryParams);
+      const validSettings = processValidSettings(queryParams) as QueryParamPreset;
+      if (projectId) {
+        validSettings.projectId = projectId;
+      }
 
-      return { decodedPrompt, validSettings, shouldAutoSubmit };
+      return { decodedPrompt, validSettings, shouldAutoSubmit, forceNewConversation };
     };
 
     const intervalId = setInterval(() => {
@@ -263,10 +320,14 @@ export default function useQueryParams({
         return;
       }
 
-      const { decodedPrompt, validSettings, shouldAutoSubmit } = processQueryParams();
+      const { decodedPrompt, validSettings, shouldAutoSubmit, forceNewConversation } =
+        processQueryParams();
       const hasSettings = Object.keys(validSettings).length > 0;
 
-      if (!shouldAutoSubmit) {
+      const autoSubmitAllowed = startupConfig.interface?.autoSubmitFromUrl !== false;
+      const willAutoSubmit = shouldAutoSubmit && autoSubmitAllowed;
+
+      if (!willAutoSubmit) {
         submissionHandledRef.current = true;
       }
 
@@ -291,7 +352,7 @@ export default function useQueryParams({
       }
 
       // Handle auto-submission
-      if (shouldAutoSubmit && decodedPrompt) {
+      if (willAutoSubmit && decodedPrompt) {
         if (hasSettings) {
           // Settings are changing, defer submission
           pendingSubmitRef.current = true;
@@ -326,7 +387,7 @@ export default function useQueryParams({
       }
 
       if (hasSettings && !areSettingsApplied()) {
-        newQueryConvo(validSettings);
+        newQueryConvo(validSettings, forceNewConversation);
       }
 
       success();

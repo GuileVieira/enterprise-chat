@@ -64,6 +64,11 @@ const chatBadges = atomWithLocalStorage<Pick<BadgeItem, 'id'>[]>('chatBadges', [
   // { id: '2' },
 ]);
 
+const selectedProjectId = atom<string | null>({
+  key: 'selectedProjectId',
+  default: null,
+});
+
 export default {
   hideBannerHint,
   messageAttachmentsMap,
@@ -71,4 +76,5 @@ export default {
   queriesEnabled,
   isEditingBadges,
   chatBadges,
+  selectedProjectId,
 };

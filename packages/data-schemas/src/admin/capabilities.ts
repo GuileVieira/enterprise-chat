@@ -35,9 +35,13 @@ export const SystemCapabilities = {
   MANAGE_MCP_SERVERS: 'manage:mcpservers',
   READ_PROMPTS: 'read:prompts',
   MANAGE_PROMPTS: 'manage:prompts',
+  READ_SKILLS: 'read:skills',
+  MANAGE_SKILLS: 'manage:skills',
   /** Reserved — not yet enforced by any middleware. */
   READ_ASSISTANTS: 'read:assistants',
   MANAGE_ASSISTANTS: 'manage:assistants',
+  READ_PROJECTS: 'read:projects',
+  MANAGE_PROJECTS: 'manage:projects',
 } as const;
 
 /**
@@ -52,7 +56,9 @@ export const CapabilityImplications: Partial<Record<BaseSystemCapability, BaseSy
     [SystemCapabilities.MANAGE_CONFIGS]: [SystemCapabilities.READ_CONFIGS],
     [SystemCapabilities.MANAGE_AGENTS]: [SystemCapabilities.READ_AGENTS],
     [SystemCapabilities.MANAGE_PROMPTS]: [SystemCapabilities.READ_PROMPTS],
+    [SystemCapabilities.MANAGE_SKILLS]: [SystemCapabilities.READ_SKILLS],
     [SystemCapabilities.MANAGE_ASSISTANTS]: [SystemCapabilities.READ_ASSISTANTS],
+    [SystemCapabilities.MANAGE_PROJECTS]: [SystemCapabilities.READ_PROJECTS],
   };
 
 // ---------------------------------------------------------------------------
@@ -139,6 +145,8 @@ export const ResourceCapabilityMap: Record<ResourceType, SystemCapability> = {
   [ResourceType.PROMPTGROUP]: SystemCapabilities.MANAGE_PROMPTS,
   [ResourceType.MCPSERVER]: SystemCapabilities.MANAGE_MCP_SERVERS,
   [ResourceType.REMOTE_AGENT]: SystemCapabilities.MANAGE_AGENTS,
+  [ResourceType.SKILL]: SystemCapabilities.MANAGE_SKILLS,
+  [ResourceType.PROJECT]: SystemCapabilities.MANAGE_PROJECTS,
 };
 
 /**
@@ -204,9 +212,13 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
       SystemCapabilities.READ_AGENTS,
       SystemCapabilities.MANAGE_PROMPTS,
       SystemCapabilities.READ_PROMPTS,
+      SystemCapabilities.MANAGE_SKILLS,
+      SystemCapabilities.READ_SKILLS,
       SystemCapabilities.MANAGE_ASSISTANTS,
       SystemCapabilities.READ_ASSISTANTS,
       SystemCapabilities.MANAGE_MCP_SERVERS,
+      SystemCapabilities.MANAGE_PROJECTS,
+      SystemCapabilities.READ_PROJECTS,
     ],
   },
   {

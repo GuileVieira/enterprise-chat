@@ -1,7 +1,7 @@
 {
   "name": "@librechat/data-schemas",
-  "version": "0.0.50",
-  "description": "Mongoose schemas and models for LibreChat",
+  "version": "0.0.51",
+  "description": "Mongoose schemas and models for Orqest",
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.es.js",
@@ -34,12 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/danny-avila/LibreChat"
+    "url": "https://github.com/danny-avila/Orqest"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/danny-avila/LibreChat/issues"
+    "url": "https://github.com/danny-avila/Orqest/issues"
   },
   "homepage": "https://librechat.ai",
   "devDependencies": {
@@ -69,7 +69,7 @@
     "librechat-data-provider": "*",
     "lodash": "^4.17.23",
     "meilisearch": "^0.38.0",
-    "mongoose": "^8.12.1",
+    "mongoose": "^8.23.1",
     "nanoid": "^3.3.7",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"

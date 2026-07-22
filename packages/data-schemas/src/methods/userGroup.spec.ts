@@ -100,6 +100,7 @@ describe('userGroup methods', () => {
         { name: 'Engineering', source: 'local', description: 'Eng team' },
         { name: 'Design', source: 'local', email: 'design@co.com' },
         { name: 'Entra Eng', source: 'entra', idOnTheSource: 'ext-1' },
+        { name: 'Literal .* Group', source: 'local' },
       ]);
     });
 
@@ -118,6 +119,12 @@ describe('userGroup methods', () => {
       const results = await methods.findGroupsByNamePattern('Eng team');
       expect(results).toHaveLength(1);
       expect(results[0].name).toBe('Engineering');
+    });
+
+    it('treats regex metacharacters as literal text', async () => {
+      const results = await methods.findGroupsByNamePattern('.*');
+      expect(results).toHaveLength(1);
+      expect(results[0].name).toBe('Literal .* Group');
     });
 
     it('filters by source when provided', async () => {
@@ -525,7 +532,7 @@ describe('userGroup methods', () => {
       expect(score).toBe(50);
     });
 
-    it('returns 10 (default) when no substring or exact match — regex fallback', () => {
+    it('returns 10 (default) when no substring or exact match', () => {
       const score = methods.calculateRelevanceScore(
         { type: PrincipalType.USER, name: 'bob', source: 'local' },
         'zzz',
@@ -573,12 +580,12 @@ describe('userGroup methods', () => {
       expect(score).toBe(80);
     });
 
-    it('returns 100 when regex pattern matches exactly via dot wildcard', () => {
+    it('does not treat regex metacharacters as wildcards', () => {
       const score = methods.calculateRelevanceScore(
         { type: PrincipalType.USER, name: 'xYz', source: 'local' },
         'x.z',
       );
-      expect(score).toBe(100);
+      expect(score).toBe(10);
     });
   });
 
@@ -671,6 +678,36 @@ describe('userGroup methods', () => {
       expect(results).toEqual([]);
     });
 
+    it('treats regex metacharacters as literal search text', async () => {
+      await User.create({
+        name: 'Literal .* User',
+        email: 'literal-star@test.com',
+        username: 'literal-star',
+        password: 'password123',
+        provider: 'local',
+      });
+
+      const results = await methods.searchPrincipals('.*', 10, [PrincipalType.USER]);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].name).toBe('Literal .* User');
+    });
+
+    it('handles invalid regex syntax as literal search text', async () => {
+      await User.create({
+        name: 'Regex [invalid User',
+        email: 'regex-invalid@test.com',
+        username: 'regex-invalid',
+        password: 'password123',
+        provider: 'local',
+      });
+
+      const results = await methods.searchPrincipals('[invalid', 10, [PrincipalType.USER]);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].name).toBe('Regex [invalid User');
+    });
+
     it('finds matching users', async () => {
       const results = await methods.searchPrincipals('alice');
       const userResults = results.filter((r) => r.type === PrincipalType.USER);
@@ -749,6 +786,80 @@ describe('userGroup methods', () => {
       );
       expect(results[0].id).toBeDefined();
       expect(results[0].memberCount).toBeDefined();
+    });
+
+    it('scopes user and group search to the requested tenant', async () => {
+      await User.create([
+        {
+          name: 'Tenant Match',
+          email: 'tenant-a-user@test.com',
+          username: 'tenant-match-a',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-a',
+        },
+        {
+          name: 'Tenant Match',
+          email: 'tenant-b-user@test.com',
+          username: 'tenant-match-b',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-b',
+        },
+      ]);
+      await Group.create([
+        { name: 'Tenant Match Group', source: 'local', tenantId: 'tenant-a' },
+        { name: 'Tenant Match Group', source: 'local', tenantId: 'tenant-b' },
+      ]);
+
+      const results = await methods.searchPrincipals('tenant match', 10, null, {
+        tenantId: 'tenant-a',
+        global: false,
+      });
+
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: PrincipalType.USER, email: 'tenant-a-user@test.com' }),
+          expect.objectContaining({ type: PrincipalType.GROUP, name: 'Tenant Match Group' }),
+        ]),
+      );
+      expect(results).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: PrincipalType.USER, email: 'tenant-b-user@test.com' }),
+        ]),
+      );
+    });
+
+    it('allows global search across tenants', async () => {
+      await User.create([
+        {
+          name: 'Global Match',
+          email: 'global-a@test.com',
+          username: 'global-a',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-a',
+        },
+        {
+          name: 'Global Match',
+          email: 'global-b@test.com',
+          username: 'global-b',
+          password: 'password123',
+          provider: 'local',
+          tenantId: 'tenant-b',
+        },
+      ]);
+
+      const results = await methods.searchPrincipals('global match', 10, [PrincipalType.USER], {
+        global: true,
+      });
+
+      expect(results).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ email: 'global-a@test.com' }),
+          expect.objectContaining({ email: 'global-b@test.com' }),
+        ]),
+      );
     });
   });
 

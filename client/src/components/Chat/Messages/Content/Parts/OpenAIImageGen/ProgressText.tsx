@@ -50,6 +50,22 @@ export default function ProgressText({
       return localize('com_ui_getting_started');
     }
 
+    if (toolName === 'openrouter_gemini_image_gen') {
+      if (progress >= 1) {
+        return localize('com_ui_premium_image_created');
+      }
+      if (progress >= 0.7) {
+        return localize('com_ui_premium_image_final_touch');
+      }
+      if (progress >= 0.5) {
+        return localize('com_ui_premium_image_adding_details');
+      }
+      if (progress >= 0.3) {
+        return localize('com_ui_creating_premium_image');
+      }
+      return localize('com_ui_premium_image_starting');
+    }
+
     if (AGENT_STYLE_TOOLS.has(toolName)) {
       if (progress >= 1) {
         return localize('com_ui_image_created');

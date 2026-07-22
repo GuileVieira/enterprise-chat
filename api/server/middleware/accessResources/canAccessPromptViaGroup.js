@@ -1,6 +1,8 @@
 const { ResourceType } = require('librechat-data-provider');
+const { runAsSystem } = require('@librechat/data-schemas');
 const { canAccessResource } = require('./canAccessResource');
 const { getPrompt } = require('~/models');
+const mongoose = require('mongoose');
 
 /**
  * Prompt to PromptGroup ID resolver function
@@ -10,12 +12,27 @@ const { getPrompt } = require('~/models');
  * @returns {Promise<Object|null>} Object with promptGroup's _id field, or null if not found
  */
 const resolvePromptToGroupId = async (promptId) => {
-  const prompt = await getPrompt({ _id: promptId });
+  const prompt = await runAsSystem(() => getPrompt({ _id: promptId }));
   if (!prompt || !prompt.groupId) {
     return null;
   }
   // Return an object with _id that matches the promptGroup ID
   return { _id: prompt.groupId };
+};
+
+const resolveProjectInheritance = async ({ resourceId, requiredPermission }) => {
+  const Project = mongoose.models.Project;
+  if (!Project) {
+    return [];
+  }
+  const projects = await Project.find({ promptGroupIds: resourceId.toString() })
+    .select('_id')
+    .lean();
+  return projects.map((project) => ({
+    resourceType: ResourceType.PROJECT,
+    resourceId: project._id,
+    requiredPermission,
+  }));
 };
 
 /**
@@ -47,6 +64,7 @@ const canAccessPromptViaGroup = (options) => {
     requiredPermission,
     resourceIdParam,
     idResolver: resolvePromptToGroupId,
+    inheritedResourceResolver: resolveProjectInheritance,
   });
 };
 

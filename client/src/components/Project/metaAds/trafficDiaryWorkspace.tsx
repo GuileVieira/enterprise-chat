@@ -1,0 +1,479 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle, Plus, Sparkle, Trash } from '@phosphor-icons/react';
+import {
+  useDeleteProjectMetaAdsDiaryMutation,
+  useProjectMetaAdsDiaryQuery,
+  useSaveProjectMetaAdsDiaryMutation,
+} from '~/data-provider';
+import { useLocalize } from '~/hooks';
+import type { TranslationKeys } from '~/hooks';
+import type {
+  ProjectTrafficDiaryAnswer,
+  ProjectTrafficDiaryEntry,
+  ProjectTrafficDiaryKind,
+  TProject,
+} from 'librechat-data-provider';
+
+const managerDiarySections = [
+  {
+    key: 'context',
+    questionIds: ['measurement', 'strategy', 'client_feedback'],
+  },
+  {
+    key: 'decisions',
+    questionIds: ['changes', 'creative_learning'],
+  },
+  {
+    key: 'next_steps',
+    questionIds: ['next_steps'],
+  },
+] as const;
+
+const strategistDiarySections = [
+  {
+    key: 'context',
+    questionIds: ['weekly_goal', 'manager_request', 'related_audience_offer'],
+  },
+  {
+    key: 'decisions',
+    questionIds: ['defined_strategy', 'copywriter_guidance', 'hypothesis', 'requested_creatives'],
+  },
+  {
+    key: 'next_steps',
+    questionIds: ['deadline', 'status', 'observed_result', 'learning', 'next_action'],
+  },
+] as const;
+
+const diaryConfigs = {
+  manager: {
+    sections: managerDiarySections,
+    titleKey: 'com_ui_project_meta_ads_diary_title',
+    descriptionKey: 'com_ui_project_meta_ads_diary_description',
+    actorKey: 'com_ui_project_meta_ads_diary_manager',
+    accentClassName: 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10',
+  },
+  strategist: {
+    sections: strategistDiarySections,
+    titleKey: 'com_ui_project_meta_ads_strategy_diary_title',
+    descriptionKey: 'com_ui_project_meta_ads_strategy_diary_description',
+    actorKey: 'com_ui_project_meta_ads_strategy_diary_actor',
+    accentClassName:
+      'border-indigo-400 bg-indigo-50 dark:border-indigo-300/50 dark:bg-indigo-300/10',
+  },
+} as const;
+
+const diaryKinds = ['manager', 'strategist'] as const;
+type DiarySection =
+  | (typeof managerDiarySections)[number]
+  | (typeof strategistDiarySections)[number];
+
+function getDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo',
+    year: 'numeric',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(
+    new Date(`${value}T12:00:00`),
+  );
+}
+
+function formatDateTime(value?: string) {
+  if (!value) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(value),
+  );
+}
+
+function getDefaultAnswers(
+  localize: ReturnType<typeof useLocalize>,
+  kind: ProjectTrafficDiaryKind,
+) {
+  return diaryConfigs[kind].sections.flatMap((section) =>
+    section.questionIds.map((id) => ({
+      id,
+      question: localize(
+        kind === 'strategist'
+          ? (`com_ui_project_meta_ads_strategy_diary_question_${id}` as TranslationKeys)
+          : (`com_ui_project_meta_ads_diary_question_${id}` as TranslationKeys),
+      ),
+      answer: '',
+    })),
+  );
+}
+
+function getEntryDate(entry: ProjectTrafficDiaryEntry) {
+  return entry.date || entry.weekStart;
+}
+
+function getPersistableAnswers(answers: ProjectTrafficDiaryAnswer[]) {
+  return answers.filter(
+    (answer) =>
+      !answer.parentQuestionId ||
+      answer.question.trim().length > 0 ||
+      answer.answer.trim().length > 0,
+  );
+}
+
+export function TrafficDiaryWorkspace({
+  project,
+  canEdit,
+  onAnalyze,
+}: {
+  project: TProject;
+  canEdit: boolean;
+  onAnalyze: (entry: ProjectTrafficDiaryEntry) => void;
+}) {
+  const localize = useLocalize();
+  const currentDate = getDateKey();
+  const [activeKind, setActiveKind] = useState<ProjectTrafficDiaryKind>('manager');
+  const diaryQuery = useProjectMetaAdsDiaryQuery(project.projectId, activeKind);
+  const saveDiary = useSaveProjectMetaAdsDiaryMutation();
+  const deleteDiary = useDeleteProjectMetaAdsDiaryMutation();
+  const config = diaryConfigs[activeKind];
+  const defaultAnswers = useMemo(
+    () => getDefaultAnswers(localize, activeKind),
+    [activeKind, localize],
+  );
+  const defaultAnswersRef = useRef(defaultAnswers);
+  defaultAnswersRef.current = defaultAnswers;
+  const [selectedDate, setSelectedDate] = useState(currentDate);
+  const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const entries = diaryQuery.data?.entries ?? [];
+  const entry = entries.find((item) => getEntryDate(item) === selectedDate);
+  const historyEntries = entries.filter((item) => getEntryDate(item) !== currentDate);
+  const isCompleted = entry?.status === 'completed';
+  const canAddQuestion = canEdit;
+  const isSaving = saveDiary.isLoading || deleteDiary.isLoading;
+  const hasUnsavedChanges = useMemo(() => {
+    const loadedAnswers = entry?.answers.length ? entry.answers : defaultAnswers;
+    return (
+      JSON.stringify(getPersistableAnswers(answers)) !==
+      JSON.stringify(getPersistableAnswers(loadedAnswers))
+    );
+  }, [answers, defaultAnswers, entry?.answers]);
+
+  useEffect(() => {
+    setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
+    setError(null);
+    setNotice(null);
+  }, [activeKind, entry?.answers, entry?.date, entry?.updatedAt, entry?.weekStart]);
+
+  const updateAnswer = (id: string, answer: string) => {
+    setAnswers((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)));
+  };
+
+  const addQuestion = () => {
+    setAnswers((current) => [
+      ...current,
+      {
+        id: `custom_${Date.now()}`,
+        question: '',
+        answer: '',
+        parentQuestionId: activeKind === 'strategist' ? 'defined_strategy' : 'strategy',
+      },
+    ]);
+  };
+
+  const save = async (showNotice = true) => {
+    try {
+      setError(null);
+      const savedAnswers = getPersistableAnswers(answers);
+      const savedEntry = await saveDiary.mutateAsync({
+        projectId: project.projectId,
+        date: selectedDate,
+        answers: savedAnswers,
+        kind: activeKind,
+      });
+      if (showNotice) {
+        setNotice(localize('com_ui_project_meta_ads_diary_saved'));
+      }
+      return savedEntry;
+    } catch {
+      setError(localize('com_ui_project_meta_ads_diary_save_error'));
+      return null;
+    }
+  };
+
+  const deleteEntry = async () => {
+    if (!entry || !window.confirm(localize('com_ui_project_meta_ads_diary_delete_confirm'))) {
+      return;
+    }
+    try {
+      setError(null);
+      await deleteDiary.mutateAsync({
+        projectId: project.projectId,
+        entryId: entry._id,
+        kind: activeKind,
+      });
+      setSelectedDate(currentDate);
+      setNotice(localize('com_ui_project_meta_ads_diary_deleted_success'));
+    } catch {
+      setError(localize('com_ui_project_meta_ads_diary_delete_error'));
+    }
+  };
+
+  const answersForSection = (section: DiarySection) =>
+    answers.filter(
+      (answer) =>
+        (section.questionIds as readonly string[]).includes(answer.id) ||
+        (answer.parentQuestionId != null &&
+          (section.questionIds as readonly string[]).includes(answer.parentQuestionId)),
+    );
+
+  return (
+    <div id="meta-ads-diary-tab-panel" role="tabpanel" className="space-y-5 p-5">
+      <header className="flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/70 p-5 dark:border-white/10 dark:bg-slate-950/20 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
+          <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-white/10 dark:bg-slate-950">
+            {diaryKinds.map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => {
+                  setActiveKind(kind);
+                  setSelectedDate(currentDate);
+                }}
+                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  activeKind === kind
+                    ? diaryConfigs[kind].accentClassName
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10'
+                }`}
+              >
+                {localize(
+                  kind === 'strategist'
+                    ? 'com_ui_project_meta_ads_strategy_diary_tab'
+                    : 'com_ui_project_meta_ads_manager_diary_tab',
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-xl font-semibold tracking-tight">{localize(config.titleKey)}</h3>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-200">
+              {entry
+                ? localize(
+                    isCompleted
+                      ? 'com_ui_project_meta_ads_diary_completed'
+                      : 'com_ui_project_meta_ads_diary_draft',
+                  )
+                : localize('com_ui_project_meta_ads_diary_new_week')}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            {localize(config.descriptionKey)}
+          </p>
+          <p className="mt-3 text-sm font-medium text-slate-900 dark:text-white">
+            {formatDate(selectedDate)}
+          </p>
+          {entry && (
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {localize('com_ui_project_meta_ads_diary_entry_meta', {
+                0: entry.createdBy.name || localize(config.actorKey),
+                1: formatDateTime(entry.updatedAt || entry.createdAt),
+              })}
+            </p>
+          )}
+        </div>
+        {selectedDate !== currentDate && (
+          <button
+            type="button"
+            onClick={() => setSelectedDate(currentDate)}
+            className="self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-200"
+          >
+            {localize('com_ui_project_meta_ads_diary_this_week')}
+          </button>
+        )}
+      </header>
+
+      {(error || notice) && (
+        <div
+          role="status"
+          className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
+            error
+              ? 'bg-red-500/10 text-red-700 dark:text-red-200'
+              : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
+          }`}
+        >
+          {!error && <CheckCircle className="h-4 w-4" aria-hidden="true" />}
+          {error || notice}
+        </div>
+      )}
+
+      <div className="sticky top-0 z-10 -mx-5 border-y border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.8)] backdrop-blur dark:border-white/10 dark:bg-slate-950/95">
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && hasUnsavedChanges && (
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={isSaving}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/15 dark:text-slate-100"
+            >
+              {localize('com_ui_project_meta_ads_diary_save')}
+            </button>
+          )}
+          {entry && (
+            <button
+              type="button"
+              onClick={() => onAnalyze(entry)}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+            >
+              <Sparkle className="h-4 w-4" aria-hidden="true" />
+              {localize('com_ui_project_meta_ads_diary_analyze')}
+            </button>
+          )}
+          {canEdit && entry && (
+            <button
+              type="button"
+              onClick={() => void deleteEntry()}
+              disabled={isSaving}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-300/20 dark:text-red-200 dark:hover:bg-red-300/10"
+            >
+              <Trash className="h-4 w-4" aria-hidden="true" />
+              {localize('com_ui_project_meta_ads_diary_delete')}
+            </button>
+          )}
+          {entry && !isCompleted && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {localize('com_ui_project_meta_ads_diary_analyze_hint')}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0 space-y-5">
+          {canAddQuestion && (
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-teal-700 transition hover:text-teal-900 dark:text-teal-200 dark:hover:text-teal-100"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {localize('com_ui_project_meta_ads_diary_add_question')}
+            </button>
+          )}
+
+          {config.sections.map((section) => {
+            const sectionAnswers = answersForSection(section);
+            if (sectionAnswers.length === 0) {
+              return null;
+            }
+            return (
+              <section key={section.key} className="space-y-3">
+                <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {localize(
+                    `com_ui_project_meta_ads_diary_section_${section.key}` as TranslationKeys,
+                  )}
+                </h4>
+                <div className="space-y-3">
+                  {sectionAnswers.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 dark:border-white/10 dark:bg-slate-950/20"
+                    >
+                      {item.parentQuestionId ? (
+                        <input
+                          value={item.question}
+                          disabled={!canEdit}
+                          onChange={(event) =>
+                            setAnswers((current) =>
+                              current.map((answer) =>
+                                answer.id === item.id
+                                  ? { ...answer, question: event.target.value }
+                                  : answer,
+                              ),
+                            )
+                          }
+                          placeholder={localize('com_ui_project_meta_ads_diary_extra_question')}
+                          className="mb-3 w-full border-b border-slate-300 bg-transparent pb-2 text-sm font-semibold dark:border-white/20"
+                        />
+                      ) : (
+                        <label className="block max-w-3xl text-sm font-semibold leading-6">
+                          {item.question}
+                        </label>
+                      )}
+                      <textarea
+                        value={item.answer}
+                        disabled={!canEdit}
+                        onChange={(event) => updateAnswer(item.id, event.target.value)}
+                        rows={3}
+                        className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-white/15 dark:bg-slate-900"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+
+        <aside className="min-w-0 xl:sticky xl:top-4 xl:self-start">
+          <div className="rounded-2xl border border-slate-200/70 bg-white/55 p-3 dark:border-white/10 dark:bg-slate-950/20">
+            <h4 className="px-1 pb-3 text-sm font-semibold">
+              {localize('com_ui_project_meta_ads_diary_history')}
+            </h4>
+            <div className="flex gap-3 overflow-x-auto pb-1 xl:max-h-[460px] xl:flex-col xl:overflow-y-auto xl:pr-1">
+              <button
+                type="button"
+                onClick={() => setSelectedDate(currentDate)}
+                className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
+                  selectedDate === currentDate
+                    ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
+                    : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03]'
+                }`}
+              >
+                <span className="block text-sm font-semibold">{formatDate(currentDate)}</span>
+                <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                  {localize('com_ui_project_meta_ads_diary_this_week')}
+                </span>
+              </button>
+              {historyEntries.map((historyEntry) => {
+                const historyDate = getEntryDate(historyEntry);
+                const isSelected = historyDate === selectedDate;
+                const author = historyEntry.createdBy.name || localize(config.actorKey);
+                return (
+                  <button
+                    key={historyEntry._id}
+                    type="button"
+                    onClick={() => setSelectedDate(historyDate)}
+                    className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
+                      isSelected
+                        ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
+                        : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03]'
+                    }`}
+                  >
+                    <span className="block text-sm font-semibold">{formatDate(historyDate)}</span>
+                    <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">
+                      {localize(
+                        historyEntry.status === 'completed'
+                          ? 'com_ui_project_meta_ads_diary_completed'
+                          : 'com_ui_project_meta_ads_diary_draft',
+                      )}
+                    </span>
+                    <span className="mt-2 block text-sm text-slate-700 dark:text-slate-200">
+                      {author}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                      {formatDateTime(historyEntry.updatedAt || historyEntry.createdAt)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -2,27 +2,24 @@ import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { useRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import {
-  FileSearch,
-  ImageUpIcon,
-  FileType2Icon,
-  FileImageIcon,
-  TerminalSquareIcon,
-} from 'lucide-react';
-import {
-  FileUpload,
-  TooltipAnchor,
-  DropdownPopup,
-  AttachmentIcon,
-  SharePointIcon,
-} from '@librechat/client';
+  FileImage as FileImageIcon,
+  FileMagnifyingGlass as FileSearch,
+  FileText as FileType2Icon,
+  ImageSquare as ImageUpIcon,
+  Paperclip,
+  TerminalWindow as TerminalSquareIcon,
+} from '@phosphor-icons/react';
+import { FileUpload, TooltipAnchor, DropdownPopup, SharePointIcon } from '@librechat/client';
 import {
   Providers,
   EToolResources,
   EModelEndpoint,
+  fullMimeTypesList,
   isPermissiveMimeConfig,
   defaultAgentCapabilities,
   bedrockDocumentExtensions,
   isDocumentSupportedProvider,
+  fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import type { EndpointFileConfig, TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
@@ -47,6 +44,45 @@ type FileUploadType =
   | 'image_document_extended'
   | 'image_document_video_audio';
 
+const mimeAcceptExtensions: Record<string, string[]> = {
+  'text/csv': ['.csv'],
+  'text/html': ['.html', '.htm'],
+  'text/plain': ['.txt'],
+  'text/markdown': ['.md'],
+  'application/pdf': ['.pdf'],
+  'application/msword': ['.doc'],
+  'application/vnd.ms-excel': ['.xls'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+  'application/vnd.oasis.opendocument.text': ['.odt'],
+  'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
+  'application/vnd.oasis.opendocument.presentation': ['.odp'],
+  'application/vnd.oasis.opendocument.graphics': ['.odg'],
+};
+
+const acceptMimeCandidates = Array.from(
+  new Set([...fullMimeTypesList, ...Object.keys(mimeAcceptExtensions)]),
+);
+
+const getAcceptFromEndpointConfig = (endpointFileConfig?: EndpointFileConfig): string => {
+  const supportedMimeTypes = endpointFileConfig?.supportedMimeTypes;
+  if (!supportedMimeTypes?.length || isPermissiveMimeConfig(supportedMimeTypes)) {
+    return '';
+  }
+
+  const acceptValues = new Set<string>();
+  for (const mimeType of acceptMimeCandidates) {
+    if (!defaultFileConfig.checkType(mimeType, supportedMimeTypes)) {
+      continue;
+    }
+    mimeAcceptExtensions[mimeType]?.forEach((extension) => acceptValues.add(extension));
+    acceptValues.add(mimeType);
+  }
+
+  return Array.from(acceptValues).join(',');
+};
+
 interface AttachFileMenuProps {
   agentId?: string | null;
   endpoint?: string | null;
@@ -59,6 +95,7 @@ interface AttachFileMenuProps {
   setFiles: FileSetter;
   setFilesLoading: React.Dispatch<React.SetStateAction<boolean>>;
   conversation: TConversation | null;
+  saveUploadsToProject?: boolean;
 }
 
 const AttachFileMenu = ({
@@ -73,6 +110,7 @@ const AttachFileMenu = ({
   setFiles,
   setFilesLoading,
   conversation,
+  saveUploadsToProject,
 }: AttachFileMenuProps) => {
   const localize = useLocalize();
   const isUploadDisabled = disabled ?? false;
@@ -81,8 +119,10 @@ const AttachFileMenu = ({
   const [ephemeralAgent, setEphemeralAgent] = useRecoilState(
     ephemeralAgentByConvoId(conversationId),
   );
-  const [toolResource, setToolResource] = useState<EToolResources | undefined>();
-  const { handleFileChange } = useFileHandlingNoChatContext(undefined, {
+  const toolResourceRef = useRef<EToolResources | undefined>();
+  const [toolResource, setToolResourceState] = useState<EToolResources | undefined>();
+  const fileHandlingParams = useMemo(() => ({ saveUploadsToProject }), [saveUploadsToProject]);
+  const { handleFileChange } = useFileHandlingNoChatContext(fileHandlingParams, {
     files,
     setFiles,
     setFilesLoading,
@@ -90,7 +130,7 @@ const AttachFileMenu = ({
   });
   const { handleSharePointFiles, isProcessing, downloadProgress } =
     useSharePointFileHandlingNoChatContext(
-      { toolResource },
+      { toolResource, saveUploadsToProject },
       { files, setFiles, setFilesLoading, conversation },
     );
 
@@ -117,31 +157,33 @@ const AttachFileMenu = ({
         return;
       }
       inputRef.current.value = '';
-      if (
-        fileType !== undefined &&
-        isPermissiveMimeConfig(endpointFileConfig?.supportedMimeTypes)
-      ) {
-        inputRef.current.accept = '';
-      } else if (fileType === 'image') {
+      const endpointAccept = getAcceptFromEndpointConfig(endpointFileConfig);
+      if (fileType === 'image') {
         inputRef.current.accept = 'image/*,.heif,.heic';
       } else if (fileType === 'document') {
-        inputRef.current.accept = '.pdf,application/pdf';
+        inputRef.current.accept = endpointAccept || '.pdf,application/pdf';
       } else if (fileType === 'image_document') {
-        inputRef.current.accept = 'image/*,.heif,.heic,.pdf,application/pdf';
+        inputRef.current.accept = endpointAccept || 'image/*,.heif,.heic,.pdf,application/pdf';
       } else if (fileType === 'image_document_extended') {
         inputRef.current.accept = `image/*,.heif,.heic,${bedrockDocumentExtensions}`;
       } else if (fileType === 'image_document_video_audio') {
-        inputRef.current.accept = 'image/*,.heif,.heic,.pdf,application/pdf,video/*,audio/*';
+        inputRef.current.accept =
+          endpointAccept || 'image/*,.heif,.heic,.pdf,application/pdf,video/*,audio/*';
       } else {
-        inputRef.current.accept = '';
+        inputRef.current.accept = endpointAccept;
       }
       inputRef.current.click();
       inputRef.current.accept = '';
     },
-    [endpointFileConfig?.supportedMimeTypes],
+    [endpointFileConfig],
   );
 
   const dropdownItems = useMemo(() => {
+    const setToolResource = (value: EToolResources | undefined) => {
+      toolResourceRef.current = value;
+      setToolResourceState(value);
+    };
+
     const createMenuItems = (onAction: (fileType?: FileUploadType) => void) => {
       const items: MenuItemProps[] = [];
 
@@ -153,7 +195,9 @@ const AttachFileMenu = ({
       }
 
       const isAzureWithResponsesApi =
-        currentProvider === EModelEndpoint.azureOpenAI && useResponsesApi;
+        (currentProvider === EModelEndpoint.azureOpenAI ||
+          endpointType === EModelEndpoint.azureOpenAI) &&
+        useResponsesApi === true;
 
       if (
         isDocumentSupportedProvider(endpointType) ||
@@ -216,7 +260,7 @@ const AttachFileMenu = ({
 
       if (capabilities.codeEnabled && codeAllowedByAgent) {
         items.push({
-          label: localize('com_ui_upload_code_files'),
+          label: localize('com_ui_upload_code_environment'),
           onClick: () => {
             setToolResource(EToolResources.execute_code);
             setEphemeralAgent((prev) => ({
@@ -257,7 +301,6 @@ const AttachFileMenu = ({
     capabilities,
     useResponsesApi,
     handleUploadClick,
-    setToolResource,
     setEphemeralAgent,
     sharePointEnabled,
     codeAllowedByAgent,
@@ -269,6 +312,7 @@ const AttachFileMenu = ({
     <TooltipAnchor
       render={
         <Ariakit.MenuButton
+          render={<button type="button" />}
           disabled={isUploadDisabled}
           id="attach-file-menu-button"
           aria-label="Attach File Options"
@@ -278,7 +322,7 @@ const AttachFileMenu = ({
           )}
         >
           <div className="flex w-full items-center justify-center gap-2">
-            <AttachmentIcon />
+            <Paperclip size={26} aria-hidden="true" />
           </div>
         </Ariakit.MenuButton>
       }
@@ -301,7 +345,8 @@ const AttachFileMenu = ({
       <FileUpload
         ref={inputRef}
         handleFileChange={(e) => {
-          handleFileChange(e, toolResource);
+          handleFileChange(e, toolResourceRef.current);
+          toolResourceRef.current = undefined;
         }}
       >
         <DropdownPopup

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRecoilState } from 'recoil';
-import { ListFilter, User, Share2 } from 'lucide-react';
+import { Funnel as ListFilter, ShareNetwork as Share2, User } from '@phosphor-icons/react';
 import { Dropdown, FilterInput } from '@librechat/client';
 import { SystemCategories } from 'librechat-data-provider';
 import type { Option } from '~/common';

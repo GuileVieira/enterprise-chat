@@ -27,6 +27,7 @@ const { generateShortLivedToken } = require('@librechat/api');
 describe('fileSearch.js - tuple return validation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    axios.post.mockReset();
     process.env.RAG_API_URL = 'http://localhost:8000';
   });
 
@@ -227,6 +228,239 @@ describe('fileSearch.js - tuple return validation', () => {
       // Results are sorted by distance (ascending), so file-2 (0.15) comes before file-1 (0.25)
       expect(artifact.file_search.sources[0].fileId).toBe('file-2');
       expect(artifact.file_search.sources[1].fileId).toBe('file-1');
+    });
+
+    it('should query project files with the project entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Project file content',
+              metadata: { source: '/path/to/project.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-project', filename: 'project.docx', projectId: 'project-123' }],
+        entity_id: 'agent-456',
+      });
+
+      await fileSearchTool.func({ query: 'project query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+    });
+
+    it('falls back to the agent entity id when a project file has no project results', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValueOnce({ data: [] }).mockResolvedValueOnce({
+        data: [
+          [
+            {
+              page_content: 'Legacy agent-indexed content',
+              metadata: { source: '/path/to/project.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-project', filename: 'project.docx', projectId: 'project-123' }],
+        entity_id: 'agent-456',
+      });
+
+      const [formattedString] = await fileSearchTool.func({ query: 'project query' });
+
+      expect(formattedString).toContain('Legacy agent-indexed content');
+      expect(axios.post).toHaveBeenNthCalledWith(
+        1,
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+      expect(axios.post).toHaveBeenNthCalledWith(
+        2,
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-project',
+          query: 'project query',
+          k: 5,
+          entity_id: 'agent-456',
+        },
+        expect.any(Object),
+      );
+    });
+
+    it('should query non-project files with the agent entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Agent file content',
+              metadata: { source: '/path/to/agent.pdf', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'file-agent', filename: 'agent.pdf' }],
+        entity_id: 'agent-456',
+      });
+
+      await fileSearchTool.func({ query: 'agent query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'file-agent',
+          query: 'agent query',
+          k: 5,
+          entity_id: 'agent-456',
+        },
+        expect.any(Object),
+      );
+    });
+
+    it('keeps file metadata aligned when another file query fails', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockImplementation((_url, body) => {
+        if (body.file_id === 'file-1') {
+          return Promise.reject(new Error('API Error'));
+        }
+        return Promise.resolve({
+          data: [
+            [
+              {
+                page_content: 'Content from file 2',
+                metadata: { source: '/path/to/file2.pdf', page: 1 },
+              },
+              0.15,
+            ],
+          ],
+        });
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [
+          { file_id: 'file-1', filename: 'file1.pdf', projectId: 'project-1' },
+          { file_id: 'file-2', filename: 'file2.pdf', projectId: 'project-2' },
+        ],
+      });
+
+      const [, artifact] = await fileSearchTool.func({ query: 'test query' });
+
+      expect(artifact.file_search.sources).toHaveLength(1);
+      expect(artifact.file_search.sources[0].fileId).toBe('file-2');
+    });
+
+    it('should query legacy project files with the active project entity id', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Legacy project file content',
+              metadata: { source: '/path/to/legacy.docx', page: 1 },
+            },
+            0.2,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [{ file_id: 'legacy-file', filename: 'legacy.docx' }],
+        entity_id: 'project-123',
+      });
+
+      await fileSearchTool.func({ query: 'legacy query' });
+
+      expect(axios.post).toHaveBeenCalledWith(
+        'http://localhost:8000/query',
+        {
+          file_id: 'legacy-file',
+          query: 'legacy query',
+          k: 5,
+          entity_id: 'project-123',
+        },
+        expect.any(Object),
+      );
+    });
+
+    it('should expose source image metadata for derived image RAG files', async () => {
+      generateShortLivedToken.mockReturnValue('mock-jwt-token');
+
+      axios.post.mockResolvedValue({
+        data: [
+          [
+            {
+              page_content: 'Visual description extracted from image "photo.png".',
+              metadata: { source: '/path/to/photo.png.vision.txt' },
+            },
+            0.1,
+          ],
+        ],
+      });
+
+      const fileSearchTool = await createFileSearchTool({
+        userId: 'user1',
+        files: [
+          {
+            file_id: 'caption-file',
+            filename: 'photo.png.vision.txt',
+            metadata: {
+              imageRag: {
+                sourceImageFileId: 'image-file',
+                sourceImageFileName: 'photo.png',
+              },
+            },
+          },
+        ],
+      });
+
+      const [, artifact] = await fileSearchTool.func({ query: 'what is in the image?' });
+
+      expect(artifact.file_search.sources[0]).toMatchObject({
+        fileId: 'caption-file',
+        fileName: 'photo.png',
+        metadata: {
+          imageRag: {
+            sourceImageFileId: 'image-file',
+            sourceImageFileName: 'photo.png',
+            derivedTextFileId: 'caption-file',
+          },
+        },
+      });
     });
   });
 });

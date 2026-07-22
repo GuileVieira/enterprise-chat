@@ -81,6 +81,7 @@ librechat.yml
 my.secrets
 !**/.env.example
 !**/.env.test.example
+!.env.prod.example
 cache.json
 api/data/
 owner.yml
@@ -178,3 +179,4 @@ claude-flow
 hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
+.vercel

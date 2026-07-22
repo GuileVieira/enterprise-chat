@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import { TooltipAnchor } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
@@ -70,6 +70,7 @@ function MCPSelectContent() {
           disabled={isOpen}
           render={
             <Ariakit.MenuButton
+              render={<button type="button" />}
               className={cn(
                 'group relative inline-flex items-center justify-center gap-1.5',
                 'border border-border-medium text-sm font-medium transition-all',

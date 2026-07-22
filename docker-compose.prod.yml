@@ -1,0 +1,162 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.multi
+      target: api-build
+      args:
+        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-4096}
+        VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
+    restart: always
+    depends_on:
+      mongodb:
+        condition: service_started
+      meilisearch:
+        condition: service_started
+      rag_api:
+        condition: service_started
+    expose:
+      - '3080'
+    ports:
+      - '3080:3080'
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3080
+      NODE_ENV: production
+      NODE_OPTIONS: ${NODE_OPTIONS:-"--max-old-space-size=6144"}
+      DOMAIN_CLIENT: ${DOMAIN_CLIENT}
+      DOMAIN_SERVER: ${DOMAIN_SERVER}
+      CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      NO_INDEX: ${NO_INDEX:-true}
+      CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
+      DEBUG_CONSOLE: ${DEBUG_CONSOLE:-false}
+      MONGO_URI: mongodb://mongodb:27017/Orqest
+      MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
+      MONGO_AUTO_CREATE: ${MONGO_AUTO_CREATE:-true}
+      SEARCH: ${SEARCH:-true}
+      MEILI_NO_ANALYTICS: ${MEILI_NO_ANALYTICS:-true}
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      RAG_PORT: ${RAG_PORT:-8000}
+      RAG_API_URL: http://rag_api:${RAG_PORT:-8000}
+      RAG_OPENAI_BASEURL: ${RAG_OPENAI_BASEURL}
+      RAG_OPENAI_API_KEY: ${RAG_OPENAI_API_KEY}
+      RAG_USE_FULL_CONTEXT: ${RAG_USE_FULL_CONTEXT:-false}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL}
+      ALLOW_EMAIL_LOGIN: ${ALLOW_EMAIL_LOGIN:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      ALLOW_SOCIAL_LOGIN: ${ALLOW_SOCIAL_LOGIN:-false}
+      ALLOW_SOCIAL_REGISTRATION: ${ALLOW_SOCIAL_REGISTRATION:-false}
+      ALLOW_PASSWORD_RESET: ${ALLOW_PASSWORD_RESET:-false}
+      ALLOW_UNVERIFIED_EMAIL_LOGIN: ${ALLOW_UNVERIFIED_EMAIL_LOGIN:-true}
+      SESSION_EXPIRY: ${SESSION_EXPIRY}
+      REFRESH_TOKEN_EXPIRY: ${REFRESH_TOKEN_EXPIRY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CREDS_KEY: ${CREDS_KEY}
+      CREDS_IV: ${CREDS_IV}
+      APP_TITLE: ${APP_TITLE:-Orqest}
+      ENDPOINTS: ${ENDPOINTS:-agents,custom}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_KEY: ${GOOGLE_KEY:-}
+      ASSISTANTS_API_KEY: ${ASSISTANTS_API_KEY:-}
+      OPENROUTER_KEY: ${OPENROUTER_KEY:-}
+      IMAGE_RAG_OCR_MODEL: ${IMAGE_RAG_OCR_MODEL:-}
+      IMAGE_RAG_OPENROUTER_BASE_URL: ${IMAGE_RAG_OPENROUTER_BASE_URL:-}
+      IMAGE_RAG_OCR_MAX_TOKENS: ${IMAGE_RAG_OCR_MAX_TOKENS:-}
+      IMAGE_RAG_OCR_TIMEOUT_MS: ${IMAGE_RAG_OCR_TIMEOUT_MS:-}
+      FLUX_API_BASE_URL: ${FLUX_API_BASE_URL:-https://api.us1.bfl.ai}
+    volumes:
+      - orqest_images:/app/client/public/images
+      - orqest_uploads:/app/uploads
+      - orqest_logs:/app/api/logs
+
+  meta_ads_budget_job:
+    profiles:
+      - jobs
+    build:
+      context: .
+      dockerfile: Dockerfile.multi
+      target: api-build
+      args:
+        NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-4096}
+        VITE_TERSER_MAX_WORKERS: ${VITE_TERSER_MAX_WORKERS:-1}
+    depends_on:
+      mongodb:
+        condition: service_started
+    working_dir: /app
+    command: /bin/sh -lc 'node api/server/jobs/metaAdsBudgetCron.js'
+    environment:
+      NODE_ENV: production
+      CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
+      CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
+      MONGO_URI: mongodb://mongodb:27017/Orqest
+      MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
+      MONGO_AUTO_CREATE: ${MONGO_AUTO_CREATE:-true}
+    volumes:
+      - orqest_logs:/app/api/logs
+
+  mongodb:
+    image: mongo:8.0.20
+    restart: always
+    command: mongod --noauth
+    volumes:
+      - orqest_mongodb:/data/db
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.35.1
+    restart: always
+    environment:
+      MEILI_HOST: http://meilisearch:7700
+      MEILI_NO_ANALYTICS: 'true'
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+    volumes:
+      - orqest_meilisearch:/meili_data
+
+  vectordb:
+    image: pgvector/pgvector:0.8.0-pg15-trixie
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orqest_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-orqest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - orqest_pgvector:/var/lib/postgresql/data
+
+  rag_api:
+    image: registry.librechat.ai/danny-avila/librechat-rag-api-dev-lite:latest
+    restart: always
+    depends_on:
+      vectordb:
+        condition: service_started
+    environment:
+      DB_HOST: vectordb
+      DB_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-orqest_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-orqest}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      RAG_PORT: ${RAG_PORT:-8000}
+      OPENAI_API_KEY: ${RAG_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${RAG_OPENAI_BASEURL}
+      OPENAI_BASE_URL: ${RAG_OPENAI_BASEURL}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
+
+volumes:
+  orqest_images:
+    name: orqest_images_prod
+  orqest_uploads:
+    name: orqest_uploads_prod
+  orqest_logs:
+    name: orqest_logs_prod
+  orqest_mongodb:
+    name: orqest_mongodb_prod
+  orqest_meilisearch:
+    name: orqest_meilisearch_prod
+  orqest_pgvector:
+    name: orqest_pgvector_prod

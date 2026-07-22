@@ -1,6 +1,6 @@
 import React from 'react';
 import { Spinner } from '@librechat/client';
-import { PlugZap, SlidersHorizontal, X } from 'lucide-react';
+import { Plug as PlugZap, SlidersHorizontal, X } from '@phosphor-icons/react';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';

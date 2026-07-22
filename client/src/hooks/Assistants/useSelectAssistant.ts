@@ -22,6 +22,7 @@ export default function useSelectAssistant(endpoint: AssistantsEndpoint) {
         assistant_id: assistant.id,
         model: assistant.model,
         conversationId: 'new',
+        projectId: conversation?.projectId,
       };
 
       logger.log('conversation', 'Updating conversation with assistant', assistant);

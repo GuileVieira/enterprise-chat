@@ -60,6 +60,29 @@ export const RESOURCE_CONFIGS: Record<ResourceType, ResourceConfig> = {
       `Manage API access for ${name && name !== '' ? `"${name}"` : 'agent'}`,
     getCopyUrlMessage: () => 'API endpoint copied',
   },
+  [ResourceType.SKILL]: {
+    resourceType: ResourceType.SKILL,
+    defaultViewerRoleId: AccessRoleIds.SKILL_VIEWER,
+    defaultEditorRoleId: AccessRoleIds.SKILL_EDITOR,
+    defaultOwnerRoleId: AccessRoleIds.SKILL_OWNER,
+    getResourceName: (name?: string) => (name && name !== '' ? name : 'skill'),
+    getShareMessage: (name?: string) => (name && name !== '' ? name : 'skill'),
+    getManageMessage: (name?: string) =>
+      `Manage permissions for ${name && name !== '' ? name : 'skill'}`,
+    getCopyUrlMessage: () => 'Skill URL copied',
+  },
+  [ResourceType.PROJECT]: {
+    resourceType: ResourceType.PROJECT,
+    defaultViewerRoleId: AccessRoleIds.PROJECT_VIEWER,
+    defaultEditorRoleId: AccessRoleIds.PROJECT_EDITOR,
+    defaultOwnerRoleId: AccessRoleIds.PROJECT_OWNER,
+    getResourceUrl: (projectId: string) => `${window.location.origin}/projects/${projectId}`,
+    getResourceName: (name?: string) => (name && name !== '' ? name : 'project'),
+    getShareMessage: (name?: string) => (name && name !== '' ? name : 'project'),
+    getManageMessage: (name?: string) =>
+      `Manage permissions for ${name && name !== '' ? name : 'project'}`,
+    getCopyUrlMessage: () => 'Project URL copied',
+  },
 };
 
 export const getResourceConfig = (resourceType: ResourceType): ResourceConfig | undefined => {

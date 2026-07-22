@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@phosphor-icons/react';
 import { matchSorter } from 'match-sorter';
 import { SystemRoles, PermissionTypes, Permissions } from 'librechat-data-provider';
 import {
@@ -121,7 +121,7 @@ export default function MemoryPanel() {
   const totalPages = Math.ceil(filteredMemories.length / pageSize);
 
   return (
-    <div className="flex h-auto w-full flex-col px-3 pb-3">
+    <div className="flex h-auto w-full flex-col px-3 pb-3 pt-2">
       <div role="region" aria-label={localize('com_ui_memories')} className="space-y-2">
         {/* Header: Filter + Create Button */}
         <div className="flex items-center gap-2">

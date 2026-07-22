@@ -34,14 +34,36 @@ export const useGetSharedMessages = (
   );
 };
 
+export const useGetTenantSharedMessages = (
+  shareId: string,
+  config?: UseQueryOptions<t.TSharedMessagesResponse>,
+): QueryObserverResult<t.TSharedMessagesResponse> => {
+  return useQuery<t.TSharedMessagesResponse>(
+    [QueryKeys.sharedMessages, 'tenant', shareId],
+    () => dataService.getTenantSharedMessages(shareId),
+    {
+      enabled: !!shareId,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
 export const useGetSharedLinkQuery = (
   conversationId: string,
+  targetMessageIdOrConfig?: string | UseQueryOptions<t.TSharedLinkGetResponse>,
   config?: UseQueryOptions<t.TSharedLinkGetResponse>,
 ): QueryObserverResult<t.TSharedLinkGetResponse> => {
   const queryClient = useQueryClient();
+  const targetMessageId =
+    typeof targetMessageIdOrConfig === 'string' ? targetMessageIdOrConfig : undefined;
+  const queryConfig =
+    typeof targetMessageIdOrConfig === 'string' ? config : targetMessageIdOrConfig;
   return useQuery<t.TSharedLinkGetResponse>(
-    [QueryKeys.sharedLinks, conversationId],
-    () => dataService.getSharedLink(conversationId),
+    [QueryKeys.sharedLinks, conversationId, targetMessageId ?? null],
+    () => dataService.getSharedLink(conversationId, targetMessageId),
     {
       enabled:
         !!conversationId &&
@@ -51,12 +73,12 @@ export const useGetSharedLinkQuery = (
       refetchOnReconnect: false,
       refetchOnMount: false,
       onSuccess: (data) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, conversationId], {
-          conversationId: data.conversationId,
-          shareId: data.shareId,
-        });
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, conversationId, targetMessageId ?? null],
+          data,
+        );
       },
-      ...config,
+      ...queryConfig,
     },
   );
 };

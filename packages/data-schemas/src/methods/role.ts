@@ -40,7 +40,12 @@ export function createRoleMethods(mongoose: typeof import('mongoose'), deps: Rol
   async function initializeRoles() {
     const Role = mongoose.models.Role;
 
-    for (const roleName of [SystemRoles.ADMIN, SystemRoles.USER]) {
+    for (const roleName of [
+      SystemRoles.ADMIN,
+      SystemRoles.OWNER,
+      SystemRoles.AD_MANAGER,
+      SystemRoles.USER,
+    ]) {
       let role = await Role.findOne({ name: roleName });
       const defaultPerms = roleDefaults[roleName].permissions;
 
@@ -146,7 +151,13 @@ export function createRoleMethods(mongoose: typeof import('mongoose'), deps: Rol
         const targetName = updates.name ?? roleName;
         throw new RoleConflictError(`Role "${targetName}" already exists`);
       }
-      throw new Error(`Failed to update role: ${(error as Error).message}`, { cause: error });
+      const updateError = new Error(
+        `Failed to update role: ${(error as Error).message}`,
+      ) as Error & {
+        cause?: unknown;
+      };
+      updateError.cause = error;
+      throw updateError;
     }
   }
 
@@ -487,7 +498,7 @@ export function createRoleMethods(mongoose: typeof import('mongoose'), deps: Rol
       .sort({ _id: 1 })
       .skip(offset)
       .limit(limit)
-      .lean();
+      .lean<IUser[]>();
   }
 
   async function countUsersByRole(roleName: string): Promise<number> {

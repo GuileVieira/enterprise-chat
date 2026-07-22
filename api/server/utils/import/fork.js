@@ -1,9 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('@librechat/data-schemas');
+const mongoose = require('mongoose');
 const { EModelEndpoint, Constants, ForkOptions } = require('librechat-data-provider');
 const { createImportBatchBuilder } = require('./importBatchBuilder');
 const BaseClient = require('~/app/clients/BaseClient');
-const { getConvo, getMessages } = require('~/models');
+const { getConvo, getMessages, getTenantSharedLinkForFork } = require('~/models');
 
 /**
  * Helper function to clone messages with proper parent-child relationships and timestamps
@@ -66,6 +67,95 @@ function cloneMessagesWithTimestamps(messagesToClone, importBatchBuilder) {
   }
 
   return idMapping;
+}
+
+function sanitizeSharedConversation(originalConvo) {
+  const sanitized = {
+    ...originalConvo,
+    files: [],
+    tags: [],
+  };
+  delete sanitized._id;
+  delete sanitized.projectId;
+  delete sanitized.messages;
+  delete sanitized.shareId;
+  delete sanitized.isPublic;
+  delete sanitized.targetMessageId;
+  delete sanitized.tenantId;
+  return sanitized;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripCopyPrefix(title) {
+  return title.replace(/^Cópia \d+ - /, '');
+}
+
+async function getNextCopyTitle(userId, originalTitle) {
+  const baseTitle = stripCopyPrefix(originalTitle || 'Untitled');
+  const fallbackTitle = `Cópia 1 - ${baseTitle}`;
+  const Conversation = mongoose.models.Conversation;
+  if (!Conversation) {
+    return fallbackTitle;
+  }
+
+  const titlePattern = `^Cópia (\\d+) - ${escapeRegExp(baseTitle)}$`;
+  const existingCopies = await Conversation.find({
+    user: userId,
+    title: { $regex: titlePattern },
+  })
+    .select('title')
+    .lean();
+
+  const copyNumbers = existingCopies
+    .map((conversation) => conversation.title?.match(/^Cópia (\d+) - /)?.[1])
+    .filter(Boolean)
+    .map((copyNumber) => Number(copyNumber))
+    .filter(Number.isFinite);
+  const nextCopyNumber = copyNumbers.length > 0 ? Math.max(...copyNumbers) + 1 : 1;
+  return `Cópia ${nextCopyNumber} - ${baseTitle}`;
+}
+
+async function forkConversationFromSource({
+  originalConvo,
+  originalMessages,
+  requestUserId,
+  targetMessageId,
+  newTitle,
+  option = ForkOptions.TARGET_LEVEL,
+  builderFactory = createImportBatchBuilder,
+}) {
+  const importBatchBuilder = builderFactory(requestUserId);
+  importBatchBuilder.startConversation(originalConvo.endpoint ?? EModelEndpoint.openAI);
+
+  const resolvedTargetMessageId =
+    targetMessageId || originalMessages[originalMessages.length - 1]?.messageId;
+  if (!resolvedTargetMessageId) {
+    throw new Error('No messages to fork');
+  }
+
+  let messagesToClone = [];
+  if (option === ForkOptions.DIRECT_PATH) {
+    messagesToClone = BaseClient.getMessagesForConversation({
+      messages: originalMessages,
+      parentMessageId: resolvedTargetMessageId,
+    });
+  } else if (option === ForkOptions.INCLUDE_BRANCHES) {
+    messagesToClone = getAllMessagesUpToParent(originalMessages, resolvedTargetMessageId);
+  } else {
+    messagesToClone = getMessagesUpToTargetLevel(originalMessages, resolvedTargetMessageId);
+  }
+
+  cloneMessagesWithTimestamps(messagesToClone, importBatchBuilder);
+
+  const safeConvo = sanitizeSharedConversation(originalConvo);
+  const forkedTitle = newTitle || (await getNextCopyTitle(requestUserId, safeConvo.title));
+  const result = importBatchBuilder.finishConversation(forkedTitle, new Date(), safeConvo);
+  await importBatchBuilder.saveBatch();
+
+  return result;
 }
 
 /**
@@ -162,6 +252,39 @@ async function forkConversation({
     );
     throw error;
   }
+}
+
+async function forkSharedConversation({
+  shareId,
+  requestUserId,
+  tenantId,
+  targetMessageId,
+  option,
+}) {
+  const shared = await getTenantSharedLinkForFork(shareId, tenantId);
+  if (!shared) {
+    throw new Error('Shared conversation not found');
+  }
+
+  const result = await forkConversationFromSource({
+    sourceUserId: shared.user,
+    requestUserId,
+    originalConvo: shared.conversation,
+    originalMessages: shared.messages,
+    targetMessageId: targetMessageId || shared.targetMessageId,
+    option,
+  });
+
+  const conversation = await getConvo(requestUserId, result.conversation.conversationId);
+  const messages = await getMessages({
+    user: requestUserId,
+    conversationId: result.conversation.conversationId,
+  });
+
+  return {
+    conversation,
+    messages,
+  };
 }
 
 /**
@@ -381,7 +504,7 @@ async function duplicateConversation({ userId, conversationId, title }) {
 
   cloneMessagesWithTimestamps(messagesToClone, importBatchBuilder);
 
-  const duplicateTitle = title || originalConvo.title;
+  const duplicateTitle = title || (await getNextCopyTitle(userId, originalConvo.title));
   const result = importBatchBuilder.finishConversation(duplicateTitle, new Date(), originalConvo);
   await importBatchBuilder.saveBatch();
   logger.debug(
@@ -402,6 +525,9 @@ async function duplicateConversation({ userId, conversationId, title }) {
 
 module.exports = {
   forkConversation,
+  forkConversationFromSource,
+  forkSharedConversation,
+  getNextCopyTitle,
   splitAtTargetLevel,
   duplicateConversation,
   getAllMessagesUpToParent,

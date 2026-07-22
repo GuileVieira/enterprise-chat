@@ -1,4 +1,3 @@
-// client/src/hooks/Plugins/useCodeApiKeyForm.ts
 import { useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import type { ApiKeyFormData } from '~/common';

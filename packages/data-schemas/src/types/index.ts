@@ -8,6 +8,7 @@ export * from './convo';
 export * from './session';
 export * from './balance';
 export * from './banner';
+export * from './category';
 export * from './transaction';
 export * from './message';
 export * from './agent';
@@ -22,7 +23,10 @@ export * from './pluginAuth';
 /* Memories */
 export * from './memory';
 /* Prompts */
+export * from './project';
 export * from './prompts';
+/* Skills */
+export * from './skill';
 /* Access Control */
 export * from './accessRole';
 export * from './aclEntry';
@@ -36,3 +40,7 @@ export * from './admin';
 export * from './web';
 /* MCP Servers */
 export * from './mcp';
+/* Tenant Functions */
+export * from './tenantFunction';
+export * from './tenantSecret';
+export * from './trafficDiary';

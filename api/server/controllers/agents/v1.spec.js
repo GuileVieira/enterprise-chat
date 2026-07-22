@@ -1,8 +1,18 @@
+jest.unmock('winston');
+jest.unmock('winston-daily-rotate-file');
+
 const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 const { v4: uuidv4 } = require('uuid');
-const { agentSchema, fileSchema } = require('@librechat/data-schemas');
-const { FileSources, PermissionBits } = require('librechat-data-provider');
+const { agentSchema, fileSchema, projectSchema } = require('@librechat/data-schemas');
+const {
+  FileSources,
+  PermissionBits,
+  PrincipalType,
+  ResourceType,
+  AccessRoleIds,
+  SystemRoles,
+} = require('librechat-data-provider');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Only mock the dependencies that are not database-related
@@ -56,6 +66,7 @@ jest.mock('~/models', () => {
   return {
     ...methods,
     getCategoriesWithCounts: jest.fn(),
+    getTenantFunctions: jest.fn().mockResolvedValue([]),
     deleteFileByFilter: jest.fn(),
   };
 });
@@ -72,14 +83,19 @@ jest.mock('~/cache', () => ({
 
 const {
   createAgent: createAgentHandler,
+  getAgent: getAgentHandler,
+  duplicateAgent: duplicateAgentHandler,
+  revertAgentVersion: revertAgentVersionHandler,
   updateAgent: updateAgentHandler,
   getListAgents: getListAgentsHandler,
+  cloneAgentToTenant: cloneAgentToTenantHandler,
 } = require('./v1');
 
 const {
   findAccessibleResources,
   findPubliclyAccessibleResources,
   getResourcePermissionsMap,
+  grantPermission,
 } = require('~/server/services/PermissionService');
 
 const { refreshS3Url } = require('@librechat/api');
@@ -102,6 +118,7 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
     // Register File so orphan-pruning tests (and the tool_resources validation
     // test, which now needs real File docs for its ids) have a working model.
     mongoose.models.File || mongoose.model('File', fileSchema);
+    mongoose.models.Project || mongoose.model('Project', projectSchema);
   }, 20000);
 
   afterAll(async () => {
@@ -111,6 +128,8 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
 
   beforeEach(async () => {
     await Agent.deleteMany({});
+    await mongoose.models.File.deleteMany({});
+    await mongoose.models.Project.deleteMany({});
 
     // Reset all mocks
     jest.clearAllMocks();
@@ -172,6 +191,49 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(agentInDb).toBeDefined();
       expect(agentInDb.name).toBe('Test Agent');
       expect(agentInDb.author.toString()).toBe(mockReq.user.id);
+    });
+
+    test('should share owner-created tenant agents with the tenant as viewer', async () => {
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.body = {
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+
+      const createdAgent = mockRes.json.mock.calls[0][0];
+      const agentInDb = await Agent.findOne({ id: createdAgent.id });
+      expect(agentInDb.tenantId).toBe('tenant-owner');
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-owner',
+          resourceType: ResourceType.AGENT,
+          resourceId: agentInDb._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+    });
+
+    test('should fail creation when owner permission grant fails', async () => {
+      grantPermission.mockRejectedValueOnce(new Error('owner grant failed'));
+
+      mockReq.body = {
+        name: 'Test Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(500);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Failed to grant owner permissions' });
     });
 
     test('should reject creation with unauthorized fields (mass assignment protection)', async () => {
@@ -276,6 +338,48 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       // Verify in database
       const agentInDb = await Agent.findOne({ id: createdAgent.id });
       expect(agentInDb.tool_resources.invalid_resource).toBeUndefined();
+    });
+
+    test('should strip file_ids not owned by the creator from tool_resources', async () => {
+      const File = mongoose.models.File;
+
+      const ownedFileId = `file_${uuidv4()}`;
+      const otherFileId = `file_${uuidv4()}`;
+      await File.create({
+        file_id: ownedFileId,
+        user: mockReq.user.id,
+        filename: `${ownedFileId}.txt`,
+        filepath: `/tmp/${ownedFileId}`,
+        object: 'file',
+        type: 'text/plain',
+        bytes: 1,
+        source: FileSources.local,
+      });
+      await File.create({
+        file_id: otherFileId,
+        user: new mongoose.Types.ObjectId(),
+        filename: `${otherFileId}.txt`,
+        filepath: `/tmp/${otherFileId}`,
+        object: 'file',
+        type: 'text/plain',
+        bytes: 1,
+        source: FileSources.local,
+      });
+
+      mockReq.body = {
+        provider: 'openai',
+        model: 'gpt-4',
+        name: 'Agent with Files',
+        tool_resources: {
+          file_search: { file_ids: [ownedFileId, otherFileId] },
+        },
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      const createdAgent = mockRes.json.mock.calls[0][0];
+      expect(createdAgent.tool_resources.file_search.file_ids).toEqual([ownedFileId]);
     });
 
     test('should handle support_contact with empty strings', async () => {
@@ -438,6 +542,172 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
     });
   });
 
+  describe('getAgentHandler', () => {
+    test('should return the safe Responses API flag in the basic VIEW response', async () => {
+      const agent = await Agent.create({
+        id: `agent_${uuidv4()}`,
+        name: 'Azure Agent',
+        description: 'Uses Responses API',
+        provider: 'azureOpenAI',
+        model: 'gpt-5.5',
+        author: mockReq.user.id,
+        model_parameters: {
+          useResponsesApi: true,
+          temperature: 0.7,
+          apiKey: 'secret-value',
+        },
+      });
+
+      mockReq.params = { id: agent.id };
+
+      await getAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.model_parameters).toEqual({ useResponsesApi: true });
+      expect(response.model_parameters.temperature).toBeUndefined();
+      expect(response.model_parameters.apiKey).toBeUndefined();
+    });
+  });
+
+  describe('cloneAgentToTenantHandler', () => {
+    test('should reject non-admin users cloning an agent outside their tenant', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_cross_tenant',
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'tenant-owner',
+      });
+
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-other' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: 'Cannot share agent outside your tenant',
+      });
+      expect(grantPermission).not.toHaveBeenCalled();
+    });
+
+    test('should allow non-admin users cloning an agent to their own tenant', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_own_tenant',
+        name: 'Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'tenant-owner',
+      });
+
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-owner' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-owner',
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+    });
+
+    test('should not grant target tenant project view for shared agent file_search project files', async () => {
+      const File = mongoose.models.File;
+      await mongoose.models.Project.create({
+        projectId: 'project-dna',
+        name: 'DNA Project',
+        user: mockReq.user.id,
+        tenantId: 'orqest-admin',
+      });
+      const fileId = `file_${uuidv4()}`;
+      await File.create({
+        file_id: fileId,
+        user: mockReq.user.id,
+        filename: 'DNA.docx',
+        filepath: `/tmp/${fileId}`,
+        object: 'file',
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        bytes: 1,
+        source: FileSources.local,
+        embedded: true,
+        projectId: 'project-dna',
+        tenantId: 'orqest-admin',
+      });
+      const agent = await Agent.create({
+        id: 'agent_clone_with_project_files',
+        name: 'Shared DNA Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'orqest-admin',
+        tool_resources: {
+          file_search: {
+            file_ids: [fileId],
+          },
+        },
+      });
+
+      mockReq.user.role = SystemRoles.ADMIN;
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-client' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-client',
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+      expect(grantPermission).toHaveBeenCalledTimes(1);
+    });
+
+    test('should not grant project view when shared agent has no project file_search files', async () => {
+      const agent = await Agent.create({
+        id: 'agent_clone_without_project_files',
+        name: 'Shared Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: mockReq.user.id,
+        tenantId: 'orqest-admin',
+      });
+
+      mockReq.user.role = SystemRoles.ADMIN;
+      mockReq.params = { id: agent.id };
+      mockReq.body = { tenantId: 'tenant-client' };
+
+      await cloneAgentToTenantHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(grantPermission).toHaveBeenCalledTimes(1);
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceType: ResourceType.AGENT,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+        }),
+      );
+    });
+  });
+
   describe('updateAgentHandler', () => {
     let existingAgentId;
     let existingAgentAuthorId;
@@ -542,6 +812,48 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
 
       const updatedAgent = mockRes.json.mock.calls[0][0];
       expect(updatedAgent.name).toBe('Admin Update');
+    });
+
+    test('should prune admin-supplied file_ids against the agent author', async () => {
+      const File = mongoose.models.File;
+      const adminUserId = new mongoose.Types.ObjectId().toString();
+      const authorFileId = `file_${uuidv4()}`;
+      const adminFileId = `file_${uuidv4()}`;
+
+      await File.create({
+        file_id: authorFileId,
+        user: existingAgentAuthorId,
+        filename: `${authorFileId}.txt`,
+        filepath: `/tmp/${authorFileId}`,
+        object: 'file',
+        type: 'text/plain',
+        bytes: 1,
+        source: FileSources.local,
+      });
+      await File.create({
+        file_id: adminFileId,
+        user: adminUserId,
+        filename: `${adminFileId}.txt`,
+        filepath: `/tmp/${adminFileId}`,
+        object: 'file',
+        type: 'text/plain',
+        bytes: 1,
+        source: FileSources.local,
+      });
+
+      mockReq.user.id = adminUserId;
+      mockReq.user.role = 'ADMIN';
+      mockReq.params.id = existingAgentId;
+      mockReq.body = {
+        tool_resources: {
+          file_search: { file_ids: [authorFileId, adminFileId] },
+        },
+      };
+
+      await updateAgentHandler(mockReq, mockRes);
+
+      const agentInDb = await Agent.findOne({ id: existingAgentId }).lean();
+      expect(agentInDb.tool_resources.file_search.file_ids).toEqual([authorFileId]);
     });
 
     test('should validate tool_resources in updates', async () => {
@@ -808,10 +1120,9 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
         expect(agentInDb.tool_resources.file_search.file_ids).toEqual([orphan]);
       });
 
-      test('swallows errors from the file-existence check and still completes the save', async () => {
+      test('prunes incoming file_ids when the file ownership check fails', async () => {
         const db = require('~/models');
-        const originalGetFiles = db.getFiles;
-        db.getFiles = jest.fn().mockRejectedValue(new Error('transient DB error'));
+        jest.spyOn(db, 'getFiles').mockRejectedValueOnce(new Error('transient DB error'));
 
         const orphan = `file_${uuidv4()}`;
         mockReq.user.id = existingAgentAuthorId.toString();
@@ -821,20 +1132,119 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
           tool_resources: { file_search: { file_ids: [orphan] } },
         };
 
-        try {
-          await updateAgentHandler(mockReq, mockRes);
+        await updateAgentHandler(mockReq, mockRes);
 
-          expect(mockRes.status).not.toHaveBeenCalledWith(500);
-          expect(mockRes.json).toHaveBeenCalled();
-          const agentInDb = await Agent.findOne({ id: existingAgentId }).lean();
-          expect(agentInDb.name).toBe('Save Succeeds');
-          // Cleanup skipped on error, so the id remains — the delete-time path
-          // or the next successful save will reconcile it.
-          expect(agentInDb.tool_resources.file_search.file_ids).toEqual([orphan]);
-        } finally {
-          db.getFiles = originalGetFiles;
-        }
+        expect(mockRes.status).not.toHaveBeenCalledWith(500);
+        expect(mockRes.json).toHaveBeenCalled();
+        const agentInDb = await Agent.findOne({ id: existingAgentId }).lean();
+        expect(agentInDb.name).toBe('Save Succeeds');
+        expect(agentInDb.tool_resources.file_search.file_ids).toEqual([]);
       });
+
+      test('strips file_ids owned by another user from incoming tool_resources', async () => {
+        const keeper = `file_${uuidv4()}`;
+        const otherUsersFile = `file_${uuidv4()}`;
+        await createFileDoc(keeper, existingAgentAuthorId);
+        await createFileDoc(otherUsersFile, new mongoose.Types.ObjectId());
+
+        mockReq.user.id = existingAgentAuthorId.toString();
+        mockReq.params.id = existingAgentId;
+        mockReq.body = {
+          tool_resources: {
+            file_search: { file_ids: [keeper, otherUsersFile] },
+          },
+        };
+
+        await updateAgentHandler(mockReq, mockRes);
+
+        const agentInDb = await Agent.findOne({ id: existingAgentId }).lean();
+        expect(agentInDb.tool_resources.file_search.file_ids).toEqual([keeper]);
+      });
+    });
+  });
+
+  describe('tool_resources ownership pruning in alternate write paths', () => {
+    const createFileDoc = (file_id, userId) =>
+      mongoose.models.File.create({
+        file_id,
+        user: userId,
+        filename: `${file_id}.txt`,
+        filepath: `/tmp/${file_id}`,
+        object: 'file',
+        type: 'text/plain',
+        bytes: 1,
+        source: FileSources.local,
+      });
+
+    test('duplicateAgentHandler should prune file_ids not owned by the clone author', async () => {
+      const sourceAuthorId = new mongoose.Types.ObjectId();
+      const cloneAuthorId = new mongoose.Types.ObjectId();
+      const sourceFileId = `file_${uuidv4()}`;
+      const cloneAuthorFileId = `file_${uuidv4()}`;
+
+      await createFileDoc(sourceFileId, sourceAuthorId);
+      await createFileDoc(cloneAuthorFileId, cloneAuthorId);
+      const sourceAgent = await Agent.create({
+        id: `agent_${uuidv4()}`,
+        name: 'Source Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: sourceAuthorId,
+        tool_resources: {
+          context: { file_ids: [sourceFileId, cloneAuthorFileId] },
+        },
+      });
+
+      const db = require('~/models');
+      jest.spyOn(db, 'getActions').mockResolvedValueOnce([]);
+
+      mockReq.user.id = cloneAuthorId.toString();
+      mockReq.params.id = sourceAgent.id;
+
+      await duplicateAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      const { agent } = mockRes.json.mock.calls[0][0];
+      expect(agent.author.toString()).toBe(cloneAuthorId.toString());
+      expect(agent.tool_resources.context.file_ids).toEqual([cloneAuthorFileId]);
+    });
+
+    test('revertAgentVersionHandler should prune restored file_ids not owned by the agent author', async () => {
+      const agentAuthorId = new mongoose.Types.ObjectId();
+      const otherUserId = new mongoose.Types.ObjectId();
+      const ownedFileId = `file_${uuidv4()}`;
+      const otherFileId = `file_${uuidv4()}`;
+
+      await createFileDoc(ownedFileId, agentAuthorId);
+      await createFileDoc(otherFileId, otherUserId);
+      const agent = await Agent.create({
+        id: `agent_${uuidv4()}`,
+        name: 'Current Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: agentAuthorId,
+        tool_resources: {},
+        versions: [
+          {
+            name: 'Historical Agent',
+            provider: 'openai',
+            model: 'gpt-4',
+            tool_resources: {
+              file_search: { file_ids: [ownedFileId, otherFileId] },
+            },
+          },
+        ],
+      });
+
+      mockReq.user.id = agentAuthorId.toString();
+      mockReq.params.id = agent.id;
+      mockReq.body = { version_index: 0 };
+
+      await revertAgentVersionHandler(mockReq, mockRes);
+
+      expect(mockRes.json).toHaveBeenCalled();
+      const agentInDb = await Agent.findOne({ id: agent.id }).lean();
+      expect(agentInDb.tool_resources.file_search.file_ids).toEqual([ownedFileId]);
     });
   });
 
@@ -903,6 +1313,24 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       // Verify in database
       const agentInDb = await Agent.findOne({ id: createdAgent.id });
       expect(agentInDb.author.toString()).toBe(originalAuthorId.toString());
+    });
+
+    test('should persist tenantId for admin-created agents', async () => {
+      mockReq.user.role = 'ADMIN';
+      mockReq.user.tenantId = 'tenant-admin';
+      mockReq.body = {
+        provider: 'openai',
+        model: 'gpt-4',
+        name: 'Tenant Admin Agent',
+      };
+
+      await createAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+
+      const createdAgent = mockRes.json.mock.calls[0][0];
+      const agentInDb = await Agent.findOne({ id: createdAgent.id });
+      expect(agentInDb.tenantId).toBe('tenant-admin');
     });
 
     test('should strip unknown fields to prevent future vulnerabilities', async () => {
@@ -1089,6 +1517,68 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(response.data[0].name).toBe('Agent A1');
     });
 
+    test('should return only expected safe list fields for VIEW callers', async () => {
+      const hiddenSkillId = new mongoose.Types.ObjectId();
+      await Agent.findByIdAndUpdate(agentA1._id, {
+        avatar: { filepath: '/avatars/a1.png', source: FileSources.local },
+        category: 'general',
+        support_contact: { name: 'Support', email: 'support@example.com' },
+        is_promoted: true,
+        instructions: 'private system instructions',
+        tools: ['execute_code'],
+        actions: ['example.com::action'],
+        model_parameters: { temperature: 0.7 },
+        tool_resources: { file_search: { file_ids: ['file-1'] } },
+        tool_options: { execute_code: { defer_loading: true } },
+        subagents: { enabled: true, agent_ids: [agentA2.id] },
+        edges: [{ from: agentA1.id, to: agentA2.id }],
+        skills_enabled: true,
+        skills: [hiddenSkillId.toString()],
+      });
+
+      mockReq.user.id = userB.toString();
+      mockReq.query.requiredPermission = String(PermissionBits.VIEW);
+      findAccessibleResources.mockImplementation(({ resourceType }) => {
+        if (resourceType === ResourceType.AGENT) {
+          return Promise.resolve([agentA1._id]);
+        }
+        if (resourceType === ResourceType.SKILL) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([]);
+      });
+      findPubliclyAccessibleResources.mockResolvedValue([]);
+
+      await getListAgentsHandler(mockReq, mockRes);
+
+      const response = mockRes.json.mock.calls[0][0];
+      const agent = response.data[0];
+      expect(Object.keys(agent).sort()).toEqual(
+        [
+          '_id',
+          'author',
+          'avatar',
+          'category',
+          'description',
+          'id',
+          'is_promoted',
+          'name',
+          'support_contact',
+          'updatedAt',
+        ].sort(),
+      );
+      expect(agent).toEqual(
+        expect.objectContaining({
+          id: agentA1.id,
+          name: 'Agent A1',
+          description: 'User A agent 1',
+          author: userA.toString(),
+          category: 'general',
+          is_promoted: true,
+        }),
+      );
+    });
+
     test('should return multiple accessible agents', async () => {
       // User B has access to multiple agents
       mockReq.user.id = userB.toString();
@@ -1212,6 +1702,91 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
 
       const response = mockRes.json.mock.calls[0][0];
       expect(response.data).toHaveLength(1);
+    });
+
+    test('should return only viewer-accessible skill scope for VIEW list callers', async () => {
+      const visibleSkillId = new mongoose.Types.ObjectId();
+      const hiddenSkillId = new mongoose.Types.ObjectId();
+      await Agent.findByIdAndUpdate(agentA1._id, {
+        skills_enabled: true,
+        skills: [visibleSkillId.toString(), hiddenSkillId.toString()],
+      });
+
+      mockReq.user.id = userB.toString();
+      mockReq.query.requiredPermission = String(PermissionBits.VIEW);
+      findAccessibleResources.mockImplementation(({ resourceType }) => {
+        if (resourceType === ResourceType.AGENT) {
+          return Promise.resolve([agentA1._id]);
+        }
+        if (resourceType === ResourceType.SKILL) {
+          return Promise.resolve([visibleSkillId]);
+        }
+        return Promise.resolve([]);
+      });
+      findPubliclyAccessibleResources.mockResolvedValue([]);
+
+      await getListAgentsHandler(mockReq, mockRes);
+
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.data).toHaveLength(1);
+      expect(response.data[0].skills_enabled).toBe(true);
+      expect(response.data[0].skills).toEqual([visibleSkillId.toString()]);
+      expect(response.data[0].skills).not.toContain(hiddenSkillId.toString());
+    });
+
+    test('should omit skill scope for VIEW list callers with no accessible configured skills', async () => {
+      const hiddenSkillId = new mongoose.Types.ObjectId();
+      await Agent.findByIdAndUpdate(agentA1._id, {
+        skills_enabled: true,
+        skills: [hiddenSkillId.toString()],
+      });
+
+      mockReq.user.id = userB.toString();
+      mockReq.query.requiredPermission = String(PermissionBits.VIEW);
+      findAccessibleResources.mockImplementation(({ resourceType }) => {
+        if (resourceType === ResourceType.AGENT) {
+          return Promise.resolve([agentA1._id]);
+        }
+        if (resourceType === ResourceType.SKILL) {
+          return Promise.resolve([]);
+        }
+        return Promise.resolve([]);
+      });
+      findPubliclyAccessibleResources.mockResolvedValue([]);
+
+      await getListAgentsHandler(mockReq, mockRes);
+
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.data).toHaveLength(1);
+      expect(response.data[0].skills).toBeUndefined();
+      expect(response.data[0].skills_enabled).toBeUndefined();
+    });
+
+    test('should return raw skill configuration for EDIT list callers', async () => {
+      const visibleSkillId = new mongoose.Types.ObjectId();
+      const hiddenSkillId = new mongoose.Types.ObjectId();
+      await Agent.findByIdAndUpdate(agentA1._id, {
+        skills_enabled: true,
+        skills: [visibleSkillId.toString(), hiddenSkillId.toString()],
+      });
+
+      mockReq.user.id = userB.toString();
+      mockReq.query.requiredPermission = String(PermissionBits.EDIT);
+      findAccessibleResources.mockResolvedValue([agentA1._id]);
+      findPubliclyAccessibleResources.mockResolvedValue([]);
+
+      await getListAgentsHandler(mockReq, mockRes);
+
+      const response = mockRes.json.mock.calls[0][0];
+      expect(response.data).toHaveLength(1);
+      expect(response.data[0].skills_enabled).toBe(true);
+      expect(response.data[0].skills).toEqual([
+        visibleSkillId.toString(),
+        hiddenSkillId.toString(),
+      ]);
+      expect(findAccessibleResources).not.toHaveBeenCalledWith(
+        expect.objectContaining({ resourceType: ResourceType.SKILL }),
+      );
     });
 
     test('should handle promoted filter with ACL', async () => {

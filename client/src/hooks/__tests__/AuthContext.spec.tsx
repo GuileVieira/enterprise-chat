@@ -6,6 +6,7 @@ import { render, act } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { SystemRoles } from 'librechat-data-provider';
 
 import type { TAuthConfig } from '~/common';
 
@@ -459,6 +460,10 @@ describe('AuthContextProvider — custom role detection and fetching', () => {
     name: 'STAFF',
     permissions: { PROMPTS: { USE: true, CREATE: false } },
   };
+  const ownerPermissions = {
+    name: SystemRoles.OWNER,
+    permissions: { AGENTS: { USE: true, CREATE: true } },
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -547,6 +552,38 @@ describe('AuthContextProvider — custom role detection and fetching', () => {
     jest.useRealTimers();
   });
 
+  it('calls useGetRole with enabled: true for OWNER role users', () => {
+    jest.useFakeTimers();
+
+    renderProviderLive();
+
+    const [, refreshOptions] = mockRefreshMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: (data: unknown) => void },
+    ];
+
+    act(() => {
+      refreshOptions.onSuccess({ user: { id: '1', role: SystemRoles.OWNER }, token: 'tok' });
+    });
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    const ownerCalls = mockUseGetRole.mock.calls.filter(
+      ([name]: [string]) => name === SystemRoles.OWNER,
+    );
+    expect(ownerCalls.length).toBeGreaterThan(0);
+    const lastOwnerCall = ownerCalls[ownerCalls.length - 1];
+    expect(lastOwnerCall[1]).toEqual(expect.objectContaining({ enabled: true }));
+
+    const sentinelCalls = mockUseGetRole.mock.calls.filter(([name]: [string]) => name === '_');
+    for (const call of sentinelCalls) {
+      expect(call[1]).toEqual(expect.objectContaining({ enabled: false }));
+    }
+
+    jest.useRealTimers();
+  });
+
   it('includes custom role data in the roles context map when loaded', () => {
     jest.useFakeTimers();
     mockUseGetRole.mockImplementation((name: string, opts?: { enabled?: boolean }) => {
@@ -574,6 +611,38 @@ describe('AuthContextProvider — custom role detection and fetching', () => {
     const roles = JSON.parse(rolesAttr);
     expect(roles).toHaveProperty('STAFF');
     expect(roles.STAFF).toEqual(staffPermissions);
+
+    mockUseGetRole.mockReturnValue({ data: null });
+    jest.useRealTimers();
+  });
+
+  it('includes OWNER role data in the roles context map when loaded', () => {
+    jest.useFakeTimers();
+    mockUseGetRole.mockImplementation((name: string, opts?: { enabled?: boolean }) => {
+      if (name === SystemRoles.OWNER && opts?.enabled) {
+        return { data: ownerPermissions };
+      }
+      return { data: null };
+    });
+
+    const { getByTestId } = renderProviderLive();
+
+    const [, refreshOptions] = mockRefreshMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: (data: unknown) => void },
+    ];
+
+    act(() => {
+      refreshOptions.onSuccess({ user: { id: '1', role: SystemRoles.OWNER }, token: 'tok' });
+    });
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    const rolesAttr = getByTestId('consumer').getAttribute('data-roles') ?? '{}';
+    const roles = JSON.parse(rolesAttr);
+    expect(roles).toHaveProperty(SystemRoles.OWNER);
+    expect(roles[SystemRoles.OWNER]).toEqual(ownerPermissions);
 
     mockUseGetRole.mockReturnValue({ data: null });
     jest.useRealTimers();

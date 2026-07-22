@@ -1,4 +1,4 @@
-require('dotenv').config();
+const telemetry = require('./telemetry');
 const fs = require('fs');
 const path = require('path');
 require('module-alias')({ base: path.resolve(__dirname, '..') });
@@ -13,6 +13,7 @@ const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   isEnabled,
   apiNotFound,
+  createMetrics,
   ErrorController,
   memoryDiagnostics,
   performStartupChecks,
@@ -20,21 +21,26 @@ const {
   GenerationJobManager,
   createStreamServices,
   initializeFileStorage,
-  updateInterfacePermissions,
   preAuthTenantMiddleware,
+  updateInterfacePermissions,
 } = require('@librechat/api');
 const { connectDb, indexSync } = require('~/db');
+const {
+  updateAccessPermissions,
+  sweepOrphanedPreviews,
+  getRoleByName,
+  seedDatabase,
+} = require('~/models');
 const initializeOAuthReconnectManager = require('./services/initializeOAuthReconnectManager');
-const { getRoleByName, updateAccessPermissions, seedDatabase } = require('~/models');
 const { capabilityContextMiddleware } = require('./middleware/roles/capabilities');
 const createValidateImageRequest = require('./middleware/validateImageRequest');
 const { jwtLogin, ldapLogin, passportLogin } = require('~/strategies');
 const { checkMigrations } = require('./services/start/migration');
+const optionalJwtAuth = require('./middleware/optionalJwtAuth');
 const initializeMCPs = require('./services/initializeMCPs');
 const configureSocialLogins = require('./socialLogins');
 const { getAppConfig } = require('./services/Config');
 const staticCache = require('./utils/staticCache');
-const optionalJwtAuth = require('./middleware/optionalJwtAuth');
 const noIndex = require('./middleware/noIndex');
 const routes = require('./routes');
 
@@ -48,13 +54,18 @@ const trusted_proxy = Number(TRUST_PROXY) || 1; /* trust first proxy by default 
 const app = express();
 
 const startServer = async () => {
+  const { metricsMiddleware, metricsRouter } = createMetrics();
+  if (!process.env.METRICS_SECRET) {
+    logger.warn('[metrics] METRICS_SECRET is not set - /metrics will return 401 for all requests');
+  }
+
   if (typeof Bun !== 'undefined') {
     axios.defaults.headers.common['Accept-Encoding'] = 'gzip';
   }
   await connectDb();
 
   logger.info('Connected to MongoDB');
-  indexSync().catch((err) => {
+  runAsSystem(indexSync).catch((err) => {
     logger.error('[indexSync] Background sync failed:', err);
   });
 
@@ -69,6 +80,17 @@ const startServer = async () => {
   }
 
   await runAsSystem(seedDatabase);
+  /* Recover stuck `status: 'pending'` records from a crash mid-render.
+   * `runAsSystem` is required — `File` is tenant-isolated and strict
+   * mode rejects unscoped queries. Lazy sweep in the preview endpoint
+   * covers anything younger than the boot cutoff. */
+  if (typeof sweepOrphanedPreviews === 'function') {
+    runAsSystem(sweepOrphanedPreviews).catch((err) => {
+      logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
+    });
+  } else {
+    logger.warn('[sweepOrphanedPreviews] Skipping background sweep; method is unavailable');
+  }
   const appConfig = await getAppConfig({ baseOnly: true });
   initializeFileStorage(appConfig);
   await runAsSystem(async () => {
@@ -95,6 +117,7 @@ const startServer = async () => {
   app.get('/health', (_req, res) => res.status(200).send('OK'));
 
   /* Middleware */
+  app.use(metricsMiddleware);
   app.use(noIndex);
   app.use(express.json({ limit: '3mb' }));
   app.use(express.urlencoded({ extended: true, limit: '3mb' }));
@@ -127,6 +150,10 @@ const startServer = async () => {
   app.use(staticCache(appConfig.paths.fonts));
   app.use(staticCache(appConfig.paths.assets));
 
+  if (telemetry.enabled) {
+    app.use(telemetry.telemetryMiddleware);
+  }
+
   if (!ALLOW_SOCIAL_LOGIN) {
     console.warn('Social logins are disabled. Set ALLOW_SOCIAL_LOGIN=true to enable them.');
   }
@@ -157,8 +184,12 @@ const startServer = async () => {
   app.use('/api/admin/config', routes.adminConfig);
   app.use('/api/admin/grants', routes.adminGrants);
   app.use('/api/admin/groups', routes.adminGroups);
+  app.use('/api/admin/overview', routes.adminOverview);
   app.use('/api/admin/roles', routes.adminRoles);
+  app.use('/api/admin/tenants', routes.adminTenants);
   app.use('/api/admin/users', routes.adminUsers);
+  app.use('/api/admin/functions', routes.adminFunctions);
+  app.use('/api/admin/secrets', routes.adminSecrets);
   app.use('/api/actions', routes.actions);
   app.use('/api/keys', routes.keys);
   app.use('/api/api-keys', routes.apiKeys);
@@ -167,7 +198,11 @@ const startServer = async () => {
   app.use('/api/messages', routes.messages);
   app.use('/api/convos', routes.convos);
   app.use('/api/presets', routes.presets);
+  app.use('/api/projects/:projectId/meta-ads', routes.projectMetaAds);
+  app.use('/api/projects', routes.projects);
   app.use('/api/prompts', routes.prompts);
+  app.use('/api/prompt', routes.promptImprove);
+  app.use('/api/skills', routes.skills);
   app.use('/api/categories', routes.categories);
   app.use('/api/endpoints', routes.endpoints);
   app.use('/api/balance', routes.balance);
@@ -185,6 +220,8 @@ const startServer = async () => {
 
   app.use('/api/tags', routes.tags);
   app.use('/api/mcp', routes.mcp);
+
+  app.use('/metrics', metricsRouter);
 
   /** 404 for unmatched API routes */
   app.use('/api', apiNotFound);
@@ -205,6 +242,10 @@ const startServer = async () => {
     res.send(updatedIndexHtml);
   });
 
+  /** Record trace errors before the final error controller. */
+  if (telemetry.enabled) {
+    app.use(telemetry.telemetryErrorMiddleware);
+  }
   /** Error handler (must be last - Express identifies error middleware by its 4-arg signature) */
   app.use(ErrorController);
 
@@ -235,7 +276,7 @@ const startServer = async () => {
         await initializeMCPs();
         await initializeOAuthReconnectManager();
       });
-      await checkMigrations();
+      await runAsSystem(checkMigrations);
 
       // Configure stream services (auto-detects Redis from USE_REDIS env var)
       const streamServices = createStreamServices();
@@ -263,6 +304,10 @@ const startServer = async () => {
  */
 startServer().catch((err) => {
   logger.error('Failed to start server:', err);
+  if (err?.stack) {
+    logger.error(err.stack);
+    console.error(err.stack);
+  }
   process.exit(1);
 });
 

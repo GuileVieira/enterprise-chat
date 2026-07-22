@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { Trigger } from '@radix-ui/react-popover';
 import { useLocalize } from '~/hooks';
 

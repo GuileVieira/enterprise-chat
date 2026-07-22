@@ -9,6 +9,7 @@ import type {
 } from 'mongoose';
 import type { AclEntry, IAclEntry } from '~/types';
 import { MAX_PERM_BITS } from '~/common/permissions';
+import { normalizePrincipalId } from '~/utils/principal';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 
 /**
@@ -19,6 +20,29 @@ import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 const EMPTY_SUPERSETS: readonly number[] = Object.freeze([]);
 
 const supersetCache = new Map<number, readonly number[]>();
+
+const resourceIdVariants = (resourceId: string | Types.ObjectId) => {
+  const value = resourceId.toString();
+  if (!Types.ObjectId.isValid(value)) {
+    return [resourceId];
+  }
+  return [value, new Types.ObjectId(value)];
+};
+
+const normalizeAclFilter = (filter: Record<string, unknown>): Record<string, unknown> => {
+  const normalized = { ...filter };
+  if (typeof normalized.resourceId === 'string' || normalized.resourceId instanceof Types.ObjectId) {
+    normalized.resourceId = { $in: resourceIdVariants(normalized.resourceId) };
+  }
+  if (Array.isArray(normalized.$or)) {
+    normalized.$or = normalized.$or.map((item) =>
+      item && typeof item === 'object'
+        ? normalizeAclFilter(item as Record<string, unknown>)
+        : item,
+    );
+  }
+  return normalized;
+};
 
 /**
  * Enumerates every `permBits` value (in the range `[0, MAX_PERM_BITS]`) whose
@@ -51,6 +75,7 @@ export function permissionBitSupersets(requiredBits: number): readonly number[] 
   if (
     !Number.isInteger(requiredBits) ||
     requiredBits < 0 ||
+    requiredBits > MAX_PERM_BITS ||
     (requiredBits & ~MAX_PERM_BITS) !== 0
   ) {
     return EMPTY_SUPERSETS;
@@ -93,7 +118,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     if (resourceType) {
       query.resourceType = resourceType;
     }
-    return await AclEntry.find(query).lean();
+    return await AclEntry.find(query).lean<IAclEntry[]>();
   }
 
   /**
@@ -107,7 +132,10 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     resourceId: string | Types.ObjectId,
   ): Promise<IAclEntry[]> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
-    return await AclEntry.find({ resourceType, resourceId }).lean();
+    return await AclEntry.find({
+      resourceType,
+      resourceId: { $in: resourceIdVariants(resourceId) },
+    }).lean();
   }
 
   /**
@@ -125,13 +153,15 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const principalsQuery = principalsList.map((p) => ({
       principalType: p.principalType,
-      ...(p.principalType !== PrincipalType.PUBLIC && { principalId: p.principalId }),
+      ...(p.principalType !== PrincipalType.PUBLIC && {
+        principalId: normalizePrincipalId(p.principalId!, p.principalType as PrincipalType),
+      }),
     }));
 
     return await AclEntry.find({
       $or: principalsQuery,
       resourceType,
-      resourceId,
+      resourceId: { $in: resourceIdVariants(resourceId) },
     }).lean();
   }
 
@@ -153,13 +183,15 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const principalsQuery = principalsList.map((p) => ({
       principalType: p.principalType,
-      ...(p.principalType !== PrincipalType.PUBLIC && { principalId: p.principalId }),
+      ...(p.principalType !== PrincipalType.PUBLIC && {
+        principalId: normalizePrincipalId(p.principalId!, p.principalType as PrincipalType),
+      }),
     }));
 
     const entry = await AclEntry.findOne({
       $or: principalsQuery,
       resourceType,
-      resourceId,
+      resourceId: { $in: resourceIdVariants(resourceId) },
       permBits: { $in: permissionBitSupersets(permissionBit) },
     })
       .select('_id')
@@ -224,14 +256,18 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const principalsQuery = principalsList.map((p) => ({
       principalType: p.principalType,
-      ...(p.principalType !== PrincipalType.PUBLIC && { principalId: p.principalId }),
+      ...(p.principalType !== PrincipalType.PUBLIC && {
+        principalId: normalizePrincipalId(p.principalId!, p.principalType as PrincipalType),
+      }),
     }));
 
     // Batch query for all resources at once
     const aclEntries = await AclEntry.find({
       $or: principalsQuery,
       resourceType,
-      resourceId: { $in: resourceIds },
+      resourceId: {
+        $in: resourceIds.flatMap((id) => resourceIdVariants(id)),
+      },
     }).lean();
 
     // Compute effective permissions per resource
@@ -271,12 +307,14 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const query: Record<string, unknown> = {
       principalType,
       resourceType,
-      resourceId,
+      resourceId: { $in: resourceIdVariants(resourceId) },
     };
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
       if (principalType === PrincipalType.USER) {
@@ -291,6 +329,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const update = {
       $set: {
         permBits,
+        resourceId,
         grantedBy,
         grantedAt: new Date(),
         ...(roleId && { roleId }),
@@ -326,12 +365,14 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const query: Record<string, unknown> = {
       principalType,
       resourceType,
-      resourceId,
+      resourceId: { $in: resourceIdVariants(resourceId) },
     };
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
     }
@@ -365,12 +406,14 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const query: Record<string, unknown> = {
       principalType,
       resourceType,
-      resourceId,
+      resourceId: { $in: resourceIdVariants(resourceId) },
     };
 
     if (principalType !== PrincipalType.PUBLIC) {
       query.principalId =
-        typeof principalId === 'string' && principalType !== PrincipalType.ROLE
+        typeof principalId === 'string' &&
+        principalType !== PrincipalType.ROLE &&
+        principalType !== PrincipalType.TENANT
           ? new Types.ObjectId(principalId)
           : principalId;
     }
@@ -413,7 +456,9 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const principalsQuery = principalsList.map((p) => ({
       principalType: p.principalType,
-      ...(p.principalType !== PrincipalType.PUBLIC && { principalId: p.principalId }),
+      ...(p.principalType !== PrincipalType.PUBLIC && {
+        principalId: normalizePrincipalId(p.principalId!, p.principalType as PrincipalType),
+      }),
     }));
 
     return await AclEntry.find({
@@ -433,7 +478,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     options?: { session?: ClientSession },
   ): Promise<DeleteResult> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
-    return AclEntry.deleteMany(filter, options || {});
+    return AclEntry.deleteMany(normalizeAclFilter(filter), options || {});
   }
 
   /**

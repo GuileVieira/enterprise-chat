@@ -1,6 +1,7 @@
 export * from './Auth';
 export * from './Agents';
 export * from './Endpoints';
+export * from './Skills';
 export * from './Files';
 /* Memories */
 export * from './Memories';
@@ -16,3 +17,4 @@ export * from './roles';
 export * from './tags';
 export * from './MCP';
 export * from './SSE';
+export * from './categories';

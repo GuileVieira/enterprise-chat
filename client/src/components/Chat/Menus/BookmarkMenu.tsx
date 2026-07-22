@@ -1,9 +1,9 @@
 import { useState, useId, useCallback, useMemo, useRef } from 'react';
 import { useRecoilValue } from 'recoil';
 import * as Ariakit from '@ariakit/react';
-import { BookmarkPlusIcon } from 'lucide-react';
+import { BookmarkSimple as BookmarkPlusIcon } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Constants, QueryKeys } from 'librechat-data-provider';
+import { Constants, Permissions, PermissionTypes, QueryKeys } from 'librechat-data-provider';
 import { BookmarkFilledIcon, BookmarkIcon } from '@radix-ui/react-icons';
 import { DropdownPopup, TooltipAnchor, Spinner, useToastContext } from '@librechat/client';
 import type { TConversationTag } from 'librechat-data-provider';
@@ -12,7 +12,7 @@ import type * as t from '~/common';
 import { useConversationTagsQuery, useTagConversationMutation } from '~/data-provider';
 import { BookmarkContext } from '~/Providers/BookmarkContext';
 import { BookmarkEditDialog } from '~/components/Bookmarks';
-import { useBookmarkSuccess, useLocalize } from '~/hooks';
+import { useBookmarkSuccess, useHasAccess, useLocalize } from '~/hooks';
 import { NotificationSeverity } from '~/common';
 import { cn, logger } from '~/utils';
 import store from '~/store';
@@ -27,36 +27,44 @@ const BookmarkMenu: FC = () => {
   const updateConvoTags = useBookmarkSuccess(conversationId);
   const tags = conversation?.tags;
   const isTemporary = conversation?.expiredAt != null;
+  const canUseBookmarks = useHasAccess({
+    permissionType: PermissionTypes.BOOKMARKS,
+    permission: Permissions.USE,
+  });
 
   const menuId = useId();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const mutation = useTagConversationMutation(conversationId, {
-    onSuccess: (newTags: string[], vars) => {
-      updateConvoTags(newTags);
-      const tagElement = document.getElementById(vars.tag);
-      console.log('tagElement', tagElement);
-      if (tagElement) {
-        setTimeout(() => tagElement.focus(), 2);
-      }
+  const mutation = useTagConversationMutation(
+    conversationId,
+    {
+      onSuccess: (newTags: string[], vars) => {
+        updateConvoTags(newTags);
+        const tagElement = document.getElementById(vars.tag);
+        console.log('tagElement', tagElement);
+        if (tagElement) {
+          setTimeout(() => tagElement.focus(), 2);
+        }
+      },
+      onError: () => {
+        showToast({
+          message: 'Error adding bookmark',
+          severity: NotificationSeverity.ERROR,
+        });
+      },
+      onMutate: (vars) => {
+        const tagElement = document.getElementById(vars.tag);
+        console.log('tagElement', tagElement);
+        if (tagElement) {
+          setTimeout(() => tagElement.focus(), 2);
+        }
+      },
     },
-    onError: () => {
-      showToast({
-        message: 'Error adding bookmark',
-        severity: NotificationSeverity.ERROR,
-      });
-    },
-    onMutate: (vars) => {
-      const tagElement = document.getElementById(vars.tag);
-      console.log('tagElement', tagElement);
-      if (tagElement) {
-        setTimeout(() => tagElement.focus(), 2);
-      }
-    },
-  });
+    canUseBookmarks,
+  );
 
-  const { data } = useConversationTagsQuery();
+  const { data } = useConversationTagsQuery({ enabled: canUseBookmarks });
 
   const isActiveConvo = Boolean(
     conversation &&

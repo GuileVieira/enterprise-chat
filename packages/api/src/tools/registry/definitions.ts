@@ -1,9 +1,5 @@
-import {
-  WebSearchToolDefinition,
-  CalculatorToolDefinition,
-  CodeExecutionToolDefinition,
-} from '@librechat/agents';
-import { geminiToolkit } from '~/tools/toolkits/gemini';
+import { WebSearchToolDefinition, CalculatorToolDefinition } from '@librechat/agents';
+import { geminiToolkit, openRouterGeminiToolkit } from '~/tools/toolkits/gemini';
 import { oaiToolkit } from '~/tools/toolkits/oai';
 
 /** Extended JSON Schema type that includes standard validation keywords */
@@ -341,6 +337,113 @@ export const tavilySearchSchema: ExtendedJsonSchema = {
   required: ['query'],
 };
 
+/** DuckDuckGo Search tool JSON schema */
+export const duckDuckGoSearchSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    query: {
+      type: 'string',
+      minLength: 1,
+      description: 'The web search query.',
+    },
+    max_results: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 10,
+      description: 'Maximum search results to return. Defaults to 5.',
+    },
+    fetch_results: {
+      type: 'boolean',
+      description: 'Whether to fetch and extract readable text from each result. Defaults to true.',
+    },
+    max_content_chars: {
+      type: 'integer',
+      minimum: 500,
+      maximum: 12000,
+      description: 'Maximum extracted content characters per fetched result. Defaults to 4000.',
+    },
+  },
+  required: ['query'],
+};
+
+/** Meta Ads insights tool JSON schema */
+export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    ad_account_id: {
+      type: 'string',
+      pattern: '^act_\\d+$',
+      description:
+        'Optional Meta ad account id in act_<number> format. Defaults to the configured project account.',
+    },
+    since: {
+      type: 'string',
+      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+      description: 'Start date in YYYY-MM-DD format.',
+    },
+    until: {
+      type: 'string',
+      pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+      description: 'End date in YYYY-MM-DD format.',
+    },
+    level: {
+      type: 'string',
+      enum: ['campaign', 'adset', 'ad'],
+      description:
+        'Insight aggregation level. Use campaign for campaigns, adset for ad sets, or ad for ads and creatives. Never use campaign or adset as a creative substitute. Defaults to ad.',
+    },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 500,
+      description: 'Rows per Meta page. Defaults to 100.',
+    },
+    max_pages: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 10,
+      description: 'Maximum pages to fetch. Defaults to 3.',
+    },
+    after: {
+      type: 'string',
+      description: 'Optional Meta cursor for continuing a previous paginated request.',
+    },
+    graph_version: {
+      type: 'string',
+      pattern: '^v[1-9]\\d?\\.0$',
+      description: 'Optional Meta Graph API version, for example v25.0. Defaults to v25.0.',
+    },
+    project_id: {
+      type: 'string',
+      description:
+        'Optional project id. Defaults to the active conversation project. Required through either source; the project controls access to Meta Ads credentials.',
+    },
+  },
+  required: ['since', 'until'],
+};
+
+/** Meta Ads budget manager tool JSON schema */
+export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    action: {
+      type: 'string',
+      enum: ['get_status', 'list_recommendations', 'run_now', 'approve_change', 'pause_automation'],
+      description:
+        'Action to run. Use approve_change only after showing the recommendation to the user.',
+    },
+    project_id: {
+      type: 'string',
+      description: 'Project id that owns the Meta Ads configuration.',
+    },
+    recommendation_id: {
+      type: 'string',
+      description: 'Recommendation id. Required for approve_change.',
+    },
+  },
+  required: ['action', 'project_id'],
+};
+
 /** File Search tool JSON schema */
 export const fileSearchSchema: ExtendedJsonSchema = {
   type: 'object',
@@ -420,6 +523,27 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     schema: tavilySearchSchema,
     toolType: 'builtin',
   },
+  duckduckgo_search: {
+    name: 'duckduckgo_search',
+    description:
+      'Search DuckDuckGo and optionally fetch readable text from each result. Useful for open web research without API keys.',
+    schema: duckDuckGoSearchSchema,
+    toolType: 'builtin',
+  },
+  meta_ads_get_insights: {
+    name: 'meta_ads_get_insights',
+    description:
+      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. For ad or creative questions, use level=ad; campaign and ad set rows are not creative substitutes. Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data. Historical queries include paused ads that had results in the requested period. graph_version is optional and must match Meta version format like v25.0.',
+    schema: metaAdsGetInsightsSchema,
+    toolType: 'builtin',
+  },
+  meta_ads_budget_manager: {
+    name: 'meta_ads_budget_manager',
+    description:
+      'Manage Meta Ads budget recommendations for a project-linked ad account. Can read status, list recommendations, run analysis now, pause automation, and apply one approved recommendation. Requires project permissions.',
+    schema: metaAdsBudgetManagerSchema,
+    toolType: 'builtin',
+  },
   file_search: {
     name: 'file_search',
     description:
@@ -449,20 +573,31 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
     toolType: 'builtin',
     responseFormat: geminiToolkit.gemini_image_gen.responseFormat,
   },
+  openrouter_gemini_image_gen: {
+    name: openRouterGeminiToolkit.openrouter_gemini_image_gen.name,
+    description: openRouterGeminiToolkit.openrouter_gemini_image_gen.description,
+    schema: openRouterGeminiToolkit.openrouter_gemini_image_gen.schema,
+    toolType: 'builtin',
+    responseFormat: openRouterGeminiToolkit.openrouter_gemini_image_gen.responseFormat,
+  },
 };
 
-/** Tool definitions from @librechat/agents */
+/**
+ * Tool definitions from @librechat/agents.
+ *
+ * `CodeExecutionToolDefinition` (the legacy `execute_code` tool) is
+ * intentionally absent — the `execute_code` capability now expands into
+ * the skill-flavored `bash_tool` + `read_file` pair, registered at
+ * initialize-time by `registerCodeExecutionTools`. Agents whose `tools`
+ * array contains the literal string `execute_code` continue to work:
+ * the capability gate still filters on that string, and the runtime
+ * registers the tool pair on match.
+ */
 const agentToolDefinitions: Record<string, ToolRegistryDefinition> = {
   [CalculatorToolDefinition.name]: {
     name: CalculatorToolDefinition.name,
     description: CalculatorToolDefinition.description,
     schema: CalculatorToolDefinition.schema as unknown as ExtendedJsonSchema,
-    toolType: 'builtin',
-  },
-  [CodeExecutionToolDefinition.name]: {
-    name: CodeExecutionToolDefinition.name,
-    description: CodeExecutionToolDefinition.description,
-    schema: CodeExecutionToolDefinition.schema as unknown as ExtendedJsonSchema,
     toolType: 'builtin',
   },
   [WebSearchToolDefinition.name]: {

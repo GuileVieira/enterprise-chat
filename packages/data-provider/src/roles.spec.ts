@@ -10,7 +10,7 @@ const RESOURCE_MANAGEMENT_FIELDS: Permissions[] = [
 /**
  * Permission types where CREATE/SHARE/SHARE_PUBLIC must default to false for USER.
  * MEMORIES is excluded: its CREATE/READ/UPDATE apply to the user's own private data.
- * AGENTS/PROMPTS are excluded: CREATE=true is intentional (users own their agents/prompts).
+ * AGENTS/PROMPTS/PROJECTS are excluded: CREATE=true is intentional for owned resources.
  * Add new types here if they gate shared/multi-user resources.
  */
 const RESOURCE_PERMISSION_TYPES: PermissionTypes[] = [
@@ -31,8 +31,7 @@ describe('roleDefaults', () => {
           continue;
         }
 
-        const userValues =
-          userPerms[permType as PermissionTypes] as Record<string, boolean>;
+        const userValues = userPerms[permType as PermissionTypes] as Record<string, boolean>;
 
         for (const field of fieldNames) {
           expect({
@@ -78,7 +77,9 @@ describe('roleDefaults', () => {
 
       for (const [permType, subSchema] of Object.entries(schemaShape)) {
         const fieldNames = Object.keys(subSchema.shape);
-        const hasResourceFields = fieldNames.some((f) => RESOURCE_MANAGEMENT_FIELDS.includes(f as Permissions));
+        const hasResourceFields = fieldNames.some((f) =>
+          RESOURCE_MANAGEMENT_FIELDS.includes(f as Permissions),
+        );
         if (!hasResourceFields) {
           continue;
         }
@@ -87,7 +88,9 @@ describe('roleDefaults', () => {
           restrictedSet.has(permType) ||
           permType === PermissionTypes.MEMORIES ||
           permType === PermissionTypes.PROMPTS ||
-          permType === PermissionTypes.AGENTS;
+          permType === PermissionTypes.AGENTS ||
+          permType === PermissionTypes.SKILLS ||
+          permType === PermissionTypes.PROJECTS;
 
         expect({
           permType,
@@ -100,6 +103,62 @@ describe('roleDefaults', () => {
         );
       }
     });
+
+    it('should not allow Meta Ads by default', () => {
+      expect(userPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: false,
+      });
+    });
+  });
+
+  describe('AD-MANAGER role', () => {
+    const adManagerPerms = roleDefaults[SystemRoles.AD_MANAGER].permissions;
+
+    it('should inherit USER defaults except for Meta Ads access', () => {
+      for (const permType of Object.values(PermissionTypes)) {
+        if (permType === PermissionTypes.META_ADS) {
+          continue;
+        }
+
+        expect(adManagerPerms[permType]).toEqual(
+          roleDefaults[SystemRoles.USER].permissions[permType],
+        );
+      }
+      expect(adManagerPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: true,
+      });
+    });
+  });
+
+  describe('OWNER role', () => {
+    const ownerPerms = roleDefaults[SystemRoles.OWNER].permissions;
+
+    it('should allow creating agents without public sharing by default', () => {
+      expect(ownerPerms[PermissionTypes.AGENTS]).toEqual(
+        expect.objectContaining({
+          [Permissions.USE]: true,
+          [Permissions.CREATE]: true,
+          [Permissions.SHARE]: false,
+          [Permissions.SHARE_PUBLIC]: false,
+        }),
+      );
+    });
+
+    it('should inherit non-agent defaults from USER', () => {
+      for (const permType of Object.values(PermissionTypes)) {
+        if (permType === PermissionTypes.AGENTS || permType === PermissionTypes.META_ADS) {
+          continue;
+        }
+
+        expect(ownerPerms[permType]).toEqual(roleDefaults[SystemRoles.USER].permissions[permType]);
+      }
+    });
+
+    it('should allow Meta Ads by default', () => {
+      expect(ownerPerms[PermissionTypes.META_ADS]).toEqual({
+        [Permissions.USE]: true,
+      });
+    });
   });
 
   describe('ADMIN role', () => {
@@ -110,8 +169,7 @@ describe('roleDefaults', () => {
 
       for (const [permType, subSchema] of Object.entries(schemaShape)) {
         const fieldNames = Object.keys(subSchema.shape);
-        const adminValues =
-          adminPerms[permType as PermissionTypes] as Record<string, boolean>;
+        const adminValues = adminPerms[permType as PermissionTypes] as Record<string, boolean>;
 
         for (const field of fieldNames) {
           expect({
@@ -127,6 +185,32 @@ describe('roleDefaults', () => {
           );
         }
       }
+    });
+  });
+
+  describe('SKILLS permission defaults', () => {
+    it('grants ADMIN all four skill permissions by default', () => {
+      const adminSkills = roleDefaults[SystemRoles.ADMIN].permissions[
+        PermissionTypes.SKILLS
+      ] as Record<string, boolean>;
+      expect(adminSkills).toEqual({
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: true,
+        [Permissions.SHARE_PUBLIC]: true,
+      });
+    });
+
+    it('grants USER USE+CREATE but no sharing by default', () => {
+      const userSkills = roleDefaults[SystemRoles.USER].permissions[
+        PermissionTypes.SKILLS
+      ] as Record<string, boolean>;
+      expect(userSkills).toEqual({
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      });
     });
   });
 });

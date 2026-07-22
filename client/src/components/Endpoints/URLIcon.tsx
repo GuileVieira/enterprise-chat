@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { WarningCircle as AlertCircle } from '@phosphor-icons/react';
 import { icons } from '~/hooks/Endpoint/Icons';
 
 export const URLIcon = memo(

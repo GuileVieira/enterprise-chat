@@ -1,7 +1,12 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import copy from 'copy-to-clipboard';
-import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { Clipboard, CheckMark } from '@librechat/client';
+import {
+  Check,
+  Copy,
+  ArrowCounterClockwise as RotateCcw,
+  MagnifyingGlassPlus as ZoomIn,
+  MagnifyingGlassMinus as ZoomOut,
+} from '@phosphor-icons/react';
 import { MIN_ZOOM, MAX_ZOOM } from './useMermaidZoom';
 import { useLocalize } from '~/hooks';
 import cn from '~/utils/cn';
@@ -94,7 +99,11 @@ const ZoomControls: React.FC<ZoomControlsProps> = memo(
           className="rounded p-1.5 text-text-secondary hover:bg-surface-hover"
           title={localize('com_ui_copy_code')}
         >
-          {isCopied ? <CheckMark className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+          {isCopied ? (
+            <Check size={16} weight="bold" aria-hidden="true" />
+          ) : (
+            <Copy size={16} aria-hidden="true" />
+          )}
         </button>
       </div>
     );

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { KeyRoundIcon } from 'lucide-react';
+import { Keyhole as KeyRoundIcon } from '@phosphor-icons/react';
 import { AuthType, AgentCapabilities } from 'librechat-data-provider';
 import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import {

@@ -13,6 +13,7 @@ const useHasAccess = ({
   const user = authContext?.user;
   const roles = authContext?.roles;
   const isAuthenticated = authContext?.isAuthenticated || false;
+  const isRoleLoading = authContext?.isRoleLoading || false;
 
   const checkAccess = useCallback(
     ({
@@ -31,9 +32,12 @@ const useHasAccess = ({
       if (isAuthenticated && user?.role != null && roles && roles[user.role]) {
         return roles[user.role]?.permissions?.[permissionType]?.[permission] === true;
       }
+      if (isAuthenticated && user?.role != null && isRoleLoading) {
+        return true;
+      }
       return false;
     },
-    [authContext, isAuthenticated, roles],
+    [authContext, isAuthenticated, roles, isRoleLoading],
   );
 
   const hasAccess = useMemo(

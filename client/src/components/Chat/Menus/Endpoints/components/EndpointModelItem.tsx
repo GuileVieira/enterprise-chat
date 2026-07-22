@@ -1,6 +1,11 @@
 import React from 'react';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, EarthIcon, Pin, PinOff } from 'lucide-react';
+import {
+  CheckCircle as CheckCircle2,
+  GlobeHemisphereWest as EarthIcon,
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+} from '@phosphor-icons/react';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
@@ -11,6 +16,74 @@ import { cn } from '~/utils';
 interface EndpointModelItemProps {
   modelId: string | null;
   endpoint: Endpoint;
+}
+
+const AGENT_AVATAR_COLORS = [
+  'bg-emerald-700',
+  'bg-amber-600',
+  'bg-rose-700',
+  'bg-sky-700',
+  'bg-violet-700',
+  'bg-cyan-700',
+];
+
+const SPEC_COLOR_CLASSES: Record<string, string> = {
+  padrao: 'bg-emerald-700',
+  padrão: 'bg-emerald-700',
+  avancado: 'bg-amber-600',
+  avançado: 'bg-amber-600',
+  especialista: 'bg-rose-700',
+};
+
+function getInitials(name: string) {
+  const cleanName = name
+    .replace(/\([^)]*\)/g, '')
+    .replace(/^agente\s+/i, '')
+    .trim();
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  if (words.length === 0) {
+    return 'AG';
+  }
+  return (words[0]?.[0] ?? 'A').toUpperCase();
+}
+
+function getSpecColorClass(name: string) {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^agente\s+/, '')
+    .split(/\s|\(/)[0];
+  return SPEC_COLOR_CLASSES[normalized];
+}
+
+function getColorClass(seed: string) {
+  const specColorClass = getSpecColorClass(seed);
+  if (specColorClass) {
+    return specColorClass;
+  }
+
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return AGENT_AVATAR_COLORS[hash % AGENT_AVATAR_COLORS.length];
+}
+
+export function AgentModelAvatar({ name, className }: { name: string; className?: string }) {
+  return (
+    <div
+      className={cn(
+        'flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-lg px-1 text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-white/10',
+        getColorClass(name),
+        className,
+      )}
+      title={name}
+    >
+      {getInitials(name)}
+    </div>
+  );
 }
 
 export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps) {
@@ -77,6 +150,9 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
     const getContent = () => {
       if (avatarUrl) {
         return <img src={avatarUrl} alt={modelName ?? ''} className="h-full w-full object-cover" />;
+      }
+      if (isAgent) {
+        return <AgentModelAvatar name={modelName ?? modelId ?? 'Agent'} />;
       }
       if (showEndpointIcon) {
         return endpoint.icon;

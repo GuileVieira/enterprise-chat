@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { GitBranchPlus } from 'lucide-react';
+import { GitBranch as GitBranchPlus } from '@phosphor-icons/react';
 import { useToastContext } from '@librechat/client';
 import { EModelEndpoint, parseEphemeralAgentId, stripAgentIdSuffix } from 'librechat-data-provider';
 import type { TMessage, Agent } from 'librechat-data-provider';

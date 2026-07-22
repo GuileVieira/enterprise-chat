@@ -1,5 +1,5 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { Folder } from 'lucide-react';
+import { Folder } from '@phosphor-icons/react';
 import * as Ariakit from '@ariakit/react';
 import { EModelEndpoint, EToolResources } from 'librechat-data-provider';
 import {

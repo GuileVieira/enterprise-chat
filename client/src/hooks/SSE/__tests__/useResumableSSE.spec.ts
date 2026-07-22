@@ -75,12 +75,14 @@ jest.mock('~/data-provider', () => ({
 const mockErrorHandler = jest.fn();
 const mockSetIsSubmitting = jest.fn();
 const mockClearStepMaps = jest.fn();
+const mockFinalHandler = jest.fn();
+const mockCreatedHandler = jest.fn();
 
 jest.mock('~/hooks/SSE/useEventHandlers', () =>
   jest.fn(() => ({
     errorHandler: mockErrorHandler,
-    finalHandler: jest.fn(),
-    createdHandler: jest.fn(),
+    finalHandler: mockFinalHandler,
+    createdHandler: mockCreatedHandler,
     attachmentHandler: jest.fn(),
     stepHandler: jest.fn(),
     contentHandler: jest.fn(),
@@ -174,6 +176,8 @@ describe('useResumableSSE - 404 error path', () => {
     mockSetIsSubmitting.mockClear();
     mockInvalidateQueries.mockClear();
     mockRemoveQueries.mockClear();
+    mockFinalHandler.mockClear();
+    mockCreatedHandler.mockClear();
   });
 
   const seedDraft = (conversationId: string) => {
@@ -281,4 +285,144 @@ describe('useResumableSSE - 404 error path', () => {
       unmount();
     },
   );
+
+  it('treats responseCode === 0 with raw SSE buffer data as transport failure (reconnect path)', async () => {
+    const submission = buildSubmission();
+    const chatHelpers = buildChatHelpers();
+
+    const { unmount } = renderHook(() => useResumableSSE(submission, chatHelpers));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const sse = getLastSSE();
+
+    await act(async () => {
+      sse._emit('error', {
+        responseCode: 0,
+        data: 'event: message\ndata: {"created":true,"message":{}}\n\n',
+      });
+    });
+
+    expect(mockErrorHandler).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it('parses and surfaces server-sent error events (no responseCode, JSON data)', async () => {
+    const submission = buildSubmission();
+    const chatHelpers = buildChatHelpers();
+
+    const { unmount } = renderHook(() => useResumableSSE(submission, chatHelpers));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const sse = getLastSSE();
+
+    const errorPayload = JSON.stringify({
+      error: JSON.stringify({ type: 'token_limit' }),
+    });
+
+    await act(async () => {
+      sse._emit('error', { data: errorPayload });
+    });
+
+    expect(mockErrorHandler).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('normalizes new-conversation submission ids from start and CREATED events', async () => {
+    const { request } = jest.requireMock('librechat-data-provider');
+    request.post.mockResolvedValueOnce({
+      streamId: 'real-conv-id',
+      conversationId: 'real-conv-id',
+    });
+
+    const submission = buildSubmission({
+      conversation: {},
+      userMessage: {
+        messageId: 'msg-1',
+        conversationId: null,
+        text: 'Hello',
+        isCreatedByUser: true,
+        sender: 'User',
+        parentMessageId: Constants.NO_PARENT,
+      },
+      initialResponse: {
+        messageId: 'resp-1',
+        conversationId: null,
+        text: '',
+        isCreatedByUser: false,
+        sender: 'Assistant',
+      },
+    });
+    const chatHelpers = buildChatHelpers();
+
+    const { unmount } = renderHook(() => useResumableSSE(submission, chatHelpers));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const sse = getLastSSE();
+    await act(async () => {
+      sse._emit('message', {
+        data: JSON.stringify({
+          created: true,
+          message: {
+            messageId: 'msg-1',
+            conversationId: 'real-conv-id',
+          },
+        }),
+      });
+    });
+
+    expect(mockCreatedHandler).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        conversation: expect.objectContaining({ conversationId: 'real-conv-id' }),
+        userMessage: expect.objectContaining({ conversationId: 'real-conv-id' }),
+        initialResponse: expect.objectContaining({
+          conversationId: 'real-conv-id',
+          parentMessageId: 'msg-1',
+        }),
+      }),
+    );
+    unmount();
+  });
+
+  it('clears active submission after FINAL so later reconnect checks do not resume stale state', async () => {
+    jest.useFakeTimers();
+    const submission = buildSubmission();
+    const chatHelpers = buildChatHelpers();
+
+    const { unmount } = renderHook(() => useResumableSSE(submission, chatHelpers));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const firstSse = getLastSSE();
+    await act(async () => {
+      firstSse._emit('message', {
+        data: JSON.stringify({
+          final: true,
+          conversation: { conversationId: CONV_ID },
+          responseMessage: { messageId: 'resp-1' },
+        }),
+      });
+    });
+
+    await act(async () => {
+      firstSse._emit('error', { responseCode: 500 });
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(mockSSEInstances).toHaveLength(1);
+    expect(mockFinalHandler).toHaveBeenCalledTimes(1);
+    unmount();
+    jest.useRealTimers();
+  });
 });

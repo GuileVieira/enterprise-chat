@@ -14,17 +14,20 @@ const connect = require('./connect');
   console.purple('--------------------------');
 
   if (process.argv.length < 5) {
-    console.orange('Usage: npm run create-user -- <email> <name> <username> [--email-verified=false]');
+    console.orange(
+      'Usage: npm run create-user -- <email> <name> <username> [--email-verified=false] [--tenant=<tenantId>]',
+    );
     console.orange('Note: if you do not pass in the arguments, you will be prompted for them.');
     console.orange(
       'If you really need to pass in the password, you can do so as the 4th argument (not recommended for security).',
     );
     console.orange('Use --email-verified=false to set emailVerified to false. Default is true.');
+    console.orange('Use --tenant=<tenantId> to assign the user to a specific tenant.');
     console.purple('--------------------------');
   }
 
   // Parse command line arguments
-  let email, password, name, username, emailVerified, provider;
+  let email, password, name, username, emailVerified, provider, tenantId;
   for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i].startsWith('--email-verified=')) {
       emailVerified = process.argv[i].split('=')[1].toLowerCase() !== 'false';
@@ -33,6 +36,11 @@ const connect = require('./connect');
 
     if (process.argv[i].startsWith('--provider=')) {
       provider = process.argv[i].split('=')[1];
+      continue;
+    }
+
+    if (process.argv[i].startsWith('--tenant=')) {
+      tenantId = process.argv[i].split('=')[1];
       continue;
     }
 
@@ -88,9 +96,9 @@ If \`n\`, and email service is configured, the user will be sent a verification 
 If \`n\`, and email service is not configured, you must have the \`ALLOW_UNVERIFIED_EMAIL_LOGIN\` .env variable set to true,
 or the user will need to attempt logging in to have a verification link sent to them.`);
 
-    const normalizedEmailVerifiedInput = emailVerifiedInput.trim().toLowerCase()
+    const normalizedEmailVerifiedInput = emailVerifiedInput.trim().toLowerCase();
 
-    emailVerified = true
+    emailVerified = true;
 
     if (normalizedEmailVerifiedInput === 'n') {
       emailVerified = false;
@@ -104,9 +112,13 @@ or the user will need to attempt logging in to have a verification link sent to 
   }
 
   const user = { email, password, name, username, confirm_password: password, provider };
+  const additionalData = { emailVerified };
+  if (tenantId) {
+    additionalData.tenantId = tenantId;
+  }
   let result;
   try {
-    result = await registerUser(user, { emailVerified });
+    result = await registerUser(user, additionalData);
   } catch (error) {
     console.red('Error: ' + error.message);
     silentExit(1);
@@ -121,6 +133,9 @@ or the user will need to attempt logging in to have a verification link sent to 
   if (userCreated) {
     console.green('User created successfully!');
     console.green(`Email verified: ${userCreated.emailVerified}`);
+    if (userCreated.tenantId) {
+      console.green(`Tenant: ${userCreated.tenantId}`);
+    }
     silentExit(0);
   }
 })();

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { X } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 type TagProps = React.ComponentPropsWithoutRef<'div'> & {

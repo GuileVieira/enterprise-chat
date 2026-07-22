@@ -20,6 +20,7 @@ import ShareRoute from './ShareRoute';
 import ChatRoute from './ChatRoute';
 import Search from './Search';
 import Root from './Root';
+import AdminLayout from '~/components/Admin';
 
 const AuthLayout = () => (
   <AuthContextProvider>
@@ -33,6 +34,11 @@ const loadInlinePromptsView = () =>
     Component: m.default,
   }));
 
+const loadSkillsView = () =>
+  import('~/components/Skills/layouts/SkillsView').then((m) => ({
+    Component: m.default,
+  }));
+
 const baseEl = document.querySelector('base');
 const baseHref = baseEl?.getAttribute('href') || '/';
 
@@ -41,6 +47,11 @@ export const router = createBrowserRouter(
     {
       path: 'share/:shareId',
       element: <ShareRoute />,
+      errorElement: <RouteErrorBoundary />,
+    },
+    {
+      path: 'share/tenant/:shareId',
+      element: <ShareRoute isTenantShare={true} />,
       errorElement: <RouteErrorBoundary />,
     },
     {
@@ -101,6 +112,80 @@ export const router = createBrowserRouter(
         },
         dashboardRoutes,
         {
+          path: 'admin',
+          element: <AdminLayout />,
+          children: [
+            {
+              index: true,
+              lazy: () =>
+                import('~/components/Admin/Dashboard').then((m) => ({ Component: m.default })),
+            },
+            {
+              path: 'users',
+              lazy: () =>
+                import('~/components/Admin/Users/UsersPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'roles',
+              lazy: () =>
+                import('~/components/Admin/Roles/RolesPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'groups',
+              lazy: () =>
+                import('~/components/Admin/Groups/GroupsPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'config',
+              lazy: () =>
+                import('~/components/Admin/Config/ConfigPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'groups/:id',
+              lazy: () =>
+                import('~/components/Admin/Groups/GroupDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'tenants',
+              lazy: () =>
+                import('~/components/Admin/Tenants/TenantsPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'tenants/:id',
+              lazy: () =>
+                import('~/components/Admin/Tenants/TenantDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'functions',
+              lazy: () =>
+                import('~/components/Admin/Functions/FunctionsPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'secrets',
+              lazy: () =>
+                import('~/components/Admin/Secrets/SecretsPage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+          ],
+        },
+        {
           path: '/',
           element: <Root />,
           children: [
@@ -129,6 +214,18 @@ export const router = createBrowserRouter(
               lazy: loadInlinePromptsView,
             },
             {
+              path: 'skills',
+              lazy: loadSkillsView,
+            },
+            {
+              path: 'skills/:skillId',
+              lazy: loadSkillsView,
+            },
+            {
+              path: 'skills/:skillId/edit',
+              lazy: loadSkillsView,
+            },
+            {
               path: 'agents',
               element: (
                 <MarketplaceProvider>
@@ -143,6 +240,27 @@ export const router = createBrowserRouter(
                   <AgentMarketplace />
                 </MarketplaceProvider>
               ),
+            },
+            {
+              path: 'projects',
+              lazy: () =>
+                import('~/components/Project/ProjectsList').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'projects/new',
+              lazy: () =>
+                import('~/components/Project/ProjectCreatePage').then((m) => ({
+                  Component: m.default,
+                })),
+            },
+            {
+              path: 'projects/:projectId',
+              lazy: () =>
+                import('~/components/Project/ProjectDetailPage').then((m) => ({
+                  Component: m.default,
+                })),
             },
           ],
         },

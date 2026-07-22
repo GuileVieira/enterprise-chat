@@ -1,5 +1,5 @@
 import { useState, useId, useMemo } from 'react';
-import { ListFilter } from 'lucide-react';
+import { Funnel as ListFilter } from '@phosphor-icons/react';
 import * as Menu from '@ariakit/react/menu';
 import { useReactTable } from '@tanstack/react-table';
 import { DropdownPopup } from '@librechat/client';

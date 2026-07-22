@@ -12,6 +12,7 @@ export interface ISharedLink {
   isPublic: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  tenantId?: string;
 }
 
 export interface ShareServiceError extends Error {
@@ -43,11 +44,13 @@ export interface SharedMessagesResult {
 export interface CreateShareResult {
   shareId: string;
   conversationId: string;
+  targetMessageId?: string;
 }
 
 export interface UpdateShareResult {
   shareId: string;
   conversationId: string;
+  targetMessageId?: string;
 }
 
 export interface DeleteShareResult {
@@ -58,10 +61,18 @@ export interface DeleteShareResult {
 
 export interface GetShareLinkResult {
   shareId: string | null;
+  targetMessageId?: string;
   success: boolean;
 }
 
 export interface DeleteAllSharesResult {
   message: string;
   deletedCount: number;
+}
+
+export interface TenantSharedForkResult {
+  user?: string;
+  targetMessageId?: string;
+  conversation: Record<string, unknown>;
+  messages: Array<IMessage>;
 }

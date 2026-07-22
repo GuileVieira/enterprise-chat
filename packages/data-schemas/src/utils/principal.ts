@@ -7,12 +7,17 @@ import { PrincipalType } from 'librechat-data-provider';
  * Ensures a string caller ID is cast to ObjectId so it matches documents written
  * by `grantCapability` — which always stores user/group IDs as ObjectIds to match
  * what `getUserPrincipals` returns.
+ * ROLE and TENANT principals are stored as strings.
  */
 export const normalizePrincipalId = (
   principalId: string | Types.ObjectId,
   principalType: PrincipalType,
 ): string | Types.ObjectId => {
-  if (typeof principalId === 'string' && principalType !== PrincipalType.ROLE) {
+  if (
+    typeof principalId === 'string' &&
+    principalType !== PrincipalType.ROLE &&
+    principalType !== PrincipalType.TENANT
+  ) {
     if (!Types.ObjectId.isValid(principalId)) {
       throw new TypeError(`Invalid ObjectId string for ${principalType}: "${principalId}"`);
     }

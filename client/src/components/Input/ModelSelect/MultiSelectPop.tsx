@@ -1,4 +1,4 @@
-import { Wrench } from 'lucide-react';
+import { Wrench } from '@phosphor-icons/react';
 import { useMultiSearch } from '@librechat/client';
 import { Root, Trigger, Content, Portal } from '@radix-ui/react-popover';
 import type { TPlugin } from 'librechat-data-provider';

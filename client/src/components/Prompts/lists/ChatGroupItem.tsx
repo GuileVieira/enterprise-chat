@@ -1,7 +1,14 @@
 import { useState, memo, useRef, useCallback, useId, useMemo } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Ellipsis, Eye, SquarePen, Trash, EarthIcon, User } from 'lucide-react';
+import {
+  GlobeHemisphereWest as EarthIcon,
+  DotsThree as Ellipsis,
+  Eye,
+  PencilSimpleLine as SquarePen,
+  Trash,
+  User,
+} from '@phosphor-icons/react';
 import { PermissionBits, ResourceType } from 'librechat-data-provider';
 import type { TPromptGroup } from 'librechat-data-provider';
 import {
@@ -94,7 +101,7 @@ function ChatGroupItem({
       return;
     }
 
-    submitPrompt(text);
+    submitPrompt(text, group);
     if (group._id) {
       recordUsage.mutate(group._id);
     }

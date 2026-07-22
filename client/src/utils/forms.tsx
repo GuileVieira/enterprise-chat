@@ -1,4 +1,4 @@
-import { EarthIcon } from 'lucide-react';
+import { GlobeHemisphereWest as EarthIcon } from '@phosphor-icons/react';
 import {
   FileSources,
   alternateName,

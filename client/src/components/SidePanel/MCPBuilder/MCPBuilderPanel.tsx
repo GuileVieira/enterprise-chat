@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@phosphor-icons/react';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import { Button, Spinner, FilterInput, OGDialogTrigger, TooltipAnchor } from '@librechat/client';
 import { useLocalize, useMCPServerManager, useHasAccess } from '~/hooks';
@@ -36,7 +36,7 @@ export default function MCPBuilderPanel() {
   }, [availableMCPServers, searchQuery]);
 
   return (
-    <div className="flex h-auto w-full flex-col px-3 pb-3">
+    <div className="flex h-auto w-full flex-col px-3 pb-3 pt-2">
       <div role="region" aria-label={localize('com_ui_mcp_servers')} className="space-y-2">
         {/* Toolbar: Search + Add Button */}
         <div className="flex items-center gap-2">

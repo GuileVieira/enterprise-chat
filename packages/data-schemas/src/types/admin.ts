@@ -114,12 +114,14 @@ export type AdminMember = {
 /** Full user info returned by the admin user list endpoint. */
 export type AdminUserListItem = {
   id: string;
+  _id: string;
   name: string;
   username: string;
   email: string;
   avatar: string;
   role: string;
   provider: string;
+  tenantId?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -127,8 +129,10 @@ export type AdminUserListItem = {
 /** Minimal user info returned by user search endpoints. */
 export type AdminUserSearchResult = {
   id: string;
+  _id: string;
   name: string;
   email: string;
   username?: string;
   avatarUrl?: string;
+  tenantId?: string;
 };

@@ -1,0 +1,33 @@
+graph LR
+    subgraph PainelAdmin["Painel Administrativo"]
+        UC_CreateUser["Criar Usuario"]
+        UC_BanUser["Banir Usuario"]
+        UC_ResetPwd["Resetar Senha"]
+        UC_Groups["Gerenciar Grupos"]
+        UC_Roles["Gerenciar Papeis"]
+        UC_Endpoints["Configurar Endpoints IA"]
+        UC_BannerConfig["Definir Banners"]
+        UC_Balances["Monitorar Saldos"]
+        UC_Transactions["Ver Transacoes"]
+        UC_Terms["Configurar Termos"]
+        UC_Cache["Configurar Cache"]
+        UC_Migrate["Executar Migracoes"]
+    end
+
+    Admin((Administrador))
+
+    Admin --> UC_CreateUser
+    Admin --> UC_BanUser
+    Admin --> UC_ResetPwd
+    Admin --> UC_Groups
+    Admin --> UC_Roles
+    Admin --> UC_Endpoints
+    Admin --> UC_BannerConfig
+    Admin --> UC_Balances
+    Admin --> UC_Transactions
+    Admin --> UC_Terms
+    Admin --> UC_Cache
+    Admin --> UC_Migrate
+
+    UC_BanUser -.->|extend| UC_ResetPwd
+    UC_Balances -.->|include| UC_Transactions

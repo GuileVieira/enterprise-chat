@@ -3,7 +3,7 @@ import { applyTenantIsolation } from '~/models/plugins/tenantIsolation';
 import type * as t from '~/types';
 
 export function createAccessRoleModel(mongoose: typeof import('mongoose')) {
-  applyTenantIsolation(accessRoleSchema);
+  applyTenantIsolation(accessRoleSchema, { includeGlobalDocuments: true });
   return (
     mongoose.models.AccessRole || mongoose.model<t.IAccessRole>('AccessRole', accessRoleSchema)
   );

@@ -1,4 +1,4 @@
-import { ChevronLeft } from 'lucide-react';
+import { CaretLeft as ChevronLeft } from '@phosphor-icons/react';
 import { useCallback, useMemo } from 'react';
 import { useToastContext } from '@librechat/client';
 import { useGetAgentByIdQuery, useRevertAgentVersionMutation } from '~/data-provider';

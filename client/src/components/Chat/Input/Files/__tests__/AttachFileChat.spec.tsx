@@ -25,6 +25,10 @@ let mockFileConfig = defaultFileConfig;
 
 let mockAgentsMap: Record<string, Partial<Agent>> = {};
 let mockAgentQueryData: Partial<Agent> | undefined;
+let mockProjectPermissions = {
+  permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
+  isLoading: false,
+};
 
 jest.mock('~/data-provider', () => ({
   useGetEndpointsQuery: () => ({ data: mockEndpointsConfig }),
@@ -38,6 +42,14 @@ jest.mock('~/Providers', () => ({
   useAgentsMapContext: () => mockAgentsMap,
 }));
 
+jest.mock('~/hooks', () => ({
+  useLocalize: () => (key: string) => key,
+}));
+
+jest.mock('~/hooks/useProjectPermissions', () => ({
+  useProjectPermissions: () => mockProjectPermissions,
+}));
+
 /** Capture the props passed to AttachFileMenu */
 let mockAttachFileMenuProps: Record<string, unknown> = {};
 jest.mock('../AttachFileMenu', () => {
@@ -47,8 +59,10 @@ jest.mock('../AttachFileMenu', () => {
   };
 });
 
+let mockAttachFileProps: Record<string, unknown> = {};
 jest.mock('../AttachFile', () => {
-  return function MockAttachFile() {
+  return function MockAttachFile(props: Record<string, unknown>) {
+    mockAttachFileProps = props;
     return <div data-testid="attach-file" />;
   };
 });
@@ -77,6 +91,11 @@ describe('AttachFileChat', () => {
     mockAgentsMap = {};
     mockAgentQueryData = undefined;
     mockAttachFileMenuProps = {};
+    mockAttachFileProps = {};
+    mockProjectPermissions = {
+      permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
+      isLoading: false,
+    };
   });
 
   describe('rendering decisions', () => {
@@ -93,6 +112,41 @@ describe('AttachFileChat', () => {
     it('renders null for null conversation', () => {
       const { container } = renderComponent(null);
       expect(container.innerHTML).toBe('');
+    });
+
+    it('saves project chat uploads to the project when the user can edit', () => {
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        projectId: 'project-1',
+      });
+
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(true);
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('com_ui_upload_keep_local')).not.toBeInTheDocument();
+    });
+
+    it('keeps uploads local when the user cannot edit the project', () => {
+      mockProjectPermissions = {
+        permissions: { canView: true, canEdit: false, canDelete: false, canShare: false },
+        isLoading: false,
+      };
+
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        projectId: 'project-1',
+      });
+
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
+    });
+
+    it('saves assistants project chat uploads to the project when the user can edit', () => {
+      renderComponent({ endpoint: EModelEndpoint.assistants, projectId: 'project-1' });
+
+      expect(mockAttachFileProps.saveUploadsToProject).toBe(true);
+      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
     });
   });
 
@@ -127,6 +181,51 @@ describe('AttachFileChat', () => {
       mockAgentQueryData = { provider: 'Moonshot' } as Partial<Agent>;
       renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent-2' });
       expect(mockAttachFileMenuProps.endpointType).toBe(EModelEndpoint.custom);
+    });
+
+    it('falls back to agentsMap provider when fetched agent omits provider', () => {
+      mockAgentsMap = {
+        'agent-1': { provider: EModelEndpoint.openAI, model_parameters: {} } as Partial<Agent>,
+      };
+      mockAgentQueryData = {} as Partial<Agent>;
+      renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent-1' });
+      expect(mockAttachFileMenuProps.endpointType).toBe(EModelEndpoint.openAI);
+    });
+  });
+
+  describe('useResponsesApi resolution for agents', () => {
+    it('passes useResponsesApi from fetched agent model parameters', () => {
+      mockAgentQueryData = {
+        provider: EModelEndpoint.azureOpenAI,
+        model_parameters: { useResponsesApi: true },
+      } as Partial<Agent>;
+      renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent-1' });
+      expect(mockAttachFileMenuProps.useResponsesApi).toBe(true);
+    });
+
+    it('falls back to agentsMap model parameters when fetched agent omits them', () => {
+      mockAgentsMap = {
+        'agent-1': {
+          provider: EModelEndpoint.azureOpenAI,
+          model_parameters: { useResponsesApi: true },
+        } as Partial<Agent>,
+      };
+      mockAgentQueryData = { provider: EModelEndpoint.azureOpenAI } as Partial<Agent>;
+      renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent-1' });
+      expect(mockAttachFileMenuProps.useResponsesApi).toBe(true);
+    });
+
+    it('preserves an explicit conversation useResponsesApi false override', () => {
+      mockAgentQueryData = {
+        provider: EModelEndpoint.azureOpenAI,
+        model_parameters: { useResponsesApi: true },
+      } as Partial<Agent>;
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        useResponsesApi: false,
+      });
+      expect(mockAttachFileMenuProps.useResponsesApi).toBe(false);
     });
   });
 

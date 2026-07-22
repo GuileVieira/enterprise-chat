@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@phosphor-icons/react';
 import { Button, FilterInput, OGDialogTrigger, TooltipAnchor } from '@librechat/client';
 import type { ConversationTagsResponse, TConversationTag } from 'librechat-data-provider';
 import { BookmarkContext, useBookmarkContext } from '~/Providers/BookmarkContext';

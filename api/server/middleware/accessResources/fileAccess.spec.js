@@ -1,12 +1,20 @@
 const mongoose = require('mongoose');
-const { ResourceType, PrincipalType, PrincipalModel } = require('librechat-data-provider');
+const { tenantStorage, createMethods } = require('@librechat/data-schemas');
+const {
+  ResourceType,
+  PrincipalType,
+  PrincipalModel,
+  AccessRoleIds,
+} = require('librechat-data-provider');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { fileAccess } = require('./fileAccess');
-const { User, Role, AclEntry } = require('~/db/models');
+const { User, Role, AclEntry, Project } = require('~/db/models');
 const { createAgent, createFile } = require('~/models');
+const { grantPermission } = require('~/server/services/PermissionService');
 
 describe('fileAccess middleware', () => {
   let mongoServer;
+  let methods;
   let req, res, next;
   let testUser, otherUser, thirdUser;
 
@@ -14,6 +22,7 @@ describe('fileAccess middleware', () => {
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     await mongoose.connect(mongoUri);
+    methods = createMethods(mongoose);
   });
 
   afterAll(async () => {
@@ -23,6 +32,7 @@ describe('fileAccess middleware', () => {
 
   beforeEach(async () => {
     await mongoose.connection.dropDatabase();
+    await methods.seedDefaultRoles();
 
     // Create test role
     await Role.create({
@@ -42,6 +52,7 @@ describe('fileAccess middleware', () => {
       name: 'Test User',
       username: 'testuser',
       role: 'test-role',
+      tenantId: 'tenant-a',
     });
 
     otherUser = await User.create({
@@ -49,6 +60,7 @@ describe('fileAccess middleware', () => {
       name: 'Other User',
       username: 'otheruser',
       role: 'test-role',
+      tenantId: 'tenant-a',
     });
 
     thirdUser = await User.create({
@@ -56,11 +68,12 @@ describe('fileAccess middleware', () => {
       name: 'Third User',
       username: 'thirduser',
       role: 'test-role',
+      tenantId: 'tenant-b',
     });
 
     // Setup request/response objects
     req = {
-      user: { id: testUser._id.toString(), role: testUser.role },
+      user: { id: testUser._id.toString(), role: testUser.role, tenantId: testUser.tenantId },
       params: {},
     };
     res = {
@@ -115,6 +128,50 @@ describe('fileAccess middleware', () => {
       });
     });
 
+    test('should deny access when tenant does not match even if user owns the file', async () => {
+      await tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        createFile({
+          user: testUser._id.toString(),
+          file_id: 'file_owned_by_user_other_tenant',
+          filepath: '/test/file.txt',
+          filename: 'file.txt',
+          type: 'text/plain',
+          size: 100,
+          tenantId: 'tenant-a',
+        }),
+      );
+
+      req.user.tenantId = 'tenant-b';
+      req.params.file_id = 'file_owned_by_user_other_tenant';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        error: 'Forbidden',
+        message: 'Insufficient permissions to access this file',
+      });
+    });
+
+    test('should allow tenant-scoped users to access owned legacy files without tenantId', async () => {
+      await createFile({
+        user: testUser._id.toString(),
+        file_id: 'legacy_file_owned_by_user',
+        filepath: '/test/legacy.txt',
+        filename: 'legacy.txt',
+        type: 'text/plain',
+        size: 100,
+      });
+
+      req.user.tenantId = 'tenant-b';
+      req.params.file_id = 'legacy_file_owned_by_user';
+      await fileAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.fileAccess.file.file_id).toBe('legacy_file_owned_by_user');
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
     test('should return 404 when file does not exist', async () => {
       req.params.file_id = 'non_existent_file';
       await fileAccess(req, res, next);
@@ -167,8 +224,7 @@ describe('fileAccess middleware', () => {
       });
     });
 
-    test('should allow access when user is author of agent with file', async () => {
-      // Create agent owned by testUser with the file
+    test('should deny access when user authored an agent with another user file id', async () => {
       await createAgent({
         id: `agent_${Date.now()}`,
         name: 'Test Agent',
@@ -185,9 +241,8 @@ describe('fileAccess middleware', () => {
       req.params.file_id = 'shared_file_via_agent';
       await fileAccess(req, res, next);
 
-      expect(next).toHaveBeenCalled();
-      expect(req.fileAccess).toBeDefined();
-      expect(req.fileAccess.file).toBeDefined();
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
     });
 
     test('should allow access when user has VIEW permission on agent with file', async () => {
@@ -223,18 +278,153 @@ describe('fileAccess middleware', () => {
       expect(req.fileAccess).toBeDefined();
     });
 
+    test('should deny cross-tenant access even when user has VIEW permission on agent with file', async () => {
+      await tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        createFile({
+          user: otherUser._id.toString(),
+          file_id: 'cross_tenant_shared_file',
+          filepath: '/test/cross-tenant.txt',
+          filename: 'cross-tenant.txt',
+          type: 'text/plain',
+          size: 100,
+          tenantId: 'tenant-a',
+        }),
+      );
+
+      const agent = await createAgent({
+        id: `agent_cross_tenant_${Date.now()}`,
+        name: 'Cross Tenant Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: otherUser._id,
+        tool_resources: {
+          execute_code: {
+            file_ids: ['cross_tenant_shared_file'],
+          },
+        },
+      });
+
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
+      });
+
+      req.user.tenantId = 'tenant-b';
+      req.params.file_id = 'cross_tenant_shared_file';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('should not use agent VIEW to expose a file that belongs to a project', async () => {
+      const project = await Project.create({
+        projectId: 'project_agent_file',
+        name: 'Agent File Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['project_agent_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'project_agent_file',
+        filepath: '/test/project-agent.txt',
+        filename: 'project-agent.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+        tenantId: 'tenant-a',
+      });
+
+      const agent = await createAgent({
+        id: `agent_project_file_${Date.now()}`,
+        name: 'Project File Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: otherUser._id,
+        tool_resources: {
+          file_search: {
+            file_ids: ['project_agent_file'],
+          },
+        },
+      });
+
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
+      });
+
+      req.params.file_id = 'project_agent_file';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
     test('should check file in ocr tool_resources', async () => {
-      await createAgent({
+      const agent = await createAgent({
         id: `agent_ocr_${Date.now()}`,
         name: 'OCR Agent',
         provider: 'openai',
         model: 'gpt-4',
-        author: testUser._id,
+        author: otherUser._id,
         tool_resources: {
           ocr: {
             file_ids: ['shared_file_via_agent'],
           },
         },
+      });
+
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
+      });
+
+      req.params.file_id = 'shared_file_via_agent';
+      await fileAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.fileAccess).toBeDefined();
+    });
+
+    test('should check file in image_edit tool_resources', async () => {
+      const agent = await createAgent({
+        id: `agent_image_${Date.now()}`,
+        name: 'Image Edit Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: otherUser._id,
+        tool_resources: {
+          image_edit: {
+            file_ids: ['shared_file_via_agent'],
+          },
+        },
+      });
+
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
       });
 
       req.params.file_id = 'shared_file_via_agent';
@@ -278,6 +468,85 @@ describe('fileAccess middleware', () => {
     });
   });
 
+  describe('project-based file access', () => {
+    test('should allow access when the file belongs to a tenant-shared project', async () => {
+      const project = await Project.create({
+        projectId: 'project_shared_to_tenant',
+        name: 'Shared Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['project_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'project_file',
+        filepath: '/test/project.txt',
+        filename: 'project.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+      });
+
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: 'tenant-a',
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: otherUser._id,
+      });
+
+      req.params.file_id = 'project_file';
+      await fileAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.fileAccess).toBeDefined();
+      expect(req.fileAccess.file).toBeDefined();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    test('should deny access when user is outside the tenant-shared project', async () => {
+      const project = await Project.create({
+        projectId: 'project_shared_to_other_tenant',
+        name: 'Tenant A Project',
+        user: otherUser._id.toString(),
+        tenantId: 'tenant-a',
+        fileIds: ['tenant_project_file'],
+      });
+
+      await createFile({
+        user: otherUser._id.toString(),
+        file_id: 'tenant_project_file',
+        filepath: '/test/project.txt',
+        filename: 'project.txt',
+        type: 'text/plain',
+        size: 100,
+        projectId: project.projectId,
+      });
+
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: 'tenant-a',
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: otherUser._id,
+      });
+
+      req.user = {
+        id: thirdUser._id.toString(),
+        role: thirdUser.role,
+        tenantId: thirdUser.tenantId,
+      };
+      req.params.file_id = 'tenant_project_file';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+  });
+
   describe('multiple agents with same file', () => {
     /**
      * This test suite verifies that when multiple agents have the same file,
@@ -288,7 +557,7 @@ describe('fileAccess middleware', () => {
     test('should check ALL agents with file, not just first one', async () => {
       // Create a file owned by someone else
       await createFile({
-        user: otherUser._id.toString(),
+        user: thirdUser._id.toString(),
         file_id: 'multi_agent_file',
         filepath: '/test/multi.txt',
         filename: 'multi.txt',
@@ -321,7 +590,7 @@ describe('fileAccess middleware', () => {
         grantedBy: otherUser._id,
       });
 
-      // Create second agent (owned by thirdUser, but testUser has VIEW access)
+      // Create second agent (owned by the file owner, and testUser has VIEW access)
       const agent2 = await createAgent({
         id: 'agent_with_access',
         name: 'Accessible Agent',
@@ -350,9 +619,8 @@ describe('fileAccess middleware', () => {
       await fileAccess(req, res, next);
 
       /**
-       * Should succeed because testUser has access to agent2,
-       * even though they don't have access to agent1.
-       * The fix ensures all agents are checked, not just the first one.
+       * Should succeed because testUser has access to the file owner's agent,
+       * even though a non-owner agent without access is found first.
        */
       expect(next).toHaveBeenCalled();
       expect(req.fileAccess).toBeDefined();
@@ -385,12 +653,12 @@ describe('fileAccess middleware', () => {
       });
 
       // Agent 2: same file in execute_code (testUser has access)
-      await createAgent({
+      const agent2 = await createAgent({
         id: 'agent_execute_code',
         name: 'Execute Code Agent',
         provider: 'openai',
         model: 'gpt-4',
-        author: thirdUser._id,
+        author: otherUser._id,
         tool_resources: {
           execute_code: {
             file_ids: ['multi_tool_file'],
@@ -398,13 +666,23 @@ describe('fileAccess middleware', () => {
         },
       });
 
-      // Agent 3: same file in ocr (testUser also has access)
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.AGENT,
+        resourceId: agent2._id,
+        permBits: 1,
+        grantedBy: otherUser._id,
+      });
+
+      // Agent 3: same file in ocr (bad reference from a non-owner agent)
       await createAgent({
         id: 'agent_ocr',
         name: 'OCR Agent',
         provider: 'openai',
         model: 'gpt-4',
-        author: testUser._id, // testUser owns this one
+        author: testUser._id,
         tool_resources: {
           ocr: {
             file_ids: ['multi_tool_file'],
@@ -416,7 +694,7 @@ describe('fileAccess middleware', () => {
       await fileAccess(req, res, next);
 
       /**
-       * Should succeed because testUser owns agent3,
+       * Should succeed through the file owner's execute_code agent,
        * even if other agents with the file are found first.
        */
       expect(next).toHaveBeenCalled();
@@ -473,6 +751,36 @@ describe('fileAccess middleware', () => {
       });
 
       req.params.file_id = 'another_orphan_file';
+      await fileAccess(req, res, next);
+
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    test('should deny agent-based access when file has no owner', async () => {
+      await mongoose.models.File.collection.insertOne({
+        file_id: 'ownerless_file',
+        filepath: '/test/ownerless.txt',
+        filename: 'ownerless.txt',
+        type: 'text/plain',
+        bytes: 100,
+        object: 'file',
+      });
+
+      await createAgent({
+        id: `agent_ownerless_${Date.now()}`,
+        name: 'Ownerless File Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: testUser._id,
+        tool_resources: {
+          file_search: {
+            file_ids: ['ownerless_file'],
+          },
+        },
+      });
+
+      req.params.file_id = 'ownerless_file';
       await fileAccess(req, res, next);
 
       expect(next).not.toHaveBeenCalled();

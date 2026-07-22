@@ -39,18 +39,58 @@ export const useUpdateConversationMutation = (
   );
 };
 
+export const useMoveConversationToProjectMutation = (): UseMutationResult<
+  t.TUpdateConversationResponse,
+  unknown,
+  { conversationId: string; projectId: string | null },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ conversationId, projectId }) =>
+      dataService.updateConversation({ conversationId, projectId }),
+    {
+      onSuccess: (updatedConvo) => {
+        const updatedConversationId = updatedConvo.conversationId;
+        if (!updatedConversationId) {
+          return;
+        }
+
+        queryClient.setQueryData([QueryKeys.conversation, updatedConversationId], updatedConvo);
+        updateConvoInAllQueries(queryClient, updatedConversationId, () => updatedConvo);
+        // Invalidate conversation lists since project association changed
+        queryClient.invalidateQueries([QueryKeys.allConversations]);
+      },
+    },
+  );
+};
+
+export const useImprovePromptMutation = (): UseMutationResult<
+  t.TImprovePromptResponse,
+  unknown,
+  t.TImprovePromptRequest,
+  unknown
+> => {
+  return useMutation([MutationKeys.improvePrompt], (payload: t.TImprovePromptRequest) =>
+    dataService.improvePrompt(payload),
+  );
+};
+
 export const useTagConversationMutation = (
   conversationId: string,
   options?: t.updateTagsInConvoOptions,
+  enabled = true,
 ): UseMutationResult<t.TTagConversationResponse, unknown, t.TTagConversationRequest, unknown> => {
-  const query = useConversationTagsQuery();
+  const query = useConversationTagsQuery({ enabled });
   const { updateTagsInConversation } = useUpdateTagsInConvo();
   return useMutation(
     (payload: t.TTagConversationRequest) =>
       dataService.addTagToConversation(conversationId, payload),
     {
       onSuccess: (updatedTags, ...rest) => {
-        query.refetch();
+        if (enabled) {
+          query.refetch();
+        }
         updateTagsInConversation(conversationId, updatedTags);
         options?.onSuccess?.(updatedTags, ...rest);
       },
@@ -166,7 +206,10 @@ export const useCreateSharedLinkMutation = (
     },
     {
       onSuccess: (_data: t.TSharedLinkResponse, vars, context) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, _data.conversationId], _data);
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, _data.conversationId, vars.targetMessageId ?? null],
+          _data,
+        );
 
         onSuccess?.(_data, vars, context);
       },
@@ -175,22 +218,45 @@ export const useCreateSharedLinkMutation = (
   );
 };
 
+export const useCreateTenantSharedLinkMutation = (
+  options?: t.CreateTenantSharedLinkOptions,
+): UseMutationResult<t.TSharedLinkResponse, unknown, t.TCreateTenantShareLinkRequest, unknown> => {
+  const { onSuccess, ..._options } = options || {};
+  return useMutation(
+    ({ conversationId, targetMessageId }) => {
+      if (!conversationId) {
+        throw new Error('Conversation ID is required');
+      }
+      return dataService.createTenantSharedLink(conversationId, targetMessageId);
+    },
+    {
+      onSuccess: (data, vars, context) => {
+        onSuccess?.(data, vars, context);
+      },
+      ..._options,
+    },
+  );
+};
+
 export const useUpdateSharedLinkMutation = (
-  options?: t.MutationOptions<t.TUpdateShareLinkRequest, { shareId: string }>,
-): UseMutationResult<t.TSharedLinkResponse, unknown, { shareId: string }, unknown> => {
+  options?: t.MutationOptions<t.TUpdateShareLinkRequest, t.TUpdateShareLinkRequest>,
+): UseMutationResult<t.TSharedLinkResponse, unknown, t.TUpdateShareLinkRequest, unknown> => {
   const queryClient = useQueryClient();
 
   const { onSuccess, ..._options } = options || {};
   return useMutation(
-    ({ shareId }) => {
+    ({ shareId, targetMessageId }) => {
       if (!shareId) {
         throw new Error('Share ID is required');
       }
-      return dataService.updateSharedLink(shareId);
+      return dataService.updateSharedLink(shareId, targetMessageId);
     },
     {
       onSuccess: (_data: t.TSharedLinkResponse, vars, context) => {
-        queryClient.setQueryData([QueryKeys.sharedLinks, _data.conversationId], _data);
+        queryClient.setQueryData(
+          [QueryKeys.sharedLinks, _data.conversationId, _data.targetMessageId ?? null],
+          _data,
+        );
 
         onSuccess?.(_data, vars, context);
       },
@@ -610,6 +676,40 @@ export const useForkConvoMutation = (
     },
     ..._options,
   });
+};
+
+export const useForkTenantShareMutation = (
+  options?: t.ForkTenantShareOptions,
+): UseMutationResult<t.TForkConvoResponse, unknown, t.TForkTenantShareRequest, unknown> => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ..._options } = options || {};
+
+  return useMutation(
+    (payload: t.TForkTenantShareRequest) => dataService.forkTenantSharedLink(payload),
+    {
+      onSuccess: (data, vars, context) => {
+        const forkedConversation = data.conversation;
+        const forkedConversationId = forkedConversation.conversationId;
+        if (!forkedConversationId) {
+          return;
+        }
+
+        queryClient.setQueryData(
+          [QueryKeys.conversation, forkedConversationId],
+          forkedConversation,
+        );
+        addConvoToAllQueries(queryClient, forkedConversation);
+        queryClient.setQueryData([QueryKeys.messages, forkedConversationId], data.messages);
+        queryClient.invalidateQueries({
+          queryKey: [QueryKeys.allConversations],
+          refetchPage: (_, index) => index === 0,
+        });
+
+        onSuccess?.(data, vars, context);
+      },
+      ..._options,
+    },
+  );
 };
 
 export const useUploadConversationsMutation = (
@@ -1049,4 +1149,321 @@ export const useAcceptTermsMutation = (
     onError: options?.onError,
     onMutate: options?.onMutate,
   });
+};
+
+/* Projects */
+export const useCreateProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((payload) => dataService.createProject(payload), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
+    },
+  });
+};
+
+export const useUpdateProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  {
+    projectId: string;
+    payload: Partial<
+      Omit<t.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>
+    >;
+  },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(({ projectId, payload }) => dataService.updateProject(projectId, payload), {
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
+      queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+    },
+  });
+};
+
+export const useDeleteProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  string,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((projectId: string) => dataService.deleteProject(projectId), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.projects]);
+    },
+  });
+};
+
+export const useArchiveProjectMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  { projectId: string; isArchived: boolean },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, isArchived }) => dataService.archiveProject(projectId, isArchived),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useUpdateProjectMetaAdsMutation = (): UseMutationResult<
+  t.TProject,
+  unknown,
+  { projectId: string; metaAds: t.TProject['metaAds']; metaAccessToken?: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, metaAds, metaAccessToken }) =>
+      dataService.updateProjectMetaAdsSettings(projectId, metaAds, metaAccessToken),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projects]);
+        queryClient.invalidateQueries([QueryKeys.project, vars.projectId]);
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useUpdateProjectMetaAdsTenantTokenMutation = (): UseMutationResult<
+  t.ProjectMetaAdsTenantTokenResponse,
+  unknown,
+  { projectId: string; metaAccessToken: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, metaAccessToken }) =>
+      dataService.updateProjectMetaAdsTenantToken(projectId, metaAccessToken),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useRunProjectMetaAdsMutation = (): UseMutationResult<
+  t.ProjectMetaAdsRunResponse,
+  unknown,
+  string,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation((projectId) => dataService.runProjectMetaAdsAnalysis(projectId), {
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries([QueryKeys.projectMetaAds, projectId]);
+    },
+  });
+};
+
+const mergeProjectMetaAdsDiaryEntry = (
+  current: t.ProjectTrafficDiaryResponse | undefined,
+  entry: t.ProjectTrafficDiaryEntry,
+): t.ProjectTrafficDiaryResponse => {
+  const entries = current?.entries ?? [];
+  const nextEntries = entries.some((item) => item._id === entry._id)
+    ? entries.map((item) => (item._id === entry._id ? entry : item))
+    : [entry, ...entries];
+  return { entries: nextEntries };
+};
+
+export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  {
+    projectId: string;
+    date: string;
+    answers: t.ProjectTrafficDiaryAnswer[];
+    kind?: t.ProjectTrafficDiaryKind;
+  },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, date, answers, kind }) =>
+      dataService.saveProjectMetaAdsDiary(projectId, date, answers, kind),
+    {
+      onSuccess: (entry, vars) => {
+        queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
+          (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
+        );
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          vars.kind ?? 'manager',
+        ]);
+      },
+    },
+  );
+};
+
+export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.completeProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (entry, vars) => {
+        queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
+          (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
+        );
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          entry.kind ?? 'manager',
+        ]);
+      },
+    },
+  );
+};
+
+export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.reopenProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (entry, vars) => {
+        queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
+          (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
+        );
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          entry.kind ?? 'manager',
+        ]);
+      },
+    },
+  );
+};
+
+export const useDeleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  void,
+  unknown,
+  { projectId: string; entryId: string; kind?: t.ProjectTrafficDiaryKind },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.deleteProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
+          (current) => ({
+            entries: (current?.entries ?? []).filter((entry) => entry._id !== vars.entryId),
+          }),
+        );
+        queryClient.invalidateQueries([
+          QueryKeys.projectMetaAds,
+          vars.projectId,
+          'diary',
+          vars.kind ?? 'manager',
+        ]);
+      },
+    },
+  );
+};
+
+export const useUpdateProjectMetaAdsBudgetMutation = (): UseMutationResult<
+  t.ProjectMetaAdsManualBudgetResponse,
+  unknown,
+  { projectId: string; payload: t.ProjectMetaAdsManualBudgetPayload },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, payload }) => dataService.updateProjectMetaAdsBudget(projectId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useDuplicateProjectMetaAdsEntityMutation = (): UseMutationResult<
+  t.ProjectMetaAdsDuplicateResponse,
+  unknown,
+  { projectId: string; payload: t.ProjectMetaAdsDuplicatePayload },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, payload }) => dataService.duplicateProjectMetaAdsEntity(projectId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useUpdateProjectMetaAdsEntityStatusMutation = (): UseMutationResult<
+  t.ProjectMetaAdsEntityStatusResponse,
+  unknown,
+  {
+    projectId: string;
+    entityLevel: t.ProjectMetaAdsEntityStatusLevel;
+    entityId: string;
+    payload: t.ProjectMetaAdsEntityStatusPayload;
+  },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entityLevel, entityId, payload }) =>
+      dataService.updateProjectMetaAdsEntityStatus(projectId, entityLevel, entityId, payload),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
+};
+
+export const useApplyProjectMetaAdsRecommendationMutation = (): UseMutationResult<
+  t.ProjectMetaAdsApplyResponse,
+  unknown,
+  { projectId: string; recommendationId: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, recommendationId }) =>
+      dataService.applyProjectMetaAdsRecommendation(projectId, recommendationId),
+    {
+      onSuccess: (_, vars) => {
+        queryClient.invalidateQueries([QueryKeys.projectMetaAds, vars.projectId]);
+      },
+    },
+  );
 };

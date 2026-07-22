@@ -1,0 +1,247 @@
+{
+  "api/server/controllers/agents/client.js": {
+    "mtime": 1783393708.1621146,
+    "ast_hash": "92e239f63f31e97e7cabb77bd599273e",
+    "semantic_hash": "92e239f63f31e97e7cabb77bd599273e"
+  },
+  "api/server/controllers/agents/request.js": {
+    "mtime": 1783393708.1553888,
+    "ast_hash": "adb9593316e89271a06e1e8df52b4f29",
+    "semantic_hash": "adb9593316e89271a06e1e8df52b4f29"
+  },
+  "api/server/controllers/agents/responses.js": {
+    "mtime": 1783393708.148986,
+    "ast_hash": "0578347995e5e8b85e085f47822f41f6",
+    "semantic_hash": "0578347995e5e8b85e085f47822f41f6"
+  },
+  "api/server/controllers/agents/v1.js": {
+    "mtime": 1783393708.1425233,
+    "ast_hash": "21860c8001e98e0d86335a94f990a5a7",
+    "semantic_hash": "21860c8001e98e0d86335a94f990a5a7"
+  },
+  "api/server/middleware/__tests__/validateMessageReq.spec.js": {
+    "mtime": 1783393708.1365006,
+    "ast_hash": "fc50a7d5c62f6fa4dace5619377d2c7f",
+    "semantic_hash": "fc50a7d5c62f6fa4dace5619377d2c7f"
+  },
+  "api/server/middleware/validateMessageReq.js": {
+    "mtime": 1783393708.130624,
+    "ast_hash": "89255519fe89b356f9507df8ba585edb",
+    "semantic_hash": "89255519fe89b356f9507df8ba585edb"
+  },
+  "api/server/routes/__tests__/messages-delete.spec.js": {
+    "mtime": 1783393708.0987134,
+    "ast_hash": "0730350d401acceaf4783f74078368f6",
+    "semantic_hash": "0730350d401acceaf4783f74078368f6"
+  },
+  "api/server/routes/agents/chat.js": {
+    "mtime": 1783393708.1233413,
+    "ast_hash": "bbb530f7f54ca1c7bf113b706a132cb5",
+    "semantic_hash": "bbb530f7f54ca1c7bf113b706a132cb5"
+  },
+  "api/server/routes/agents/index.js": {
+    "mtime": 1783393708.1048667,
+    "ast_hash": "3871603a28f0ed32f56a2f7561c05e64",
+    "semantic_hash": "3871603a28f0ed32f56a2f7561c05e64"
+  },
+  "api/server/routes/agents/responses.js": {
+    "mtime": 1783393708.1166282,
+    "ast_hash": "17ff6620f6bece4e1b55d71d3451ad6c",
+    "semantic_hash": "17ff6620f6bece4e1b55d71d3451ad6c"
+  },
+  "api/server/routes/agents/v1.js": {
+    "mtime": 1783393708.1107788,
+    "ast_hash": "a97c78ccc91f03cac9ad0cc7135c21d2",
+    "semantic_hash": "a97c78ccc91f03cac9ad0cc7135c21d2"
+  },
+  "api/server/routes/messages.js": {
+    "mtime": 1783393708.0923743,
+    "ast_hash": "d0fbd7b80ed1392277a64c74a2413565",
+    "semantic_hash": "d0fbd7b80ed1392277a64c74a2413565"
+  },
+  "api/server/services/Threads/processMessages.spec.js": {
+    "mtime": 1783393708.168434,
+    "ast_hash": "1558e57ce047b811399d34f93554dc88",
+    "semantic_hash": "1558e57ce047b811399d34f93554dc88"
+  },
+  "api/server/utils/import/importConversations.js": {
+    "mtime": 1783393708.1743858,
+    "ast_hash": "2a865a6a34fd86e2474a31f7a3a149d3",
+    "semantic_hash": "2a865a6a34fd86e2474a31f7a3a149d3"
+  },
+  "client/src/Providers/ChatContext.tsx": {
+    "mtime": 1783393708.2671378,
+    "ast_hash": "b95242103580fd9f88be93a95f6da17c",
+    "semantic_hash": "b95242103580fd9f88be93a95f6da17c"
+  },
+  "client/src/Providers/ChatFormContext.tsx": {
+    "mtime": 1783393708.275522,
+    "ast_hash": "f8e0d9bd2758f4a6462300826f7c3823",
+    "semantic_hash": "f8e0d9bd2758f4a6462300826f7c3823"
+  },
+  "client/src/Providers/MessagesViewContext.tsx": {
+    "mtime": 1783393708.2839143,
+    "ast_hash": "e20f3748783c0cc9f1dc154efe630076",
+    "semantic_hash": "e20f3748783c0cc9f1dc154efe630076"
+  },
+  "client/src/components/Chat/Input/ChatForm.tsx": {
+    "mtime": 1783393708.3601878,
+    "ast_hash": "f2f4497b89f7754359ca8d24eb9e6400",
+    "semantic_hash": "f2f4497b89f7754359ca8d24eb9e6400"
+  },
+  "client/src/components/Chat/Input/Files/AttachFileChat.tsx": {
+    "mtime": 1783393708.37809,
+    "ast_hash": "62e05af6393b914a2b2480c1562c8b37",
+    "semantic_hash": "62e05af6393b914a2b2480c1562c8b37"
+  },
+  "client/src/components/Chat/Input/ProjectPromptSnippets.tsx": {
+    "mtime": 1783393708.3851585,
+    "ast_hash": "29c6f344974a1417b67688dc866ca77d",
+    "semantic_hash": "29c6f344974a1417b67688dc866ca77d"
+  },
+  "client/src/components/Chat/Input/SendButton.tsx": {
+    "mtime": 1783393708.368523,
+    "ast_hash": "f90fe01cc7ca0d707c7ca136260b5b5d",
+    "semantic_hash": "f90fe01cc7ca0d707c7ca136260b5b5d"
+  },
+  "client/src/components/Chat/Messages/Content/ContentParts.tsx": {
+    "mtime": 1783393708.4107087,
+    "ast_hash": "ef7f189eea8208fbd8904433c359fa52",
+    "semantic_hash": "ef7f189eea8208fbd8904433c359fa52"
+  },
+  "client/src/components/Chat/Messages/Content/MessageContent.tsx": {
+    "mtime": 1783393708.404469,
+    "ast_hash": "b6a4a9fc19cf965e0e3229164bd985ac",
+    "semantic_hash": "b6a4a9fc19cf965e0e3229164bd985ac"
+  },
+  "client/src/components/Chat/Messages/Content/Parts/AgentUpdate.tsx": {
+    "mtime": 1783393708.4231508,
+    "ast_hash": "71f7ecc0bb76af49765722043681550a",
+    "semantic_hash": "71f7ecc0bb76af49765722043681550a"
+  },
+  "client/src/components/Chat/Messages/Content/ToolCall.tsx": {
+    "mtime": 1783393708.4172816,
+    "ast_hash": "99f80b6ad22d32f0060ee4b3ab0848fe",
+    "semantic_hash": "99f80b6ad22d32f0060ee4b3ab0848fe"
+  },
+  "client/src/components/Chat/Messages/MessagesView.tsx": {
+    "mtime": 1783393708.3911848,
+    "ast_hash": "2810e1a781975453b806e4efc19bdc6a",
+    "semantic_hash": "2810e1a781975453b806e4efc19bdc6a"
+  },
+  "client/src/components/Chat/Messages/MultiMessage.tsx": {
+    "mtime": 1783393708.3975801,
+    "ast_hash": "70e3691199e0d215808cff6bc59bf13a",
+    "semantic_hash": "70e3691199e0d215808cff6bc59bf13a"
+  },
+  "client/src/data-provider/Messages/mutations.ts": {
+    "mtime": 1783393708.3409104,
+    "ast_hash": "3835a83dbfd78faae5607189fdd08d65",
+    "semantic_hash": "3835a83dbfd78faae5607189fdd08d65"
+  },
+  "client/src/data-provider/Messages/queries.ts": {
+    "mtime": 1783393708.3344238,
+    "ast_hash": "c1c06ba52fb4af7a171670d03dc1938f",
+    "semantic_hash": "c1c06ba52fb4af7a171670d03dc1938f"
+  },
+  "client/src/data-provider/mutations.ts": {
+    "mtime": 1783393708.3541067,
+    "ast_hash": "9b547a461f1e53ef63d00e71de187dac",
+    "semantic_hash": "9b547a461f1e53ef63d00e71de187dac"
+  },
+  "client/src/data-provider/queries.ts": {
+    "mtime": 1783393708.3478065,
+    "ast_hash": "5f8e4d91b7b89b2ad70fee4f7a87a7a4",
+    "semantic_hash": "5f8e4d91b7b89b2ad70fee4f7a87a7a4"
+  },
+  "client/src/hooks/Chat/useAddedResponse.ts": {
+    "mtime": 1783393708.3070877,
+    "ast_hash": "849bdd90953af75b7a4339f6909e320d",
+    "semantic_hash": "849bdd90953af75b7a4339f6909e320d"
+  },
+  "client/src/hooks/Chat/useChatFunctions.ts": {
+    "mtime": 1783393708.2919736,
+    "ast_hash": "5f4ee7a8df29fd9a9610caf0b4b09a04",
+    "semantic_hash": "5f4ee7a8df29fd9a9610caf0b4b09a04"
+  },
+  "client/src/hooks/Chat/useChatHelpers.ts": {
+    "mtime": 1783393708.300767,
+    "ast_hash": "787a8bb055f2095e290dfa5fd928d7fb",
+    "semantic_hash": "787a8bb055f2095e290dfa5fd928d7fb"
+  },
+  "client/src/hooks/Chat/useFocusChatEffect.ts": {
+    "mtime": 1783393708.3286602,
+    "ast_hash": "5e34c278155565f0ace5a1e021b69403",
+    "semantic_hash": "5e34c278155565f0ace5a1e021b69403"
+  },
+  "client/src/hooks/Chat/useGetAddedConvo.ts": {
+    "mtime": 1783393708.3141642,
+    "ast_hash": "4d7ca7cc6ac28e385f371c8804412038",
+    "semantic_hash": "4d7ca7cc6ac28e385f371c8804412038"
+  },
+  "client/src/hooks/Chat/useIdChangeEffect.ts": {
+    "mtime": 1783393708.321347,
+    "ast_hash": "c8e377a591c3d5736409358b7f3f9789",
+    "semantic_hash": "c8e377a591c3d5736409358b7f3f9789"
+  },
+  "client/src/routes/ChatRoute.tsx": {
+    "mtime": 1783393708.2597237,
+    "ast_hash": "f1e3f6feae1aa597cf99024ef9b10be9",
+    "semantic_hash": "f1e3f6feae1aa597cf99024ef9b10be9"
+  },
+  "packages/data-provider/src/api-endpoints.ts": {
+    "mtime": 1783393708.2445483,
+    "ast_hash": "20946427d8832887ffbd3849c5e10c4c",
+    "semantic_hash": "20946427d8832887ffbd3849c5e10c4c"
+  },
+  "packages/data-provider/src/data-service.ts": {
+    "mtime": 1783393708.2527106,
+    "ast_hash": "07bf94ac4197c2f57a2522b0c43db790",
+    "semantic_hash": "07bf94ac4197c2f57a2522b0c43db790"
+  },
+  "packages/data-provider/src/messages.ts": {
+    "mtime": 1783393708.2356758,
+    "ast_hash": "db1de6f29727e94f09ebbcbf8d464c33",
+    "semantic_hash": "db1de6f29727e94f09ebbcbf8d464c33"
+  },
+  "packages/data-schemas/src/methods/conversation.spec.ts": {
+    "mtime": 1783393708.214343,
+    "ast_hash": "7c8333015c2cc20f612dbdca6f19b2bd",
+    "semantic_hash": "7c8333015c2cc20f612dbdca6f19b2bd"
+  },
+  "packages/data-schemas/src/methods/conversation.ts": {
+    "mtime": 1783393708.207581,
+    "ast_hash": "af1d0c03b3389a874da1db981b2a2d89",
+    "semantic_hash": "af1d0c03b3389a874da1db981b2a2d89"
+  },
+  "packages/data-schemas/src/methods/message.spec.ts": {
+    "mtime": 1783393708.20164,
+    "ast_hash": "55f001424ae6e573adb3bc59308e13a3",
+    "semantic_hash": "55f001424ae6e573adb3bc59308e13a3"
+  },
+  "packages/data-schemas/src/methods/message.ts": {
+    "mtime": 1783393708.1961043,
+    "ast_hash": "8b85cf697b6a8daf0014152045467b4c",
+    "semantic_hash": "8b85cf697b6a8daf0014152045467b4c"
+  },
+  "packages/data-schemas/src/models/message.ts": {
+    "mtime": 1783393708.219953,
+    "ast_hash": "447490954e2607c7db59b86b899ba9ab",
+    "semantic_hash": "447490954e2607c7db59b86b899ba9ab"
+  },
+  "packages/data-schemas/src/schema/conversationTag.ts": {
+    "mtime": 1783393708.1875827,
+    "ast_hash": "de42d73e9f9de88b13b39763d1a9f1bb",
+    "semantic_hash": "de42d73e9f9de88b13b39763d1a9f1bb"
+  },
+  "packages/data-schemas/src/schema/message.ts": {
+    "mtime": 1783393708.1815062,
+    "ast_hash": "de0b98438810b7514bde789fd214d276",
+    "semantic_hash": "de0b98438810b7514bde789fd214d276"
+  },
+  "packages/data-schemas/src/types/message.ts": {
+    "mtime": 1783393708.226345,
+    "ast_hash": "c79e828ff5afbe77e87f40d43bb8bbe9",
+    "semantic_hash": "c79e828ff5afbe77e87f40d43bb8bbe9"
+  }
+}

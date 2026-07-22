@@ -1,6 +1,4 @@
-import { Tools } from 'librechat-data-provider';
 import type { ExtendedFile } from '~/common';
-import { useVerifyAgentToolAuth } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import Action from './Action';
 import Files from './Files';
@@ -13,7 +11,6 @@ export default function CodeForm({
   files?: [string, ExtendedFile][];
 }) {
   const localize = useLocalize();
-  const { data } = useVerifyAgentToolAuth({ toolId: Tools.execute_code });
 
   return (
     <div className="w-full">
@@ -23,14 +20,12 @@ export default function CodeForm({
             <span className="text-token-text-primary block text-sm font-medium">
               {localize('com_agents_code_interpreter_title')}
             </span>
-            <span className="text-xs text-text-secondary">
-              {localize('com_agents_by_librechat')}
-            </span>
+            <span className="text-xs text-text-secondary">{localize('com_agents_by_brand')}</span>
           </div>
         </div>
       </div>
       <div className="flex flex-col items-start gap-2">
-        <Action authType={data?.message} isToolAuthenticated={data?.authenticated} />
+        <Action />
         <Files agent_id={agent_id} files={files} />
       </div>
     </div>

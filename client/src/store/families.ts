@@ -14,6 +14,7 @@ import { LocalStorageKeys, isEphemeralAgentId, Constants } from 'librechat-data-
 import type {
   EModelEndpoint,
   TConversation,
+  THiddenPromptContext,
   TSubmission,
   TMessage,
   TPreset,
@@ -285,6 +286,11 @@ const activePromptByIndex = atomFamily<string | undefined, string | number | nul
   default: undefined,
 });
 
+const activeHiddenPromptByIndex = atomFamily<THiddenPromptContext | null, string | number | null>({
+  key: 'activeHiddenPromptByIndex',
+  default: null,
+});
+
 const showMentionPopoverFamily = atomFamily<boolean, string | number | null>({
   key: 'showMentionPopoverByIndex',
   default: false,
@@ -298,6 +304,25 @@ const showPlusPopoverFamily = atomFamily<boolean, string | number | null>({
 const showPromptsPopoverFamily = atomFamily<boolean, string | number | null>({
   key: 'showPromptsPopoverByIndex',
   default: false,
+});
+
+const showSkillsPopoverFamily = atomFamily<boolean, string | number | null>({
+  key: 'showSkillsPopoverByIndex',
+  default: false,
+});
+
+/**
+ * Per-conversation queue of skill names the user invoked manually via the
+ * `$` popover for the next submission. Structured channel that the submit
+ * pipeline (`useChatFunctions.ask`) drains and pins onto the user message's
+ * `manualSkills` field (also echoed at the top of the payload for the
+ * runtime resolver), then resets to `[]`. Compose-time chips above the
+ * textarea read this atom directly so users see (and can dismiss) their
+ * current selection before hitting send.
+ */
+const pendingManualSkillsByConvoId = atomFamily<string[], string>({
+  key: 'pendingManualSkillsByConvoId',
+  default: [],
 });
 
 const globalAudioURLFamily = atomFamily<string | null, string | number | null>({
@@ -494,8 +519,11 @@ export default {
   globalAudioFetchingFamily,
   showPlusPopoverFamily,
   activePromptByIndex,
+  activeHiddenPromptByIndex,
   useClearSubmissionState,
   useClearLatestMessages,
   showPromptsPopoverFamily,
+  showSkillsPopoverFamily,
+  pendingManualSkillsByConvoId,
   updateConversationSelector,
 };

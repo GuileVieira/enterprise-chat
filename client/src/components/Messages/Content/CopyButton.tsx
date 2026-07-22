@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Check } from 'lucide-react';
+import { Check, Copy } from '@phosphor-icons/react';
 import { TooltipAnchor } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 import cn from '~/utils/cn';

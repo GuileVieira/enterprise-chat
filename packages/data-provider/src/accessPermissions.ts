@@ -16,6 +16,7 @@ import { z } from 'zod';
 export enum PrincipalType {
   USER = 'user',
   GROUP = 'group',
+  TENANT = 'tenant',
   PUBLIC = 'public',
   ROLE = 'role',
 }
@@ -44,9 +45,11 @@ export type TAccessLevel = 'none' | 'viewer' | 'editor' | 'owner';
  */
 export enum ResourceType {
   AGENT = 'agent',
+  PROJECT = 'project',
   PROMPTGROUP = 'promptGroup',
   MCPSERVER = 'mcpServer',
   REMOTE_AGENT = 'remoteAgent',
+  SKILL = 'skill',
 }
 
 /**
@@ -70,6 +73,9 @@ export enum AccessRoleIds {
   AGENT_VIEWER = 'agent_viewer',
   AGENT_EDITOR = 'agent_editor',
   AGENT_OWNER = 'agent_owner',
+  PROJECT_VIEWER = 'project_viewer',
+  PROJECT_EDITOR = 'project_editor',
+  PROJECT_OWNER = 'project_owner',
   PROMPTGROUP_VIEWER = 'promptGroup_viewer',
   PROMPTGROUP_EDITOR = 'promptGroup_editor',
   PROMPTGROUP_OWNER = 'promptGroup_owner',
@@ -79,6 +85,9 @@ export enum AccessRoleIds {
   REMOTE_AGENT_VIEWER = 'remoteAgent_viewer',
   REMOTE_AGENT_EDITOR = 'remoteAgent_editor',
   REMOTE_AGENT_OWNER = 'remoteAgent_owner',
+  SKILL_VIEWER = 'skill_viewer',
+  SKILL_EDITOR = 'skill_editor',
+  SKILL_OWNER = 'skill_owner',
 }
 
 // ===== ZOD SCHEMAS =====
@@ -88,7 +97,7 @@ export enum AccessRoleIds {
  */
 export const principalSchema = z.object({
   type: z.nativeEnum(PrincipalType),
-  id: z.string().optional(), // undefined for 'public' type, role name for 'role' type
+  id: z.string().optional(), // undefined for 'public' type, role name for 'role' type, tenantId for 'tenant'
   name: z.string().optional(),
   email: z.string().optional(), // for user and group types
   source: z.enum(['local', 'entra']).optional(),
@@ -314,19 +323,25 @@ export function permBitsToAccessLevel(permBits: number): TAccessLevel {
 export function accessRoleToPermBits(accessRoleId: string): number {
   switch (accessRoleId) {
     case AccessRoleIds.AGENT_VIEWER:
+    case AccessRoleIds.PROJECT_VIEWER:
     case AccessRoleIds.PROMPTGROUP_VIEWER:
     case AccessRoleIds.MCPSERVER_VIEWER:
     case AccessRoleIds.REMOTE_AGENT_VIEWER:
+    case AccessRoleIds.SKILL_VIEWER:
       return PermissionBits.VIEW;
     case AccessRoleIds.AGENT_EDITOR:
+    case AccessRoleIds.PROJECT_EDITOR:
     case AccessRoleIds.PROMPTGROUP_EDITOR:
     case AccessRoleIds.MCPSERVER_EDITOR:
     case AccessRoleIds.REMOTE_AGENT_EDITOR:
+    case AccessRoleIds.SKILL_EDITOR:
       return PermissionBits.VIEW | PermissionBits.EDIT;
     case AccessRoleIds.AGENT_OWNER:
+    case AccessRoleIds.PROJECT_OWNER:
     case AccessRoleIds.PROMPTGROUP_OWNER:
     case AccessRoleIds.MCPSERVER_OWNER:
     case AccessRoleIds.REMOTE_AGENT_OWNER:
+    case AccessRoleIds.SKILL_OWNER:
       return (
         PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE
       );

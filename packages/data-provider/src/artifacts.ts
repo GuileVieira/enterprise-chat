@@ -14,7 +14,7 @@ export function cn(...inputs: ClassValue[]) {
 `;
 export const accordian = `import * as React from "react"
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
-import { ChevronDown } from "lucide-react"
+import { CaretDown } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -46,7 +46,7 @@ const AccordionTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      <CaretDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))
@@ -360,7 +360,7 @@ export { Badge, badgeVariants }
 `;
 export const breadcrumb = `import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { ChevronRight, MoreHorizontal } from "lucide-react"
+import { CaretRight, DotsThree } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -443,7 +443,7 @@ const BreadcrumbSeparator = ({
     className={cn("[&>svg]:size-3.5", className)}
     {...props}
   >
-    {children ?? <ChevronRight />}
+    {children ?? <CaretRight />}
   </li>
 )
 BreadcrumbSeparator.displayName = "BreadcrumbSeparator"
@@ -458,7 +458,7 @@ const BreadcrumbEllipsis = ({
     className={cn("flex h-9 w-9 items-center justify-center", className)}
     {...props}
   >
-    <MoreHorizontal className="h-4 w-4" />
+    <DotsThree className="h-4 w-4" />
     <span className="sr-only">More</span>
   </span>
 )
@@ -533,7 +533,7 @@ Button.displayName = "Button"
 export { Button, buttonVariants }
 `;
 export const calendar = `import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { CaretLeft, CaretRight } from "@phosphor-icons/react"
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "../../lib/utils"
@@ -586,8 +586,8 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: ({ ...props }) => <CaretLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <CaretRight className="h-4 w-4" />,
       }}
       {...props}
     />
@@ -682,7 +682,7 @@ export const carousel = `import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 import { Button } from "./button"
@@ -942,7 +942,7 @@ export {
 `;
 export const checkbox = `import * as React from "react"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
-import { Check } from "lucide-react"
+import { Check } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -983,7 +983,7 @@ export { Collapsible, CollapsibleTrigger, CollapsibleContent }
 `;
 export const dialog = `import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import { X } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -1223,7 +1223,7 @@ export {
 `;
 export const dropdownMenu = `import * as React from "react"
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
-import { Check, ChevronRight, Circle } from "lucide-react"
+import { Check, CaretRight, Circle } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -1255,7 +1255,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
+    <CaretRight className="ml-auto h-4 w-4" />
   </DropdownMenuPrimitive.SubTrigger>
 ))
 DropdownMenuSubTrigger.displayName =
@@ -1503,7 +1503,7 @@ export { Label }
 export const menuBar = `
 import * as React from "react"
 import * as MenubarPrimitive from "@radix-ui/react-menubar"
-import { Check, ChevronRight, Circle } from "lucide-react"
+import { Check, CaretRight, Circle } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -1563,7 +1563,7 @@ const MenubarSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ChevronRight className="ml-auto h-4 w-4" />
+    <CaretRight className="ml-auto h-4 w-4" />
   </MenubarPrimitive.SubTrigger>
 ))
 MenubarSubTrigger.displayName = MenubarPrimitive.SubTrigger.displayName
@@ -1740,7 +1740,7 @@ export {
 export const navigationMenu = `import * as React from "react"
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"
 import { cva } from "class-variance-authority"
-import { ChevronDown } from "lucide-react"
+import { CaretDown } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -1793,7 +1793,7 @@ const NavigationMenuTrigger = React.forwardRef<
     {...props}
   >
     {children}{""}
-    <ChevronDown
+    <CaretDown
       className="relative top-[1px] ml-1 h-3 w-3 transition duration-200 group-data-[state=open]:rotate-180"
       aria-hidden="true"
     />
@@ -1868,7 +1868,7 @@ export {
 
 `;
 export const pagination = `import * as React from "react"
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
+import { CaretLeft, CaretRight, DotsThree } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 import { ButtonProps, buttonVariants } from "./button"
@@ -1938,7 +1938,7 @@ const PaginationPrevious = ({
     className={cn("gap-1 pl-2.5", className)}
     {...props}
   >
-    <ChevronLeft className="h-4 w-4" />
+    <CaretLeft className="h-4 w-4" />
     <span>Previous</span>
   </PaginationLink>
 )
@@ -1955,7 +1955,7 @@ const PaginationNext = ({
     {...props}
   >
     <span>Next</span>
-    <ChevronRight className="h-4 w-4" />
+    <CaretRight className="h-4 w-4" />
   </PaginationLink>
 )
 PaginationNext.displayName = "PaginationNext"
@@ -1969,7 +1969,7 @@ const PaginationEllipsis = ({
     className={cn("flex h-9 w-9 items-center justify-center", className)}
     {...props}
   >
-    <MoreHorizontal className="h-4 w-4" />
+    <DotsThree className="h-4 w-4" />
     <span className="sr-only">More pages</span>
   </span>
 )
@@ -2046,7 +2046,7 @@ export { Progress }
 `;
 export const radioGroup = `import * as React from "react"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
-import { Circle } from "lucide-react"
+import { Circle } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -2090,7 +2090,7 @@ export { RadioGroup, RadioGroupItem }
 `;
 export const select = `import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { Check, ChevronDown, ChevronUp } from "lucide-react"
+import { Check, CaretDown, CaretUp } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 
@@ -2114,7 +2114,7 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
+      <CaretDown className="h-4 w-4 opacity-50" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -2132,7 +2132,7 @@ const SelectScrollUpButton = React.forwardRef<
     )}
     {...props}
   >
-    <ChevronUp className="h-4 w-4" />
+    <CaretUp className="h-4 w-4" />
   </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
@@ -2149,7 +2149,7 @@ const SelectScrollDownButton = React.forwardRef<
     )}
     {...props}
   >
-    <ChevronDown className="h-4 w-4" />
+    <CaretDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
 ))
 SelectScrollDownButton.displayName =
@@ -2555,7 +2555,7 @@ export { Textarea }
 export const toast = `import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { X } from "@phosphor-icons/react"
 
 import { cn } from "../../lib/utils"
 

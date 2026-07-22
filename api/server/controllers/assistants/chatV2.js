@@ -32,6 +32,7 @@ const validateAuthor = require('~/server/middleware/assistants/validateAuthor');
 const { createRun, StreamRunManager } = require('~/server/services/Runs');
 const { addTitle } = require('~/server/services/Endpoints/assistants');
 const { createRunBody } = require('~/server/services/createRunBody');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const {
   getConvo,
   getMultiplier,
@@ -62,6 +63,7 @@ const chatV2 = async (req, res) => {
     endpoint,
     files = [],
     promptPrefix,
+    hiddenPromptContext,
     assistant_id,
     instructions,
     endpointOption,
@@ -90,6 +92,10 @@ const chatV2 = async (req, res) => {
   let attachedFileIds = new Set();
   /** @type {TMessage | null} */
   let requestMessage = null;
+  const hiddenPromptContent =
+    typeof hiddenPromptContext?.content === 'string' ? hiddenPromptContext.content.trim() : '';
+  const runPromptPrefix =
+    [hiddenPromptContent, promptPrefix].filter(Boolean).join('\n\n') || undefined;
 
   const userMessageId = v4();
   const responseMessageId = v4();
@@ -154,7 +160,10 @@ const chatV2 = async (req, res) => {
       // TODO: make promptBuffer a config option; buffer for titles, needs buffer for system instructions
       const promptBuffer = parentMessageId === Constants.NO_PARENT && !_thread_id ? 200 : 0;
       // 5 is added for labels
-      let promptTokens = (await countTokens(text + (promptPrefix ?? ''))) + 5;
+      let promptTokens =
+        (await countTokens(
+          text + (runPromptPrefix ?? '') + projectInstructions + projectMemories,
+        )) + 5;
       promptTokens += totalPreviousTokens + promptBuffer;
       // Count tokens up to the current context window
       promptTokens = Math.min(promptTokens, getModelMaxTokens(model));
@@ -190,6 +199,16 @@ const chatV2 = async (req, res) => {
     openai = _openai;
     await validateAuthor({ req, openai });
 
+    /** Load project context if conversation belongs to a project */
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: convoId,
+      projectId: req.body.projectId,
+    });
+    const projectInstructions = projectContext.projectInstructions;
+    const projectMemories = projectContext.projectMemories;
+    const projectFileIds = projectContext.projectFileIds;
+
     if (previousMessages.length) {
       parentMessageId = previousMessages[previousMessages.length - 1].messageId;
     }
@@ -211,10 +230,12 @@ const chatV2 = async (req, res) => {
     const body = createRunBody({
       assistant_id,
       model,
-      promptPrefix,
+      promptPrefix: runPromptPrefix,
       instructions,
       endpointOption,
       clientTimestamp,
+      projectInstructions,
+      projectMemories,
     });
 
     const getRequestFileIds = async () => {
@@ -226,8 +247,8 @@ const chatV2 = async (req, res) => {
         }
       }
 
-      if (files.length || thread_file_ids.length) {
-        attachedFileIds = new Set([...file_ids, ...thread_file_ids]);
+      if (files.length || thread_file_ids.length || projectFileIds.length) {
+        attachedFileIds = new Set([...file_ids, ...thread_file_ids, ...projectFileIds]);
 
         let attachmentIndex = 0;
         for (const file of files) {
@@ -261,6 +282,15 @@ const chatV2 = async (req, res) => {
           }
 
           attachmentIndex++;
+        }
+        for (const file_id of projectFileIds) {
+          if (!userMessage.attachments) {
+            userMessage.attachments = [];
+          }
+          userMessage.attachments.push({
+            file_id,
+            tools: [{ type: ToolCallTypes.FILE_SEARCH }],
+          });
         }
       }
     };

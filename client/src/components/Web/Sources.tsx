@@ -3,7 +3,15 @@ import { useRecoilValue } from 'recoil';
 import * as Ariakit from '@ariakit/react';
 import { VisuallyHidden } from '@ariakit/react';
 import { Tools } from 'librechat-data-provider';
-import { X, Globe, Newspaper, Image, ChevronDown, File, Download } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  Download,
+  File,
+  Globe,
+  Image,
+  Newspaper,
+  X,
+} from '@phosphor-icons/react';
 import {
   OGDialog,
   AnimatedTabs,
@@ -19,7 +27,7 @@ import SourcesErrorBoundary from './SourcesErrorBoundary';
 import { useFileDownload } from '~/data-provider';
 import { useSearchContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
+import { cn, triggerDownload } from '~/utils';
 import store from '~/store';
 
 interface SourceItemProps {
@@ -212,7 +220,9 @@ const FileItem = React.memo(function FileItem({
   const user = useRecoilValue(store.user);
   const { showToast } = useToastContext();
 
-  const { refetch: downloadFile } = useFileDownload(user?.id ?? '', file.file_id);
+  const { refetch: downloadFile } = useFileDownload(user?.id ?? '', file.file_id, {
+    source: file.source,
+  });
 
   // Extract error message logic to avoid duplication
   const getErrorMessage = useCallback(
@@ -255,13 +265,7 @@ const FileItem = React.memo(function FileItem({
           });
           return;
         }
-        const link = document.createElement('a');
-        link.href = stream.data;
-        link.setAttribute('download', file.filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(stream.data);
+        triggerDownload(stream.data, file.filename);
       } catch (error) {
         console.error('Error downloading file:', error);
       }

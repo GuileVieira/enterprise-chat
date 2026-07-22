@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useRecoilValue, useSetRecoilState } from 'recoil';
 import {
   useMediaQuery,
   ResizablePanel,
@@ -10,7 +11,8 @@ import type { TMessage } from 'librechat-data-provider';
 import type { ArtifactsContextValue } from '~/Providers';
 import { ArtifactsProvider, EditorProvider } from '~/Providers';
 import Artifacts from '~/components/Artifacts/Artifacts';
-import { getLatestText } from '~/utils';
+import { isCodeOnlyArtifact } from '~/utils/artifacts';
+import { findShareArtifactId, getLatestText } from '~/utils';
 import store from '~/store';
 
 const DEFAULT_ARTIFACT_PANEL_SIZE = 40;
@@ -55,8 +57,12 @@ export function ShareArtifactsContainer({
 }: ShareArtifactsContainerProps) {
   const artifacts = useRecoilValue(store.artifactsState);
   const artifactsVisibility = useRecoilValue(store.artifactsVisibility);
+  const currentArtifactId = useRecoilValue(store.currentArtifactId);
+  const setCurrentArtifactId = useSetRecoilState(store.currentArtifactId);
+  const setArtifactsVisibility = useSetRecoilState(store.artifactsVisibility);
   const isSmallScreen = useMediaQuery('(max-width: 1023px)');
   const [artifactPanelSize, setArtifactPanelSize] = useState(getInitialArtifactPanelSize);
+  const [searchParams] = useSearchParams();
 
   const artifactsContextValue = useMemo<ArtifactsContextValue | null>(() => {
     const latestMessage =
@@ -76,12 +82,37 @@ export function ShareArtifactsContainer({
     };
   }, [messages, conversationId]);
 
+  const hasSelectedArtifact = currentArtifactId != null && artifacts?.[currentArtifactId] != null;
+  const hasAutoOpenableArtifact = Object.values(artifacts ?? {}).some(
+    (artifact) => artifact != null && !isCodeOnlyArtifact(artifact.type),
+  );
   const shouldRenderArtifacts =
     artifactsVisibility === true &&
     artifactsContextValue != null &&
-    Object.keys(artifacts ?? {}).length > 0;
+    (hasSelectedArtifact || hasAutoOpenableArtifact);
 
   const normalizedArtifactSize = Math.min(60, Math.max(20, artifactPanelSize));
+
+  useEffect(() => {
+    if (!artifacts) {
+      return;
+    }
+
+    const artifactId = searchParams.get('artifact');
+    const targetId = findShareArtifactId(
+      artifacts,
+      artifactId,
+      searchParams.get('artifactHash'),
+      searchParams.get('artifactIndex'),
+    );
+
+    if (!targetId) {
+      return;
+    }
+
+    setCurrentArtifactId(targetId);
+    setArtifactsVisibility(true);
+  }, [artifacts, searchParams, setArtifactsVisibility, setCurrentArtifactId]);
 
   const handleLayoutChanged = (layout: Record<string, number | string>) => {
     const raw = layout['share-artifacts'];

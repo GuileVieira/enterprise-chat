@@ -1,7 +1,7 @@
 import React from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { TooltipAnchor } from '@librechat/client';
-import { Zap, Circle, CheckCircle2 } from 'lucide-react';
+import { CheckCircle as CheckCircle2, Circle, Lightning as Zap } from '@phosphor-icons/react';
 import type { TPrompt, TPromptGroup } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';

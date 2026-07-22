@@ -10,7 +10,7 @@ const express = require('express');
 const passport = require('passport');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const mongoSanitize = require('express-mongo-sanitize');
 const {
   isEnabled,
@@ -26,7 +26,12 @@ const initializeOAuthReconnectManager = require('./services/initializeOAuthRecon
 const createValidateImageRequest = require('./middleware/validateImageRequest');
 const { jwtLogin, ldapLogin, passportLogin } = require('~/strategies');
 const { updateInterfacePermissions: updateInterfacePerms } = require('@librechat/api');
-const { getRoleByName, updateAccessPermissions, seedDatabase } = require('~/models');
+const {
+  getRoleByName,
+  updateAccessPermissions,
+  seedDatabase,
+  sweepOrphanedPreviews,
+} = require('~/models');
 const { checkMigrations } = require('./services/start/migration');
 const initializeMCPs = require('./services/initializeMCPs');
 const configureSocialLogins = require('./socialLogins');
@@ -210,7 +215,7 @@ if (cluster.isMaster) {
     logger.info(`Worker ${process.pid}: Connected to MongoDB`);
 
     /** Background index sync (non-blocking) */
-    indexSync().catch((err) => {
+    runAsSystem(indexSync).catch((err) => {
       logger.error(`[Worker ${process.pid}][indexSync] Background sync failed:`, err);
     });
 
@@ -218,13 +223,20 @@ if (cluster.isMaster) {
     app.set('trust proxy', trusted_proxy);
 
     /** Seed database (idempotent) */
-    await seedDatabase();
+    await runAsSystem(seedDatabase);
+
+    /* Mirrors `server/index.js`; `runAsSystem` for tenant-isolated File. */
+    runAsSystem(sweepOrphanedPreviews).catch((err) => {
+      logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
+    });
 
     /** Initialize app configuration */
-    const appConfig = await getAppConfig();
+    const appConfig = await getAppConfig({ baseOnly: true });
     initializeFileStorage(appConfig);
-    await performStartupChecks(appConfig);
-    await updateInterfacePerms({ appConfig, getRoleByName, updateAccessPermissions });
+    await runAsSystem(async () => {
+      await performStartupChecks(appConfig);
+      await updateInterfacePerms({ appConfig, getRoleByName, updateAccessPermissions });
+    });
 
     /** Load index.html for SPA serving */
     const indexPath = path.join(appConfig.paths.dist, 'index.html');
@@ -310,6 +322,7 @@ if (cluster.isMaster) {
     app.use('/api/convos', routes.convos);
     app.use('/api/presets', routes.presets);
     app.use('/api/prompts', routes.prompts);
+    app.use('/api/skills', routes.skills);
     app.use('/api/categories', routes.categories);
     app.use('/api/endpoints', routes.endpoints);
     app.use('/api/balance', routes.balance);
@@ -373,7 +386,7 @@ if (cluster.isMaster) {
         /** Initialize MCP servers and OAuth reconnection for this worker */
         await initializeMCPs();
         await initializeOAuthReconnectManager();
-        await checkMigrations();
+        await runAsSystem(checkMigrations);
       } catch (initErr) {
         logger.error(`Worker ${process.pid} post-listen initialization failed:`, initErr);
         process.exit(1);

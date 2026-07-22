@@ -36,6 +36,9 @@ export default function useContentHandler({ setMessages, getMessages }: TUseCont
   const handler = useCallback(
     ({ data, submission }: TContentHandler) => {
       const { type, messageId, thread_id, conversationId, index } = data;
+      if (!type) {
+        return;
+      }
 
       const _messages = getMessages();
       const messages =
@@ -64,6 +67,9 @@ export default function useContentHandler({ setMessages, getMessages }: TUseCont
       const textPart: Text | string | undefined = data[ContentTypes.TEXT];
       const part: ContentPart =
         textPart != null && typeof textPart === 'string' ? { value: textPart } : data[type];
+      if (part == null) {
+        return;
+      }
 
       if (type === ContentTypes.IMAGE_FILE) {
         addFileToCache(queryClient, part as ImageFile & PartMetadata);

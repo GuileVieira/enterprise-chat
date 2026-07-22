@@ -1,11 +1,24 @@
 const cookies = require('cookie');
 const jwt = require('jsonwebtoken');
 const openIdClient = require('openid-client');
-const { logger } = require('@librechat/data-schemas');
-const { isEnabled, findOpenIDUser } = require('@librechat/api');
+const {
+  logger,
+  runAsSystem,
+  tenantStorage,
+  SYSTEM_TENANT_ID,
+  DEFAULT_SESSION_EXPIRY,
+} = require('@librechat/data-schemas');
+const {
+  math,
+  isEnabled,
+  findOpenIDUser,
+  getOpenIdIssuer,
+  buildOpenIDRefreshParams,
+} = require('@librechat/api');
 const {
   requestPasswordReset,
   setOpenIDAuthTokens,
+  setCloudFrontAuthCookies,
   resetPassword,
   setAuthTokens,
   registerUser,
@@ -16,9 +29,15 @@ const {
   findSession,
   updateUser,
   findUser,
+  generateToken,
 } = require('~/models');
 const { getGraphApiToken } = require('~/server/services/GraphTokenService');
 const { getOpenIdConfig, getOpenIdEmail } = require('~/strategies');
+
+const AUTH_REFRESH_USER_PROJECTION = '-password -__v -totpSecret -backupCodes -federatedTokens';
+const OPENID_REUSE_EXPIRY_BUFFER_SECONDS = 30;
+/** Mirrors the default SESSION_EXPIRY to bound IdP revocation lag for session-token reuse. */
+const OPENID_REUSE_MAX_SESSION_AGE_MS = 15 * 60 * 1000;
 
 const registrationController = async (req, res) => {
   try {
@@ -29,6 +48,79 @@ const registrationController = async (req, res) => {
     logger.error('[registrationController]', err);
     return res.status(500).json({ message: err.message });
   }
+};
+
+const sanitizeUserForAuthResponse = (user) => {
+  const source = (typeof user?.toObject === 'function' ? user.toObject() : user) || {};
+  const {
+    password: _pw,
+    __v: _v,
+    totpSecret: _ts,
+    backupCodes: _bc,
+    federatedTokens: _ft,
+    ...safeUser
+  } = source;
+  return safeUser;
+};
+
+const getValidOpenIDReuseUserId = (parsedCookies) => {
+  const openidUserId = parsedCookies.openid_user_id;
+  if (!openidUserId || !process.env.JWT_REFRESH_SECRET) {
+    return null;
+  }
+
+  try {
+    const payload = jwt.verify(openidUserId, process.env.JWT_REFRESH_SECRET);
+    return typeof payload === 'object' && payload != null && typeof payload.id === 'string'
+      ? payload.id
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const isRecentOpenIDSessionRefresh = (openidTokens) => {
+  const lastRefreshedAt = Number(openidTokens?.lastRefreshedAt);
+  const elapsed = Date.now() - lastRefreshedAt;
+  return (
+    Number.isFinite(lastRefreshedAt) && elapsed >= 0 && elapsed <= OPENID_REUSE_MAX_SESSION_AGE_MS
+  );
+};
+
+const getReusableOpenIDSessionToken = (openidTokens) => {
+  if (!isRecentOpenIDSessionRefresh(openidTokens)) {
+    return null;
+  }
+
+  const candidates = [{ token: openidTokens?.idToken, type: 'id_token' }];
+  const now = Math.floor(Date.now() / 1000);
+
+  for (const candidate of candidates) {
+    if (!candidate.token) {
+      continue;
+    }
+    /** Decode only: tokens are from the trusted server-side session; expiry gates reuse. */
+    const decoded = jwt.decode(candidate.token);
+    if (
+      decoded &&
+      typeof decoded === 'object' &&
+      decoded.exp > now + OPENID_REUSE_EXPIRY_BUFFER_SECONDS
+    ) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const generateOpenIDFallbackAppToken = async (user) => {
+  const sessionExpiry = math(process.env.SESSION_EXPIRY, DEFAULT_SESSION_EXPIRY);
+  const token = await generateToken(user, sessionExpiry);
+  logger.info('[refreshController] OpenID app auth token fell back to local JWT', {
+    userId: user?._id?.toString?.() ?? user?.id,
+    provider: user?.provider,
+  });
+  return token;
 };
 
 const resetPasswordRequestController = async (req, res) => {
@@ -77,18 +169,54 @@ const refreshController = async (req, res) => {
     }
 
     try {
+      /**
+       * Reuse skips an IdP refresh only for recently-refreshed server-side tokens.
+       * Stale, missing, or near-expiry tokens fall through to refreshTokenGrant so
+       * upstream revocations and cookie/session extension are checked regularly.
+       */
+      const reusableSessionToken = getReusableOpenIDSessionToken(req.session?.openidTokens);
+      const reuseUserId = reusableSessionToken ? getValidOpenIDReuseUserId(parsedCookies) : null;
+      if (reuseUserId) {
+        const user = await getUserById(reuseUserId, AUTH_REFRESH_USER_PROJECTION);
+        if (user) {
+          const cloudFrontCookiesSet = setCloudFrontAuthCookies(req, res, user);
+          logger.debug('[refreshController] OpenID session token reused', {
+            token_type: reusableSessionToken.type,
+            has_id_token: Boolean(req.session?.openidTokens?.idToken),
+            has_access_token: Boolean(req.session?.openidTokens?.accessToken),
+            cloudfront_cookies_set: cloudFrontCookiesSet,
+          });
+          return res.status(200).send({
+            token: reusableSessionToken.token,
+            user: sanitizeUserForAuthResponse(user),
+          });
+        }
+      }
+
       const openIdConfig = getOpenIdConfig();
-      const refreshParams = process.env.OPENID_SCOPE ? { scope: process.env.OPENID_SCOPE } : {};
+      const refreshParams = buildOpenIDRefreshParams();
+      logger.debug('[refreshController] OpenID refresh params', {
+        has_scope: Boolean(process.env.OPENID_SCOPE),
+        has_refresh_audience: Boolean(process.env.OPENID_REFRESH_AUDIENCE),
+      });
       const tokenset = await openIdClient.refreshTokenGrant(
         openIdConfig,
         refreshToken,
         refreshParams,
       );
+      logger.debug('[refreshController] OpenID refresh succeeded', {
+        has_access_token: Boolean(tokenset.access_token),
+        has_id_token: Boolean(tokenset.id_token),
+        has_refresh_token: Boolean(tokenset.refresh_token),
+        expires_in: tokenset.expires_in,
+      });
       const claims = tokenset.claims();
+      const openidIssuer = getOpenIdIssuer(claims, openIdConfig);
       const { user, error, migration } = await findOpenIDUser({
         findUser,
         email: getOpenIdEmail(claims),
         openidId: claims.sub,
+        openidIssuer,
         idOnTheSource: claims.oid,
         strategyName: 'refreshController',
       });
@@ -111,16 +239,22 @@ const refreshController = async (req, res) => {
         await updateUser(user._id.toString(), {
           provider: 'openid',
           openidId: claims.sub,
+          ...(openidIssuer ? { openidIssuer } : {}),
         });
         logger.info(
           `[refreshController] Updated user ${user.email} openidId (${reason}): ${user.openidId ?? 'null'} -> ${claims.sub}`,
         );
       }
 
-      const token = setOpenIDAuthTokens(tokenset, req, res, user._id.toString(), refreshToken);
+      const token = setOpenIDAuthTokens(tokenset, req, res, {
+        userId: user._id.toString(),
+        existingRefreshToken: refreshToken,
+        tenantId: user.tenantId,
+      });
 
-      const { password: _pw, __v: _v, totpSecret: _ts, backupCodes: _bc, ...safeUser } = user;
-      return res.status(200).send({ token, user: safeUser });
+      const appToken = token || (await generateOpenIDFallbackAppToken(user));
+
+      return res.status(200).send({ token: appToken, user: sanitizeUserForAuthResponse(user) });
     } catch (error) {
       logger.error('[refreshController] OpenID token refresh error', error);
       return res.status(403).send('Invalid OpenID refresh token');
@@ -135,39 +269,45 @@ const refreshController = async (req, res) => {
 
   try {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await getUserById(payload.id, '-password -__v -totpSecret -backupCodes');
+    // Refresh runs without ALS context: look up the user across tenants under
+    // SYSTEM, then scope the rest to the user's tenant for session lookup/creation.
+    const user = await runAsSystem(() => getUserById(payload.id, AUTH_REFRESH_USER_PROJECTION));
     if (!user) {
       return res.status(401).redirect('/login');
     }
 
     const userId = payload.id;
+    const userTenantId = user.tenantId || SYSTEM_TENANT_ID;
 
     if (process.env.NODE_ENV === 'CI') {
-      const token = await setAuthTokens(userId, res);
-      return res.status(200).send({ token, user });
+      const token = await tenantStorage.run({ tenantId: userTenantId }, () =>
+        setAuthTokens(userId, res, null, req),
+      );
+      return res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
     }
 
-    /** Session with the hashed refresh token */
-    const session = await findSession(
-      {
-        userId: userId,
-        refreshToken: refreshToken,
-      },
-      { lean: false },
-    );
+    await tenantStorage.run({ tenantId: userTenantId }, async () => {
+      /** Session with the hashed refresh token */
+      const session = await findSession(
+        {
+          userId: userId,
+          refreshToken: refreshToken,
+        },
+        { lean: false },
+      );
 
-    if (session && session.expiration > new Date()) {
-      const token = await setAuthTokens(userId, res, session);
-
-      res.status(200).send({ token, user });
-    } else if (req?.query?.retry) {
-      // Retrying from a refresh token request that failed (401)
-      res.status(403).send('No session found');
-    } else if (payload.exp < Date.now() / 1000) {
-      res.status(403).redirect('/login');
-    } else {
-      res.status(401).send('Refresh token expired or not found for this user');
-    }
+      if (session && session.expiration > new Date()) {
+        const token = await setAuthTokens(userId, res, session, req);
+        res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
+      } else if (req?.query?.retry) {
+        // Retrying from a refresh token request that failed (401)
+        res.status(403).send('No session found');
+      } else if (payload.exp < Date.now() / 1000) {
+        res.status(403).redirect('/login');
+      } else {
+        res.status(401).send('Refresh token expired or not found for this user');
+      }
+    });
   } catch (err) {
     logger.error(`[refreshController] Invalid refresh token:`, err);
     res.status(403).send('Invalid refresh token');

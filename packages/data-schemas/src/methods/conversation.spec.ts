@@ -136,7 +136,7 @@ describe('Conversation Operations', () => {
 
       // Verify that getMessages was called with correct parameters
       expect(getMessages).toHaveBeenCalledWith(
-        { conversationId: mockConversationData.conversationId },
+        { conversationId: mockConversationData.conversationId, user: mockCtx.userId },
         '_id',
       );
     });
@@ -203,6 +203,24 @@ describe('Conversation Operations', () => {
         conversationId: mockConversationData.conversationId,
       });
       expect(savedConvo?.someField).toBeUndefined();
+    });
+
+    it('should set createdAt from metadata only on insert', async () => {
+      const firstAnchor = new Date('2024-02-03T04:05:06.000Z');
+      const secondAnchor = new Date('2025-02-03T04:05:06.000Z');
+
+      const firstSave = await saveConvo(mockCtx, mockConversationData, {
+        createdAtOnInsert: firstAnchor,
+      });
+      const secondSave = await saveConvo(
+        mockCtx,
+        { ...mockConversationData, title: 'Updated title' },
+        { createdAtOnInsert: secondAnchor },
+      );
+
+      expect(new Date(firstSave?.createdAt ?? 0).toISOString()).toBe(firstAnchor.toISOString());
+      expect(new Date(secondSave?.createdAt ?? 0).toISOString()).toBe(firstAnchor.toISOString());
+      expect(secondSave?.title).toBe('Updated title');
     });
   });
 
@@ -662,7 +680,7 @@ describe('Conversation Operations', () => {
         createdAt,
         updatedAt,
       });
-      return Conversation.findOne({ conversationId }).lean();
+      return Conversation.findOne({ conversationId }).lean<IConversation>();
     };
 
     it('should not skip conversations at page boundaries', async () => {
@@ -906,6 +924,77 @@ describe('Conversation Operations', () => {
 
       expect(result?.conversations).toHaveLength(25);
       expect(result?.nextCursor).toBeNull(); // No next page
+    });
+  });
+
+  describe('projectId support', () => {
+    it('saveConvo should persist projectId', async () => {
+      const conversationId = uuidv4();
+      const result = await saveConvo(
+        { userId: 'user123' },
+        {
+          conversationId,
+          projectId: 'proj-123',
+          title: 'Project Test',
+          endpoint: EModelEndpoint.openAI,
+        },
+      );
+
+      expect(result).not.toBeNull();
+      const doc = await Conversation.findOne({ conversationId }).lean();
+      expect(doc).not.toBeNull();
+      expect((doc as Record<string, unknown>).projectId).toBe('proj-123');
+    });
+
+    it('getConvosByCursor should filter by projectId', async () => {
+      await Conversation.create([
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'In Project',
+          endpoint: EModelEndpoint.openAI,
+          projectId: 'proj-abc',
+          updatedAt: new Date(),
+        },
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'No Project',
+          endpoint: EModelEndpoint.openAI,
+          updatedAt: new Date(),
+        },
+      ]);
+
+      Object.assign(Conversation, { meiliSearch: jest.fn().mockResolvedValue({ hits: [] }) });
+
+      const result = await getConvosByCursor('user123', { projectId: 'proj-abc' });
+      expect(result?.conversations).toHaveLength(1);
+      expect(result?.conversations[0]?.title).toBe('In Project');
+    });
+
+    it('getConvosByCursor without projectId returns all user conversations', async () => {
+      await Conversation.create([
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'In Project',
+          endpoint: EModelEndpoint.openAI,
+          projectId: 'proj-abc',
+          updatedAt: new Date(),
+        },
+        {
+          conversationId: uuidv4(),
+          user: 'user123',
+          title: 'No Project',
+          endpoint: EModelEndpoint.openAI,
+          updatedAt: new Date(),
+        },
+      ]);
+
+      Object.assign(Conversation, { meiliSearch: jest.fn().mockResolvedValue({ hits: [] }) });
+
+      const result = await getConvosByCursor('user123');
+      expect(result?.conversations).toHaveLength(2);
     });
   });
 

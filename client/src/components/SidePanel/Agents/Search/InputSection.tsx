@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as Menu from '@ariakit/react/menu';
-import { ChevronDown, Eye, EyeOff } from 'lucide-react';
+import { CaretDown as ChevronDown, Eye, EyeSlash as EyeOff } from '@phosphor-icons/react';
 import { Input, Label, DropdownPopup } from '@librechat/client';
 import type { SearchApiKeyFormData } from '~/hooks/Plugins/useAuthSearchTool';
 import type { UseFormRegister } from 'react-hook-form';

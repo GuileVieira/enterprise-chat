@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import debounce from 'lodash/debounce';
 import { Tools, AuthType } from 'librechat-data-provider';
-import { TerminalSquareIcon, Check, X } from 'lucide-react';
+import { Check, TerminalWindow as TerminalSquareIcon, X } from '@phosphor-icons/react';
 import { Spinner, TooltipAnchor, useToastContext } from '@librechat/client';
 import type { CodeBarProps } from '~/common';
 import { useVerifyAgentToolAuth, useToolCallMutation } from '~/data-provider';

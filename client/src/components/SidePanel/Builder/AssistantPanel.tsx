@@ -215,7 +215,7 @@ export default function AssistantPanel({
     <FormProvider {...methods}>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="h-auto w-full flex-shrink-0 overflow-x-hidden"
+        className="h-auto w-full flex-shrink-0 overflow-x-hidden pt-2"
       >
         <div className="flex w-full flex-wrap">
           <Controller
@@ -237,7 +237,7 @@ export default function AssistantPanel({
           {/* Select Button */}
           {assistant_id && (
             <button
-              className="btn btn-primary focus:shadow-outline mx-2 mt-1 h-[40px] rounded bg-green-500 px-4 py-2 font-semibold text-white hover:bg-green-400 focus:border-green-500 focus:outline-none focus:ring-0"
+              className="btn btn-primary focus:shadow-outline mx-2 mt-1 h-[40px] rounded bg-surface-submit px-4 py-2 font-semibold text-white hover:bg-surface-submit-hover focus:border-surface-submit focus:outline-none focus:ring-0"
               type="button"
               disabled={!assistant_id}
               onClick={(e) => {
@@ -460,7 +460,7 @@ export default function AssistantPanel({
             />
             {/* Submit Button */}
             <button
-              className="btn btn-primary focus:shadow-outline flex w-full items-center justify-center px-4 py-2 font-semibold text-white hover:bg-green-600 focus:border-green-500"
+              className="btn btn-primary focus:shadow-outline flex w-full items-center justify-center px-4 py-2 font-semibold text-white hover:bg-surface-submit-hover focus:border-surface-submit"
               type="submit"
             >
               {submitContext}

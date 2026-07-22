@@ -8,8 +8,11 @@ const {
   deleteSharedLink,
   getSharedLinks,
   getSharedLink,
+  createTenantSharedLink,
+  getTenantSharedMessages,
 } = require('~/models');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
+const { forkSharedConversation } = require('~/server/utils/import/fork');
 const router = express.Router();
 
 /**
@@ -82,16 +85,95 @@ router.get('/', requireJwtAuth, async (req, res) => {
 
 router.get('/link/:conversationId', requireJwtAuth, async (req, res) => {
   try {
-    const share = await getSharedLink(req.user.id, req.params.conversationId);
+    const { targetMessageId } = req.query ?? {};
+    if (targetMessageId !== undefined && typeof targetMessageId !== 'string') {
+      return res.status(400).json({ message: 'targetMessageId must be a string' });
+    }
+
+    const share = await getSharedLink(req.user.id, req.params.conversationId, targetMessageId);
 
     return res.status(200).json({
       success: share.success,
       shareId: share.shareId,
+      targetMessageId: share.targetMessageId,
       conversationId: req.params.conversationId,
     });
   } catch (error) {
     logger.error('Error getting shared link:', error);
     res.status(500).json({ message: 'Error getting shared link' });
+  }
+});
+
+router.get('/tenant/:shareId', requireJwtAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ message: 'Tenant context required' });
+    }
+
+    const share = await getTenantSharedMessages(req.params.shareId, tenantId);
+    if (!share) {
+      return res.status(404).end();
+    }
+
+    return res.status(200).json(share);
+  } catch (error) {
+    logger.error('Error getting tenant shared messages:', error);
+    return res.status(500).json({ message: 'Error getting tenant shared messages' });
+  }
+});
+
+router.post('/tenant/:conversationId', requireJwtAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ message: 'Tenant context required' });
+    }
+
+    const { targetMessageId } = req.body ?? {};
+    if (targetMessageId !== undefined && typeof targetMessageId !== 'string') {
+      return res.status(400).json({ message: 'targetMessageId must be a string' });
+    }
+
+    const created = await createTenantSharedLink(
+      req.user.id,
+      tenantId,
+      req.params.conversationId,
+      targetMessageId,
+    );
+    return res.status(200).json(created);
+  } catch (error) {
+    logger.error('Error creating tenant shared link:', error);
+    return res.status(500).json({ message: 'Error creating tenant shared link' });
+  }
+});
+
+router.post('/tenant/:shareId/fork', requireJwtAuth, async (req, res) => {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ message: 'Tenant context required' });
+    }
+
+    const { targetMessageId, option } = req.body ?? {};
+    if (targetMessageId !== undefined && typeof targetMessageId !== 'string') {
+      return res.status(400).json({ message: 'targetMessageId must be a string' });
+    }
+    if (option !== undefined && typeof option !== 'string') {
+      return res.status(400).json({ message: 'option must be a string' });
+    }
+
+    const forked = await forkSharedConversation({
+      shareId: req.params.shareId,
+      requestUserId: req.user.id,
+      tenantId,
+      targetMessageId,
+      option,
+    });
+    return res.status(201).json(forked);
+  } catch (error) {
+    logger.error('Error forking tenant shared conversation:', error);
+    return res.status(500).json({ message: 'Error forking tenant shared conversation' });
   }
 });
 
@@ -112,7 +194,12 @@ router.post('/:conversationId', requireJwtAuth, async (req, res) => {
 
 router.patch('/:shareId', requireJwtAuth, async (req, res) => {
   try {
-    const updatedShare = await updateSharedLink(req.user.id, req.params.shareId);
+    const { targetMessageId } = req.body ?? {};
+    if (targetMessageId !== undefined && typeof targetMessageId !== 'string') {
+      return res.status(400).json({ message: 'targetMessageId must be a string' });
+    }
+
+    const updatedShare = await updateSharedLink(req.user.id, req.params.shareId, targetMessageId);
     if (updatedShare) {
       res.status(200).json(updatedShare);
     } else {

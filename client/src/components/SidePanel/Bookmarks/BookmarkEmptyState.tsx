@@ -1,4 +1,4 @@
-import { Bookmark } from 'lucide-react';
+import { Bookmark } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 
 interface BookmarkEmptyStateProps {

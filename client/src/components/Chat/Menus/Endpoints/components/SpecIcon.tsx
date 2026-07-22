@@ -5,6 +5,7 @@ import type { IconMapProps } from '~/common';
 import { getModelSpecIconURL, getIconKey } from '~/utils';
 import { URLIcon } from '~/components/Endpoints/URLIcon';
 import { icons } from '~/hooks/Endpoint/Icons';
+import { AgentModelAvatar } from './EndpointModelItem';
 
 interface SpecIconProps {
   currentSpec: TModelSpec;
@@ -18,7 +19,12 @@ const SpecIcon: React.FC<SpecIconProps> = ({ currentSpec, endpointsConfig }) => 
   const { endpoint } = currentSpec.preset;
   const endpointIconURL = getEndpointField(endpointsConfig, endpoint, 'iconURL');
   const iconKey = getIconKey({ endpoint, endpointsConfig, endpointIconURL });
+  const hasExplicitIcon = Boolean(currentSpec.iconURL);
   let Icon: IconType;
+
+  if (!hasExplicitIcon) {
+    return <AgentModelAvatar name={currentSpec.label || currentSpec.name} />;
+  }
 
   if (!iconURL.includes('http')) {
     Icon = (icons[iconURL] ?? icons[iconKey] ?? icons.unknown) as IconType;

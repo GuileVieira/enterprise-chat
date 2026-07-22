@@ -1,5 +1,13 @@
 import { Constants, isActionTool } from 'librechat-data-provider';
-import { Terminal, Globe, ImageIcon, ArrowRightLeft, FileSearch, Zap, Wrench } from 'lucide-react';
+import {
+  ArrowsLeftRight as ArrowRightLeft,
+  FileMagnifyingGlass as FileSearch,
+  Globe,
+  Image as ImageIcon,
+  Terminal,
+  Wrench,
+  Lightning as Zap,
+} from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 export type ToolIconType =
@@ -36,7 +44,12 @@ export function getToolIconType(name: string): ToolIconType {
   if (name === 'web_search') {
     return 'web_search';
   }
-  if (name === 'image_gen_oai' || name === 'image_edit_oai' || name === 'gemini_image_gen') {
+  if (
+    name === 'image_gen_oai' ||
+    name === 'image_edit_oai' ||
+    name === 'gemini_image_gen' ||
+    name === 'openrouter_gemini_image_gen'
+  ) {
     return 'image_gen';
   }
   if (name === 'file_search' || name === 'retrieval') {

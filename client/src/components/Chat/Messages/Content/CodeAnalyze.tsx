@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRecoilValue } from 'recoil';
-import { Terminal } from 'lucide-react';
+import { Terminal } from '@phosphor-icons/react';
 import { useProgress, useLocalize } from '~/hooks';
 import ProgressText from './ProgressText';
 import MarkdownLite from './MarkdownLite';

@@ -65,8 +65,8 @@ export default function UnifiedPeopleSearch({
         options={selectableResults.map((s) => ({
           ...s,
           id: s.id ?? undefined,
-          key: s.idOnTheSource || 'unknown' + 'picker_key',
-          value: s.idOnTheSource || 'Unknown',
+          key: `${s.type}-${s.id || s.idOnTheSource || 'unknown'}-picker_key`,
+          value: s.name || s.email || s.idOnTheSource || s.id || 'Unknown',
         }))}
         renderOptions={(o) => <PeoplePickerSearchItem principal={o} />}
         placeholder={placeholder || localize('com_ui_search_default_placeholder')}

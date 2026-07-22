@@ -7,10 +7,15 @@ const {
   agentPermissionsSchema,
   promptPermissionsSchema,
   memoryPermissionsSchema,
+  fileSearchPermissionsSchema,
+  fileCitationsPermissionsSchema,
   mcpServersPermissionsSchema,
+  projectPermissionsSchema,
   marketplacePermissionsSchema,
+  metaAdsPermissionsSchema,
   peoplePickerPermissionsSchema,
   remoteAgentsPermissionsSchema,
+  skillPermissionsSchema,
 } = require('librechat-data-provider');
 const { hasCapability, requireCapability } = require('~/server/middleware/roles/capabilities');
 const { updateRoleByName, getRoleByName } = require('~/models');
@@ -55,10 +60,35 @@ const permissionConfigs = {
     permissionType: PermissionTypes.MARKETPLACE,
     errorMessage: 'Invalid marketplace permissions.',
   },
+  'file-search': {
+    schema: fileSearchPermissionsSchema,
+    permissionType: PermissionTypes.FILE_SEARCH,
+    errorMessage: 'Invalid file search permissions.',
+  },
+  'file-citations': {
+    schema: fileCitationsPermissionsSchema,
+    permissionType: PermissionTypes.FILE_CITATIONS,
+    errorMessage: 'Invalid file citations permissions.',
+  },
+  projects: {
+    schema: projectPermissionsSchema,
+    permissionType: PermissionTypes.PROJECTS,
+    errorMessage: 'Invalid project permissions.',
+  },
   'remote-agents': {
     schema: remoteAgentsPermissionsSchema,
     permissionType: PermissionTypes.REMOTE_AGENTS,
     errorMessage: 'Invalid remote agents permissions.',
+  },
+  skills: {
+    schema: skillPermissionsSchema,
+    permissionType: PermissionTypes.SKILLS,
+    errorMessage: 'Invalid skill permissions.',
+  },
+  'meta-ads': {
+    schema: metaAdsPermissionsSchema,
+    permissionType: PermissionTypes.META_ADS,
+    errorMessage: 'Invalid Meta Ads permissions.',
   },
 };
 
@@ -171,10 +201,28 @@ router.put('/:roleName/mcp-servers', manageRoles, createPermissionUpdateHandler(
  */
 router.put('/:roleName/marketplace', manageRoles, createPermissionUpdateHandler('marketplace'));
 
+router.put('/:roleName/file-search', manageRoles, createPermissionUpdateHandler('file-search'));
+
+router.put(
+  '/:roleName/file-citations',
+  manageRoles,
+  createPermissionUpdateHandler('file-citations'),
+);
+
+router.put('/:roleName/projects', manageRoles, createPermissionUpdateHandler('projects'));
+
 /**
  * PUT /api/roles/:roleName/remote-agents
  * Update remote agents (API) permissions for a specific role
  */
 router.put('/:roleName/remote-agents', manageRoles, createPermissionUpdateHandler('remote-agents'));
+
+/**
+ * PUT /api/roles/:roleName/skills
+ * Update skill permissions for a specific role
+ */
+router.put('/:roleName/skills', manageRoles, createPermissionUpdateHandler('skills'));
+
+router.put('/:roleName/meta-ads', manageRoles, createPermissionUpdateHandler('meta-ads'));
 
 module.exports = router;
