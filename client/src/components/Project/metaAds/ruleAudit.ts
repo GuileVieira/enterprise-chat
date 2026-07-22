@@ -57,10 +57,16 @@ export function formatRuleChangeAction(change: ProjectMetaAdsRuleChange, localiz
   }
   return change.ruleChanges
     .map((ruleChange) => {
-      const labelKey = `com_ui_project_meta_ads_rule_action_${ruleChange.action}` as Parameters<
-        typeof localize
-      >[0];
-      const ruleName = ruleChange.ruleName || ruleChange.ruleKey;
+      const labelKey =
+        ruleChange.ruleType === 'global'
+          ? 'com_ui_project_meta_ads_global_rules_updated'
+          : (`com_ui_project_meta_ads_rule_action_${ruleChange.action}` as Parameters<
+              typeof localize
+            >[0]);
+      const ruleName =
+        ruleChange.ruleType === 'global'
+          ? localize('com_ui_project_meta_ads_global_rules')
+          : ruleChange.ruleName || ruleChange.ruleKey;
       const label = localize(labelKey, { 0: ruleName });
       return label === labelKey ? `${ruleName} ${label}` : label;
     })
