@@ -894,7 +894,14 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
     const entries = await TrafficDiaryEntry.find({
       ...getDiaryProjectFilter(project, { kind }),
       ...getDiaryPeriodQuery(req.query),
-      $or: [{ userId: req.user.id }, { userId: { $exists: false }, 'createdBy.id': req.user.id }],
+      ...(req.user.role === SystemRoles.OWNER
+        ? {}
+        : {
+            $or: [
+              { userId: req.user.id },
+              { userId: { $exists: false }, 'createdBy.id': req.user.id },
+            ],
+          }),
     })
       .sort({ date: -1, weekStart: -1 })
       .limit(120)

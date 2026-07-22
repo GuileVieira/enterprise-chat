@@ -126,10 +126,12 @@ function getPersistableAnswers(answers: ProjectTrafficDiaryAnswer[]) {
 export function TrafficDiaryWorkspace({
   project,
   canEdit,
+  currentUserId,
   onAnalyze,
 }: {
   project: TProject;
   canEdit: boolean;
+  currentUserId: string;
   onAnalyze: (entry: ProjectTrafficDiaryEntry) => void;
 }) {
   const localize = useLocalize();
@@ -145,15 +147,22 @@ export function TrafficDiaryWorkspace({
   );
   const defaultAnswersRef = useRef(defaultAnswers);
   defaultAnswersRef.current = defaultAnswers;
-  const [selectedDate, setSelectedDate] = useState(currentDate);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const entries = diaryQuery.data?.entries ?? [];
-  const entry = entries.find((item) => getEntryDate(item) === selectedDate);
-  const historyEntries = entries.filter((item) => getEntryDate(item) !== currentDate);
+  const currentEntry = entries.find(
+    (item) => getEntryDate(item) === currentDate && item.userId === currentUserId,
+  );
+  const entry = selectedEntryId
+    ? entries.find((item) => item._id === selectedEntryId)
+    : currentEntry;
+  const selectedDate = entry ? getEntryDate(entry) : currentDate;
+  const historyEntries = entries.filter((item) => item._id !== currentEntry?._id);
   const isCompleted = entry?.status === 'completed';
-  const canAddQuestion = canEdit;
+  const canEditEntry = canEdit && (!entry || entry.userId === currentUserId);
+  const canAddQuestion = canEditEntry;
   const isSaving = saveDiary.isLoading || deleteDiary.isLoading;
   const hasUnsavedChanges = useMemo(() => {
     const loadedAnswers = entry?.answers.length ? entry.answers : defaultAnswers;
@@ -216,7 +225,7 @@ export function TrafficDiaryWorkspace({
         entryId: entry._id,
         kind: activeKind,
       });
-      setSelectedDate(currentDate);
+      setSelectedEntryId(null);
       setNotice(localize('com_ui_project_meta_ads_diary_deleted_success'));
     } catch {
       setError(localize('com_ui_project_meta_ads_diary_delete_error'));
@@ -242,7 +251,7 @@ export function TrafficDiaryWorkspace({
                 type="button"
                 onClick={() => {
                   setActiveKind(kind);
-                  setSelectedDate(currentDate);
+                  setSelectedEntryId(null);
                 }}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                   activeKind === kind
@@ -285,10 +294,10 @@ export function TrafficDiaryWorkspace({
             </p>
           )}
         </div>
-        {selectedDate !== currentDate && (
+        {selectedEntryId && (
           <button
             type="button"
-            onClick={() => setSelectedDate(currentDate)}
+            onClick={() => setSelectedEntryId(null)}
             className="self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-200"
           >
             {localize('com_ui_project_meta_ads_diary_this_week')}
@@ -312,7 +321,7 @@ export function TrafficDiaryWorkspace({
 
       <div className="sticky top-0 z-10 -mx-5 border-y border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.8)] backdrop-blur dark:border-white/10 dark:bg-slate-950/95">
         <div className="flex flex-wrap items-center gap-2">
-          {canEdit && hasUnsavedChanges && (
+          {canEditEntry && hasUnsavedChanges && (
             <button
               type="button"
               onClick={() => void save()}
@@ -332,7 +341,7 @@ export function TrafficDiaryWorkspace({
               {localize('com_ui_project_meta_ads_diary_analyze')}
             </button>
           )}
-          {canEdit && entry && (
+          {canEditEntry && entry && (
             <button
               type="button"
               onClick={() => void deleteEntry()}
@@ -385,7 +394,7 @@ export function TrafficDiaryWorkspace({
                       {item.parentQuestionId ? (
                         <input
                           value={item.question}
-                          disabled={!canEdit}
+                          disabled={!canEditEntry}
                           onChange={(event) =>
                             setAnswers((current) =>
                               current.map((answer) =>
@@ -405,7 +414,7 @@ export function TrafficDiaryWorkspace({
                       )}
                       <textarea
                         value={item.answer}
-                        disabled={!canEdit}
+                        disabled={!canEditEntry}
                         onChange={(event) => updateAnswer(item.id, event.target.value)}
                         rows={3}
                         className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-white/15 dark:bg-slate-900"
@@ -426,9 +435,9 @@ export function TrafficDiaryWorkspace({
             <div className="flex gap-3 overflow-x-auto pb-1 xl:max-h-[460px] xl:flex-col xl:overflow-y-auto xl:pr-1">
               <button
                 type="button"
-                onClick={() => setSelectedDate(currentDate)}
+                onClick={() => setSelectedEntryId(null)}
                 className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
-                  selectedDate === currentDate
+                  selectedEntryId === null
                     ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
                     : 'border-slate-200 bg-white/70 hover:border-slate-300 dark:border-white/10 dark:bg-white/[0.03]'
                 }`}
@@ -440,13 +449,13 @@ export function TrafficDiaryWorkspace({
               </button>
               {historyEntries.map((historyEntry) => {
                 const historyDate = getEntryDate(historyEntry);
-                const isSelected = historyDate === selectedDate;
+                const isSelected = historyEntry._id === selectedEntryId;
                 const author = historyEntry.createdBy.name || localize(config.actorKey);
                 return (
                   <button
                     key={historyEntry._id}
                     type="button"
-                    onClick={() => setSelectedDate(historyDate)}
+                    onClick={() => setSelectedEntryId(historyEntry._id)}
                     className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
                       isSelected
                         ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'

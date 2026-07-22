@@ -964,6 +964,11 @@ describe('projectMetaAds diary route', () => {
       .send({ kind: 'strategist', answers: [] })
       .expect(200);
 
+    expect(find).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      kind: 'strategist',
+    });
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'owner-1', kind: 'strategist' }),
       expect.any(Object),

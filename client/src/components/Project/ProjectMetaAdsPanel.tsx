@@ -413,6 +413,7 @@ export default function ProjectMetaAdsPanel({
           <TrafficDiaryWorkspace
             project={project}
             canEdit={canEditMetaAdsDiary}
+            currentUserId={user?.id ?? ''}
             onAnalyze={onOpenTrafficDiaryAnalysis}
           />
         )}

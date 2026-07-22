@@ -44,6 +44,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
@@ -74,6 +75,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
@@ -105,6 +107,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
@@ -137,6 +140,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
@@ -144,6 +148,54 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_history')).toBeInTheDocument();
     expect(screen.getAllByText('Guilherme').length).toBeGreaterThan(0);
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
+  });
+
+  it('shows another user diary for the same day with its author in read-only mode', () => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const currentDate = `${values.year}-${values.month}-${values.day}`;
+    mockEntries = [
+      {
+        _id: 'entry-owner',
+        projectId: 'project-1',
+        userId: 'user-1',
+        date: currentDate,
+        weekStart: currentDate,
+        status: 'draft',
+        answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Meu diário.' }],
+        createdBy: { id: 'user-1', name: 'Owner' },
+        events: [],
+      },
+      {
+        _id: 'entry-manager',
+        projectId: 'project-1',
+        userId: 'manager-1',
+        date: currentDate,
+        weekStart: currentDate,
+        status: 'draft',
+        answers: [{ id: 'strategy', question: 'Estratégia', answer: 'Diário do gestor.' }],
+        createdBy: { id: 'manager-1', name: 'Marcelo' },
+        events: [],
+      },
+    ];
+
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        currentUserId="user-1"
+        onAnalyze={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('Meu diário.')).toBeEnabled();
+    fireEvent.click(screen.getByText('Marcelo'));
+    expect(screen.getByDisplayValue('Diário do gestor.')).toBeDisabled();
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_delete')).not.toBeInTheDocument();
   });
 
   it('keeps a completed daily record editable and saves it directly', async () => {
@@ -164,6 +216,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
@@ -213,6 +266,7 @@ describe('TrafficDiaryWorkspace', () => {
       <TrafficDiaryWorkspace
         project={{ projectId: 'project-1', name: 'Cliente' }}
         canEdit={true}
+        currentUserId="user-1"
         onAnalyze={jest.fn()}
       />,
     );
