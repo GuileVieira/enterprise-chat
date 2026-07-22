@@ -7,7 +7,13 @@ const mockDelete = jest.fn();
 let mockEntries: unknown[] = [];
 
 jest.mock('~/data-provider', () => ({
-  useProjectMetaAdsDiaryQuery: () => ({ data: { entries: mockEntries } }),
+  useProjectMetaAdsDiaryQuery: (_projectId: string, kind: string) => ({
+    data: {
+      entries: mockEntries.filter(
+        (entry) => ((entry as { kind?: string }).kind ?? 'manager') === kind,
+      ),
+    },
+  }),
   useSaveProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockSave, isLoading: false }),
   useDeleteProjectMetaAdsDiaryMutation: () => ({ mutateAsync: mockDelete, isLoading: false }),
 }));
@@ -150,7 +156,7 @@ describe('TrafficDiaryWorkspace', () => {
     expect(screen.getByText('com_ui_project_meta_ads_diary_completed')).toBeInTheDocument();
   });
 
-  it('shows another user diary for the same day with its author in read-only mode', () => {
+  it('shows manager and strategist diaries from other users with author names', () => {
     const parts = new Intl.DateTimeFormat('en-CA', {
       day: '2-digit',
       month: '2-digit',
@@ -181,6 +187,18 @@ describe('TrafficDiaryWorkspace', () => {
         createdBy: { id: 'manager-1', name: 'Marcelo' },
         events: [],
       },
+      {
+        _id: 'entry-strategist',
+        projectId: 'project-1',
+        userId: 'manager-2',
+        kind: 'strategist',
+        date: currentDate,
+        weekStart: currentDate,
+        status: 'draft',
+        answers: [{ id: 'weekly_goal', question: 'Objetivo', answer: 'Planejamento estratégico.' }],
+        createdBy: { id: 'manager-2', name: 'Fernanda' },
+        events: [],
+      },
     ];
 
     render(
@@ -196,6 +214,11 @@ describe('TrafficDiaryWorkspace', () => {
     fireEvent.click(screen.getByText('Marcelo'));
     expect(screen.getByDisplayValue('Diário do gestor.')).toBeDisabled();
     expect(screen.queryByText('com_ui_project_meta_ads_diary_delete')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_strategy_diary_tab'));
+    fireEvent.click(screen.getByText('Fernanda'));
+    expect(screen.getByDisplayValue('Planejamento estratégico.')).toBeDisabled();
+    expect(screen.queryByText('Marcelo')).not.toBeInTheDocument();
   });
 
   it('keeps a completed daily record editable and saves it directly', async () => {
