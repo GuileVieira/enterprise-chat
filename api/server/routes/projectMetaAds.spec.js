@@ -764,6 +764,7 @@ describe('projectMetaAds diary validation', () => {
 
 describe('projectMetaAds diary route', () => {
   const originalModel = mongoose.models.TrafficDiaryEntry;
+  const originalUserModel = mongoose.models.User;
 
   beforeEach(() => {
     mockRouteUser = { id: 'user-1', role: SystemRoles.AD_MANAGER, tenantId: 'tenant-x' };
@@ -775,6 +776,7 @@ describe('projectMetaAds diary route', () => {
     } else {
       delete mongoose.models.TrafficDiaryEntry;
     }
+    mongoose.models.User = originalUserModel;
   });
 
   it('saves one daily record per project, user, and date', async () => {
@@ -974,6 +976,44 @@ describe('projectMetaAds diary route', () => {
       expect.any(Object),
       expect.any(Object),
     );
+  });
+
+  it('fills missing diary author names for owner history', async () => {
+    mockRouteUser = { id: 'owner-1', role: SystemRoles.OWNER, tenantId: 'tenant-x' };
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const find = jest.fn().mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([
+        {
+          _id: 'entry-manager',
+          projectId: 'p1',
+          tenantId: 'tenant-x',
+          userId: 'manager-1',
+          kind: 'manager',
+          date: '2026-07-14',
+          createdBy: { id: 'manager-1' },
+        },
+      ]),
+    });
+    const userLean = jest
+      .fn()
+      .mockResolvedValue([{ id: 'manager-1', name: 'Marcelo', email: 'marcelo@example.com' }]);
+    const select = jest.fn().mockReturnValue({ lean: userLean });
+    const findUsers = jest.fn().mockReturnValue({ select });
+    mongoose.models.TrafficDiaryEntry = { find };
+    mongoose.models.User = { find: findUsers };
+
+    const response = await request(createApp())
+      .get('/projects/p1/meta-ads/diary?kind=manager')
+      .expect(200);
+
+    expect(findUsers).toHaveBeenCalledWith({ id: { $in: ['manager-1'] } });
+    expect(response.body.entries[0].createdBy).toEqual({
+      id: 'manager-1',
+      name: 'Marcelo',
+      email: 'marcelo@example.com',
+    });
   });
 
   it('filters diary entries by date period', async () => {

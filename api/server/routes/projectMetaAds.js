@@ -248,6 +248,33 @@ function normalizeDiaryEntry(entry) {
   return { ...entry, kind: entry.kind || 'manager', date, weekStart: entry.weekStart || date };
 }
 
+async function hydrateDiaryAuthorNames(entries) {
+  const missingIds = [
+    ...new Set(
+      entries
+        .filter((entry) => !entry.createdBy?.name)
+        .map((entry) => entry.userId || entry.createdBy?.id)
+        .filter(Boolean),
+    ),
+  ];
+  if (missingIds.length === 0) {
+    return entries;
+  }
+  const users = await mongoose.models.User.find({ id: { $in: missingIds } })
+    .select('id name email')
+    .lean();
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  return entries.map((entry) => {
+    if (entry.createdBy?.name) {
+      return entry;
+    }
+    const user = usersById.get(entry.userId || entry.createdBy?.id);
+    return user
+      ? { ...entry, createdBy: { ...entry.createdBy, name: user.name, email: user.email } }
+      : entry;
+  });
+}
+
 function validateDiaryAnswers(value) {
   if (!Array.isArray(value)) {
     throw Object.assign(new Error('answers must be an array.'), { statusCode: 400 });
@@ -906,7 +933,8 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
       .sort({ date: -1, weekStart: -1 })
       .limit(120)
       .lean();
-    return res.json({ entries: entries.map(normalizeDiaryEntry) });
+    const hydratedEntries = await hydrateDiaryAuthorNames(entries);
+    return res.json({ entries: hydratedEntries.map(normalizeDiaryEntry) });
   } catch (error) {
     logger.error('[projectMetaAds] diary list failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
