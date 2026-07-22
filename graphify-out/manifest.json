@@ -570,8 +570,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/manifest.json": {
-    "mtime": 1784751203.349706,
-    "ast_hash": "747c7aef708674c75d7749d0343eb60f",
+    "mtime": 1784756234.4227195,
+    "ast_hash": "5d361940516f096357789473cc4c1963",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/AzureAISearch.js": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
-    "mtime": 1784751203.3502133,
-    "ast_hash": "662ebfc5d92acf04541aa2a9faf91363",
+    "mtime": 1784756234.239482,
+    "ast_hash": "508f082040c10b9d20d8e2e619bafd7d",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/OpenAIImageTools.js": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsGetInsights.spec.js": {
-    "mtime": 1784751203.3507526,
-    "ast_hash": "891ce5d0124f2b5fd4673e831ea9c5a8",
+    "mtime": 1784756234.3289888,
+    "ast_hash": "265b3c2fa2d3902ed653a41485182c59",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/OpenRouterGeminiImageGen.spec.js": {

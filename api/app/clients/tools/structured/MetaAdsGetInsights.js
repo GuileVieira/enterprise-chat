@@ -19,10 +19,10 @@ const DEFAULT_META_INSIGHT_LEVEL = 'ad';
 const META_INSIGHT_LEVELS = ['campaign', 'adset', 'ad'];
 const META_INSIGHTS_FIELDS_BY_LEVEL = {
   campaign:
-    'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
+    'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
   adset:
-    'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
-  ad: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
+    'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
+  ad: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
 };
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
@@ -161,7 +161,8 @@ class MetaAdsGetInsights extends Tool {
     'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. ' +
     'Requires an accessible project with Meta Ads credentials. ' +
     'Defaults to the configured project ad account and supports level campaign, adset, or ad. ' +
-    'Returns Meta-reported impressions, reach, frequency, spend, CPM, CTR, CPC, actions, and ROAS. ' +
+    'Returns Meta-reported impressions, reach, frequency, spend, CPM, CTR, CPC, actions, ThruPlay, and ROAS. ' +
+    'Use video_thruplay_watched_actions for ThruPlay; never substitute actions.video_view, which is a 3-second video view. ' +
     'For ad or creative questions, always use level ad: campaign and ad set rows are not creative substitutes. ' +
     'Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data.';
 

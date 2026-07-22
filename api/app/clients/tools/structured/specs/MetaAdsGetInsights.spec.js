@@ -56,7 +56,18 @@ describe('MetaAdsGetInsights', () => {
       metaAds: { adAccountId: 'act_123' },
     });
     userCanAccessProject.mockResolvedValue(true);
-    fetch.mockResolvedValue(createResponse({ data: [{ ad_name: 'Ad 1', spend: '10.00' }] }));
+    fetch.mockResolvedValue(
+      createResponse({
+        data: [
+          {
+            ad_name: 'Ad 1',
+            spend: '10.00',
+            reach: '900',
+            video_thruplay_watched_actions: [{ value: '300' }],
+          },
+        ],
+      }),
+    );
   });
 
   it('forces Meta Graph insight params and project-scoped tenant bearer auth', async () => {
@@ -86,7 +97,7 @@ describe('MetaAdsGetInsights', () => {
     const url = new URL(fetch.mock.calls[0][0]);
     expect(url.searchParams.get('level')).toBe('ad');
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
     );
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
@@ -105,7 +116,14 @@ describe('MetaAdsGetInsights', () => {
       graphVersion: 'v25.0',
       pagesFetched: 1,
       hasMore: false,
-      data: [{ ad_name: 'Ad 1', spend: '10.00' }],
+      data: [
+        {
+          ad_name: 'Ad 1',
+          spend: '10.00',
+          reach: '900',
+          video_thruplay_watched_actions: [{ value: '300' }],
+        },
+      ],
     });
   });
 
@@ -223,7 +241,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('campaign');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
   });
@@ -239,7 +257,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('adset');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,cpm,ctr,cpc,actions,action_values,video_thruplay_watched_actions,purchase_roas',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'adset' }));
   });
