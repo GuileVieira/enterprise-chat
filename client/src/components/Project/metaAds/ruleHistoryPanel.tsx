@@ -26,9 +26,11 @@ function formatChangedFields(fields: string[], localize: Localize): string {
     return '-';
   }
   return fields
-    .map((field) =>
-      localize(`com_ui_project_meta_ads_rule_change_${field}` as Parameters<typeof localize>[0]),
-    )
+    .map((field) => {
+      const key = `com_ui_project_meta_ads_rule_change_${field}` as Parameters<typeof localize>[0];
+      const label = localize(key);
+      return label === key ? field.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase() : label;
+    })
     .join(', ');
 }
 
