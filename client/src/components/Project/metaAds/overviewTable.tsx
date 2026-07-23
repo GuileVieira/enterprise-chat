@@ -261,7 +261,7 @@ export function MetaAdsOverviewTable({
         <div
           ref={stickyHorizontalScrollRef}
           onScroll={onStickyHorizontalScroll}
-          className="max-w-full overflow-x-auto"
+          className="max-w-full overflow-x-scroll [scrollbar-color:rgb(148_163_184)_transparent] [scrollbar-width:auto] dark:[scrollbar-color:rgb(71_85_105)_transparent] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar]:h-3"
           aria-hidden="true"
         >
           <div className={`h-2 w-full ${tableMinWidthClassName}`} />
