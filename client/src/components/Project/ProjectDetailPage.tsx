@@ -48,6 +48,9 @@ export default function ProjectDetailPage() {
   const localize = useLocalize();
   const tabStorageKey = projectId ? `orqest.project.${projectId}.activeTab` : null;
   const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'files') {
+      return 'files';
+    }
     if (!tabStorageKey) {
       return 'conversations';
     }
@@ -77,7 +80,8 @@ export default function ProjectDetailPage() {
     user?.role === SystemRoles.OWNER ||
     user?.role === SystemRoles.AD_MANAGER;
   const isMetaAdsVisible =
-    startupConfigQuery.data?.interface?.metaAds !== false && (hasSystemMetaAdsRole || canUseMetaAds);
+    startupConfigQuery.data?.interface?.metaAds !== false &&
+    (hasSystemMetaAdsRole || canUseMetaAds);
   const visibleTabs = isMetaAdsVisible ? tabs : tabs.filter((tab) => tab !== 'metaAds');
 
   useEffect(() => {
@@ -277,36 +281,13 @@ export default function ProjectDetailPage() {
             </>
           )}
           {activeTab === 'files' && (
-            <>
-              {permissions.canEdit ? (
-                <ProjectFileUploader
-                  projectId={project.projectId}
-                  files={filesQuery.data ?? []}
-                  isLoading={filesQuery.isLoading}
-                  onFilesChange={() => filesQuery.refetch()}
-                />
-              ) : (
-                <div className="space-y-3">
-                  {filesQuery.isLoading ? (
-                    <div className="h-20 animate-pulse rounded-xl bg-surface-secondary" />
-                  ) : filesQuery.data && filesQuery.data.length > 0 ? (
-                    filesQuery.data.map((file) => (
-                      <div
-                        key={file.file_id}
-                        className="flex items-center justify-between rounded-xl border border-border-light bg-surface-secondary p-4"
-                      >
-                        <div className="text-sm text-text-primary">{file.filename}</div>
-                        <div className="text-xs text-text-secondary">{file.type}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-border-light py-10 text-center text-sm text-text-secondary">
-                      {localize('com_ui_project_no_files')}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
+            <ProjectFileUploader
+              projectId={project.projectId}
+              files={filesQuery.data ?? []}
+              isLoading={filesQuery.isLoading}
+              canEdit={permissions.canEdit}
+              onFilesChange={() => filesQuery.refetch()}
+            />
           )}
           {isMetaAdsVisible && activeTab === 'metaAds' && (
             <ProjectMetaAdsPanel project={project} canEdit={permissions.canEdit} />

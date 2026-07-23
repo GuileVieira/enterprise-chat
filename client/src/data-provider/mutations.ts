@@ -1299,7 +1299,7 @@ export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager', 'mine'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
         queryClient.invalidateQueries([
@@ -1325,7 +1325,7 @@ export const useCompleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager', 'mine'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
         queryClient.invalidateQueries([
@@ -1351,7 +1351,7 @@ export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', entry.kind ?? 'manager', 'mine'],
           (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
         );
         queryClient.invalidateQueries([
@@ -1360,6 +1360,27 @@ export const useReopenProjectMetaAdsDiaryMutation = (): UseMutationResult<
           'diary',
           entry.kind ?? 'manager',
         ]);
+      },
+    },
+  );
+};
+
+export const useReprocessProjectMetaAdsDiaryMutation = (): UseMutationResult<
+  t.ProjectTrafficDiaryEntry,
+  unknown,
+  { projectId: string; entryId: string; kind: t.ProjectTrafficDiaryKind },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ projectId, entryId }) => dataService.reprocessProjectMetaAdsDiary(projectId, entryId),
+    {
+      onSuccess: (entry, vars) => {
+        queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind, 'project'],
+          (current) => mergeProjectMetaAdsDiaryEntry(current, entry),
+        );
+        queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(vars.projectId));
       },
     },
   );
@@ -1377,7 +1398,7 @@ export const useDeleteProjectMetaAdsDiaryMutation = (): UseMutationResult<
     {
       onSuccess: (_, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(
-          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager'],
+          [QueryKeys.projectMetaAds, vars.projectId, 'diary', vars.kind ?? 'manager', 'mine'],
           (current) => ({
             entries: (current?.entries ?? []).filter((entry) => entry._id !== vars.entryId),
           }),

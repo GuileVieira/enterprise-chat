@@ -919,8 +919,9 @@ export const getProjectMetaAdsRuns = (
 export const getProjectMetaAdsDiary = (
   id: string,
   kind?: q.ProjectTrafficDiaryKind,
+  scope?: 'project',
 ): Promise<q.ProjectTrafficDiaryResponse> => {
-  return request.get(endpoints.projectMetaAdsDiary(id, kind));
+  return request.get(endpoints.projectMetaAdsDiary(id, kind, scope));
 };
 
 export const saveProjectMetaAdsDiary = (
@@ -944,6 +945,13 @@ export const reopenProjectMetaAdsDiary = (
   entryId: string,
 ): Promise<q.ProjectTrafficDiaryEntry> => {
   return request.post(endpoints.projectMetaAdsDiaryReopen(id, entryId), {});
+};
+
+export const reprocessProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryReprocess(id, entryId), {});
 };
 
 export const deleteProjectMetaAdsDiary = (id: string, entryId: string): Promise<void> => {

@@ -185,7 +185,16 @@ type AgentFileSource = {
   pageRelevance?: Record<number, number>;
   messageId: string;
   toolCallId: string;
-  metadata?: any;
+  metadata?: {
+    storageType?: string;
+    trafficDiary?: {
+      entryId?: string;
+      kind?: 'manager' | 'strategist';
+      projectId?: string;
+      date?: string;
+      weekStart?: string;
+    };
+  };
 };
 
 interface FileItemProps {
@@ -245,6 +254,8 @@ const FileItem = React.memo(function FileItem({
 
   // Check if file is from local storage
   const isLocalFile = file.metadata?.storageType === 'local';
+  const diary = file.metadata?.trafficDiary;
+  const canOpen = Boolean(diary) || !isLocalFile;
 
   const handleDownload = useCallback(
     async (e: React.MouseEvent) => {
@@ -272,6 +283,22 @@ const FileItem = React.memo(function FileItem({
     },
     [downloadFile, file.filename, isLocalFile, localize, showToast],
   );
+  const handleOpen = useCallback(
+    (event: React.MouseEvent) => {
+      if (!diary?.projectId || !diary.entryId) {
+        handleDownload(event);
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      window.open(
+        `/projects/${encodeURIComponent(diary.projectId)}?tab=files&diary=${encodeURIComponent(diary.entryId)}`,
+        '_blank',
+        'noopener,noreferrer',
+      );
+    },
+    [diary, handleDownload],
+  );
   const isLoading = false;
 
   // Memoize file icon computation for performance
@@ -291,25 +318,29 @@ const FileItem = React.memo(function FileItem({
     filename: file.filename,
     status: isLoading ? localize('com_sources_downloading_status') : '',
   });
+  let openLabel = downloadAriaLabel;
+  if (diary) {
+    openLabel = file.filename;
+  } else if (isLocalFile) {
+    openLabel = localize('com_sources_download_local_unavailable');
+  }
   const error = null;
   if (expanded) {
     return (
       <button
-        onClick={isLocalFile ? undefined : handleDownload}
+        onClick={canOpen ? handleOpen : undefined}
         disabled={isLoading}
         className={`flex w-full flex-col rounded-lg bg-surface-primary-contrast px-3 py-2 text-sm transition-all duration-300 disabled:opacity-50 ${
-          isLocalFile ? 'cursor-default' : 'hover:bg-surface-tertiary'
+          canOpen ? 'hover:bg-surface-tertiary' : 'cursor-default'
         }`}
-        aria-label={
-          isLocalFile ? localize('com_sources_download_local_unavailable') : downloadAriaLabel
-        }
+        aria-label={openLabel}
       >
         <div className="flex items-center gap-2">
           <span className="text-base">{fileIcon}</span>
           <span className="truncate text-xs font-medium text-text-secondary">
             {localize('com_sources_agent_file')}
           </span>
-          {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
+          {(!isLocalFile || diary) && <Download className="ml-auto size-3" aria-hidden="true" />}
         </div>
         <div className="mt-1 min-w-0">
           <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">
@@ -334,21 +365,19 @@ const FileItem = React.memo(function FileItem({
 
   return (
     <button
-      onClick={isLocalFile ? undefined : handleDownload}
+      onClick={canOpen ? handleOpen : undefined}
       disabled={isLoading}
       className={`flex h-full w-full flex-col rounded-lg bg-surface-primary-contrast px-3 py-2 text-sm transition-all duration-300 disabled:opacity-50 ${
-        isLocalFile ? 'cursor-default' : 'hover:bg-surface-tertiary'
+        canOpen ? 'hover:bg-surface-tertiary' : 'cursor-default'
       }`}
-      aria-label={
-        isLocalFile ? localize('com_sources_download_local_unavailable') : downloadAriaLabel
-      }
+      aria-label={openLabel}
     >
       <div className="flex items-center gap-2">
         <span className="text-base">{fileIcon}</span>
         <span className="truncate text-xs font-medium text-text-secondary">
           {localize('com_sources_agent_file')}
         </span>
-        {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
+        {(!isLocalFile || diary) && <Download className="ml-auto size-3" aria-hidden="true" />}
       </div>
       <div className="mt-1 min-w-0">
         <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">

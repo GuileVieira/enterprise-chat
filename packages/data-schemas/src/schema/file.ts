@@ -180,6 +180,8 @@ const file: Schema<IMongoFile> = new Schema(
             date: { type: String, index: true },
             weekStart: { type: String, index: true },
             status: { type: String, enum: ['draft', 'completed'] },
+            author: String,
+            indexStatus: { type: String, enum: ['pending', 'indexed', 'failed'] },
             updatedAt: Date,
           },
           { _id: false },

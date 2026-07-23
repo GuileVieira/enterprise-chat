@@ -123,6 +123,8 @@ async function syncTrafficDiaryIndex({
           date: entry.date,
           weekStart: entry.weekStart || entry.date,
           status: entry.status,
+          author: getActorLabel(entry.lastEditedBy || entry.completedBy || entry.createdBy),
+          indexStatus: 'indexed',
           updatedAt: entry.updatedAt,
         },
       },

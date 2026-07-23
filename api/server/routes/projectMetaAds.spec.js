@@ -80,6 +80,18 @@ function createApp() {
   return app;
 }
 
+function withDiaryIndexLifecycle(model) {
+  return {
+    ...model,
+    updateOne: jest.fn().mockResolvedValue({ acknowledged: true }),
+    findByIdAndUpdate: jest
+      .fn()
+      .mockImplementation((id, update) =>
+        Promise.resolve({ _id: id, date: '2026-07-14', indexStatus: update.$set.indexStatus }),
+      ),
+  };
+}
+
 beforeEach(() => {
   mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
   mockGetRoleByName.mockImplementation(async (roleName) => ({
@@ -760,6 +772,28 @@ describe('projectMetaAds diary validation', () => {
   it('accepts any ISO day, not only Mondays', () => {
     expect(router._validateDiaryDateForTest('2026-07-14')).toBe('2026-07-14');
   });
+
+  it('persists failed indexing so the files area can offer retry', async () => {
+    const originalModel = mongoose.models.TrafficDiaryEntry;
+    const updateOne = jest.fn().mockResolvedValue({});
+    const findByIdAndUpdate = jest.fn().mockImplementation((_id, update) => update.$set);
+    mongoose.models.TrafficDiaryEntry = { updateOne, findByIdAndUpdate };
+
+    const result = await router._syncDiaryIndexForTest({
+      entry: { _id: 'entry-1' },
+      project: { projectId: 'p1' },
+      req: { user: { id: 'user-1' } },
+      syncIndex: jest.fn().mockRejectedValue(new Error('vector unavailable')),
+      createFileFn: jest.fn(),
+    });
+
+    expect(result).toEqual({
+      indexStatus: 'failed',
+      indexError: 'vector unavailable',
+    });
+    if (originalModel) mongoose.models.TrafficDiaryEntry = originalModel;
+    else delete mongoose.models.TrafficDiaryEntry;
+  });
 });
 
 describe('projectMetaAds diary route', () => {
@@ -801,7 +835,7 @@ describe('projectMetaAds diary route', () => {
       createdBy: { id: 'user-1', name: 'Guilherme' },
       events: [],
     });
-    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+    mongoose.models.TrafficDiaryEntry = withDiaryIndexLifecycle({ findOne, findOneAndUpdate });
 
     const response = await request(createApp())
       .put('/projects/p1/meta-ads/diary/2026-07-14')
@@ -891,7 +925,7 @@ describe('projectMetaAds diary route', () => {
       createdBy: { id: 'user-1' },
       events: [{ type: 'updated', actor: { id: 'user-1' }, at: new Date() }],
     });
-    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+    mongoose.models.TrafficDiaryEntry = withDiaryIndexLifecycle({ findOne, findOneAndUpdate });
 
     await request(createApp())
       .put('/projects/p1/meta-ads/diary/2026-07-14')
@@ -922,7 +956,7 @@ describe('projectMetaAds diary route', () => {
       createdBy: { id: 'user-1' },
       events: [],
     });
-    mongoose.models.TrafficDiaryEntry = { findOne, findOneAndUpdate };
+    mongoose.models.TrafficDiaryEntry = withDiaryIndexLifecycle({ findOne, findOneAndUpdate });
 
     await request(createApp())
       .put('/projects/p1/meta-ads/diary/2026-07-14')
@@ -958,7 +992,11 @@ describe('projectMetaAds diary route', () => {
       createdBy: { id: 'owner-1' },
       events: [],
     });
-    mongoose.models.TrafficDiaryEntry = { find, findOne, findOneAndUpdate };
+    mongoose.models.TrafficDiaryEntry = withDiaryIndexLifecycle({
+      find,
+      findOne,
+      findOneAndUpdate,
+    });
 
     await request(createApp()).get('/projects/p1/meta-ads/diary?kind=strategist').expect(200);
     await request(createApp())
@@ -1036,6 +1074,27 @@ describe('projectMetaAds diary route', () => {
       kind: 'manager',
       date: { $gte: '2026-07-01', $lte: '2026-07-31' },
       $or: [{ userId: 'user-1' }, { userId: { $exists: false }, 'createdBy.id': 'user-1' }],
+    });
+  });
+
+  it('lists every project diary source when files view requests project scope', async () => {
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const find = jest.fn().mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue([]),
+    });
+    mongoose.models.TrafficDiaryEntry = { find };
+
+    await request(createApp())
+      .get('/projects/p1/meta-ads/diary')
+      .query({ kind: 'strategist', scope: 'project' })
+      .expect(200);
+
+    expect(find).toHaveBeenCalledWith({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      kind: 'strategist',
     });
   });
 

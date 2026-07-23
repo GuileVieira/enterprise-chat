@@ -153,6 +153,9 @@ function looksLikeMetaAccessToken(value) {
 const requireMetaAdsProjectView = canAccessProjectResource({
   requiredPermission: PermissionBits.VIEW,
 });
+const requireMetaAdsProjectEdit = canAccessProjectResource({
+  requiredPermission: PermissionBits.EDIT,
+});
 
 async function requireMetaAdsRoleAccess(req, res, next) {
   try {
@@ -246,6 +249,46 @@ function normalizeDiaryEntry(entry) {
   }
   const date = entry.date || entry.weekStart;
   return { ...entry, kind: entry.kind || 'manager', date, weekStart: entry.weekStart || date };
+}
+
+async function syncDiaryIndex({
+  entry,
+  project,
+  req,
+  syncIndex = syncTrafficDiaryIndex,
+  createFileFn = createFile,
+}) {
+  const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+  await TrafficDiaryEntry.updateOne(
+    { _id: entry._id },
+    { $set: { indexStatus: 'pending' }, $unset: { indexError: 1 } },
+  );
+  try {
+    await syncIndex({
+      entry,
+      project,
+      req,
+      userId: req.user.id,
+      createFile: createFileFn,
+    });
+    return TrafficDiaryEntry.findByIdAndUpdate(
+      entry._id,
+      { $set: { indexStatus: 'indexed', indexedAt: new Date() }, $unset: { indexError: 1 } },
+      { new: true, lean: true },
+    );
+  } catch (error) {
+    logger.error('[projectMetaAds] diary indexing failed', error);
+    return TrafficDiaryEntry.findByIdAndUpdate(
+      entry._id,
+      {
+        $set: {
+          indexStatus: 'failed',
+          indexError: String(error.message || error).slice(0, 500),
+        },
+      },
+      { new: true, lean: true },
+    );
+  }
 }
 
 async function hydrateDiaryAuthorNames(entries) {
@@ -906,7 +949,7 @@ router.get('/runs', metaAdsAccess, async (req, res) => {
   }
 });
 
-router.get('/diary', metaAdsAccess, async (req, res) => {
+router.get('/diary', requireMetaAdsProjectView, async (req, res) => {
   try {
     const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
     if (!TrafficDiaryEntry) {
@@ -921,7 +964,7 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
     const entries = await TrafficDiaryEntry.find({
       ...getDiaryProjectFilter(project, { kind }),
       ...getDiaryPeriodQuery(req.query),
-      ...(req.user.role === SystemRoles.OWNER
+      ...(req.query.scope === 'project' || req.user.role === SystemRoles.OWNER
         ? {}
         : {
             $or: [
@@ -979,8 +1022,8 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
       },
       { new: true, upsert: true, lean: true },
     );
-    await syncTrafficDiaryIndex({ entry, project, userId: req.user.id, createFile });
-    return res.json(normalizeDiaryEntry(entry));
+    const indexedEntry = await syncDiaryIndex({ entry, project, req });
+    return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
     logger.error('[projectMetaAds] diary save failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
@@ -1032,13 +1075,8 @@ router.post('/diary/:entryId/complete', metaAdsDiaryEditAccess, async (req, res)
       },
       { new: true, lean: true },
     );
-    await syncTrafficDiaryIndex({
-      entry: completed,
-      project,
-      userId: req.user.id,
-      createFile,
-    });
-    return res.json(normalizeDiaryEntry(completed));
+    const indexedEntry = await syncDiaryIndex({ entry: completed, project, req });
+    return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
     logger.error('[projectMetaAds] diary completion failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
@@ -1073,10 +1111,37 @@ router.post('/diary/:entryId/reopen', metaAdsDiaryEditAccess, async (req, res) =
     if (!reopened) {
       return res.status(404).json({ message: 'Completed diary entry not found' });
     }
-    await syncTrafficDiaryIndex({ entry: reopened, project, userId: req.user.id, createFile });
-    return res.json(normalizeDiaryEntry(reopened));
+    const indexedEntry = await syncDiaryIndex({ entry: reopened, project, req });
+    return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
     logger.error('[projectMetaAds] diary reopen failed', error);
+    return res.status(error.statusCode ?? 500).json({ message: error.message });
+  }
+});
+
+router.post('/diary/:entryId/reprocess', requireMetaAdsProjectEdit, async (req, res) => {
+  try {
+    const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
+    if (!TrafficDiaryEntry || !mongoose.Types.ObjectId.isValid(req.params.entryId)) {
+      return res.status(400).json({ message: 'Invalid diary entry' });
+    }
+    const project =
+      (await getProjectById(req.params.projectId)) || (await findProjectById(req.params.projectId));
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const entry = await TrafficDiaryEntry.findOne(
+      getDiaryProjectFilter(project, {
+        _id: req.params.entryId,
+      }),
+    ).lean();
+    if (!entry) {
+      return res.status(404).json({ message: 'Diary entry not found' });
+    }
+    const indexedEntry = await syncDiaryIndex({ entry, project, req });
+    return res.json(normalizeDiaryEntry(indexedEntry));
+  } catch (error) {
+    logger.error('[projectMetaAds] diary reprocess failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1325,6 +1390,7 @@ router._validateDiaryAnswersForTest = validateDiaryAnswers;
 router._validateDiaryDateForTest = validateDiaryDate;
 router._getDiaryDateKeyForTest = getDiaryDateKey;
 router._syncTrafficDiaryIndexForTest = syncTrafficDiaryIndex;
+router._syncDiaryIndexForTest = syncDiaryIndex;
 router._deleteTrafficDiaryIndexForTest = deleteTrafficDiaryIndex;
 
 module.exports = router;

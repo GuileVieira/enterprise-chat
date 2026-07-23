@@ -20,6 +20,14 @@ jest.mock('~/data-provider', () => ({
   }),
   useUpdateProjectMutation: jest.fn(() => ({ mutate: mockUpdateProjectMutate })),
   useDeleteFilesMutation: jest.fn(() => ({ mutate: mockDeleteFilesMutate })),
+  useProjectMetaAdsDiaryQuery: jest.fn(() => ({
+    data: { entries: [] },
+    isLoading: false,
+  })),
+  useReprocessProjectMetaAdsDiaryMutation: jest.fn(() => ({
+    mutate: jest.fn(),
+    isLoading: false,
+  })),
 }));
 
 jest.mock('~/hooks', () => ({
