@@ -140,16 +140,20 @@ async function enhanceSourcesWithMetadata(sources, appConfig) {
 
   return sources.map((source) => {
     const fileRecord = fileMetadataMap[source.fileId] || {};
+    const diary = fileRecord.metadata?.trafficDiary;
     const configuredStorageType = fileRecord.source || appConfig?.fileStrategy || FileSources.local;
 
     return {
       ...source,
-      fileName: fileRecord.filename || source.fileName || 'Unknown File',
+      fileName: diary
+        ? `${diary.kind === 'strategist' ? 'Diário do Estrategista' : 'Diário do Gestor'} — ${diary.date || diary.weekStart}`
+        : fileRecord.filename || source.fileName || 'Unknown File',
       metadata: {
         ...source.metadata,
         storageType: configuredStorageType,
         fileType: fileRecord.type || undefined,
         fileBytes: fileRecord.bytes || undefined,
+        ...(diary ? { trafficDiary: diary } : {}),
       },
     };
   });

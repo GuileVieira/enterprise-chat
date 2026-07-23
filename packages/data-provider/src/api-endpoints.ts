@@ -143,14 +143,21 @@ export const projectMetaAdsRulePerformance = (id: string) =>
   `${projectMetaAds(id)}/rules/performance`;
 export const projectMetaAdsRuleHistory = (id: string) => `${projectMetaAds(id)}/rules/history`;
 export const projectMetaAdsRuns = (id: string) => `${projectMetaAds(id)}/runs`;
-export const projectMetaAdsDiary = (id: string, kind?: string) =>
-  `${projectMetaAds(id)}/diary${kind ? `?kind=${encodeURIComponent(kind)}` : ''}`;
+export const projectMetaAdsDiary = (id: string, kind?: string, scope?: 'project') => {
+  const query = new URLSearchParams();
+  if (kind) query.set('kind', kind);
+  if (scope) query.set('scope', scope);
+  const search = query.toString();
+  return `${projectMetaAds(id)}/diary${search ? `?${search}` : ''}`;
+};
 export const projectMetaAdsDiaryWeek = (id: string, date: string) =>
   `${projectMetaAdsDiary(id)}/${encodeURIComponent(date)}`;
 export const projectMetaAdsDiaryComplete = (id: string, entryId: string) =>
   `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/complete`;
 export const projectMetaAdsDiaryReopen = (id: string, entryId: string) =>
   `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/reopen`;
+export const projectMetaAdsDiaryReprocess = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/reprocess`;
 export const projectMetaAdsDiaryDelete = (id: string, entryId: string) =>
   `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}`;
 export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;

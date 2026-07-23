@@ -168,6 +168,19 @@ export type TFile = {
       sourceImageFileName?: string;
       derivedTextFileId?: string;
     };
+    trafficDiary?: {
+      entryId?: string;
+      kind?: 'manager' | 'strategist';
+      projectId?: string;
+      tenantId?: string;
+      userId?: string;
+      date?: string;
+      weekStart?: string;
+      status?: 'draft' | 'completed';
+      author?: string;
+      indexStatus?: 'pending' | 'indexed' | 'failed';
+      updatedAt?: string | Date;
+    };
   };
   createdAt?: string | Date;
   updatedAt?: string | Date;

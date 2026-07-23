@@ -398,11 +398,12 @@ export const useProjectMetaAdsRunsQuery = (
 export const useProjectMetaAdsDiaryQuery = (
   projectId: string,
   kind?: t.ProjectTrafficDiaryKind,
+  scope?: 'project',
   config?: UseQueryOptions<t.ProjectTrafficDiaryResponse>,
 ): QueryObserverResult<t.ProjectTrafficDiaryResponse> => {
   return useQuery<t.ProjectTrafficDiaryResponse>(
-    [QueryKeys.projectMetaAds, projectId, 'diary', kind ?? 'manager'],
-    () => dataService.getProjectMetaAdsDiary(projectId, kind),
+    [QueryKeys.projectMetaAds, projectId, 'diary', kind ?? 'manager', scope ?? 'mine'],
+    () => dataService.getProjectMetaAdsDiary(projectId, kind, scope),
     {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,

@@ -128,6 +128,9 @@ export type ProjectTrafficDiaryEntry = {
   timeZone?: string;
   weekStart: string;
   status: 'draft' | 'completed';
+  indexStatus: 'pending' | 'indexed' | 'failed';
+  indexError?: string;
+  indexedAt?: string;
   answers: ProjectTrafficDiaryAnswer[];
   createdBy: ProjectTrafficDiaryActor;
   lastEditedBy?: ProjectTrafficDiaryActor;

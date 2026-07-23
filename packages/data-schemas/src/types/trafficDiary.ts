@@ -2,6 +2,7 @@ import type { Document } from 'mongoose';
 
 export type TrafficDiaryStatus = 'draft' | 'completed';
 export type TrafficDiaryKind = 'manager' | 'strategist';
+export type TrafficDiaryIndexStatus = 'pending' | 'indexed' | 'failed';
 export type TrafficDiaryEventType = 'created' | 'updated' | 'completed' | 'reopened';
 
 export interface ITrafficDiaryActor {
@@ -32,6 +33,9 @@ export interface ITrafficDiaryEntry extends Document {
   timeZone?: string;
   weekStart: string;
   status: TrafficDiaryStatus;
+  indexStatus: TrafficDiaryIndexStatus;
+  indexError?: string;
+  indexedAt?: Date;
   answers: ITrafficDiaryAnswer[];
   createdBy: ITrafficDiaryActor;
   lastEditedBy?: ITrafficDiaryActor;

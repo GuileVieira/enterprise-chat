@@ -88,6 +88,8 @@ export interface IMongoFile extends Omit<Document, 'model'> {
       date?: string;
       weekStart?: string;
       status?: 'draft' | 'completed';
+      author?: string;
+      indexStatus?: 'pending' | 'indexed' | 'failed';
       updatedAt?: Date;
     };
   };

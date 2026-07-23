@@ -18,12 +18,14 @@ import {
   useUpdateProjectMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import ProjectDiaryFiles from './ProjectDiaryFiles';
 
 interface ProjectFileUploaderProps {
   projectId: string;
   files: TFile[];
   isLoading: boolean;
   onFilesChange: () => void;
+  canEdit?: boolean;
 }
 
 export default function ProjectFileUploader({
@@ -31,6 +33,7 @@ export default function ProjectFileUploader({
   files,
   isLoading,
   onFilesChange,
+  canEdit = true,
 }: ProjectFileUploaderProps) {
   const localize = useLocalize();
   const [isDragOver, setIsDragOver] = useState(false);
@@ -122,6 +125,7 @@ export default function ProjectFileUploader({
   };
 
   const isUploading = uploadingFileName !== null;
+  const regularFiles = files.filter((file) => !file.metadata?.trafficDiary);
 
   const [fileToDelete, setFileToDelete] = useState<TFile | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -170,33 +174,36 @@ export default function ProjectFileUploader({
 
   return (
     <div className="space-y-4">
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => !isUploading && fileInputRef.current?.click()}
-        aria-busy={isUploading}
-        className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 transition-colors focus-within:ring-2 focus-within:ring-ring-primary ${
-          isDragOver
-            ? 'border-text-primary bg-surface-hover'
-            : 'border-border-light bg-surface-secondary hover:border-border-medium hover:bg-surface-hover'
-        } ${isUploading ? 'cursor-wait opacity-70' : 'cursor-pointer active:scale-[0.99]'}`}
-      >
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border-light bg-surface-primary">
-          <Upload className="h-6 w-6 text-text-secondary" aria-hidden="true" />
+      <ProjectDiaryFiles projectId={projectId} canEdit={canEdit} />
+      {canEdit && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
+          aria-busy={isUploading}
+          className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 transition-colors focus-within:ring-2 focus-within:ring-ring-primary ${
+            isDragOver
+              ? 'border-text-primary bg-surface-hover'
+              : 'border-border-light bg-surface-secondary hover:border-border-medium hover:bg-surface-hover'
+          } ${isUploading ? 'cursor-wait opacity-70' : 'cursor-pointer active:scale-[0.99]'}`}
+        >
+          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-border-light bg-surface-primary">
+            <Upload className="h-6 w-6 text-text-secondary" aria-hidden="true" />
+          </div>
+          <p className="text-sm font-medium text-text-primary">
+            {localize('com_ui_project_upload_file')}
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">{localize('com_ui_drag_drop')}</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            disabled={isUploading}
+            onChange={handleInputChange}
+          />
         </div>
-        <p className="text-sm font-medium text-text-primary">
-          {localize('com_ui_project_upload_file')}
-        </p>
-        <p className="mt-1 text-xs text-text-secondary">{localize('com_ui_drag_drop')}</p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          disabled={isUploading}
-          onChange={handleInputChange}
-        />
-      </div>
+      )}
 
       {uploadingFileName && (
         <div
@@ -223,9 +230,9 @@ export default function ProjectFileUploader({
         </div>
       )}
 
-      {files.length > 0 && (
+      {regularFiles.length > 0 && (
         <div className="space-y-2 rounded-2xl border border-border-light bg-surface-secondary p-2">
-          {files.map((file) => (
+          {regularFiles.map((file) => (
             <div
               key={file.file_id}
               className="flex items-center justify-between rounded-xl border border-transparent bg-surface-secondary p-3 transition-colors hover:border-border-light hover:bg-surface-hover"
@@ -249,20 +256,22 @@ export default function ProjectFileUploader({
                   </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => handleDelete(file)}
-                className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
-                title={localize('com_ui_delete')}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(file)}
+                  className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
+                  title={localize('com_ui_delete')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {files.length === 0 && !isLoading && (
+      {regularFiles.length === 0 && !isLoading && (
         <div className="rounded-2xl border border-dashed border-border-light bg-surface-secondary py-10 text-center text-sm text-text-secondary">
           {localize('com_ui_project_no_files')}
         </div>
