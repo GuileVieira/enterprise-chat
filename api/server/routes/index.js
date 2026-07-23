@@ -18,6 +18,7 @@ const memories = require('./memories');
 const presets = require('./presets');
 const projects = require('./projects');
 const projectMetaAds = require('./projectMetaAds');
+const projectMeetings = require('./projectMeetings');
 const prompts = require('./prompts');
 const promptImprove = require('./promptImprove');
 const skills = require('./skills');
@@ -69,6 +70,7 @@ module.exports = {
   models,
   projects,
   projectMetaAds,
+  projectMeetings,
   prompts,
   promptImprove,
   skills,
