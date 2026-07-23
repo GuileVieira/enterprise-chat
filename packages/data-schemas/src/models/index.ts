@@ -35,6 +35,7 @@ import { createConfigModel } from './config';
 import { createTenantFunctionModel } from './tenantFunction';
 import { createTenantSecretModel } from './tenantSecret';
 import { createTrafficDiaryModel } from './trafficDiary';
+import { createMeetingModel } from './meeting';
 
 /**
  * Creates all database models for all collections
@@ -78,5 +79,6 @@ export function createModels(mongoose: typeof import('mongoose')) {
     TenantFunction: createTenantFunctionModel(mongoose),
     TenantSecret: createTenantSecretModel(mongoose),
     TrafficDiaryEntry: createTrafficDiaryModel(mongoose),
+    Meeting: createMeetingModel(mongoose),
   };
 }

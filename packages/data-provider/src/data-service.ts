@@ -875,6 +875,30 @@ export const archiveProject = (id: string, isArchived: boolean): Promise<s.TProj
   return request.put(endpoints.archiveProject(id), { isArchived });
 };
 
+export const getProjectMeetings = (
+  id: string,
+): Promise<import('./types/meetings').ProjectMeeting[]> =>
+  request.get(endpoints.projectMeetings(id));
+
+export const getProjectMeeting = (
+  id: string,
+  meetingId: string,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.get(endpoints.projectMeeting(id, meetingId));
+
+export const createProjectMeeting = (
+  id: string,
+  data: FormData,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.postMultiPart(endpoints.projectMeetings(id), data);
+
+export const updateProjectMeetingSpeakers = (
+  id: string,
+  meetingId: string,
+  speakerNames: Record<string, string>,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.patch(endpoints.projectMeetingSpeakers(id, meetingId), { speakerNames });
+
 export const getProjectMetaAdsStatus = (
   id: string,
   params?: q.ProjectMetaAdsStatusParams,

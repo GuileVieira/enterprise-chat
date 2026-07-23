@@ -199,6 +199,7 @@ const startServer = async () => {
   app.use('/api/convos', routes.convos);
   app.use('/api/presets', routes.presets);
   app.use('/api/projects/:projectId/meta-ads', routes.projectMetaAds);
+  app.use('/api/projects/:projectId/meetings', routes.projectMeetings);
   app.use('/api/projects', routes.projects);
   app.use('/api/prompts', routes.prompts);
   app.use('/api/prompt', routes.promptImprove);

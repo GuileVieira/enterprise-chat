@@ -136,6 +136,11 @@ const projectsRoot = `${BASE_URL}/api/projects`;
 export const projects = () => projectsRoot;
 export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}`;
 export const archiveProject = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}/archive`;
+export const projectMeetings = (id: string) => `${projectById(id)}/meetings`;
+export const projectMeeting = (id: string, meetingId: string) =>
+  `${projectMeetings(id)}/${encodeURIComponent(meetingId)}`;
+export const projectMeetingSpeakers = (id: string, meetingId: string) =>
+  `${projectMeeting(id, meetingId)}/speakers`;
 export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
 export const projectMetaAdsRankings = (id: string) => `${projectMetaAds(id)}/rankings`;
 export const projectMetaAdsPerformance = (id: string) => `${projectMetaAds(id)}/performance`;

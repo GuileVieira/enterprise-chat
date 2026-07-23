@@ -6,6 +6,7 @@ import {
   FileText,
   Folder,
   GearSix,
+  MicrophoneStage,
   PencilSimple,
   Sparkle,
   TrendUp,
@@ -26,9 +27,18 @@ import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectFileUploader from './ProjectFileUploader';
 import ProjectForm from './ProjectForm';
 import ProjectMetaAdsPanel from './ProjectMetaAdsPanel';
+import ProjectMeetingsTab from './ProjectMeetingsTab';
 import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 
-const tabs = ['conversations', 'prompts', 'memories', 'files', 'metaAds', 'settings'] as const;
+const tabs = [
+  'conversations',
+  'prompts',
+  'memories',
+  'files',
+  'meetings',
+  'metaAds',
+  'settings',
+] as const;
 type Tab = (typeof tabs)[number];
 
 const isProjectTab = (value: string | null): value is Tab =>
@@ -39,6 +49,7 @@ const tabIcons: Record<Tab, typeof ChatCircle> = {
   prompts: Sparkle,
   memories: FileText,
   files: Folder,
+  meetings: MicrophoneStage,
   metaAds: TrendUp,
   settings: GearSix,
 };
@@ -288,6 +299,9 @@ export default function ProjectDetailPage() {
               canEdit={permissions.canEdit}
               onFilesChange={() => filesQuery.refetch()}
             />
+          )}
+          {activeTab === 'meetings' && (
+            <ProjectMeetingsTab projectId={project.projectId} canEdit={permissions.canEdit} />
           )}
           {isMetaAdsVisible && activeTab === 'metaAds' && (
             <ProjectMetaAdsPanel project={project} canEdit={permissions.canEdit} />

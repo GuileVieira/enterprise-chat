@@ -46,6 +46,11 @@ jest.mock('../ProjectMetaAdsPanel', () => ({
   default: () => <div data-testid="project-meta-ads-panel" />,
 }));
 
+jest.mock('../ProjectMeetingsTab', () => ({
+  __esModule: true,
+  default: () => <div data-testid="project-meetings-tab" />,
+}));
+
 jest.mock('../ProjectForm', () => ({
   __esModule: true,
   default: ({ onSuccess }) => (
@@ -151,6 +156,24 @@ describe('ProjectDetailPage', () => {
     });
     renderPage();
     expect(screen.getByTestId('project-conversations-tab')).toBeInTheDocument();
+  });
+
+  it('opens the meetings area from project details', () => {
+    (useProjectByIdQuery as jest.Mock).mockReturnValue({
+      data: {
+        projectId: 'p1',
+        name: 'Test Project',
+        user: 'user-1',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+      isLoading: false,
+    });
+    renderPage();
+
+    fireEvent.click(screen.getByText('com_ui_project_tab_meetings'));
+
+    expect(screen.getByTestId('project-meetings-tab')).toBeInTheDocument();
   });
 
   it('hides Meta Ads tab when startup config disables it', () => {
