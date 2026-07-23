@@ -103,7 +103,7 @@ describe('MetaAdsGetInsights', () => {
     const url = new URL(fetch.mock.calls[0][0]);
     expect(url.searchParams.get('level')).toBe('ad');
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,clicks',
     );
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(JSON.parse(url.searchParams.get('time_range'))).toEqual({
@@ -111,26 +111,19 @@ describe('MetaAdsGetInsights', () => {
       until: '2026-05-07',
     });
 
-    expect(JSON.parse(result)).toEqual({
-      ok: true,
-      status: 200,
-      accountId: 'act_123',
-      since: '2026-05-01',
-      until: '2026-05-07',
-      level: 'ad',
-      rows: 1,
-      graphVersion: 'v25.0',
-      pagesFetched: 1,
-      hasMore: false,
-      data: [
-        {
-          ad_name: 'Ad 1',
-          spend: '10.00',
-          reach: '900',
-          video_thruplay_watched_actions: [{ value: '300' }],
-        },
-      ],
-    });
+    expect(JSON.parse(result)).toEqual(
+      expect.objectContaining({
+        ok: true,
+        status: 200,
+        accountId: 'act_123',
+        rowsProcessed: 1,
+        pagesFetched: 1,
+        totals: expect.objectContaining({ spend: 10, reach: 900 }),
+        tables: expect.objectContaining({
+          ad: [expect.objectContaining({ ad_name: 'Ad 1', spend: 10, reach: 900 })],
+        }),
+      }),
+    );
   });
 
   it('does not filter ad insights by current delivery status', async () => {
@@ -163,13 +156,20 @@ describe('MetaAdsGetInsights', () => {
       await createTool().call({ since: '2026-05-01', until: '2026-05-07' }),
     );
 
-    expect(result.data).toEqual([
+    expect(result.tables.ad).toEqual([
       {
         ad_id: 'ad-1',
         ad_name: 'Real ad name',
         creative_id: 'creative-1',
         creative_name: 'Real creative',
-        spend: '10.00',
+        spend: 10,
+        impressions: 0,
+        reach: 0,
+        clicks: 0,
+        frequency: 0,
+        cpm: 0,
+        ctr: 0,
+        cpc: 0,
       },
     ]);
     const url = new URL(fetch.mock.calls[1][0]);
@@ -247,7 +247,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('campaign');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,spend,impressions,reach,clicks',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'campaign' }));
   });
@@ -263,7 +263,7 @@ describe('MetaAdsGetInsights', () => {
     expect(url.searchParams.get('level')).toBe('adset');
     expect(url.searchParams.get('filtering')).toBeNull();
     expect(url.searchParams.get('fields')).toBe(
-      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
+      'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,clicks',
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, level: 'adset' }));
   });
@@ -386,7 +386,7 @@ describe('MetaAdsGetInsights', () => {
     );
   });
 
-  it('paginates until max_pages and returns nextAfter', async () => {
+  it('paginates to completion regardless of the legacy max_pages argument', async () => {
     fetch
       .mockResolvedValueOnce(
         createResponse({
@@ -399,6 +399,11 @@ describe('MetaAdsGetInsights', () => {
           data: [{ ad_name: 'Ad 2' }],
           paging: { cursors: { after: 'cursor-2' } },
         }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          data: [{ ad_name: 'Ad 3' }],
+        }),
       );
 
     const result = await createTool().call({
@@ -408,17 +413,79 @@ describe('MetaAdsGetInsights', () => {
       max_pages: 2,
     });
 
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(3);
     expect(new URL(fetch.mock.calls[1][0]).searchParams.get('after')).toBe('cursor-1');
+    expect(new URL(fetch.mock.calls[2][0]).searchParams.get('after')).toBe('cursor-2');
     expect(JSON.parse(result)).toEqual(
       expect.objectContaining({
         ok: true,
-        rows: 2,
-        pagesFetched: 2,
-        hasMore: true,
-        nextAfter: 'cursor-2',
-        data: [{ ad_name: 'Ad 1' }, { ad_name: 'Ad 2' }],
+        rowsProcessed: 3,
+        pagesFetched: 3,
       }),
+    );
+  });
+
+  it('summarizes more than 100 ads without returning every raw row', async () => {
+    const ads = Array.from({ length: 125 }, (_, index) => ({
+      campaign_id: `campaign-${index % 2}`,
+      campaign_name: `Campaign ${index % 2}`,
+      adset_id: `adset-${index % 5}`,
+      adset_name: `Ad set ${index % 5}`,
+      ad_id: `ad-${index}`,
+      ad_name: `Ad ${index}`,
+      spend: '2',
+      impressions: '10',
+      reach: '8',
+      clicks: '1',
+    }));
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({
+          data: ads.slice(0, 100),
+          paging: { cursors: { after: 'cursor-100' } },
+        }),
+      )
+      .mockResolvedValueOnce(createResponse({ data: ads.slice(100) }))
+      .mockResolvedValueOnce(createResponse({}));
+
+    const result = JSON.parse(
+      await createTool().call({
+        since: '2026-05-01',
+        until: '2026-05-07',
+        metrics: ['spend', 'impressions', 'clicks'],
+      }),
+    );
+
+    expect(result.rowsProcessed).toBe(125);
+    expect(result.totals).toEqual({ spend: 250, impressions: 1250, clicks: 125 });
+    expect(result.tables.campaign).toHaveLength(2);
+    expect(result.tables.ad).toHaveLength(25);
+    expect(result.details).toEqual(
+      expect.objectContaining({
+        available: expect.objectContaining({ ad: 125 }),
+        omitted: expect.objectContaining({ ad: 100 }),
+        hasMore: true,
+      }),
+    );
+    expect(JSON.stringify(result)).not.toContain('"data":');
+  });
+
+  it('applies drill-down and daily breakdown at Meta before summarizing', async () => {
+    await createTool().call({
+      since: '2026-05-01',
+      until: '2026-05-07',
+      campaign_id: 'campaign-1',
+      breakdown: 'day',
+      metrics: ['spend'],
+    });
+
+    const url = new URL(fetch.mock.calls[0][0]);
+    expect(JSON.parse(url.searchParams.get('filtering'))).toEqual([
+      { field: 'campaign.id', operator: 'EQUAL', value: 'campaign-1' },
+    ]);
+    expect(url.searchParams.get('time_increment')).toBe('1');
+    expect(url.searchParams.get('fields')).toBe(
+      'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,date_start',
     );
   });
 

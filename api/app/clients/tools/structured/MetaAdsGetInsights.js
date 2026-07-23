@@ -13,23 +13,23 @@ const {
   getMetaGraphVersion,
   metaGet,
 } = require('~/server/services/MetaAds/graph');
+const { DEFAULT_METRICS, METRICS, createInsightsSummary } = require('./metaAdsInsightsSummary');
 
 const META_GRAPH_VERSION_PATTERN = /^v[1-9]\d?\.0$/;
 const DEFAULT_META_INSIGHT_LEVEL = 'ad';
 const META_INSIGHT_LEVELS = ['campaign', 'adset', 'ad'];
-const META_INSIGHTS_FIELDS_BY_LEVEL = {
-  campaign:
-    'campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
-  adset:
-    'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
-  ad: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,reach,frequency,clicks,cpm,ctr,cpc,actions,action_values,cost_per_action_type,video_p75_watched_actions,video_thruplay_watched_actions,purchase_roas',
+const META_IDENTITY_FIELDS_BY_LEVEL = {
+  campaign: ['campaign_id', 'campaign_name'],
+  adset: ['campaign_id', 'campaign_name', 'adset_id', 'adset_name'],
+  ad: ['campaign_id', 'campaign_name', 'adset_id', 'adset_name', 'ad_id', 'ad_name'],
 };
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
-const DEFAULT_MAX_PAGES = 3;
-const MAX_PAGES = 10;
+const MAX_INTERNAL_PAGES = 1000;
 const MAX_DATE_RANGE_DAYS = 120;
 const META_AD_IDS_BATCH_SIZE = 50;
+const DEFAULT_DETAIL_LIMIT = 25;
+const MAX_DETAIL_LIMIT = 100;
 
 const metaAdsGetInsightsJsonSchema = {
   type: 'object',
@@ -59,15 +59,43 @@ const metaAdsGetInsightsJsonSchema = {
       maximum: MAX_LIMIT,
       description: `Rows per Meta page. Defaults to ${DEFAULT_LIMIT}.`,
     },
-    max_pages: {
+    metrics: {
+      type: 'array',
+      items: { type: 'string', enum: METRICS },
+      description: 'Metrics needed for the analysis. Defaults to core delivery metrics.',
+    },
+    sort_by: {
+      type: 'string',
+      enum: METRICS,
+      description: 'Metric used to sort summary tables. Defaults to spend.',
+    },
+    sort_order: {
+      type: 'string',
+      enum: ['asc', 'desc'],
+      description: 'Summary sort direction. Defaults to desc.',
+    },
+    detail_limit: {
       type: 'integer',
       minimum: 1,
-      maximum: MAX_PAGES,
-      description: `Maximum pages to fetch. Defaults to ${DEFAULT_MAX_PAGES}.`,
+      maximum: MAX_DETAIL_LIMIT,
+      description: `Rows returned per summary table. Defaults to ${DEFAULT_DETAIL_LIMIT}.`,
     },
-    after: {
+    breakdown: {
       type: 'string',
-      description: 'Optional Meta cursor for continuing a previous paginated request.',
+      enum: ['none', 'day'],
+      description: 'Use day only when daily detail is requested.',
+    },
+    campaign_id: {
+      type: 'string',
+      description: 'Optional campaign drill-down filter.',
+    },
+    adset_id: {
+      type: 'string',
+      description: 'Optional ad set drill-down filter.',
+    },
+    ad_id: {
+      type: 'string',
+      description: 'Optional ad drill-down filter.',
     },
     graph_version: {
       type: 'string',
@@ -150,6 +178,58 @@ function parseInsightLevel(value) {
   return value;
 }
 
+function parseMetrics(value) {
+  if (value === undefined || value === null) {
+    return DEFAULT_METRICS;
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((metric) => !METRICS.includes(metric))
+  ) {
+    throw new Error(`metrics must contain only: ${METRICS.join(', ')}.`);
+  }
+  return [...new Set(value)];
+}
+
+function parseEnum(value, values, defaultValue, fieldName) {
+  if (value === undefined || value === null || value === '') {
+    return defaultValue;
+  }
+  if (!values.includes(value)) {
+    throw new Error(`${fieldName} must be one of ${values.join(', ')}.`);
+  }
+  return value;
+}
+
+function buildFiltering(args) {
+  return [
+    ['campaign.id', args.campaign_id],
+    ['adset.id', args.adset_id],
+    ['ad.id', args.ad_id],
+  ]
+    .filter(([, value]) => typeof value === 'string' && value.length > 0)
+    .map(([field, value]) => ({ field, operator: 'EQUAL', value }));
+}
+
+function buildFields(level, metrics, byDay) {
+  const fields = new Set(META_IDENTITY_FIELDS_BY_LEVEL[level]);
+  for (const metric of metrics) {
+    if (['frequency', 'cpm', 'ctr', 'cpc'].includes(metric)) {
+      fields.add('spend');
+      fields.add('impressions');
+      fields.add('reach');
+      fields.add('clicks');
+    } else {
+      fields.add(metric);
+    }
+  }
+  if (byDay) {
+    fields.add('date_start');
+  }
+  return [...fields].join(',');
+}
+
 function extractNextAfter(payload) {
   const after = payload?.paging?.cursors?.after;
   return typeof after === 'string' && after.length > 0 ? after : undefined;
@@ -165,7 +245,8 @@ class MetaAdsGetInsights extends Tool {
     'In Orqest, use actions.link_click as the Instagram profile visit result metric. ' +
     'Use video_thruplay_watched_actions for ThruPlay; never substitute actions.video_view, which is a 3-second video view. ' +
     'For ad or creative questions, always use level ad: campaign and ad set rows are not creative substitutes. ' +
-    'Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data.';
+    'Fetches every Meta page internally, then returns totals before bounded campaign, ad set, ad, and optional daily summary tables. ' +
+    'Use campaign_id, adset_id, or ad_id for drill-down; omitted counts indicate more details are available.';
 
   schema = metaAdsGetInsightsJsonSchema;
 
@@ -230,12 +311,26 @@ class MetaAdsGetInsights extends Tool {
     return { accessToken: credentials.accessToken, adAccountId: resolvedAdAccountId };
   }
 
-  async fetchPage({ accessToken, graphVersion, adAccountId, since, until, level, limit, after }) {
+  async fetchPage({
+    accessToken,
+    graphVersion,
+    adAccountId,
+    since,
+    until,
+    level,
+    limit,
+    after,
+    fields,
+    filtering,
+    byDay,
+  }) {
     const params = {
       level,
-      fields: META_INSIGHTS_FIELDS_BY_LEVEL[level],
+      fields,
       time_range: JSON.stringify({ since, until }),
       limit,
+      ...(filtering.length > 0 ? { filtering: JSON.stringify(filtering) } : {}),
+      ...(byDay ? { time_increment: 1 } : {}),
       ...(after ? { after } : {}),
     };
     const payload = await metaGet({
@@ -287,19 +382,41 @@ class MetaAdsGetInsights extends Tool {
       validateDateRange(since, until);
 
       const limit = parsePositiveInteger(args.limit, DEFAULT_LIMIT, MAX_LIMIT);
-      const maxPages = parsePositiveInteger(args.max_pages, DEFAULT_MAX_PAGES, MAX_PAGES);
       const level = parseInsightLevel(args.level);
+      const metrics = parseMetrics(args.metrics);
+      const sortBy = parseEnum(
+        args.sort_by,
+        metrics,
+        metrics.includes('spend') ? 'spend' : metrics[0],
+        'sort_by',
+      );
+      const sortOrder = parseEnum(args.sort_order, ['asc', 'desc'], 'desc', 'sort_order');
+      const detailLimit = parsePositiveInteger(
+        args.detail_limit,
+        DEFAULT_DETAIL_LIMIT,
+        MAX_DETAIL_LIMIT,
+      );
+      const byDay = parseEnum(args.breakdown, ['none', 'day'], 'none', 'breakdown') === 'day';
+      const filtering = buildFiltering(args);
+      const fields = buildFields(level, metrics, byDay);
       const graphVersion = parseGraphVersion(args.graph_version);
-      let nextAfter =
-        typeof args.after === 'string' && args.after.length > 0 ? args.after : undefined;
+      let nextAfter;
       const projectId =
         typeof args.project_id === 'string' && args.project_id ? args.project_id : this.projectId;
       const metaAccess = await this.getAccessToken(projectId, adAccountId);
-      const data = [];
+      const summary = createInsightsSummary({
+        level,
+        metrics,
+        sortBy,
+        sortOrder,
+        detailLimit,
+        byDay,
+      });
+      const seenCursors = new Set();
       let status = 200;
       let pagesFetched = 0;
 
-      while (pagesFetched < maxPages) {
+      while (pagesFetched < MAX_INTERNAL_PAGES) {
         const page = await this.fetchPage({
           accessToken: metaAccess.accessToken,
           graphVersion,
@@ -309,28 +426,40 @@ class MetaAdsGetInsights extends Tool {
           level,
           limit,
           after: nextAfter,
+          fields,
+          filtering,
+          byDay,
         });
         if (!page.ok) {
           return JSON.stringify(page);
         }
         status = page.status;
         pagesFetched += 1;
-        data.push(...page.data);
+        summary.add(page.data);
         nextAfter = page.nextAfter;
         if (!nextAfter) {
           break;
         }
+        if (seenCursors.has(nextAfter)) {
+          throw new Error('Meta pagination returned a repeated cursor.');
+        }
+        seenCursors.add(nextAfter);
       }
 
+      if (nextAfter) {
+        throw new Error(`Meta pagination exceeded ${MAX_INTERNAL_PAGES} pages.`);
+      }
+
+      const result = summary.build();
       if (level === 'ad') {
-        const adIds = [...new Set(data.map((row) => row?.ad_id).filter(Boolean))];
+        const adIds = result.tables.ad.map((row) => row.ad_id).filter(Boolean);
         if (adIds.length > 0) {
           const creativeDetails = await this.getCreativeDetails({
             accessToken: metaAccess.accessToken,
             graphVersion,
             adIds,
           });
-          for (const row of data) {
+          for (const row of result.tables.ad) {
             const ad = creativeDetails.get(row?.ad_id);
             if (!ad) {
               continue;
@@ -354,11 +483,30 @@ class MetaAdsGetInsights extends Tool {
         since,
         until,
         level,
-        rows: data.length,
+        rowsProcessed: result.processedRows,
         pagesFetched,
-        hasMore: Boolean(nextAfter),
-        nextAfter,
-        data,
+        metrics,
+        sort: { by: sortBy, order: sortOrder },
+        filters: Object.fromEntries(
+          [
+            ['campaign_id', args.campaign_id],
+            ['adset_id', args.adset_id],
+            ['ad_id', args.ad_id],
+          ].filter(([, value]) => typeof value === 'string' && value.length > 0),
+        ),
+        totals: result.totals,
+        tables: result.tables,
+        details: {
+          available: result.available,
+          returned: Object.fromEntries(
+            Object.entries(result.tables).map(([name, rows]) => [name, rows.length]),
+          ),
+          omitted: result.omitted,
+          hasMore: result.hasMoreDetails,
+          hint: result.hasMoreDetails
+            ? 'Use campaign_id, adset_id, or ad_id to drill down without reloading the whole account.'
+            : undefined,
+        },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Meta Ads insights request failed.';

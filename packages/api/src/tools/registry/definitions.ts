@@ -398,15 +398,70 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
       maximum: 500,
       description: 'Rows per Meta page. Defaults to 100.',
     },
-    max_pages: {
+    metrics: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: [
+          'spend',
+          'impressions',
+          'reach',
+          'clicks',
+          'frequency',
+          'cpm',
+          'ctr',
+          'cpc',
+          'actions',
+          'action_values',
+          'purchase_roas',
+        ],
+      },
+      description: 'Metrics needed for the analysis. Defaults to core delivery metrics.',
+    },
+    sort_by: {
+      type: 'string',
+      enum: [
+        'spend',
+        'impressions',
+        'reach',
+        'clicks',
+        'frequency',
+        'cpm',
+        'ctr',
+        'cpc',
+        'actions',
+        'action_values',
+        'purchase_roas',
+      ],
+      description: 'Metric used to sort summary tables. Defaults to spend.',
+    },
+    sort_order: {
+      type: 'string',
+      enum: ['asc', 'desc'],
+      description: 'Summary sort direction. Defaults to desc.',
+    },
+    detail_limit: {
       type: 'integer',
       minimum: 1,
-      maximum: 10,
-      description: 'Maximum pages to fetch. Defaults to 3.',
+      maximum: 100,
+      description: 'Rows returned per summary table. Defaults to 25.',
     },
-    after: {
+    breakdown: {
       type: 'string',
-      description: 'Optional Meta cursor for continuing a previous paginated request.',
+      enum: ['none', 'day'],
+      description: 'Use day only when daily detail is requested.',
+    },
+    campaign_id: {
+      type: 'string',
+      description: 'Optional campaign drill-down filter.',
+    },
+    adset_id: {
+      type: 'string',
+      description: 'Optional ad set drill-down filter.',
+    },
+    ad_id: {
+      type: 'string',
+      description: 'Optional ad drill-down filter.',
     },
     graph_version: {
       type: 'string',
@@ -533,7 +588,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Requires an accessible project with Meta Ads credentials and defaults to the configured project ad account. Returns Meta-reported impressions, reach, frequency, spend, CPM, CTR, CPC, actions, and ROAS. For ad or creative questions, use level=ad; campaign and ad set rows are not creative substitutes. Ad rows include ad_id, ad_name, creative_id, and creative_name when Meta returns creative data. Historical queries include paused ads that had results in the requested period. graph_version is optional and must match Meta version format like v25.0.',
+      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Fetches every page internally and returns consolidated totals before bounded summary tables, avoiding raw-data context overflow. Use campaign_id, adset_id, or ad_id for drill-down and breakdown=day only for daily detail. Omitted counts indicate more details are available. Historical queries include paused ads that had results in the requested period.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },
