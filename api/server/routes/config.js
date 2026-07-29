@@ -21,6 +21,7 @@ const sharedLinksEnabled =
 
 const publicSharedLinksEnabled =
   sharedLinksEnabled && isEnabled(process.env.ALLOW_SHARED_LINKS_PUBLIC);
+const shareLinkBaseUrl = process.env.SHARE_LINK_BASE_URL || '';
 
 const sharePointFilePickerEnabled = isEnabled(process.env.ENABLE_SHAREPOINT_FILEPICKER);
 const openidReuseTokens = isEnabled(process.env.OPENID_REUSE_TOKENS);
@@ -47,7 +48,7 @@ function buildSharedPayload() {
 
   /** @type {Partial<TStartupConfig>} */
   const payload = {
-    appTitle: process.env.APP_TITLE || 'LibreChat',
+    appTitle: process.env.APP_TITLE || 'Orqest',
     discordLoginEnabled: !!process.env.DISCORD_CLIENT_ID && !!process.env.DISCORD_CLIENT_SECRET,
     facebookLoginEnabled: !!process.env.FACEBOOK_CLIENT_ID && !!process.env.FACEBOOK_CLIENT_SECRET,
     githubLoginEnabled: !!process.env.GITHUB_CLIENT_ID && !!process.env.GITHUB_CLIENT_SECRET,
@@ -78,9 +79,10 @@ function buildSharedPayload() {
       isBirthday() ||
       isEnabled(process.env.SHOW_BIRTHDAY_ICON) ||
       process.env.SHOW_BIRTHDAY_ICON === '',
-    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || 'https://librechat.ai',
+    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || '',
     sharedLinksEnabled,
     publicSharedLinksEnabled,
+    shareLinkBaseUrl,
     analyticsGtmId: process.env.ANALYTICS_GTM_ID,
     openidReuseTokens,
     /** Read inline (not module-level) for per-request evaluation and test isolation */

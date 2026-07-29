@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
+import { MagnifyingGlass as Search, X } from '@phosphor-icons/react';
 import { Input } from '@librechat/client';
 import { useDebounce, useLocalize } from '~/hooks';
 

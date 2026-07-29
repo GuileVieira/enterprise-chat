@@ -24,7 +24,13 @@ jest.mock('~/models', () => {
     removeAllPermissions: async ({ resourceType, resourceId }) => {
       const AclEntry = mongoose.models.AclEntry;
       if (AclEntry) {
-        await AclEntry.deleteMany({ resourceType, resourceId });
+        const resourceIdText = resourceId.toString();
+        await AclEntry.deleteMany({
+          resourceType,
+          resourceId: {
+            $in: [resourceIdText, new mongoose.Types.ObjectId(resourceIdText)],
+          },
+        });
       }
     },
   });
@@ -35,7 +41,13 @@ jest.mock('~/models', () => {
 });
 
 jest.mock('~/server/middleware', () => ({
-  requireJwtAuth: (req, res, next) => next(),
+  requireJwtAuth: (req, res, next) => {
+    const { tenantStorage } = require('@librechat/data-schemas');
+    if (req.user?.tenantId) {
+      return tenantStorage.run({ tenantId: req.user.tenantId }, async () => next());
+    }
+    return next();
+  },
   promptUsageLimiter: (req, res, next) => next(),
   canAccessPromptViaGroup: jest.requireActual('~/server/middleware').canAccessPromptViaGroup,
   canAccessPromptGroupResource:
@@ -166,6 +178,18 @@ async function setupTestData() {
       email: 'admin@example.com',
       role: SystemRoles.ADMIN,
     }),
+    tenantViewer: await User.create({
+      name: 'Tenant Viewer',
+      email: 'tenant-viewer@example.com',
+      role: SystemRoles.USER,
+      tenantId: 'tenant-a',
+    }),
+    tenantBViewer: await User.create({
+      name: 'Tenant B Viewer',
+      email: 'tenant-b-viewer@example.com',
+      role: SystemRoles.USER,
+      tenantId: 'tenant-b',
+    }),
   };
 
   // Seed capabilities for the ADMIN role
@@ -216,6 +240,135 @@ describe('Prompt Routes - ACL Permissions', () => {
 
     // We expect a 401 or 404, not 500
     expect(response.status).not.toBe(500);
+  });
+
+  it('grants viewer access to multiple tenants when admin creates a prompt group', async () => {
+    setTestUser(app, testUsers.admin);
+
+    const response = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Shared Tenant Prompt', category: 'ops' },
+        prompt: { prompt: 'Use tenant context', type: 'text' },
+        shareTenantIds: ['tenant-a', 'tenant-b'],
+      });
+
+    expect(response.status).toBe(200);
+    const groupId = response.body.prompt.groupId;
+
+    const tenantEntries = await AclEntry.find({
+      principalType: PrincipalType.TENANT,
+      principalId: { $in: ['tenant-a', 'tenant-b'] },
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: { $in: [groupId.toString(), new ObjectId(groupId)] },
+    }).lean();
+
+    expect(tenantEntries).toHaveLength(2);
+    expect(tenantEntries.every((entry) => entry.permBits === PermissionBits.VIEW)).toBe(true);
+  });
+
+  it('ignores requested tenant sharing when non-admin creates a prompt group', async () => {
+    setTestUser(app, testUsers.owner);
+
+    const response = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Private Prompt', category: 'ops' },
+        prompt: { prompt: 'Keep private', type: 'text' },
+        shareTenantIds: ['tenant-a'],
+      });
+
+    expect(response.status).toBe(200);
+    const groupId = response.body.prompt.groupId;
+
+    const tenantEntries = await AclEntry.find({
+      principalType: PrincipalType.TENANT,
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: { $in: [groupId.toString(), new ObjectId(groupId)] },
+    }).lean();
+
+    expect(tenantEntries).toHaveLength(0);
+  });
+
+  it('lists a tenant-shared admin skill for users in that tenant only', async () => {
+    setTestUser(app, testUsers.admin);
+
+    const createResponse = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Tenant Shared Skill', category: 'ops' },
+        prompt: { prompt: 'Visible to tenant A', type: 'text' },
+        shareTenantIds: ['tenant-a'],
+      })
+      .expect(200);
+
+    const groupId = createResponse.body.prompt.groupId.toString();
+
+    setTestUser(app, testUsers.tenantViewer);
+    const tenantAResponse = await request(app).get('/api/prompts/groups').expect(200);
+
+    expect(tenantAResponse.body.promptGroups.map((group) => group._id.toString())).toContain(
+      groupId,
+    );
+
+    setTestUser(app, testUsers.tenantBViewer);
+    const tenantBResponse = await request(app).get('/api/prompts/groups').expect(200);
+
+    expect(tenantBResponse.body.promptGroups.map((group) => group._id.toString())).not.toContain(
+      groupId,
+    );
+  });
+
+  it('allows a tenant-shared viewer to open the skill and list its prompts', async () => {
+    setTestUser(app, testUsers.admin);
+
+    const createResponse = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Tenant Read Skill', category: 'ops' },
+        prompt: { prompt: 'Tenant readable prompt', type: 'text' },
+        shareTenantIds: ['tenant-a'],
+      })
+      .expect(200);
+
+    const groupId = createResponse.body.prompt.groupId.toString();
+
+    setTestUser(app, testUsers.tenantViewer);
+    const groupResponse = await request(app).get(`/api/prompts/groups/${groupId}`).expect(200);
+
+    expect(groupResponse.body._id.toString()).toBe(groupId);
+
+    const promptsResponse = await request(app).get('/api/prompts').query({ groupId }).expect(200);
+
+    expect(promptsResponse.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          prompt: 'Tenant readable prompt',
+          groupId,
+        }),
+      ]),
+    );
+  });
+
+  it('denies editing for a tenant-shared viewer', async () => {
+    setTestUser(app, testUsers.admin);
+
+    const createResponse = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Tenant Viewer Skill', category: 'ops' },
+        prompt: { prompt: 'Tenant viewer only', type: 'text' },
+        shareTenantIds: ['tenant-a'],
+      })
+      .expect(200);
+
+    const groupId = createResponse.body.prompt.groupId.toString();
+
+    setTestUser(app, testUsers.tenantViewer);
+    await request(app)
+      .patch(`/api/prompts/groups/${groupId}`)
+      .send({ name: 'Should Not Update' })
+      .expect(403);
   });
 
   describe('POST /api/prompts - Create Prompt', () => {

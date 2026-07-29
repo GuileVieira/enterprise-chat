@@ -2,11 +2,12 @@ import { useState, useId, useMemo, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { CrossCircledIcon } from '@radix-ui/react-icons';
 import { DropdownPopup, TooltipAnchor } from '@librechat/client';
+import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import { BookmarkFilledIcon, BookmarkIcon } from '@radix-ui/react-icons';
 import type * as t from '~/common';
 import type { FC } from 'react';
 import { useGetConversationTags } from '~/data-provider';
-import { useLocalize } from '~/hooks';
+import { useHasAccess, useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 type BookmarkNavProps = {
@@ -18,7 +19,11 @@ const BookmarkNav: FC<BookmarkNavProps> = ({ tags, setTags }: BookmarkNavProps) 
   const localize = useLocalize();
   const menuId = useId();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data } = useGetConversationTags();
+  const canUseBookmarks = useHasAccess({
+    permissionType: PermissionTypes.BOOKMARKS,
+    permission: Permissions.USE,
+  });
+  const { data } = useGetConversationTags({ enabled: canUseBookmarks });
 
   const label = useMemo(
     () => (tags.length > 0 ? tags.join(', ') : localize('com_ui_bookmarks')),

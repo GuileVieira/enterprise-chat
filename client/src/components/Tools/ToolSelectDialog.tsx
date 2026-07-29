@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Search, X } from 'lucide-react';
+import { MagnifyingGlass as Search, X } from '@phosphor-icons/react';
 import { useFormContext } from 'react-hook-form';
 import { isAgentsEndpoint } from 'librechat-data-provider';
 import { Dialog, DialogPanel, DialogTitle, Description } from '@headlessui/react';

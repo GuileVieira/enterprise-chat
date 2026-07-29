@@ -37,7 +37,7 @@ export default function useTextarea({
   const getSender = useGetSender();
   const isComposing = useRef(false);
   const agentsMap = useAgentsMapContext();
-  const { handleFiles } = useFileHandling();
+  const { handleFiles } = useFileHandling({ saveUploadsToProject: false });
   const assistantMap = useAssistantsMapContext();
   const checkHealth = useInteractionHealthCheck();
   const enterToSend = useRecoilValue(store.enterToSend);
@@ -92,6 +92,10 @@ export default function useTextarea({
 
       if (isNotAppendable) {
         return localize('com_endpoint_message_not_appendable');
+      }
+
+      if (conversation?.spec) {
+        return localize('com_endpoint_message');
       }
 
       const sender =

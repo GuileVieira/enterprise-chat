@@ -32,8 +32,19 @@ const ConvoLink: React.FC<ConvoLinkProps> = ({
     >
       {children}
       <div
-        className="relative flex-1 grow overflow-hidden whitespace-nowrap"
+        className={cn(
+          'relative flex-1 grow overflow-hidden whitespace-nowrap',
+          isActiveConvo && !isSmallScreen ? 'cursor-text' : '',
+        )}
         style={{ textOverflow: 'clip' }}
+        onClick={(e) => {
+          if (!isActiveConvo || isSmallScreen) {
+            return;
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          onRename();
+        }}
         onDoubleClick={(e) => {
           if (isSmallScreen) {
             return;

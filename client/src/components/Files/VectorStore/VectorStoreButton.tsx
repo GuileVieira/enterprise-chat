@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlusIcon } from 'lucide-react';
+import { Plus as PlusIcon } from '@phosphor-icons/react';
 import { Button } from '@librechat/client';
 
 type VectorStoreButtonProps = {

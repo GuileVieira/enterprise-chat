@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   QueryKeys,
   Constants,
+  DynamicQueryKeys,
   EToolResources,
   mergeFileConfig,
   isAssistantsEndpoint,
@@ -30,6 +31,7 @@ type UseFileHandling = {
   fileSetter?: FileSetter;
   fileFilter?: (file: File) => boolean;
   additionalMetadata?: Record<string, string | undefined>;
+  saveUploadsToProject?: boolean;
   /** Overrides `endpoint` for upload routing; also used as `endpointType` fallback when `endpointTypeOverride` is not set */
   endpointOverride?: EModelEndpoint | string;
   /** Overrides `endpointType` independently from `endpointOverride` */
@@ -116,9 +118,14 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
 
   const uploadFile = useUploadFileMutation(
     {
-      onSuccess: (data) => {
+      onSuccess: (data, body) => {
         clearUploadTimer(data.temp_file_id);
         console.log('upload success', data);
+        const projectId = body.get('projectId');
+        if (typeof projectId === 'string' && projectId) {
+          queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(projectId));
+          queryClient.invalidateQueries([QueryKeys.project, projectId]);
+        }
         if (agent_id) {
           queryClient.refetchQueries([QueryKeys.agent, agent_id]);
           return;
@@ -211,15 +218,26 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
       }
     }
 
+    const shouldSaveUploadsToProject = params?.saveUploadsToProject ?? true;
+    const projectId =
+      metadata.projectId || (shouldSaveUploadsToProject ? (conversation?.projectId ?? '') : '');
+    if (projectId && formData.get('projectId') == null) {
+      formData.append('projectId', projectId);
+    }
+    const isProjectUpload = Boolean(projectId);
+
     if (!isAssistantsEndpoint(endpointType ?? endpoint)) {
-      if (!agent_id) {
+      if (!agent_id && !isProjectUpload) {
         formData.append('message_file', 'true');
       }
       const tool_resource = extendedFile.tool_resource;
       if (tool_resource != null) {
         formData.append('tool_resource', tool_resource);
       }
-      if (conversation?.agent_id != null && formData.get('agent_id') == null) {
+      if (isProjectUpload && formData.get('tool_resource') == null) {
+        formData.append('tool_resource', EToolResources.file_search);
+      }
+      if (conversation?.agent_id != null && formData.get('agent_id') == null && !isProjectUpload) {
         formData.append('agent_id', conversation.agent_id);
       }
 

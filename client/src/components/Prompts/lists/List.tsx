@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileText } from '@phosphor-icons/react';
 import { Skeleton } from '@librechat/client';
 import type { TPromptGroup } from 'librechat-data-provider';
 import ChatGroupItem from './ChatGroupItem';

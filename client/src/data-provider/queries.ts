@@ -33,6 +33,81 @@ import type {
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
+const projectMetaAdsStatusCachePrefix = 'orqest:project-meta-ads-status:v5';
+const projectMetaAdsStatusCacheTtlMs = 15 * 60 * 1000;
+const projectMetaAdsStatusStaleTimeMs = 10 * 60 * 1000;
+
+type CachedProjectMetaAdsStatus = {
+  cachedAt: number;
+  data: t.ProjectMetaAdsStatus;
+};
+
+function getProjectMetaAdsStatusCacheKey(projectId: string, params?: t.ProjectMetaAdsStatusParams) {
+  return [
+    projectMetaAdsStatusCachePrefix,
+    projectId,
+    params?.scope ?? 'live',
+    params?.datePreset ?? 'default',
+    params?.since ?? 'none',
+    params?.until ?? 'none',
+  ].join(':');
+}
+
+function isProjectMetaAdsStatus(value: unknown): value is t.ProjectMetaAdsStatus {
+  if (typeof value !== 'object' || value == null) {
+    return false;
+  }
+  const status = value as Partial<t.ProjectMetaAdsStatus>;
+  return (
+    Array.isArray(status.latestSnapshots) &&
+    Array.isArray(status.recommendations) &&
+    Array.isArray(status.changes)
+  );
+}
+
+function readCachedProjectMetaAdsStatus(cacheKey: string): CachedProjectMetaAdsStatus | undefined {
+  if (typeof localStorage === 'undefined') {
+    return undefined;
+  }
+  try {
+    const rawValue = localStorage.getItem(cacheKey);
+    if (!rawValue) {
+      return undefined;
+    }
+    const cachedValue = JSON.parse(rawValue) as Partial<CachedProjectMetaAdsStatus>;
+    if (
+      typeof cachedValue.cachedAt !== 'number' ||
+      Date.now() - cachedValue.cachedAt > projectMetaAdsStatusCacheTtlMs ||
+      !isProjectMetaAdsStatus(cachedValue.data)
+    ) {
+      localStorage.removeItem(cacheKey);
+      return undefined;
+    }
+    return {
+      cachedAt: cachedValue.cachedAt,
+      data: cachedValue.data,
+    };
+  } catch {
+    localStorage.removeItem(cacheKey);
+    return undefined;
+  }
+}
+
+function writeCachedProjectMetaAdsStatus(cacheKey: string, data: t.ProjectMetaAdsStatus) {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  try {
+    const cachedValue: CachedProjectMetaAdsStatus = {
+      cachedAt: Date.now(),
+      data,
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cachedValue));
+  } catch {
+    localStorage.removeItem(cacheKey);
+  }
+}
+
 export const useGetPresetsQuery = (
   config?: UseQueryOptions<TPreset[]>,
 ): QueryObserverResult<TPreset[], unknown> => {
@@ -86,12 +161,12 @@ export const useConversationsInfiniteQuery = (
   params: ConversationListParams,
   config?: UseInfiniteQueryOptions<ConversationListResponse, unknown>,
 ) => {
-  const { isArchived, sortBy, sortDirection, tags, search } = params;
+  const { isArchived, sortBy, sortDirection, tags, projectId, search } = params;
 
   return useInfiniteQuery<ConversationListResponse>({
     queryKey: [
       isArchived ? QueryKeys.archivedConversations : QueryKeys.allConversations,
-      { isArchived, sortBy, sortDirection, tags, search },
+      { isArchived, sortBy, sortDirection, tags, projectId, search },
     ],
     queryFn: ({ pageParam }) =>
       dataService.listConversations({
@@ -99,6 +174,7 @@ export const useConversationsInfiniteQuery = (
         sortBy,
         sortDirection,
         tags,
+        projectId,
         search,
         cursor: pageParam?.toString(),
       }),
@@ -174,6 +250,164 @@ export const useConversationTagsQuery = (
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+export const useProjectsQuery = (
+  config?: UseQueryOptions<t.TProject[]>,
+): QueryObserverResult<t.TProject[]> => {
+  return useQuery<t.TProject[]>([QueryKeys.projects], () => dataService.getProjects(), {
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    ...config,
+  });
+};
+
+export const useProjectByIdQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.TProject>,
+): QueryObserverResult<t.TProject> => {
+  return useQuery<t.TProject>(
+    [QueryKeys.project, projectId],
+    () => dataService.getProjectById(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsStatus>,
+): QueryObserverResult<t.ProjectMetaAdsStatus> => {
+  const cacheKey = getProjectMetaAdsStatusCacheKey(projectId, params);
+  const cachedStatus = readCachedProjectMetaAdsStatus(cacheKey);
+  const hasConfigInitialData =
+    typeof config?.initialData === 'function' || config?.initialData != null;
+  return useQuery<t.ProjectMetaAdsStatus>(
+    [QueryKeys.projectMetaAds, projectId, params],
+    () => dataService.getProjectMetaAdsStatus(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      staleTime: projectMetaAdsStatusStaleTimeMs,
+      ...config,
+      initialData: hasConfigInitialData ? config.initialData : cachedStatus?.data,
+      initialDataUpdatedAt: config?.initialDataUpdatedAt ?? cachedStatus?.cachedAt,
+      onSuccess: (data) => {
+        writeCachedProjectMetaAdsStatus(cacheKey, data);
+        config?.onSuccess?.(data);
+      },
+    },
+  );
+};
+
+export const useProjectMetaAdsRankingsQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsRankingParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsRankingResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRankingResponse> => {
+  return useQuery<t.ProjectMetaAdsRankingResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'rankings', params],
+    () => dataService.getProjectMetaAdsRankings(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsPerformanceQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsPerformanceResponse>,
+): QueryObserverResult<t.ProjectMetaAdsPerformanceResponse> => {
+  return useQuery<t.ProjectMetaAdsPerformanceResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'performance', params],
+    () => dataService.getProjectMetaAdsPerformance(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsRulePerformanceQuery = (
+  projectId: string,
+  params?: t.ProjectMetaAdsStatusParams,
+  config?: UseQueryOptions<t.ProjectMetaAdsRulePerformanceResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRulePerformanceResponse> => {
+  return useQuery<t.ProjectMetaAdsRulePerformanceResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'rulePerformance', params],
+    () => dataService.getProjectMetaAdsRulePerformance(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsRuleHistoryQuery = (
+  projectId: string,
+  config?: UseQueryOptions<t.ProjectMetaAdsRuleHistoryResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRuleHistoryResponse> => {
+  return useQuery<t.ProjectMetaAdsRuleHistoryResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'ruleHistory'],
+    () => dataService.getProjectMetaAdsRuleHistory(projectId),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsRunsQuery = (
+  projectId: string,
+  params?: { limit?: number },
+  config?: UseQueryOptions<t.ProjectMetaAdsRunsResponse>,
+): QueryObserverResult<t.ProjectMetaAdsRunsResponse> => {
+  return useQuery<t.ProjectMetaAdsRunsResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'runs', params],
+    () => dataService.getProjectMetaAdsRuns(projectId, params),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
+      ...config,
+    },
+  );
+};
+
+export const useProjectMetaAdsDiaryQuery = (
+  projectId: string,
+  kind?: t.ProjectTrafficDiaryKind,
+  scope?: 'project',
+  config?: UseQueryOptions<t.ProjectTrafficDiaryResponse>,
+): QueryObserverResult<t.ProjectTrafficDiaryResponse> => {
+  return useQuery<t.ProjectTrafficDiaryResponse>(
+    [QueryKeys.projectMetaAds, projectId, 'diary', kind ?? 'manager', scope ?? 'mine'],
+    () => dataService.getProjectMetaAdsDiary(projectId, kind, scope),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      enabled: !!projectId,
       ...config,
     },
   );

@@ -36,6 +36,11 @@ const convoSchema: Schema<IConversation> = new Schema(
     expiredAt: {
       type: Date,
     },
+    projectId: {
+      type: String,
+      index: true,
+      meiliIndex: true,
+    },
     tenantId: {
       type: String,
       index: true,

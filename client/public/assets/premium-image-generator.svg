@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Premium image generator">
+  <defs>
+    <linearGradient id="sky" x1="48" y1="42" x2="205" y2="194" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="0.42" stop-color="#d9ecff"/>
+      <stop offset="1" stop-color="#8bb6ff"/>
+    </linearGradient>
+    <linearGradient id="mountainA" x1="43" y1="177" x2="178" y2="93" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1d2d44"/>
+      <stop offset="1" stop-color="#5f7fa7"/>
+    </linearGradient>
+    <linearGradient id="mountainB" x1="119" y1="185" x2="218" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#30415f"/>
+      <stop offset="1" stop-color="#9fb6d8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="181" y1="32" x2="225" y2="83" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff4bf"/>
+      <stop offset="0.48" stop-color="#f1c65a"/>
+      <stop offset="1" stop-color="#b47a1f"/>
+    </linearGradient>
+    <filter id="shadow" x="16" y="14" width="224" height="226" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#05070d" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="54" fill="#151718"/>
+  <g filter="url(#shadow)">
+    <rect x="38" y="38" width="180" height="180" rx="30" fill="#f5f1e8"/>
+    <rect x="49" y="49" width="158" height="158" rx="22" fill="url(#sky)"/>
+    <circle cx="82" cy="83" r="19" fill="#fff3a8"/>
+    <path d="M49 177.5 92.8 125c6.3-7.6 17.8-7.8 24.5-.5l35.4 38.9 12.9-13.7c6.4-6.8 17.1-6.7 23.4.2l18 19.8V207H49v-29.5Z" fill="url(#mountainA)"/>
+    <path d="m101 207 54.7-70.2c6.6-8.4 19.4-8.3 25.8.3L207 171.5V207H101Z" fill="url(#mountainB)"/>
+    <path d="M49 186.8c18.8-7.5 42.8-9.6 72-6.2 32.8 3.8 61.5 1.5 86-6.9V207H49v-20.2Z" fill="#f8fbff" opacity=".5"/>
+  </g>
+  <g>
+    <path d="M202 21.5 210.6 48l26.4 8.6-26.4 8.7L202 91.7l-8.7-26.4-26.4-8.7 26.4-8.6L202 21.5Z" fill="url(#gold)"/>
+    <path d="M163.6 35.5 167.9 49l13.5 4.4-13.5 4.4-4.3 13.4-4.5-13.4-13.4-4.4 13.4-4.4 4.5-13.5Z" fill="#fff7d1"/>
+    <path d="M212.5 92.2 216 103l10.8 3.5L216 110l-3.5 10.8L209 110l-10.8-3.5L209 103l3.5-10.8Z" fill="#f8d66f"/>
+  </g>
+</svg>

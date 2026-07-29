@@ -366,7 +366,7 @@ describe('getOpenAILLMConfig', () => {
       expect(result.tools).toContainEqual({ type: 'web_search' });
     });
 
-    it('should handle web search with OpenRouter', () => {
+    it('should handle web search and URL fetch with OpenRouter server tools', () => {
       const result = getOpenAILLMConfig({
         apiKey: 'test-api-key',
         streaming: true,
@@ -377,11 +377,22 @@ describe('getOpenAILLMConfig', () => {
         },
       });
 
-      expect(result.llmConfig.modelKwargs).toHaveProperty('plugins', [{ id: 'web' }]);
+      expect(result.tools).toEqual([
+        { type: 'openrouter:web_search' },
+        {
+          type: 'openrouter:web_fetch',
+          parameters: {
+            engine: 'openrouter',
+            max_uses: 5,
+            max_content_tokens: 20000,
+          },
+        },
+      ]);
+      expect(result.llmConfig.modelKwargs).toBeUndefined();
       expect(result.llmConfig).toHaveProperty('include_reasoning', true);
     });
 
-    it('should combine web search plugins and reasoning object for OpenRouter', () => {
+    it('should combine OpenRouter server tools and reasoning object', () => {
       const result = getOpenAILLMConfig({
         apiKey: 'test-api-key',
         streaming: true,
@@ -397,7 +408,8 @@ describe('getOpenAILLMConfig', () => {
         effort: ReasoningEffort.high,
       });
       expect(result.llmConfig).not.toHaveProperty('include_reasoning');
-      expect(result.llmConfig.modelKwargs).toHaveProperty('plugins', [{ id: 'web' }]);
+      expect(result.tools).toHaveLength(2);
+      expect(result.llmConfig.modelKwargs).not.toHaveProperty('plugins');
     });
 
     it('should disable web search via dropParams', () => {

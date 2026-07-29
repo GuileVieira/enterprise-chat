@@ -1,5 +1,5 @@
 import React from 'react';
-import { Share2Icon } from 'lucide-react';
+import { ShareNetwork as Share2Icon } from '@phosphor-icons/react';
 import { Button, TooltipAnchor } from '@librechat/client';
 import {
   SystemRoles,

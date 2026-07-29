@@ -53,6 +53,15 @@ export type TGenTitleResponse = {
   title: string;
 };
 
+export type TImprovePromptRequest = {
+  text: string;
+};
+
+export type TImprovePromptResponse = {
+  improvedText: string;
+  cached: boolean;
+};
+
 export type PresetDeleteResponse = {
   acknowledged: boolean;
   deletedCount: number;
@@ -207,6 +216,16 @@ export type CreateSharedLinkOptions = MutationOptions<
   Partial<types.TSharedLink>
 >;
 
+export type CreateTenantSharedLinkOptions = MutationOptions<
+  types.TSharedLinkResponse,
+  types.TCreateTenantShareLinkRequest
+>;
+
+export type ForkTenantShareOptions = MutationOptions<
+  types.TForkConvoResponse,
+  types.TForkTenantShareRequest
+>;
+
 export type updateTagsInConvoOptions = MutationOptions<
   types.TTagConversationResponse,
   types.TTagConversationRequest
@@ -289,6 +308,7 @@ export type UpdateAgentPermVars = UpdatePermVars<p.TAgentPermissions>;
 export type UpdatePeoplePickerPermVars = UpdatePermVars<p.TPeoplePickerPermissions>;
 export type UpdateMCPServersPermVars = UpdatePermVars<p.TMcpServersPermissions>;
 export type UpdateSkillPermVars = UpdatePermVars<p.TSkillPermissions>;
+export type UpdateMetaAdsPermVars = UpdatePermVars<p.TMetaAdsPermissions>;
 
 export type UpdatePermResponse = r.TRole;
 
@@ -366,6 +386,13 @@ export type UpdateMCPServersPermOptions = MutationOptions<
 export type UpdateSkillPermOptions = MutationOptions<
   UpdatePermResponse,
   UpdateSkillPermVars,
+  unknown,
+  types.TError | null | undefined
+>;
+
+export type UpdateMetaAdsPermOptions = MutationOptions<
+  UpdatePermResponse,
+  UpdateMetaAdsPermVars,
   unknown,
   types.TError | null | undefined
 >;
@@ -505,3 +532,41 @@ export interface CancelMCPOAuthResponse {
   success: boolean;
   message: string;
 }
+
+/* Admin Groups */
+export type CreateGroupPayload = {
+  name: string;
+  description?: string;
+};
+
+export type UpdateGroupPayload = {
+  name?: string;
+  description?: string;
+};
+
+export type UpdateGroupVars = {
+  id: string;
+  payload: UpdateGroupPayload;
+};
+
+export type AddGroupMemberVars = {
+  id: string;
+  userId: string;
+};
+
+export type RemoveGroupMemberVars = {
+  id: string;
+  userId: string;
+};
+
+export type CreateGroupOptions = MutationOptions<
+  import('./queries').GroupResponse,
+  CreateGroupPayload
+>;
+export type UpdateGroupOptions = MutationOptions<
+  import('./queries').GroupResponse,
+  UpdateGroupVars
+>;
+export type DeleteGroupOptions = MutationOptions<unknown, string>;
+export type AddGroupMemberOptions = MutationOptions<unknown, AddGroupMemberVars>;
+export type RemoveGroupMemberOptions = MutationOptions<unknown, RemoveGroupMemberVars>;

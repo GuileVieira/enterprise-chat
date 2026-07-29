@@ -1,4 +1,4 @@
-import { CopyPlus } from 'lucide-react';
+import { CopySimple as CopyPlus } from '@phosphor-icons/react';
 import { useToastContext, Button } from '@librechat/client';
 import { useDuplicateAgentMutation } from '~/data-provider';
 import { isEphemeralAgent } from '~/common';

@@ -79,7 +79,7 @@ describe('updateInterfacePermissions - permissions', () => {
       [PermissionTypes.MULTI_CONVO]: { [Permissions.USE]: true },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
@@ -249,7 +249,7 @@ describe('updateInterfacePermissions - permissions', () => {
       [PermissionTypes.MULTI_CONVO]: { [Permissions.USE]: false },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: false,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
@@ -405,7 +405,7 @@ describe('updateInterfacePermissions - permissions', () => {
       [PermissionTypes.MULTI_CONVO]: { [Permissions.USE]: true },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
@@ -574,7 +574,7 @@ describe('updateInterfacePermissions - permissions', () => {
       [PermissionTypes.MULTI_CONVO]: { [Permissions.USE]: true },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
@@ -730,7 +730,7 @@ describe('updateInterfacePermissions - permissions', () => {
       [PermissionTypes.MULTI_CONVO]: { [Permissions.USE]: true },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
-        [Permissions.CREATE]: true,
+        [Permissions.CREATE]: false,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
@@ -884,8 +884,14 @@ describe('updateInterfacePermissions - permissions', () => {
       updateAccessPermissions: mockUpdateAccessPermissions,
     });
 
-    // Should be called with all permissions EXCEPT prompts and agents (which already exist)
+    // Should be called with all permissions except prompts. USER agents are enforced as use-only.
     const expectedPermissionsForUser = {
+      [PermissionTypes.AGENTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
       [PermissionTypes.BOOKMARKS]: { [Permissions.USE]: true },
       [PermissionTypes.MEMORIES]: {
         [Permissions.USE]: true,
@@ -1052,6 +1058,12 @@ describe('updateInterfacePermissions - permissions', () => {
         [Permissions.USE]: true,
         // CREATE/SHARE/SHARE_PUBLIC not included since prompts: true is boolean and PROMPTS already exists
       }, // Explicitly configured
+      [PermissionTypes.AGENTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
       // All other permissions that don't exist in the database
       [PermissionTypes.MEMORIES]: {
         [Permissions.USE]: true,
@@ -1319,7 +1331,7 @@ describe('updateInterfacePermissions - permissions', () => {
     // Check AGENTS permissions use role defaults
     expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
       [Permissions.USE]: true,
-      [Permissions.CREATE]: true,
+      [Permissions.CREATE]: false,
       [Permissions.SHARE]: false,
       [Permissions.SHARE_PUBLIC]: false,
     });
@@ -1967,16 +1979,12 @@ describe('updateInterfacePermissions - permissions', () => {
       (call) => call[0] === SystemRoles.USER,
     );
 
-    // CRITICAL: When using boolean config and permissions already exist,
-    // only USE should be updated. CREATE, SHARE, and SHARE_PUBLIC should NOT be in the update payload.
-    // This means they will be preserved in the database (not reset to defaults).
     expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
       [Permissions.USE]: true,
-      // CREATE, SHARE, and SHARE_PUBLIC intentionally omitted - preserves existing DB values
+      [Permissions.CREATE]: false,
+      [Permissions.SHARE]: false,
+      [Permissions.SHARE_PUBLIC]: false,
     });
-    expect(userCall[1][PermissionTypes.AGENTS]).not.toHaveProperty(Permissions.CREATE);
-    expect(userCall[1][PermissionTypes.AGENTS]).not.toHaveProperty(Permissions.SHARE);
-    expect(userCall[1][PermissionTypes.AGENTS]).not.toHaveProperty(Permissions.SHARE_PUBLIC);
 
     expect(userCall[1][PermissionTypes.PROMPTS]).toEqual({
       [Permissions.USE]: true,
@@ -2031,9 +2039,9 @@ describe('updateInterfacePermissions - permissions', () => {
       (call) => call[0] === SystemRoles.USER,
     );
 
-    // When object config is used with explicit share/public, they SHOULD be included
-    expect(userCall[1][PermissionTypes.AGENTS]).toHaveProperty(Permissions.SHARE, true);
-    expect(userCall[1][PermissionTypes.AGENTS]).toHaveProperty(Permissions.SHARE_PUBLIC, true);
+    // USER agents are use-only even when share/public is explicitly configured.
+    expect(userCall[1][PermissionTypes.AGENTS]).toHaveProperty(Permissions.SHARE, false);
+    expect(userCall[1][PermissionTypes.AGENTS]).toHaveProperty(Permissions.SHARE_PUBLIC, false);
   });
 
   it('should preserve SHARE/SHARE_PUBLIC when using object config without share/public keys', async () => {
@@ -2097,13 +2105,13 @@ describe('updateInterfacePermissions - permissions', () => {
       (call) => call[0] === SystemRoles.USER,
     );
 
-    // AGENTS: use and create should be updated, but SHARE/SHARE_PUBLIC should NOT be in payload
+    // USER agents are use-only, so SHARE/SHARE_PUBLIC are reset to false.
     expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
       [Permissions.USE]: true,
       [Permissions.CREATE]: false,
+      [Permissions.SHARE]: false,
+      [Permissions.SHARE_PUBLIC]: false,
     });
-    expect(userCall[1][PermissionTypes.AGENTS]).not.toHaveProperty(Permissions.SHARE);
-    expect(userCall[1][PermissionTypes.AGENTS]).not.toHaveProperty(Permissions.SHARE_PUBLIC);
 
     // PROMPTS: same behavior
     expect(userCall[1][PermissionTypes.PROMPTS]).toEqual({
@@ -2299,7 +2307,7 @@ describe('updateInterfacePermissions - permissions', () => {
 
     expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
       [Permissions.USE]: true,
-      [Permissions.CREATE]: true,
+      [Permissions.CREATE]: false,
       [Permissions.SHARE]: false,
       [Permissions.SHARE_PUBLIC]: false,
     });
@@ -2345,6 +2353,9 @@ describe('updateInterfacePermissions - permissions', () => {
 
     expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
       [Permissions.USE]: true,
+      [Permissions.CREATE]: false,
+      [Permissions.SHARE]: false,
+      [Permissions.SHARE_PUBLIC]: false,
     });
   });
 
@@ -2381,7 +2392,12 @@ describe('updateInterfacePermissions - permissions', () => {
       (call) => call[0] === SystemRoles.USER,
     );
 
-    expect(userCall[1]).not.toHaveProperty(PermissionTypes.AGENTS);
+    expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
+      [Permissions.USE]: true,
+      [Permissions.CREATE]: false,
+      [Permissions.SHARE]: false,
+      [Permissions.SHARE_PUBLIC]: false,
+    });
     expect(userCall[1]).not.toHaveProperty(PermissionTypes.PROMPTS);
   });
 
@@ -2532,7 +2548,12 @@ describe('updateInterfacePermissions - permissions', () => {
     expect(userCall[1][PermissionTypes.MCP_SERVERS]).toEqual({
       [Permissions.CREATE]: false,
     });
-    expect(userCall[1]).not.toHaveProperty(PermissionTypes.AGENTS);
+    expect(userCall[1][PermissionTypes.AGENTS]).toEqual({
+      [Permissions.USE]: true,
+      [Permissions.CREATE]: false,
+      [Permissions.SHARE]: false,
+      [Permissions.SHARE_PUBLIC]: false,
+    });
 
     expect(adminCall[1]).not.toHaveProperty(PermissionTypes.MCP_SERVERS);
     expect(adminCall[1]).not.toHaveProperty(PermissionTypes.AGENTS);

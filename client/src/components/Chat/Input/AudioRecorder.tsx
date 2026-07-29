@@ -1,6 +1,6 @@
 import { memo, useCallback, useRef } from 'react';
-import { MicOff } from 'lucide-react';
-import { useToastContext, TooltipAnchor, ListeningIcon, Spinner } from '@librechat/client';
+import { Microphone, MicrophoneSlash as MicOff } from '@phosphor-icons/react';
+import { useToastContext, TooltipAnchor, Spinner } from '@librechat/client';
 import { useLocalize, useSpeechToText, useGetAudioSettings } from '~/hooks';
 import { useChatFormContext } from '~/Providers';
 import { globalAudioId } from '~/common';
@@ -98,12 +98,12 @@ export default memo(function AudioRecorder({
 
   const renderIcon = () => {
     if (isListening === true) {
-      return <MicOff className="stroke-red-500" />;
+      return <MicOff size={26} className="text-red-500" aria-hidden="true" />;
     }
     if (isLoading === true) {
       return <Spinner className="stroke-text-secondary" />;
     }
-    return <ListeningIcon className="stroke-text-secondary" />;
+    return <Microphone size={26} className="text-text-secondary" aria-hidden="true" />;
   };
 
   return (

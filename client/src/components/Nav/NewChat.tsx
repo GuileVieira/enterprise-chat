@@ -1,8 +1,10 @@
 import { useRecoilValue } from 'recoil';
 import { QueryKeys } from 'librechat-data-provider';
+import type { TConversation } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';
 import { TooltipAnchor, Button, NewChatIcon } from '@librechat/client';
 import { useLocalize, useNewConvo } from '~/hooks';
+import { useProjectByIdQuery } from '~/data-provider';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
@@ -11,6 +13,10 @@ export default function NewChat({ className }: { className?: string }) {
   const queryClient = useQueryClient();
   const { newConversation } = useNewConvo();
   const conversation = useRecoilValue(store.conversationByIndex(0));
+  const selectedProjectId = useRecoilValue(store.selectedProjectId);
+  const { data: project } = useProjectByIdQuery(selectedProjectId ?? '', {
+    enabled: !!selectedProjectId,
+  });
 
   const clickHandler: React.MouseEventHandler<HTMLButtonElement> = (e) => {
     if (e.button === 0 && (e.ctrlKey || e.metaKey)) {
@@ -19,7 +25,19 @@ export default function NewChat({ className }: { className?: string }) {
     }
     clearMessagesCache(queryClient, conversation?.conversationId);
     queryClient.invalidateQueries([QueryKeys.messages]);
-    newConversation();
+
+    const template: Partial<TConversation> = {};
+    if (project) {
+      template.projectId = project.projectId;
+      if (project.endpoint) {
+        template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+      }
+      if (project.model) {
+        template.model = project.model;
+      }
+    }
+
+    newConversation(Object.keys(template).length > 0 ? { template } : undefined);
   };
 
   return (

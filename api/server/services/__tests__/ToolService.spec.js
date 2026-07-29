@@ -8,6 +8,15 @@ const {
   defaultAgentCapabilities,
 } = require('librechat-data-provider');
 
+jest.mock('@librechat/data-schemas', () => ({
+  logger: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+
 const mockGetEndpointsConfig = jest.fn();
 const mockGetMCPServerTools = jest.fn();
 const mockGetCachedTools = jest.fn();
@@ -19,6 +28,8 @@ jest.mock('~/server/services/Config', () => ({
 
 const mockLoadToolDefinitions = jest.fn();
 const mockGetUserMCPAuthMap = jest.fn();
+const mockGetTenantFunctions = jest.fn();
+const mockGetTenantSecret = jest.fn();
 jest.mock('@librechat/api', () => ({
   ...jest.requireActual('@librechat/api'),
   loadToolDefinitions: (...args) => mockLoadToolDefinitions(...args),
@@ -66,6 +77,8 @@ jest.mock('~/server/services/Threads', () => ({
 }));
 jest.mock('~/models', () => ({
   findPluginAuthsByKeys: jest.fn(),
+  getTenantFunctions: (...args) => mockGetTenantFunctions(...args),
+  getTenantSecret: (...args) => mockGetTenantSecret(...args),
 }));
 jest.mock('~/config', () => ({
   getFlowStateManager: jest.fn(() => ({})),
@@ -86,7 +99,7 @@ const {
 
 function createMockReq(capabilities) {
   return {
-    user: { id: 'user_123' },
+    user: { id: 'user_123', tenantId: 'tenant-x' },
     config: {
       endpoints: {
         [EModelEndpoint.agents]: {
@@ -113,6 +126,8 @@ describe('ToolService - Action Capability Gating', () => {
     });
     mockLoadToolsUtil.mockResolvedValue({ loadedTools: [], toolContextMap: {} });
     mockLoadActionSets.mockResolvedValue([]);
+    mockGetTenantFunctions.mockResolvedValue([]);
+    mockGetTenantSecret.mockResolvedValue({ value: 'secret' });
   });
 
   describe('resolveAgentCapabilities', () => {
@@ -258,6 +273,40 @@ describe('ToolService - Action Capability Gating', () => {
       });
 
       expect(result.actionsEnabled).toBe(false);
+    });
+
+    it('should gate duckduckgo_search definitions behind web_search capability', async () => {
+      const req = createMockReq([AgentCapabilities.tools]);
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        definitionsOnly: true,
+      });
+
+      expect(mockLoadToolDefinitions).not.toHaveBeenCalled();
+
+      jest.clearAllMocks();
+      mockLoadToolDefinitions.mockResolvedValue({
+        toolDefinitions: [],
+        toolRegistry: new Map(),
+        hasDeferredTools: false,
+      });
+      mockGetEndpointsConfig.mockResolvedValue(
+        createEndpointsConfig([AgentCapabilities.tools, AgentCapabilities.web_search]),
+      );
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        definitionsOnly: true,
+      });
+
+      const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
+      expect(callArgs.tools).toContain(Tools.duckduckgo_search);
     });
   });
 
@@ -430,6 +479,93 @@ describe('ToolService - Action Capability Gating', () => {
       });
 
       expect(mockLoadActionSets).not.toHaveBeenCalled();
+    });
+
+    it('should load duckduckgo_search only when web_search capability is enabled', async () => {
+      const req = createMockReq([AgentCapabilities.tools]);
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
+
+      await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: [Tools.duckduckgo_search],
+        actionsEnabled: true,
+      });
+
+      expect(mockLoadToolsUtil).not.toHaveBeenCalled();
+
+      mockGetEndpointsConfig.mockResolvedValue(
+        createEndpointsConfig([AgentCapabilities.tools, AgentCapabilities.web_search]),
+      );
+
+      await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: [Tools.duckduckgo_search],
+        actionsEnabled: true,
+      });
+
+      expect(mockLoadToolsUtil).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: [Tools.duckduckgo_search],
+        }),
+      );
+    });
+  });
+
+  describe('loadToolsForExecution — tenant function schema', () => {
+    it('builds tenant function tools with enum and nested validation', async () => {
+      mockGetTenantFunctions.mockResolvedValue([
+        {
+          tenantId: 'tenant-x',
+          id: 'tenant_report',
+          name: 'Tenant report',
+          description: 'Build a tenant report',
+          type: 'http',
+          config: {
+            baseUrl: 'https://api.example.com',
+            method: 'POST',
+            path: '/reports',
+          },
+          inputSchema: {
+            filters: {
+              type: 'object',
+              required: true,
+              properties: {
+                status: {
+                  type: 'string',
+                  enum: ['active', 'paused'],
+                  required: true,
+                },
+                tags: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+            },
+          },
+          isActive: true,
+        },
+      ]);
+
+      const req = createMockReq([AgentCapabilities.tools]);
+      req.config = {};
+
+      const result = await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: ['tenant_report'],
+      });
+
+      expect(result.loadedTools).toHaveLength(1);
+      await expect(
+        result.loadedTools[0].invoke({
+          filters: { status: 'invalid', tags: [123] },
+        }),
+      ).rejects.toThrow();
     });
   });
 

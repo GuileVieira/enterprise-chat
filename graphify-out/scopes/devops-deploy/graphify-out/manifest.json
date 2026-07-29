@@ -1,0 +1,647 @@
+{
+  ".github/configuration-release.json": {
+    "mtime": 1777407818.4197843,
+    "ast_hash": "618d346273e41f1d518bbfbed6ebbb2f",
+    "semantic_hash": "618d346273e41f1d518bbfbed6ebbb2f"
+  },
+  ".github/configuration-unreleased.json": {
+    "mtime": 1777407818.419835,
+    "ast_hash": "0d52dd820df41f2d4d7a5764ca3f5d17",
+    "semantic_hash": "0d52dd820df41f2d4d7a5764ca3f5d17"
+  },
+  "api/config/__tests__/parsers.spec.js": {
+    "mtime": 1779199271.3528936,
+    "ast_hash": "189b12cd0084c719d0566f6ab427025b",
+    "semantic_hash": "189b12cd0084c719d0566f6ab427025b"
+  },
+  "api/config/index.js": {
+    "mtime": 1777407818.4285448,
+    "ast_hash": "022583f7775858350d0b9febf31511b9",
+    "semantic_hash": "022583f7775858350d0b9febf31511b9"
+  },
+  "api/config/meiliLogger.js": {
+    "mtime": 1777407818.4285994,
+    "ast_hash": "1480664d06481f622a5c1b81e21030aa",
+    "semantic_hash": "1480664d06481f622a5c1b81e21030aa"
+  },
+  "api/config/parsers.js": {
+    "mtime": 1779199271.3531556,
+    "ast_hash": "b91e4fe50a7275c86468649bcda2e395",
+    "semantic_hash": "b91e4fe50a7275c86468649bcda2e395"
+  },
+  "api/config/paths.js": {
+    "mtime": 1777407818.4288752,
+    "ast_hash": "ff0660da1427ecd6e37fbcd89380c279",
+    "semantic_hash": "ff0660da1427ecd6e37fbcd89380c279"
+  },
+  "api/config/winston.js": {
+    "mtime": 1779199271.3535416,
+    "ast_hash": "6ad912254c3dcb5e5a32e81a4eef5f99",
+    "semantic_hash": "6ad912254c3dcb5e5a32e81a4eef5f99"
+  },
+  "api/db/connect.js": {
+    "mtime": 1777407818.429045,
+    "ast_hash": "1ef9bf19c58a1b07cf2494150e823178",
+    "semantic_hash": "1ef9bf19c58a1b07cf2494150e823178"
+  },
+  "api/db/index.js": {
+    "mtime": 1777407818.4290922,
+    "ast_hash": "5179380012713a9b3609f0b5f12ba9ba",
+    "semantic_hash": "5179380012713a9b3609f0b5f12ba9ba"
+  },
+  "api/db/index.spec.js": {
+    "mtime": 1777407818.4291463,
+    "ast_hash": "fc56149cdf753a83ab0008d65b41ca94",
+    "semantic_hash": "fc56149cdf753a83ab0008d65b41ca94"
+  },
+  "api/db/indexSync.js": {
+    "mtime": 1779203545.1211307,
+    "ast_hash": "db48a011c616e874cab1eed55787ce56",
+    "semantic_hash": "db48a011c616e874cab1eed55787ce56"
+  },
+  "api/db/indexSync.spec.js": {
+    "mtime": 1779203545.1214437,
+    "ast_hash": "3478e28f7e454114b97a8d843017f280",
+    "semantic_hash": "3478e28f7e454114b97a8d843017f280"
+  },
+  "api/db/meiliProjectSetup.js": {
+    "mtime": 1779203545.1215677,
+    "ast_hash": "773c37e1463a5d503308b8bb7c119bfe",
+    "semantic_hash": "773c37e1463a5d503308b8bb7c119bfe"
+  },
+  "api/db/models.js": {
+    "mtime": 1777407818.429523,
+    "ast_hash": "da30c95a90d5779498f270e57c0efa17",
+    "semantic_hash": "da30c95a90d5779498f270e57c0efa17"
+  },
+  "api/db/utils.js": {
+    "mtime": 1777407818.4295807,
+    "ast_hash": "cb732df795e239390cb4fe3c14030946",
+    "semantic_hash": "cb732df795e239390cb4fe3c14030946"
+  },
+  "api/db/utils.spec.js": {
+    "mtime": 1777407818.429659,
+    "ast_hash": "38264f0c94bffaa3d0c47fdf3c2fa72d",
+    "semantic_hash": "38264f0c94bffaa3d0c47fdf3c2fa72d"
+  },
+  "api/package.json": {
+    "mtime": 1779203881.797102,
+    "ast_hash": "35459ada853e13aa1681783a716abfd5",
+    "semantic_hash": "35459ada853e13aa1681783a716abfd5"
+  },
+  "api/server/index.js": {
+    "mtime": 1781219412.7598221,
+    "ast_hash": "bd1d6de227c8886054f52fbe15710615",
+    "semantic_hash": "bd1d6de227c8886054f52fbe15710615"
+  },
+  "api/server/routes/index.js": {
+    "mtime": 1781219412.7602832,
+    "ast_hash": "6caf16599f7d289fbce223357d98936f",
+    "semantic_hash": "6caf16599f7d289fbce223357d98936f"
+  },
+  "api/server/services/Config/EndpointService.js": {
+    "mtime": 1779199271.3830447,
+    "ast_hash": "43c99b66b3d5b1ddf6ac51d0a3a4eb9d",
+    "semantic_hash": "43c99b66b3d5b1ddf6ac51d0a3a4eb9d"
+  },
+  "api/server/services/Config/__tests__/EndpointService.spec.js": {
+    "mtime": 1779199271.3831134,
+    "ast_hash": "305a905f2e774e71d5f0ea310453f1e6",
+    "semantic_hash": "305a905f2e774e71d5f0ea310453f1e6"
+  },
+  "api/server/services/Config/__tests__/getCachedTools.spec.js": {
+    "mtime": 1779199271.3832452,
+    "ast_hash": "0d85e91892e5b498c0e9d7f9d1964d0f",
+    "semantic_hash": "0d85e91892e5b498c0e9d7f9d1964d0f"
+  },
+  "api/server/services/Config/__tests__/invalidateConfigCaches.spec.js": {
+    "mtime": 1777407818.4508393,
+    "ast_hash": "e6bd8fa23d89fe0c0dbc782222cbaf32",
+    "semantic_hash": "e6bd8fa23d89fe0c0dbc782222cbaf32"
+  },
+  "api/server/services/Config/app.js": {
+    "mtime": 1777407818.4508905,
+    "ast_hash": "5c8d72cbbdbfdd097a50d0ef2dd26df9",
+    "semantic_hash": "5c8d72cbbdbfdd097a50d0ef2dd26df9"
+  },
+  "api/server/services/Config/getCachedTools.js": {
+    "mtime": 1779199271.3834581,
+    "ast_hash": "348553216948814fe84e381be6284b81",
+    "semantic_hash": "348553216948814fe84e381be6284b81"
+  },
+  "api/server/services/Config/getEndpointsConfig.js": {
+    "mtime": 1777407818.4509952,
+    "ast_hash": "a291373b2ce0975573cfa25ef8788aa8",
+    "semantic_hash": "a291373b2ce0975573cfa25ef8788aa8"
+  },
+  "api/server/services/Config/index.js": {
+    "mtime": 1777407818.4510405,
+    "ast_hash": "d8bde63a735ffcb5d74cdbf7ee7bcf30",
+    "semantic_hash": "d8bde63a735ffcb5d74cdbf7ee7bcf30"
+  },
+  "api/server/services/Config/ldap.js": {
+    "mtime": 1777407818.451094,
+    "ast_hash": "7920abf04ebdee91fef2cba27e59e612",
+    "semantic_hash": "7920abf04ebdee91fef2cba27e59e612"
+  },
+  "api/server/services/Config/loadAsyncEndpoints.js": {
+    "mtime": 1777407818.4512513,
+    "ast_hash": "b1c7e5e7c810774143c252d18e7273e9",
+    "semantic_hash": "b1c7e5e7c810774143c252d18e7273e9"
+  },
+  "api/server/services/Config/loadConfigModels.js": {
+    "mtime": 1777407818.4513073,
+    "ast_hash": "2c90320bd1a45930715e5191f28253e4",
+    "semantic_hash": "2c90320bd1a45930715e5191f28253e4"
+  },
+  "api/server/services/Config/loadConfigModels.spec.js": {
+    "mtime": 1779199271.3835857,
+    "ast_hash": "9111a1b47e23b54cdf5f00411f2deb9e",
+    "semantic_hash": "9111a1b47e23b54cdf5f00411f2deb9e"
+  },
+  "api/server/services/Config/loadCustomConfig.js": {
+    "mtime": 1779199271.3838685,
+    "ast_hash": "04d3b71be2fe72cba55099e8beee91e3",
+    "semantic_hash": "04d3b71be2fe72cba55099e8beee91e3"
+  },
+  "api/server/services/Config/loadCustomConfig.spec.js": {
+    "mtime": 1779199271.3840253,
+    "ast_hash": "657107ca8e811026262b2a557f7f653d",
+    "semantic_hash": "657107ca8e811026262b2a557f7f653d"
+  },
+  "api/server/services/Config/loadDefaultEConfig.js": {
+    "mtime": 1777407818.4516633,
+    "ast_hash": "f0f367f0d51c2328e31f0496fbce72de",
+    "semantic_hash": "f0f367f0d51c2328e31f0496fbce72de"
+  },
+  "api/server/services/Config/loadDefaultModels.js": {
+    "mtime": 1779199271.3842385,
+    "ast_hash": "699f93f7fd926dde24a7f156494604fc",
+    "semantic_hash": "699f93f7fd926dde24a7f156494604fc"
+  },
+  "api/server/services/Config/mcp.js": {
+    "mtime": 1777407818.451883,
+    "ast_hash": "578414bfcb144f8eadf0e1b055ee5e0a",
+    "semantic_hash": "578414bfcb144f8eadf0e1b055ee5e0a"
+  },
+  "api/server/services/start/migration.js": {
+    "mtime": 1779209936.5050094,
+    "ast_hash": "ba81f27728d3e764b6d43dd62f1bf0d3",
+    "semantic_hash": "ba81f27728d3e764b6d43dd62f1bf0d3"
+  },
+  "api/server/services/start/tools.js": {
+    "mtime": 1780281987.5658925,
+    "ast_hash": "eea0d48002da20b9bb15ac7b997197a6",
+    "semantic_hash": "eea0d48002da20b9bb15ac7b997197a6"
+  },
+  "api/server/services/start/tools.spec.js": {
+    "mtime": 1780281957.8012898,
+    "ast_hash": "662c967892de065b6d21f71a28626069",
+    "semantic_hash": "662c967892de065b6d21f71a28626069"
+  },
+  "api/server/telemetry.js": {
+    "mtime": 1779199271.3982956,
+    "ast_hash": "383d25c8502078c01a53b9b0c419d639",
+    "semantic_hash": "383d25c8502078c01a53b9b0c419d639"
+  },
+  "client/package.json": {
+    "mtime": 1781804724.0956519,
+    "ast_hash": "d75e9ae0d99979418ac9e30628d92d72",
+    "semantic_hash": "d75e9ae0d99979418ac9e30628d92d72"
+  },
+  "config/deployed-update.js": {
+    "mtime": 1777407818.6070375,
+    "ast_hash": "9e62452ab59e787a75bd8df0a14c2c3e",
+    "semantic_hash": "9e62452ab59e787a75bd8df0a14c2c3e"
+  },
+  "package.json": {
+    "mtime": 1781881427.1807833,
+    "ast_hash": "e4d6adc8b5b5c7f2f4c3dfca9804ecd8",
+    "semantic_hash": "e4d6adc8b5b5c7f2f4c3dfca9804ecd8"
+  },
+  "packages/api/package.json": {
+    "mtime": 1779201843.2151165,
+    "ast_hash": "e16e94325e965fa85716921661e97212",
+    "semantic_hash": "e16e94325e965fa85716921661e97212"
+  },
+  "packages/api/src/mcp/oauth/handler.ts": {
+    "mtime": 1779199271.6079872,
+    "ast_hash": "a2a0ab51ba143745f1f8664c2848da46",
+    "semantic_hash": "a2a0ab51ba143745f1f8664c2848da46"
+  },
+  "packages/client/package.json": {
+    "mtime": 1779209046.9691234,
+    "ast_hash": "4a52d178e530b9c87ade645ad0f9c1b3",
+    "semantic_hash": "4a52d178e530b9c87ade645ad0f9c1b3"
+  },
+  "packages/data-provider/package.json": {
+    "mtime": 1779201865.7371912,
+    "ast_hash": "de6e160c53b621d9f17a71bb86ec67fd",
+    "semantic_hash": "de6e160c53b621d9f17a71bb86ec67fd"
+  },
+  "packages/data-schemas/package.json": {
+    "mtime": 1779201843.2160292,
+    "ast_hash": "3a233404d4c62d922e3c53d2ac012bdc",
+    "semantic_hash": "3a233404d4c62d922e3c53d2ac012bdc"
+  },
+  "redis-config/start-cluster.sh": {
+    "mtime": 1777407818.7132225,
+    "ast_hash": "56a65c32e1777322726060e7d42d260f",
+    "semantic_hash": "56a65c32e1777322726060e7d42d260f"
+  },
+  "redis-config/start-redis-tls.sh": {
+    "mtime": 1777407818.713272,
+    "ast_hash": "b2c573512aa0f9f59c23dc1ae3244df9",
+    "semantic_hash": "b2c573512aa0f9f59c23dc1ae3244df9"
+  },
+  "redis-config/stop-cluster.sh": {
+    "mtime": 1777407818.713463,
+    "ast_hash": "3085e1e3cbdd21f0e3326cf0ebc6b7d2",
+    "semantic_hash": "3085e1e3cbdd21f0e3326cf0ebc6b7d2"
+  },
+  "sites/orqest-landing/package.json": {
+    "mtime": 1779201635.5615404,
+    "ast_hash": "7c5da1b9e2ce262168af327294201526",
+    "semantic_hash": "7c5da1b9e2ce262168af327294201526"
+  },
+  "turbo.json": {
+    "mtime": 1779199271.6836877,
+    "ast_hash": "05923bb4e16db636bd599fb8819214a6",
+    "semantic_hash": "05923bb4e16db636bd599fb8819214a6"
+  },
+  "utils/docker/docker-build.sh": {
+    "mtime": 1777407818.714221,
+    "ast_hash": "8d5a14fcc6770b555fabf06c16b650ea",
+    "semantic_hash": "8d5a14fcc6770b555fabf06c16b650ea"
+  },
+  "utils/docker/docker-push.sh": {
+    "mtime": 1777407818.7142825,
+    "ast_hash": "40d2bfbed866b4ee1d0a99aab7b7fd16",
+    "semantic_hash": "40d2bfbed866b4ee1d0a99aab7b7fd16"
+  },
+  "vercel.json": {
+    "mtime": 1779202875.297242,
+    "ast_hash": "976ca55086d2943659463a375e636549",
+    "semantic_hash": "976ca55086d2943659463a375e636549"
+  },
+  ".github/CODE_OF_CONDUCT.md": {
+    "mtime": 1777407818.4191198,
+    "ast_hash": "ff6785ba80f2d65da0e6874758c7bff8",
+    "semantic_hash": "ff6785ba80f2d65da0e6874758c7bff8"
+  },
+  ".github/CONTRIBUTING.md": {
+    "mtime": 1777407818.419234,
+    "ast_hash": "82647ca27527596086594be422e5c8fd",
+    "semantic_hash": "82647ca27527596086594be422e5c8fd"
+  },
+  ".github/FUNDING.yml": {
+    "mtime": 1777407818.4192832,
+    "ast_hash": "718f87cd8e3eb32e8a649216b897b14c",
+    "semantic_hash": "718f87cd8e3eb32e8a649216b897b14c"
+  },
+  ".github/ISSUE_TEMPLATE/BUG-REPORT.yml": {
+    "mtime": 1777407818.419367,
+    "ast_hash": "657fa23892f5c0db827c0f46246ab3c4",
+    "semantic_hash": "657fa23892f5c0db827c0f46246ab3c4"
+  },
+  ".github/ISSUE_TEMPLATE/FEATURE-REQUEST.yml": {
+    "mtime": 1777407818.4194224,
+    "ast_hash": "d677a849a444ab148dc08ede9bb43935",
+    "semantic_hash": "d677a849a444ab148dc08ede9bb43935"
+  },
+  ".github/ISSUE_TEMPLATE/LOCIZE_TRANSLATION_ACCESS_REQUEST.yml": {
+    "mtime": 1777407818.4194787,
+    "ast_hash": "48f0d8aef0a1d7896cb8c2638c19e830",
+    "semantic_hash": "48f0d8aef0a1d7896cb8c2638c19e830"
+  },
+  ".github/ISSUE_TEMPLATE/NEW-LANGUAGE-REQUEST.yml": {
+    "mtime": 1777407818.4196308,
+    "ast_hash": "36e4e3578f3c5b5fa118b9d2fcc78cb8",
+    "semantic_hash": "36e4e3578f3c5b5fa118b9d2fcc78cb8"
+  },
+  ".github/SECURITY.md": {
+    "mtime": 1777407818.4197295,
+    "ast_hash": "cd3b808f33f5c3dd3fe23878a9f6252c",
+    "semantic_hash": "cd3b808f33f5c3dd3fe23878a9f6252c"
+  },
+  ".github/playwright.yml": {
+    "mtime": 1777407818.4198887,
+    "ast_hash": "b74f0998fb2241ca4a0bd0ecd2e8a53e",
+    "semantic_hash": "b74f0998fb2241ca4a0bd0ecd2e8a53e"
+  },
+  ".github/pull_request_template.md": {
+    "mtime": 1777407818.4199421,
+    "ast_hash": "ac274ccd0776e24d2df69173a9ed3c14",
+    "semantic_hash": "ac274ccd0776e24d2df69173a9ed3c14"
+  },
+  ".github/workflows/a11y.yml": {
+    "mtime": 1779199271.3369322,
+    "ast_hash": "2213949a2fc25487828202def2cc47f9",
+    "semantic_hash": "2213949a2fc25487828202def2cc47f9"
+  },
+  ".github/workflows/backend-review.yml": {
+    "mtime": 1779199271.3376472,
+    "ast_hash": "9491cabcfed79a06bdcd8aa1e4c42842",
+    "semantic_hash": "9491cabcfed79a06bdcd8aa1e4c42842"
+  },
+  ".github/workflows/build.yml": {
+    "mtime": 1779199271.3379555,
+    "ast_hash": "1b59c3cef9d6a8ba6c01a2f9ca285f76",
+    "semantic_hash": "1b59c3cef9d6a8ba6c01a2f9ca285f76"
+  },
+  ".github/workflows/cache-integration-tests.yml": {
+    "mtime": 1779199271.3380947,
+    "ast_hash": "94118b73c0992e9e4ed64711293b7843",
+    "semantic_hash": "94118b73c0992e9e4ed64711293b7843"
+  },
+  ".github/workflows/client.yml": {
+    "mtime": 1779199271.3383198,
+    "ast_hash": "b75d818c199f36e54a88617e80e3efcd",
+    "semantic_hash": "b75d818c199f36e54a88617e80e3efcd"
+  },
+  ".github/workflows/data-provider.yml": {
+    "mtime": 1779199271.338472,
+    "ast_hash": "c6e67a2c05f7ee5d2b96b69385ad2f7d",
+    "semantic_hash": "c6e67a2c05f7ee5d2b96b69385ad2f7d"
+  },
+  ".github/workflows/data-schemas.yml": {
+    "mtime": 1779199271.3386683,
+    "ast_hash": "7a954c258d1c6fc6bdda2164afd4299a",
+    "semantic_hash": "7a954c258d1c6fc6bdda2164afd4299a"
+  },
+  ".github/workflows/deploy-dev.yml": {
+    "mtime": 1779199271.3387818,
+    "ast_hash": "8a2165eed19b19a71613c89ac5429d60",
+    "semantic_hash": "8a2165eed19b19a71613c89ac5429d60"
+  },
+  ".github/workflows/deploy.yml": {
+    "mtime": 1779199271.3389,
+    "ast_hash": "0904a6b2e123cb419dd57f9fca35f957",
+    "semantic_hash": "0904a6b2e123cb419dd57f9fca35f957"
+  },
+  ".github/workflows/dev-branch-images.yml": {
+    "mtime": 1779199271.3390062,
+    "ast_hash": "577d888c636c69af3e93c7737599211a",
+    "semantic_hash": "577d888c636c69af3e93c7737599211a"
+  },
+  ".github/workflows/dev-images.yml": {
+    "mtime": 1779199271.3391142,
+    "ast_hash": "2d31aeec32ed8b827e82a8a258b1dfa6",
+    "semantic_hash": "2d31aeec32ed8b827e82a8a258b1dfa6"
+  },
+  ".github/workflows/dev-staging-images.yml": {
+    "mtime": 1779199271.3394406,
+    "ast_hash": "c19609e5c856f75d87e7631f0b428b59",
+    "semantic_hash": "c19609e5c856f75d87e7631f0b428b59"
+  },
+  ".github/workflows/docker-smoke.yml": {
+    "mtime": 1779199271.3399203,
+    "ast_hash": "a972675429bd03a2a00eb7838e2568e9",
+    "semantic_hash": "a972675429bd03a2a00eb7838e2568e9"
+  },
+  ".github/workflows/eslint-ci.yml": {
+    "mtime": 1777407818.4209983,
+    "ast_hash": "0aea30fe1e77d4b47cf5365d91322da7",
+    "semantic_hash": "0aea30fe1e77d4b47cf5365d91322da7"
+  },
+  ".github/workflows/frontend-review.yml": {
+    "mtime": 1779199271.3401778,
+    "ast_hash": "d45c5c2ddb7244dc7908265ba34374fd",
+    "semantic_hash": "d45c5c2ddb7244dc7908265ba34374fd"
+  },
+  ".github/workflows/generate_embeddings.yml": {
+    "mtime": 1779199271.340387,
+    "ast_hash": "6a3a97a8dd6b9f75150053e3129f5a90",
+    "semantic_hash": "6a3a97a8dd6b9f75150053e3129f5a90"
+  },
+  ".github/workflows/gitnexus-cleanup-pr.yml": {
+    "mtime": 1777407818.4212284,
+    "ast_hash": "e1dbcc554e2767a9c6790d12ad870d55",
+    "semantic_hash": "e1dbcc554e2767a9c6790d12ad870d55"
+  },
+  ".github/workflows/gitnexus-deploy.yml": {
+    "mtime": 1777407818.421328,
+    "ast_hash": "bef75e0b33efd8eb159fecc05eca19b2",
+    "semantic_hash": "bef75e0b33efd8eb159fecc05eca19b2"
+  },
+  ".github/workflows/gitnexus-index.yml": {
+    "mtime": 1779199271.3407543,
+    "ast_hash": "98ef9d5bf6f4cfee3e9021bb4e672ae3",
+    "semantic_hash": "98ef9d5bf6f4cfee3e9021bb4e672ae3"
+  },
+  ".github/workflows/gitnexus-pr-command.yml": {
+    "mtime": 1779199271.3408983,
+    "ast_hash": "65127950a88d66b182c16694d8b84252",
+    "semantic_hash": "65127950a88d66b182c16694d8b84252"
+  },
+  ".github/workflows/helmcharts.yml": {
+    "mtime": 1779199271.3410017,
+    "ast_hash": "e3945369a9a3e13451b6f8ad697f2da8",
+    "semantic_hash": "e3945369a9a3e13451b6f8ad697f2da8"
+  },
+  ".github/workflows/i18n-unused-keys.yml": {
+    "mtime": 1779199271.3411417,
+    "ast_hash": "de9ff5888dda9fcaaf82552c6d2ffc51",
+    "semantic_hash": "de9ff5888dda9fcaaf82552c6d2ffc51"
+  },
+  ".github/workflows/locize-i18n-sync.yml": {
+    "mtime": 1779199271.34142,
+    "ast_hash": "2696165c2773356089ff533e933b699f",
+    "semantic_hash": "2696165c2773356089ff533e933b699f"
+  },
+  ".github/workflows/main-image-workflow.yml": {
+    "mtime": 1779199271.3415213,
+    "ast_hash": "3885e998ac4a65a8bb92f4c8c905519b",
+    "semantic_hash": "3885e998ac4a65a8bb92f4c8c905519b"
+  },
+  ".github/workflows/tag-images.yml": {
+    "mtime": 1779199271.341614,
+    "ast_hash": "0188a9ecb7145670f10cd01080dc45a6",
+    "semantic_hash": "0188a9ecb7145670f10cd01080dc45a6"
+  },
+  ".github/workflows/unused-packages.yml": {
+    "mtime": 1779199271.3417184,
+    "ast_hash": "1a7f8ddfd49839ee12e95e5c7276b349",
+    "semantic_hash": "1a7f8ddfd49839ee12e95e5c7276b349"
+  },
+  "config/librechat.prod.yaml": {
+    "mtime": 1783392992.5166373,
+    "ast_hash": "c129ec020bf990a6143e380f6e351a60",
+    "semantic_hash": "c129ec020bf990a6143e380f6e351a60"
+  },
+  "deploy-compose.yml": {
+    "mtime": 1779226103.0855277,
+    "ast_hash": "4d6eb839e448fdbfdeb9e787d9b97e9b",
+    "semantic_hash": "4d6eb839e448fdbfdeb9e787d9b97e9b"
+  },
+  "docker-compose.prod.yml": {
+    "mtime": 1781219412.7667727,
+    "ast_hash": "06351db7c8f13640c03902ddde841b4d",
+    "semantic_hash": "06351db7c8f13640c03902ddde841b4d"
+  },
+  "docker-compose.yml": {
+    "mtime": 1779226103.0407243,
+    "ast_hash": "ab7f4545b01544c577bcd15f8d5af9b0",
+    "semantic_hash": "ab7f4545b01544c577bcd15f8d5af9b0"
+  },
+  "docs/coolify-prod.md": {
+    "mtime": 1781556125.6868858,
+    "ast_hash": "2edd3d8412de5047d90dd5b35cc9105a",
+    "semantic_hash": "2edd3d8412de5047d90dd5b35cc9105a"
+  },
+  "docs/coolify-schedules.md": {
+    "mtime": 1781549042.2433715,
+    "ast_hash": "d1567f22fdb70afc18fc91df1e131fbc",
+    "semantic_hash": "d1567f22fdb70afc18fc91df1e131fbc"
+  },
+  "helm/librechat-rag-api/Chart.yaml": {
+    "mtime": 1779201843.2121336,
+    "ast_hash": "639bd3565b3024ce4eea59dc8e0dcd27",
+    "semantic_hash": "639bd3565b3024ce4eea59dc8e0dcd27"
+  },
+  "helm/librechat-rag-api/readme.md": {
+    "mtime": 1779201843.212368,
+    "ast_hash": "82ee7c0013d2fe1c64b3f50c2de0ae9b",
+    "semantic_hash": "82ee7c0013d2fe1c64b3f50c2de0ae9b"
+  },
+  "helm/librechat-rag-api/templates/configmap.yaml": {
+    "mtime": 1777429771.7096896,
+    "ast_hash": "c21f8bd98de27aaec6abdfd32fd86f84",
+    "semantic_hash": "c21f8bd98de27aaec6abdfd32fd86f84"
+  },
+  "helm/librechat-rag-api/templates/rag-deployment.yaml": {
+    "mtime": 1777429771.7099516,
+    "ast_hash": "7db4159a71b29595062af3f6da8ed8d6",
+    "semantic_hash": "7db4159a71b29595062af3f6da8ed8d6"
+  },
+  "helm/librechat-rag-api/templates/service.yaml": {
+    "mtime": 1777429771.7092104,
+    "ast_hash": "c687332d3ab24bf0a219242fbc53c619",
+    "semantic_hash": "c687332d3ab24bf0a219242fbc53c619"
+  },
+  "helm/librechat-rag-api/templates/tests/test-connection.yaml": {
+    "mtime": 1777429771.7088978,
+    "ast_hash": "e6cbfce062a5cc5aa2d4471ab574ce6b",
+    "semantic_hash": "e6cbfce062a5cc5aa2d4471ab574ce6b"
+  },
+  "helm/librechat-rag-api/values.yaml": {
+    "mtime": 1777429771.710254,
+    "ast_hash": "497e8989563930fbdb1381a64ba86aa4",
+    "semantic_hash": "497e8989563930fbdb1381a64ba86aa4"
+  },
+  "helm/librechat/Chart.yaml": {
+    "mtime": 1779201843.212646,
+    "ast_hash": "7e1b523c234e9517bca4929d5c6dc234",
+    "semantic_hash": "7e1b523c234e9517bca4929d5c6dc234"
+  },
+  "helm/librechat/DNS_CONFIGURATION.md": {
+    "mtime": 1779201843.2129538,
+    "ast_hash": "96f1e60da7cdbbd1ca46090490e12520",
+    "semantic_hash": "96f1e60da7cdbbd1ca46090490e12520"
+  },
+  "helm/librechat/examples/dns-configuration.yaml": {
+    "mtime": 1779201843.2132227,
+    "ast_hash": "3c35b95436ec6a20957c0c2cc290fbcf",
+    "semantic_hash": "3c35b95436ec6a20957c0c2cc290fbcf"
+  },
+  "helm/librechat/examples/hostaliases-values.yaml": {
+    "mtime": 1777429771.7120705,
+    "ast_hash": "42a3f7fe5f36e595c81c08e3c391e5a6",
+    "semantic_hash": "42a3f7fe5f36e595c81c08e3c391e5a6"
+  },
+  "helm/librechat/readme.md": {
+    "mtime": 1779201843.2134838,
+    "ast_hash": "b353ec6afc3b590680891f15b273889a",
+    "semantic_hash": "b353ec6afc3b590680891f15b273889a"
+  },
+  "helm/librechat/templates/NOTES.txt": {
+    "mtime": 1777407818.6133459,
+    "ast_hash": "65b3d39b4d860954997836e98bb2a8ac",
+    "semantic_hash": "65b3d39b4d860954997836e98bb2a8ac"
+  },
+  "helm/librechat/templates/_checks.yaml": {
+    "mtime": 1777429771.7144701,
+    "ast_hash": "19a67861fea4288b73af1f4c66739b70",
+    "semantic_hash": "19a67861fea4288b73af1f4c66739b70"
+  },
+  "helm/librechat/templates/configmap-env.yaml": {
+    "mtime": 1779201843.21372,
+    "ast_hash": "fcd8ba545ee03d60804eea6b0ebaeb35",
+    "semantic_hash": "fcd8ba545ee03d60804eea6b0ebaeb35"
+  },
+  "helm/librechat/templates/configmap.yaml": {
+    "mtime": 1777429771.7150447,
+    "ast_hash": "82f01b25e3911783076adc6f9b980462",
+    "semantic_hash": "82f01b25e3911783076adc6f9b980462"
+  },
+  "helm/librechat/templates/configmaps-additional.yaml": {
+    "mtime": 1777429771.7153127,
+    "ast_hash": "414b1d2d0b0cf5d0f69b9d4945ac4226",
+    "semantic_hash": "414b1d2d0b0cf5d0f69b9d4945ac4226"
+  },
+  "helm/librechat/templates/deployment.yaml": {
+    "mtime": 1777429771.7127771,
+    "ast_hash": "724a30fbf042c0b37da0d65d52166afd",
+    "semantic_hash": "724a30fbf042c0b37da0d65d52166afd"
+  },
+  "helm/librechat/templates/hpa.yaml": {
+    "mtime": 1777429771.7142239,
+    "ast_hash": "aeb92ddf110f2d766bc95eb99aff8734",
+    "semantic_hash": "aeb92ddf110f2d766bc95eb99aff8734"
+  },
+  "helm/librechat/templates/ingress.yaml": {
+    "mtime": 1777429771.7130735,
+    "ast_hash": "e05f79491d180aadc72c45fe8f6cf769",
+    "semantic_hash": "e05f79491d180aadc72c45fe8f6cf769"
+  },
+  "helm/librechat/templates/persistentvolumeclaim.yaml": {
+    "mtime": 1777429771.7157927,
+    "ast_hash": "e89f14e958730233c12798419e3a7ca8",
+    "semantic_hash": "e89f14e958730233c12798419e3a7ca8"
+  },
+  "helm/librechat/templates/service.yaml": {
+    "mtime": 1777429771.7137537,
+    "ast_hash": "cc2b267eb175ca0fd486286adf544f0c",
+    "semantic_hash": "cc2b267eb175ca0fd486286adf544f0c"
+  },
+  "helm/librechat/templates/serviceaccount.yaml": {
+    "mtime": 1777429771.7147632,
+    "ast_hash": "a9ed3b35a06f16b2e874b7a6d2a6ca7f",
+    "semantic_hash": "a9ed3b35a06f16b2e874b7a6d2a6ca7f"
+  },
+  "helm/librechat/templates/tests/test-connection.yaml": {
+    "mtime": 1777429771.7133527,
+    "ast_hash": "ac86ff03897976fee9906ed249376504",
+    "semantic_hash": "ac86ff03897976fee9906ed249376504"
+  },
+  "helm/librechat/values.yaml": {
+    "mtime": 1779201843.2140791,
+    "ast_hash": "f5768960f612bda4116ee8cf69492fbe",
+    "semantic_hash": "f5768960f612bda4116ee8cf69492fbe"
+  },
+  "librechat.example.yaml": {
+    "mtime": 1781219412.7672994,
+    "ast_hash": "da3a552a300a4ecf2065ea62116144ae",
+    "semantic_hash": "da3a552a300a4ecf2065ea62116144ae"
+  },
+  "rag.yml": {
+    "mtime": 1777407818.712497,
+    "ast_hash": "5f0a1c52ad6d5494a173fddbe4a760d2",
+    "semantic_hash": "5f0a1c52ad6d5494a173fddbe4a760d2"
+  },
+  "redis-config/README.md": {
+    "mtime": 1777407818.712665,
+    "ast_hash": "eaccf3bab5ad4a3b979f70700c9c1b3c",
+    "semantic_hash": "eaccf3bab5ad4a3b979f70700c9c1b3c"
+  },
+  "sites/orqest-landing/docker-compose.yml": {
+    "mtime": 1779201635.560292,
+    "ast_hash": "1351d47950c655ab58cd16006e330d30",
+    "semantic_hash": "1351d47950c655ab58cd16006e330d30"
+  },
+  "utils/docker/test-compose.yml": {
+    "mtime": 1777407818.7143335,
+    "ast_hash": "3a19a1315bc37f9f7dd14a84522a8e9f",
+    "semantic_hash": "3a19a1315bc37f9f7dd14a84522a8e9f"
+  }
+}

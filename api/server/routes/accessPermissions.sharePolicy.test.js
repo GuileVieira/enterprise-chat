@@ -63,6 +63,18 @@ describe('Access permissions share policy', () => {
       },
     },
     {
+      label: 'project',
+      resourceType: ResourceType.PROJECT,
+      permissionType: PermissionTypes.PROJECTS,
+      accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+      middlewareOptions: {
+        resourceType: ResourceType.PROJECT,
+        requiredPermission: PermissionBits.SHARE,
+        resourceIdParam: 'resourceId',
+        idResolver: expect.any(Function),
+      },
+    },
+    {
       label: 'prompt group',
       resourceType: ResourceType.PROMPTGROUP,
       permissionType: PermissionTypes.PROMPTS,

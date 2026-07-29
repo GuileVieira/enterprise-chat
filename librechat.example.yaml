@@ -52,7 +52,7 @@ cache: true
 #   #   /r/{storageRegion}/t/{tenantId}/{basePath}/{userId}/{file} (non-inline files)
 #   # storageRegion defaults to AWS_REGION when omitted, but only affects new keys
 #   # when includeRegionInPath is true. Existing files are not moved automatically.
-#   # LibreChat does not configure CloudFront origins, Route53, or regional routing.
+#   # Orqest does not configure CloudFront origins, Route53, or regional routing.
 #   storageRegion: "us-east-2"
 #   includeRegionInPath: false
 #   # Direct-download filename/content-type overrides require the CloudFront cache/origin
@@ -63,32 +63,36 @@ cache: true
 
 # Custom interface configuration
 interface:
-  customWelcome: 'Welcome to LibreChat! Enjoy your experience.'
+  customWelcome: 'Welcome to Orqest! Enjoy your experience.'
   # Enable/disable file search as a chatarea selection (default: true)
   # Note: This setting does not disable the Agents File Search Capability.
   # To disable the Agents Capability, see the Agents Endpoint configuration instead.
   fileSearch: true
+  # Enable/disable the project Meta Ads budget automation UI, API, and cron.
+  metaAds: true
+  # Optional agent ID used by the project Meta Ads "chat with traffic agent" action.
+  # metaAdsTrafficAgentId: ''
   # Privacy policy settings
   privacyPolicy:
-    externalUrl: 'https://librechat.ai/privacy-policy'
+    externalUrl: ''
     openNewTab: true
 
   # Terms of service
   termsOfService:
-    externalUrl: 'https://librechat.ai/tos'
+    externalUrl: ''
     openNewTab: true
     modalAcceptance: true
-    modalTitle: 'Terms of Service for LibreChat'
+    modalTitle: 'Terms of Service for Orqest'
     modalContent: |
-      # Terms and Conditions for LibreChat
+      # Terms and Conditions for Orqest
 
       *Effective Date: February 18, 2024*
 
-      Welcome to LibreChat, the informational website for the open-source AI chat platform, available at https://librechat.ai. These Terms of Service ("Terms") govern your use of our website and the services we offer. By accessing or using the Website, you agree to be bound by these Terms and our Privacy Policy, accessible at https://librechat.ai//privacy.
+      Welcome to Orqest. These Terms of Service ("Terms") govern your use of our platform and the services we offer. By accessing or using the Website, you agree to be bound by these Terms and our Privacy Policy.
 
       ## 1. Ownership
 
-      Upon purchasing a package from LibreChat, you are granted the right to download and use the code for accessing an admin panel for LibreChat. While you own the downloaded code, you are expressly prohibited from reselling, redistributing, or otherwise transferring the code to third parties without explicit permission from LibreChat.
+      Upon purchasing a package from Orqest, you are granted the right to download and use the code for accessing an admin panel for Orqest. While you own the downloaded code, you are expressly prohibited from reselling, redistributing, or otherwise transferring the code to third parties without explicit permission from Orqest.
 
       ## 2. User Data
 
@@ -147,23 +151,23 @@ interface:
   #   public: false
   # MCP Servers configuration example
   # mcpServers:
-    # Controls user permissions for MCP (Model Context Protocol) server management
-    # - use: Allow users to use configured MCP servers
-    # - create: Allow users to create and manage new MCP servers
-    # - share: Allow users to share MCP servers with other users
-    # - public: Allow users to share MCP servers publicly (with everyone)
+  # Controls user permissions for MCP (Model Context Protocol) server management
+  # - use: Allow users to use configured MCP servers
+  # - create: Allow users to create and manage new MCP servers
+  # - share: Allow users to share MCP servers with other users
+  # - public: Allow users to share MCP servers publicly (with everyone)
 
-    # Creation / edit MCP server config Dialog config example
-    # trustCheckbox:
-    #   label:
-    #     en: 'I understand and I want to continue'
-    #     de: 'Ich verstehe und möchte fortfahren'
-    #     de-DE: 'Ich verstehe und möchte fortfahren' # You can narrow translation to regions like (de-DE or de-CH)
-    #   subLabel:
-    #     en: |
-    #       Librechat hasn't reviewed this MCP server. Attackers may attempt to steal your data or trick the model into taking unintended actions, including destroying data. <a href="https://google.de" target="_blank"><strong>Learn more.</strong></a>
-    #     de: |
-    #       LibreChat hat diesen MCP-Server nicht überprüft. Angreifer könnten versuchen, Ihre Daten zu stehlen oder das Modell zu unbeabsichtigten Aktionen zu verleiten, einschließlich der Zerstörung von Daten. <a href="https://google.de" target="_blank"><strong>Mehr erfahren.</strong></a>
+  # Creation / edit MCP server config Dialog config example
+  # trustCheckbox:
+  #   label:
+  #     en: 'I understand and I want to continue'
+  #     de: 'Ich verstehe und möchte fortfahren'
+  #     de-DE: 'Ich verstehe und möchte fortfahren' # You can narrow translation to regions like (de-DE or de-CH)
+  #   subLabel:
+  #     en: |
+  #       Librechat hasn't reviewed this MCP server. Attackers may attempt to steal your data or trick the model into taking unintended actions, including destroying data. <a href="https://google.de" target="_blank"><strong>Learn more.</strong></a>
+  #     de: |
+  #       Orqest hat diesen MCP-Server nicht überprüft. Angreifer könnten versuchen, Ihre Daten zu stehlen oder das Modell zu unbeabsichtigten Aktionen zu verleiten, einschließlich der Zerstörung von Daten. <a href="https://google.de" target="_blank"><strong>Mehr erfahren.</strong></a>
 
   # Temporary chat retention period in hours (default: 720, min: 1, max: 8760)
   # temporaryChatRetention: 1
@@ -318,8 +322,8 @@ actions:
 #     args:
 #       - -y
 #       - "@modelcontextprotocol/server-filesystem"
-#       - /home/user/LibreChat/
-#     iconPath: /home/user/LibreChat/client/public/assets/logo.svg
+#       - /home/user/Orqest/
+#     iconPath: /home/user/Orqest/client/public/assets/logo.svg
 #   mcp-obsidian:
 #     command: npx
 #     args:
@@ -357,7 +361,7 @@ endpoints:
   #   # Set to 0.0 to show all sources (no filtering), or higher like 0.7 for stricter filtering
   #   minRelevanceScore: 0.45
   #   # (optional) Agent Capabilities available to all users. Omit the ones you wish to exclude. Defaults to list below.
-  #   capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools"]
+  #   capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
 
   # Anthropic endpoint configuration with Vertex AI support
   # Use this to run Anthropic Claude models through Google Cloud Vertex AI

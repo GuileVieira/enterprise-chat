@@ -70,7 +70,30 @@ export interface IMongoFile extends Omit<Document, 'model'> {
      * derive the sessionKey explicitly.
      */
     codeEnvRef?: CodeEnvRef;
+    imageRag?: {
+      kind?: 'vision_caption';
+      status?: 'ready' | 'failed';
+      model?: string;
+      error?: string;
+      sourceImageFileId?: string;
+      sourceImageFileName?: string;
+      derivedTextFileId?: string;
+    };
+    trafficDiary?: {
+      entryId?: string;
+      kind?: 'manager' | 'strategist';
+      projectId?: string;
+      tenantId?: string;
+      userId?: string;
+      date?: string;
+      weekStart?: string;
+      status?: 'draft' | 'completed';
+      author?: string;
+      indexStatus?: 'pending' | 'indexed' | 'failed';
+      updatedAt?: Date;
+    };
   };
+  projectId?: string;
   expiresAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;

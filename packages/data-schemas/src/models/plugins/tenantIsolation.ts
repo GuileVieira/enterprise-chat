@@ -83,7 +83,10 @@ function sanitizeTenantIdMutation(update: UpdateQuery<unknown> | null): void {
  * - `tenantId` absent + strict mode off -> passes through (transitional/pre-tenancy).
  * - Update and replace operations that modify `tenantId` are blocked unless running as system.
  */
-export function applyTenantIsolation(schema: Schema): void {
+export function applyTenantIsolation(
+  schema: Schema,
+  options: { includeGlobalDocuments?: boolean } = {},
+): void {
   const s = schema as Schema & { [key: symbol]: boolean };
   if (s[TENANT_ISOLATION_APPLIED]) {
     return;
@@ -98,6 +101,17 @@ export function applyTenantIsolation(schema: Schema): void {
     }
 
     if (!tenantId || tenantId === SYSTEM_TENANT_ID) {
+      return;
+    }
+
+    if (options.includeGlobalDocuments) {
+      const filter = this.getFilter();
+      this.setQuery({
+        $and: [
+          filter,
+          { $or: [{ tenantId }, { tenantId: { $exists: false } }, { tenantId: null }] },
+        ],
+      });
       return;
     }
 
@@ -164,6 +178,13 @@ export function applyTenantIsolation(schema: Schema): void {
     }
 
     if (!tenantId || tenantId === SYSTEM_TENANT_ID) {
+      return;
+    }
+
+    if (options.includeGlobalDocuments) {
+      this.pipeline().unshift({
+        $match: { $or: [{ tenantId }, { tenantId: { $exists: false } }, { tenantId: null }] },
+      });
       return;
     }
 

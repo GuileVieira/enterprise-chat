@@ -1,7 +1,7 @@
 const { z } = require('zod');
 const fs = require('fs').promises;
 const { nanoid } = require('nanoid');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   refreshS3Url,
   agentCreateSchema,
@@ -23,6 +23,7 @@ const {
   ResourceType,
   AccessRoleIds,
   PrincipalType,
+  SystemRoles,
   EToolResources,
   PermissionBits,
   actionDelimiter,
@@ -45,6 +46,7 @@ const { getCachedTools } = require('~/server/services/Config');
 const { resolveConfigServers } = require('~/server/services/MCP');
 const { getMCPServersRegistry } = require('~/config');
 const { getLogStores } = require('~/cache');
+const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const db = require('~/models');
 
 const systemTools = {
@@ -91,6 +93,14 @@ const sanitizeViewerSkillScope = (agent, accessibleSkillSet) => {
   agent.skills = visibleSkills;
   agent.skills_enabled = true;
   return agent;
+};
+
+const createAgentInRequestTenant = async (req, createAgent) => {
+  if (req.user?.tenantId || req.user?.role !== SystemRoles.ADMIN) {
+    return await createAgent();
+  }
+
+  return await runAsSystem(createAgent);
 };
 
 /**
@@ -200,11 +210,13 @@ const filterAuthorizedTools = async ({
   availableTools,
   existingTools,
   configServers,
+  tenantId,
 }) => {
   const filteredTools = [];
   let mcpServerConfigs;
   let registryUnavailable = false;
   const existingToolSet = existingTools?.length ? new Set(existingTools) : null;
+  const tenantFunctions = tenantId ? await db.getTenantFunctions({ tenantId, isActive: true }) : [];
 
   for (const tool of tools) {
     if (availableTools[tool] || systemTools[tool]) {
@@ -213,6 +225,10 @@ const filterAuthorizedTools = async ({
     }
 
     if (!tool?.includes(Constants.mcp_delimiter)) {
+      if (tenantFunctions.some((f) => f.id === tool)) {
+        filteredTools.push(tool);
+        continue;
+      }
       continue;
     }
 
@@ -378,6 +394,9 @@ const createAgentHandler = async (req, res) => {
     agentData.id = `agent_${nanoid()}`;
     agentData.author = userId;
     agentData.tools = [];
+    if (req.user.tenantId) {
+      agentData.tenantId = req.user.tenantId;
+    }
 
     const hasMCPTools = tools.some((t) => t?.includes(Constants.mcp_delimiter));
     const [availableTools, configServers] = await Promise.all([
@@ -389,29 +408,46 @@ const createAgentHandler = async (req, res) => {
       userId,
       availableTools,
       configServers,
+      tenantId: req.user.tenantId,
     });
 
-    const agent = await db.createAgent(agentData);
+    const createAgent = () => db.createAgent(agentData);
+    const agent = await createAgentInRequestTenant(req, createAgent);
 
     try {
-      await Promise.all([
-        grantPermission({
+      const permissionGrants = [
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.AGENT,
           resourceId: agent._id,
           accessRoleId: AccessRoleIds.AGENT_OWNER,
           grantedBy: userId,
-        }),
-        grantPermission({
+        },
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.REMOTE_AGENT,
           resourceId: agent._id,
           accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
           grantedBy: userId,
-        }),
-      ]);
+        },
+      ];
+
+      if (req.user.role === SystemRoles.OWNER && req.user.tenantId) {
+        permissionGrants.push({
+          principalType: PrincipalType.TENANT,
+          principalId: req.user.tenantId,
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: userId,
+        });
+      }
+
+      await Promise.all(
+        permissionGrants.map((permissionGrant) => grantPermission(permissionGrant)),
+      );
       logger.debug(
         `[createAgent] Granted owner permissions to user ${userId} for agent ${agent.id}`,
       );
@@ -420,6 +456,13 @@ const createAgentHandler = async (req, res) => {
         `[createAgent] Failed to grant owner permissions for agent ${agent.id}:`,
         permissionError,
       );
+      await db.deleteAgent({ id: agent.id }).catch((deleteError) => {
+        logger.error(
+          `[createAgent] Failed to delete agent ${agent.id} after permission grant failure:`,
+          deleteError,
+        );
+      });
+      return res.status(500).json({ error: 'Failed to grant owner permissions' });
     }
 
     res.status(201).json(agent);
@@ -608,22 +651,21 @@ const updateAgentHandler = async (req, res) => {
 
     if (updateData.tools) {
       const existingToolSet = new Set(existingAgent.tools ?? []);
-      const newMCPTools = updateData.tools.filter(
-        (t) => !existingToolSet.has(t) && t?.includes(Constants.mcp_delimiter),
-      );
+      const newTools = updateData.tools.filter((t) => !existingToolSet.has(t));
 
-      if (newMCPTools.length > 0) {
+      if (newTools.length > 0) {
         const [availableTools, configServers] = await Promise.all([
           getCachedTools().then((t) => t ?? {}),
           resolveConfigServers(req),
         ]);
         const approvedNew = await filterAuthorizedTools({
-          tools: newMCPTools,
+          tools: newTools,
           userId: req.user.id,
           availableTools,
           configServers,
+          tenantId: req.user.tenantId,
         });
-        const rejectedSet = new Set(newMCPTools.filter((t) => !approvedNew.includes(t)));
+        const rejectedSet = new Set(newTools.filter((t) => !approvedNew.includes(t)));
         if (rejectedSet.size > 0) {
           updateData.tools = updateData.tools.filter((t) => !rejectedSet.has(t));
         }
@@ -727,6 +769,7 @@ const duplicateAgentHandler = async (req, res) => {
     const newAgentData = Object.assign(cloneData, {
       id: newAgentId,
       author: userId,
+      ...(req.user.tenantId && { tenantId: req.user.tenantId }),
     });
 
     const newActionsList = [];
@@ -784,6 +827,7 @@ const duplicateAgentHandler = async (req, res) => {
         availableTools,
         existingTools: newAgentData.tools,
         configServers,
+        tenantId: req.user.tenantId,
       });
     }
 
@@ -795,7 +839,8 @@ const duplicateAgentHandler = async (req, res) => {
       });
     }
 
-    const newAgent = await db.createAgent(newAgentData);
+    const createDuplicatedAgent = () => db.createAgent(newAgentData);
+    const newAgent = await createAgentInRequestTenant(req, createDuplicatedAgent);
 
     try {
       await Promise.all([
@@ -824,6 +869,13 @@ const duplicateAgentHandler = async (req, res) => {
         `[duplicateAgent] Failed to grant owner permissions for duplicated agent ${newAgent.id}:`,
         permissionError,
       );
+      await db.deleteAgent({ id: newAgent.id }).catch((deleteError) => {
+        logger.error(
+          `[duplicateAgent] Failed to delete duplicated agent ${newAgent.id} after permission grant failure:`,
+          deleteError,
+        );
+      });
+      return res.status(500).json({ error: 'Failed to grant owner permissions' });
     }
 
     return res.status(201).json({
@@ -857,6 +909,44 @@ const deleteAgentHandler = async (req, res) => {
   } catch (error) {
     logger.error('[/Agents/:id] Error deleting Agent', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Shares an existing agent with a target tenant using viewer access.
+ */
+const cloneAgentToTenantHandler = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { tenantId } = req.body || {};
+    const { id: userId } = req.user;
+
+    if (!tenantId || typeof tenantId !== 'string' || !tenantId.trim()) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
+    const sourceAgent = await db.getAgent({ id });
+    if (!sourceAgent) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+
+    if (req.user.role !== SystemRoles.ADMIN && tenantId !== req.user.tenantId) {
+      return res.status(403).json({ error: 'Cannot share agent outside your tenant' });
+    }
+
+    await grantPermission({
+      principalType: PrincipalType.TENANT,
+      principalId: tenantId,
+      resourceType: ResourceType.AGENT,
+      resourceId: sourceAgent._id,
+      accessRoleId: AccessRoleIds.AGENT_VIEWER,
+      grantedBy: userId,
+    });
+
+    return res.status(200).json(sourceAgent);
+  } catch (error) {
+    logger.error('[/Agents/:id/clone-to-tenant] Error cloning Agent to tenant', error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -905,12 +995,21 @@ const getListAgentsHandler = async (req, res) => {
     }
 
     // Get agent IDs the user has VIEW access to via ACL
-    const accessibleIds = await findAccessibleResources({
-      userId,
-      role: req.user.role,
-      resourceType: ResourceType.AGENT,
-      requiredPermissions: requiredPermission,
-    });
+    let accessibleIds;
+    const canManageAgents = await hasCapability(req.user, SystemCapabilities.MANAGE_AGENTS).catch(
+      () => false,
+    );
+    if (canManageAgents) {
+      const agents = await db.getAgents({});
+      accessibleIds = agents.map((agent) => agent._id);
+    } else {
+      accessibleIds = await findAccessibleResources({
+        userId,
+        role: req.user.role,
+        resourceType: ResourceType.AGENT,
+        requiredPermissions: requiredPermission,
+      });
+    }
 
     const publiclyAccessibleIds = await findPubliclyAccessibleResources({
       resourceType: ResourceType.AGENT,
@@ -1158,6 +1257,7 @@ const revertAgentVersionHandler = async (req, res) => {
         availableTools,
         existingTools: updatedAgent.tools,
         configServers,
+        tenantId: req.user.tenantId,
       });
       if (filteredTools.length !== updatedAgent.tools.length) {
         revertUpdates.tools = filteredTools;
@@ -1240,6 +1340,7 @@ module.exports = {
   getAgent: getAgentHandler,
   updateAgent: updateAgentHandler,
   duplicateAgent: duplicateAgentHandler,
+  cloneAgentToTenant: cloneAgentToTenantHandler,
   deleteAgent: deleteAgentHandler,
   getListAgents: getListAgentsHandler,
   uploadAgentAvatar: uploadAgentAvatarHandler,

@@ -474,9 +474,17 @@ export function getOpenAILLMConfig({
   }
 
   if (useOpenRouter && enableWebSearch) {
-    /** OpenRouter expects web search as a plugins parameter */
-    modelKwargs.plugins = [{ id: 'web' }];
-    hasModelKwargs = true;
+    tools.push(
+      { type: 'openrouter:web_search' },
+      {
+        type: 'openrouter:web_fetch',
+        parameters: {
+          engine: 'openrouter',
+          max_uses: 5,
+          max_content_tokens: 20000,
+        },
+      },
+    );
   } else if (enableWebSearch) {
     /** Standard OpenAI web search uses tools API */
     llmConfig.useResponsesApi = true;

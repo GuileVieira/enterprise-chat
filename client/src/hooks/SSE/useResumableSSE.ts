@@ -39,6 +39,10 @@ type ChatHelpers = Pick<
 >;
 
 const MAX_RETRIES = 5;
+type GenerationStart = {
+  streamId: string;
+  conversationId?: string;
+};
 
 /**
  * Hook for resumable SSE streams.
@@ -140,8 +144,36 @@ export default function useResumableSSE(
    */
   const subscribeToStream = useCallback(
     (currentStreamId: string, currentSubmission: TSubmission, isResume = false) => {
+      let activeSubmission = currentSubmission;
       let { userMessage } = currentSubmission;
       let textIndex: number | null = null;
+
+      const normalizeActiveSubmission = (conversationId?: string | null) => {
+        if (!conversationId) {
+          return activeSubmission;
+        }
+
+        userMessage = {
+          ...userMessage,
+          conversationId,
+        };
+
+        activeSubmission = {
+          ...activeSubmission,
+          conversation: {
+            ...activeSubmission.conversation,
+            conversationId,
+          },
+          userMessage,
+          initialResponse: {
+            ...(activeSubmission.initialResponse as TMessage),
+            conversationId,
+            parentMessageId: userMessage.messageId,
+          },
+        };
+        submissionRef.current = activeSubmission;
+        return activeSubmission;
+      };
 
       const baseUrl = `${apiBaseUrl()}/api/agents/chat/stream/${encodeURIComponent(currentStreamId)}`;
       const url = isResume ? `${baseUrl}?resume=true` : baseUrl;
@@ -172,9 +204,9 @@ export default function useResumableSSE(
               conversationId: data.conversation?.conversationId,
               hasResponseMessage: !!data.responseMessage,
             });
-            clearAllDrafts(currentSubmission.conversation?.conversationId);
+            clearAllDrafts(activeSubmission.conversation?.conversationId);
             try {
-              finalHandler(data, currentSubmission as EventSubmission);
+              finalHandler(data, activeSubmission as EventSubmission);
             } catch (error) {
               console.error('[ResumableSSE] Error in finalHandler:', error);
               setIsSubmitting(false);
@@ -187,6 +219,7 @@ export default function useResumableSSE(
             (startupConfig?.balance?.enabled ?? false) && balanceQuery.refetch();
             sse.close();
             setStreamId(null);
+            submissionRef.current = null;
             return;
           }
 
@@ -195,27 +228,34 @@ export default function useResumableSSE(
               messageId: data.message?.messageId,
               conversationId: data.message?.conversationId,
             });
+            const normalizedSubmission = normalizeActiveSubmission(data.message?.conversationId);
             const runId = v4();
             setActiveRunId(runId);
             userMessage = {
               ...userMessage,
               ...data.message,
+              conversationId: data.message?.conversationId ?? userMessage.conversationId,
               overrideParentMessageId: userMessage.overrideParentMessageId,
             };
-            createdHandler(data, { ...currentSubmission, userMessage } as EventSubmission);
+            activeSubmission = {
+              ...normalizedSubmission,
+              userMessage,
+            };
+            submissionRef.current = activeSubmission;
+            createdHandler(data, activeSubmission as EventSubmission);
             return;
           }
 
           if (data.event === 'attachment' && data.data) {
             attachmentHandler({
               data: data.data,
-              submission: currentSubmission as EventSubmission,
+              submission: activeSubmission as EventSubmission,
             });
             return;
           }
 
           if (data.event != null) {
-            stepHandler(data, { ...currentSubmission, userMessage } as EventSubmission);
+            stepHandler(data, { ...activeSubmission, userMessage } as EventSubmission);
             return;
           }
 
@@ -231,7 +271,7 @@ export default function useResumableSSE(
             if (data.resumeState?.runSteps) {
               for (const runStep of data.resumeState.runSteps) {
                 stepHandler({ event: StepEvents.ON_RUN_STEP, data: runStep }, {
-                  ...currentSubmission,
+                  ...activeSubmission,
                   userMessage,
                 } as EventSubmission);
               }
@@ -284,7 +324,7 @@ export default function useResumableSSE(
                 const newMessage = {
                   messageId: responseId,
                   parentMessageId: userMsgId,
-                  conversationId: currentSubmission.conversation?.conversationId ?? '',
+                  conversationId: activeSubmission.conversation?.conversationId ?? '',
                   text: '',
                   content: data.resumeState.aggregatedContent,
                   isCreatedByUser: false,
@@ -297,7 +337,7 @@ export default function useResumableSSE(
 
             if (data.pendingEvents?.length > 0) {
               console.log(`[ResumableSSE] Replaying ${data.pendingEvents.length} pending events`);
-              const submission = { ...currentSubmission, userMessage } as EventSubmission;
+              const submission = { ...activeSubmission, userMessage } as EventSubmission;
               for (const pendingEvent of data.pendingEvents) {
                 if (pendingEvent.event != null) {
                   stepHandler(pendingEvent, submission);
@@ -317,18 +357,18 @@ export default function useResumableSSE(
             if (text != null && index !== textIndex) {
               textIndex = index;
             }
-            contentHandler({ data, submission: currentSubmission as EventSubmission });
+            contentHandler({ data, submission: activeSubmission as EventSubmission });
             return;
           }
 
           if (data.message != null) {
             const text = data.text ?? data.response;
             const initialResponse = {
-              ...(currentSubmission.initialResponse as TMessage),
+              ...(activeSubmission.initialResponse as TMessage),
               parentMessageId: data.parentMessageId,
               messageId: data.messageId,
             };
-            messageHandler(text, { ...currentSubmission, userMessage, initialResponse });
+            messageHandler(text, { ...activeSubmission, userMessage, initialResponse });
           }
         } catch (error) {
           console.error('[ResumableSSE] Error processing message:', error);
@@ -351,7 +391,7 @@ export default function useResumableSSE(
         // 404 → job completed & was cleaned up; messages are persisted in DB.
         // Invalidate cache once so react-query refetches instead of showing an error.
         if (responseCode === 404) {
-          const convoId = currentSubmission.conversation?.conversationId;
+          const convoId = activeSubmission.conversation?.conversationId;
           console.log('[ResumableSSE] Stream 404, invalidating messages for:', convoId);
           sse.close();
           removeActiveJob(currentStreamId);
@@ -364,6 +404,7 @@ export default function useResumableSSE(
           setIsSubmitting(false);
           setShowStopButton(false);
           setStreamId(null);
+          submissionRef.current = null;
           reconnectAttemptRef.current = 0;
           return;
         }
@@ -424,19 +465,20 @@ export default function useResumableSSE(
             // Display the error to user via errorHandler
             errorHandler({
               data: { text: errorString } as unknown as Parameters<typeof errorHandler>[0]['data'],
-              submission: currentSubmission as EventSubmission,
+              submission: activeSubmission as EventSubmission,
             });
           } catch (parseError) {
             console.error('[ResumableSSE] Failed to parse server error:', parseError);
             errorHandler({
               data: { text: e.data } as unknown as Parameters<typeof errorHandler>[0]['data'],
-              submission: currentSubmission as EventSubmission,
+              submission: activeSubmission as EventSubmission,
             });
           }
 
           setIsSubmitting(false);
           setShowStopButton(false);
           setStreamId(null);
+          submissionRef.current = null;
           reconnectAttemptRef.current = 0;
           return;
         }
@@ -472,12 +514,13 @@ export default function useResumableSSE(
         } else {
           console.error('[ResumableSSE] Max reconnect attempts reached');
           sse.close();
-          errorHandler({ data: undefined, submission: currentSubmission as EventSubmission });
+          errorHandler({ data: undefined, submission: activeSubmission as EventSubmission });
           // Optimistically remove from active jobs on max retries
           removeActiveJob(currentStreamId);
           setIsSubmitting(false);
           setShowStopButton(false);
           setStreamId(null);
+          submissionRef.current = null;
         }
       });
 
@@ -563,10 +606,23 @@ export default function useResumableSSE(
    * Retries up to 3 times on network errors with exponential backoff.
    */
   const startGeneration = useCallback(
-    async (currentSubmission: TSubmission): Promise<string | null> => {
-      const payloadData = createPayload(currentSubmission);
-      let { payload } = payloadData;
-      payload = removeNullishValues(payload) as TPayload;
+    async (currentSubmission: TSubmission): Promise<GenerationStart | null> => {
+      let payloadData: ReturnType<typeof createPayload>;
+      let payload: TPayload;
+
+      try {
+        payloadData = createPayload(currentSubmission);
+        payload = removeNullishValues(payloadData.payload) as TPayload;
+      } catch (error) {
+        console.error('[ResumableSSE] Failed to create generation payload:', {
+          error,
+          submission: currentSubmission,
+        });
+        errorHandler({ data: undefined, submission: currentSubmission as EventSubmission });
+        setIsSubmitting(false);
+        setShowStopButton(false);
+        return null;
+      }
 
       clearStepMaps();
 
@@ -578,9 +634,16 @@ export default function useResumableSSE(
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           // Use request.post which handles auth token refresh via axios interceptors
-          const data = (await request.post(url, payload)) as { streamId: string };
-          console.log('[ResumableSSE] Generation started:', { streamId: data.streamId });
-          return data.streamId;
+          const data = (await request.post(url, payload)) as {
+            streamId?: string;
+            conversationId?: string;
+          };
+          const streamId = data.streamId ?? data.conversationId ?? null;
+          console.log('[ResumableSSE] Generation started:', { streamId, response: data });
+          if (!streamId) {
+            throw new Error('Generation response did not include streamId');
+          }
+          return { streamId, conversationId: data.conversationId };
         } catch (error) {
           lastError = error;
           // Check if it's a network error (retry) vs server error (don't retry)
@@ -620,7 +683,7 @@ export default function useResumableSSE(
       setIsSubmitting(false);
       return null;
     },
-    [clearStepMaps, errorHandler, setIsSubmitting],
+    [clearStepMaps, errorHandler, setIsSubmitting, setShowStopButton],
   );
 
   useEffect(() => {
@@ -668,15 +731,34 @@ export default function useResumableSSE(
         console.log('[ResumableSSE] Starting NEW generation');
         const newStreamId = await startGeneration(submission);
         if (newStreamId) {
-          setStreamId(newStreamId);
+          const normalizedSubmission = newStreamId.conversationId
+            ? {
+                ...submission,
+                conversation: {
+                  ...submission.conversation,
+                  conversationId: newStreamId.conversationId,
+                },
+                userMessage: {
+                  ...submission.userMessage,
+                  conversationId: newStreamId.conversationId,
+                },
+                initialResponse: {
+                  ...(submission.initialResponse as TMessage),
+                  conversationId: newStreamId.conversationId,
+                  parentMessageId: submission.userMessage?.messageId,
+                },
+              }
+            : submission;
+          submissionRef.current = normalizedSubmission;
+          setStreamId(newStreamId.streamId);
           // Optimistically add to active jobs
-          addActiveJob(newStreamId);
+          addActiveJob(newStreamId.streamId);
           // Queue title generation if this is a new conversation (first message)
           const isNewConvo = submission.userMessage?.parentMessageId === Constants.NO_PARENT;
           if (isNewConvo) {
-            queueTitleGeneration(newStreamId);
+            queueTitleGeneration(newStreamId.streamId);
           }
-          subscribeToStream(newStreamId, submission);
+          subscribeToStream(newStreamId.streamId, normalizedSubmission);
         } else {
           console.error('[ResumableSSE] Failed to get streamId from startGeneration');
         }

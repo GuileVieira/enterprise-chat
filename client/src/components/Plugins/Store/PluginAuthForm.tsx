@@ -1,4 +1,4 @@
-import { Save } from 'lucide-react';
+import { FloppyDisk as Save } from '@phosphor-icons/react';
 import { useForm } from 'react-hook-form';
 import { HoverCard, HoverCardTrigger } from '@librechat/client';
 import { TPlugin, TPluginAuthConfig, TPluginAction } from 'librechat-data-provider';

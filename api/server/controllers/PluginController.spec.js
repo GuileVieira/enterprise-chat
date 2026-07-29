@@ -258,6 +258,94 @@ describe('PluginController', () => {
       const toolkit = responseData.find((t) => t.pluginKey === 'toolkit1');
       expect(toolkit).toBeDefined();
     });
+
+    it('should filter available tools based on includedTools', async () => {
+      require('~/app/clients/tools').availableTools.push(
+        { name: 'Calculator', pluginKey: 'calculator', description: 'Calculator' },
+        { name: 'Stable Diffusion', pluginKey: 'stable-diffusion', description: 'Images' },
+        {
+          name: 'Premium Image Generator',
+          pluginKey: 'openrouter_gemini_image_gen',
+          description: 'Premium',
+        },
+      );
+
+      getCachedTools.mockResolvedValueOnce({
+        calculator: {
+          type: 'function',
+          function: {
+            name: 'calculator',
+            description: 'Calculator',
+            parameters: {},
+          },
+        },
+        'stable-diffusion': {
+          type: 'function',
+          function: {
+            name: 'stable-diffusion',
+            description: 'Images',
+            parameters: {},
+          },
+        },
+        openrouter_gemini_image_gen: {
+          type: 'function',
+          function: {
+            name: 'openrouter_gemini_image_gen',
+            description: 'Premium',
+            parameters: {},
+          },
+        },
+      });
+      mockReq.config = {
+        filteredTools: [],
+        includedTools: ['calculator', 'openrouter_gemini_image_gen'],
+      };
+
+      await getAvailableTools(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      const responseData = mockRes.json.mock.calls[0][0];
+      expect(responseData.map((tool) => tool.pluginKey)).toEqual([
+        'calculator',
+        'openrouter_gemini_image_gen',
+      ]);
+    });
+
+    it('should exclude available tools based on filteredTools', async () => {
+      require('~/app/clients/tools').availableTools.push(
+        { name: 'Calculator', pluginKey: 'calculator', description: 'Calculator' },
+        { name: 'Azure AI Search', pluginKey: 'azure-ai-search', description: 'Azure' },
+      );
+
+      getCachedTools.mockResolvedValueOnce({
+        calculator: {
+          type: 'function',
+          function: {
+            name: 'calculator',
+            description: 'Calculator',
+            parameters: {},
+          },
+        },
+        'azure-ai-search': {
+          type: 'function',
+          function: {
+            name: 'azure-ai-search',
+            description: 'Azure',
+            parameters: {},
+          },
+        },
+      });
+      mockReq.config = {
+        filteredTools: ['azure-ai-search'],
+        includedTools: [],
+      };
+
+      await getAvailableTools(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      const responseData = mockRes.json.mock.calls[0][0];
+      expect(responseData.map((tool) => tool.pluginKey)).toEqual(['calculator']);
+    });
   });
 
   describe('helper function integration', () => {

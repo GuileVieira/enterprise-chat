@@ -83,6 +83,10 @@ export interface DiscoverConnectedAgentsParams {
    * code-execution tooling even though their parent had it.
    */
   codeEnvAvailable?: InitializeAgentParams['codeEnvAvailable'];
+  /** Active project files inherited by every initialized handoff agent. */
+  projectFileIds?: InitializeAgentParams['projectFileIds'];
+  /** Active project id inherited by every initialized handoff agent. */
+  projectId?: InitializeAgentParams['projectId'];
 }
 
 export interface DiscoverConnectedAgentsDeps {
@@ -151,6 +155,8 @@ export async function discoverConnectedAgents(
     skillStates,
     defaultActiveOnShare,
     codeEnvAvailable,
+    projectFileIds,
+    projectId,
   } = params;
 
   const {
@@ -252,6 +258,8 @@ export async function discoverConnectedAgents(
         skillStates,
         defaultActiveOnShare,
         codeEnvAvailable,
+        projectFileIds,
+        projectId,
       },
       db,
     );

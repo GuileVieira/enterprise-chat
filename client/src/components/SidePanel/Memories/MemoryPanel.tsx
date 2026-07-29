@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus } from '@phosphor-icons/react';
 import { matchSorter } from 'match-sorter';
 import { SystemRoles, PermissionTypes, Permissions } from 'librechat-data-provider';
 import {

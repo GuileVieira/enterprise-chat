@@ -1,4 +1,4 @@
-import { History } from 'lucide-react';
+import { ClockCounterClockwise as History } from '@phosphor-icons/react';
 import { Button } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 import { Panel } from '~/common';

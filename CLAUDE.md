@@ -1,8 +1,8 @@
-# LibreChat
+# Orqest
 
 ## Project Overview
 
-LibreChat is a monorepo with the following key workspaces:
+Orqest is a B2B SaaS platform forked from Orqest, orchestrating AI agents for marketing agencies. It is a monorepo with the following key workspaces:
 
 | Workspace | Language | Side | Dependency | Purpose |
 |---|---|---|---|---|
@@ -146,6 +146,13 @@ Multi-line imports count total character length across all lines. Consolidate va
 - Node.js: v20.19.0+ or ^22.12.0 or >= 23.0.0
 - Database: MongoDB
 - Backend runs on `http://localhost:3080/`; frontend dev server on `http://localhost:3090/`
+
+---
+
+## Production User Operations
+
+- Prefer `npm run create-user -- <email> "<name>" <username> --tenant=<tenantId> --email-verified=true` from `/app` in the Coolify `api` terminal.
+- Fallback Mongo shell in prod: connect with `mongosh Orqest`. Store only bcrypt hashes (`cost 10`), never plaintext passwords.
 
 ---
 

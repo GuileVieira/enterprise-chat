@@ -4,6 +4,7 @@ import { PermissionTypes, Permissions, isAssistantsEndpoint } from 'librechat-da
 import useAgentCapabilities from '~/hooks/Agents/useAgentCapabilities';
 import useGetAgentsConfig from '~/hooks/Agents/useGetAgentsConfig';
 import useHasAccess from '~/hooks/Roles/useHasAccess';
+import { useGetStartupConfig } from '~/data-provider';
 import store from '~/store';
 
 /** Event keys that shouldn't trigger a command */
@@ -69,6 +70,7 @@ const useHandleKeyUp = ({
   });
   const { agentsConfig } = useGetAgentsConfig();
   const { skillsEnabled } = useAgentCapabilities(agentsConfig?.capabilities);
+  const { data: startupConfig } = useGetStartupConfig();
   const latestMessage = useRecoilValue(store.latestMessageFamily(index));
   const endpoint = useRecoilValue(store.effectiveEndpointByIndex(index));
   const setShowMentionPopover = useSetRecoilState(store.showMentionPopoverFamily(index));
@@ -95,13 +97,25 @@ const useHandleKeyUp = ({
   }, [textAreaRef, setShowMentionPopover, atCommandEnabled]);
 
   const handlePlusCommand = useCallback(() => {
-    if (!hasMultiConvoAccess || !plusCommandEnabled || isAssistantsEndpoint(endpoint)) {
+    if (
+      !hasMultiConvoAccess ||
+      !plusCommandEnabled ||
+      isAssistantsEndpoint(endpoint) ||
+      startupConfig?.interface?.multiConvo === false
+    ) {
       return;
     }
     if (shouldTriggerCommand(textAreaRef, '+')) {
       setShowPlusPopover(true);
     }
-  }, [textAreaRef, setShowPlusPopover, plusCommandEnabled, hasMultiConvoAccess, endpoint]);
+  }, [
+    textAreaRef,
+    setShowPlusPopover,
+    plusCommandEnabled,
+    hasMultiConvoAccess,
+    endpoint,
+    startupConfig,
+  ]);
 
   const handlePromptsCommand = useCallback(() => {
     if (!hasPromptsAccess || !slashCommandEnabled) {

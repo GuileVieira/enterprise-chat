@@ -65,4 +65,43 @@ describe('loadDefaultInterface', () => {
 
     expect(interfaceConfig).not.toHaveProperty('temporaryChatRetention');
   });
+
+  it('enables Meta Ads by default', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.metaAds).toBe(true);
+  });
+
+  it('preserves disabled Meta Ads config', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        metaAds: false,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.metaAds).toBe(false);
+  });
+
+  it('preserves the configured Meta Ads traffic agent', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        metaAdsTrafficAgentId: 'traffic-agent-1',
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.metaAdsTrafficAgentId).toBe('traffic-agent-1');
+  });
 });

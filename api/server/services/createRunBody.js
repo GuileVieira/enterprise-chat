@@ -42,6 +42,8 @@ const createRunBody = ({
   instructions,
   endpointOption = {},
   clientTimestamp,
+  projectInstructions,
+  projectMemories,
 }) => {
   const body = {
     assistant_id,
@@ -54,6 +56,14 @@ const createRunBody = ({
     const dateStr = getDateStr(clientTimestamp);
     const timeStr = getTimeStr(clientTimestamp);
     systemInstructions = `Current date and time: ${dateStr} ${timeStr}\n`;
+  }
+
+  if (projectInstructions) {
+    systemInstructions += projectInstructions;
+  }
+
+  if (projectMemories) {
+    systemInstructions += `\n${projectMemories}`;
   }
 
   if (promptPrefix) {

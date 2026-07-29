@@ -5,6 +5,12 @@ const absolutePath = path.resolve(process.cwd(), 'api/server/index.js');
 import dotenv from 'dotenv';
 dotenv.config();
 
+const stringEnv = Object.fromEntries(
+  Object.entries(process.env).filter(
+    (entry): entry is [string, string] => typeof entry[1] === 'string',
+  ),
+);
+
 const config: PlaywrightTestConfig = {
   ...mainConfig,
   retries: 0,
@@ -14,7 +20,7 @@ const config: PlaywrightTestConfig = {
     ...mainConfig.webServer,
     command: `node ${absolutePath}`,
     env: {
-      ...process.env,
+      ...stringEnv,
       SEARCH: 'false',
       NODE_ENV: 'CI',
       EMAIL_HOST: '',

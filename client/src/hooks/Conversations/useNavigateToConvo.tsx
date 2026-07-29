@@ -32,12 +32,14 @@ const useNavigateToConvo = (index = 0) => {
   const clearAllConversations = store.useClearConvoState();
   const applyModelSpecEffects = useApplyModelSpecEffects();
   const setSubmission = useSetRecoilState(store.submissionByIndex(index));
+  const setSelectedProjectId = useSetRecoilState(store.selectedProjectId);
   const clearAllLatestMessages = store.useClearLatestMessages(`useNavigateToConvo ${index}`);
   const { hasSetConversation, setConversation: setConvo } = store.useCreateConversationAtom(index);
 
   const setConversation = useCallback(
     (conversation: TConversation) => {
       setConvo(conversation);
+      setSelectedProjectId(conversation.projectId ?? null);
       if (!conversation.spec) {
         return;
       }
@@ -49,7 +51,7 @@ const useNavigateToConvo = (index = 0) => {
         convoId: conversation.conversationId,
       });
     },
-    [setConvo, queryClient, applyModelSpecEffects],
+    [setConvo, setSelectedProjectId, queryClient, applyModelSpecEffects],
   );
 
   const fetchFreshData = async (conversation?: Partial<TConversation>) => {

@@ -1,7 +1,8 @@
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const { PermissionBits, hasPermissions, ResourceType } = require('librechat-data-provider');
 const { getEffectivePermissions } = require('~/server/services/PermissionService');
 const { getAgents, getFiles } = require('~/models');
+const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 /**
  * Checks if user has access to a file through agent permissions
@@ -73,6 +74,39 @@ const denyFileAccess = (res) =>
   });
 
 /**
+ * Checks if user has access to a file through project permissions.
+ * Files inherit VIEW access from the project they belong to; conversations do not.
+ */
+const checkProjectBasedFileAccess = async ({ userId, role, file, user }) => {
+  if (!file?.projectId) {
+    return false;
+  }
+
+  try {
+    const project = await findProjectForRequest({ projectId: file.projectId, user });
+    if (!project?._id) {
+      return false;
+    }
+
+    const permissions = await getEffectivePermissions({
+      userId,
+      role,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+    });
+
+    if (hasPermissions(permissions, PermissionBits.VIEW)) {
+      logger.debug(`[fileAccess] User ${userId} has VIEW permissions on project ${file.projectId}`);
+      return true;
+    }
+  } catch (error) {
+    logger.warn(`[fileAccess] Project permission check failed for file ${file.file_id}:`, error);
+  }
+
+  return false;
+};
+
+/**
  * Middleware to check if user can access a file
  * Checks: 1) File ownership, 2) Agent-based access through a file-owner agent
  */
@@ -95,7 +129,7 @@ const fileAccess = async (req, res, next) => {
       });
     }
 
-    const [file] = await getFiles({ file_id: fileId });
+    const [file] = await runAsSystem(async () => getFiles({ file_id: fileId }));
     if (!file) {
       return res.status(404).json({
         error: 'Not Found',
@@ -115,6 +149,25 @@ const fileAccess = async (req, res, next) => {
     if (file.user && file.user.toString() === userId) {
       req.fileAccess = { file };
       return next();
+    }
+
+    /** Project files inherit project permissions only, not agent permissions. */
+    if (file.projectId) {
+      const hasProjectAccess = await checkProjectBasedFileAccess({
+        userId,
+        role: userRole,
+        file,
+        user: req.user,
+      });
+      if (hasProjectAccess) {
+        req.fileAccess = { file };
+        return next();
+      }
+
+      logger.warn(
+        `[fileAccess] User ${userId} denied project file ${fileId} without PROJECT VIEW`,
+      );
+      return denyFileAccess(res);
     }
 
     /** Agent-based access (file inherits agent permissions) */
@@ -142,4 +195,5 @@ const fileAccess = async (req, res, next) => {
 
 module.exports = {
   fileAccess,
+  checkProjectBasedFileAccess,
 };

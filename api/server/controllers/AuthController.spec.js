@@ -1,5 +1,9 @@
 jest.mock('@librechat/data-schemas', () => ({
   logger: { error: jest.fn(), debug: jest.fn(), warn: jest.fn(), info: jest.fn() },
+  runAsSystem: jest.fn((fn) => fn()),
+  tenantStorage: { run: jest.fn((_ctx, fn) => fn()) },
+  SYSTEM_TENANT_ID: 'system',
+  DEFAULT_SESSION_EXPIRY: 900000,
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -20,8 +24,10 @@ jest.mock('~/models', () => ({
   findSession: jest.fn(),
   updateUser: jest.fn(),
   findUser: jest.fn(),
+  generateToken: jest.fn(),
 }));
 jest.mock('@librechat/api', () => ({
+  math: jest.fn((value, fallback) => (value ? Number(value) : fallback)),
   isEnabled: jest.fn(),
   findOpenIDUser: jest.fn(),
   getOpenIdIssuer: jest.fn(() => 'https://issuer.example.com'),
@@ -49,7 +55,7 @@ const {
   setAuthTokens,
 } = require('~/server/services/AuthService');
 const { getOpenIdConfig, getOpenIdEmail } = require('~/strategies');
-const { getUserById, findSession, updateUser } = require('~/models');
+const { getUserById, findSession, updateUser, generateToken } = require('~/models');
 
 const ORIGINAL_OPENID_SCOPE = process.env.OPENID_SCOPE;
 const ORIGINAL_OPENID_REFRESH_AUDIENCE = process.env.OPENID_REFRESH_AUDIENCE;
@@ -234,6 +240,7 @@ describe('refreshController – OpenID path', () => {
     mockTokenset.claims.mockReturnValue(baseClaims);
     getOpenIdEmail.mockReturnValue(baseClaims.email);
     setOpenIDAuthTokens.mockReturnValue('new-app-token');
+    generateToken.mockResolvedValue('fallback-local-jwt');
     setCloudFrontAuthCookies.mockReturnValue(true);
     findOpenIDUser.mockResolvedValue({ user: { ...defaultUser }, error: null, migration: false });
     getUserById.mockResolvedValue({
@@ -303,6 +310,29 @@ describe('refreshController – OpenID path', () => {
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
+  it('uses a local app JWT when OpenID refresh has no reusable id_token', async () => {
+    setOpenIDAuthTokens.mockReturnValueOnce(undefined);
+
+    await refreshController(req, res);
+
+    expect(generateToken).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: 'user-db-id' }),
+      900000,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      token: 'fallback-local-jwt',
+      user: expect.objectContaining({
+        _id: 'user-db-id',
+        email: baseClaims.email,
+      }),
+    });
+    expect(logger.info).toHaveBeenCalledWith(
+      '[refreshController] OpenID app auth token fell back to local JWT',
+      expect.objectContaining({ userId: 'user-db-id' }),
+    );
+  });
+
   it('reuses valid OpenID session tokens and refreshes CloudFront cookies', async () => {
     const reusableIdToken = makeSessionToken();
     const signedUserId = makeSignedUserId();
@@ -365,6 +395,25 @@ describe('refreshController – OpenID path', () => {
       openidTokens: {
         accessToken: expiredToken,
         idToken: expiredToken,
+        refreshToken: 'stored-refresh',
+        lastRefreshedAt: Date.now(),
+      },
+    };
+
+    await refreshController(req, res);
+
+    expect(getUserById).not.toHaveBeenCalled();
+    expect(setCloudFrontAuthCookies).not.toHaveBeenCalled();
+    expectOpenIDRefreshGrant();
+  });
+
+  it('does not reuse a valid OpenID access_token as app auth', async () => {
+    const reusableAccessToken = makeSessionToken();
+    setOpenIDReuseCookies();
+    req.session = {
+      openidTokens: {
+        accessToken: reusableAccessToken,
+        idToken: undefined,
         refreshToken: 'stored-refresh',
         lastRefreshedAt: Date.now(),
       },

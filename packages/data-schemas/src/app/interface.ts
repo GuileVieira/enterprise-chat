@@ -43,6 +43,8 @@ export async function loadDefaultInterface({
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,
     memories: shouldDisableMemories ? false : interfaceConfig?.memories,
+    metaAds: interfaceConfig?.metaAds ?? defaults.metaAds,
+    metaAdsTrafficAgentId: interfaceConfig?.metaAdsTrafficAgentId,
     prompts: interfaceConfig?.prompts,
     multiConvo: interfaceConfig?.multiConvo,
     agents: interfaceConfig?.agents,

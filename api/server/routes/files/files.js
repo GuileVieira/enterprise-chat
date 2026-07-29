@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const express = require('express');
-const { logger, SystemCapabilities } = require('@librechat/data-schemas');
+const { EnvVar } = require('@librechat/agents');
+const { logger, runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   logAxiosError,
   refreshS3FileUrls,
@@ -30,6 +31,10 @@ const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { hasAccessToFilesViaAgent } = require('~/server/services/Files');
+const {
+  findProjectForRequest,
+  userCanAccessProject,
+} = require('~/server/services/Projects/access');
 const { cleanFileName, getContentDisposition } = require('~/server/utils/files');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
@@ -37,10 +42,57 @@ const db = require('~/models');
 
 const router = express.Router();
 
+const hasProjectAccess = async ({ req, projectId, requiredPermission }) => {
+  if (!projectId) {
+    return { allowed: false, project: null };
+  }
+
+  const project = await findProjectForRequest({ projectId, user: req.user });
+  if (!project?._id) {
+    return { allowed: false, project: null };
+  }
+
+  try {
+    const canManageProjects = await hasCapability(req.user, SystemCapabilities.MANAGE_PROJECTS);
+    if (canManageProjects) {
+      return { allowed: true, project };
+    }
+  } catch (err) {
+    logger.warn(`[/files] project capability check failed, denying bypass: ${err.message}`);
+  }
+
+  const allowed = await userCanAccessProject({
+    req,
+    project,
+    requiredPermission,
+  });
+  return { allowed, project };
+};
+
 router.get('/', async (req, res) => {
   try {
     const appConfig = req.config;
-    const files = await db.getFiles({ user: req.user.id });
+    const filter = { user: req.user.id };
+    if (req.query.projectId) {
+      const projectId = req.query.projectId;
+      const { allowed, project } = await hasProjectAccess({
+        req,
+        projectId,
+        requiredPermission: PermissionBits.VIEW,
+      });
+      if (!allowed) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+      delete filter.user;
+      const fileIds = Array.isArray(project?.fileIds) ? project.fileIds.filter(Boolean) : [];
+      filter.$or = [{ projectId: project.projectId }];
+      if (fileIds.length > 0) {
+        filter.$or.push({ file_id: { $in: fileIds } });
+      }
+    }
+    const files = req.query.projectId
+      ? await runAsSystem(async () => db.getFiles(filter))
+      : await db.getFiles(filter);
     if (appConfig.fileStrategy === FileSources.s3) {
       try {
         const cache = getLogStores(CacheKeys.S3_EXPIRY_INTERVAL);
@@ -130,14 +182,11 @@ router.get('/config', async (req, res) => {
 
 router.delete('/', async (req, res) => {
   try {
-    const { files: _files } = req.body;
+    const { files: _files, projectId } = req.body;
 
     /** @type {MongoFile[]} */
-    const files = _files.filter((file) => {
+    const files = (Array.isArray(_files) ? _files : []).filter((file) => {
       if (!file.file_id) {
-        return false;
-      }
-      if (!file.filepath) {
         return false;
       }
 
@@ -155,6 +204,14 @@ router.delete('/', async (req, res) => {
 
     const fileIds = files.map((file) => file.file_id);
     const dbFiles = await db.getFiles({ file_id: { $in: fileIds } });
+    const requestedProject =
+      projectId && dbFiles.length > 0
+        ? await hasProjectAccess({
+            req,
+            projectId,
+            requiredPermission: PermissionBits.EDIT,
+          })
+        : { allowed: false, project: null };
 
     const ownedFiles = [];
     const nonOwnedFiles = [];
@@ -167,48 +224,58 @@ router.delete('/', async (req, res) => {
       }
     }
 
-    if (dbFiles.length > 0 && nonOwnedFiles.length === 0) {
-      await processDeleteRequest({ req, files: ownedFiles });
-      logger.debug(
-        `[/files] Files deleted successfully: ${ownedFiles
-          .filter((f) => f.file_id)
-          .map((f) => f.file_id)
-          .join(', ')}`,
-      );
-      res.status(200).json({ message: 'Files deleted successfully' });
-      return;
-    }
+    if (nonOwnedFiles.length > 0) {
+      if (requestedProject.allowed) {
+        const linkedFileIds = Array.isArray(requestedProject.project?.fileIds)
+          ? requestedProject.project.fileIds.filter(Boolean)
+          : [];
+        const projectFiles = nonOwnedFiles.filter(
+          (file) =>
+            file.projectId?.toString() === requestedProject.project.projectId ||
+            linkedFileIds.includes(file.file_id),
+        );
 
-    let authorizedFiles = [...ownedFiles];
-    let unauthorizedFiles = [];
-
-    if (req.body.agent_id && nonOwnedFiles.length > 0) {
-      const nonOwnedFileIds = nonOwnedFiles.map((f) => f.file_id);
-      const accessMap = await hasAccessToFilesViaAgent({
-        userId: req.user.id,
-        role: req.user.role,
-        fileIds: nonOwnedFileIds,
-        agentId: req.body.agent_id,
-        isDelete: true,
-        files: nonOwnedFiles,
-      });
-
-      for (const file of nonOwnedFiles) {
-        if (accessMap.get(file.file_id)) {
-          authorizedFiles.push(file);
-        } else {
-          unauthorizedFiles.push(file);
+        if (projectFiles.length === nonOwnedFiles.length) {
+          await processDeleteRequest({ req, files: dbFiles });
+          logger.debug(
+            `[/files] Project files deleted successfully: ${dbFiles
+              .filter((f) => f.file_id)
+              .map((f) => f.file_id)
+              .join(', ')}`,
+          );
+          res.status(200).json({ message: 'Files deleted successfully' });
+          return;
         }
       }
-    } else {
-      unauthorizedFiles = nonOwnedFiles;
-    }
 
-    if (unauthorizedFiles.length > 0) {
-      return res.status(403).json({
-        message: 'You can only delete files you have access to',
-        unauthorizedFiles: unauthorizedFiles.map((f) => f.file_id),
-      });
+      const projectIds = [
+        ...new Set(
+          nonOwnedFiles
+            .map((file) => file.projectId)
+            .filter(Boolean)
+            .map((projectId) => projectId.toString()),
+        ),
+      ];
+
+      if (projectIds.length === 1) {
+        const { allowed } = await hasProjectAccess({
+          req,
+          projectId: projectIds[0],
+          requiredPermission: PermissionBits.EDIT,
+        });
+
+        if (allowed) {
+          await processDeleteRequest({ req, files: dbFiles });
+          logger.debug(
+            `[/files] Project files deleted successfully: ${dbFiles
+              .filter((f) => f.file_id)
+              .map((f) => f.file_id)
+              .join(', ')}`,
+          );
+          res.status(200).json({ message: 'Files deleted successfully' });
+          return;
+        }
+      }
     }
 
     /* Handle agent unlinking even if no valid files to delete */
@@ -266,6 +333,50 @@ router.delete('/', async (req, res) => {
       return res
         .status(200)
         .json({ message: 'File associations removed successfully from Azure Assistant' });
+    }
+
+    if (nonOwnedFiles.length === 0) {
+      await processDeleteRequest({ req, files: ownedFiles });
+      logger.debug(
+        `[/files] Files deleted successfully: ${ownedFiles
+          .filter((f) => f.file_id)
+          .map((f) => f.file_id)
+          .join(', ')}`,
+      );
+      res.status(200).json({ message: 'Files deleted successfully' });
+      return;
+    }
+
+    let authorizedFiles = [...ownedFiles];
+    let unauthorizedFiles = [];
+
+    if (req.body.agent_id && nonOwnedFiles.length > 0) {
+      const nonOwnedFileIds = nonOwnedFiles.map((f) => f.file_id);
+      const accessMap = await hasAccessToFilesViaAgent({
+        userId: req.user.id,
+        role: req.user.role,
+        fileIds: nonOwnedFileIds,
+        agentId: req.body.agent_id,
+        isDelete: true,
+        files: nonOwnedFiles,
+      });
+
+      for (const file of nonOwnedFiles) {
+        if (accessMap.get(file.file_id)) {
+          authorizedFiles.push(file);
+        } else {
+          unauthorizedFiles.push(file);
+        }
+      }
+    } else {
+      unauthorizedFiles = nonOwnedFiles;
+    }
+
+    if (unauthorizedFiles.length > 0) {
+      return res.status(403).json({
+        message: 'You can only delete files you have access to',
+        unauthorizedFiles: unauthorizedFiles.map((f) => f.file_id),
+      });
     }
 
     await processDeleteRequest({ req, files: authorizedFiles });
@@ -619,6 +730,17 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
+    if (metadata.projectId) {
+      const { allowed } = await hasProjectAccess({
+        req,
+        projectId: metadata.projectId,
+        requiredPermission: PermissionBits.EDIT,
+      });
+      if (!allowed) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+    }
+
     if (isAssistantsEndpoint(metadata.endpoint)) {
       return await processFileUpload({ req, res, metadata });
     }
@@ -630,7 +752,7 @@ router.post('/', async (req, res) => {
       logger.warn(`[/files] capability check failed, denying bypass: ${err.message}`);
     }
 
-    if (!skipUploadAuth) {
+    if (!metadata.projectId && !skipUploadAuth) {
       const denied = await verifyAgentUploadPermission({
         req,
         res,

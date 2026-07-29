@@ -1,4 +1,4 @@
-import { Calendar, User, Clock, Globe, Sparkles } from 'lucide-react';
+import { Calendar, Clock, Globe, Sparkle as Sparkles, User } from '@phosphor-icons/react';
 import type { specialVariables } from 'librechat-data-provider';
 
 type SpecialVariableKey = keyof typeof specialVariables;

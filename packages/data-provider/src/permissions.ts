@@ -57,6 +57,10 @@ export enum PermissionTypes {
    */
   MCP_SERVERS = 'MCP_SERVERS',
   /**
+   * Type for Project Permissions
+   */
+  PROJECTS = 'PROJECTS',
+  /**
    * Type for Remote Agent (API) Permissions
    */
   REMOTE_AGENTS = 'REMOTE_AGENTS',
@@ -64,6 +68,10 @@ export enum PermissionTypes {
    * Type for Skill Permissions
    */
   SKILLS = 'SKILLS',
+  /**
+   * Type for Meta Ads project tools and UI
+   */
+  META_ADS = 'META_ADS',
 }
 
 /**
@@ -71,7 +79,7 @@ export enum PermissionTypes {
  * Used to identify which interface fields seed role permissions at startup
  * and must NOT be overridden via DB config (use the role permissions editor instead).
  */
-export const PERMISSION_TYPE_INTERFACE_FIELDS: Record<PermissionTypes, string> = {
+export const PERMISSION_TYPE_INTERFACE_FIELDS: Partial<Record<PermissionTypes, string>> = {
   [PermissionTypes.PROMPTS]: 'prompts',
   [PermissionTypes.AGENTS]: 'agents',
   [PermissionTypes.BOOKMARKS]: 'bookmarks',
@@ -85,6 +93,7 @@ export const PERMISSION_TYPE_INTERFACE_FIELDS: Record<PermissionTypes, string> =
   [PermissionTypes.PEOPLE_PICKER]: 'peoplePicker',
   [PermissionTypes.MARKETPLACE]: 'marketplace',
   [PermissionTypes.MCP_SERVERS]: 'mcpServers',
+  [PermissionTypes.PROJECTS]: 'projects',
   [PermissionTypes.REMOTE_AGENTS]: 'remoteAgents',
   [PermissionTypes.SKILLS]: 'skills',
 };
@@ -215,6 +224,14 @@ export const mcpServersPermissionsSchema = z.object({
 });
 export type TMcpServersPermissions = z.infer<typeof mcpServersPermissionsSchema>;
 
+export const projectPermissionsSchema = z.object({
+  [Permissions.USE]: z.boolean().default(true),
+  [Permissions.CREATE]: z.boolean().default(true),
+  [Permissions.SHARE]: z.boolean().default(false),
+  [Permissions.SHARE_PUBLIC]: z.boolean().default(false),
+});
+export type TProjectPermissions = z.infer<typeof projectPermissionsSchema>;
+
 export const remoteAgentsPermissionsSchema = z.object({
   [Permissions.USE]: z.boolean().default(false),
   [Permissions.CREATE]: z.boolean().default(false),
@@ -231,6 +248,11 @@ export const skillPermissionsSchema = z.object({
 });
 export type TSkillPermissions = z.infer<typeof skillPermissionsSchema>;
 
+export const metaAdsPermissionsSchema = z.object({
+  [Permissions.USE]: z.boolean().default(false),
+});
+export type TMetaAdsPermissions = z.infer<typeof metaAdsPermissionsSchema>;
+
 // Define a single permissions schema that holds all permission types.
 export const permissionsSchema = z.object({
   [PermissionTypes.PROMPTS]: promptPermissionsSchema,
@@ -246,6 +268,8 @@ export const permissionsSchema = z.object({
   [PermissionTypes.FILE_SEARCH]: fileSearchPermissionsSchema,
   [PermissionTypes.FILE_CITATIONS]: fileCitationsPermissionsSchema,
   [PermissionTypes.MCP_SERVERS]: mcpServersPermissionsSchema,
+  [PermissionTypes.PROJECTS]: projectPermissionsSchema,
   [PermissionTypes.REMOTE_AGENTS]: remoteAgentsPermissionsSchema,
   [PermissionTypes.SKILLS]: skillPermissionsSchema,
+  [PermissionTypes.META_ADS]: metaAdsPermissionsSchema,
 });

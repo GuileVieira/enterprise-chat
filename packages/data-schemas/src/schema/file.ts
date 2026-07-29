@@ -135,10 +135,67 @@ const file: Schema<IMongoFile> = new Schema(
         ),
         default: undefined,
       },
+      imageRag: {
+        type: new Schema(
+          {
+            kind: {
+              type: String,
+              enum: ['vision_caption'],
+            },
+            status: {
+              type: String,
+              enum: ['ready', 'failed'],
+            },
+            model: {
+              type: String,
+            },
+            error: {
+              type: String,
+              maxlength: 500,
+            },
+            sourceImageFileId: {
+              type: String,
+              index: true,
+            },
+            sourceImageFileName: {
+              type: String,
+            },
+            derivedTextFileId: {
+              type: String,
+              index: true,
+            },
+          },
+          { _id: false },
+        ),
+        default: undefined,
+      },
+      trafficDiary: {
+        type: new Schema(
+          {
+            entryId: { type: String, index: true },
+            kind: { type: String, enum: ['manager', 'strategist'], index: true },
+            projectId: { type: String, index: true },
+            tenantId: { type: String, index: true },
+            userId: { type: String, index: true },
+            date: { type: String, index: true },
+            weekStart: { type: String, index: true },
+            status: { type: String, enum: ['draft', 'completed'] },
+            author: String,
+            indexStatus: { type: String, enum: ['pending', 'indexed', 'failed'] },
+            updatedAt: Date,
+          },
+          { _id: false },
+        ),
+        default: undefined,
+      },
     },
     expiresAt: {
       type: Date,
       expires: 3600, // 1 hour in seconds
+    },
+    projectId: {
+      type: String,
+      index: true,
     },
     tenantId: {
       type: String,

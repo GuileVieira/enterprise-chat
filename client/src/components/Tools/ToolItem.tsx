@@ -1,4 +1,4 @@
-import { XCircle, PlusCircleIcon, Wrench } from 'lucide-react';
+import { PlusCircle as PlusCircleIcon, Wrench, XCircle } from '@phosphor-icons/react';
 import type { TPlugin, AgentToolType } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
@@ -63,7 +63,7 @@ function ToolItem({ tool, onAddTool, onRemoveTool, isInstalled = false }: ToolIt
             </button>
           ) : (
             <button
-              className="btn relative bg-gray-300 hover:bg-gray-400 dark:bg-gray-50 dark:hover:bg-gray-200"
+              className="btn btn-neutral border-token-border-light relative"
               onClick={handleClick}
               aria-label={`${localize('com_nav_tool_remove')} ${name}`}
             >

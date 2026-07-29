@@ -3,7 +3,7 @@ import FileList from './FileList';
 import { Button, Input } from '@librechat/client';
 import { TFile } from 'librechat-data-provider/dist/types';
 import UploadFileButton from './UploadFileButton';
-import { ListFilter } from 'lucide-react';
+import { Funnel as ListFilter } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 
 const fakeFiles = [

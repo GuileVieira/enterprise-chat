@@ -14,6 +14,7 @@ import { LocalStorageKeys, isEphemeralAgentId, Constants } from 'librechat-data-
 import type {
   EModelEndpoint,
   TConversation,
+  THiddenPromptContext,
   TSubmission,
   TMessage,
   TPreset,
@@ -285,6 +286,11 @@ const activePromptByIndex = atomFamily<string | undefined, string | number | nul
   default: undefined,
 });
 
+const activeHiddenPromptByIndex = atomFamily<THiddenPromptContext | null, string | number | null>({
+  key: 'activeHiddenPromptByIndex',
+  default: null,
+});
+
 const showMentionPopoverFamily = atomFamily<boolean, string | number | null>({
   key: 'showMentionPopoverByIndex',
   default: false,
@@ -513,6 +519,7 @@ export default {
   globalAudioFetchingFamily,
   showPlusPopoverFamily,
   activePromptByIndex,
+  activeHiddenPromptByIndex,
   useClearSubmissionState,
   useClearLatestMessages,
   showPromptsPopoverFamily,

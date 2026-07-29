@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus } from 'lucide-react';
+import { Minus, Plus } from '@phosphor-icons/react';
 import { Button, Label } from '@librechat/client';
 import TextareaAutosize from 'react-textarea-autosize';
 import type { TExample } from 'librechat-data-provider';

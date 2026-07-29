@@ -197,7 +197,7 @@ describe('AgentCard', () => {
     expect(avatarImg).toHaveAttribute('src', '/string-avatar.png');
   });
 
-  it('displays Feather icon fallback when no avatar is provided', () => {
+  it('displays Robot icon fallback when no avatar is provided', () => {
     const agentWithoutAvatar = {
       ...mockAgent,
       avatar: undefined,
@@ -209,9 +209,8 @@ describe('AgentCard', () => {
       </Wrapper>,
     );
 
-    // Check for Feather icon presence by looking for the svg with lucide-feather class
-    const featherIcon = document.querySelector('.lucide-feather');
-    expect(featherIcon).toBeInTheDocument();
+    const fallbackIcon = document.querySelector('svg');
+    expect(fallbackIcon).toBeInTheDocument();
   });
 
   it('card is clickable and has dialog trigger', () => {

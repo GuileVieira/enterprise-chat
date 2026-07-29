@@ -159,6 +159,28 @@ export type TFile = {
      * resolve via `resolveCodeEnvRef`.
      */
     codeEnvRef?: CodeEnvRef;
+    imageRag?: {
+      kind?: 'vision_caption';
+      status?: 'ready' | 'failed';
+      model?: string;
+      error?: string;
+      sourceImageFileId?: string;
+      sourceImageFileName?: string;
+      derivedTextFileId?: string;
+    };
+    trafficDiary?: {
+      entryId?: string;
+      kind?: 'manager' | 'strategist';
+      projectId?: string;
+      tenantId?: string;
+      userId?: string;
+      date?: string;
+      weekStart?: string;
+      status?: 'draft' | 'completed';
+      author?: string;
+      indexStatus?: 'pending' | 'indexed' | 'failed';
+      updatedAt?: string | Date;
+    };
   };
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -254,6 +276,7 @@ export type BatchFile = {
 
 export type DeleteFilesBody = {
   files: BatchFile[];
+  projectId?: string;
   agent_id?: string;
   assistant_id?: string;
   tool_resource?: EToolResources;

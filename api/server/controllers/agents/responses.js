@@ -59,6 +59,7 @@ const {
   enrichWithSkillConfigurable,
   buildSkillPrimedIdsByName,
 } = require('~/server/services/Endpoints/agents/skillDeps');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { logViolation } = require('~/cache');
 const db = require('~/models');
@@ -79,6 +80,8 @@ function createToolLoader(signal, definitionsOnly = true) {
     provider,
     tool_options,
     tool_resources,
+    projectId,
+    projectFileIds,
   }) {
     const agent = { id: agentId, tools, provider, model, tool_options };
     try {
@@ -90,6 +93,8 @@ function createToolLoader(signal, definitionsOnly = true) {
         tool_resources,
         definitionsOnly,
         streamId: null,
+        projectId,
+        projectFileIds,
       });
     } catch (error) {
       logger.error('Error loading tools for agent ' + agentId, error);
@@ -356,6 +361,19 @@ const createResponse = async (req, res) => {
       endpoint: agent.provider,
       model_parameters: agent.model_parameters ?? {},
     };
+    const projectContext = await loadProjectContext({
+      req,
+      conversationId: request.previous_response_id,
+      projectId: req.body.projectId,
+    });
+    const projectFileIds = projectContext.projectFileIds;
+    const contextParts = [
+      projectContext.projectInstructions,
+      projectContext.projectMemories,
+    ].filter(Boolean);
+    if (contextParts.length > 0) {
+      agent.instructions = `${contextParts.join('\n\n')}\n\n${agent.instructions ?? ''}`;
+    }
 
     // `filterFilesByAgentAccess` is intentionally omitted: it calls
     // `checkPermission` with `resourceType: AGENT`, but this route
@@ -423,6 +441,8 @@ const createResponse = async (req, res) => {
         skillStates,
         defaultActiveOnShare,
         manualSkills,
+        projectFileIds,
+        projectId: projectContext.projectId,
       },
       dbMethods,
     );
@@ -447,6 +467,8 @@ const createResponse = async (req, res) => {
       tool_resources: primaryConfig.tool_resources,
       actionsEnabled: primaryConfig.actionsEnabled,
       codeEnvAvailable: primaryConfig.codeEnvAvailable,
+      projectId: projectContext.projectId,
+      projectFileIds,
     });
 
     // Only run BFS discovery (and pay `getModelsConfig` upfront) when the
@@ -478,6 +500,8 @@ const createResponse = async (req, res) => {
           resourceType: ResourceType.REMOTE_AGENT,
           /** @see DiscoverConnectedAgentsParams.codeEnvAvailable */
           codeEnvAvailable: enabledCapabilities.has(AgentCapabilities.execute_code),
+          projectId: projectContext.projectId,
+          projectFileIds,
         },
         {
           getAgent: db.getAgent,
@@ -505,6 +529,8 @@ const createResponse = async (req, res) => {
               tool_resources: config.tool_resources,
               actionsEnabled: config.actionsEnabled,
               codeEnvAvailable: config.codeEnvAvailable,
+              projectId: projectContext.projectId,
+              projectFileIds,
             });
           },
           initializeAgent,
@@ -638,6 +664,8 @@ const createResponse = async (req, res) => {
             userMCPAuthMap: ctx.userMCPAuthMap,
             tool_resources: ctx.tool_resources,
             actionsEnabled: ctx.actionsEnabled,
+            projectId: ctx.projectId,
+            projectFileIds: ctx.projectFileIds,
           });
           return enrichWithSkillConfigurable(
             result,
@@ -814,6 +842,8 @@ const createResponse = async (req, res) => {
             userMCPAuthMap: ctx.userMCPAuthMap,
             tool_resources: ctx.tool_resources,
             actionsEnabled: ctx.actionsEnabled,
+            projectId: ctx.projectId,
+            projectFileIds: ctx.projectFileIds,
           });
           return enrichWithSkillConfigurable(
             result,

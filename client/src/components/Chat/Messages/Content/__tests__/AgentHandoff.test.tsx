@@ -33,8 +33,8 @@ jest.mock('~/components/Share/MessageIcon', () => ({
   default: () => <div data-testid="message-icon" />,
 }));
 
-jest.mock('lucide-react', () => ({
-  ChevronDown: () => <span data-testid="chevron-down" />,
+jest.mock('@phosphor-icons/react', () => ({
+  CaretDown: () => <span data-testid="chevron-down" />,
 }));
 
 jest.mock('~/utils', () => ({

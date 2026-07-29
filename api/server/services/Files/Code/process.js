@@ -348,7 +348,7 @@ const processCodeOutput = async ({
       url: `${baseURL}/download/${session_id}/${id}${downloadQuery}`,
       responseType: 'arraybuffer',
       headers: {
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         ...authHeaders,
       },
       httpAgent: codeServerHttpAgent,
@@ -697,7 +697,7 @@ async function getSessionInfo(ref, req) {
       method: 'get',
       url: `${baseURL}/sessions/${ref.storage_session_id}/objects/${ref.file_id}${query}`,
       headers: {
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         ...authHeaders,
       },
       httpAgent: codeServerHttpAgent,
@@ -761,7 +761,7 @@ const appendVisibleCodeFileContext = (toolContext, contextLine) => {
  * }>}
  */
 const primeFiles = async (options) => {
-  const { tool_resources, req, agentId } = options;
+  const { tool_resources, req, agentId, projectId, projectFileIds } = options;
   const file_ids = tool_resources?.[EToolResources.execute_code]?.file_ids ?? [];
   const agentResourceIds = new Set(file_ids);
   const resourceFiles = tool_resources?.[EToolResources.execute_code]?.files ?? [];
@@ -786,6 +786,8 @@ const primeFiles = async (options) => {
       userId: req.user.id,
       role: req.user.role,
       agentId,
+      projectId,
+      projectFileIds,
     });
   } else {
     dbFiles = allFiles;
@@ -1015,7 +1017,7 @@ async function readSandboxFile({ file_path, session_id, files, req }) {
       data: postData,
       headers: {
         'Content-Type': 'application/json',
-        'User-Agent': 'LibreChat/1.0',
+        'User-Agent': 'Orqest/1.0',
         ...authHeaders,
       },
       httpAgent: codeServerHttpAgent,

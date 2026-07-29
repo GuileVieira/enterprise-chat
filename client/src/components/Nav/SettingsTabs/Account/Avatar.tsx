@@ -2,7 +2,15 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useSetRecoilState } from 'recoil';
 // @ts-ignore - no type definitions available
 import AvatarEditor from 'react-avatar-editor';
-import { FileImage, RotateCw, Upload, ZoomIn, ZoomOut, Move, X } from 'lucide-react';
+import {
+  FileImage,
+  ArrowsOutSimple as Move,
+  ArrowClockwise as RotateCw,
+  Upload,
+  X,
+  MagnifyingGlassPlus as ZoomIn,
+  MagnifyingGlassMinus as ZoomOut,
+} from '@phosphor-icons/react';
 import { fileConfig as defaultFileConfig, mergeFileConfig } from 'librechat-data-provider';
 import {
   Label,

@@ -1,21 +1,14 @@
 import { Constants, isActionTool } from 'librechat-data-provider';
 import {
-  Terminal,
+  ArrowsLeftRight as ArrowRightLeft,
+  FileMagnifyingGlass as FileSearch,
   Globe,
-  ImageIcon,
-  ArrowRightLeft,
-  FileSearch,
-  FileText,
-  ScrollText,
-  Zap,
+  Image as ImageIcon,
+  Terminal,
   Wrench,
-} from 'lucide-react';
-import LangIcon from '~/components/Messages/Content/LangIcon';
+  Lightning as Zap,
+} from '@phosphor-icons/react';
 import { cn } from '~/utils';
-
-function BashIcon({ className }: { className?: string }) {
-  return <LangIcon lang="bash" className={className} />;
-}
 
 export type ToolIconType =
   | 'mcp'
@@ -24,9 +17,6 @@ export type ToolIconType =
   | 'image_gen'
   | 'agent_handoff'
   | 'file_search'
-  | 'skill'
-  | 'read_file'
-  | 'bash_tool'
   | 'action'
   | 'generic';
 
@@ -37,9 +27,6 @@ const ICON_MAP: Record<ToolIconType, React.ComponentType<{ className?: string }>
   image_gen: ImageIcon,
   agent_handoff: ArrowRightLeft,
   file_search: FileSearch,
-  skill: ScrollText,
-  read_file: FileText,
-  bash_tool: BashIcon,
   action: Zap,
   generic: Wrench,
 };
@@ -57,7 +44,12 @@ export function getToolIconType(name: string): ToolIconType {
   if (name === 'web_search') {
     return 'web_search';
   }
-  if (name === 'image_gen_oai' || name === 'image_edit_oai' || name === 'gemini_image_gen') {
+  if (
+    name === 'image_gen_oai' ||
+    name === 'image_edit_oai' ||
+    name === 'gemini_image_gen' ||
+    name === 'openrouter_gemini_image_gen'
+  ) {
     return 'image_gen';
   }
   if (name === 'file_search' || name === 'retrieval') {
@@ -65,15 +57,6 @@ export function getToolIconType(name: string): ToolIconType {
   }
   if (name === 'code_interpreter') {
     return 'execute_code';
-  }
-  if (name === 'skill') {
-    return 'skill';
-  }
-  if (name === 'read_file') {
-    return 'read_file';
-  }
-  if (name === 'bash_tool' || name === Constants.BASH_PROGRAMMATIC_TOOL_CALLING) {
-    return 'bash_tool';
   }
   if (name.startsWith(Constants.LC_TRANSFER_TO_)) {
     return 'agent_handoff';

@@ -125,6 +125,37 @@ describe('discoverConnectedAgents', () => {
     expect(onAgentInitialized.mock.calls.map((c) => c[0])).toEqual(['B', 'C']);
   });
 
+  it('forwards active project file ids to every discovered handoff agent', async () => {
+    const edgesAB: GraphEdge[] = [{ from: 'A', to: 'B', edgeType: 'handoff' }];
+    const primaryConfig = makeConfig('A', edgesAB);
+
+    const getAgent = jest.fn(async () => makeAgent('B', []));
+    const checkPermission = jest.fn().mockResolvedValue(true);
+
+    await discoverConnectedAgents(
+      {
+        req: makeReq(),
+        res: makeRes(),
+        primaryConfig,
+        allowedProviders: new Set(),
+        modelsConfig: { openai: ['gpt-4o'] },
+        loadTools: jest.fn(),
+        projectFileIds: ['project-file'],
+      },
+      {
+        getAgent,
+        checkPermission,
+        logViolation: jest.fn(),
+        db: {} as never,
+      },
+    );
+
+    expect(mockInitializeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ projectFileIds: ['project-file'] }),
+      expect.anything(),
+    );
+  });
+
   it('skips orphaned agents and filters out edges pointing at them', async () => {
     const edges: GraphEdge[] = [
       { from: 'A', to: 'B', edgeType: 'handoff' },

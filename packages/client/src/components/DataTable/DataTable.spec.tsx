@@ -37,15 +37,15 @@ jest.mock('~/svgs', () => ({
   ),
 }));
 
-// Mock lucide-react icons
-jest.mock('lucide-react', () => ({
+// Mock Phosphor icons
+jest.mock('@phosphor-icons/react', () => ({
   ArrowUp: ({ className }: { className?: string }) => (
     <span data-testid="arrow-up" className={className} />
   ),
   ArrowDown: ({ className }: { className?: string }) => (
     <span data-testid="arrow-down" className={className} />
   ),
-  ArrowDownUp: ({ className }: { className?: string }) => (
+  ArrowsDownUp: ({ className }: { className?: string }) => (
     <span data-testid="arrow-down-up" className={className} />
   ),
 }));

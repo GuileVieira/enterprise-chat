@@ -44,7 +44,9 @@ const inMemoryCacheMap = new Map<string, Keyv>();
 export const standardCache = (namespace: string, ttl?: number, fallbackStore?: object): Keyv => {
   if (keyvRedisClient && !cacheConfig.FORCED_IN_MEMORY_CACHE_NAMESPACES?.includes(namespace)) {
     try {
-      const keyvRedis = new KeyvRedis(keyvRedisClient);
+      const keyvRedis = new KeyvRedis(
+        keyvRedisClient as ConstructorParameters<typeof KeyvRedis>[0],
+      );
       const cache = new Keyv(keyvRedis, { namespace, ttl });
       keyvRedis.namespace = cacheConfig.REDIS_KEY_PREFIX;
       keyvRedis.keyPrefixSeparator = cacheConfig.GLOBAL_PREFIX_SEPARATOR;

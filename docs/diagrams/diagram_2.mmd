@@ -1,0 +1,42 @@
+graph LR
+    subgraph ModChat["Modulo de Chat"]
+        UC_SendMsg["Enviar Mensagem"]
+        UC_SelectModel["Selecionar Modelo"]
+        UC_Upload["Upload de Arquivo"]
+        UC_Branch["Criar Branch"]
+        UC_Fork["Fork de Conversa"]
+        UC_EditMsg["Editar Mensagem"]
+        UC_Resend["Reenviar Mensagem"]
+        UC_Feedback["Avaliar Resposta"]
+        UC_GenImage["Gerar Imagem"]
+        UC_STT["Speech-to-Text"]
+        UC_TTS["Text-to-Speech"]
+        UC_Export["Exportar Conversa"]
+        UC_Import["Importar Conversa"]
+        UC_Archive["Arquivar Conversa"]
+        UC_Tags["Adicionar Tags"]
+    end
+
+    User((Usuario))
+
+    User --> UC_SendMsg
+    User --> UC_SelectModel
+    User --> UC_Upload
+    User --> UC_Branch
+    User --> UC_Fork
+    User --> UC_EditMsg
+    User --> UC_Resend
+    User --> UC_Feedback
+    User --> UC_GenImage
+    User --> UC_STT
+    User --> UC_TTS
+    User --> UC_Export
+    User --> UC_Import
+    User --> UC_Archive
+    User --> UC_Tags
+
+    UC_SendMsg -.->|include| UC_SelectModel
+    UC_Upload -.->|extend| UC_SendMsg
+    UC_STT -.->|extend| UC_SendMsg
+    UC_TTS -.->|extend| UC_SendMsg
+    UC_Feedback -.->|extend| UC_SendMsg

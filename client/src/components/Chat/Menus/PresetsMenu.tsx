@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Trans } from 'react-i18next';
-import { BookCopy } from 'lucide-react';
+import { Books as BookCopy } from '@phosphor-icons/react';
 import { Content, Portal, Root, Trigger } from '@radix-ui/react-popover';
 import {
   Button,

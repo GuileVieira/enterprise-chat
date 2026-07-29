@@ -1,4 +1,4 @@
-import { Terminal, Type, Database } from 'lucide-react';
+import { Database, Terminal, TextT as Type } from '@phosphor-icons/react';
 import { EModelEndpoint, FileSources } from 'librechat-data-provider';
 import { MinimalIcon } from '~/components/Endpoints';
 import { cn } from '~/utils';

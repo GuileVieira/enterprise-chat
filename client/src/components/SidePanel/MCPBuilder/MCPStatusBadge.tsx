@@ -1,4 +1,4 @@
-import { Check, PlugZap } from 'lucide-react';
+import { Check, Plug as PlugZap } from '@phosphor-icons/react';
 import { Spinner } from '@librechat/client';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';

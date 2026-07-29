@@ -65,9 +65,19 @@ const getAvailableTools = async (req, res) => {
     const uniquePlugins = filterUniquePlugins(availableTools);
     const toolDefKeysList = toolDefinitions ? Object.keys(toolDefinitions) : null;
     const toolDefKeys = toolDefKeysList ? new Set(toolDefKeysList) : null;
+    const includeSet = new Set(appConfig?.includedTools ?? []);
+    const filterSet = new Set(appConfig?.filteredTools ?? []);
 
     const toolsOutput = [];
     for (const plugin of uniquePlugins) {
+      if (includeSet.size > 0) {
+        if (!includeSet.has(plugin.pluginKey)) {
+          continue;
+        }
+      } else if (filterSet.has(plugin.pluginKey)) {
+        continue;
+      }
+
       const isToolDefined = toolDefKeys?.has(plugin.pluginKey) === true;
       const isToolkit =
         plugin.toolkit === true &&

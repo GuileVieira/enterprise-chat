@@ -33,8 +33,8 @@ export const defaultTheme: IThemeRGB = {
   'rgb-surface-tertiary': '236 236 236', // #ececec (gray-100)
   'rgb-surface-tertiary-alt': '255 255 255', // #fff (white)
   'rgb-surface-dialog': '255 255 255', // #fff (white)
-  'rgb-surface-submit': '4 120 87', // #047857 (green-700)
-  'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)
+  'rgb-surface-submit': '52 49 41', // #343129
+  'rgb-surface-submit-hover': '67 63 53', // #433f35
   'rgb-surface-destructive': '185 28 28', // #b91c1c (red-700)
   'rgb-surface-destructive-hover': '153 27 27', // #991b1b (red-800)
   'rgb-surface-chat': '255 255 255', // #fff (white)
@@ -55,7 +55,7 @@ export const defaultTheme: IThemeRGB = {
   // Utility colors (mapped to existing colors for backwards compatibility)
   'rgb-background': '255 255 255', // Same as surface-primary
   'rgb-foreground': '17 17 17', // Same as text-primary
-  'rgb-primary': '235 235 235', // Same as surface-active
+  'rgb-primary': '52 49 41', // Same as surface-submit
   'rgb-primary-foreground': '0 0 0', // Same as surface-primary-contrast
   'rgb-secondary': '247 247 248', // Same as surface-secondary
   'rgb-secondary-foreground': '66 66 66', // Same as text-secondary

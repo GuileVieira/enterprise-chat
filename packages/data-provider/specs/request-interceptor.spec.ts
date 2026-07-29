@@ -301,4 +301,43 @@ describe('axios 401 interceptor — Authorization header guard', () => {
     const refreshCall = mockAdapter.mock.calls[1];
     expect(refreshCall[0].url).toContain('api/auth/refresh');
   });
+
+  it('redirects to login when the refreshed token is still rejected', async () => {
+    expect.assertions(3);
+    setTokenHeader('expired-token');
+
+    setWindowLocation({
+      href: 'http://localhost/projects/p1',
+      pathname: '/projects/p1',
+      search: '?tab=metaAds',
+      hash: '',
+    } as Partial<Location>);
+
+    mockAdapter.mockRejectedValueOnce({
+      response: { status: 401 },
+      config: { url: '/api/projects', headers: {}, _retry: false },
+    });
+
+    mockAdapter.mockResolvedValueOnce({
+      data: { token: 'bad-refreshed-token' },
+      status: 200,
+      headers: {},
+      config: {},
+    });
+
+    mockAdapter.mockRejectedValueOnce({
+      response: { status: 401 },
+      config: { url: '/api/projects', headers: {}, _retry: true },
+    });
+
+    try {
+      await axios.get('/api/projects');
+    } catch {
+      // expected rejection
+    }
+
+    expect(mockAdapter).toHaveBeenCalledTimes(3);
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined();
+    expect(window.location.href).toBe('/login?redirect_to=%2Fprojects%2Fp1%3Ftab%3DmetaAds');
+  });
 });

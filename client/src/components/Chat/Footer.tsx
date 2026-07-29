@@ -5,6 +5,9 @@ import { Constants } from 'librechat-data-provider';
 import { useGetStartupConfig } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 
+const isLibreChatUrl = (url?: string | null) =>
+  url != null && /(^|\/\/|\.)(librechat\.(ai|com)|docs\.librechat\.ai)(\/|$)/i.test(url);
+
 function Footer({ className }: { className?: string }) {
   const { data: config } = useGetStartupConfig();
   const localize = useLocalize();
@@ -12,25 +15,32 @@ function Footer({ className }: { className?: string }) {
   const privacyPolicy = config?.interface?.privacyPolicy;
   const termsOfService = config?.interface?.termsOfService;
 
-  const privacyPolicyRender = privacyPolicy?.externalUrl != null && (
-    <a className="text-text-secondary underline" href={privacyPolicy.externalUrl} rel="noreferrer">
-      {localize('com_ui_privacy_policy')}
-    </a>
-  );
+  const privacyPolicyRender = privacyPolicy?.externalUrl != null &&
+    !isLibreChatUrl(privacyPolicy.externalUrl) && (
+      <a
+        className="text-text-secondary underline"
+        href={privacyPolicy.externalUrl}
+        rel="noreferrer"
+      >
+        {localize('com_ui_privacy_policy')}
+      </a>
+    );
 
-  const termsOfServiceRender = termsOfService?.externalUrl != null && (
-    <a className="text-text-secondary underline" href={termsOfService.externalUrl} rel="noreferrer">
-      {localize('com_ui_terms_of_service')}
-    </a>
-  );
+  const termsOfServiceRender = termsOfService?.externalUrl != null &&
+    !isLibreChatUrl(termsOfService.externalUrl) && (
+      <a
+        className="text-text-secondary underline"
+        href={termsOfService.externalUrl}
+        rel="noreferrer"
+      >
+        {localize('com_ui_terms_of_service')}
+      </a>
+    );
 
   const mainContentParts = (
     typeof config?.customFooter === 'string'
       ? config.customFooter
-      : '[LibreChat ' +
-        Constants.VERSION +
-        '](https://librechat.ai) - ' +
-        localize('com_ui_latest_footer')
+      : 'Orqest ' + Constants.VERSION + ' - ' + localize('com_ui_latest_footer')
   ).split('|');
 
   useEffect(() => {
@@ -47,6 +57,10 @@ function Footer({ className }: { className?: string }) {
       <ReactMarkdown
         components={{
           a: ({ node: _n, href, children, ...otherProps }) => {
+            if (isLibreChatUrl(href)) {
+              return <>{children}</>;
+            }
+
             return (
               <a
                 className="text-text-secondary underline"

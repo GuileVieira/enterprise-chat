@@ -140,9 +140,17 @@ export async function updateInterfacePermissions({
         permType === PermissionTypes.MEMORIES &&
         shouldEnableMemory &&
         existingPermissions?.[PermissionTypes.MEMORIES]?.[Permissions.USE] === false;
+      const shouldEnforceUserAgentUseOnly =
+        roleName === SystemRoles.USER && permType === PermissionTypes.AGENTS;
 
       // Only update if: doesn't exist OR explicitly configured OR memory state change
-      if (!permTypeExists || isExplicitlyConfigured || isMemoryDisabled || isMemoryReenabling) {
+      if (
+        !permTypeExists ||
+        isExplicitlyConfigured ||
+        isMemoryDisabled ||
+        isMemoryReenabling ||
+        shouldEnforceUserAgentUseOnly
+      ) {
         permissionsToUpdate[permType] = permissions;
         if (!permTypeExists) {
           logger.debug(`Role '${roleName}': Setting up default permissions for '${permType}'`);
@@ -199,6 +207,7 @@ export async function updateInterfacePermissions({
       typeof defaults.agents === 'object' ? defaults.agents?.public : undefined;
     const skillsDefaultPublic =
       typeof defaults.skills === 'object' ? defaults.skills?.public : undefined;
+    const isUserAgentPermission = roleName === SystemRoles.USER;
 
     const allPermissions: Partial<Record<PermissionTypes, Record<string, boolean | undefined>>> = {
       [PermissionTypes.PROMPTS]: {
@@ -283,30 +292,38 @@ export async function updateInterfacePermissions({
           defaultPerms[PermissionTypes.AGENTS]?.[Permissions.USE],
           agentsDefaultUse,
         ),
-        ...((typeof interfaceConfig?.agents === 'object' && 'create' in interfaceConfig.agents) ||
+        ...(isUserAgentPermission ||
+        (typeof interfaceConfig?.agents === 'object' && 'create' in interfaceConfig.agents) ||
         !existingPermissions?.[PermissionTypes.AGENTS]
           ? {
-              [Permissions.CREATE]: getPermissionValue(
-                getConfigCreate(loadedInterface.agents),
-                defaultPerms[PermissionTypes.AGENTS]?.[Permissions.CREATE],
-                agentsDefaultCreate ?? true,
-              ),
+              [Permissions.CREATE]: isUserAgentPermission
+                ? false
+                : getPermissionValue(
+                    getConfigCreate(loadedInterface.agents),
+                    defaultPerms[PermissionTypes.AGENTS]?.[Permissions.CREATE],
+                    agentsDefaultCreate,
+                  ),
             }
           : {}),
-        ...((typeof interfaceConfig?.agents === 'object' &&
+        ...(isUserAgentPermission ||
+        (typeof interfaceConfig?.agents === 'object' &&
           ('share' in interfaceConfig.agents || 'public' in interfaceConfig.agents)) ||
         !existingPermissions?.[PermissionTypes.AGENTS]
           ? {
-              [Permissions.SHARE]: getPermissionValue(
-                getConfigShare(loadedInterface.agents),
-                defaultPerms[PermissionTypes.AGENTS]?.[Permissions.SHARE],
-                agentsDefaultShare,
-              ),
-              [Permissions.SHARE_PUBLIC]: getPermissionValue(
-                getConfigPublic(loadedInterface.agents),
-                defaultPerms[PermissionTypes.AGENTS]?.[Permissions.SHARE_PUBLIC],
-                agentsDefaultPublic,
-              ),
+              [Permissions.SHARE]: isUserAgentPermission
+                ? false
+                : getPermissionValue(
+                    getConfigShare(loadedInterface.agents),
+                    defaultPerms[PermissionTypes.AGENTS]?.[Permissions.SHARE],
+                    agentsDefaultShare,
+                  ),
+              [Permissions.SHARE_PUBLIC]: isUserAgentPermission
+                ? false
+                : getPermissionValue(
+                    getConfigPublic(loadedInterface.agents),
+                    defaultPerms[PermissionTypes.AGENTS]?.[Permissions.SHARE_PUBLIC],
+                    agentsDefaultPublic,
+                  ),
             }
           : {}),
       },

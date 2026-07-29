@@ -1,8 +1,15 @@
 const cookies = require('cookie');
 const jwt = require('jsonwebtoken');
 const openIdClient = require('openid-client');
-const { logger } = require('@librechat/data-schemas');
 const {
+  logger,
+  runAsSystem,
+  tenantStorage,
+  SYSTEM_TENANT_ID,
+  DEFAULT_SESSION_EXPIRY,
+} = require('@librechat/data-schemas');
+const {
+  math,
   isEnabled,
   findOpenIDUser,
   getOpenIdIssuer,
@@ -22,6 +29,7 @@ const {
   findSession,
   updateUser,
   findUser,
+  generateToken,
 } = require('~/models');
 const { getGraphApiToken } = require('~/server/services/GraphTokenService');
 const { getOpenIdConfig, getOpenIdEmail } = require('~/strategies');
@@ -84,10 +92,7 @@ const getReusableOpenIDSessionToken = (openidTokens) => {
     return null;
   }
 
-  const candidates = [
-    { token: openidTokens?.idToken, type: 'id_token' },
-    { token: openidTokens?.accessToken, type: 'access_token' },
-  ];
+  const candidates = [{ token: openidTokens?.idToken, type: 'id_token' }];
   const now = Math.floor(Date.now() / 1000);
 
   for (const candidate of candidates) {
@@ -106,6 +111,16 @@ const getReusableOpenIDSessionToken = (openidTokens) => {
   }
 
   return null;
+};
+
+const generateOpenIDFallbackAppToken = async (user) => {
+  const sessionExpiry = math(process.env.SESSION_EXPIRY, DEFAULT_SESSION_EXPIRY);
+  const token = await generateToken(user, sessionExpiry);
+  logger.info('[refreshController] OpenID app auth token fell back to local JWT', {
+    userId: user?._id?.toString?.() ?? user?.id,
+    provider: user?.provider,
+  });
+  return token;
 };
 
 const resetPasswordRequestController = async (req, res) => {
@@ -237,7 +252,9 @@ const refreshController = async (req, res) => {
         tenantId: user.tenantId,
       });
 
-      return res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
+      const appToken = token || (await generateOpenIDFallbackAppToken(user));
+
+      return res.status(200).send({ token: appToken, user: sanitizeUserForAuthResponse(user) });
     } catch (error) {
       logger.error('[refreshController] OpenID token refresh error', error);
       return res.status(403).send('Invalid OpenID refresh token');
@@ -252,39 +269,45 @@ const refreshController = async (req, res) => {
 
   try {
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await getUserById(payload.id, AUTH_REFRESH_USER_PROJECTION);
+    // Refresh runs without ALS context: look up the user across tenants under
+    // SYSTEM, then scope the rest to the user's tenant for session lookup/creation.
+    const user = await runAsSystem(() => getUserById(payload.id, AUTH_REFRESH_USER_PROJECTION));
     if (!user) {
       return res.status(401).redirect('/login');
     }
 
     const userId = payload.id;
+    const userTenantId = user.tenantId || SYSTEM_TENANT_ID;
 
     if (process.env.NODE_ENV === 'CI') {
-      const token = await setAuthTokens(userId, res, null, req);
+      const token = await tenantStorage.run({ tenantId: userTenantId }, () =>
+        setAuthTokens(userId, res, null, req),
+      );
       return res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
     }
 
-    /** Session with the hashed refresh token */
-    const session = await findSession(
-      {
-        userId: userId,
-        refreshToken: refreshToken,
-      },
-      { lean: false },
-    );
+    await tenantStorage.run({ tenantId: userTenantId }, async () => {
+      /** Session with the hashed refresh token */
+      const session = await findSession(
+        {
+          userId: userId,
+          refreshToken: refreshToken,
+        },
+        { lean: false },
+      );
 
-    if (session && session.expiration > new Date()) {
-      const token = await setAuthTokens(userId, res, session, req);
-
-      res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
-    } else if (req?.query?.retry) {
-      // Retrying from a refresh token request that failed (401)
-      res.status(403).send('No session found');
-    } else if (payload.exp < Date.now() / 1000) {
-      res.status(403).redirect('/login');
-    } else {
-      res.status(401).send('Refresh token expired or not found for this user');
-    }
+      if (session && session.expiration > new Date()) {
+        const token = await setAuthTokens(userId, res, session, req);
+        res.status(200).send({ token, user: sanitizeUserForAuthResponse(user) });
+      } else if (req?.query?.retry) {
+        // Retrying from a refresh token request that failed (401)
+        res.status(403).send('No session found');
+      } else if (payload.exp < Date.now() / 1000) {
+        res.status(403).redirect('/login');
+      } else {
+        res.status(401).send('Refresh token expired or not found for this user');
+      }
+    });
   } catch (err) {
     logger.error(`[refreshController] Invalid refresh token:`, err);
     res.status(403).send('Invalid refresh token');

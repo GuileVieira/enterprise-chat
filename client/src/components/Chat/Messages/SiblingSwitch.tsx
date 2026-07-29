@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CaretLeft as ChevronLeft, CaretRight as ChevronRight } from '@phosphor-icons/react';
 import type { TMessageProps } from '~/common';
 import { cn } from '~/utils';
 

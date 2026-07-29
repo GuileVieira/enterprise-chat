@@ -65,7 +65,7 @@ const startServer = async () => {
   await connectDb();
 
   logger.info('Connected to MongoDB');
-  indexSync().catch((err) => {
+  runAsSystem(indexSync).catch((err) => {
     logger.error('[indexSync] Background sync failed:', err);
   });
 
@@ -84,9 +84,13 @@ const startServer = async () => {
    * `runAsSystem` is required — `File` is tenant-isolated and strict
    * mode rejects unscoped queries. Lazy sweep in the preview endpoint
    * covers anything younger than the boot cutoff. */
-  runAsSystem(sweepOrphanedPreviews).catch((err) => {
-    logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
-  });
+  if (typeof sweepOrphanedPreviews === 'function') {
+    runAsSystem(sweepOrphanedPreviews).catch((err) => {
+      logger.error('[sweepOrphanedPreviews] Background sweep failed:', err);
+    });
+  } else {
+    logger.warn('[sweepOrphanedPreviews] Skipping background sweep; method is unavailable');
+  }
   const appConfig = await getAppConfig({ baseOnly: true });
   initializeFileStorage(appConfig);
   await runAsSystem(async () => {
@@ -180,8 +184,12 @@ const startServer = async () => {
   app.use('/api/admin/config', routes.adminConfig);
   app.use('/api/admin/grants', routes.adminGrants);
   app.use('/api/admin/groups', routes.adminGroups);
+  app.use('/api/admin/overview', routes.adminOverview);
   app.use('/api/admin/roles', routes.adminRoles);
+  app.use('/api/admin/tenants', routes.adminTenants);
   app.use('/api/admin/users', routes.adminUsers);
+  app.use('/api/admin/functions', routes.adminFunctions);
+  app.use('/api/admin/secrets', routes.adminSecrets);
   app.use('/api/actions', routes.actions);
   app.use('/api/keys', routes.keys);
   app.use('/api/api-keys', routes.apiKeys);
@@ -190,7 +198,11 @@ const startServer = async () => {
   app.use('/api/messages', routes.messages);
   app.use('/api/convos', routes.convos);
   app.use('/api/presets', routes.presets);
+  app.use('/api/projects/:projectId/meta-ads', routes.projectMetaAds);
+  app.use('/api/projects/:projectId/meetings', routes.projectMeetings);
+  app.use('/api/projects', routes.projects);
   app.use('/api/prompts', routes.prompts);
+  app.use('/api/prompt', routes.promptImprove);
   app.use('/api/skills', routes.skills);
   app.use('/api/categories', routes.categories);
   app.use('/api/endpoints', routes.endpoints);
@@ -265,7 +277,7 @@ const startServer = async () => {
         await initializeMCPs();
         await initializeOAuthReconnectManager();
       });
-      await checkMigrations();
+      await runAsSystem(checkMigrations);
 
       // Configure stream services (auto-detects Redis from USE_REDIS env var)
       const streamServices = createStreamServices();
@@ -293,6 +305,10 @@ const startServer = async () => {
  */
 startServer().catch((err) => {
   logger.error('Failed to start server:', err);
+  if (err?.stack) {
+    logger.error(err.stack);
+    console.error(err.stack);
+  }
   process.exit(1);
 });
 

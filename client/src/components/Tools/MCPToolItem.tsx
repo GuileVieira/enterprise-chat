@@ -1,4 +1,4 @@
-import { XCircle, PlusCircleIcon, Wrench } from 'lucide-react';
+import { PlusCircle as PlusCircleIcon, Wrench, XCircle } from '@phosphor-icons/react';
 import type { AgentToolType } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 

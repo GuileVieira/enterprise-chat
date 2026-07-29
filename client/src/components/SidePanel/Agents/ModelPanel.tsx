@@ -1,7 +1,10 @@
 import React, { useMemo, useEffect } from 'react';
 import keyBy from 'lodash/keyBy';
 import { ControlCombobox } from '@librechat/client';
-import { ChevronLeft, RotateCcw } from 'lucide-react';
+import {
+  CaretLeft as ChevronLeft,
+  ArrowCounterClockwise as RotateCcw,
+} from '@phosphor-icons/react';
 import { useFormContext, useWatch, Controller } from 'react-hook-form';
 import { componentMapping } from '~/components/SidePanel/Parameters/components';
 import {

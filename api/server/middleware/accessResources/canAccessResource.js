@@ -38,6 +38,7 @@ const canAccessResource = (options) => {
     requiredPermission,
     resourceIdParam = 'resourceId',
     idResolver = null,
+    inheritedResourceResolver = null,
   } = options;
 
   if (!resourceType || typeof resourceType !== 'string') {
@@ -71,19 +72,6 @@ const canAccessResource = (options) => {
           message: 'Authentication required',
         });
       }
-      const cap = ResourceCapabilityMap[resourceType];
-      let hasCap = false;
-      try {
-        hasCap = cap != null && (await hasCapability(req.user, cap));
-      } catch (err) {
-        logger.warn(`[canAccessResource] capability check failed, denying bypass: ${err.message}`);
-      }
-      if (hasCap) {
-        logger.debug(
-          `[canAccessResource] ${cap} bypass for user ${req.user.id} on ${resourceType} ${rawResourceId}`,
-        );
-        return next();
-      }
       const userId = req.user.id;
       let resourceId = rawResourceId;
       let resourceInfo = null;
@@ -94,7 +82,7 @@ const canAccessResource = (options) => {
           `[canAccessResource] Resolving ${resourceType} custom ID ${rawResourceId} to ObjectId`,
         );
 
-        const resolutionResult = await idResolver(rawResourceId);
+        const resolutionResult = await idResolver(rawResourceId, req);
 
         if (!resolutionResult) {
           logger.warn(`[canAccessResource] ${resourceType} not found: ${rawResourceId}`);
@@ -115,6 +103,29 @@ const canAccessResource = (options) => {
         logger.debug(
           `[canAccessResource] Resolved ${resourceType} ${rawResourceId} to ObjectId ${resourceId}`,
         );
+      }
+
+      const cap = ResourceCapabilityMap[resourceType];
+      let hasCap = false;
+      try {
+        hasCap = cap != null && (await hasCapability(req.user, cap));
+      } catch (err) {
+        logger.warn(`[canAccessResource] capability check failed, denying bypass: ${err.message}`);
+      }
+
+      if (hasCap) {
+        logger.debug(
+          `[canAccessResource] ${cap} bypass for user ${req.user.id} on ${resourceType} ${rawResourceId} (${resourceId})`,
+        );
+        req.resourceAccess = {
+          resourceType,
+          resourceId,
+          customResourceId: rawResourceId,
+          permission: requiredPermission,
+          userId,
+          ...(resourceInfo && { resourceInfo }),
+        };
+        return next();
       }
 
       // Check permissions using PermissionService with ObjectId
@@ -141,6 +152,39 @@ const canAccessResource = (options) => {
         };
 
         return next();
+      }
+
+      if (inheritedResourceResolver) {
+        const inheritedResources = await inheritedResourceResolver({
+          req,
+          resourceId,
+          rawResourceId,
+          requiredPermission,
+          resourceInfo,
+        });
+
+        for (const inherited of inheritedResources ?? []) {
+          const hasInheritedPermission = await checkPermission({
+            userId,
+            role: req.user.role,
+            resourceType: inherited.resourceType,
+            resourceId: inherited.resourceId,
+            requiredPermission: inherited.requiredPermission ?? requiredPermission,
+          });
+
+          if (hasInheritedPermission) {
+            req.resourceAccess = {
+              resourceType,
+              resourceId,
+              customResourceId: rawResourceId,
+              permission: requiredPermission,
+              userId,
+              inheritedFrom: inherited,
+              ...(resourceInfo && { resourceInfo }),
+            };
+            return next();
+          }
+        }
       }
 
       logger.warn(

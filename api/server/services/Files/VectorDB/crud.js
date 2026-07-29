@@ -66,7 +66,13 @@ const deleteVectors = async (req, file) => {
  */
 async function uploadVectors({ req, file, file_id, entity_id, storageMetadata }) {
   if (!process.env.RAG_API_URL) {
-    throw new Error('RAG_API_URL not defined');
+    logger.warn('RAG_API_URL not defined, skipping vector database upload');
+    return {
+      bytes: file.size,
+      filename: file.originalname,
+      filepath: file.path,
+      embedded: false,
+    };
   }
 
   try {

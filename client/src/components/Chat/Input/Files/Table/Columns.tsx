@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { ArrowUpDown, ArrowUp, ArrowDown, Database } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowsDownUp as ArrowUpDown, Database } from '@phosphor-icons/react';
 import { FileSources, FileContext } from 'librechat-data-provider';
 import {
   Button,

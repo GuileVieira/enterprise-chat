@@ -137,7 +137,7 @@ function UnifiedSidebar() {
       <>
         <div
           className={cn(
-            'fixed left-0 top-0 z-[110] flex h-full bg-surface-primary-alt',
+            'shadow-sidebar-raycast fixed left-0 top-0 z-[110] flex h-full border-r border-border-light bg-surface-primary-alt',
             expanded ? 'translate-x-0' : '-translate-x-full',
           )}
           style={{
@@ -178,7 +178,7 @@ function UnifiedSidebar() {
     <SidebarChatProvider>
       <ActivePanelProvider>
         <aside
-          className="relative flex h-full flex-shrink-0 overflow-hidden"
+          className="shadow-sidebar-raycast relative z-[1] flex h-full flex-shrink-0 overflow-hidden border-r border-border-light bg-surface-primary-alt"
           style={{
             width: expanded ? sidebarWidth : COLLAPSED_WIDTH,
             minWidth: expanded ? EXPANDED_MIN : COLLAPSED_WIDTH,

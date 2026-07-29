@@ -1,5 +1,5 @@
 import { startTransition } from 'react';
-import { Search as SearchIcon } from 'lucide-react';
+import { MagnifyingGlass as SearchIcon } from '@phosphor-icons/react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons';
 import {

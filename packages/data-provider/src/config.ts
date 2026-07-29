@@ -37,6 +37,7 @@ export const defaultRetrievalModels = [
 
 export const excludedKeys = new Set([
   'conversationId',
+  'projectId',
   'title',
   'iconURL',
   'greeting',
@@ -911,6 +912,8 @@ export const interfaceSchema = z
     multiConvo: z.boolean().optional(),
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
+    metaAds: z.boolean().optional(),
+    metaAdsTrafficAgentId: z.string().optional(),
     presets: z.boolean().optional(),
     prompts: z
       .union([
@@ -981,6 +984,7 @@ export const interfaceSchema = z
     multiConvo: true,
     bookmarks: true,
     memories: true,
+    metaAds: true,
     prompts: {
       use: true,
       create: true,
@@ -1088,6 +1092,7 @@ export type TStartupConfig = {
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
+  shareLinkBaseUrl?: string;
   analyticsGtmId?: string;
   bundlerURL?: string;
   staticBundlerURL?: string;
@@ -1474,7 +1479,7 @@ export const defaultEndpoints: EModelEndpoint[] = [
 export const alternateName = {
   [EModelEndpoint.openAI]: 'OpenAI',
   [EModelEndpoint.assistants]: 'Assistants',
-  [EModelEndpoint.agents]: 'My Agents',
+  [EModelEndpoint.agents]: 'Agentes',
   [EModelEndpoint.azureAssistants]: 'Azure Assistants',
   [EModelEndpoint.azureOpenAI]: 'Azure OpenAI',
   [EModelEndpoint.google]: 'Google',
@@ -1727,6 +1732,7 @@ export const imageGenTools = new Set([
   'stable-diffusion',
   'flux',
   'gemini_image_gen',
+  'openrouter_gemini_image_gen',
 ]);
 
 /**

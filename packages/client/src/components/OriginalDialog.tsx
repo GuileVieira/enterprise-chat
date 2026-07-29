@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { cn } from '~/utils';
 
 const DialogDepthContext = React.createContext(0);
@@ -75,6 +75,7 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
   showCloseButton?: boolean;
   disableScroll?: boolean;
   overlayClassName?: string;
+  overlayStyle?: React.CSSProperties;
 };
 
 const DialogContent = React.forwardRef<
@@ -85,6 +86,7 @@ const DialogContent = React.forwardRef<
     {
       className,
       overlayClassName,
+      overlayStyle,
       showCloseButton = true,
       children,
       style,
@@ -136,10 +138,10 @@ const DialogContent = React.forwardRef<
 
     return (
       <DialogPortal>
-        <DialogOverlay className={overlayClassName} />
+        <DialogOverlay className={overlayClassName} style={overlayStyle} />
         <DialogPrimitive.Content
           ref={ref}
-          style={{ ...style, zIndex: contentZIndex }}
+          style={{ zIndex: contentZIndex, ...style }}
           onEscapeKeyDown={handleEscapeKeyDown}
           className={cn(
             'max-w-11/12 fixed left-[50%] top-[50%] grid max-h-[90vh] w-full translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-2xl bg-background p-6 text-text-primary shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',

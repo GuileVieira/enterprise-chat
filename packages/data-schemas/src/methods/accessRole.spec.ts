@@ -3,7 +3,8 @@ import { AccessRoleIds, ResourceType, PermissionBits } from 'librechat-data-prov
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import type * as t from '~/types';
 import { createAccessRoleMethods } from './accessRole';
-import accessRoleSchema from '~/schema/accessRole';
+import { createAccessRoleModel } from '~/models/accessRole';
+import { tenantStorage } from '~/config/tenantContext';
 import { RoleBits } from '~/common';
 
 let mongoServer: MongoMemoryServer;
@@ -13,7 +14,7 @@ let methods: ReturnType<typeof createAccessRoleMethods>;
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();
-  AccessRole = mongoose.models.AccessRole || mongoose.model('AccessRole', accessRoleSchema);
+  AccessRole = createAccessRoleModel(mongoose);
   methods = createAccessRoleMethods(mongoose);
   await mongoose.connect(mongoUri);
 });
@@ -181,6 +182,21 @@ describe('AccessRole Model Tests', () => {
       const role = await methods.findRoleByPermissions('agent', customPerm);
       expect(role).toBeNull();
     });
+
+    test('should expose global access roles inside tenant context', async () => {
+      const tenantRole = await tenantStorage.run({ tenantId: 'tenant-2' }, async () =>
+        methods.findRoleByIdentifier(AccessRoleIds.AGENT_VIEWER),
+      );
+      expect(tenantRole).toBeDefined();
+      expect(tenantRole?.accessRoleId).toBe(AccessRoleIds.AGENT_VIEWER);
+
+      const tenantAgentRoles = await tenantStorage.run({ tenantId: 'tenant-2' }, async () =>
+        methods.findRolesByResourceType(ResourceType.AGENT),
+      );
+      expect(tenantAgentRoles.map((role) => role.accessRoleId).sort()).toEqual(
+        [AccessRoleIds.AGENT_EDITOR, AccessRoleIds.AGENT_VIEWER].sort(),
+      );
+    });
   });
 
   describe('seedDefaultRoles', () => {
@@ -197,6 +213,9 @@ describe('AccessRole Model Tests', () => {
           AccessRoleIds.AGENT_EDITOR,
           AccessRoleIds.AGENT_OWNER,
           AccessRoleIds.AGENT_VIEWER,
+          AccessRoleIds.PROJECT_EDITOR,
+          AccessRoleIds.PROJECT_OWNER,
+          AccessRoleIds.PROJECT_VIEWER,
           AccessRoleIds.PROMPTGROUP_EDITOR,
           AccessRoleIds.PROMPTGROUP_OWNER,
           AccessRoleIds.PROMPTGROUP_VIEWER,

@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { EModelEndpoint } from 'librechat-data-provider';
-import { X, Waypoints, PlusCircle, ChevronDown } from 'lucide-react';
+import {
+  CaretDown as ChevronDown,
+  PlusCircle,
+  Circuitry as Waypoints,
+  X,
+} from '@phosphor-icons/react';
 import {
   Label,
   Input,

@@ -14,9 +14,11 @@ import {
   multiConvoPermissionsSchema,
   mcpServersPermissionsSchema,
   peoplePickerPermissionsSchema,
+  metaAdsPermissionsSchema,
   remoteAgentsPermissionsSchema,
   temporaryChatPermissionsSchema,
   fileCitationsPermissionsSchema,
+  projectPermissionsSchema,
 } from './permissions';
 
 /**
@@ -27,6 +29,14 @@ export enum SystemRoles {
    * The Admin role
    */
   ADMIN = 'ADMIN',
+  /**
+   * Tenant-level creator role without admin panel access
+   */
+  OWNER = 'OWNER',
+  /**
+   * Meta Ads manager role without admin panel access
+   */
+  AD_MANAGER = 'AD-MANAGER',
   /**
    * The default user role
    */
@@ -98,6 +108,12 @@ const defaultRolesSchema = z.object({
         [Permissions.SHARE]: z.boolean().default(true),
         [Permissions.SHARE_PUBLIC]: z.boolean().default(true),
       }),
+      [PermissionTypes.PROJECTS]: projectPermissionsSchema.extend({
+        [Permissions.USE]: z.boolean().default(true),
+        [Permissions.CREATE]: z.boolean().default(true),
+        [Permissions.SHARE]: z.boolean().default(true),
+        [Permissions.SHARE_PUBLIC]: z.boolean().default(true),
+      }),
       [PermissionTypes.REMOTE_AGENTS]: remoteAgentsPermissionsSchema.extend({
         [Permissions.USE]: z.boolean().default(true),
         [Permissions.CREATE]: z.boolean().default(true),
@@ -110,7 +126,18 @@ const defaultRolesSchema = z.object({
         [Permissions.SHARE]: z.boolean().default(true),
         [Permissions.SHARE_PUBLIC]: z.boolean().default(true),
       }),
+      [PermissionTypes.META_ADS]: metaAdsPermissionsSchema.extend({
+        [Permissions.USE]: z.boolean().default(true),
+      }),
     }),
+  }),
+  [SystemRoles.OWNER]: roleSchema.extend({
+    name: z.literal(SystemRoles.OWNER),
+    permissions: permissionsSchema,
+  }),
+  [SystemRoles.AD_MANAGER]: roleSchema.extend({
+    name: z.literal(SystemRoles.AD_MANAGER),
+    permissions: permissionsSchema,
   }),
   [SystemRoles.USER]: roleSchema.extend({
     name: z.literal(SystemRoles.USER),
@@ -186,6 +213,12 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.SHARE]: true,
         [Permissions.SHARE_PUBLIC]: true,
       },
+      [PermissionTypes.PROJECTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: true,
+        [Permissions.SHARE_PUBLIC]: true,
+      },
       [PermissionTypes.REMOTE_AGENTS]: {
         [Permissions.USE]: true,
         [Permissions.CREATE]: true,
@@ -198,10 +231,133 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.SHARE]: true,
         [Permissions.SHARE_PUBLIC]: true,
       },
+      [PermissionTypes.META_ADS]: {
+        [Permissions.USE]: true,
+      },
     },
   },
   [SystemRoles.USER]: {
     name: SystemRoles.USER,
+    permissions: {
+      [PermissionTypes.PROMPTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.BOOKMARKS]: {},
+      [PermissionTypes.MEMORIES]: {},
+      [PermissionTypes.AGENTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.MULTI_CONVO]: {},
+      [PermissionTypes.TEMPORARY_CHAT]: {},
+      [PermissionTypes.RUN_CODE]: {},
+      [PermissionTypes.WEB_SEARCH]: {},
+      [PermissionTypes.PEOPLE_PICKER]: {
+        [Permissions.VIEW_USERS]: false,
+        [Permissions.VIEW_GROUPS]: false,
+        [Permissions.VIEW_ROLES]: false,
+      },
+      [PermissionTypes.MARKETPLACE]: {
+        [Permissions.USE]: false,
+      },
+      [PermissionTypes.FILE_SEARCH]: {},
+      [PermissionTypes.FILE_CITATIONS]: {},
+      [PermissionTypes.MCP_SERVERS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.PROJECTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.REMOTE_AGENTS]: {
+        [Permissions.USE]: false,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.SKILLS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.META_ADS]: {
+        [Permissions.USE]: false,
+      },
+    },
+  },
+  [SystemRoles.AD_MANAGER]: {
+    name: SystemRoles.AD_MANAGER,
+    permissions: {
+      [PermissionTypes.PROMPTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.BOOKMARKS]: {},
+      [PermissionTypes.MEMORIES]: {},
+      [PermissionTypes.AGENTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.MULTI_CONVO]: {},
+      [PermissionTypes.TEMPORARY_CHAT]: {},
+      [PermissionTypes.RUN_CODE]: {},
+      [PermissionTypes.WEB_SEARCH]: {},
+      [PermissionTypes.PEOPLE_PICKER]: {
+        [Permissions.VIEW_USERS]: false,
+        [Permissions.VIEW_GROUPS]: false,
+        [Permissions.VIEW_ROLES]: false,
+      },
+      [PermissionTypes.MARKETPLACE]: {
+        [Permissions.USE]: false,
+      },
+      [PermissionTypes.FILE_SEARCH]: {},
+      [PermissionTypes.FILE_CITATIONS]: {},
+      [PermissionTypes.MCP_SERVERS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.PROJECTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.REMOTE_AGENTS]: {
+        [Permissions.USE]: false,
+        [Permissions.CREATE]: false,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.SKILLS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.META_ADS]: {
+        [Permissions.USE]: true,
+      },
+    },
+  },
+  [SystemRoles.OWNER]: {
+    name: SystemRoles.OWNER,
     permissions: {
       [PermissionTypes.PROMPTS]: {
         [Permissions.USE]: true,
@@ -237,6 +393,12 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
       },
+      [PermissionTypes.PROJECTS]: {
+        [Permissions.USE]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.SHARE]: false,
+        [Permissions.SHARE_PUBLIC]: false,
+      },
       [PermissionTypes.REMOTE_AGENTS]: {
         [Permissions.USE]: false,
         [Permissions.CREATE]: false,
@@ -248,6 +410,9 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.CREATE]: true,
         [Permissions.SHARE]: false,
         [Permissions.SHARE_PUBLIC]: false,
+      },
+      [PermissionTypes.META_ADS]: {
+        [Permissions.USE]: true,
       },
     },
   },

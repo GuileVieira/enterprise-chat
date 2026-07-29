@@ -1,0 +1,607 @@
+speaker,text,time
+Marcelo Kuwer,"E aí, não tô te ouvindo.",40.514
+Guilherme Vieira,"E aí, tudo bem?",50.174
+Guilherme Vieira,"Beleza, cê?",53.494
+Marcelo Kuwer,Tudo certo.,54.734
+Guilherme Vieira,As atualizações aí?,57.514
+Marcelo Kuwer,"Não, vamos lá?",60.114
+Marcelo Kuwer,"Vamos lá, vamos lá, vamos lá, tô ansioso pra usar isso aí.",62.834
+Guilherme Vieira,Bastante...,70.349
+Guilherme Vieira,"O Google mudou os barulhinhos agora, tá fazendo uns barulhinhos estranhos.",71.569
+Guilherme Vieira,"Ali, você viu o botãozinho metrics em Tela Cheia?",80.249
+Guilherme Vieira,Pra facilitar.,83.089
+Marcelo Kuwer,E...,84.109
+Marcelo Kuwer,Ficou bem legal.,86.229
+Guilherme Vieira,Aí já facilita.,88.029
+Guilherme Vieira,"Aí, por exemplo, você vê, quando tiver coisa mesclada, muitas campanhas, vários objetivos, clica ali no Resultados Totais.",89.389
+Marcelo Kuwer,Aonde?,96.91
+Marcelo Kuwer,Resultados totais?,97.47
+Guilherme Vieira,"É embaixo, do lado do gasto total.",98.99
+Marcelo Kuwer,Do lado do gasto...,101.71
+Guilherme Vieira,Os números.,103.83
+Guilherme Vieira,Aqui!,104.47
+Marcelo Kuwer,Boa!,105.13
+Marcelo Kuwer,"Ah, boa!",105.81
+Guilherme Vieira,"Aí você seleciona qual a métrica que você quer puxar e aí ele só vai fazer o análise em cima das campanhas, o quanto cada campanha gastou.",107.47
+Guilherme Vieira,"Ele não junta tudo, o saldo, e faz a análise.",118.05
+Marcelo Kuwer,"Tá, eu cliquei aqui então, resultados totais, cliquei em compra, né?",123.235
+Marcelo Kuwer,"Deu 69 reais, 69 compras?",127.495
+Guilherme Vieira,"69, Qual que é o período?",131.875
+Marcelo Kuwer,Sete dias.,135.335
+Guilherme Vieira,É da...?,136.455
+Marcelo Kuwer,Da Mai.,138.635
+Guilherme Vieira,Tá.,140.415
+Guilherme Vieira,Eu acho que...,141.635
+Guilherme Vieira,Tá.,142.495
+Guilherme Vieira,Beleza.,145.895
+Marcelo Kuwer,Quer que eu entre na conta pra ver?,146.655
+Guilherme Vieira,"É, é bom, é bom.",149.055
+Marcelo Kuwer,"Tá, fechou.",150.815
+Guilherme Vieira,"Aí a gente já compara, já vê o que tá pegando de errado.",151.838
+Guilherme Vieira,"Eu coloquei menos peso pra questão de vídeo view lá, que tava juntando e atrapalhando.",155.838
+Guilherme Vieira,"Aí tem uma coisa em relação à questão de frequência, que, por exemplo, de início ele tava pegando a frequência de todos os anúncios e somando.",180.897
+Guilherme Vieira,"Aí eu falei pra ele, não, pega, tipo, o conjunto de anúncios pega a frequência que tá marcada ali, a campanha pega a frequência que tá marcada ali, porque tem muita sobreposição.",193.257
+Guilherme Vieira,"Por exemplo, às vezes a mesma pessoa que viu um anúncio, viu o outro também.",204.269
+Guilherme Vieira,"Só que aí, tipo, esse um anúncio tá com a frequência baixa, o outro anúncio também tá com a frequência baixa, mas por, tipo assim, por ter um monte de anúncios dentro da campanha, ele puxa uma outra frequência.",208.689
+Marcelo Kuwer,"Não tá batendo, ó.",224.549
+Marcelo Kuwer,"Tem 10, 9 com 2 dá 11.",227.729
+Marcelo Kuwer,"15, Tem 16 conversões e lá tá mostrando 69.",233.362
+Guilherme Vieira,"O gasto, vê se o gasto tá batendo.",239.942
+Marcelo Kuwer,"O gasto total 802, vamos ver aqui.",243.682
+Guilherme Vieira,Todas são compras.,248.182
+Marcelo Kuwer,"907, Vamos ver aqui, então talvez ele tá rodando daqui até aqui.",250.042
+Guilherme Vieira,Hoje é 19?,256.862
+Guilherme Vieira,Pega do dia 18 pra ver.,260.262
+Marcelo Kuwer,"Não, tá certo, do dia 19 ao dia 13, 802, tá certinho, isso tá batendo.",262.15
+Marcelo Kuwer,"Aí as conversões da 20 e 3, ele botou 69.",268.73
+Guilherme Vieira,Conversa iniciada.,280.13
+Marcelo Kuwer,"É, porque talvez ele puxe alguma coisa de...",284.51
+Marcelo Kuwer,"O cara clicou numa campanha e iniciou uma conversa no Whats, talvez ele faz esse traqueamento, né?",288.813
+Marcelo Kuwer,"Mas, ó, resultados totais de compra não tá batendo.",295.573
+Marcelo Kuwer,"Até porque ele tá batendo aqui, ó, gastos 754.",301.973
+Marcelo Kuwer,Tá errado aqui.,305.693
+Guilherme Vieira,Clica no link.,307.193
+Guilherme Vieira,"Veja se tem, dentro dos conjuntos de anúncios, veja se tem alguma coisa relacionada a tráfego.",309.033
+Marcelo Kuwer,"Não, não tem nada.",314.393
+Marcelo Kuwer,"É tudo conversão, porque sou eu que subo essas campanhas.",315.333
+Marcelo Kuwer,"O que eu notei aqui é que quando eu vim aqui em completa performance, nome, resultado.",320.926
+Marcelo Kuwer,"Cara, criou a regra de compra automática.",332.286
+Marcelo Kuwer,Ele estava aparecendo duas regras de compra.,335.706
+Marcelo Kuwer,Aparecia compra e compra duas vezes.,339.206
+Marcelo Kuwer,Mas enfim.,341.886
+Guilherme Vieira,Clica...,345.125
+Guilherme Vieira,Cadê?,346.485
+Guilherme Vieira,Ali é o objetivo.,346.945
+Guilherme Vieira,Deixa eu ver.,347.805
+Guilherme Vieira,O objetivo de campanha.,348.025
+Guilherme Vieira,Deixa eu ver se tá aparecendo certo aí pra você.,349.105
+Guilherme Vieira,Ali do lado.,350.845
+Marcelo Kuwer,Vendas.,353.465
+Guilherme Vieira,"É, então.",355.225
+Guilherme Vieira,A gente já puxa por vendas.,356.165
+Marcelo Kuwer,Todos.,358.765
+Guilherme Vieira,Tá.,359.585
+Marcelo Kuwer,"Ordenar, definir por resultado.",360.825
+Guilherme Vieira,"É, vamos ver se tá batendo lá embaixo.",365.905
+Marcelo Kuwer,"Aonde, aqui?",369.458
+Guilherme Vieira,"É, ó, são 1, 2, 3, 4, 5, 6, 7, são 7 que estão ativas.",370.398
+Marcelo Kuwer,"Vamos ver aqui, deixa eu trazer esse cara para o lado aqui.",376.018
+Guilherme Vieira,"Ativas que rodaram, né?",379.478
+Marcelo Kuwer,"2, 3, 4, 5, 5.",381.338
+Guilherme Vieira,"É, teve alguma outra que rodou no período?",384.778
+Guilherme Vieira,"Porque eu falei assim, quando a gente...",387.358
+Marcelo Kuwer,"Ah, tá, teve, teve, ó, teve, deixa eu botar aqui...",389.218
+Marcelo Kuwer,Cadê a TV veiculação?,396.661
+Marcelo Kuwer,"Deixa eu só achar aqui, peraí.",404.381
+Guilherme Vieira,"Do lado, o terceiro botão, tá vendo?",406.641
+Guilherme Vieira,"Tá todos os anúncios, aí tem anúncios ativos.",408.201
+Marcelo Kuwer,Tiveram veiculação.,410.201
+Marcelo Kuwer,"Então, uma, duas, três, quatro, cinco, seis.",412.061
+Guilherme Vieira,Ali tá...,419.02
+Guilherme Vieira,"802, Beleza.",420.46
+Marcelo Kuwer,"2, 3, 4, 5, 6, 7.",422.4
+Marcelo Kuwer,Tem uma mais aqui.,425.04
+Marcelo Kuwer,Se eu conseguir mexer aqui...,426.46
+Marcelo Kuwer,Se bem.,428.36
+Guilherme Vieira,"Que ela tá zero, tá vendo?",428.78
+Guilherme Vieira,A última tá com gasto zerado.,429.88
+Marcelo Kuwer,Então tá certo.,432.48
+Marcelo Kuwer,Provavelmente...,433.68
+Marcelo Kuwer,"Ah, porque assim, o que aconteceu aqui?",435.28
+Marcelo Kuwer,Tá vendo que ela tá marcando um resultado?,439.58
+Marcelo Kuwer,O que acontece com esse resultado?,441.88
+Marcelo Kuwer,Ela teve uma venda...,445.06
+Marcelo Kuwer,"Mesmo com a campanha offline, ele vendeu porque ele pega histórico de acesso de dois, três dias antes de eu desativar a campanha, saca?",447.64
+Marcelo Kuwer,Demorou para pingar aqui a métrica.,456.46
+Marcelo Kuwer,"O erro está aqui, já achei.",460.74
+Marcelo Kuwer,"Resultados, 41.",463.12
+Guilherme Vieira,"Clica nela, vamos abrir para ver.",465.68
+Marcelo Kuwer,Está aparecendo pausada ainda.,468.24
+Marcelo Kuwer,Vamos vir aqui no gerenciador.,472.2
+Marcelo Kuwer,Rend.,475.687
+Marcelo Kuwer,"É renda, né?",477.907
+Marcelo Kuwer,"Olha, ela nem tá aqui.",479.047
+Marcelo Kuwer,Rend.,482.287
+Marcelo Kuwer,Tá aqui.,485.727
+Marcelo Kuwer,Tá desativada.,487.207
+Marcelo Kuwer,E ele tá gerando 41 conversões que não existiram.,488.907
+Guilherme Vieira,Era renda mesmo?,494.387
+Guilherme Vieira,Aham.,496.007
+Marcelo Kuwer,Vou voltar aqui.,496.467
+Guilherme Vieira,Rend.,497.767
+Guilherme Vieira,E tá pausada.,500.127
+Marcelo Kuwer,Campanha pausada.,502.687
+Marcelo Kuwer,Tá vendo?,503.847
+Guilherme Vieira,"A DV Plus, mas no que você mostrou tinha mais anúncios e tem três.",505.117
+Marcelo Kuwer,Será que tem?,511.297
+Marcelo Kuwer,"É que tem um que tá pausado, ele não tá aparecendo.",513.837
+Marcelo Kuwer,E é 41 e 42 o investimento.,515.957
+Marcelo Kuwer,"Resultado é 47 e 20, ele tá aparecendo.",520.457
+Guilherme Vieira,Será que...,528.537
+Guilherme Vieira,"Ah, faz assim.",528.917
+Marcelo Kuwer,"Total, tá certo.",530.237
+Guilherme Vieira,"Ah, tá.",533.652
+Guilherme Vieira,"Clica no anúncio, que aí você vai ver se vai...",534.512
+Guilherme Vieira,Já vê se tá abrindo direto.,536.972
+Marcelo Kuwer,Clica no quê?,539.092
+Guilherme Vieira,No anúncio.,539.972
+Guilherme Vieira,Acho que você tá com a versão antiga.,541.792
+Guilherme Vieira,Você clicou em alguma coisa?,546.672
+Marcelo Kuwer,"Cliquei, mas deixa eu atualizar então.",548.732
+Marcelo Kuwer,"Command Shift R, né?",550.212
+Guilherme Vieira,Isso.,551.772
+Guilherme Vieira,Quero pra abrir um modalzinho e aí...,553.352
+Marcelo Kuwer,"Pode ser que é por isso também que tá dando dado errado, né?",555.412
+Marcelo Kuwer,"Deixa eu abrir aqui na métrica, beleza.",558.452
+Guilherme Vieira,Vamos clicar.,563.437
+Marcelo Kuwer,Nessa aqui que está ativa.,584.877
+Marcelo Kuwer,Não vai.,592.445
+Guilherme Vieira,"É porque assim, ontem eu fiz isso aí que era você clicar e ele já ia direto.",593.365
+Guilherme Vieira,Aí hoje eu fiz para aparecer o modal primeiro com as métricas.,598.125
+Guilherme Vieira,Eu resumi.,602.525
+Guilherme Vieira,E aí depois você consegue cair direto no...,603.765
+Guilherme Vieira,Sim.,608.125
+Guilherme Vieira,Aí aperta FN F12.,609.665
+Marcelo Kuwer,F...,613.085
+Marcelo Kuwer,Calma aí.,615.025
+Marcelo Kuwer,FN F12.,615.885
+Guilherme Vieira,"Tá, do console.",619.428
+Guilherme Vieira,"Clica em algum aí, só pra ver.",622.048
+Guilherme Vieira,No anúncio.,623.888
+Guilherme Vieira,Pra ver se dá algum erro.,626.088
+Guilherme Vieira,Não.,628.768
+Marcelo Kuwer,Pô.,629.408
+Marcelo Kuwer,"Ó, opa.",631.008
+Marcelo Kuwer,"Ah, ele vem pra cá, ó.",633.348
+Marcelo Kuwer,"Mas eu clicando no conjunto, né?",637.448
+Marcelo Kuwer,Deixa eu continuar.,642.293
+Guilherme Vieira,Será que você não bloqueou as pop-ups?,644.093
+Guilherme Vieira,"No anúncio, o que acontece?",650.313
+Guilherme Vieira,"Você clica no anúncio, ele abre um pop-upzinho, um modalzinho, com a miniatura, as métricas, o texto, e aí te dá a opção para abrir no gerenciador.",651.453
+Marcelo Kuwer,"Pode ser, vamos ver porque eu desativo aqui.",664.153
+Guilherme Vieira,"Pega o link e abre, só joga ele no...",668.855
+Marcelo Kuwer,Agora tá pedindo uma chave de segurança que eu não tenho.,672.175
+Guilherme Vieira,Pega o link pra ir no...,674.955
+Guilherme Vieira,É nesse navegador que você logou?,680.275
+Marcelo Kuwer,"Ah, tá.",683.415
+Marcelo Kuwer,"Não, tá errado.",684.175
+Marcelo Kuwer,Não é aqui.,684.975
+Marcelo Kuwer,"Tá certo, não é aqui.",685.735
+Marcelo Kuwer,"Não é esse navegador, foi mal.",687.195
+Marcelo Kuwer,É esse aqui.,688.795
+Marcelo Kuwer,"Deixou logar o orqueste aqui, então.",690.035
+Marcelo Kuwer,"Peraí, é por isso.",692.095
+Marcelo Kuwer,Tá aí o problema.,694.915
+Marcelo Kuwer,"Tá, calma aí, deixa eu pegar o link.",697.593
+Guilherme Vieira,"É orqueste com senho U e ponto headbite, esse tipo de U.",699.713
+Marcelo Kuwer,"Mas deixa eu pegar aqui, porque eu acho que eu não loguei aqui nessa navegação.",704.713
+Guilherme Vieira,"E mudou a senha, agora nem lembro a senha qual que é.",710.033
+Marcelo Kuwer,"Vamos ver se ele vai, peraí.",715.593
+Marcelo Kuwer,"É esse teste, né?",719.473
+Marcelo Kuwer,"O Marcelo, né?",726.314
+Guilherme Vieira,"É, você tem a sua própria conta.",728.114
+Guilherme Vieira,"E eu acho que ontem, ou foi ontem?",730.854
+Guilherme Vieira,Ele sobrescreveu a senha.,734.274
+Guilherme Vieira,Deixa eu ver se eu acho aqui.,737.194
+Marcelo Kuwer,Tem como alterar?,738.954
+Guilherme Vieira,Agora a sua senha.,740.434
+Guilherme Vieira,Você não.,741.694
+Guilherme Vieira,Eu tenho que abrir o sistema.,744.354
+Guilherme Vieira,"Olha, eu acho que é isso aqui.",748.594
+Guilherme Vieira,"É, não tem nem como decorar essa senha.",749.994
+Guilherme Vieira,Eu vou te mandar aqui no...,752.454
+Marcelo Kuwer,"Fechou, vamos ver se é isso.",755.71
+Marcelo Kuwer,"Não, daí é óbvio que não iria abrir, né?",759.37
+Marcelo Kuwer,Porque daí eu não tô logado no navegador certo.,760.97
+Marcelo Kuwer,Não foi possível.,764.13
+Guilherme Vieira,"Ah, meu Deus, vou alguém a senha agora.",767.19
+Guilherme Vieira,Deixa eu ver.,769.27
+Marcelo Kuwer,"Ah, você viu como eu ia em senhas aqui e descobri qual que é a senha aqui?",770.91
+Marcelo Kuwer,Abri aqui senhas.,776.31
+Guilherme Vieira,"É que ontem, lembra que você colocou pra salvar?",777.55
+Guilherme Vieira,"É, tenta aí, vamos ver se...",780.77
+Guilherme Vieira,Como.,782.17
+Marcelo Kuwer,É que vai aqui?,782.33
+Guilherme Vieira,É...,783.554
+Guilherme Vieira,"Gerenciador de senhas, vai ter...",784.414
+Guilherme Vieira,"Ah, licença, não, senha comprometida...",787.094
+Guilherme Vieira,"Local, configuração...",789.814
+Guilherme Vieira,"Ah, licença, boa.",792.374
+Guilherme Vieira,"Aí você digita orqueste, orqueste com...",794.054
+Guilherme Vieira,"Isso, aí.",797.834
+Guilherme Vieira,"Só que aí tem que ver, cadê?",799.694
+Guilherme Vieira,Orqueste...,801.214
+Guilherme Vieira,"Ah, tem um monte de senha.",802.154
+Guilherme Vieira,"Eita, um monte de número.",803.574
+Guilherme Vieira,Orqueste.,806.614
+Guilherme Vieira,"Ah, mas esse aí foi o que a gente fez agora, não foi?",808.214
+Marcelo Kuwer,"Ah, vamos tentar de novo, peraí.",810.874
+Marcelo Kuwer,Não.,819.397
+Guilherme Vieira,Não foi.,819.937
+Marcelo Kuwer,Vou tentar com a de mim aqui.,822.477
+Guilherme Vieira,"É que esse aí, Eduardo, tá vendo?",826.197
+Guilherme Vieira,Sites.,827.417
+Marcelo Kuwer,"É, tá.",828.137
+Marcelo Kuwer,"Esse é outra coisa, né?",828.777
+Guilherme Vieira,Isso.,829.757
+Guilherme Vieira,É que a gente usa o mesmo domínio ali pra tudo.,830.517
+Guilherme Vieira,É só um subdomínio.,833.557
+Guilherme Vieira,"Tem esse Marcelo, tem o...",834.557
+Guilherme Vieira,Cadê?,837.917
+Guilherme Vieira,Tinha um outro lá pra cima.,838.337
+Marcelo Kuwer,"Ah, mas é que o e-mail tá errado lá.",839.837
+Marcelo Kuwer,Peraí.,841.777
+Marcelo Kuwer,"Peraí, cara.",842.417
+Marcelo Kuwer,"Peraí, peraí, peraí.",843.517
+Marcelo Kuwer,Peraí que agora vai.,845.637
+Marcelo Kuwer,Olha aí.,847.297
+Marcelo Kuwer,Boa.,848.257
+Guilherme Vieira,"Aí você vai ali na aba meta, já tá aberto aí o projeto, o link que você abriu já tá lá.",851.425
+Marcelo Kuwer,"Beleza, vamos ver se agora vai dar certo.",858.485
+Marcelo Kuwer,Tá carregando.,861.105
+Guilherme Vieira,Inclusive nos testes...,862.085
+Guilherme Vieira,"Dependendo do que puxava, ele puxava muita informação, a meta falava, reclamava.",865.853
+Guilherme Vieira,"Tá, não foi.",873.393
+Guilherme Vieira,"Mas vê se você tá bloqueado ali, deixa eu ver onde que veio o bloqueio de pop-up.",874.533
+Guilherme Vieira,"Porque, ó, deixa eu mostrar o meu orquestre.",883.233
+Guilherme Vieira,Eu vou na meta.,890.137
+Marcelo Kuwer,"Privacidade e segurança, não é, talvez, aqui?",893.657
+Marcelo Kuwer,Cuxa e terceiro.,896.297
+Guilherme Vieira,Pesquisa o termo.,898.537
+Guilherme Vieira,Qual que é o termo?,902.117
+Guilherme Vieira,Pop-up mesmo.,904.077
+Guilherme Vieira,Pop-up.,905.677
+Guilherme Vieira,"Não, não é modal.",908.217
+Guilherme Vieira,Impedir.,911.677
+Marcelo Kuwer,"Aqui, configurações de sites e pop-ups.",913.977
+Guilherme Vieira,Aí tem que ver...,919.33
+Guilherme Vieira,"Chat, gpt, chat, não...",920.59
+Guilherme Vieira,"Cookies de terceiro, popup e redirecionamento.",924.13
+Guilherme Vieira,Não permitir que o site nem viver.,927.25
+Guilherme Vieira,Veja se tá...,928.73
+Guilherme Vieira,Se tem alguma lista aí.,929.95
+Guilherme Vieira,Não permitir que o site saia.,931.77
+Guilherme Vieira,Talvez seja por isso.,933.93
+Guilherme Vieira,Aí tem algum botão de salvar ali embaixo ou não?,936.73
+Marcelo Kuwer,Deixa eu ver.,940.41
+Guilherme Vieira,"Não, não tem não.",942.331
+Marcelo Kuwer,"É só isso então, né?",943.691
+Guilherme Vieira,"É, mas dá um refresh ali pra ver, vamos ver se vai.",944.951
+Guilherme Vieira,"No orqueste, ctrl shift R, ou ctrl R, command, né?",948.991
+Guilherme Vieira,"Aí, no topo, V agora, no maisinho...",954.111
+Marcelo Kuwer,Não.,963.151
+Guilherme Vieira,"Não, o que é mais estranho é que esse ícone aí...",969.432
+Guilherme Vieira,Eu acho que eu tipei ele.,974.752
+Guilherme Vieira,"Ó, deixa eu ver aqui.",977.952
+Guilherme Vieira,Eu acabei...,980.872
+Marcelo Kuwer,Ele não dá nem aquela opção abrir em uma nova...,981.312
+Guilherme Vieira,Entendeu?,984.732
+Guilherme Vieira,"Sim, sim.",986.072
+Guilherme Vieira,"Ó, deixa eu ver.",987.432
+Guilherme Vieira,Ah!,989.632
+Guilherme Vieira,"Não, eu tenho o Tolkien...",990.992
+Guilherme Vieira,Tá configurado no máquina local.,993.872
+Guilherme Vieira,Eu teria que configurar a máquina...,995.452
+Guilherme Vieira,"Ah, uma coisa sobre o token também, já adiantando.",998.812
+Guilherme Vieira,"Quando você for ali, vai lá em configurações, lá em cima.",1001.812
+Guilherme Vieira,Configurações...,1004.492
+Guilherme Vieira,"Não, essa não.",1005.852
+Guilherme Vieira,"É essa mesmo, ali em cima mesmo.",1007.052
+Guilherme Vieira,"Automação, automated regra.",1009.752
+Guilherme Vieira,"Contas e credenciais, contas e credenciais.",1013.032
+Guilherme Vieira,"Aí você pode colocar o token, tipo, se você definir o token...",1016.012
+Guilherme Vieira,"Isso é meio estranho porque, deixa eu ver, tá diferente do meu.",1021.412
+Marcelo Kuwer,"É porque aqui já tem um token, né?",1025.972
+Guilherme Vieira,"Sim, é, é que aí dá pra você colocar ele global.",1028.748
+Guilherme Vieira,"Ah, coloca, vê se aparece a gerência Arctox.",1034.668
+Guilherme Vieira,"Ah, apareceu, gerência Arctox.",1036.828
+Guilherme Vieira,"Ali no, isso.",1038.268
+Guilherme Vieira,"Ah tá, isso aí.",1039.748
+Guilherme Vieira,Que aí você consegue colocar o global.,1041.148
+Guilherme Vieira,"Não, não consegue colocar o global.",1046.388
+Guilherme Vieira,"Tá, mais um ponto.",1050.128
+Marcelo Kuwer,"Remover token local e usar token global, tá escrito aqui.",1051.988
+Guilherme Vieira,"É, é que ele não tem a opção, era pra ter um inputzinho ali com o token global, pra você inserir o token global, mas não tem.",1055.933
+Guilherme Vieira,"Se bem que, é, pode ser que...",1067.433
+Guilherme Vieira,Eu não sei se você removendo ele.,1069.993
+Marcelo Kuwer,Vai sumir...,1071.693
+Marcelo Kuwer,"Deixa eu abrir uma outra conta de anúncio, uma outra conta aqui, peraí.",1072.673
+Marcelo Kuwer,Deixa eu vir aqui em outro DNA.,1083.507
+Marcelo Kuwer,Cadê aqui?,1087.067
+Guilherme Vieira,Projeto.,1089.107
+Marcelo Kuwer,Seca.,1090.927
+Guilherme Vieira,Cole o token.,1094.707
+Marcelo Kuwer,Nenhum token configurado.,1102.147
+Guilherme Vieira,É porque tinha que ter o token global ali disponível pra você.,1103.787
+Guilherme Vieira,Ele tá com aqueles probleminhas de...,1109.607
+Guilherme Vieira,Permissão?,1112.532
+Guilherme Vieira,Permissão...,1114.752
+Guilherme Vieira,Owner...,1117.532
+Guilherme Vieira,Como é que é o nome?,1119.172
+Guilherme Vieira,Tem que ter...,1120.392
+Guilherme Vieira,Do Token.,1121.192
+Guilherme Vieira,Token...,1122.412
+Guilherme Vieira,Popup...,1124.672
+Guilherme Vieira,Popup...,1126.632
+Guilherme Vieira,"Que aí, esse embaixo aí, depois são os tops de cada.",1128.332
+Marcelo Kuwer,"Coisa, de cada...",1132.772
+Marcelo Kuwer,Tem que ver porque que ele tá puxando esse produto aqui.,1135.685
+Marcelo Kuwer,"1, 2, 3, 4, 5, 6, 7 Campanhas ativas.",1146.145
+Marcelo Kuwer,Vamos ver aqui.,1153.165
+Marcelo Kuwer,"1, 2, 3, 4, 5.",1155.625
+Marcelo Kuwer,Tem 5 campanhas ativas.,1158.565
+Marcelo Kuwer,Mas vamos ver as que tiveram vinculação nesse mesmo período.,1159.885
+Marcelo Kuwer,Comando R aqui pra ele atualizar.,1166.431
+Marcelo Kuwer,Tiveram vinculação.,1170.191
+Guilherme Vieira,Depois veio essa macacão aí?,1173.051
+Marcelo Kuwer,"4, 5, 6.",1175.751
+Marcelo Kuwer,Só 6.,1177.331
+Marcelo Kuwer,E aí ele segue marcando essa de renda.,1178.871
+Guilherme Vieira,"Que o valor bate, mas o...",1182.371
+Marcelo Kuwer,"É, mas não tá certo.",1185.731
+Guilherme Vieira,Ele deve ter visto alguma...,1189.251
+Marcelo Kuwer,É porque ela tá contabilizando...,1192.051
+Marcelo Kuwer,O que acontece?,1195.625
+Marcelo Kuwer,"O valor, valor usado, ok, beleza, 47,20, porque ele está contabilizando uma conversão aqui nesse período que não está aqui, fechou?",1196.545
+Marcelo Kuwer,"Não sei por que ele está com o valor usado, cara, mas não foi usado.",1208.185
+Marcelo Kuwer,"Faz sentido, deixa eu voltar aqui para o dia 12, vamos ver se no dia 12, não, dia 13.",1213.705
+Marcelo Kuwer,"Ó, tá vendo?",1221.697
+Marcelo Kuwer,Ele tá contabilizando valores que ele nem tá gerando...,1222.197
+Marcelo Kuwer,"Ah, gerou alcance, ó.",1226.997
+Marcelo Kuwer,"13, Mas vou medir a 12.",1229.337
+Marcelo Kuwer,Também.,1231.997
+Marcelo Kuwer,"Tipo, ele teve vinculação.",1237.437
+Marcelo Kuwer,"Tá, beleza.",1240.137
+Marcelo Kuwer,Fechou.,1241.797
+Marcelo Kuwer,804.,1242.877
+Marcelo Kuwer,"Agora, porque atualizou o valor de hoje, né?",1245.085
+Marcelo Kuwer,"Então, ok, tá batendo.",1247.905
+Marcelo Kuwer,Daí as conversões deu 23 e não 41 que ele tá marcando.,1249.685
+Marcelo Kuwer,"Onde ele tá tirando essa 41, cara?",1254.945
+Guilherme Vieira,Veja se dá pra mudar as...,1258.445
+Guilherme Vieira,"Clica nela aí pra expandir, pra ver os anúncios.",1263.325
+Guilherme Vieira,Qual anúncio que tá pegando esses 43?,1265.505
+Guilherme Vieira,É no maizinho lá embaixo.,1267.225
+Guilherme Vieira,No maizinho do lado da campanha.,1268.645
+Marcelo Kuwer,No mais do lado da campanha.,1272.068
+Guilherme Vieira,É a renda?,1274.128
+Guilherme Vieira,É isso.,1274.828
+Guilherme Vieira,Só que é a renda.,1275.228
+Guilherme Vieira,Lá embaixo é a renda.,1275.948
+Marcelo Kuwer,Ele tá dizendo que essa aqui tá gastando 41.,1276.828
+Marcelo Kuwer,Beleza.,1284.588
+Marcelo Kuwer,Só que...,1285.628
+Marcelo Kuwer,"Ah, ele tá dando 38 de resultado?",1285.868
+Marcelo Kuwer,Mas não faz sentido.,1288.028
+Marcelo Kuwer,Não teve 38 pra noite.,1288.868
+Guilherme Vieira,"Ah, acho que é vídeo.",1290.208
+Guilherme Vieira,Talvez ele tenha pego.,1292.088
+Guilherme Vieira,Quer ver?,1293.588
+Guilherme Vieira,38.,1293.928
+Guilherme Vieira,"Vídeo, promoção, blusa.",1295.228
+Guilherme Vieira,"Vamos lá nesse vídeo, promoção, blusa.",1296.808
+Guilherme Vieira,Talvez pegue a métrica de engajamento.,1299.44
+Marcelo Kuwer,"Cadê, cadê, cadê?",1302.84
+Marcelo Kuwer,Aqui.,1303.8
+Marcelo Kuwer,Vamos ver aqui.,1305.66
+Marcelo Kuwer,"Visualização de vídeo, né?",1307.22
+Marcelo Kuwer,"75, Né?",1310.6
+Marcelo Kuwer,Então o que tu vai fazer se for isso?,1316
+Marcelo Kuwer,"41, Mais 3 e vai ficar 46.",1318.1
+Marcelo Kuwer,Vamos ver se ele tá batendo lá 46.,1322.16
+Marcelo Kuwer,"É, vai dar 40...",1328.954
+Marcelo Kuwer,Eu acho que é isso.,1330.154
+Marcelo Kuwer,"Não, cadê?",1331.214
+Marcelo Kuwer,Resultado.,1331.794
+Guilherme Vieira,"48, Que é 31, né?",1332.554
+Guilherme Vieira,41.,1334.634
+Marcelo Kuwer,É.,1335.994
+Marcelo Kuwer,"38, 40, 41.",1337.294
+Guilherme Vieira,41.,1340.894
+Marcelo Kuwer,"Tá, mas daí calma aí, vamos ver se agora eu tô puxando do...",1342.614
+Marcelo Kuwer,"Olha,.",1345.134
+Guilherme Vieira,"46, Ele tá batendo a 46.",1345.214
+Guilherme Vieira,"46 Bateu, volta lá.",1346.314
+Guilherme Vieira,46 Na aba vídeo 75 tá batendo.,1348.174
+Guilherme Vieira,"Ó, 46.",1352.434
+Marcelo Kuwer,"Tá, fechou.",1354.283
+Marcelo Kuwer,"E aqui tá 41, o resultado.",1355.243
+Guilherme Vieira,"41, Tem que ver se é alguma coisa de engajamento.",1357.343
+Marcelo Kuwer,"Vamos lá, vamos lá.",1360.983
+Marcelo Kuwer,E daí a gente vai tirar essa métrica.,1362.343
+Guilherme Vieira,"É, aí ela tá atrapalhando.",1365.883
+Guilherme Vieira,"Porque o que eu vi também, às vezes tem métrica que a ideia é a mesma, tipo mensagem.",1368.463
+Guilherme Vieira,A mensagem demora...,1374.643
+Guilherme Vieira,"Tem a mensagem sete dias, mensagem normal e um outro tipo de mensagem.",1378.043
+Marcelo Kuwer,Tem que bater quanto?,1383.022
+Marcelo Kuwer,41.,1384.602
+Marcelo Kuwer,Temos que achar o que tá batendo 41.,1386.802
+Guilherme Vieira,"Ah não, mas é um vídeo só.",1389.542
+Marcelo Kuwer,"É só um, é o total 41.",1391.122
+Marcelo Kuwer,Então o engajamento não é nada.,1392.702
+Marcelo Kuwer,"Tá, deixa eu pegar resultado aqui.",1395.102
+Marcelo Kuwer,Vou pegar aqui.,1398.702
+Marcelo Kuwer,Resultado.,1400.542
+Marcelo Kuwer,Resultado.,1406.422
+Marcelo Kuwer,"Não, não tá marcando nada.",1411.355
+Marcelo Kuwer,Vou limpar.,1413.915
+Marcelo Kuwer,Engajamento.,1416.375
+Marcelo Kuwer,"41, Engajamento.",1418.215
+Marcelo Kuwer,Clics no link.,1419.575
+Guilherme Vieira,"Ah, é 38.",1419.935
+Guilherme Vieira,Clics no link.,1420.875
+Guilherme Vieira,"Ah, já chamo.",1422.195
+Marcelo Kuwer,Pode eliminar o clics no link como resultado.,1423.195
+Marcelo Kuwer,Beleza?,1429.095
+Guilherme Vieira,"Vai lá em cima ali, acho que tem um filtro...",1433.073
+Guilherme Vieira,Cadê a visão?,1438.693
+Guilherme Vieira,"Tem a visão ali, completa.",1441.393
+Guilherme Vieira,"Performance, Criativo...",1444.573
+Marcelo Kuwer,"Criativo, cliquei em Criativo.",1448.473
+Marcelo Kuwer,"É só clicar que ele já vai mudando lá, né?",1453.053
+Marcelo Kuwer,"Tá, beleza, eu botei em Criativo.",1456.933
+Marcelo Kuwer,O que ele tá me trazendo aqui daí?,1458.253
+Marcelo Kuwer,Só pra eu entender.,1459.873
+Guilherme Vieira,"É, aí ele foca mais na parte...",1461.794
+Guilherme Vieira,"Eu acho que ele minimiza, tipo, ele só...",1464.194
+Guilherme Vieira,"Aquela completa tem todas as métricas, aí só tem questão de clique, frequência, resultado e...",1466.894
+Guilherme Vieira,Cadê a renda?,1473.394
+Guilherme Vieira,Veja a renda de novo.,1474.154
+Guilherme Vieira,Abre a renda de novo.,1474.894
+Guilherme Vieira,Vamos ver se...,1476.214
+Guilherme Vieira,61...,1479.314
+Guilherme Vieira,61 Tá ali.,1483.994
+Marcelo Kuwer,Aonde?,1486.347
+Guilherme Vieira,"Ah, é cliques.",1487.187
+Guilherme Vieira,Tá vendo?,1488.827
+Guilherme Vieira,Ele entendeu que o clique no link foi um resultado.,1490.867
+Guilherme Vieira,Provavelmente deve ser aquele secundário.,1494.127
+Marcelo Kuwer,"É, mas ele não pode puxar como resultado.",1496.267
+Marcelo Kuwer,Ele não pode linkar junto com a conversão.,1498.647
+Marcelo Kuwer,"Nem junto com mensagem, entendeu?",1501.887
+Marcelo Kuwer,Ele nunca pode se juntar com a métrica principal.,1504.547
+Marcelo Kuwer,Ele é uma métrica secundária.,1511.347
+Guilherme Vieira,"Vê lá na campanha, nesse vídeo.",1514.123
+Marcelo Kuwer,Aqui na...,1518.163
+Marcelo Kuwer,"Aqui, beleza.",1520.763
+Marcelo Kuwer,O que tu quer?,1522.803
+Guilherme Vieira,É...,1523.623
+Guilherme Vieira,Cadê?,1524.243
+Guilherme Vieira,Coloca em...,1526.063
+Guilherme Vieira,Acho que é editar.,1527.643
+Marcelo Kuwer,Tu quer outra métrica?,1528.943
+Guilherme Vieira,"Não, não.",1532.503
+Guilherme Vieira,Era pra ver a configuração.,1533.223
+Guilherme Vieira,A configuração...,1536.763
+Guilherme Vieira,Do quê?,1539.123
+Guilherme Vieira,"É isso, aí você abre o menuzinho, deixa eu ver como é que tá.",1542.153
+Guilherme Vieira,"budget, campanha, tá, isso aí tá certo, beleza.",1545.213
+Guilherme Vieira,"Só pra ver se, que pode ser alguma coisa que ele alucinou baseado na configuração.",1549.313
+Marcelo Kuwer,"Não, a configuração é compra, é advantage mais, todas elas são compras, sempre, e-commerce.",1554.973
+Guilherme Vieira,"Essa aí não teve compra, né?",1563.044
+Guilherme Vieira,"Essa renda não teve, né?",1566.044
+Marcelo Kuwer,"Não, nesse período não.",1567.304
+Marcelo Kuwer,Ela teve só...,1568.904
+Marcelo Kuwer,Ele está contabilizando como compra porque ela esteve ativa e teve clique no link.,1571.024
+Guilherme Vieira,"Teve clique, aí ele jogou clique como...",1576.444
+Guilherme Vieira,"Tipo assim, está zerada a compra, eu vou considerar clique.",1578.304
+Marcelo Kuwer,"Exatamente, ele deveria não considerar nada.",1581.104
+Marcelo Kuwer,"Não teve compra, elimina ela como métrica.",1584.104
+Marcelo Kuwer,Não tem métrica nenhuma de resultado.,1587.744
+Marcelo Kuwer,"O valor tá batendo, tá certinho.",1591.748
+Marcelo Kuwer,E ele tá mostrando aqui que tá pausada.,1594.028
+Marcelo Kuwer,"São duas coisas que eu pausei, mas que elas tiveram um custo, um gasto.",1601.048
+Marcelo Kuwer,Isso aqui ficou bem legal.,1607.328
+Guilherme Vieira,"É, eu queria que tivesse funcionando o modalzinho, não sei porquê.",1610.699
+Guilherme Vieira,Eu subi antes de testar.,1614.559
+Marcelo Kuwer,"Aí é que eu não entendi, tipo assim, ó, por que que ele tá...",1616.639
+Marcelo Kuwer,"Ó, eu tô com uma campanha de conversão, tá?",1619.399
+Marcelo Kuwer,"Ó, vou voltar aqui, ó, vou eliminar isso aqui.",1623.699
+Guilherme Vieira,"Tem, acho que, um botãozinho pra...",1626.239
+Guilherme Vieira,"Aqui,.",1628.319
+Marcelo Kuwer,"Ó, resultado, vou botar compra.",1628.739
+Marcelo Kuwer,"Ele não deveria aparecer o vídeo aqui, ó?",1630.719
+Marcelo Kuwer,"Porque o objetivo é realmente compra, então ele deveria só vir direto pra compra e aí aparecer o resultado.",1634.003
+Marcelo Kuwer,Aqui tá aparecendo o resultado de 3.591.,1642.843
+Marcelo Kuwer,"Aí eu não sei se ele tá puxando o resultado total, vamos ver aqui.",1649.003
+Marcelo Kuwer,"Não, não, vamos ver se ele não tá puxando o desempenho de...",1652.763
+Marcelo Kuwer,"O resultado, quer ver?",1659.823
+Marcelo Kuwer,Compras.,1661.343
+Marcelo Kuwer,"Ó, valor.",1663.231
+Marcelo Kuwer,Beleza?,1664.651
+Marcelo Kuwer,"Vamos ver quanto ele vai dar o valor total aqui, ó.",1665.391
+Marcelo Kuwer,"3.858, E 21.",1668.371
+Marcelo Kuwer,3.500.,1673.511
+Guilherme Vieira,"Aí, em teoria, é pra ele ter puxado o valor da...",1676.571
+Guilherme Vieira,Quantas pessoas viram o vídeo?,1682.471
+Guilherme Vieira,Independente da quantidade.,1685.291
+Marcelo Kuwer,"Tá, então pera aí.",1687.582
+Marcelo Kuwer,Então deixa eu botar aqui.,1688.842
+Guilherme Vieira,Performance.,1690.302
+Marcelo Kuwer,75%.,1692.042
+Guilherme Vieira,"É, não, na verdade ele, o vídeo viu, ele tá considerando tudo, na verdade.",1693.362
+Guilherme Vieira,Todas as visualizações.,1696.902
+Marcelo Kuwer,"Ah tá, então beleza.",1698.242
+Marcelo Kuwer,"Então esse cara, quando tu clica em e-commerce, ele não tem que puxar isso.",1699.442
+Marcelo Kuwer,Não é relevante.,1705.002
+Guilherme Vieira,Tá.,1706.122
+Guilherme Vieira,Tá.,1708.042
+Guilherme Vieira,"É, eu tinha colocado nas regras a questão da análise por tipo, mas eu vou colocar ele também nos filtros principais.",1712.54
+Marcelo Kuwer,"E daí tu poderia fazer o seguinte, por exemplo, como tu fez aqui a métrica, Tu pode botar, pô, eu quero saber visualização de vídeo, mas tá, ok, não vai interferir nada em outra métrica.",1724.96
+Marcelo Kuwer,"Quando eu clico aqui, ó, em conversas iniciadas, por exemplo, ó, ele não mudou aqui, ó.",1736.321
+Guilherme Vieira,"É, isso aí, na verdade, é que foi assim, ele tava puxando toda, ele puxa bastante dados, né?",1741.381
+Guilherme Vieira,"Aí tava baixando, sei lá, 50 eventos.",1747.601
+Guilherme Vieira,Todos os eventos que tem disponível na API ele tava buscando.,1750.621
+Guilherme Vieira,"Aí eu falei, não, tipo, se o evento não bate, acho que era 10%, tá vendo que tem uma porcentagemzinha de quanto representa, né?",1754.272
+Guilherme Vieira,"Aí eu falei, soma tudo e coloca como outros eventos.",1765.192
+Guilherme Vieira,"Só que agora faz sentido, porque, por exemplo, o resultado de compra foi baixo, mas o resultado de Tá, não, beleza.",1769.512
+Guilherme Vieira,É erro de UX.,1779.09
+Guilherme Vieira,É erro de UX.,1780.41
+Marcelo Kuwer,Olha o que acontece.,1781.21
+Marcelo Kuwer,Olha como ficou legal isso aqui que tu fez.,1782.57
+Marcelo Kuwer,Para e pensa comigo.,1785.73
+Marcelo Kuwer,Eu chego aqui rapidamente e eu bato o olho.,1787.19
+Marcelo Kuwer,Gasto.,1790.07
+Marcelo Kuwer,Resultado.,1791.95
+Marcelo Kuwer,Custo médio por resultado.,1793.67
+Marcelo Kuwer,frequencies.,1797.17
+Marcelo Kuwer,Sabe o que tu pode botar aqui no lugar de frequência?,1798.67
+Marcelo Kuwer,Coloca ROI.,1801.15
+Marcelo Kuwer,No e-commerce.,1802.87
+Marcelo Kuwer,Porque daí o que eu vou fazer?,1810.111
+Marcelo Kuwer,"Eu vou olhar o e-commerce, eu tenho todos os dados que eu preciso.",1811.451
+Marcelo Kuwer,"Pra mim, tipo, dizer assim, pô, legal, em uma linha eu tenho os dados que eu preciso.",1815.916
+Marcelo Kuwer,"Pô, o custo por resultado tá excelente.",1820.116
+Marcelo Kuwer,"Só que, cara, não tá vendendo bem, mas o custo por resultado tá bom, o ROI tá dentro.",1822.656
+Marcelo Kuwer,"Pô, vamos analisar as campanhas agora pra começar a ver onde eu posso começar a botar mais dinheiro.",1826.856
+Marcelo Kuwer,"Ou, pô, o ROI tá tudo ruim aqui.",1831.276
+Marcelo Kuwer,"Legal, então eu já vou ter que olhar as campanhas aqui.",1833.256
+Guilherme Vieira,Entendeu?,1835.676
+Marcelo Kuwer,"E aí, esse mesmo dado aqui, ó, tu tá aqui, ó, gasto, bateu aqui.",1836.676
+Marcelo Kuwer,"Resultado deveria estar aqui, não CTR.",1842.393
+Guilherme Vieira,Beleza?,1846.993
+Marcelo Kuwer,Custo médio por resultado já deveria estar aqui também.,1850.093
+Marcelo Kuwer,Fechou?,1854.173
+Marcelo Kuwer,"Isso pensando em e-commerce, tá?",1854.993
+Marcelo Kuwer,Legal.,1856.873
+Marcelo Kuwer,Aí o ROI eu posso deixar ele do lado do...,1857.753
+Marcelo Kuwer,Na frente do gasto.,1864.733
+Marcelo Kuwer,Primeira métrica pode ser o ROI.,1866.433
+Guilherme Vieira,Certo.,1869.033
+Marcelo Kuwer,"ROE, gasto, resultado e custo por resultado.",1870.152
+Marcelo Kuwer,"Aí eu posso ir para o lado aqui, estou movimentando o mouse, poderia ir para o lado.",1877.572
+Marcelo Kuwer,Vai aparecer o que?,1882.552
+Marcelo Kuwer,"cliques, frequência e CTR.",1886.472
+Guilherme Vieira,Certo.,1901.557
+Marcelo Kuwer,"E aí talvez eu acho que o que eu teria aqui é que daí tipo assim, deixa eu só ver uma coisa.",1903.317
+Marcelo Kuwer,"Eu tô olhando para as métricas aqui, beleza, mas eu não consigo fazer nenhuma alteração nessa janela.",1914.197
+Marcelo Kuwer,Como é que eu faço para voltar para janela inicial?,1924.197
+Guilherme Vieira,A visão completa.,1929.017
+Marcelo Kuwer,"Visão completa, tá onde isso?",1930.683
+Guilherme Vieira,"Ali tem visão, embaixo no filtro, do lado do outro.",1933.163
+Marcelo Kuwer,"Aqui visão, visão completa.",1938.283
+Marcelo Kuwer,"Eu poderia lá, tá muito top isso aqui cara, mas eu deveria ter esse carinha aqui lá dentro desse resultado aqui também.",1941.063
+Marcelo Kuwer,Por quê?,1952.203
+Marcelo Kuwer,"Cliquei aqui e aqui, ele não voltou.",1954.383
+Guilherme Vieira,"Clica em cima desse verdinho de novo, só pra ver.",1960.028
+Marcelo Kuwer,Cliquei.,1967.208

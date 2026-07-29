@@ -1,14 +1,16 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import copy from 'copy-to-clipboard';
 import * as Tabs from '@radix-ui/react-tabs';
-import { Code, Play, RefreshCw, X } from 'lucide-react';
+import { Code, Play, ArrowsOutSimple, ArrowClockwise as RefreshCw, X } from '@phosphor-icons/react';
 import { useSetRecoilState, useResetRecoilState } from 'recoil';
 import { Button, Spinner, useMediaQuery, Radio } from '@librechat/client';
 import type { SandpackPreviewRef } from '@codesandbox/sandpack-react';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useShareContext, useMutationState } from '~/Providers';
 import useArtifacts from '~/hooks/Artifacts/useArtifacts';
+import ShareArtifact from './ShareArtifact';
 import DownloadArtifact from './DownloadArtifact';
+import FullscreenArtifact from './FullscreenArtifact';
 import ArtifactVersion from './ArtifactVersion';
 import ArtifactTabs from './ArtifactTabs';
 import { isCodeOnlyArtifact, isPreviewOnlyArtifact } from '~/utils/artifacts';
@@ -34,6 +36,7 @@ export default function Artifacts() {
   const [isDragging, setIsDragging] = useState(false);
   const [blurAmount, setBlurAmount] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(90);
   const setArtifactsVisible = useSetRecoilState(store.artifactsVisibility);
@@ -329,6 +332,16 @@ export default function Artifacts() {
                 />
               )}
               <CopyButton isCopied={isCopied} iconOnly onClick={handleCopyArtifact} />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9"
+                onClick={() => setIsFullscreenOpen(true)}
+                aria-label={localize('com_ui_fullscreen_artifact')}
+              >
+                <ArrowsOutSimple size={16} aria-hidden="true" />
+              </Button>
+              <ShareArtifact artifact={currentArtifact} />
               <DownloadArtifact artifact={currentArtifact} />
               <Button
                 size="icon"
@@ -381,6 +394,12 @@ export default function Artifacts() {
               />
             </div>
           )}
+          <FullscreenArtifact
+            open={isFullscreenOpen}
+            artifact={currentArtifact}
+            initialTab={displayedTab === 'preview' ? 'preview' : 'code'}
+            onClose={() => setIsFullscreenOpen(false)}
+          />
         </div>
       </div>
     </Tabs.Root>

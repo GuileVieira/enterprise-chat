@@ -18,10 +18,25 @@ import { Panel, isEphemeralAgent } from '~/common';
 
 const AgentPanelContext = createContext<AgentPanelContextType | undefined>(undefined);
 
+const noop = () => undefined;
+
+const fallbackAgentPanelContext: AgentPanelContextType = {
+  setMcp: noop,
+  setMcps: noop,
+  setAction: noop,
+  activePanel: Panel.builder,
+  regularTools: [],
+  mcpServersMap: new Map(),
+  setActivePanel: noop,
+  setCurrentAgentId: noop,
+  availableMCPServers: [],
+  availableMCPServersMap: undefined,
+};
+
 export function useAgentPanelContext() {
   const context = useContext(AgentPanelContext);
   if (context === undefined) {
-    throw new Error('useAgentPanelContext must be used within an AgentPanelProvider');
+    return fallbackAgentPanelContext;
   }
   return context;
 }

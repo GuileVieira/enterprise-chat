@@ -7,7 +7,12 @@ const {
   restoreTenantContextFromReq,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
-const { CacheKeys, EModelEndpoint } = require('librechat-data-provider');
+const {
+  CacheKeys,
+  EModelEndpoint,
+  ResourceType,
+  PermissionBits,
+} = require('librechat-data-provider');
 const {
   createImportLimiters,
   validateConvoAccess,
@@ -17,6 +22,7 @@ const {
 const { forkConversation, duplicateConversation } = require('~/server/utils/import/fork');
 const { storage, importFileFilter } = require('~/server/routes/files/multer');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
+const { checkPermission } = require('~/server/services/PermissionService');
 const { importConversations } = require('~/server/utils/import');
 const getLogStores = require('~/cache/getLogStores');
 const db = require('~/models');
@@ -42,12 +48,15 @@ router.get('/', async (req, res) => {
     tags = Array.isArray(req.query.tags) ? req.query.tags : [req.query.tags];
   }
 
+  const projectId = req.query.projectId ? String(req.query.projectId) : undefined;
+
   try {
     const result = await db.getConvosByCursor(req.user.id, {
       cursor,
       limit,
       isArchived,
       tags,
+      projectId,
       search,
       sortBy,
       sortDirection,
@@ -56,17 +65,6 @@ router.get('/', async (req, res) => {
   } catch (error) {
     logger.error('Error fetching conversations', error);
     res.status(500).json({ error: 'Error fetching conversations' });
-  }
-});
-
-router.get('/:conversationId', async (req, res) => {
-  const { conversationId } = req.params;
-  const convo = await db.getConvo(req.user.id, conversationId);
-
-  if (convo) {
-    res.status(200).json(convo);
-  } else {
-    res.status(404).end();
   }
 });
 
@@ -92,9 +90,18 @@ router.get('/gen_title/:conversationId', async (req, res) => {
     await titleCache.delete(key);
     res.status(200).json({ title });
   } else {
-    res.status(404).json({
-      message: "Title not found or method not implemented for the conversation's endpoint",
-    });
+    res.status(204).end();
+  }
+});
+
+router.get('/:conversationId', async (req, res) => {
+  const { conversationId } = req.params;
+  const convo = await db.getConvo(req.user.id, conversationId);
+
+  if (convo) {
+    res.status(200).json(convo);
+  } else {
+    res.status(404).end();
   }
 });
 
@@ -200,21 +207,43 @@ const MAX_CONVO_TITLE_LENGTH = 1024;
  * @returns {object} 201 - The updated conversation object.
  */
 router.post('/update', validateConvoAccess, async (req, res) => {
-  const { conversationId, title } = req.body?.arg ?? {};
+  const { conversationId, title, projectId } = req.body?.arg ?? {};
 
   if (!conversationId) {
     return res.status(400).json({ error: 'conversationId is required' });
   }
 
-  if (title === undefined) {
-    return res.status(400).json({ error: 'title is required' });
+  if (title === undefined && projectId === undefined) {
+    return res.status(400).json({ error: 'title or projectId is required' });
   }
 
-  if (typeof title !== 'string') {
+  if (title !== undefined && typeof title !== 'string') {
     return res.status(400).json({ error: 'title must be a string' });
   }
 
-  const sanitizedTitle = title.trim().slice(0, MAX_CONVO_TITLE_LENGTH);
+  const updatePayload = { conversationId };
+  if (title !== undefined) {
+    updatePayload.title = title.trim().slice(0, MAX_CONVO_TITLE_LENGTH);
+  }
+  if (projectId !== undefined) {
+    if (projectId !== null) {
+      const project = await db.findProjectById(projectId);
+      if (!project?._id) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+      const allowed = await checkPermission({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        requiredPermission: PermissionBits.VIEW,
+      });
+      if (!allowed) {
+        return res.status(403).json({ error: 'Insufficient project permissions' });
+      }
+    }
+    updatePayload.projectId = projectId;
+  }
 
   try {
     const dbResponse = await db.saveConvo(
@@ -223,7 +252,7 @@ router.post('/update', validateConvoAccess, async (req, res) => {
         isTemporary: req?.body?.isTemporary,
         interfaceConfig: req?.config?.interfaceConfig,
       },
-      { conversationId, title: sanitizedTitle },
+      updatePayload,
       { context: `POST /api/convos/update ${conversationId}` },
     );
     res.status(201).json(dbResponse);

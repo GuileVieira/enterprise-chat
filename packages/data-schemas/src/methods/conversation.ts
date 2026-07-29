@@ -31,6 +31,7 @@ export interface ConversationMethods {
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -275,6 +276,7 @@ export function createConversationMethods(
       limit = 25,
       isArchived = false,
       tags,
+      projectId,
       search,
       sortBy = 'updatedAt',
       sortDirection = 'desc',
@@ -283,6 +285,7 @@ export function createConversationMethods(
       limit?: number;
       isArchived?: boolean;
       tags?: string[];
+      projectId?: string;
       search?: string;
       sortBy?: string;
       sortDirection?: string;
@@ -302,12 +305,20 @@ export function createConversationMethods(
       filters.push({ tags: { $in: tags } } as FilterQuery<IConversation>);
     }
 
+    if (projectId) {
+      filters.push({ projectId } as FilterQuery<IConversation>);
+    }
+
     filters.push({
       $or: [{ expiredAt: null }, { expiredAt: { $exists: false } }],
     } as FilterQuery<IConversation>);
 
     if (search) {
       try {
+        const meiliFilters = [`user = "${user}"`];
+        if (projectId) {
+          meiliFilters.push(`projectId = "${projectId}"`);
+        }
         const meiliResults = await (
           Conversation as unknown as {
             meiliSearch: (
@@ -317,7 +328,7 @@ export function createConversationMethods(
               hits: Array<{ conversationId: string }>;
             }>;
           }
-        ).meiliSearch(search, { filter: `user = "${user}"` });
+        ).meiliSearch(search, { filter: meiliFilters.join(' AND ') });
         const matchingIds = Array.isArray(meiliResults.hits)
           ? meiliResults.hits.map((result) => result.conversationId)
           : [];

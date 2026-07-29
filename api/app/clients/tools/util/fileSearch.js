@@ -30,9 +30,10 @@ const fileSearchJsonSchema = {
  * }>}
  */
 const primeFiles = async (options) => {
-  const { tool_resources, req, agentId } = options;
+  const { tool_resources, req, agentId, projectId, projectFileIds } = options;
   const file_ids = tool_resources?.[EToolResources.file_search]?.file_ids ?? [];
   const agentResourceIds = new Set(file_ids);
+  const projectResourceIds = new Set(projectFileIds ?? []);
   const resourceFiles = tool_resources?.[EToolResources.file_search]?.files ?? [];
 
   // Get all files first
@@ -46,6 +47,8 @@ const primeFiles = async (options) => {
       userId: req.user.id,
       role: req.user.role,
       agentId,
+      projectId,
+      projectFileIds,
     });
   } else {
     dbFiles = allFiles;
@@ -62,7 +65,9 @@ const primeFiles = async (options) => {
       continue;
     }
     if (i === 0) {
-      toolContext = `- Note: Use the ${Tools.file_search} tool to find relevant information within:`;
+      toolContext =
+        `- Note: Use the ${Tools.file_search} tool to find relevant information within the available attached or project files. ` +
+        `When the user asks about anexo, arquivo, documento, PDF, DOCX, attachment, file, document, or asks to summarize available files, call ${Tools.file_search} before answering:`;
     }
     toolContext += `\n\t- ${file.filename}${
       agentResourceIds.has(file.file_id) ? '' : ' (just attached by user)'
@@ -70,6 +75,8 @@ const primeFiles = async (options) => {
     files.push({
       file_id: file.file_id,
       filename: file.filename,
+      projectId: file.projectId || (projectResourceIds.has(file.file_id) ? projectId : undefined),
+      metadata: file.metadata,
     });
   }
 
@@ -80,7 +87,7 @@ const primeFiles = async (options) => {
  *
  * @param {Object} options
  * @param {string} options.userId
- * @param {Array<{ file_id: string; filename: string }>} options.files
+ * @param {Array<{ file_id: string; filename: string; projectId?: string; metadata?: Object }>} options.files
  * @param {string} [options.entity_id]
  * @param {boolean} [options.fileCitations=false] - Whether to include citation instructions
  * @returns
@@ -98,37 +105,58 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
 
       /**
        * @param {import('librechat-data-provider').TFile} file
+       * @param {string | undefined} queryEntityId
        * @returns {{ file_id: string, query: string, k: number, entity_id?: string }}
        */
-      const createQueryBody = (file) => {
+      const createQueryBody = (file, queryEntityId) => {
         const body = {
           file_id: file.file_id,
           query,
           k: 5,
         };
-        if (!entity_id) {
+        if (!queryEntityId) {
           return body;
         }
-        body.entity_id = entity_id;
+        body.entity_id = queryEntityId;
         logger.debug(`[${Tools.file_search}] RAG API /query body`, body);
         return body;
       };
 
-      const queryPromises = files.map((file) =>
-        axios
-          .post(`${process.env.RAG_API_URL}/query`, createQueryBody(file), {
-            headers: {
-              Authorization: `Bearer ${jwtToken}`,
-              'Content-Type': 'application/json',
-            },
-          })
-          .catch((error) => {
-            logger.error('Error encountered in `file_search` while querying file:', error);
-            return null;
-          }),
-      );
+      const queryFile = async (file) => {
+        const queryEntityIds = [
+          ...new Set([
+            ...(file.projectId ? [file.projectId] : []),
+            ...(entity_id ? [entity_id] : []),
+            undefined,
+          ]),
+        ];
+        let emptyResponse = null;
 
-      const results = await Promise.all(queryPromises);
+        for (const queryEntityId of queryEntityIds) {
+          try {
+            const response = await axios.post(
+              `${process.env.RAG_API_URL}/query`,
+              createQueryBody(file, queryEntityId),
+              {
+                headers: {
+                  Authorization: `Bearer ${jwtToken}`,
+                  'Content-Type': 'application/json',
+                },
+              },
+            );
+            if (Array.isArray(response.data) && response.data.length > 0) {
+              return { file, response };
+            }
+            emptyResponse = response;
+          } catch (error) {
+            logger.error('Error encountered in `file_search` while querying file:', error);
+          }
+        }
+
+        return emptyResponse ? { file, response: emptyResponse } : null;
+      };
+
+      const results = await Promise.all(files.map((file) => queryFile(file)));
       const validResults = results.filter((result) => result !== null);
 
       if (validResults.length === 0) {
@@ -136,12 +164,15 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
       }
 
       const formattedResults = validResults
-        .flatMap((result, fileIndex) =>
-          result.data.map(([docInfo, distance]) => ({
-            filename: docInfo.metadata.source.split('/').pop(),
+        .flatMap(({ file, response }) =>
+          response.data.map(([docInfo, distance]) => ({
+            filename:
+              file?.metadata?.imageRag?.sourceImageFileName ??
+              docInfo.metadata.source.split('/').pop(),
             content: docInfo.page_content,
             distance,
-            file_id: files[fileIndex]?.file_id,
+            file_id: file?.file_id,
+            file_metadata: file?.metadata,
             page: docInfo.metadata.page || null,
           })),
         )
@@ -170,6 +201,14 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         content: result.content,
         fileName: result.filename,
         relevance: 1.0 - result.distance,
+        metadata: result.file_metadata?.imageRag
+          ? {
+              imageRag: {
+                ...result.file_metadata.imageRag,
+                derivedTextFileId: result.file_id,
+              },
+            }
+          : undefined,
         pages: result.page ? [result.page] : [],
         pageRelevance: result.page ? { [result.page]: 1.0 - result.distance } : {},
       }));

@@ -33,6 +33,15 @@ jest.mock('~/server/controllers/assistants/helpers', () => ({
   getOpenAIClient: jest.fn(),
 }));
 
+jest.mock('~/server/services/Files/VectorDB/crud', () => ({
+  uploadVectors: jest.fn().mockResolvedValue({
+    bytes: 42,
+    filename: 'caption.txt',
+    filepath: 'vectordb',
+    embedded: true,
+  }),
+}));
+
 jest.mock('~/server/services/Tools/credentials', () => ({
   loadAuthValues: jest.fn(),
 }));
@@ -41,6 +50,8 @@ jest.mock('~/models', () => ({
   createFile: jest.fn().mockResolvedValue({ file_id: 'created-file-id' }),
   updateFileUsage: jest.fn(),
   deleteFiles: jest.fn(),
+  addProjectFileId: jest.fn(),
+  updateFile: jest.fn(),
   addAgentResourceFile: jest.fn().mockResolvedValue({}),
   removeAgentResourceFiles: jest.fn(),
 }));
@@ -78,6 +89,7 @@ const {
 const { mergeFileConfig } = require('librechat-data-provider');
 const { checkCapability } = require('~/server/services/Config');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { uploadVectors } = require('~/server/services/Files/VectorDB/crud');
 const db = require('~/models');
 const { processAgentFileUpload, processFileURL } = require('./process');
 
@@ -130,12 +142,240 @@ describe('processAgentFileUpload', () => {
     mockRes.status.mockReturnThis();
     mockRes.json.mockReturnValue({});
     checkCapability.mockResolvedValue(true);
+    db.createFile.mockResolvedValue({ file_id: 'created-file-id' });
+    db.addProjectFileId.mockResolvedValue({});
+    db.updateFile.mockResolvedValue({});
     getStrategyFunctions.mockReturnValue({
       handleFileUpload: jest
         .fn()
-        .mockResolvedValue({ text: 'extracted text', bytes: 42, filepath: 'doc://result' }),
+        .mockResolvedValue({ text: 'OCR text from image', bytes: 42, filepath: 'ocr://result' }),
+      handleImageUpload: jest.fn().mockResolvedValue({
+        filepath: '/images/upload.png',
+        bytes: 123,
+        width: 640,
+        height: 480,
+      }),
     });
     mergeFileConfig.mockReturnValue(makeFileConfig());
+  });
+
+  describe('image file_search uploads', () => {
+    const fs = require('fs');
+    let createReadStreamSpy;
+    let readFileSpy;
+    let writeFileSpy;
+    let unlinkSpy;
+    const originalFetch = global.fetch;
+    const originalOpenRouterKey = process.env.OPENROUTER_KEY;
+    const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
+    const originalImageRagModel = process.env.IMAGE_RAG_OCR_MODEL;
+
+    beforeEach(() => {
+      process.env.OPENROUTER_KEY = 'test-openrouter-key';
+      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.IMAGE_RAG_OCR_MODEL;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          choices: [{ message: { content: 'OCR text from OpenRouter' } }],
+        }),
+      });
+      createReadStreamSpy = jest
+        .spyOn(fs, 'createReadStream')
+        .mockImplementation(() => require('stream').Readable.from(Buffer.from('caption')));
+      readFileSpy = jest.spyOn(fs.promises, 'readFile').mockResolvedValue(Buffer.from('image'));
+      writeFileSpy = jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
+      unlinkSpy = jest.spyOn(fs.promises, 'unlink').mockResolvedValue();
+    });
+
+    afterEach(() => {
+      createReadStreamSpy.mockRestore();
+      readFileSpy.mockRestore();
+      writeFileSpy.mockRestore();
+      unlinkSpy.mockRestore();
+      global.fetch = originalFetch;
+      if (originalOpenRouterKey === undefined) {
+        delete process.env.OPENROUTER_KEY;
+      } else {
+        process.env.OPENROUTER_KEY = originalOpenRouterKey;
+      }
+      if (originalOpenRouterApiKey === undefined) {
+        delete process.env.OPENROUTER_API_KEY;
+      } else {
+        process.env.OPENROUTER_API_KEY = originalOpenRouterApiKey;
+      }
+      if (originalImageRagModel === undefined) {
+        delete process.env.IMAGE_RAG_OCR_MODEL;
+      } else {
+        process.env.IMAGE_RAG_OCR_MODEL = originalImageRagModel;
+      }
+    });
+
+    test('stores the image, extracts OCR text, and indexes the saved image record for file_search', async () => {
+      mergeFileConfig.mockReturnValue(makeFileConfig({ ocrSupportedMimeTypes: ['image/png'] }));
+      const req = makeReq({
+        mimetype: 'image/png',
+        ocrConfig: { strategy: FileSources.mistral_ocr },
+      });
+      req.file.originalname = 'landing.png';
+      req.file.size = 123;
+      db.createFile.mockResolvedValueOnce({
+        file_id: 'image-file-id',
+        filename: 'landing.png',
+      });
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'image-file-id',
+        },
+      });
+
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'image-file-id',
+          filename: 'landing.png',
+          embedded: false,
+          type: 'image/png',
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({ kind: 'ocr_text' }),
+          }),
+        }),
+        true,
+      );
+      expect(db.createFile).toHaveBeenCalledTimes(1);
+      expect(uploadVectors).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'image-file-id',
+          file: expect.objectContaining({
+            originalname: 'landing.png.ocr.txt',
+            mimetype: 'text/plain',
+          }),
+        }),
+      );
+      expect(db.updateFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'image-file-id',
+          embedded: true,
+          text: expect.stringContaining('OCR text from OpenRouter'),
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              status: 'ready',
+              source: 'openrouter:google/gemini-3.1-flash-lite',
+            }),
+          }),
+        }),
+      );
+      expect(db.addAgentResourceFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'image-file-id',
+        }),
+      );
+      expect(getStrategyFunctions).not.toHaveBeenCalledWith(FileSources.mistral_ocr);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://openrouter.ai/api/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer test-openrouter-key',
+          }),
+          body: expect.any(String),
+        }),
+      );
+      const openRouterBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+      expect(openRouterBody).toEqual(
+        expect.objectContaining({
+          model: 'google/gemini-3.1-flash-lite',
+          temperature: 0,
+          max_tokens: 2000,
+        }),
+      );
+      expect(openRouterBody.messages[0].content[1].image_url.url).toBe(
+        'data:image/png;base64,aW1hZ2U=',
+      );
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
+
+    test('links only the original image to the project for file_search', async () => {
+      mergeFileConfig.mockReturnValue(makeFileConfig({ ocrSupportedMimeTypes: ['image/png'] }));
+      const req = makeReq({
+        mimetype: 'image/png',
+        ocrConfig: { strategy: FileSources.mistral_ocr },
+      });
+      req.body.projectId = 'project-123';
+      req.file.originalname = 'wireframe.png';
+      req.file.size = 123;
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          tool_resource: EToolResources.file_search,
+          file_id: 'project-image-id',
+        },
+      });
+
+      expect(db.addProjectFileId).toHaveBeenCalledWith('project-123', 'project-image-id');
+      expect(db.addProjectFileId).toHaveBeenCalledTimes(1);
+    });
+
+    test('saves the image without RAG when OCR extraction fails', async () => {
+      mergeFileConfig.mockReturnValue(makeFileConfig({ ocrSupportedMimeTypes: ['image/png'] }));
+      const req = makeReq({
+        mimetype: 'image/png',
+        ocrConfig: { strategy: FileSources.mistral_ocr },
+      });
+      req.file.originalname = 'photo.png';
+      req.file.size = 123;
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        statusText: 'Bad Request',
+        json: jest.fn().mockResolvedValue({ error: { message: 'OCR failed' } }),
+      });
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          tool_resource: EToolResources.file_search,
+          file_id: 'failed-image-id',
+        },
+      });
+
+      expect(db.createFile).toHaveBeenCalledTimes(1);
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'failed-image-id',
+          embedded: false,
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              status: 'failed',
+              kind: 'ocr_text',
+            }),
+          }),
+        }),
+        true,
+      );
+      expect(db.updateFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file_id: 'failed-image-id',
+          metadata: expect.objectContaining({
+            imageRag: expect.objectContaining({
+              status: 'failed',
+              error: expect.any(String),
+            }),
+          }),
+        }),
+      );
+      expect(db.addAgentResourceFile).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+    });
   });
 
   describe('OCR strategy selection', () => {

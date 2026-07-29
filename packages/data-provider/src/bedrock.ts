@@ -229,6 +229,7 @@ export const bedrockInputSchema = s.tConversationSchema
     /* Catch-all fields */
     topK: true,
     additionalModelRequestFields: true,
+    projectId: true,
   })
   .transform((obj) => {
     if ((obj as AnthropicInput).additionalModelRequestFields?.thinking != null) {

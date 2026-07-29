@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
-import { MCPIcon, AttachmentIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
-  Bot,
+  BookmarkSimple,
   Brain,
-  Bookmark,
-  NotebookPen,
-  ScrollText,
-  ArrowRightToLine,
+  Folder,
+  NotePencil,
+  Paperclip,
+  Robot,
+  SidebarSimple,
   SlidersHorizontal,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
+import { MCPIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
   Permissions,
   EModelEndpoint,
@@ -19,12 +20,6 @@ import {
 } from 'librechat-data-provider';
 import type { TInterfaceConfig, TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
-import {
-  useAgentCapabilities,
-  useMCPServerManager,
-  useGetAgentsConfig,
-  useHasAccess,
-} from '~/hooks';
 import MCPBuilderPanel from '~/components/SidePanel/MCPBuilder/MCPBuilderPanel';
 import AgentPanelSwitch from '~/components/SidePanel/Agents/AgentPanelSwitch';
 import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
@@ -32,8 +27,9 @@ import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
+import ProjectsPanel from '~/components/SidePanel/Projects/ProjectsPanel';
+import { useHasAccess, useMCPServerManager } from '~/hooks';
 import { PromptsAccordion } from '~/components/Prompts';
-import { SkillsAccordion } from '~/components/Skills';
 
 export default function useSideNavLinks({
   hidePanel,
@@ -54,10 +50,6 @@ export default function useSideNavLinks({
 }) {
   const hasAccessToPrompts = useHasAccess({
     permissionType: PermissionTypes.PROMPTS,
-    permission: Permissions.USE,
-  });
-  const hasAccessToSkills = useHasAccess({
-    permissionType: PermissionTypes.SKILLS,
     permission: Permissions.USE,
   });
   const hasAccessToBookmarks = useHasAccess({
@@ -88,10 +80,11 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.MCP_SERVERS,
     permission: Permissions.CREATE,
   });
+  const hasAccessToProjects = useHasAccess({
+    permissionType: PermissionTypes.PROJECTS,
+    permission: Permissions.USE,
+  });
   const { availableMCPServers } = useMCPServerManager();
-
-  const { agentsConfig } = useGetAgentsConfig({ endpointsConfig });
-  const { skillsEnabled } = useAgentCapabilities(agentsConfig?.capabilities);
 
   const Links = useMemo(() => {
     const links: NavLink[] = [];
@@ -105,7 +98,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_sidepanel_agent_builder',
         label: '',
-        icon: Bot,
+        icon: Robot,
         id: EModelEndpoint.agents,
         Component: AgentPanelSwitch,
       });
@@ -130,21 +123,11 @@ export default function useSideNavLinks({
       });
     }
 
-    if (hasAccessToSkills && skillsEnabled) {
-      links.push({
-        title: 'com_ui_skills',
-        label: '',
-        icon: ScrollText,
-        id: 'skills',
-        Component: SkillsAccordion,
-      });
-    }
-
     if (hasAccessToPrompts) {
       links.push({
         title: 'com_ui_prompts',
         label: '',
-        icon: NotebookPen,
+        icon: NotePencil,
         id: 'prompts',
         Component: PromptsAccordion,
       });
@@ -164,7 +147,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_sidepanel_conversation_tags',
         label: '',
-        icon: Bookmark,
+        icon: BookmarkSimple,
         id: 'bookmarks',
         Component: BookmarkPanel,
       });
@@ -173,7 +156,7 @@ export default function useSideNavLinks({
     links.push({
       title: 'com_sidepanel_attach_files',
       label: '',
-      icon: AttachmentIcon,
+      icon: Paperclip,
       id: 'files',
       Component: FilesPanel,
     });
@@ -206,11 +189,21 @@ export default function useSideNavLinks({
       });
     }
 
+    if (hasAccessToProjects) {
+      links.push({
+        title: 'com_ui_projects',
+        label: '',
+        icon: Folder,
+        id: 'projects',
+        Component: ProjectsPanel,
+      });
+    }
+
     if (includeHidePanel && hidePanel) {
       links.push({
         title: 'com_sidepanel_hide_panel',
         label: '',
-        icon: ArrowRightToLine,
+        icon: SidebarSimple,
         onClick: hidePanel,
         id: 'hide-panel',
       });
@@ -224,8 +217,6 @@ export default function useSideNavLinks({
     hasAccessToAgents,
     hasAccessToCreateAgents,
     hasAccessToPrompts,
-    hasAccessToSkills,
-    skillsEnabled,
     hasAccessToMemories,
     hasAccessToReadMemories,
     interfaceConfig.parameters,
@@ -234,6 +225,7 @@ export default function useSideNavLinks({
     availableMCPServers,
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
+    hasAccessToProjects,
     includeHidePanel,
     hidePanel,
   ]);

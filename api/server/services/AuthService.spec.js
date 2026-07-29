@@ -121,7 +121,7 @@ describe('setOpenIDAuthTokens', () => {
       expect(result).toBe('the-id-token');
     });
 
-    it('should return access_token when id_token is not available', () => {
+    it('should not return access_token when id_token is not available', () => {
       const tokenset = {
         access_token: 'the-access-token',
         refresh_token: 'the-refresh-token',
@@ -130,10 +130,10 @@ describe('setOpenIDAuthTokens', () => {
       const res = mockResponse();
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
-      expect(result).toBe('the-access-token');
+      expect(result).toBeUndefined();
     });
 
-    it('should return access_token when id_token is undefined', () => {
+    it('should not return access_token when id_token is undefined', () => {
       const tokenset = {
         id_token: undefined,
         access_token: 'the-access-token',
@@ -143,10 +143,10 @@ describe('setOpenIDAuthTokens', () => {
       const res = mockResponse();
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
-      expect(result).toBe('the-access-token');
+      expect(result).toBeUndefined();
     });
 
-    it('should return access_token when id_token is null', () => {
+    it('should not return access_token when id_token is null', () => {
       const tokenset = {
         id_token: null,
         access_token: 'the-access-token',
@@ -156,7 +156,7 @@ describe('setOpenIDAuthTokens', () => {
       const res = mockResponse();
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
-      expect(result).toBe('the-access-token');
+      expect(result).toBeUndefined();
     });
 
     it('should return id_token even when id_token and access_token differ', () => {
@@ -219,7 +219,7 @@ describe('setOpenIDAuthTokens', () => {
       expect(req.session.openidTokens.lastRefreshedAt).toEqual(expect.any(Number));
     });
 
-    it('should fall back to access_token when the existing session id_token is expired', () => {
+    it('should not fall back to access_token when the existing session id_token is expired', () => {
       const expiredIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) - 60 },
         'idp-signing-secret',
@@ -239,12 +239,12 @@ describe('setOpenIDAuthTokens', () => {
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
 
-      expect(result).toBe('new-access-token');
+      expect(result).toBeUndefined();
       expect(req.session.openidTokens.idToken).toBe(expiredIdToken);
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
     });
 
-    it('should fall back to access_token when the existing session id_token is near expiry', () => {
+    it('should not fall back to access_token when the existing session id_token is near expiry', () => {
       const nearExpiryIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) + 10 },
         'idp-signing-secret',
@@ -264,7 +264,7 @@ describe('setOpenIDAuthTokens', () => {
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
 
-      expect(result).toBe('new-access-token');
+      expect(result).toBeUndefined();
       expect(req.session.openidTokens.idToken).toBe(nearExpiryIdToken);
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
     });

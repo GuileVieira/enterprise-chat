@@ -28,6 +28,8 @@ export type TFilterFilesByAgentAccess = (params: {
   userId: string;
   role?: string;
   agentId: string;
+  projectId?: string;
+  projectFileIds?: string[];
 }) => Promise<Array<TFile>>;
 
 /**

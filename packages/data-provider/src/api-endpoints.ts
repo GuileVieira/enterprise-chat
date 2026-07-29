@@ -70,7 +70,9 @@ export const messagesBranch = () => `${messagesRoot}/branch`;
 
 const shareRoot = `${BASE_URL}/api/share`;
 export const shareMessages = (shareId: string) => `${shareRoot}/${shareId}`;
-export const getSharedLink = (conversationId: string) => `${shareRoot}/link/${conversationId}`;
+export const tenantShareMessages = (shareId: string) => `${shareRoot}/tenant/${shareId}`;
+export const getSharedLink = (conversationId: string, targetMessageId?: string) =>
+  `${shareRoot}/link/${conversationId}${targetMessageId ? `?targetMessageId=${encodeURIComponent(targetMessageId)}` : ''}`;
 export const getSharedLinks = (
   pageSize: number,
   isPublic: boolean,
@@ -83,6 +85,9 @@ export const getSharedLinks = (
     search ? `&search=${search}` : ''
   }${cursor ? `&cursor=${cursor}` : ''}`;
 export const createSharedLink = (conversationId: string) => `${shareRoot}/${conversationId}`;
+export const createTenantSharedLink = (conversationId: string) =>
+  `${shareRoot}/tenant/${conversationId}`;
+export const forkTenantSharedLink = (shareId: string) => `${shareRoot}/tenant/${shareId}/fork`;
 export const updateSharedLink = (shareId: string) => `${shareRoot}/${shareId}`;
 
 const keysEndpoint = `${BASE_URL}/api/keys`;
@@ -126,6 +131,59 @@ export const forkConversation = () => `${conversationsRoot}/fork`;
 
 export const duplicateConversation = () => `${conversationsRoot}/duplicate`;
 
+const projectsRoot = `${BASE_URL}/api/projects`;
+
+export const projects = () => projectsRoot;
+export const projectById = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}`;
+export const archiveProject = (id: string) => `${projectsRoot}/${encodeURIComponent(id)}/archive`;
+export const projectMeetings = (id: string) => `${projectById(id)}/meetings`;
+export const projectMeeting = (id: string, meetingId: string) =>
+  `${projectMeetings(id)}/${encodeURIComponent(meetingId)}`;
+export const projectMeetingSpeakers = (id: string, meetingId: string) =>
+  `${projectMeeting(id, meetingId)}/speakers`;
+export const projectMeetingIndex = (id: string, meetingId: string) =>
+  `${projectMeeting(id, meetingId)}/index`;
+export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
+export const projectMetaAdsRankings = (id: string) => `${projectMetaAds(id)}/rankings`;
+export const projectMetaAdsPerformance = (id: string) => `${projectMetaAds(id)}/performance`;
+export const projectMetaAdsRulePerformance = (id: string) =>
+  `${projectMetaAds(id)}/rules/performance`;
+export const projectMetaAdsRuleHistory = (id: string) => `${projectMetaAds(id)}/rules/history`;
+export const projectMetaAdsRuns = (id: string) => `${projectMetaAds(id)}/runs`;
+export const projectMetaAdsDiary = (id: string, kind?: string, scope?: 'project') => {
+  const query = new URLSearchParams();
+  if (kind) query.set('kind', kind);
+  if (scope) query.set('scope', scope);
+  const search = query.toString();
+  return `${projectMetaAds(id)}/diary${search ? `?${search}` : ''}`;
+};
+export const projectMetaAdsDiaryWeek = (id: string, date: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(date)}`;
+export const projectMetaAdsDiaryComplete = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/complete`;
+export const projectMetaAdsDiaryReopen = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/reopen`;
+export const projectMetaAdsDiaryReprocess = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}/reprocess`;
+export const projectMetaAdsDiaryDelete = (id: string, entryId: string) =>
+  `${projectMetaAdsDiary(id)}/${encodeURIComponent(entryId)}`;
+export const projectMetaAdsSettings = (id: string) => `${projectMetaAds(id)}/settings`;
+export const projectMetaAdsTenantToken = (id: string) => `${projectMetaAds(id)}/tenant-token`;
+export const projectMetaAdsRun = (id: string) => `${projectMetaAds(id)}/run`;
+export const projectMetaAdsBudget = (id: string) => `${projectMetaAds(id)}/budget`;
+export const projectMetaAdsDuplicate = (id: string) => `${projectMetaAds(id)}/duplicates`;
+export const projectMetaAdsEntityStatus = (
+  id: string,
+  entityLevel: 'campaign' | 'adset' | 'ad',
+  entityId: string,
+) => {
+  const path =
+    entityLevel === 'campaign' ? 'campaigns' : entityLevel === 'adset' ? 'adsets' : 'ads';
+  return `${projectMetaAds(id)}/${path}/${encodeURIComponent(entityId)}/status`;
+};
+export const projectMetaAdsApply = (id: string, recommendationId: string) =>
+  `${projectMetaAds(id)}/recommendations/${encodeURIComponent(recommendationId)}/apply`;
+
 export const search = (q: string, cursor?: string | null) =>
   `${BASE_URL}/api/search?q=${q}${cursor ? `&cursor=${cursor}` : ''}`;
 
@@ -140,6 +198,8 @@ export const aiEndpoints = () => `${BASE_URL}/api/endpoints`;
 export const models = () => `${BASE_URL}/api/models`;
 
 export const tokenizer = () => `${BASE_URL}/api/tokenizer`;
+
+export const promptImprove = () => `${BASE_URL}/api/prompt/improve`;
 
 export const login = () => `${BASE_URL}/api/auth/login`;
 
@@ -278,10 +338,14 @@ export const mcp = {
 export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${serverName}`;
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
+export const cloneAgentToTenant = (agent_id: string) =>
+  `${agents({ path: `${agent_id}/clone-to-tenant` })}`;
 
 export const files = () => `${BASE_URL}/api/files`;
 export const fileUpload = () => `${BASE_URL}/api/files`;
 export const fileDelete = () => `${BASE_URL}/api/files`;
+export const projectFiles = (projectId: string) =>
+  `${BASE_URL}/api/files?projectId=${encodeURIComponent(projectId)}`;
 export const fileDownload = (userId: string, fileId: string) =>
   `${BASE_URL}/api/files/download/${userId}/${fileId}`;
 /* Deferred-preview lifecycle endpoint. Returns
@@ -361,6 +425,9 @@ export const deletePrompt = ({ _id, groupId }: { _id: string; groupId: string })
 };
 
 export const getCategories = () => `${BASE_URL}/api/categories`;
+export const postCategory = getCategories;
+export const updateCategory = (_id: string) => `${getCategories()}/${encodeURIComponent(_id)}`;
+export const deleteCategory = (_id: string) => `${getCategories()}/${encodeURIComponent(_id)}`;
 
 export const getAllPromptGroups = () => `${prompts()}/all`;
 
@@ -418,12 +485,53 @@ export const updateAgentPermissions = (roleName: string) => `${getRole(roleName)
 export const updatePeoplePickerPermissions = (roleName: string) =>
   `${getRole(roleName)}/people-picker`;
 export const updateMCPServersPermissions = (roleName: string) => `${getRole(roleName)}/mcp-servers`;
+export const updateFileSearchPermissions = (roleName: string) => `${getRole(roleName)}/file-search`;
+export const updateFileCitationsPermissions = (roleName: string) =>
+  `${getRole(roleName)}/file-citations`;
+export const updateProjectPermissions = (roleName: string) => `${getRole(roleName)}/projects`;
 export const updateRemoteAgentsPermissions = (roleName: string) =>
   `${getRole(roleName)}/remote-agents`;
 
 export const updateMarketplacePermissions = (roleName: string) =>
   `${getRole(roleName)}/marketplace`;
 export const updateSkillPermissions = (roleName: string) => `${getRole(roleName)}/skills`;
+export const updateMetaAdsPermissions = (roleName: string) => `${getRole(roleName)}/meta-ads`;
+
+/* Admin Users */
+export const adminUsers = () => `${BASE_URL}/api/admin/users`;
+export const adminUsersSearch = (q: string) => `${adminUsers()}/search?q=${encodeURIComponent(q)}`;
+
+/* Admin Groups */
+export const adminGroups = () => `${BASE_URL}/api/admin/groups`;
+export const adminGroupById = (id: string) => `${adminGroups()}/${encodeURIComponent(id)}`;
+export const adminGroupMembers = (id: string) => `${adminGroupById(id)}/members`;
+
+/* Admin Config */
+export const adminConfigs = () => `${BASE_URL}/api/admin/config`;
+export const adminConfigBase = () => `${adminConfigs()}/base`;
+export const adminConfigByPrincipal = (principalType: string, principalId: string) =>
+  `${adminConfigs()}/${encodeURIComponent(principalType)}/${encodeURIComponent(principalId)}`;
+export const adminConfigActive = (principalType: string, principalId: string) =>
+  `${adminConfigByPrincipal(principalType, principalId)}/active`;
+
+/* Admin Overview */
+export const adminOverview = () => `${BASE_URL}/api/admin/overview`;
+
+/* Admin Tenants */
+export const adminTenants = () => `${BASE_URL}/api/admin/tenants`;
+export const adminTenantUsers = (tenantId: string) =>
+  `${adminTenants()}/${encodeURIComponent(tenantId)}/users`;
+export const adminTenantStats = (tenantId: string) =>
+  `${adminTenants()}/${encodeURIComponent(tenantId)}/stats`;
+
+/* Admin Functions */
+export const adminFunctions = () => `${BASE_URL}/api/admin/functions`;
+export const adminFunctionById = (id: string) => `${adminFunctions()}/${encodeURIComponent(id)}`;
+export const adminFunctionToggle = (id: string) => `${adminFunctionById(id)}/toggle`;
+
+/* Admin Secrets */
+export const adminSecrets = () => `${BASE_URL}/api/admin/secrets`;
+export const adminSecretByName = (name: string) => `${adminSecrets()}/${encodeURIComponent(name)}`;
 
 /* Conversation Tags */
 export const conversationTags = (tag?: string) =>

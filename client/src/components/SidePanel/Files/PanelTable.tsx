@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { ArrowUpLeft } from 'lucide-react';
+import { ArrowUpLeft } from '@phosphor-icons/react';
 import {
   Table,
   Button,

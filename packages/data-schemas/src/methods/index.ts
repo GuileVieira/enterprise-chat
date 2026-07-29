@@ -28,6 +28,7 @@ import { createBannerMethods, type BannerMethods } from './banner';
 import { createToolCallMethods, type ToolCallMethods } from './toolCall';
 import { createCategoriesMethods, type CategoriesMethods } from './categories';
 import { createPresetMethods, type PresetMethods } from './preset';
+import { createProjectMethods, type ProjectMethods } from './project';
 /* Tier 2 — Moderate (service deps injected) */
 import { createConversationTagMethods, type ConversationTagMethods } from './conversationTag';
 import { createMessageMethods, type MessageMethods } from './message';
@@ -62,6 +63,9 @@ import {
 import { createAgentMethods, type AgentMethods, type AgentDeps } from './agent';
 /* Config */
 import { createConfigMethods, type ConfigMethods } from './config';
+/* Tenant Functions */
+import { createTenantFunctionMethods, type TenantFunctionMethods } from './tenantFunction';
+import { createTenantSecretMethods, type TenantSecretMethods } from './tenantSecret';
 
 export { RoleConflictError, DEFAULT_REFRESH_TOKEN_EXPIRY, DEFAULT_SESSION_EXPIRY };
 export { tokenValues, cacheTokenValues, premiumTokenValues, defaultRate };
@@ -89,6 +93,7 @@ export type AllMethods = UserMethods &
   ToolCallMethods &
   CategoriesMethods &
   PresetMethods &
+  ProjectMethods &
   ConversationTagMethods &
   MessageMethods &
   ConversationMethods &
@@ -98,7 +103,9 @@ export type AllMethods = UserMethods &
   PromptMethods &
   SkillMethods &
   AgentMethods &
-  ConfigMethods;
+  ConfigMethods &
+  TenantFunctionMethods &
+  TenantSecretMethods;
 
 /** Dependencies injected from the api layer into createMethods */
 export interface CreateMethodsDeps {
@@ -214,6 +221,10 @@ export function createMethods(
     ...createToolCallMethods(mongoose),
     ...createCategoriesMethods(mongoose),
     ...createPresetMethods(mongoose),
+    ...createProjectMethods(mongoose, {
+      removeAllPermissions,
+      grantPermission: aclEntryMethods.grantPermission,
+    }),
     /* Tier 2 */
     ...createConversationTagMethods(mongoose),
     ...messageMethods,
@@ -228,6 +239,9 @@ export function createMethods(
     ...agentMethods,
     /* Config */
     ...createConfigMethods(mongoose),
+    /* Tenant Functions */
+    ...createTenantFunctionMethods(mongoose),
+    ...createTenantSecretMethods(mongoose),
   };
 }
 
@@ -254,6 +268,7 @@ export type {
   ToolCallMethods,
   CategoriesMethods,
   PresetMethods,
+  ProjectMethods,
   ConversationTagMethods,
   MessageMethods,
   ConversationMethods,
@@ -273,4 +288,6 @@ export type {
   ValidationIssue,
   AgentMethods,
   ConfigMethods,
+  TenantFunctionMethods,
+  TenantSecretMethods,
 };

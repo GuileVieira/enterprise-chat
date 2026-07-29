@@ -5,7 +5,16 @@ import {
   useDeleteAgentApiKeyMutation,
 } from 'librechat-data-provider/react-query';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
-import { Plus, Trash2, Copy, CopyCheck, Key, Eye, EyeOff, ShieldEllipsis } from 'lucide-react';
+import {
+  Copy,
+  ClipboardText as CopyCheck,
+  Eye,
+  EyeSlash as EyeOff,
+  Key,
+  Plus,
+  ShieldStar as ShieldEllipsis,
+  Trash as Trash2,
+} from '@phosphor-icons/react';
 import {
   Button,
   Input,

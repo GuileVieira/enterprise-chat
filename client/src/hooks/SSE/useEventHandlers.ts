@@ -593,11 +593,22 @@ export default function useEventHandlers({
               .filter((m) => m.files && m.files.length > 0)
               .map((m) => [m.messageId, m.files]),
           );
+          const currentMetadataMap = new Map(
+            currentMessages.filter((m) => m.metadata != null).map((m) => [m.messageId, m.metadata]),
+          );
           for (let i = 0; i < finalMessages.length; i++) {
             const msg = finalMessages[i];
             const preservedFiles = currentMsgMap.get(msg.messageId);
-            if (msg.files == null && preservedFiles) {
-              finalMessages[i] = { ...msg, files: preservedFiles };
+            const preservedMetadata = currentMetadataMap.get(msg.messageId);
+            if (
+              (msg.files == null && preservedFiles) ||
+              (msg.metadata == null && preservedMetadata)
+            ) {
+              finalMessages[i] = {
+                ...msg,
+                files: msg.files ?? preservedFiles,
+                metadata: msg.metadata ?? preservedMetadata,
+              };
             }
           }
         }

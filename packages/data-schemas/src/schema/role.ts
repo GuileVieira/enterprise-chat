@@ -61,6 +61,12 @@ const rolePermissionsSchema = new Schema(
       [Permissions.SHARE]: { type: Boolean },
       [Permissions.SHARE_PUBLIC]: { type: Boolean },
     },
+    [PermissionTypes.PROJECTS]: {
+      [Permissions.USE]: { type: Boolean },
+      [Permissions.CREATE]: { type: Boolean },
+      [Permissions.SHARE]: { type: Boolean },
+      [Permissions.SHARE_PUBLIC]: { type: Boolean },
+    },
     [PermissionTypes.REMOTE_AGENTS]: {
       [Permissions.USE]: { type: Boolean },
       [Permissions.CREATE]: { type: Boolean },
@@ -72,6 +78,9 @@ const rolePermissionsSchema = new Schema(
       [Permissions.CREATE]: { type: Boolean },
       [Permissions.SHARE]: { type: Boolean },
       [Permissions.SHARE_PUBLIC]: { type: Boolean },
+    },
+    [PermissionTypes.META_ADS]: {
+      [Permissions.USE]: { type: Boolean },
     },
   },
   { _id: false },

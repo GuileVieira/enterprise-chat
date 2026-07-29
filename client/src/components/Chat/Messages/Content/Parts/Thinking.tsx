@@ -1,12 +1,19 @@
 import { useState, useMemo, memo, useCallback, useRef, useId, type MouseEvent } from 'react';
 import { useAtomValue } from 'jotai';
-import { Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
-import { Clipboard, CheckMark, TooltipAnchor } from '@librechat/client';
+import {
+  Check,
+  Copy,
+  CaretDown as ChevronDown,
+  CaretUp as ChevronUp,
+  Lightbulb,
+} from '@phosphor-icons/react';
+import { TooltipAnchor } from '@librechat/client';
 import type { FocusEvent, FC } from 'react';
 import { useLocalize, useExpandCollapse } from '~/hooks';
 import { showThinkingAtom } from '~/store/showThinking';
 import { fontSizeAtom } from '~/store/fontSize';
 import { cn } from '~/utils';
+import MarkdownLite from '../MarkdownLite';
 
 /**
  * ThinkingContent - Displays the actual thinking/reasoning content
@@ -16,10 +23,13 @@ export const ThinkingContent: FC<{
   children: React.ReactNode;
 }> = memo(({ children }) => {
   const fontSize = useAtomValue(fontSizeAtom);
+  const content = typeof children === 'string' ? children : '';
 
   return (
     <div className="relative rounded-lg border border-border-light bg-surface-secondary p-3 pb-8 text-text-secondary">
-      <p className={cn('whitespace-pre-wrap leading-[26px]', fontSize)}>{children}</p>
+      <div className={cn('markdown prose dark:prose-invert light leading-[26px]', fontSize)}>
+        {content ? <MarkdownLite content={content} /> : children}
+      </div>
     </div>
   );
 });
@@ -113,9 +123,9 @@ export const ThinkingButton = memo(
                 : localize('com_ui_copy_thoughts_to_clipboard')}
             </span>
             {isCopied ? (
-              <CheckMark className="h-[18px] w-[18px]" aria-hidden="true" />
+              <Check size={20} weight="bold" aria-hidden="true" />
             ) : (
-              <Clipboard size="19" aria-hidden="true" />
+              <Copy size={20} aria-hidden="true" />
             )}
           </button>
         )}
@@ -213,9 +223,9 @@ export const FloatingThinkingBar = memo(
                 )}
               >
                 {isCopied ? (
-                  <CheckMark className="h-[18px] w-[18px]" aria-hidden="true" />
+                  <Check size={20} weight="bold" aria-hidden="true" />
                 ) : (
-                  <Clipboard size="18" aria-hidden="true" />
+                  <Copy size={20} aria-hidden="true" />
                 )}
               </button>
             }

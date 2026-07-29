@@ -111,10 +111,12 @@ export type TPayload = Partial<TMessage> &
     isContinued: boolean;
     isRegenerate?: boolean;
     conversationId: string | null;
+    projectId?: string;
     messages?: TMessages;
     isTemporary: boolean;
     ephemeralAgent?: TEphemeralAgent | null;
     editedContent?: TEditedContent | null;
+    hiddenPromptContext?: THiddenPromptContext | null;
     /** Added conversation for multi-convo feature */
     addedConvo?: TConversation;
     /**
@@ -151,6 +153,7 @@ export type TSubmission = {
   clientTimestamp?: string;
   ephemeralAgent?: TEphemeralAgent | null;
   editedContent?: TEditedContent | null;
+  hiddenPromptContext?: THiddenPromptContext | null;
   /** Added conversation for multi-convo feature */
   addedConvo?: TConversation;
   /** Skills the user invoked via the `$` popover for this submission. */
@@ -158,6 +161,14 @@ export type TSubmission = {
 };
 
 export type EventSubmission = Omit<TSubmission, 'initialResponse'> & { initialResponse: TMessage };
+
+export type THiddenPromptContext = {
+  promptGroupId?: string;
+  promptId?: string;
+  name: string;
+  description?: string;
+  content: string;
+};
 
 export type TPluginAction = {
   pluginKey: string;
@@ -182,6 +193,27 @@ export type TCategory = {
   label: string;
   description?: string;
   custom?: boolean;
+  icon?: string;
+  order?: number;
+  isDefault?: boolean;
+};
+
+export type TCreateCategoryRequest = {
+  label: string;
+  value: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TUpdateCategoryRequest = {
+  label?: string;
+  icon?: string;
+  order?: number;
+};
+
+export type TDeleteCategoryResponse = {
+  message: string;
+  usageCount?: number;
 };
 
 export type TMarketplaceCategory = TCategory & {
@@ -279,7 +311,8 @@ export type TAgentApiKeyListResponse = {
 
 export type TUpdateConversationRequest = {
   conversationId: string;
-  title: string;
+  title?: string;
+  projectId?: string | null;
 };
 
 export type TUpdateConversationResponse = TConversation;
@@ -311,7 +344,13 @@ export type TSharedMessagesResponse = Omit<TSharedLink, 'messages'> & {
   messages: TMessage[];
 };
 
-export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'>;
+export type TCreateShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
+
+export type TCreateTenantShareLinkRequest = Pick<TConversation, 'conversationId'> & {
+  targetMessageId?: string;
+};
 
 export type TUpdateShareLinkRequest = Pick<TSharedLink, 'shareId' | 'targetMessageId'>;
 
@@ -363,6 +402,12 @@ export type TForkConvoRequest = {
 export type TForkConvoResponse = {
   conversation: TConversation;
   messages: TMessage[];
+};
+
+export type TForkTenantShareRequest = {
+  shareId: string;
+  targetMessageId?: string;
+  option?: string;
 };
 
 export type TSearchResults = {
@@ -562,6 +607,7 @@ export type TPromptGroup = {
 export type TCreatePrompt = {
   prompt: Pick<TPrompt, 'prompt' | 'type'> & { groupId?: string };
   group?: { name: string; category?: string; oneliner?: string; command?: string };
+  shareTenantIds?: string[];
 };
 
 export type TCreatePromptRecord = TCreatePrompt & Pick<TPromptGroup, 'author' | 'authorName'>;

@@ -108,6 +108,7 @@ export default function useChatFunctions({
       parentMessageId = null,
       conversationId = null,
       messageId = null,
+      hiddenPromptContext = null,
     },
     {
       editedContent = null,
@@ -125,7 +126,8 @@ export default function useChatFunctions({
     resetLatestMultiMessage();
 
     text = text.trim();
-    if (!!isSubmitting || text === '') {
+    const hasFilesToSubmit = (overrideFiles?.length ?? 0) > 0 || (files?.size ?? 0) > 0;
+    if (!!isSubmitting || (text === '' && !hasFilesToSubmit)) {
       return;
     }
 
@@ -160,12 +162,13 @@ export default function useChatFunctions({
      *    a prior turn, not compose a new one).
      *  - Fresh submit → drain the per-convo atom into the message.
      */
-    const manualSkills =
-      overrideManualSkills != null
-        ? overrideManualSkills
-        : isRegenerate || isContinued || isEdited
+    let manualSkills = overrideManualSkills;
+    if (manualSkills == null) {
+      manualSkills =
+        isRegenerate || isContinued || isEdited
           ? []
           : drainPendingManualSkills(conversationId ?? Constants.NEW_CONVO);
+    }
     const isEditOrContinue = isEdited || isContinued;
 
     let currentMessages: TMessage[] | null = overrideMessages ?? getMessages() ?? [];
@@ -246,6 +249,21 @@ export default function useChatFunctions({
       endpointOption.key = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     }
     const responseSender = getSender({ model: conversation?.model, ...endpointOption });
+    const responseAvatarLabel =
+      (conversation?.spec ? responseSender : null) ||
+      conversation?.modelLabel ||
+      conversation?.agent_id ||
+      conversation?.assistant_id ||
+      responseSender;
+    const hiddenPromptMetadata = hiddenPromptContext
+      ? {
+          hiddenPrompt: {
+            name: hiddenPromptContext.name,
+            promptGroupId: hiddenPromptContext.promptGroupId,
+            description: hiddenPromptContext.description,
+          },
+        }
+      : undefined;
 
     const currentMsg: TMessage = {
       text,
@@ -264,6 +282,7 @@ export default function useChatFunctions({
        * skill resolution reads the top-level `manualSkills` payload field.
        */
       manualSkills: manualSkills.length > 0 ? manualSkills : undefined,
+      metadata: hiddenPromptMetadata,
     };
 
     const submissionFiles = overrideFiles ?? targetParentMessage?.files;
@@ -320,6 +339,9 @@ export default function useChatFunctions({
        * server-backed `responseMessage` replacement takes over.
        */
       manualSkills: manualSkills.length > 0 ? manualSkills : undefined,
+      metadata: {
+        responseAvatarLabel,
+      },
     };
 
     if (isAssistantsEndpoint(endpoint)) {
@@ -392,6 +414,7 @@ export default function useChatFunctions({
       editedContent,
       addedConvo,
       manualSkills: manualSkills.length > 0 ? manualSkills : undefined,
+      hiddenPromptContext,
     };
 
     if (isRegenerate) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, MoreHorizontal, Code2 } from 'lucide-react';
+import { Clock, Code as Code2, DotsThree as MoreHorizontal } from '@phosphor-icons/react';
 import {
   Checkbox,
   DropdownMenu,

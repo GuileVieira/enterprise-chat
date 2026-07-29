@@ -29,6 +29,7 @@ const {
 } = require('~/server/controllers/agents/callbacks');
 const { loadAgentTools, loadToolsForExecution } = require('~/server/services/ToolService');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const {
   getSkillToolDeps,
   enrichWithSkillConfigurable,
@@ -75,6 +76,8 @@ function createToolLoader(signal, streamId = null, definitionsOnly = false) {
     provider,
     tool_options,
     tool_resources,
+    projectId,
+    projectFileIds,
   }) {
     const agent = { id: agentId, tools, provider, model, tool_options };
     try {
@@ -86,6 +89,8 @@ function createToolLoader(signal, streamId = null, definitionsOnly = false) {
         streamId,
         tool_resources,
         definitionsOnly,
+        projectId,
+        projectFileIds,
       });
     } catch (error) {
       logger.error('Error loading tools for agent ' + agentId, error);
@@ -187,6 +192,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
         userMCPAuthMap: ctx.userMCPAuthMap,
         tool_resources: ctx.tool_resources,
         actionsEnabled: ctx.actionsEnabled,
+        projectId: ctx.projectId,
+        projectFileIds: ctx.projectFileIds,
       });
 
       logger.debug(`[ON_TOOL_EXECUTE] loaded ${result.loadedTools?.length ?? 0} tools`);
@@ -286,6 +293,38 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     ephemeralSkillsToggle,
   });
 
+  /** Load project context (instructions + memories + files) if conversation belongs to a project */
+  const projectContext = await loadProjectContext({
+    req,
+    conversationId,
+    projectId: req.body.projectId,
+  });
+  const projectId = projectContext.projectId;
+  const projectFileIds = projectContext.projectFileIds;
+  const contextParts = [projectContext.projectInstructions, projectContext.projectMemories].filter(
+    Boolean,
+  );
+  if (contextParts.length > 0) {
+    primaryAgent.instructions = `${contextParts.join('\n\n')}\n\n${primaryAgent.instructions ?? ''}`;
+  }
+
+  const hiddenPromptContext = req.body.hiddenPromptContext;
+  const hiddenPromptContent =
+    typeof hiddenPromptContext?.content === 'string' ? hiddenPromptContext.content.trim() : '';
+  let canUseHiddenPrompt = true;
+  if (hiddenPromptContent && hiddenPromptContext?.promptGroupId) {
+    canUseHiddenPrompt = await checkPermission({
+      userId: req.user.id,
+      role: req.user.role,
+      resourceType: ResourceType.PROMPTGROUP,
+      resourceId: hiddenPromptContext.promptGroupId,
+      requiredPermission: PermissionBits.VIEW,
+    });
+  }
+  if (hiddenPromptContent && canUseHiddenPrompt) {
+    primaryAgent.instructions = `${hiddenPromptContent}\n\n${primaryAgent.instructions ?? ''}`;
+  }
+
   const primaryConfig = await initializeAgent(
     {
       req,
@@ -303,6 +342,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       skillStates,
       defaultActiveOnShare,
       manualSkills,
+      projectFileIds,
+      projectId,
     },
     {
       getFiles: db.getFiles,
@@ -324,6 +365,14 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   logger.debug(
     `[initializeClient] Storing tool context for ${primaryConfig.id}: ${primaryConfig.toolDefinitions?.length ?? 0} tools, registry size: ${primaryConfig.toolRegistry?.size ?? '0'}`,
   );
+  logger.debug('[initializeClient] file_search context summary', {
+    projectId,
+    fileSearchFileIds:
+      primaryConfig.tool_resources?.file_search?.file_ids?.length ??
+      primaryConfig.tool_resources?.file_search?.files?.length ??
+      0,
+    hasFileSearchDynamicContext: !!primaryConfig.dynamicToolContextMap?.file_search,
+  });
   /** Maps each primed skill name (manual `$` or always-apply) to the
    *  `_id` of the exact doc that was primed. Plumbed to
    *  `enrichWithSkillConfigurable` so the read_file handler can pin
@@ -344,6 +393,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     activeSkillNames: primaryConfig.activeSkillNames,
     codeEnvAvailable: primaryConfig.codeEnvAvailable,
     skillPrimedIdsByName,
+    projectId,
+    projectFileIds,
   });
 
   const {
@@ -374,6 +425,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       skillStates,
       defaultActiveOnShare,
       codeEnvAvailable,
+      projectFileIds,
+      projectId,
     },
     {
       getAgent: db.getAgent,
@@ -421,6 +474,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
             config.manualSkillPrimes,
             config.alwaysApplySkillPrimes,
           ),
+          projectId,
+          projectFileIds,
         });
       },
       // Pass through the `@librechat/api` exports so that tests which
@@ -458,6 +513,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     allowedProviders,
     primaryAgentId: primaryConfig.id,
     codeEnvAvailable,
+    projectFileIds,
+    projectId,
   });
 
   if (updatedMCPAuthMap) {
@@ -477,6 +534,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       accessibleSkillIds: config.accessibleSkillIds,
       activeSkillNames: config.activeSkillNames,
       codeEnvAvailable: config.codeEnvAvailable,
+      projectId,
+      projectFileIds,
     });
   }
 
@@ -591,6 +650,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
            *  false`, so `bash_tool` / `read_file` sandbox fallback are
            *  silently gated off even though the seed walk found it. */
           codeEnvAvailable,
+          projectFileIds,
+          projectId,
           skillStates,
           defaultActiveOnShare,
         },
@@ -624,6 +685,8 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
           config.manualSkillPrimes,
           config.alwaysApplySkillPrimes,
         ),
+        projectId,
+        projectFileIds,
       });
       return config;
     } catch (err) {
@@ -857,6 +920,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
     agent: primaryConfig,
     spec: endpointOption.spec,
     iconURL: endpointOption.iconURL,
+    projectId,
     attachments: primaryConfig.requestAttachments ?? primaryConfig.attachments,
     agentContextAttachmentsByAgentId,
     endpointType: endpointOption.endpointType,

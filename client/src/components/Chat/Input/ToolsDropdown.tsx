@@ -1,7 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
+import {
+  Globe,
+  GearSix as Settings,
+  SlidersHorizontal as Settings2,
+  TerminalWindow as TerminalSquareIcon,
+} from '@phosphor-icons/react';
 import { TooltipAnchor, DropdownPopup, PinIcon, VectorIcon } from '@librechat/client';
-import { Globe, ScrollText, Settings, Settings2, TerminalSquareIcon } from 'lucide-react';
 import type { MenuItemProps } from '~/common';
 import {
   AuthType,
@@ -26,7 +31,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const context = useBadgeRowContext();
   const { data: startupConfig } = useGetStartupConfig();
 
-  const { codeEnabled, webSearchEnabled, artifactsEnabled, fileSearchEnabled, skillsEnabled } =
+  const { codeEnabled, webSearchEnabled, artifactsEnabled, fileSearchEnabled } =
     useAgentCapabilities(context?.agentsConfig?.capabilities ?? defaultAgentCapabilities);
 
   const canUseWebSearch = useHasAccess({
@@ -49,22 +54,10 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     permission: Permissions.USE,
   });
 
-  const canUseSkills = useHasAccess({
-    permissionType: PermissionTypes.SKILLS,
-    permission: Permissions.USE,
-  });
-
   const [isPopoverActive, setIsPopoverActive] = useState(false);
   const isDisabled = disabled ?? false;
-  const {
-    skills,
-    webSearch,
-    artifacts,
-    fileSearch,
-    mcpServerManager,
-    codeInterpreter,
-    searchApiKeyForm,
-  } = context ?? {};
+  const { webSearch, artifacts, fileSearch, mcpServerManager, codeInterpreter, searchApiKeyForm } =
+    context ?? {};
 
   const { setIsDialogOpen: setIsSearchDialogOpen, menuTriggerRef: searchMenuTriggerRef } =
     searchApiKeyForm ?? {};
@@ -76,7 +69,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const { isPinned: isCodePinned, setIsPinned: setIsCodePinned } = codeInterpreter ?? {};
   const { isPinned: isFileSearchPinned, setIsPinned: setIsFileSearchPinned } = fileSearch ?? {};
   const { isPinned: isArtifactsPinned, setIsPinned: setIsArtifactsPinned } = artifacts ?? {};
-  const { isPinned: isSkillsPinned, setIsPinned: setIsSkillsPinned } = skills ?? {};
 
   const showWebSearchSettings = useMemo(() => {
     const authTypes = webSearchAuthData?.authTypes ?? [];
@@ -125,11 +117,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
       artifacts?.debouncedChange({ value: ArtifactModes.CUSTOM });
     }
   }, [artifacts]);
-
-  const handleSkillsToggle = useCallback(() => {
-    const newValue = !skills?.toggleState;
-    skills?.debouncedChange({ value: newValue });
-  }, [skills]);
 
   const mcpPlaceholder = startupConfig?.interface?.mcpServers?.placeholder;
 
@@ -221,38 +208,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     });
   }
 
-  if (canUseSkills && skillsEnabled) {
-    dropdownItems.push({
-      onClick: handleSkillsToggle,
-      hideOnClick: false,
-      render: (props) => (
-        <div {...props}>
-          <div className="flex items-center gap-2">
-            <ScrollText className="icon-md" aria-hidden="true" />
-            <span>{localize('com_ui_skills')}</span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSkillsPinned?.(!isSkillsPinned);
-            }}
-            className={cn(
-              'rounded p-1 transition-all duration-200',
-              'hover:bg-surface-secondary hover:shadow-sm',
-              !isSkillsPinned && 'text-text-secondary hover:text-text-primary',
-            )}
-            aria-label={isSkillsPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
-          >
-            <div className="h-4 w-4">
-              <PinIcon unpin={isSkillsPinned} />
-            </div>
-          </button>
-        </div>
-      ),
-    });
-  }
-
   if (canRunCode && codeEnabled) {
     dropdownItems.push({
       onClick: handleCodeInterpreterToggle,
@@ -261,7 +216,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
         <div {...props}>
           <div className="flex items-center gap-2">
             <TerminalSquareIcon className="icon-md" aria-hidden="true" />
-            <span>{localize('com_ui_run_code')}</span>
+            <span>{localize('com_assistants_code_interpreter')}</span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -320,6 +275,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     <TooltipAnchor
       render={
         <Ariakit.MenuButton
+          render={<button type="button" />}
           disabled={isDisabled}
           id="tools-dropdown-button"
           aria-label="Tools Options"

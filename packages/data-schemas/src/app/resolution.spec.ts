@@ -451,8 +451,11 @@ describe('INTERFACE_PERMISSION_FIELDS', () => {
     }
   });
 
-  it('has one entry per PermissionType — no duplicates or missing', () => {
-    expect(INTERFACE_PERMISSION_FIELDS.size).toBe(Object.values(PermissionTypes).length);
+  it('has one entry per interface-backed PermissionType — no duplicates or missing', () => {
+    const permissionTypesWithoutInterfaceField = [PermissionTypes.META_ADS];
+    expect(INTERFACE_PERMISSION_FIELDS.size).toBe(
+      Object.values(PermissionTypes).length - permissionTypesWithoutInterfaceField.length,
+    );
   });
 
   it('does not contain UI-only fields', () => {

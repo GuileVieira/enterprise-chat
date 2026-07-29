@@ -2,7 +2,9 @@ import { memo, useRef, useMemo, useEffect, useState, useCallback } from 'react';
 import { useWatch } from 'react-hook-form';
 import { TextareaAutosize } from '@librechat/client';
 import { useRecoilState, useRecoilValue } from 'recoil';
+import { Sparkle, X } from '@phosphor-icons/react';
 import { Constants, isAssistantsEndpoint, isAgentsEndpoint } from 'librechat-data-provider';
+import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter, ConvoGenerator } from '~/common';
 import {
@@ -22,8 +24,8 @@ import {
   useFocusChatEffect,
 } from '~/hooks';
 import PendingManualSkillsChips from './PendingManualSkillsChips';
-import { cn, getModelSpec, removeFocusRings } from '~/utils';
-import { useGetStartupConfig } from '~/data-provider';
+import { cn, getModelSpec, isSpeechFeatureEnabled, removeFocusRings } from '~/utils';
+import { useGetStartupConfig, useProjectByIdQuery } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
 import AttachFileChat from './Files/AttachFileChat';
 import FileFormChat from './Files/FileFormChat';
@@ -38,6 +40,8 @@ import SendButton from './SendButton';
 import EditBadges from './EditBadges';
 import BadgeRow from './BadgeRow';
 import Mention from './Mention';
+import PromptImproveButton from './PromptImproveButton';
+import ProjectPromptSnippets from './ProjectPromptSnippets';
 import store from '~/store';
 
 interface ChatFormProps {
@@ -85,7 +89,13 @@ const ChatForm = memo(function ChatForm({
 
   const [badges, setBadges] = useRecoilState(store.chatBadges);
   const [isEditingBadges, setIsEditingBadges] = useRecoilState(store.isEditingBadges);
+  const [activeHiddenPrompt, setActiveHiddenPrompt] = useRecoilState(
+    store.activeHiddenPromptByIndex(index),
+  );
   const [showStopButton, setShowStopButton] = useRecoilState(store.showStopButtonByIndex(index));
+  const { data: speechConfig } = useGetCustomConfigSpeechQuery();
+  const canUseSpeechToText = isSpeechFeatureEnabled(speechConfig, 'speechToText');
+  const canUseTextToSpeech = isSpeechFeatureEnabled(speechConfig, 'textToSpeech');
   const plusPopoverAtom = useMemo(() => store.showPlusPopoverFamily(index), [index]);
   const mentionPopoverAtom = useMemo(() => store.showMentionPopoverFamily(index), [index]);
 
@@ -129,6 +139,8 @@ const ChatForm = memo(function ChatForm({
     [requiresKey, invalidAssistant],
   );
 
+  const projectQuery = useProjectByIdQuery(conversation?.projectId ?? '');
+
   const handleContainerClick = useCallback(() => {
     /** Check if the device is a touchscreen */
     if (window.matchMedia?.('(pointer: coarse)').matches) {
@@ -161,6 +173,16 @@ const ChatForm = memo(function ChatForm({
   });
 
   const { submitMessage, submitPrompt } = useSubmitMessage();
+  const handleSubmit = methods.handleSubmit((data, event) => {
+    const submitter = (event?.nativeEvent as SubmitEvent | undefined)?.submitter as
+      | HTMLElement
+      | null
+      | undefined;
+    if (submitter && submitter.id !== 'send-button') {
+      return;
+    }
+    submitMessage(data);
+  });
 
   const handleKeyUp = useHandleKeyUp({
     index,
@@ -182,7 +204,7 @@ const ChatForm = memo(function ChatForm({
   useQueryParams({ textAreaRef });
 
   const { ref, ...registerProps } = methods.register('text', {
-    required: true,
+    required: false,
     onChange: useCallback(
       (e: React.ChangeEvent<HTMLTextAreaElement>) =>
         methods.setValue('text', e.target.value, { shouldValidate: true }),
@@ -191,6 +213,10 @@ const ChatForm = memo(function ChatForm({
   });
 
   const textValue = useWatch({ control: methods.control, name: 'text' });
+  const setPromptText = useCallback(
+    (value: string) => methods.setValue('text', value, { shouldValidate: true }),
+    [methods],
+  );
 
   useEffect(() => {
     if (textAreaRef.current) {
@@ -219,12 +245,16 @@ const ChatForm = memo(function ChatForm({
     setBackupBadges([]);
   }, [backupBadges, setBadges, setIsEditingBadges]);
 
+  const handleRemoveHiddenPrompt = useCallback(() => {
+    setActiveHiddenPrompt(null);
+  }, [setActiveHiddenPrompt]);
+
   const isMoreThanThreeRows = visualRowCount > 3;
 
   const baseClasses = useMemo(
     () =>
       cn(
-        'md:py-3.5 m-0 w-full resize-none py-[13px] placeholder-black/60 bg-transparent dark:placeholder-white/60 [&:has(textarea:focus)]:shadow-[0_2px_6px_rgba(0,0,0,.05)]',
+        'md:py-3.5 m-0 w-full resize-none bg-transparent py-[13px] placeholder-text-tertiary [&:has(textarea:focus)]:shadow-[0_2px_6px_rgba(0,0,0,.05)]',
         isCollapsed ? 'max-h-[52px]' : 'max-h-[45vh] md:max-h-[55vh]',
         isMoreThanThreeRows ? 'pl-5' : 'px-5',
       ),
@@ -233,7 +263,7 @@ const ChatForm = memo(function ChatForm({
 
   return (
     <form
-      onSubmit={methods.handleSubmit(submitMessage)}
+      onSubmit={handleSubmit}
       className={cn(
         'mx-auto flex w-full flex-row gap-3 transition-[max-width] duration-300 sm:px-2',
         maximizeChatSpace ? 'max-w-full' : 'md:max-w-3xl xl:max-w-4xl',
@@ -272,15 +302,39 @@ const ChatForm = memo(function ChatForm({
           <div
             onClick={handleContainerClick}
             className={cn(
-              'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-3xl border pb-4 text-text-primary transition-all duration-200 sm:rounded-3xl sm:pb-0',
-              isTextAreaFocused ? 'shadow-lg' : 'shadow-md',
+              'relative flex w-full flex-grow flex-col overflow-hidden rounded-t-[1.65rem] border pb-4 text-text-primary transition-all duration-200 sm:rounded-[1.65rem] sm:pb-0',
+              isTextAreaFocused
+                ? 'border-border-medium shadow-xl shadow-black/[0.08] dark:shadow-black/30'
+                : 'shadow-md shadow-black/[0.04] dark:shadow-black/20',
               isTemporary
-                ? 'border-violet-800/60 bg-violet-950/10'
-                : 'border-border-light bg-surface-chat',
+                ? 'border-violet-800/50 bg-violet-950/10'
+                : 'bg-surface-chat/95 border-border-light backdrop-blur',
             )}
           >
+            {activeHiddenPrompt && (
+              <div className="flex items-center gap-2 px-4 pt-3 text-sm">
+                <Sparkle className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+                <div className="min-w-0 flex-1 truncate rounded-full border border-border-light bg-surface-secondary px-3 py-1.5">
+                  {localize('com_ui_active_hidden_prompt', { name: activeHiddenPrompt.name })}
+                </div>
+                <button
+                  type="button"
+                  aria-label={localize('com_ui_remove_hidden_prompt')}
+                  className="rounded-lg p-1 text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                  onClick={handleRemoveHiddenPrompt}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             <TextareaHeader addedConvo={addedConvo} setAddedConvo={setAddedConvo} />
             <PendingManualSkillsChips conversationId={conversationId} />
+            {conversation?.projectId && projectQuery.data?.promptSnippets ? (
+              <ProjectPromptSnippets
+                snippets={projectQuery.data.promptSnippets}
+                textAreaRef={textAreaRef}
+              />
+            ) : null}
             {/* WIP */}
             <EditBadges
               isEditingChatBadges={isEditingBadges}
@@ -376,13 +430,21 @@ const ChatForm = memo(function ChatForm({
                 }
               />
               <div className="mx-auto flex" />
-              {SpeechToText && (
+              {SpeechToText && canUseSpeechToText && (
                 <AudioRecorder
                   methods={methods}
                   ask={submitMessage}
                   textAreaRef={textAreaRef}
                   disabled={disableInputs || isNotAppendable}
                   isSubmitting={isSubmitting}
+                />
+              )}
+              {endpoint && (
+                <PromptImproveButton
+                  text={textValue}
+                  setText={setPromptText}
+                  textAreaRef={textAreaRef}
+                  disabled={filesLoading || isSubmitting || disableInputs || isNotAppendable}
                 />
               )}
               <div className={`${isRTL ? 'ml-2' : 'mr-2'}`}>
@@ -393,13 +455,16 @@ const ChatForm = memo(function ChatForm({
                     <SendButton
                       ref={submitButtonRef}
                       control={methods.control}
+                      index={index}
                       disabled={filesLoading || isSubmitting || disableInputs || isNotAppendable}
                     />
                   )
                 )}
               </div>
             </div>
-            {TextToSpeech && automaticPlayback && <StreamAudio index={index} />}
+            {TextToSpeech && canUseTextToSpeech && automaticPlayback && (
+              <StreamAudio index={index} />
+            )}
           </div>
         </div>
       </div>

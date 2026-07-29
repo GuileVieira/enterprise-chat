@@ -30,6 +30,7 @@ export enum QueryKeys {
   mcpConnectionStatus = 'mcpConnectionStatus',
   mcpAuthValues = 'mcpAuthValues',
   agentTools = 'agentTools',
+  tenantFunctions = 'tenantFunctions',
   actions = 'actions',
   assistantDocs = 'assistantDocs',
   agentDocs = 'agentDocs',
@@ -49,6 +50,11 @@ export enum QueryKeys {
   roles = 'roles',
   rolesList = 'rolesList',
   conversationTags = 'conversationTags',
+  projects = 'projects',
+  project = 'project',
+  projectFiles = 'projectFiles',
+  projectMetaAds = 'projectMetaAds',
+  projectMeetings = 'projectMeetings',
   health = 'health',
   userTerms = 'userTerms',
   banner = 'banner',
@@ -80,11 +86,28 @@ export enum QueryKeys {
   skillStates = 'skillStates',
   /* General user favorites */
   favorites = 'favorites',
+  /* Admin */
+  adminUsers = 'adminUsers',
+  adminUsersSearch = 'adminUsersSearch',
+  adminGroups = 'adminGroups',
+  adminGroup = 'adminGroup',
+  adminGroupMembers = 'adminGroupMembers',
+  adminConfigs = 'adminConfigs',
+  adminConfigBase = 'adminConfigBase',
+  adminOverview = 'adminOverview',
+  adminTenants = 'adminTenants',
+  adminTenantUsers = 'adminTenantUsers',
+  adminTenantStats = 'adminTenantStats',
+  adminFunctions = 'adminFunctions',
+  adminSecrets = 'adminSecrets',
 }
 
 // Dynamic query keys that require parameters
 export const DynamicQueryKeys = {
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
+  projectFiles: (projectId: string) => ['projectFiles', projectId] as const,
+  projectMetaAds: (projectId: string) => ['projectMetaAds', projectId] as const,
+  projectMeetings: (projectId: string) => ['projectMeetings', projectId] as const,
 } as const;
 
 export enum MutationKeys {
@@ -97,6 +120,7 @@ export enum MutationKeys {
   loginUser = 'loginUser',
   logoutUser = 'logoutUser',
   refreshToken = 'refreshToken',
+  improvePrompt = 'improvePrompt',
   avatarUpload = 'avatarUpload',
   speechToText = 'speechToText',
   textToSpeech = 'textToSpeech',

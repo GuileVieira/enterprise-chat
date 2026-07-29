@@ -3,6 +3,14 @@ import { EModelEndpoint, ArtifactModes } from 'librechat-data-provider';
 import { generateShadcnPrompt } from './generate';
 import { components } from './components';
 
+const slideDeckInstructions = dedent`
+  - Slide decks: When the user explicitly asks for slides, a deck, or a visual presentation, create one complete React artifact using \`application/vnd.react\`.
+    - Import \`useEmblaCarousel\` from \`embla-carousel-react\`; it is available in the React artifact environment.
+    - Define every required component in the artifact itself, including \`SlideDeck\`, \`Slide\`, and accessible previous/next and dot navigation controls.
+    - Render one slide at a time, support keyboard navigation, and keep the deck responsive in a 16:9 presentation layout.
+    - Do not generate PPTX/PDF files, use external scripts, or depend on images from the web. The React artifact must render by itself in both the artifact panel and a shared artifact link.
+`;
+
 const artifactsPrompt = dedent`The assistant can create and reference artifacts during conversations.
   
 Artifacts are for substantial, self-contained content that users might modify or reuse, displayed in a separate UI window for clarity.
@@ -64,7 +72,7 @@ Artifacts are for substantial, self-contained content that users might modify or
       - When creating a React component, ensure it has no required props (or provide default values for all props) and use a default export.
       - Use Tailwind classes for styling. DO NOT USE ARBITRARY VALUES (e.g. \`h-[600px]\`).
       - Base React is available to be imported. To use hooks, first import it at the top of the artifact, e.g. \`import { useState } from "react"\`
-      - The lucide-react@0.394.0 library is available to be imported. e.g. \`import { Camera } from "lucide-react"\` & \`<Camera color="red" size={48} />\`
+      - The @phosphor-icons/react@2.1.10 library is available to be imported. e.g. \`import { Camera } from "@phosphor-icons/react"\` & \`<Camera color="red" size={48} />\`
       - The recharts charting library is available to be imported, e.g. \`import { LineChart, XAxis, ... } from "recharts"\` & \`<LineChart ...><XAxis dataKey="name"> ...\`
       - The three.js library is available to be imported, e.g. \`import * as THREE from "three";\`
       - The date-fns library is available to be imported, e.g. \`import { compareAsc, format } from "date-fns";\`
@@ -75,6 +83,7 @@ Artifacts are for substantial, self-contained content that users might modify or
       - Images from the web are not allowed, but you can use placeholder images by specifying the width and height like so \`<img src="/api/placeholder/400/320" alt="placeholder" />\`
       - When iterating on code, ensure that the code is complete and functional without any snippets, placeholders, or ellipses.
       - If you are unable to follow the above requirements for any reason, don't use artifacts and use regular code blocks instead, which will not attempt to render the component.
+${slideDeckInstructions}
   5. Include the complete and updated content of the artifact, without any truncation or minimization. Don't use "// rest of the code remains the same...".
   6. If unsure whether the content qualifies as an artifact, if an artifact should be updated, or which type to assign to an artifact, err on the side of not creating an artifact.
   7. Always use triple backticks (\`\`\`) to enclose the content within the artifact, regardless of the content type.
@@ -269,7 +278,7 @@ Artifacts are for substantial, self-contained content that users might modify or
       - When creating a React component, ensure it has no required props (or provide default values for all props) and use a default export.
       - Use Tailwind classes for styling. DO NOT USE ARBITRARY VALUES (e.g. \`h-[600px]\`).
       - Base React is available to be imported. To use hooks, first import it at the top of the artifact, e.g. \`import { useState } from "react"\`
-      - The lucide-react@0.394.0 library is available to be imported. e.g. \`import { Camera } from "lucide-react"\` & \`<Camera color="red" size={48} />\`
+      - The @phosphor-icons/react@2.1.10 library is available to be imported. e.g. \`import { Camera } from "@phosphor-icons/react"\` & \`<Camera color="red" size={48} />\`
       - The recharts charting library is available to be imported, e.g. \`import { LineChart, XAxis, ... } from "recharts"\` & \`<LineChart ...><XAxis dataKey="name"> ...\`
       - The three.js library is available to be imported, e.g. \`import * as THREE from "three";\`
       - The date-fns library is available to be imported, e.g. \`import { compareAsc, format } from "date-fns";\`
@@ -280,6 +289,7 @@ Artifacts are for substantial, self-contained content that users might modify or
       - Images from the web are not allowed, but you can use placeholder images by specifying the width and height like so \`<img src="/api/placeholder/400/320" alt="placeholder" />\`
       - When iterating on code, ensure that the code is complete and functional without any snippets, placeholders, or ellipses.
       - If you are unable to follow the above requirements for any reason, don't use artifacts and use regular code blocks instead, which will not attempt to render the component.
+${slideDeckInstructions}
   5. Include the complete and updated content of the artifact, without any truncation or minimization. Don't use "// rest of the code remains the same...".
   6. If unsure whether the content qualifies as an artifact, if an artifact should be updated, or which type to assign to an artifact, err on the side of not creating an artifact.
   7. NEVER use triple backticks to enclose the artifact, ONLY the content within the artifact.

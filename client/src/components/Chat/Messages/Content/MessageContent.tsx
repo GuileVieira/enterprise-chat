@@ -1,6 +1,7 @@
 import { memo, Suspense, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { DelayedRender } from '@librechat/client';
+import { Sparkle } from '@phosphor-icons/react';
 import type { TMessage } from 'librechat-data-provider';
 import type { TMessageContentProps, TDisplayProps } from '~/common';
 import Error from '~/components/Messages/Content/Error';
@@ -17,6 +18,14 @@ import store from '~/store';
 const ERROR_CONNECTION_TEXT = 'Error connecting to server, try refreshing the page.';
 const DELAYED_ERROR_TIMEOUT = 5500;
 const UNFINISHED_DELAY = 250;
+
+type HiddenPromptMetadata = {
+  hiddenPrompt?: {
+    name?: string;
+    description?: string;
+    promptGroupId?: string;
+  };
+};
 
 const parseThinkingContent = (text: string) => {
   const thinkingMatch = text.match(/:::thinking([\s\S]*?):::/);
@@ -94,6 +103,10 @@ export const ErrorMessage = ({
 const DisplayMessage = ({ text, isCreatedByUser, message, showCursor }: TDisplayProps) => {
   const { isSubmitting = false, isLatestMessage = false } = useMessageContext();
   const enableUserMsgMarkdown = useRecoilValue(store.enableUserMsgMarkdown);
+  const hiddenPrompt = (message.metadata as HiddenPromptMetadata | undefined)?.hiddenPrompt;
+  const hiddenPromptName = typeof hiddenPrompt?.name === 'string' ? hiddenPrompt.name : '';
+  const shouldShowHiddenPrompt = isCreatedByUser && hiddenPromptName;
+  const visibleText = shouldShowHiddenPrompt && text.trim() === hiddenPromptName ? '' : text;
 
   const showCursorState = useMemo(
     () => showCursor === true && isSubmitting,
@@ -102,13 +115,13 @@ const DisplayMessage = ({ text, isCreatedByUser, message, showCursor }: TDisplay
 
   const content = useMemo(() => {
     if (!isCreatedByUser) {
-      return <Markdown content={text} isLatestMessage={isLatestMessage} />;
+      return <Markdown content={visibleText} isLatestMessage={isLatestMessage} />;
     }
     if (enableUserMsgMarkdown) {
-      return <MarkdownLite content={text} />;
+      return <MarkdownLite content={visibleText} />;
     }
-    return <>{text}</>;
-  }, [isCreatedByUser, enableUserMsgMarkdown, text, isLatestMessage]);
+    return <>{visibleText}</>;
+  }, [isCreatedByUser, enableUserMsgMarkdown, visibleText, isLatestMessage]);
 
   return (
     <Container message={message}>
@@ -116,11 +129,17 @@ const DisplayMessage = ({ text, isCreatedByUser, message, showCursor }: TDisplay
         className={cn(
           'markdown prose message-content dark:prose-invert light w-full break-words',
           isSubmitting && 'submitting',
-          showCursorState && text.length > 0 && 'result-streaming',
+          showCursorState && visibleText.length > 0 && 'result-streaming',
           isCreatedByUser && !enableUserMsgMarkdown && 'whitespace-pre-wrap',
           isCreatedByUser ? 'dark:text-gray-20' : 'dark:text-gray-100',
         )}
       >
+        {shouldShowHiddenPrompt && (
+          <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border-light bg-surface-secondary px-3 py-1.5 text-sm font-medium text-text-primary">
+            <Sparkle className="h-4 w-4 flex-shrink-0 text-text-secondary" />
+            <span className="truncate">{hiddenPromptName}</span>
+          </div>
+        )}
         {content}
       </div>
     </Container>

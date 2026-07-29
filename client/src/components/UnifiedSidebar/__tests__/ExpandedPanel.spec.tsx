@@ -1,7 +1,7 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import '@testing-library/jest-dom/extend-expect';
-import { MessagesSquare, NotebookPen } from 'lucide-react';
+import { ChatsTeardrop as MessagesSquare, NotePencil as NotebookPen } from '@phosphor-icons/react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MutableSnapshot } from 'recoil';
@@ -17,12 +17,17 @@ jest.mock('~/store', () => {
     key: 'mock-newChatSwitchToHistory',
     default: true,
   });
+  const selectedProjectIdAtom = atom({
+    key: 'mock-selectedProjectId',
+    default: null,
+  });
   return {
     __esModule: true,
     default: {
       conversationByIndex: () =>
         atom({ key: `mock-conversationByIndex-${counter++}`, default: null }),
       newChatSwitchToHistory: switchAtom,
+      selectedProjectId: selectedProjectIdAtom,
     },
   };
 });
@@ -35,6 +40,10 @@ jest.mock('~/hooks', () => ({
 jest.mock('~/utils', () => ({
   clearMessagesCache: (...args: unknown[]) => mockClearMessagesCache(...args),
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(' '),
+}));
+
+jest.mock('~/data-provider', () => ({
+  useProjectByIdQuery: () => ({ data: null }),
 }));
 
 jest.mock('~/components/Chat/Menus/OpenSidebar', () => ({

@@ -3,14 +3,14 @@ const request = require('supertest');
 const mongoose = require('mongoose');
 const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
-const { createMethods, tenantStorage } = require('@librechat/data-schemas');
+const { createMethods, runAsSystem, tenantStorage } = require('@librechat/data-schemas');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const {
   SystemRoles,
+  FileSources,
   ResourceType,
   AccessRoleIds,
   PrincipalType,
-  FileSources,
 } = require('librechat-data-provider');
 const { createAgent, createFile } = require('~/models');
 
@@ -78,8 +78,10 @@ describe('File Routes - Delete with Agent Access', () => {
   let Agent;
   let AclEntry;
   let User;
+  let Project;
   let methods;
   let modelsToCleanup = [];
+  let currentTenantId;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -104,6 +106,7 @@ describe('File Routes - Delete with Agent Access', () => {
     Agent = models.Agent;
     AclEntry = models.AclEntry;
     User = models.User;
+    Project = models.Project;
 
     // Seed default roles using our methods
     await methods.seedDefaultRoles();
@@ -115,8 +118,13 @@ describe('File Routes - Delete with Agent Access', () => {
       req.user = {
         id: otherUserId?.toString() || 'default-user',
         role: SystemRoles.USER,
+        ...(currentTenantId && { tenantId: currentTenantId }),
       };
-      req.app.locals = {};
+      req.config = { fileStrategy: FileSources.local };
+      req.app.locals = req.app.locals || {};
+      if (currentTenantId) {
+        return tenantStorage.run({ tenantId: currentTenantId }, async () => next());
+      }
       next();
     });
 
@@ -143,10 +151,12 @@ describe('File Routes - Delete with Agent Access', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    currentTenantId = undefined;
 
     // Clear database - clean up all test data
     await File.deleteMany({});
     await Agent.deleteMany({});
+    await Project.deleteMany({});
     await User.deleteMany({});
     await AclEntry.deleteMany({});
     // Don't delete AccessRole as they are seeded defaults needed for tests
@@ -177,6 +187,88 @@ describe('File Routes - Delete with Agent Access', () => {
       filepath: '/uploads/test.txt',
       bytes: 100,
       type: 'text/plain',
+    });
+  });
+
+  describe('GET /files', () => {
+    it('lists project-linked files for a user with project VIEW access', async () => {
+      const projectId = uuidv4();
+      const project = await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Shared Project',
+        fileIds: [fileId],
+      });
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: otherUserId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.map((file) => file.file_id)).toContain(fileId);
+    });
+
+    it('lists legacy project files missing tenantId for tenant project viewers', async () => {
+      currentTenantId = 'tenant-a';
+      const projectId = uuidv4();
+      const legacyFileId = uuidv4();
+      const project = await tenantStorage.run({ tenantId: currentTenantId }, async () =>
+        Project.create({
+          user: authorId,
+          projectId,
+          name: 'Tenant Project',
+          fileIds: [legacyFileId],
+        }),
+      );
+      await runAsSystem(async () =>
+        File.create({
+          user: authorId,
+          file_id: legacyFileId,
+          filename: 'legacy.txt',
+          filepath: '/uploads/legacy.txt',
+          bytes: 100,
+          type: 'text/plain',
+        }),
+      );
+      await runAsSystem(async () =>
+        User.updateOne({ _id: otherUserId }, { $set: { tenantId: currentTenantId } }),
+      );
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.TENANT,
+        principalId: currentTenantId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_VIEWER,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.map((file) => file.file_id)).toContain(legacyFileId);
+    });
+
+    it('denies project file listing without project VIEW access', async () => {
+      const projectId = uuidv4();
+      await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Private Project',
+        fileIds: [fileId],
+      });
+
+      const response = await request(app).get(`/files?projectId=${projectId}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toBe('Insufficient project permissions');
     });
   });
 
@@ -225,6 +317,39 @@ describe('File Routes - Delete with Agent Access', () => {
       expect(response.body.message).toBe('You can only delete files you have access to');
       expect(response.body.unauthorizedFiles).toContain(fileId);
       expect(processDeleteRequest).not.toHaveBeenCalled();
+    });
+
+    it('allows deleting legacy project-linked files without filepath in the request', async () => {
+      const projectId = uuidv4();
+      const project = await Project.create({
+        user: authorId,
+        projectId,
+        name: 'Shared Project',
+        fileIds: [fileId],
+      });
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: otherUserId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_EDITOR,
+        grantedBy: authorId,
+      });
+
+      const response = await request(app)
+        .delete('/files')
+        .send({
+          projectId,
+          files: [{ file_id: fileId }],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Files deleted successfully');
+      expect(processDeleteRequest).toHaveBeenCalledWith({
+        req: expect.anything(),
+        files: [expect.objectContaining({ file_id: fileId })],
+      });
     });
 
     it('should allow deleting files accessible through shared agent', async () => {

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ListFilter } from 'lucide-react';
+import { Funnel as ListFilter } from '@phosphor-icons/react';
 import { useSetRecoilState } from 'recoil';
 import {
   flexRender,

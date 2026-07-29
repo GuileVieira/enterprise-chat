@@ -2,6 +2,7 @@ import {
   buildSandpackOptions,
   detectArtifactTypeFromFile,
   fileToArtifact,
+  getDependencies,
   isCodeOnlyArtifact,
   isPreviewOnlyArtifact,
   languageForFilename,
@@ -43,6 +44,14 @@ describe('buildSandpackOptions', () => {
   it('returns base options without bundlerURL when no config is provided', () => {
     const options = buildSandpackOptions('react-ts');
     expect(options?.bundlerURL).toBeUndefined();
+  });
+});
+
+describe('React artifact dependencies', () => {
+  it('makes Embla available to generated slide decks', () => {
+    expect(getDependencies(TOOL_ARTIFACT_TYPES.REACT)).toMatchObject({
+      'embla-carousel-react': '^8.2.0',
+    });
   });
 });
 

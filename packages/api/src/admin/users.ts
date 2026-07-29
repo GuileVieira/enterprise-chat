@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { PrincipalType, SystemRoles } from 'librechat-data-provider';
-import { logger, isValidObjectIdString } from '@librechat/data-schemas';
+import { logger, runAsSystem, isValidObjectIdString } from '@librechat/data-schemas';
 import type {
   IUser,
   IConfig,
@@ -15,7 +15,8 @@ import { parsePagination } from './pagination';
 
 const MAX_SEARCH_LENGTH = 200;
 
-const USER_LIST_FIELDS = '_id name username email avatar role provider createdAt updatedAt';
+const USER_LIST_FIELDS =
+  '_id name username email avatar role provider tenantId createdAt updatedAt';
 
 export interface AdminUsersDeps {
   findUsers: (
@@ -48,19 +49,23 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps) {
   async function listUsersHandler(req: ServerRequest, res: Response) {
     try {
       const { limit, offset } = parsePagination(req.query);
-      const [users, total] = await Promise.all([
-        findUsers({}, USER_LIST_FIELDS, { limit, offset, sort: { createdAt: -1 } }),
-        countUsers(),
-      ]);
+      const [users, total] = await runAsSystem(() =>
+        Promise.all([
+          findUsers({}, USER_LIST_FIELDS, { limit, offset, sort: { createdAt: -1 } }),
+          countUsers(),
+        ]),
+      );
 
       const mapped: AdminUserListItem[] = users.map((u) => ({
         id: u._id?.toString() ?? '',
+        _id: u._id?.toString() ?? '',
         name: u.name ?? '',
         username: u.username ?? '',
         email: u.email ?? '',
         avatar: u.avatar ?? '',
         role: u.role ?? 'USER',
         provider: u.provider ?? 'local',
+        tenantId: u.tenantId,
         createdAt: u.createdAt?.toISOString(),
         updatedAt: u.updatedAt?.toISOString(),
       }));
@@ -98,18 +103,22 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps) {
       const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(`^${escaped}`, 'i');
 
-      const users = await findUsers(
-        { $or: [{ name: regex }, { email: regex }, { username: regex }] },
-        '_id name email username avatar',
-        { limit: searchLimit, sort: { name: 1 } },
+      const users = await runAsSystem(() =>
+        findUsers(
+          { $or: [{ name: regex }, { email: regex }, { username: regex }] },
+          '_id name email username avatar tenantId',
+          { limit: searchLimit, sort: { name: 1 } },
+        ),
       );
 
       const results: AdminUserSearchResult[] = users.map((u) => ({
         id: u._id?.toString() ?? '',
+        _id: u._id?.toString() ?? '',
         name: u.name ?? '',
         email: u.email ?? '',
         username: u.username,
         avatarUrl: u.avatar,
+        tenantId: u.tenantId,
       }));
 
       return res

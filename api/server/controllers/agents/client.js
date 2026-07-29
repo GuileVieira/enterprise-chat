@@ -61,10 +61,17 @@ const { filterFilesByAgentAccess } = require('~/server/services/Files/permission
 const { encodeAndFormat } = require('~/server/services/Files/images/encode');
 const { createContextHandlers } = require('~/app/clients/prompts');
 const { resolveConfigServers } = require('~/server/services/MCP');
+const { loadProjectContext } = require('~/server/services/Projects/context');
 const { getMCPServerTools } = require('~/server/services/Config');
 const BaseClient = require('~/app/clients/BaseClient');
 const { getMCPManager } = require('~/config');
 const db = require('~/models');
+
+const DEFAULT_PT_BR_TITLE_PROMPT =
+  'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.\n\nConversa:\n{convo}';
+
+const DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE =
+  'Mensagem do usuário: {input}\n\nResposta do assistente: {output}';
 
 const loadAgent = (params) => loadAgentFn(params, { getAgent: db.getAgent, getMCPServerTools });
 
@@ -205,6 +212,7 @@ class AgentClient extends BaseClient {
           modelLabel: this.options.modelLabel,
           resendFiles: this.options.resendFiles,
           imageDetail: this.options.imageDetail,
+          projectId: this.options.projectId,
           maxContextTokens: this.maxContextTokens,
         },
         // TODO: PARSE OPTIONS BY PROVIDER, MAY CONTAIN SENSITIVE DATA
@@ -589,6 +597,11 @@ class AgentClient extends BaseClient {
      *  tool registered unconditionally; without this passthrough the
      *  memory path would silently lose code-execution tooling). */
     const memoryCapabilities = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities);
+    const projectContext = await loadProjectContext({
+      req: this.options.req,
+      conversationId: this.conversationId,
+      projectId: this.options.projectId,
+    });
     const agent = await initializeAgent(
       {
         req: this.options.req,
@@ -601,6 +614,8 @@ class AgentClient extends BaseClient {
             : memoryConfig.agent?.provider,
         },
         codeEnvAvailable: memoryCapabilities.has(AgentCapabilities.execute_code),
+        projectFileIds: projectContext.projectFileIds,
+        projectId: projectContext.projectId,
       },
       {
         getFiles: db.getFiles,
@@ -1167,6 +1182,15 @@ class AgentClient extends BaseClient {
    * @param {string} params.conversationId
    */
   async titleConvo({ text, abortController }) {
+    logger.debug('[AgentClient #titleConvo] Called', {
+      hasRun: !!this.run,
+      hasOptions: !!this.options,
+      hasAgent: !!this.options?.agent,
+      agentEndpoint: this.options?.agent?.endpoint,
+      agentModel: this.options?.agent?.model || this.options?.agent?.model_parameters?.model,
+      conversationId: this.conversationId,
+      textLength: text?.length,
+    });
     if (!this.run) {
       throw new Error('Run not initialized');
     }
@@ -1188,13 +1212,31 @@ class AgentClient extends BaseClient {
       model: agent.model || agent.model_parameters.model,
     };
 
-    let titleProviderConfig = getProviderConfig({ provider: endpoint, appConfig });
+    let titleProviderConfig;
+    try {
+      titleProviderConfig = getProviderConfig({ provider: endpoint, appConfig });
+    } catch (err) {
+      logger.error(
+        `[AgentClient #titleConvo] getProviderConfig failed for endpoint "${endpoint}"`,
+        err,
+      );
+      return;
+    }
 
     /** @type {TEndpoint | undefined} */
     const endpointConfig =
       appConfig.endpoints?.all ??
       appConfig.endpoints?.[endpoint] ??
       titleProviderConfig.customEndpointConfig;
+
+    logger.debug('[AgentClient #titleConvo] Config resolved', {
+      endpoint,
+      hasEndpointConfig: !!endpointConfig,
+      titleConvo: endpointConfig?.titleConvo,
+      titleModel: endpointConfig?.titleModel,
+      titleEndpoint: endpointConfig?.titleEndpoint,
+    });
+
     if (!endpointConfig) {
       logger.debug(
         `[api/server/controllers/agents/client.js #titleConvo] No endpoint config for "${endpoint}"`,
@@ -1310,8 +1352,9 @@ class AgentClient extends BaseClient {
         inputText: text,
         contentParts: this.contentParts,
         titleMethod: endpointConfig?.titleMethod,
-        titlePrompt: endpointConfig?.titlePrompt,
-        titlePromptTemplate: endpointConfig?.titlePromptTemplate,
+        titlePrompt: endpointConfig?.titlePrompt ?? DEFAULT_PT_BR_TITLE_PROMPT,
+        titlePromptTemplate:
+          endpointConfig?.titlePromptTemplate ?? DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE,
         chainOptions: {
           runName: 'TitleRun',
           signal: abortController.signal,
@@ -1364,6 +1407,16 @@ class AgentClient extends BaseClient {
           err,
         );
       });
+      logger.debug('[AgentClient #titleConvo] generateTitle result', {
+        titleResult,
+        title: titleResult?.title,
+        conversationId: this.conversationId,
+      });
+
+      if (!titleResult?.title) {
+        logger.debug('[AgentClient #titleConvo] generateTitle returned no title');
+        return;
+      }
 
       return sanitizeTitle(titleResult.title);
     } catch (err) {

@@ -4,13 +4,13 @@ import debounce from 'lodash/debounce';
 import { useRecoilValue } from 'recoil';
 import { Link } from 'react-router-dom';
 import {
-  ArrowUp,
-  TrashIcon,
   ArrowDown,
-  ArrowUpDown,
-  ExternalLink,
-  MessageSquare,
-} from 'lucide-react';
+  ArrowUp,
+  ArrowsDownUp as ArrowUpDown,
+  ArrowSquareOut as ExternalLink,
+  ChatCircle as MessageSquare,
+  Trash as TrashIcon,
+} from '@phosphor-icons/react';
 import {
   Label,
   Button,

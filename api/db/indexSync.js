@@ -128,12 +128,19 @@ async function ensureFilterableAttributes(client) {
       const convosIndex = client.index('convos');
       const settings = await convosIndex.getSettings();
 
-      if (!settings.filterableAttributes || !settings.filterableAttributes.includes('user')) {
-        logger.info('[indexSync] Configuring convos index to filter by user...');
+      const requiredConvoFilters = ['user', 'projectId'];
+      const missingConvoFilters = requiredConvoFilters.filter(
+        (attr) => !settings.filterableAttributes || !settings.filterableAttributes.includes(attr),
+      );
+
+      if (missingConvoFilters.length > 0) {
+        logger.info(
+          `[indexSync] Configuring convos index to filter by [${requiredConvoFilters.join(', ')}]...`,
+        );
         await convosIndex.updateSettings({
-          filterableAttributes: ['user'],
+          filterableAttributes: requiredConvoFilters,
         });
-        logger.info('[indexSync] Convos index configured for user filtering');
+        logger.info('[indexSync] Convos index configured for user and projectId filtering');
         settingsUpdated = true;
       }
 

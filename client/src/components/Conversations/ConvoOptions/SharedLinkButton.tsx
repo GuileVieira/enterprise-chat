@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Trans } from 'react-i18next';
-import { QrCode, RotateCw, Trash2 } from 'lucide-react';
+import { QrCode, ArrowClockwise as RotateCw, Trash as Trash2 } from '@phosphor-icons/react';
 import {
   Label,
   Button,
@@ -14,6 +14,7 @@ import {
   OGDialogContent,
 } from '@librechat/client';
 import type { TSharedLinkGetResponse } from 'librechat-data-provider';
+import type { ShareLinkSearch } from '~/utils';
 import {
   useCreateSharedLinkMutation,
   useUpdateSharedLinkMutation,
@@ -30,6 +31,8 @@ export default function SharedLinkButton({
   showQR,
   setShowQR,
   setSharedLink,
+  linkSearch,
+  shareLinkBaseUrl,
 }: {
   share: TSharedLinkGetResponse | undefined;
   conversationId: string;
@@ -37,6 +40,8 @@ export default function SharedLinkButton({
   showQR: boolean;
   setShowQR: (showQR: boolean) => void;
   setSharedLink: (sharedLink: string) => void;
+  linkSearch?: ShareLinkSearch;
+  shareLinkBaseUrl?: string;
 }) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
@@ -86,7 +91,8 @@ export default function SharedLinkButton({
     },
   });
 
-  const generateShareLink = (shareId: string) => buildShareLinkUrl(shareId);
+  const generateShareLink = (shareId: string) =>
+    buildShareLinkUrl(shareId, linkSearch, shareLinkBaseUrl);
 
   const updateSharedLink = async () => {
     if (!shareId) {

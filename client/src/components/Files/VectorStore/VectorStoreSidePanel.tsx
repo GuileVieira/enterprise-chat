@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListFilter } from 'lucide-react';
+import { Funnel as ListFilter } from '@phosphor-icons/react';
 import { Button, Input } from '@librechat/client';
 import VectorStoreButton from './VectorStoreButton';
 import VectorStoreList from './VectorStoreList';

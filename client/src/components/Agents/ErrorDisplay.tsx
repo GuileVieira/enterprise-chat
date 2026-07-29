@@ -27,7 +27,7 @@ type ApiError =
     };
 
 interface ErrorDisplayProps {
-  error: ApiError;
+  error: ApiError | null | undefined;
   onRetry?: () => void;
   context?: {
     searchQuery?: string;
@@ -42,11 +42,11 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onRetry, cont
   const localize = useLocalize();
 
   // Type guards
-  const isErrorObject = (err: ApiError): err is { [key: string]: unknown } => {
+  const isErrorObject = (err: ApiError | null | undefined): err is { [key: string]: unknown } => {
     return typeof err === 'object' && err !== null && !(err instanceof Error);
   };
 
-  const isErrorInstance = (err: ApiError): err is Error => {
+  const isErrorInstance = (err: ApiError | null | undefined): err is Error => {
     return err instanceof Error;
   };
 

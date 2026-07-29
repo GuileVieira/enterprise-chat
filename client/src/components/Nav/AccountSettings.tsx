@@ -1,11 +1,13 @@
 import { useState, memo, useRef } from 'react';
 import * as Menu from '@ariakit/react/menu';
-import { FileText, LogOut } from 'lucide-react';
-import { LinkIcon, GearIcon, DropdownMenuSeparator, Avatar } from '@librechat/client';
+import { FileText, GearSix, Shield, SignOut } from '@phosphor-icons/react';
+import { DropdownMenuSeparator, Avatar } from '@librechat/client';
 import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useLocalize } from '~/hooks';
+import { SystemRoles } from 'librechat-data-provider';
+import { useNavigate } from 'react-router-dom';
 import Settings from './Settings';
 
 function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
@@ -18,6 +20,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showFiles, setShowFiles] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
+  const navigate = useNavigate();
 
   return (
     <Menu.MenuProvider>
@@ -27,7 +30,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         data-testid="nav-user"
         className={
           collapsed
-            ? 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
+            ? 'flex h-9 w-9 items-center justify-center rounded-xl border border-transparent transition-all duration-200 hover:border-border-light hover:bg-surface-hover aria-[expanded=true]:border-border-light aria-[expanded=true]:bg-surface-active-alt'
             : 'mt-text-sm flex h-auto w-full items-center gap-2 rounded-xl p-2 text-sm transition-all duration-200 ease-in-out hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
         }
       >
@@ -73,22 +76,19 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           <FileText className="icon-md" aria-hidden="true" />
           {localize('com_nav_my_files')}
         </Menu.MenuItem>
-        {startupConfig?.helpAndFaqURL !== '/' && (
-          <Menu.MenuItem
-            onClick={() => window.open(startupConfig?.helpAndFaqURL, '_blank')}
-            className="select-item text-sm"
-          >
-            <LinkIcon aria-hidden="true" />
-            {localize('com_nav_help_faq')}
-          </Menu.MenuItem>
-        )}
         <Menu.MenuItem onClick={() => setShowSettings(true)} className="select-item text-sm">
-          <GearIcon className="icon-md" aria-hidden="true" />
+          <GearSix className="icon-md" aria-hidden="true" />
           {localize('com_nav_settings')}
         </Menu.MenuItem>
+        {user?.role === SystemRoles.ADMIN && (
+          <Menu.MenuItem onClick={() => navigate('/admin')} className="select-item text-sm">
+            <Shield className="icon-md" aria-hidden="true" />
+            {localize('com_admin_console')}
+          </Menu.MenuItem>
+        )}
         <DropdownMenuSeparator />
         <Menu.MenuItem onClick={() => logout()} className="select-item text-sm">
-          <LogOut className="icon-md" aria-hidden="true" />
+          <SignOut className="icon-md" aria-hidden="true" />
           {localize('com_nav_log_out')}
         </Menu.MenuItem>
       </Menu.Menu>

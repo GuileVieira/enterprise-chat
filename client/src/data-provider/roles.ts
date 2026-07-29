@@ -4,6 +4,7 @@ import {
   dataService,
   promptPermissionsSchema,
   skillPermissionsSchema,
+  metaAdsPermissionsSchema,
   memoryPermissionsSchema,
   mcpServersPermissionsSchema,
   marketplacePermissionsSchema,
@@ -320,6 +321,42 @@ export const useUpdateRemoteAgentsPermissionsMutation = (
         const error = args[0];
         if (error != null) {
           console.error('Failed to update remote agents permissions:', error);
+        }
+        if (onError) {
+          onError(...args);
+        }
+      },
+      onMutate,
+    },
+  );
+};
+
+export const useUpdateMetaAdsPermissionsMutation = (
+  options?: t.UpdateMetaAdsPermOptions,
+): UseMutationResult<
+  t.UpdatePermResponse,
+  t.TError | undefined,
+  t.UpdateMetaAdsPermVars,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const { onMutate, onSuccess, onError } = options ?? {};
+  return useMutation(
+    (variables) => {
+      metaAdsPermissionsSchema.partial().parse(variables.updates);
+      return dataService.updateMetaAdsPermissions(variables);
+    },
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.invalidateQueries([QueryKeys.roles, variables.roleName]);
+        if (onSuccess) {
+          onSuccess(data, variables, context);
+        }
+      },
+      onError: (...args) => {
+        const error = args[0];
+        if (error != null) {
+          console.error('Failed to update Meta Ads permissions:', error);
         }
         if (onError) {
           onError(...args);

@@ -1,5 +1,5 @@
 {
-  "name": "LibreChat",
+  "name": "orqest",
   "version": "v0.8.6-rc1",
   "description": "",
   "packageManager": "npm@11.10.0",
@@ -34,6 +34,18 @@
     "reset-password": "node config/reset-password.js",
     "ban-user": "node config/ban-user.js",
     "delete-user": "node config/delete-user.js",
+    "list-functions": "node config/manage-functions.js list",
+    "create-function": "node config/manage-functions.js create",
+    "update-function": "node config/manage-functions.js update",
+    "toggle-function": "node config/manage-functions.js toggle",
+    "delete-function": "node config/manage-functions.js delete",
+    "show-function": "node config/manage-functions.js show",
+    "list-secrets": "node config/manage-secrets.js list",
+    "create-secret": "node config/manage-secrets.js create",
+    "rotate-secret": "node config/manage-secrets.js rotate",
+    "delete-secret": "node config/manage-secrets.js delete",
+    "meta-ads:test-accounts": "node scripts/test-meta-ads-accounts.cjs",
+    "meta-ads:budget-cron": "node api/server/jobs/metaAdsBudgetCron.js",
     "reset-meili-sync": "node config/reset-meili-sync.js",
     "update-banner": "node config/update-banner.js",
     "delete-banner": "node config/delete-banner.js",
@@ -95,6 +107,12 @@
     "migrate:prompt-permissions:dry-run": "node config/migrate-prompt-permissions.js --dry-run",
     "migrate:prompt-permissions": "node config/migrate-prompt-permissions.js",
     "migrate:prompt-permissions:batch": "node config/migrate-prompt-permissions.js --batch-size=50",
+    "migrate:project-permissions:dry-run": "node config/migrate-project-permissions.js --dry-run",
+    "migrate:project-permissions": "node config/migrate-project-permissions.js --apply",
+    "migrate:project-permissions:batch": "node config/migrate-project-permissions.js --apply --batch-size=50",
+    "migrate:project-files:dry-run": "node config/migrate-project-files.js --dry-run",
+    "migrate:project-files": "node config/migrate-project-files.js --apply",
+    "migrate:project-files:batch": "node config/migrate-project-files.js --apply --batch-size=50",
     "migrate:orphaned-agent-files:dry-run": "node config/migrate-orphaned-agent-files.js --dry-run",
     "migrate:orphaned-agent-files": "node config/migrate-orphaned-agent-files.js",
     "migrate:orphaned-agent-files:batch": "node config/migrate-orphaned-agent-files.js --batch-size=50"
@@ -184,5 +202,14 @@
       "admin/",
       "packages/"
     ]
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/core": "^2.7.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
+    "@opentelemetry/sdk-trace-base": "^2.7.1",
+    "lucide-react": "^1.16.0",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   }
 }

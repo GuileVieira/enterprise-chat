@@ -1,5 +1,6 @@
 import type { AxiosResponse } from 'axios';
 import type * as t from './types';
+import type { TFileConfig } from './file-config';
 import * as endpoints from './api-endpoints';
 import * as a from './types/assistants';
 import * as ag from './types/agents';
@@ -62,6 +63,10 @@ export function getSharedMessages(shareId: string): Promise<t.TSharedMessagesRes
   return request.get(endpoints.shareMessages(shareId));
 }
 
+export function getTenantSharedMessages(shareId: string): Promise<t.TSharedMessagesResponse> {
+  return request.get(endpoints.tenantShareMessages(shareId));
+}
+
 export const listSharedLinks = async (
   params: q.SharedLinksListParams,
 ): Promise<q.SharedLinksResponse> => {
@@ -72,8 +77,11 @@ export const listSharedLinks = async (
   );
 };
 
-export function getSharedLink(conversationId: string): Promise<t.TSharedLinkGetResponse> {
-  return request.get(endpoints.getSharedLink(conversationId));
+export function getSharedLink(
+  conversationId: string,
+  targetMessageId?: string,
+): Promise<t.TSharedLinkGetResponse> {
+  return request.get(endpoints.getSharedLink(conversationId, targetMessageId));
 }
 
 export function createSharedLink(
@@ -81,6 +89,21 @@ export function createSharedLink(
   targetMessageId?: string,
 ): Promise<t.TSharedLinkResponse> {
   return request.post(endpoints.createSharedLink(conversationId), { targetMessageId });
+}
+
+export function createTenantSharedLink(
+  conversationId: string,
+  targetMessageId?: string,
+): Promise<t.TSharedLinkResponse> {
+  return request.post(endpoints.createTenantSharedLink(conversationId), { targetMessageId });
+}
+
+export function forkTenantSharedLink({
+  shareId,
+  targetMessageId,
+  option,
+}: t.TForkTenantShareRequest): Promise<t.TForkConvoResponse> {
+  return request.post(endpoints.forkTenantSharedLink(shareId), { targetMessageId, option });
 }
 
 export function updateSharedLink(
@@ -147,6 +170,12 @@ export function getUserBalance(): Promise<t.TBalanceResponse> {
 
 export const updateTokenCount = (text: string) => {
   return request.post(endpoints.tokenizer(), { arg: text });
+};
+
+export const improvePrompt = (
+  payload: m.TImprovePromptRequest,
+): Promise<m.TImprovePromptResponse> => {
+  return request.post(endpoints.promptImprove(), payload);
 };
 
 export const login = (payload: t.TLoginUser): Promise<t.TLoginResponse> => {
@@ -421,11 +450,15 @@ export const getFilePreview = (fileId: string): Promise<f.TFilePreview> => {
   return request.get(endpoints.filePreview(fileId));
 };
 
+export const getProjectFiles = (projectId: string): Promise<f.TFile[]> => {
+  return request.get(endpoints.projectFiles(projectId));
+};
+
 export const getAgentFiles = (agentId: string): Promise<f.TFile[]> => {
   return request.get(endpoints.agentFiles(agentId));
 };
 
-export const getFileConfig = (): Promise<f.FileConfig> => {
+export const getFileConfig = (): Promise<TFileConfig> => {
   return request.get(`${endpoints.files()}/config`);
 };
 
@@ -527,6 +560,16 @@ export const duplicateAgent = ({
   );
 };
 
+export const cloneAgentToTenant = ({
+  agent_id,
+  tenantId,
+}: {
+  agent_id: string;
+  tenantId: string;
+}): Promise<a.Agent> => {
+  return request.post(endpoints.cloneAgentToTenant(agent_id), { tenantId });
+};
+
 export const deleteAgent = ({ agent_id }: m.DeleteAgentBody): Promise<void> => {
   return request.delete(
     endpoints.agents({
@@ -585,6 +628,14 @@ export const getAvailableAgentTools = (): Promise<s.TPlugin[]> => {
   return request.get(
     endpoints.agents({
       path: 'tools',
+    }),
+  );
+};
+
+export const getTenantFunctions = (): Promise<q.PublicTenantFunctionListResponse> => {
+  return request.get(
+    endpoints.agents({
+      path: 'tenant-functions',
     }),
   );
 };
@@ -794,6 +845,205 @@ export function genTitle(payload: m.TGenTitleRequest): Promise<m.TGenTitleRespon
   return request.get(endpoints.genTitle(payload.conversationId));
 }
 
+/* Projects */
+export const getProjects = (): Promise<s.TProject[]> => {
+  return request.get(endpoints.projects());
+};
+
+export const getProjectById = (id: string): Promise<s.TProject> => {
+  return request.get(endpoints.projectById(id));
+};
+
+export const createProject = (
+  payload: Omit<s.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>,
+): Promise<s.TProject> => {
+  return request.post(endpoints.projects(), payload);
+};
+
+export const updateProject = (
+  id: string,
+  payload: Partial<Omit<s.TProject, 'projectId' | 'user' | 'tenantId' | 'createdAt' | 'updatedAt'>>,
+): Promise<s.TProject> => {
+  return request.put(endpoints.projectById(id), payload);
+};
+
+export const deleteProject = (id: string): Promise<s.TProject> => {
+  return request.delete(endpoints.projectById(id));
+};
+
+export const archiveProject = (id: string, isArchived: boolean): Promise<s.TProject> => {
+  return request.put(endpoints.archiveProject(id), { isArchived });
+};
+
+export const getProjectMeetings = (
+  id: string,
+): Promise<import('./types/meetings').ProjectMeeting[]> =>
+  request.get(endpoints.projectMeetings(id));
+
+export const getProjectMeeting = (
+  id: string,
+  meetingId: string,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.get(endpoints.projectMeeting(id, meetingId));
+
+export const createProjectMeeting = (
+  id: string,
+  data: FormData,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.postMultiPart(endpoints.projectMeetings(id), data);
+
+export const updateProjectMeetingSpeakers = (
+  id: string,
+  meetingId: string,
+  speakerNames: Record<string, string>,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.patch(endpoints.projectMeetingSpeakers(id, meetingId), { speakerNames });
+
+export const updateProjectMeeting = (
+  id: string,
+  meetingId: string,
+  payload: { title: string },
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.patch(endpoints.projectMeeting(id, meetingId), payload);
+
+export const retryProjectMeetingIndex = (
+  id: string,
+  meetingId: string,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.post(endpoints.projectMeetingIndex(id, meetingId));
+
+export const getProjectMetaAdsStatus = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsStatus> => {
+  return request.get(endpoints.projectMetaAds(id), { params });
+};
+
+export const getProjectMetaAdsRankings = (
+  id: string,
+  params?: q.ProjectMetaAdsRankingParams,
+): Promise<q.ProjectMetaAdsRankingResponse> => {
+  return request.get(endpoints.projectMetaAdsRankings(id), { params });
+};
+
+export const getProjectMetaAdsPerformance = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsPerformanceResponse> => {
+  return request.get(endpoints.projectMetaAdsPerformance(id), { params });
+};
+
+export const getProjectMetaAdsRulePerformance = (
+  id: string,
+  params?: q.ProjectMetaAdsStatusParams,
+): Promise<q.ProjectMetaAdsRulePerformanceResponse> => {
+  return request.get(endpoints.projectMetaAdsRulePerformance(id), { params });
+};
+
+export const getProjectMetaAdsRuleHistory = (
+  id: string,
+): Promise<q.ProjectMetaAdsRuleHistoryResponse> => {
+  return request.get(endpoints.projectMetaAdsRuleHistory(id));
+};
+
+export const getProjectMetaAdsRuns = (
+  id: string,
+  params?: { limit?: number },
+): Promise<q.ProjectMetaAdsRunsResponse> => {
+  return request.get(endpoints.projectMetaAdsRuns(id), { params });
+};
+
+export const getProjectMetaAdsDiary = (
+  id: string,
+  kind?: q.ProjectTrafficDiaryKind,
+  scope?: 'project',
+): Promise<q.ProjectTrafficDiaryResponse> => {
+  return request.get(endpoints.projectMetaAdsDiary(id, kind, scope));
+};
+
+export const saveProjectMetaAdsDiary = (
+  id: string,
+  date: string,
+  answers: q.ProjectTrafficDiaryAnswer[],
+  kind?: q.ProjectTrafficDiaryKind,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers, kind });
+};
+
+export const completeProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryComplete(id, entryId), {});
+};
+
+export const reopenProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryReopen(id, entryId), {});
+};
+
+export const reprocessProjectMetaAdsDiary = (
+  id: string,
+  entryId: string,
+): Promise<q.ProjectTrafficDiaryEntry> => {
+  return request.post(endpoints.projectMetaAdsDiaryReprocess(id, entryId), {});
+};
+
+export const deleteProjectMetaAdsDiary = (id: string, entryId: string): Promise<void> => {
+  return request.delete(endpoints.projectMetaAdsDiaryDelete(id, entryId));
+};
+
+export const updateProjectMetaAdsSettings = (
+  id: string,
+  metaAds: s.TProject['metaAds'],
+  metaAccessToken?: string,
+): Promise<s.TProject> => {
+  return request.put(endpoints.projectMetaAdsSettings(id), { metaAds, metaAccessToken });
+};
+
+export const updateProjectMetaAdsTenantToken = (
+  id: string,
+  metaAccessToken: string,
+): Promise<q.ProjectMetaAdsTenantTokenResponse> => {
+  return request.put(endpoints.projectMetaAdsTenantToken(id), { metaAccessToken });
+};
+
+export const runProjectMetaAdsAnalysis = (id: string): Promise<q.ProjectMetaAdsRunResponse> => {
+  return request.post(endpoints.projectMetaAdsRun(id), {});
+};
+
+export const updateProjectMetaAdsBudget = (
+  id: string,
+  payload: q.ProjectMetaAdsManualBudgetPayload,
+): Promise<q.ProjectMetaAdsManualBudgetResponse> => {
+  return request.post(endpoints.projectMetaAdsBudget(id), payload);
+};
+
+export const duplicateProjectMetaAdsEntity = (
+  id: string,
+  payload: q.ProjectMetaAdsDuplicatePayload,
+): Promise<q.ProjectMetaAdsDuplicateResponse> => {
+  return request.post(endpoints.projectMetaAdsDuplicate(id), payload);
+};
+
+export const updateProjectMetaAdsEntityStatus = (
+  id: string,
+  entityLevel: q.ProjectMetaAdsEntityStatusLevel,
+  entityId: string,
+  payload: q.ProjectMetaAdsEntityStatusPayload,
+): Promise<q.ProjectMetaAdsEntityStatusResponse> => {
+  return request.post(endpoints.projectMetaAdsEntityStatus(id, entityLevel, entityId), payload);
+};
+
+export const applyProjectMetaAdsRecommendation = (
+  id: string,
+  recommendationId: string,
+): Promise<q.ProjectMetaAdsApplyResponse> => {
+  return request.post(endpoints.projectMetaAdsApply(id, recommendationId), {});
+};
+
 export const listMessages = (params?: q.MessagesListParams): Promise<q.MessagesListResponse> => {
   return request.get(endpoints.messages(params ?? {}));
 };
@@ -902,6 +1152,21 @@ export function deletePromptGroup(id: string): Promise<t.TDeletePromptGroupRespo
 
 export function getCategories(): Promise<t.TGetCategoriesResponse> {
   return request.get(endpoints.getCategories());
+}
+
+export function createCategory(variables: t.TCreateCategoryRequest): Promise<t.TCategory> {
+  return request.post(endpoints.postCategory(), variables);
+}
+
+export function updateCategory(
+  id: string,
+  variables: t.TUpdateCategoryRequest,
+): Promise<t.TCategory> {
+  return request.patch(endpoints.updateCategory(id), variables);
+}
+
+export function deleteCategory(id: string): Promise<t.TDeleteCategoryResponse> {
+  return request.delete(endpoints.deleteCategory(id));
 }
 
 export function getRandomPrompts(
@@ -1056,6 +1321,167 @@ export function getRole(roleName: string): Promise<r.TRole> {
   return request.get(endpoints.getRole(roleName));
 }
 
+/* Admin Users */
+export function listAdminUsers(page: number = 1, limit: number = 50): Promise<q.ListUsersResponse> {
+  return request.get(`${endpoints.adminUsers()}?page=${page}&limit=${limit}`);
+}
+
+export function searchAdminUsers(query: string): Promise<q.ListUsersResponse> {
+  return request.get(endpoints.adminUsersSearch(query));
+}
+
+export function createAdminUser(payload: {
+  email: string;
+  name: string;
+  username: string;
+  password?: string;
+  tenantId?: string;
+  role?: string;
+}): Promise<{ message: string; password?: string }> {
+  return request.post(endpoints.adminUsers(), payload);
+}
+
+/* Admin Groups */
+export function listAdminGroups(
+  page: number = 1,
+  limit: number = 50,
+): Promise<q.ListGroupsResponse> {
+  return request.get(`${endpoints.adminGroups()}?page=${page}&limit=${limit}`);
+}
+
+export function getAdminGroup(id: string): Promise<q.GroupResponse> {
+  return request.get(endpoints.adminGroupById(id));
+}
+
+export function createAdminGroup(payload: m.CreateGroupPayload): Promise<q.GroupResponse> {
+  return request.post(endpoints.adminGroups(), payload);
+}
+
+export function updateAdminGroup(
+  id: string,
+  payload: m.UpdateGroupPayload,
+): Promise<q.GroupResponse> {
+  return request.patch(endpoints.adminGroupById(id), payload);
+}
+
+export function deleteAdminGroup(id: string): Promise<unknown> {
+  return request.delete(endpoints.adminGroupById(id));
+}
+
+export function getAdminGroupMembers(id: string): Promise<q.GroupMembersResponse> {
+  return request.get(endpoints.adminGroupMembers(id));
+}
+
+export function addAdminGroupMember(id: string, userId: string): Promise<unknown> {
+  return request.post(endpoints.adminGroupMembers(id), { userId });
+}
+
+export function removeAdminGroupMember(id: string, userId: string): Promise<unknown> {
+  return request.delete(`${endpoints.adminGroupMembers(id)}/${userId}`);
+}
+
+/* Admin Config */
+export function listAdminConfigs(): Promise<q.AdminConfigListResponse> {
+  return request.get(endpoints.adminConfigs());
+}
+
+export function getAdminConfigBase(): Promise<{ config: Record<string, unknown> }> {
+  return request.get(endpoints.adminConfigBase());
+}
+
+export function toggleAdminConfig(
+  principalType: string,
+  principalId: string,
+  payload: { isActive: boolean },
+): Promise<q.AdminConfigResponse> {
+  return request.patch(endpoints.adminConfigActive(principalType, principalId), payload);
+}
+
+export function deleteAdminConfig(principalType: string, principalId: string): Promise<unknown> {
+  return request.delete(endpoints.adminConfigByPrincipal(principalType, principalId));
+}
+
+/* Admin Overview */
+export function getAdminOverview(): Promise<q.AdminOverviewResponse> {
+  return request.get(endpoints.adminOverview());
+}
+
+/* Admin Tenants */
+export function listAdminTenants(): Promise<q.ListTenantsResponse> {
+  return request.get(endpoints.adminTenants());
+}
+
+export function getAdminTenantUsers(
+  tenantId: string,
+  page: number = 1,
+  limit: number = 50,
+): Promise<q.ListUsersResponse> {
+  return request.get(`${endpoints.adminTenantUsers(tenantId)}?page=${page}&limit=${limit}`);
+}
+
+export function getAdminTenantStats(tenantId: string): Promise<q.TenantStatsResponse> {
+  return request.get(endpoints.adminTenantStats(tenantId));
+}
+
+/* Admin Functions */
+export function listAdminFunctions(tenantId: string): Promise<q.TenantFunctionListResponse> {
+  return request.get(`${endpoints.adminFunctions()}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+export function createAdminFunction(
+  payload: Omit<q.TenantFunction, '_id' | 'createdAt' | 'updatedAt'>,
+): Promise<q.TenantFunctionResponse> {
+  return request.post(endpoints.adminFunctions(), payload);
+}
+
+export function updateAdminFunction(
+  id: string,
+  tenantId: string,
+  payload: Partial<q.TenantFunction>,
+): Promise<q.TenantFunctionResponse> {
+  return request.patch(
+    `${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+    payload,
+  );
+}
+
+export function toggleAdminFunction(
+  id: string,
+  tenantId: string,
+  isActive: boolean,
+): Promise<q.TenantFunctionResponse> {
+  return request.patch(
+    `${endpoints.adminFunctionToggle(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+    { isActive },
+  );
+}
+
+export function deleteAdminFunction(id: string, tenantId: string): Promise<unknown> {
+  return request.delete(
+    `${endpoints.adminFunctionById(id)}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
+}
+
+/* Admin Secrets */
+export function listAdminSecrets(tenantId: string): Promise<q.TenantSecretListResponse> {
+  return request.get(`${endpoints.adminSecrets()}?tenantId=${encodeURIComponent(tenantId)}`);
+}
+
+export function createAdminSecret(payload: {
+  tenantId: string;
+  name: string;
+  value: string;
+  type: string;
+}): Promise<q.TenantSecretResponse> {
+  return request.post(endpoints.adminSecrets(), payload);
+}
+
+export function deleteAdminSecret(name: string, tenantId: string): Promise<unknown> {
+  return request.delete(
+    `${endpoints.adminSecretByName(name)}?tenantId=${encodeURIComponent(tenantId)}`,
+  );
+}
+
 export function updatePromptPermissions(
   variables: m.UpdatePromptPermVars,
 ): Promise<m.UpdatePermResponse> {
@@ -1108,6 +1534,12 @@ export function updateSkillPermissions(
   variables: m.UpdateSkillPermVars,
 ): Promise<m.UpdatePermResponse> {
   return request.put(endpoints.updateSkillPermissions(variables.roleName), variables.updates);
+}
+
+export function updateMetaAdsPermissions(
+  variables: m.UpdateMetaAdsPermVars,
+): Promise<m.UpdatePermResponse> {
+  return request.put(endpoints.updateMetaAdsPermissions(variables.roleName), variables.updates);
 }
 
 /* Tags */

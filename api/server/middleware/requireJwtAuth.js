@@ -1,6 +1,7 @@
 const cookies = require('cookie');
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
+const { logger } = require('@librechat/data-schemas');
 const {
   isEnabled,
   tenantContextMiddleware,
@@ -29,6 +30,40 @@ const getValidOpenIdReuseUserId = (parsedCookies) => {
 const getAuthenticatedUserId = (user) => user?.id?.toString?.() ?? user?._id?.toString?.();
 const refreshCloudFrontCookies =
   maybeRefreshCloudFrontAuthCookiesMiddleware ?? ((_req, _res, next) => next());
+
+const getDecodedExpiry = (...tokens) => {
+  for (const token of tokens) {
+    if (!token) {
+      continue;
+    }
+    const decoded = jwt.decode(token);
+    if (decoded && typeof decoded === 'object' && typeof decoded.exp === 'number') {
+      return decoded.exp;
+    }
+  }
+};
+
+const attachOpenIDFederatedTokens = ({ req, user, parsedCookies }) => {
+  const sessionTokens = req.session?.openidTokens;
+  const accessToken = sessionTokens?.accessToken || parsedCookies.openid_access_token;
+  const idToken = sessionTokens?.idToken || parsedCookies.openid_id_token;
+  const refreshToken = sessionTokens?.refreshToken || parsedCookies.refreshToken;
+
+  if (!accessToken && !idToken && !refreshToken) {
+    logger.warn('[requireJwtAuth] OpenID JWT fallback authenticated without federated tokens', {
+      has_session: Boolean(req.session),
+      has_token_provider: parsedCookies.token_provider === 'openid',
+    });
+    return;
+  }
+
+  user.federatedTokens = {
+    access_token: accessToken,
+    id_token: idToken,
+    refresh_token: refreshToken,
+    expires_at: getDecodedExpiry(idToken, accessToken),
+  };
+};
 
 /**
  * Custom Middleware to handle JWT authentication, with support for OpenID token reuse.
@@ -59,6 +94,13 @@ const requireJwtAuth = (req, res, next) => {
         if (index + 1 < strategies.length) {
           return authenticateWithStrategy(index + 1);
         }
+        logger.warn('[requireJwtAuth] Authentication failed', {
+          strategy,
+          token_provider: tokenProvider,
+          has_openid_user_id: Boolean(parsedCookies.openid_user_id),
+          message: info?.message,
+          status: status || 401,
+        });
         return res.status(status || 401).json({
           message: info?.message || 'Unauthorized',
         });
@@ -68,6 +110,13 @@ const requireJwtAuth = (req, res, next) => {
           return authenticateWithStrategy(index + 1);
         }
         return res.status(401).json({ message: 'Unauthorized' });
+      }
+      if (strategy === 'jwt' && tokenProvider === 'openid') {
+        attachOpenIDFederatedTokens({ req, user, parsedCookies });
+        logger.info('[requireJwtAuth] OpenID request authenticated with local JWT fallback', {
+          userId: getAuthenticatedUserId(user),
+          has_session_tokens: Boolean(req.session?.openidTokens),
+        });
       }
       req.user = user;
       req.authStrategy = strategy;

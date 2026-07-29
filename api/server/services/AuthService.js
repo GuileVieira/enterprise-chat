@@ -121,7 +121,7 @@ const sendVerificationEmail = async (user) => {
     email: user.email,
     subject: 'Verify your email',
     payload: {
-      appName: process.env.APP_TITLE || 'LibreChat',
+      appName: process.env.APP_TITLE || 'Orqest',
       name: user.name || user.username || user.email,
       verificationLink: verificationLink,
       year: new Date().getFullYear(),
@@ -253,6 +253,14 @@ const registerUser = async (user, additionalData = {}) => {
 
     const newUser = await createUser(newUserData, appConfig.balance, disableTTL, true);
     newUserId = newUser._id;
+    const tenantId = newUser.tenantId || newUserData.tenantId;
+    if (tenantId) {
+      const { ensureUserTenantProjectsViewAccess } = require('~/server/services/Projects/access');
+      await ensureUserTenantProjectsViewAccess({
+        user: { _id: newUserId, tenantId },
+        grantedBy: newUserId,
+      });
+    }
     if (emailEnabled && !newUser.emailVerified) {
       await sendVerificationEmail({
         _id: newUserId,
@@ -352,7 +360,7 @@ const requestPasswordReset = async (req) => {
       email: user.email,
       subject: 'Password Reset Request',
       payload: {
-        appName: process.env.APP_TITLE || 'LibreChat',
+        appName: process.env.APP_TITLE || 'Orqest',
         name: user.name || user.username || user.email,
         link: link,
         year: new Date().getFullYear(),
@@ -408,7 +416,7 @@ const resetPassword = async (userId, token, password) => {
       email: user.email,
       subject: 'Password Reset Successfully',
       payload: {
-        appName: process.env.APP_TITLE || 'LibreChat',
+        appName: process.env.APP_TITLE || 'Orqest',
         name: user.name || user.username || user.email,
         year: new Date().getFullYear(),
       },
@@ -587,7 +595,7 @@ const resolveOpenIDAuthTokenOptions = (optionsOrUserId, existingRefreshToken, te
  * @param {string} [options.userId] - Optional MongoDB user ID for image path validation
  * @param {string} [options.existingRefreshToken] - Optional existing refresh token to preserve
  * @param {string} [options.tenantId] - Optional tenant identifier for CloudFront cookie scoping
- * @returns {String} - id_token (preferred) or access_token as the app auth token
+ * @returns {String | undefined} - id_token suitable for app auth; never returns access_token
  */
 const setOpenIDAuthTokens = (
   tokenset,
@@ -626,17 +634,12 @@ const setOpenIDAuthTokens = (
     }
 
     /**
-     * Use id_token as the app authentication token (Bearer token for JWKS validation).
-     * The id_token is always a standard JWT signed by the IdP's JWKS keys with the app's
-     * client_id as audience. The access_token may be opaque or intended for a different
-     * audience (e.g., Microsoft Graph API), which fails JWKS validation.
-     * Falls back to access_token for providers where id_token is not available.
+     * Use only id_token as the app authentication token (Bearer token for JWKS validation).
+     * access_token is for federated APIs (Graph, SharePoint, etc.) and may be opaque or
+     * resource-bound; returning it as app auth causes protected Orqest routes to 401-loop.
      */
     const sessionIdToken = req.session?.openidTokens?.idToken;
-    const appAuthToken =
-      tokenset.id_token ||
-      getUnexpiredOpenIDSessionIdToken(sessionIdToken) ||
-      tokenset.access_token;
+    const appAuthToken = tokenset.id_token || getUnexpiredOpenIDSessionIdToken(sessionIdToken);
     const logoutIdToken = tokenset.id_token || sessionIdToken;
 
     /**
@@ -739,7 +742,7 @@ const resendVerificationEmail = async (req) => {
       email: user.email,
       subject: 'Verify your email',
       payload: {
-        appName: process.env.APP_TITLE || 'LibreChat',
+        appName: process.env.APP_TITLE || 'Orqest',
         name: user.name || user.username || user.email,
         verificationLink: verificationLink,
         year: new Date().getFullYear(),

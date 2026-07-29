@@ -33,7 +33,7 @@ jest.mock('@librechat/agents', () => ({
 }));
 
 import { Providers } from '@librechat/agents';
-import { EModelEndpoint, Tools } from 'librechat-data-provider';
+import { EModelEndpoint, EToolResources, Tools } from 'librechat-data-provider';
 import type { Agent } from 'librechat-data-provider';
 import type { ServerRequest, InitializeResultBase, EndpointTokenConfig } from '~/types';
 import type { InitializeAgentDbMethods } from '../initialize';
@@ -505,6 +505,105 @@ describe('initializeAgent — stable and dynamic instruction fields', () => {
 describe('initializeAgent — attachment scoping', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('loads project file ids into tool resources without marking them as request files', async () => {
+    const { primeResources } = jest.requireMock('../resources') as {
+      primeResources: jest.Mock;
+    };
+    const projectFile = { file_id: 'project-file', filename: 'project.docx', embedded: true };
+    const { agent, req, res, loadTools, db } = createMocks();
+    agent.tools = ['file_search'];
+
+    mockExtractLibreChatParams.mockReturnValue({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: 'test-model' },
+    });
+    await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+        projectFileIds: ['project-file'],
+      },
+      db,
+    );
+
+    expect(db.getToolFilesByIds).not.toHaveBeenCalled();
+    expect(db.updateFilesUsage).not.toHaveBeenCalled();
+    expect(primeResources).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attachments: undefined,
+        requestFileSet: new Set(),
+        tool_resources: {
+          [EToolResources.file_search]: {
+            file_ids: ['project-file'],
+          },
+        },
+      }),
+    );
+    expect(loadTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool_resources: {
+          [EToolResources.file_search]: {
+            file_ids: ['project-file'],
+          },
+        },
+      }),
+    );
+  });
+
+  it('enables file_search for active project files even when the agent has no saved tool', async () => {
+    const { primeResources } = jest.requireMock('../resources') as {
+      primeResources: jest.Mock;
+    };
+    const { agent, req, res, loadTools, db } = createMocks();
+    agent.tools = [];
+
+    mockExtractLibreChatParams.mockReturnValue({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: 'test-model' },
+    });
+
+    await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+        projectFileIds: ['project-file'],
+      },
+      db,
+    );
+
+    expect(primeResources).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool_resources: {
+          [EToolResources.file_search]: {
+            file_ids: ['project-file'],
+          },
+        },
+      }),
+    );
+    expect(loadTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: [Tools.file_search],
+        tool_resources: {
+          [EToolResources.file_search]: {
+            file_ids: ['project-file'],
+          },
+        },
+      }),
+    );
   });
 
   it('keeps request attachments separate from agent context attachments', async () => {

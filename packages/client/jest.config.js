@@ -25,6 +25,6 @@ export default {
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': 'babel-jest',
   },
-  transformIgnorePatterns: ['node_modules/(?!(@tanstack|lucide-react|@dicebear)/)'],
+  transformIgnorePatterns: ['node_modules/(?!(@tanstack|@phosphor-icons/react|@dicebear)/)'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import debounce from 'lodash/debounce';
 import { useRecoilValue } from 'recoil';
-import { Menu, Rocket, X } from 'lucide-react';
+import { List as Menu, Rocket, X } from '@phosphor-icons/react';
 import { useParams } from 'react-router-dom';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Button, Skeleton, useToastContext } from '@librechat/client';

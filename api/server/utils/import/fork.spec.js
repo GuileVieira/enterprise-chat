@@ -1,4 +1,5 @@
 const { Constants, ForkOptions } = require('librechat-data-provider');
+const mongoose = require('mongoose');
 
 jest.mock('~/models', () => ({
   getConvo: jest.fn(),
@@ -7,6 +8,8 @@ jest.mock('~/models', () => ({
   bulkSaveMessages: jest.fn(),
   bulkIncrementTagCounts: jest.fn(),
 }));
+
+const mockFindConversations = jest.fn();
 
 let mockIdCounter = 0;
 jest.mock('uuid', () => {
@@ -20,7 +23,9 @@ jest.mock('uuid', () => {
 
 const {
   forkConversation,
+  forkConversationFromSource,
   duplicateConversation,
+  getNextCopyTitle,
   splitAtTargetLevel,
   getAllMessagesUpToParent,
   getMessagesUpToTargetLevel,
@@ -241,10 +246,60 @@ describe('forkConversation', () => {
   });
 });
 
+describe('forkConversationFromSource', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIdCounter = 0;
+    bulkSaveConvos.mockResolvedValue(null);
+    bulkSaveMessages.mockResolvedValue(null);
+    bulkIncrementTagCounts.mockResolvedValue(null);
+  });
+
+  test('should clone a source user conversation into the request user without private owner fields', async () => {
+    const originalConvo = {
+      ...mockConversation,
+      user: 'owner-user',
+      projectId: 'project-1',
+      files: ['owner-file'],
+      tags: ['owner-tag'],
+    };
+
+    const result = await forkConversationFromSource({
+      sourceUserId: 'owner-user',
+      requestUserId: 'recipient-user',
+      originalConvo,
+      originalMessages: mockMessages,
+      targetMessageId: '3',
+      option: ForkOptions.TARGET_LEVEL,
+    });
+
+    expect(result.conversation.user).toBe('recipient-user');
+    expect(result.conversation.title).toBe('Cópia 1 - Original Title');
+    expect(result.conversation.projectId).toBeUndefined();
+    expect(result.conversation.files).toEqual([]);
+    expect(result.conversation.tags).toEqual([]);
+    expect(result.messages).toEqual(
+      expect.arrayContaining([expect.objectContaining({ user: 'recipient-user' })]),
+    );
+    expect(bulkIncrementTagCounts).toHaveBeenCalledWith('recipient-user', []);
+  });
+});
+
 describe('duplicateConversation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockIdCounter = 0;
+    Object.defineProperty(mongoose.models, 'Conversation', {
+      configurable: true,
+      value: {
+        find: (...args) => mockFindConversations(...args),
+      },
+    });
+    mockFindConversations.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue([]),
+      }),
+    });
     getConvo.mockResolvedValue(mockConversation);
     getMessages.mockResolvedValue(mockMessages);
     bulkSaveConvos.mockResolvedValue(null);
@@ -266,6 +321,40 @@ describe('duplicateConversation', () => {
 
     // Verify that bulkIncrementTagCounts was called with correct tags
     expect(bulkIncrementTagCounts).toHaveBeenCalledWith('user1', ['important', 'work', 'project']);
+  });
+
+  test('should prefix duplicate conversation title with the next copy number', async () => {
+    const select = jest.fn().mockReturnValue({
+      lean: jest
+        .fn()
+        .mockResolvedValue([
+          { title: 'Cópia 1 - Original Title' },
+          { title: 'Cópia 2 - Original Title' },
+        ]),
+    });
+    mockFindConversations.mockReturnValue({ select });
+
+    await duplicateConversation({
+      userId: 'user1',
+      conversationId: 'abc123',
+    });
+
+    expect(bulkSaveConvos.mock.calls[0][0][0].title).toBe('Cópia 3 - Original Title');
+    expect(mockFindConversations).toHaveBeenCalledWith({
+      user: 'user1',
+      title: { $regex: '^Cópia (\\d+) - Original Title$' },
+    });
+  });
+
+  test('should calculate copy titles without nesting copy prefixes', async () => {
+    const select = jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue([{ title: 'Cópia 4 - Test Conversation' }]),
+    });
+    mockFindConversations.mockReturnValue({ select });
+
+    await expect(getNextCopyTitle('user1', 'Cópia 2 - Test Conversation')).resolves.toBe(
+      'Cópia 5 - Test Conversation',
+    );
   });
 
   test('should duplicate conversation without tags', async () => {

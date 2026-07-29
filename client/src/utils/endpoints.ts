@@ -142,10 +142,12 @@ export function getConvoSwitchLogic(params: ConversationInitParams): InitiatedTe
   const { conversation, newEndpoint, endpointsConfig, modularChat = false } = params;
 
   const currentEndpoint = conversation?.endpoint;
+  const conversationId = conversation?.conversationId ?? '';
+  const isExistingConversation = !!(conversationId && conversationId !== 'new');
   const template: Partial<t.TPreset> = {
     ...conversation,
     endpoint: newEndpoint,
-    conversationId: 'new',
+    conversationId: isExistingConversation ? conversationId : 'new',
   };
 
   // Reset agent_id if switching to a non-agents endpoint but template has a non-ephemeral agent_id
@@ -164,9 +166,6 @@ export function getConvoSwitchLogic(params: ConversationInitParams): InitiatedTe
     isAssistantsEndpoint(newEndpoint) &&
     isAssistantsEndpoint(currentEndpoint) &&
     currentEndpoint === newEndpoint;
-
-  const conversationId = conversation?.conversationId ?? '';
-  const isExistingConversation = !!(conversationId && conversationId !== 'new');
 
   const currentEndpointType =
     getEndpointField(endpointsConfig, currentEndpoint, 'type') ?? currentEndpoint;

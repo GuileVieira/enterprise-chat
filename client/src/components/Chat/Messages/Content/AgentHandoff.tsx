@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { EModelEndpoint, Constants } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import MessageIcon from '~/components/Share/MessageIcon';

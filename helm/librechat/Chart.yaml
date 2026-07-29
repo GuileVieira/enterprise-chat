@@ -1,6 +1,6 @@
 apiVersion: v2
 name: librechat
-description: A Helm chart for LibreChat
+description: A Helm chart for Orqest
 icon: https://www.librechat.ai/librechat_alt.svg
 
 # A chart can be either an 'application' or a 'library' chart.

@@ -314,6 +314,16 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
       principals.push({ principalType: PrincipalType.ROLE, principalId: userRole });
     }
 
+    const User = mongoose.models.User as Model<IUser>;
+    const userQuery = User.findById(userId).select('tenantId');
+    if (session) {
+      userQuery.session(session);
+    }
+    const userTenant = await userQuery.lean();
+    if (userTenant?.tenantId) {
+      principals.push({ principalType: PrincipalType.TENANT, principalId: userTenant.tenantId });
+    }
+
     const userGroups = await getUserGroups(userId, session);
     if (userGroups && userGroups.length > 0) {
       userGroups.forEach((group) => {
@@ -543,6 +553,7 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     searchPattern: string,
     limitPerType: number = 10,
     typeFilter: Array<PrincipalType.USER | PrincipalType.GROUP | PrincipalType.ROLE> | null = null,
+    options: { tenantId?: string; global?: boolean } = {},
     session?: ClientSession,
   ): Promise<TPrincipalSearchResult[]> {
     if (!searchPattern || searchPattern.trim().length === 0) {
@@ -558,12 +569,14 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
       const userFields = 'name email username avatar provider idOnTheSource';
       /** For now, we'll use a direct query instead of searchUsers */
       const User = mongoose.models.User as Model<IUser>;
-      const regex = new RegExp(escapedPattern, 'i');
-      const userQuery = User.find({
+      const regex = new RegExp(trimmedPattern, 'i');
+      const userFilter: FilterQuery<IUser> = {
         $or: [{ name: regex }, { email: regex }, { username: regex }],
-      })
-        .select(userFields)
-        .limit(limitPerType);
+      };
+      if (!options.global) {
+        userFilter.tenantId = options.tenantId ?? { $exists: false };
+      }
+      const userQuery = User.find(userFilter).select(userFields).limit(limitPerType);
 
       if (session) {
         userQuery.session(session);
@@ -589,10 +602,22 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     }
 
     if (!typeFilter || typeFilter.includes(PrincipalType.GROUP)) {
+      const Group = mongoose.models.Group as Model<IGroup>;
+      const regex = new RegExp(trimmedPattern, 'i');
+      const groupFilter: FilterQuery<IGroup> = {
+        $or: [{ name: regex }, { email: regex }, { description: regex }],
+      };
+      if (!options.global) {
+        groupFilter.tenantId = options.tenantId ?? { $exists: false };
+      }
+      const groupQuery = Group.find(groupFilter).limit(limitPerType);
+
+      if (session) {
+        groupQuery.session(session);
+      }
+
       promises.push(
-        findGroupsByNamePattern(trimmedPattern, null, limitPerType, session).then((groups) =>
-          groups.map(transformGroupToTPrincipalSearchResult),
-        ),
+        groupQuery.lean().then((groups) => groups.map(transformGroupToTPrincipalSearchResult)),
       );
     } else {
       promises.push(Promise.resolve([]));

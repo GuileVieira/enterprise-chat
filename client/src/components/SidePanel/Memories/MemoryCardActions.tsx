@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Pencil } from 'lucide-react';
+import { PencilSimple as Pencil } from '@phosphor-icons/react';
 import { Trans } from 'react-i18next';
 import {
   Label,

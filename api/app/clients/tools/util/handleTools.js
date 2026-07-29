@@ -23,6 +23,7 @@ const {
   manifestToolMap,
   // Basic Tools
   GoogleSearchAPI,
+  DuckDuckGoSearch,
   // Structured Tools
   DALLE3,
   FluxAPI,
@@ -30,10 +31,13 @@ const {
   StructuredSD,
   StructuredACS,
   TraversaalSearch,
+  MetaAdsGetInsights,
+  MetaAdsBudgetManager,
   StructuredWolfram,
   TavilySearchResults,
   createGeminiImageTool,
   createOpenAIImageTools,
+  createOpenRouterGeminiImageTool,
 } = require('../');
 const { createMCPTool, createMCPTools, resolveConfigServers } = require('~/server/services/MCP');
 const { createFileSearchTool, primeFiles: primeSearchFiles } = require('./fileSearch');
@@ -42,7 +46,7 @@ const { getUserPluginAuthValue } = require('~/server/services/PluginService');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { getMCPServerTools } = require('~/server/services/Config');
 const { getMCPServersRegistry } = require('~/config');
-const { getRoleByName } = require('~/models');
+const { getRoleByName, getTenantSecret } = require('~/models');
 
 /**
  * Validates the availability and authentication of tools for a user based on environment variables or user-specific plugin authentication values.
@@ -173,7 +177,10 @@ const loadTools = async ({
     flux: FluxAPI,
     calculator: Calculator,
     google: GoogleSearchAPI,
+    duckduckgo_search: DuckDuckGoSearch,
     open_weather: OpenWeather,
+    meta_ads_get_insights: MetaAdsGetInsights,
+    meta_ads_budget_manager: MetaAdsBudgetManager,
     wolfram: StructuredWolfram,
     'stable-diffusion': StructuredSD,
     'azure-ai-search': StructuredACS,
@@ -224,6 +231,27 @@ const loadTools = async ({
         fileStrategy,
       });
     },
+    openrouter_gemini_image_gen: async (toolContextMap) => {
+      const authFields = getAuthFields('openrouter_gemini_image_gen');
+      const authValues = await loadAuthValues({ userId: user, authFields, throwError: false });
+      const imageFiles = options.tool_resources?.[EToolResources.image_edit]?.files ?? [];
+      const toolContext = buildImageToolContext({
+        imageFiles,
+        toolName: 'openrouter_gemini_image_gen',
+        contextDescription: 'image context',
+      });
+      if (toolContext) {
+        toolContextMap.openrouter_gemini_image_gen = toolContext;
+      }
+      return createOpenRouterGeminiImageTool({
+        ...authValues,
+        isAgent: !!agent,
+        req: options.req,
+        imageFiles,
+        userId: user,
+        fileStrategy,
+      });
+    },
   };
 
   const requestedTools = {};
@@ -247,6 +275,16 @@ const loadTools = async ({
     dalle: imageGenOptions,
     'stable-diffusion': imageGenOptions,
     gemini_image_gen: imageGenOptions,
+    openrouter_gemini_image_gen: imageGenOptions,
+    meta_ads_get_insights: {
+      req: options.req,
+      tenantId: options.req?.user?.tenantId,
+      getTenantSecret,
+      projectId: options.projectId,
+    },
+    meta_ads_budget_manager: {
+      req: options.req,
+    },
   };
 
   /** @type {Record<string, string>} */

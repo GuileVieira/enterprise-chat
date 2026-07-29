@@ -7,7 +7,11 @@ jest.mock('winston', () => {
   // Returning a thunk that yields `{ transform: fn }` matches real winston's
   // shape just enough that module-load completes cleanly; the inner fn is
   // only ever invoked by winston's pipeline (never at load time).
-  const mockFormatFunction = jest.fn((fn) => () => ({ transform: fn }));
+  const mockFormatFunction = jest.fn((fn = (info) => info) =>
+    jest.fn(() => ({
+      transform: fn,
+    })),
+  );
 
   mockFormatFunction.colorize = jest.fn();
   mockFormatFunction.combine = jest.fn();

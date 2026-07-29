@@ -64,7 +64,13 @@ export default function usePresets(index = 0) {
     }
     setDefaultPreset(defaultPreset);
     if (!conversationId || conversationId === 'new') {
-      newConversation({ preset: defaultPreset, modelsData, disableParams: true });
+      const conversation = getConversation();
+      newConversation({
+        template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
+        preset: defaultPreset,
+        modelsData,
+        disableParams: true,
+      });
     }
     hasLoaded.current = true;
     // dependencies are stable and only needed once
@@ -115,7 +121,12 @@ export default function usePresets(index = 0) {
       if (data.defaultPreset && data.presetId !== _defaultPreset?.presetId) {
         message = `${toastTitle} ${localize('com_endpoint_preset_default')}`;
         setDefaultPreset(data);
-        newConversation({ preset: data, disableParams: true });
+        const conversation = getConversation();
+        newConversation({
+          template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
+          preset: data,
+          disableParams: true,
+        });
       } else if (preset.defaultPreset === false) {
         setDefaultPreset(null);
         message = `${toastTitle} ${localize('com_endpoint_preset_default_removed')}`;
@@ -225,7 +236,12 @@ export default function usePresets(index = 0) {
       return;
     }
 
-    newConversation({ preset: newPreset, keepAddedConvos: isModular, disableParams });
+    newConversation({
+      template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
+      preset: newPreset,
+      keepAddedConvos: isModular,
+      disableParams,
+    });
   };
 
   const onChangePreset = (preset: TPreset) => {

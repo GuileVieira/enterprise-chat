@@ -151,10 +151,18 @@ export default function useMentions({
     });
   }, [startupConfig, agentsMap]);
 
+  const includedEndpoints = useMemo(
+    () => new Set(startupConfig?.modelSpecs?.addedEndpoints ?? []),
+    [startupConfig?.modelSpecs?.addedEndpoints],
+  );
+
   const options: MentionOption[] = useMemo(() => {
     let validEndpoints = endpoints;
     if (!includeAssistants) {
       validEndpoints = endpoints.filter((endpoint) => !isAssistantsEndpoint(endpoint));
+    }
+    if (includedEndpoints.size > 0) {
+      validEndpoints = validEndpoints.filter((endpoint) => includedEndpoints.has(endpoint));
     }
 
     const modelOptions = validEndpoints.flatMap((endpoint) => {

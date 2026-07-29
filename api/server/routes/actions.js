@@ -11,6 +11,7 @@ const {
   setOAuthCsrfCookie,
   validateOAuthSession,
   OAUTH_SESSION_COOKIE,
+  preAuthTenantMiddleware,
 } = require('@librechat/api');
 const { findToken, updateToken, createToken } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
@@ -52,7 +53,7 @@ router.post('/:action_id/oauth/bind', requireJwtAuth, setOAuthSession, async (re
  * @param {string} req.query.state - The state token to verify the authenticity of the request.
  * @returns {void} Sends a success message after updating the action with OAuth tokens.
  */
-router.get('/:action_id/oauth/callback', async (req, res) => {
+router.get('/:action_id/oauth/callback', preAuthTenantMiddleware, async (req, res) => {
   const { action_id } = req.params;
   const { code, state } = req.query;
   const flowsCache = getLogStores(CacheKeys.FLOWS);

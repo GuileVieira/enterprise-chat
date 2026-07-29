@@ -5,7 +5,6 @@ import type * as InputNumberPrimitive from 'rc-input-number';
 import type { SetterOrUpdater, RecoilState } from 'recoil';
 import type { ColumnDef } from '@tanstack/react-table';
 import type * as t from 'librechat-data-provider';
-import type { LucideIcon } from 'lucide-react';
 import type { TranslationKeys } from '~/hooks';
 import { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 
@@ -125,7 +124,7 @@ export type AgentIconMapProps = IconMapProps & { agentName?: string };
 export type NavLink = {
   title: TranslationKeys;
   label?: string;
-  icon: LucideIcon | React.FC;
+  icon: React.ElementType;
   Component?: React.ComponentType;
   onClick?: (e?: React.MouseEvent) => void;
   variant?: 'default' | 'ghost';
@@ -335,6 +334,7 @@ export type TAskProps = {
   conversationId?: string | null;
   messageId?: string | null;
   clientTimestamp?: string;
+  hiddenPromptContext?: t.THiddenPromptContext | null;
 };
 
 export type TOptions = {
@@ -398,10 +398,11 @@ export type TMessageProps = {
   setSiblingIdx?: ((value: number) => void | React.Dispatch<React.SetStateAction<number>>) | null;
 };
 
-export type TMessageIcon = { endpoint?: string | null; isCreatedByUser?: boolean } & Pick<
-  t.TConversation,
-  'modelLabel'
-> &
+export type TMessageIcon = {
+  endpoint?: string | null;
+  isCreatedByUser?: boolean;
+  avatarLabel?: string;
+} & Pick<t.TConversation, 'modelLabel'> &
   Pick<t.TMessage, 'model' | 'iconURL'>;
 
 export type TInitialProps = {
@@ -476,6 +477,7 @@ export type TAuthContext = {
   user: t.TUser | undefined;
   token: string | undefined;
   isAuthenticated: boolean;
+  isRoleLoading: boolean;
   error: string | undefined;
   login: (data: t.TLoginUser) => void;
   logout: (redirect?: string) => void;

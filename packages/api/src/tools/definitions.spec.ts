@@ -7,6 +7,15 @@ import type {
   ActionToolDefinition,
 } from './definitions';
 
+jest.mock('@librechat/data-schemas', () => ({
+  logger: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+
 describe('definitions.ts', () => {
   const mockGetOrFetchMCPServerTools = jest.fn().mockResolvedValue(null);
   const mockIsBuiltInTool = jest.fn().mockReturnValue(false);
@@ -191,6 +200,18 @@ describe('definitions.ts', () => {
         expect(calcDef?.parameters).toBeDefined();
       });
 
+      it('exposes Meta Ads insights without requiring ad_account_id', () => {
+        const metaAdsDef = getToolDefinition('meta_ads_get_insights');
+
+        expect(metaAdsDef?.schema.required).toEqual(['since', 'until']);
+        expect(metaAdsDef?.schema.properties?.level).toEqual(
+          expect.objectContaining({
+            type: 'string',
+            enum: ['campaign', 'adset', 'ad'],
+          }),
+        );
+      });
+
       it('does not resolve `execute_code` as a builtin tool definition (registered by initializeAgent instead)', async () => {
         /* Phase 8: the legacy `CodeExecutionToolDefinition` is no longer in
            the registry. `execute_code` stays in `agent.tools` as the
@@ -239,6 +260,30 @@ describe('definitions.ts', () => {
         expect(webSearchDef?.parameters).toBeDefined();
         expect(webSearchDef?.parameters?.properties).toHaveProperty('query');
         expect(webSearchDef?.parameters?.required).toContain('query');
+      });
+
+      it('should include parameters for duckduckgo_search built-in tool', async () => {
+        mockIsBuiltInTool.mockImplementation((name) => name === 'duckduckgo_search');
+
+        const params: LoadToolDefinitionsParams = {
+          userId: 'user-123',
+          agentId: 'agent-123',
+          tools: ['duckduckgo_search'],
+        };
+
+        const deps: LoadToolDefinitionsDeps = {
+          getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+          isBuiltInTool: mockIsBuiltInTool,
+        };
+
+        const result = await loadToolDefinitions(params, deps);
+
+        const duckDef = result.toolDefinitions.find((d) => d.name === 'duckduckgo_search');
+        expect(duckDef).toBeDefined();
+        expect(duckDef?.parameters).toBeDefined();
+        expect(duckDef?.parameters?.properties).toHaveProperty('query');
+        expect(duckDef?.parameters?.properties).toHaveProperty('fetch_results');
+        expect(duckDef?.parameters?.required).toContain('query');
       });
 
       it('should include parameters for file_search native tool', async () => {

@@ -1,7 +1,8 @@
-import { ToolCallResult } from 'librechat-data-provider';
 import { useMemo } from 'react';
-import { useGetToolCalls } from '~/data-provider';
+import type { ToolCallResult } from 'librechat-data-provider';
+
 import { mapToolCalls, logger } from '~/utils';
+import { useGetToolCalls } from '~/data-provider';
 
 type ToolCallsMap = {
   [x: string]: ToolCallResult[] | undefined;
@@ -23,6 +24,8 @@ export default function useToolCallsMap({
     return toolCallsMap !== null ? toolCallsMap : undefined;
   }, [toolCallsMap]);
 
-  logger.log('tools', 'tool calls map:', result);
+  if (result !== undefined) {
+    logger.log('tools', 'tool calls map:', result);
+  }
   return result;
 }

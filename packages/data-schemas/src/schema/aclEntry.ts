@@ -22,7 +22,10 @@ const aclEntrySchema = new Schema<IAclEntry>(
       type: String,
       enum: Object.values(PrincipalModel),
       required: function (this: IAclEntry) {
-        return this.principalType !== PrincipalType.PUBLIC;
+        return (
+          this.principalType !== PrincipalType.PUBLIC &&
+          this.principalType !== PrincipalType.TENANT
+        );
       },
     },
     resourceType: {
@@ -31,7 +34,7 @@ const aclEntrySchema = new Schema<IAclEntry>(
       required: true,
     },
     resourceId: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed,
       required: true,
       index: true,
     },

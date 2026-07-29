@@ -1,13 +1,15 @@
 import { memo, useCallback, lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilValue } from 'recoil';
-import { SquarePen } from 'lucide-react';
+import { PencilSimpleLine, SidebarSimple, SquaresFour as LayoutGrid } from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
-import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
+import { Skeleton, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
-import { useLocalize, useNewConvo } from '~/hooks';
+import { useLocalize, useNewConvo, useShowMarketplace } from '~/hooks';
+import { useProjectByIdQuery } from '~/data-provider';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
@@ -23,6 +25,10 @@ const NewChatButton = memo(function NewChatButton({
   const { newConversation } = useNewConvo();
   const conversation = useRecoilValue(store.conversationByIndex(0));
   const switchToHistory = useRecoilValue(store.newChatSwitchToHistory);
+  const selectedProjectId = useRecoilValue(store.selectedProjectId);
+  const { data: project } = useProjectByIdQuery(selectedProjectId ?? '', {
+    enabled: !!selectedProjectId,
+  });
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -30,13 +36,32 @@ const NewChatButton = memo(function NewChatButton({
         e.preventDefault();
         clearMessagesCache(queryClient, conversation?.conversationId);
         queryClient.invalidateQueries([QueryKeys.messages]);
-        newConversation();
+
+        const template: Partial<Parameters<typeof newConversation>[0]['template']> = {};
+        if (project) {
+          template.projectId = project.projectId;
+          if (project.endpoint) {
+            template.endpoint = project.endpoint as unknown as typeof template.endpoint;
+          }
+          if (project.model) {
+            template.model = project.model;
+          }
+        }
+
+        newConversation(Object.keys(template).length > 0 ? { template } : undefined);
         if (switchToHistory) {
           setActive(DEFAULT_PANEL);
         }
       }
     },
-    [queryClient, conversation?.conversationId, newConversation, switchToHistory, setActive],
+    [
+      queryClient,
+      conversation?.conversationId,
+      newConversation,
+      switchToHistory,
+      setActive,
+      project,
+    ],
   );
 
   return (
@@ -48,11 +73,41 @@ const NewChatButton = memo(function NewChatButton({
           href="/c/new"
           data-testid="new-chat-button"
           aria-label={localize('com_ui_new_chat')}
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-hover"
+          className="group flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-text-secondary transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary active:translate-y-px"
           onClick={handleClick}
         >
-          <SquarePen className="h-5 w-5 text-text-primary" />
+          <PencilSimpleLine className="h-5 w-5" />
         </a>
+      }
+    />
+  );
+});
+
+const AgentMarketplaceButton = memo(function AgentMarketplaceButton() {
+  const navigate = useNavigate();
+  const localize = useLocalize();
+  const showAgentMarketplace = useShowMarketplace();
+
+  const handleClick = useCallback(() => navigate('/agents'), [navigate]);
+
+  if (!showAgentMarketplace) {
+    return null;
+  }
+
+  return (
+    <TooltipAnchor
+      side="right"
+      description={localize('com_agents_marketplace')}
+      render={
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={localize('com_agents_marketplace')}
+          className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary [&_svg]:stroke-[1.75]"
+          onClick={handleClick}
+        >
+          <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+        </Button>
       }
     />
   );
@@ -106,8 +161,10 @@ const NavIconButton = memo(function NavIconButton({
           aria-label={localize(link.title)}
           aria-pressed={isActive}
           className={cn(
-            'h-9 w-9 rounded-lg',
-            isActive ? 'bg-surface-active-alt text-text-primary' : 'text-text-secondary',
+            'h-9 w-9 rounded-xl border border-transparent transition-all duration-200 [&_svg]:stroke-[1.75]',
+            isActive
+              ? 'border-border-light bg-surface-active-alt text-text-primary shadow-sm shadow-black/10'
+              : 'text-text-secondary-alt hover:border-border-light hover:bg-surface-hover hover:text-text-primary',
           )}
           onClick={handleClick}
         >
@@ -149,14 +206,15 @@ function ExpandedPanel({
             variant="ghost"
             aria-label={localize(toggleLabel)}
             aria-expanded={expanded}
-            className="h-9 w-9 rounded-lg"
+            className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt hover:border-border-light hover:text-text-primary [&_svg]:stroke-[1.75]"
             onClick={toggleClick}
           >
-            <Sidebar aria-hidden="true" className="h-5 w-5 text-text-primary" />
+            <SidebarSimple aria-hidden="true" className="h-5 w-5" />
           </Button>
         }
       />
       <NewChatButton setActive={setActive} />
+      <AgentMarketplaceButton />
       <div className="mx-2 border-b border-border-light" />
       <div className="flex flex-col gap-1 overflow-y-auto">
         {links.map((link) => (
@@ -173,7 +231,7 @@ function ExpandedPanel({
       </div>
 
       <div className="mt-auto">
-        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
+        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-xl" />}>
           <AccountSettings collapsed />
         </Suspense>
       </div>

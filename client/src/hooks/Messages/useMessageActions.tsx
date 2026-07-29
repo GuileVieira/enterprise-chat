@@ -17,6 +17,7 @@ import useCopyToClipboard from './useCopyToClipboard';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useGetAddedConvo } from '~/hooks/Chat';
 import { useLocalize } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import store from '~/store';
 
 export type TMessageActions = Pick<
@@ -37,6 +38,7 @@ export default function useMessageActions(props: TMessageActions) {
   const localize = useLocalize();
   const { user } = useAuthContext();
   const UsernameDisplay = useRecoilValue<boolean>(store.UsernameDisplay);
+  const { data: startupConfig } = useGetStartupConfig();
   const { message, currentEditId, setCurrentEditId, searchResults, chatContext } = props;
 
   const {
@@ -130,10 +132,31 @@ export default function useMessageActions(props: TMessageActions) {
       return agent.name ?? 'Assistant';
     } else if (assistant) {
       return assistant.name ?? 'Assistant';
-    } else {
-      return message?.sender;
+    } else if (message?.model) {
+      const spec = startupConfig?.modelSpecs?.list?.find((s) => s.preset.model === message.model);
+      if (spec?.label) {
+        return `Agente ${spec.label}`;
+      }
+    } else if (message?.sender) {
+      return message.sender;
+    } else if (conversation?.spec) {
+      const spec = startupConfig?.modelSpecs?.list?.find((s) => s.name === conversation.spec);
+      if (spec?.label) {
+        return `Agente ${spec.label}`;
+      }
     }
-  }, [message, agent, assistant, UsernameDisplay, user, localize]);
+    return message?.sender;
+  }, [
+    message,
+    agent,
+    assistant,
+    UsernameDisplay,
+    user,
+    localize,
+    message?.sender,
+    conversation?.spec,
+    startupConfig?.modelSpecs?.list,
+  ]);
 
   const feedbackMutation = useUpdateFeedbackMutation(
     conversation?.conversationId || '',

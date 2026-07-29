@@ -2,7 +2,7 @@ import React, { memo, useState, useCallback, useMemo, useEffect } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { CheckboxButton } from '@librechat/client';
 import { ArtifactModes } from 'librechat-data-provider';
-import { WandSparkles, ChevronDown } from 'lucide-react';
+import { CaretDown as ChevronDown, MagicWand as WandSparkles } from '@phosphor-icons/react';
 import { useBadgeRowContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -91,6 +91,7 @@ function Artifacts() {
       {isEnabled && (
         <Ariakit.MenuProvider open={isPopoverOpen} setOpen={setIsPopoverOpen}>
           <Ariakit.MenuButton
+            render={<button type="button" />}
             className={cn(
               'w-7 rounded-l-none rounded-r-full border-b border-l-0 border-r border-t border-border-light md:w-6',
               'border-amber-600/40 bg-amber-500/10 hover:bg-amber-700/10',
