@@ -921,10 +921,16 @@
   "919": ".eslintrc.json",
   "920": "toolLabels.ts",
   "921": "adminFunctionById",
+  "922": "adminGroupById",
   "923": "publishConfig",
   "924": "repository",
   "925": "docker-build.sh",
+  "926": "agents",
+  "927": "buildQuery",
+  "928": "getCategories",
   "929": "list-users.js",
   "930": "docker-push.sh",
+  "931": "loadModuleWithBase",
+  "932": "latex.ts",
   "933": "ArtifactRouting.test.tsx"
 }

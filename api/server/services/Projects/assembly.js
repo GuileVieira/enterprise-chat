@@ -35,7 +35,7 @@ async function submitAudio(filepath) {
     headers: getHeaders('application/json'),
     body: JSON.stringify({
       audio_url: upload.upload_url,
-      speech_models: ['universal-3-pro', 'universal-2'],
+      speech_models: ['universal-3-5-pro', 'universal-2'],
       language_detection: true,
       speaker_labels: true,
     }),
@@ -55,7 +55,7 @@ async function generateInsights(transcript) {
     method: 'POST',
     headers: getHeaders('application/json'),
     body: JSON.stringify({
-      model: process.env.ASSEMBLYAI_LLM_MODEL || 'claude-sonnet-4-6',
+      model: process.env.ASSEMBLYAI_LLM_MODEL || 'claude-sonnet-5',
       max_tokens: 1800,
       messages: [
         {

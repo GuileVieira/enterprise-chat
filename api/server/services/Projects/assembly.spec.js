@@ -1,4 +1,4 @@
-const { generateInsights, getTranscript } = require('./assembly');
+const { generateInsights, getTranscript, submitAudio } = require('./assembly');
 
 describe('AssemblyAI meeting service', () => {
   const originalKey = process.env.ASSEMBLYAI_API_KEY;
@@ -29,6 +29,26 @@ describe('AssemblyAI meeting service', () => {
     );
   });
 
+  it('submits audio using Universal-3.5 Pro with Universal-2 fallback', async () => {
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ upload_url: 'https://cdn.assemblyai.com/audio' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'transcript-1', status: 'queued' }),
+      });
+
+    await expect(submitAudio(__filename)).resolves.toMatchObject({ id: 'transcript-1' });
+    expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toMatchObject({
+      audio_url: 'https://cdn.assemblyai.com/audio',
+      speech_models: ['universal-3-5-pro', 'universal-2'],
+      language_detection: true,
+      speaker_labels: true,
+    });
+  });
+
   it('requests structured meeting insights and parses fenced JSON', async () => {
     global.fetch.mockResolvedValue({
       ok: true,
@@ -53,7 +73,7 @@ describe('AssemblyAI meeting service', () => {
       tasks: [],
     });
     expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5',
     });
   });
 

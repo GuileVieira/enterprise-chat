@@ -828,7 +828,7 @@ describe('getOpenAIConfig', () => {
       expect(result.provider).toBe('openrouter');
     });
 
-    it('should handle web_search with OpenRouter using plugins format', () => {
+    it('should handle web_search with OpenRouter server tools', () => {
       const modelOptions = {
         model: 'gpt-4',
         web_search: true,
@@ -839,12 +839,19 @@ describe('getOpenAIConfig', () => {
         modelOptions,
       });
 
-      // Should use plugins format for OpenRouter, not tools
-      expect(result.llmConfig.modelKwargs).toEqual({
-        plugins: [{ id: 'web' }],
-      });
-      expect(result.tools).toEqual([]);
-      // Should NOT set useResponsesApi for OpenRouter
+      expect(result.llmConfig.modelKwargs).toBeUndefined();
+      expect(result.tools).toEqual([
+        { type: 'openrouter:web_search' },
+        {
+          type: 'openrouter:web_fetch',
+          parameters: {
+            engine: 'openrouter',
+            max_uses: 5,
+            max_content_tokens: 20000,
+          },
+        },
+      ]);
+      // ChatOpenRouter selects the compatible API from the bound server tools.
       expect(result.llmConfig.useResponsesApi).toBeUndefined();
       expect(result.provider).toBe('openrouter');
     });
@@ -877,12 +884,11 @@ describe('getOpenAIConfig', () => {
         addParams,
       });
 
-      // Should use plugins format and include other params
+      // Should include other params while web tools stay in the tools array
       expect(result.llmConfig.modelKwargs).toEqual({
-        plugins: [{ id: 'web' }],
         customParam: 'value',
       });
-      expect(result.tools).toEqual([]);
+      expect(result.tools).toHaveLength(2);
       expect(result.provider).toBe('openrouter');
     });
 
@@ -1252,16 +1258,15 @@ describe('getOpenAIConfig', () => {
         streaming: false,
       });
       expect(result.llmConfig.include_reasoning).toBeUndefined();
-      // Should NOT have useResponsesApi for OpenRouter
+      // ChatOpenRouter selects the compatible API from the bound server tools.
       expect(result.llmConfig.useResponsesApi).toBeUndefined();
       expect(result.llmConfig.maxTokens).toBe(2000);
       expect(result.llmConfig.verbosity).toBe(Verbosity.medium);
       expect(result.llmConfig.modelKwargs).toEqual({
         reasoning: { effort: ReasoningEffort.high },
         customParam: 'custom-value',
-        plugins: [{ id: 'web' }], // OpenRouter web search format
       });
-      expect(result.tools).toEqual([]); // No tools for OpenRouter web search
+      expect(result.tools).toHaveLength(2);
       expect(result.provider).toBe('openrouter');
     });
   });

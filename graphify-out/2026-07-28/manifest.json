@@ -415,8 +415,8 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1785287103.245484,
-    "ast_hash": "817e618054f61efad3c53664657338fc",
+    "mtime": 1785286231.5714242,
+    "ast_hash": "23a155da0f7cc53c8c8b6d8bb38a25e5",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
@@ -10885,8 +10885,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/endpoints/openai/config.spec.ts": {
-    "mtime": 1785287118.3662047,
-    "ast_hash": "c9147be56131bf812fa6dd99228b8ee8",
+    "mtime": 1785286895.9307625,
+    "ast_hash": "9d7e3d16f41a12adc62ec46f76ac4b2e",
     "semantic_hash": ""
   },
   "packages/api/src/endpoints/openai/config.ts": {
@@ -16515,13 +16515,13 @@
     "semantic_hash": ""
   },
   "api/server/services/Projects/assembly.js": {
-    "mtime": 1785288732.3771899,
-    "ast_hash": "6ffeae2003d10ac205ccf8411d7e995c",
+    "mtime": 1785285360.2217524,
+    "ast_hash": "88a9cb7fddf6babf57f39cc88c651f5e",
     "semantic_hash": ""
   },
   "api/server/services/Projects/assembly.spec.js": {
-    "mtime": 1785288739.2470198,
-    "ast_hash": "fb55f72a88b3a3868fe535501567c22e",
+    "mtime": 1784840628.4568825,
+    "ast_hash": "4affb0ba5803e7ba0f5ff3a7f4d212c0",
     "semantic_hash": ""
   },
   "api/server/services/Projects/meetingIndex.js": {
