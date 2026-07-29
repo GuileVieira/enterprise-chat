@@ -147,6 +147,30 @@ services:
       EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL}
       EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
 
+  restic:
+    image: restic/restic:0.19.1
+    restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - while true; do sleep 3600; done
+    environment:
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?}
+      RESTIC_HOST: orqest-production
+      AWS_ACCESS_KEY_ID: ${RESTIC_AWS_ACCESS_KEY_ID:?}
+      AWS_SECRET_ACCESS_KEY: ${RESTIC_AWS_SECRET_ACCESS_KEY:?}
+      AWS_DEFAULT_REGION: ${RESTIC_AWS_DEFAULT_REGION:-us-east-1}
+    volumes:
+      - orqest_mongodb:/source/mongodb:ro
+      - orqest_uploads:/source/uploads:ro
+      - orqest_images:/source/images:ro
+      - orqest_pgvector:/source/pgvector:ro
+      - orqest_meilisearch:/source/meilisearch:ro
+      - orqest_logs:/source/logs:ro
+      - orqest_restic_cache:/root/.cache/restic
+
 volumes:
   orqest_images:
     name: orqest_images_prod
@@ -160,3 +184,5 @@ volumes:
     name: orqest_meilisearch_prod
   orqest_pgvector:
     name: orqest_pgvector_prod
+  orqest_restic_cache:
+    name: orqest_restic_cache_prod
