@@ -230,6 +230,29 @@ router.patch('/:meetingId/speakers', projectAccess(PermissionBits.EDIT), async (
   }
 });
 
+router.post('/:meetingId/insights', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  try {
+    const meeting = await getMeetingModel().findOne({
+      _id: req.params.meetingId,
+      projectId: req.params.projectId,
+    });
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    if (meeting.status !== 'completed') {
+      return res.status(409).json({ error: 'Meeting transcript is not completed' });
+    }
+    meeting.insights = await generateInsights(meeting);
+    await meeting.save();
+    const project = await getProject(req);
+    await syncMeetingIndexStatus({ meeting, project, req });
+    res.json(serialize(meeting));
+  } catch (error) {
+    logger.error('[projectMeetings] insights retry failed', error);
+    res.status(502).json({ error: error.message || 'Failed to generate meeting insights' });
+  }
+});
+
 router.post('/:meetingId/index', projectAccess(PermissionBits.EDIT), async (req, res) => {
   try {
     const meeting = await getMeetingModel().findOne({

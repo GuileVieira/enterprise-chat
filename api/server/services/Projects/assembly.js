@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const API_URL = 'https://api.assemblyai.com';
-const LLM_URL = 'https://llm-gateway.assemblyai.com/v1/chat/completions';
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function getHeaders(contentType) {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
@@ -48,14 +48,21 @@ const getTranscript = (id) =>
   });
 
 async function generateInsights(transcript) {
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY;
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY or OPENROUTER_KEY is not configured');
+  }
   const content = transcript.utterances
     .map((item) => `Speaker ${item.speaker}: ${item.text}`)
     .join('\n');
-  const result = await request(LLM_URL, {
+  const result = await request(OPENROUTER_URL, {
     method: 'POST',
-    headers: getHeaders('application/json'),
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json',
+    },
     body: JSON.stringify({
-      model: process.env.ASSEMBLYAI_LLM_MODEL || 'claude-sonnet-5',
+      model: process.env.MEETING_INSIGHTS_MODEL || 'anthropic/claude-sonnet-5',
       max_tokens: 1800,
       messages: [
         {

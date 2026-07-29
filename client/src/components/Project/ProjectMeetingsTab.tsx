@@ -114,6 +114,17 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     },
   );
 
+  const retryInsights = useMutation(
+    () => dataService.retryProjectMeetingInsights(projectId, selected?.id ?? ''),
+    {
+      onSuccess: (meeting) => {
+        setSelected(meeting);
+        queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+        queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(projectId));
+      },
+    },
+  );
+
   useEffect(() => {
     if (recording !== 'recording') {
       return;
@@ -334,9 +345,11 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
         title={title}
         speakerNames={speakerNames}
         indexing={retryIndex.isLoading}
+        generatingInsights={retryInsights.isLoading}
         onTitleChange={setTitle}
         onTitleSave={() => updateTitle.mutate()}
         onIndexRetry={() => retryIndex.mutate()}
+        onInsightsRetry={() => retryInsights.mutate()}
         onSpeakerChange={(speaker, name) =>
           setSpeakerNames((current) => ({ ...current, [speaker]: name }))
         }

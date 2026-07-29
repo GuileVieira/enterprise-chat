@@ -14,6 +14,9 @@ jest.mock('librechat-data-provider', () => ({
     createProjectMeeting: (...args: unknown[]) => mockCreateProjectMeeting(...args),
     getProjectMeeting: (...args: unknown[]) => mockGetProjectMeeting(...args),
     getProjectMeetings: (...args: unknown[]) => mockGetProjectMeetings(...args),
+    retryProjectMeetingIndex: jest.fn(),
+    retryProjectMeetingInsights: jest.fn(),
+    updateProjectMeeting: jest.fn(),
     updateProjectMeetingSpeakers: jest.fn(),
   },
   DynamicQueryKeys: {

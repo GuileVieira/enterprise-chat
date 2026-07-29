@@ -143,6 +143,8 @@ export const projectMeetingSpeakers = (id: string, meetingId: string) =>
   `${projectMeeting(id, meetingId)}/speakers`;
 export const projectMeetingIndex = (id: string, meetingId: string) =>
   `${projectMeeting(id, meetingId)}/index`;
+export const projectMeetingInsights = (id: string, meetingId: string) =>
+  `${projectMeeting(id, meetingId)}/insights`;
 export const projectMetaAds = (id: string) => `${projectById(id)}/meta-ads`;
 export const projectMetaAdsRankings = (id: string) => `${projectMetaAds(id)}/rankings`;
 export const projectMetaAdsPerformance = (id: string) => `${projectMetaAds(id)}/performance`;

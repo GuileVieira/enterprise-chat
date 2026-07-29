@@ -7,9 +7,11 @@ interface MeetingDetailsProps {
   title: string;
   speakerNames: Record<string, string>;
   indexing: boolean;
+  generatingInsights: boolean;
   onTitleChange: (title: string) => void;
   onTitleSave: () => void;
   onIndexRetry: () => void;
+  onInsightsRetry: () => void;
   onSpeakerChange: (speaker: string, name: string) => void;
   onSave: () => void;
 }
@@ -23,9 +25,11 @@ export default function MeetingDetails({
   title,
   speakerNames,
   indexing,
+  generatingInsights,
   onTitleChange,
   onTitleSave,
   onIndexRetry,
+  onInsightsRetry,
   onSpeakerChange,
   onSave,
 }: MeetingDetailsProps) {
@@ -41,6 +45,11 @@ export default function MeetingDetails({
     );
   }
   const speakers = [...new Set(meeting.utterances.map((item) => item.speaker))];
+  const hasInsights =
+    Boolean(meeting.insights.summary) ||
+    meeting.insights.decisions.length > 0 ||
+    meeting.insights.nextSteps.length > 0 ||
+    meeting.insights.tasks.length > 0;
   return (
     <div className="space-y-6">
       <section>
@@ -102,6 +111,16 @@ export default function MeetingDetails({
           )}
         </div>
       </section>
+      {!hasInsights && canEdit && (
+        <button
+          type="button"
+          disabled={generatingInsights}
+          onClick={onInsightsRetry}
+          className="btn btn-primary"
+        >
+          {localize('com_ui_meeting_generate_insights')}
+        </button>
+      )}
       <Insight title={localize('com_ui_meeting_summary')} text={meeting.insights.summary} />
       <Insight title={localize('com_ui_meeting_decisions')} items={meeting.insights.decisions} />
       <Insight title={localize('com_ui_meeting_next_steps')} items={meeting.insights.nextSteps} />

@@ -44,9 +44,11 @@ describe('MeetingDetails', () => {
         title="Reunião"
         speakerNames={{ A: 'Speaker A' }}
         indexing={false}
+        generatingInsights={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
         onSpeakerChange={onSpeakerChange}
         onSave={onSave}
       />,
@@ -62,9 +64,11 @@ describe('MeetingDetails', () => {
         title="Planejamento"
         speakerNames={{ A: 'Ana' }}
         indexing={false}
+        generatingInsights={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
         onSpeakerChange={onSpeakerChange}
         onSave={onSave}
       />,
@@ -85,9 +89,11 @@ describe('MeetingDetails', () => {
         title="Reunião"
         speakerNames={{ A: 'Ana' }}
         indexing={false}
+        generatingInsights={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
         onSpeakerChange={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -109,9 +115,11 @@ describe('MeetingDetails', () => {
         title="Reunião"
         speakerNames={{ A: 'Ana' }}
         indexing={false}
+        generatingInsights={false}
         onTitleChange={jest.fn()}
         onTitleSave={jest.fn()}
         onIndexRetry={onIndexRetry}
+        onInsightsRetry={jest.fn()}
         onSpeakerChange={jest.fn()}
         onSave={jest.fn()}
       />,
@@ -120,5 +128,31 @@ describe('MeetingDetails', () => {
     fireEvent.click(screen.getByText('com_ui_meeting_retry_index'));
     expect(onIndexRetry).toHaveBeenCalledTimes(1);
     expect(screen.getByText('File embedding failed.')).toBeInTheDocument();
+  });
+
+  it('regenerates missing meeting insights', () => {
+    const onInsightsRetry = jest.fn();
+    render(
+      <MeetingDetails
+        meeting={{
+          ...meeting,
+          insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+        }}
+        canEdit
+        title="Reunião"
+        speakerNames={{ A: 'Ana' }}
+        indexing={false}
+        generatingInsights={false}
+        onTitleChange={jest.fn()}
+        onTitleSave={jest.fn()}
+        onIndexRetry={jest.fn()}
+        onInsightsRetry={onInsightsRetry}
+        onSpeakerChange={jest.fn()}
+        onSave={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('com_ui_meeting_generate_insights'));
+    expect(onInsightsRetry).toHaveBeenCalledTimes(1);
   });
 });

@@ -285,6 +285,40 @@ describe('project meetings routes', () => {
     expect(response.body.indexError).toBe('File embedding failed.');
   });
 
+  it('regenerates missing insights and refreshes the project index', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      title: 'Reunião',
+      status: 'completed',
+      speakerNames: new Map([['A', 'Teste']]),
+      utterances: [{ speaker: 'A', text: 'Vamos enviar amanhã.', start: 0, end: 1000 }],
+      insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+      recordedAt: new Date('2026-07-23T13:00:00.000Z'),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockGenerateInsights.mockResolvedValue({
+      summary: 'Envio combinado.',
+      decisions: [],
+      nextSteps: ['Enviar amanhã.'],
+      tasks: [],
+    });
+
+    const response = await request(createApp()).post(
+      '/api/projects/project-1/meetings/meeting-1/insights',
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.insights.summary).toBe('Envio combinado.');
+    expect(mockGenerateInsights).toHaveBeenCalledWith(meeting);
+    expect(mockSyncMeetingIndex).toHaveBeenCalledWith(expect.objectContaining({ meeting }));
+  });
+
   it('renames every speaker occurrence through the shared label map and reindexes', async () => {
     const meeting = {
       _id: 'meeting-1',

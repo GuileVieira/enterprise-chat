@@ -2,9 +2,11 @@ const { generateInsights, getTranscript, submitAudio } = require('./assembly');
 
 describe('AssemblyAI meeting service', () => {
   const originalKey = process.env.ASSEMBLYAI_API_KEY;
+  const originalOpenRouterKey = process.env.OPENROUTER_KEY;
 
   beforeEach(() => {
     process.env.ASSEMBLYAI_API_KEY = 'test-key';
+    process.env.OPENROUTER_KEY = 'openrouter-test-key';
     global.fetch = jest.fn();
   });
 
@@ -13,6 +15,11 @@ describe('AssemblyAI meeting service', () => {
       delete process.env.ASSEMBLYAI_API_KEY;
     } else {
       process.env.ASSEMBLYAI_API_KEY = originalKey;
+    }
+    if (originalOpenRouterKey === undefined) {
+      delete process.env.OPENROUTER_KEY;
+    } else {
+      process.env.OPENROUTER_KEY = originalOpenRouterKey;
     }
   });
 
@@ -73,8 +80,10 @@ describe('AssemblyAI meeting service', () => {
       tasks: [],
     });
     expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
-      model: 'claude-sonnet-5',
+      model: 'anthropic/claude-sonnet-5',
     });
+    expect(global.fetch.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(global.fetch.mock.calls[0][1].headers.authorization).toBe('Bearer openrouter-test-key');
   });
 
   it('drops invalid insight fields returned by the external model', async () => {

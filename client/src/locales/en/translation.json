@@ -2024,6 +2024,7 @@
   "com_ui_meeting_index_indexed": "Indexed and available to agents",
   "com_ui_meeting_index_failed": "Indexing failed",
   "com_ui_meeting_retry_index": "Retry indexing",
+  "com_ui_meeting_generate_insights": "Generate summary",
   "com_ui_meeting_participants": "Participants",
   "com_ui_meeting_summary": "Summary",
   "com_ui_meeting_decisions": "Decisions",

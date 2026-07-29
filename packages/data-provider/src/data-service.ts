@@ -912,6 +912,12 @@ export const retryProjectMeetingIndex = (
 ): Promise<import('./types/meetings').ProjectMeeting> =>
   request.post(endpoints.projectMeetingIndex(id, meetingId));
 
+export const retryProjectMeetingInsights = (
+  id: string,
+  meetingId: string,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.post(endpoints.projectMeetingInsights(id, meetingId));
+
 export const getProjectMetaAdsStatus = (
   id: string,
   params?: q.ProjectMetaAdsStatusParams,

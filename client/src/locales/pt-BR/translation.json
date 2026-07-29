@@ -1050,6 +1050,7 @@
   "com_ui_meeting_index_indexed": "Indexada e disponível para os agentes",
   "com_ui_meeting_index_failed": "Falha na indexação",
   "com_ui_meeting_retry_index": "Tentar indexar novamente",
+  "com_ui_meeting_generate_insights": "Gerar resumo",
   "com_ui_meeting_participants": "Participantes",
   "com_ui_meeting_summary": "Resumo",
   "com_ui_meeting_decisions": "Decisões",
