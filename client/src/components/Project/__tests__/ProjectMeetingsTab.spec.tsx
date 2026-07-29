@@ -4,13 +4,16 @@ import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
 const mockCreateProjectMeeting = jest.fn();
 const mockDeleteMeetingChunks = jest.fn();
+const mockGetProjectMeeting = jest.fn();
+const mockGetProjectMeetings = jest.fn();
 const mockReadMeetingChunks = jest.fn();
 const mockSaveMeetingChunk = jest.fn();
 
 jest.mock('librechat-data-provider', () => ({
   dataService: {
     createProjectMeeting: (...args: unknown[]) => mockCreateProjectMeeting(...args),
-    getProjectMeetings: jest.fn().mockResolvedValue([]),
+    getProjectMeeting: (...args: unknown[]) => mockGetProjectMeeting(...args),
+    getProjectMeetings: (...args: unknown[]) => mockGetProjectMeetings(...args),
     updateProjectMeetingSpeakers: jest.fn(),
   },
   DynamicQueryKeys: {
@@ -84,6 +87,7 @@ describe('ProjectMeetingsTab recorder', () => {
       getTracks: () => [{ stop: stopTrack }],
     });
     mockSaveMeetingChunk.mockResolvedValue(undefined);
+    mockGetProjectMeetings.mockResolvedValue([]);
     mockReadMeetingChunks.mockResolvedValue([new Blob(['audio'], { type: 'audio/webm' })]);
     mockDeleteMeetingChunks.mockResolvedValue(undefined);
     mockCreateProjectMeeting.mockResolvedValue({
@@ -115,5 +119,24 @@ describe('ProjectMeetingsTab recorder', () => {
     fireEvent.click(screen.getByText('com_ui_meeting_start'));
 
     expect(await screen.findByText('com_ui_meeting_microphone_denied')).toBeInTheDocument();
+  });
+
+  it('shows an accessible spinner while a transcript is processing', async () => {
+    const meeting = {
+      id: 'meeting-1',
+      title: 'Reunião',
+      status: 'processing',
+      recordedAt: '2026-07-29T20:00:00.000Z',
+      duration: 5,
+      speakerNames: {},
+    };
+    mockGetProjectMeetings.mockResolvedValue([meeting]);
+    mockGetProjectMeeting.mockResolvedValue(meeting);
+
+    renderTab();
+
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('com_ui_meeting_status_processing');
+    expect(status.querySelector('.animate-spin')).toBeInTheDocument();
   });
 });

@@ -278,7 +278,17 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
               className="w-full rounded-xl border border-border-light bg-surface-secondary p-3 text-left hover:bg-surface-hover"
             >
               <div className="text-sm font-medium text-text-primary">{meeting.title}</div>
-              <div className="mt-1 text-xs text-text-secondary">
+              <div
+                className="mt-1 flex items-center gap-1.5 text-xs text-text-secondary"
+                role={meeting.status === 'processing' ? 'status' : undefined}
+                aria-live={meeting.status === 'processing' ? 'polite' : undefined}
+              >
+                {meeting.status === 'processing' && (
+                  <span
+                    aria-hidden="true"
+                    className="size-3 shrink-0 animate-spin rounded-full border-2 border-text-secondary border-t-transparent"
+                  />
+                )}
                 {new Date(meeting.recordedAt).toLocaleString()} · {formatTime(meeting.duration)} ·{' '}
                 {localize(`com_ui_meeting_status_${meeting.status}`)}
               </div>

@@ -919,9 +919,10 @@
   "917": "start-redis-tls.sh",
   "918": "streamTenant.spec.js",
   "919": ".eslintrc.json",
-  "920": "useNavHelpers.ts",
+  "923": "publishConfig",
   "924": "repository",
   "925": "docker-build.sh",
   "929": "list-users.js",
-  "930": "docker-push.sh"
+  "930": "docker-push.sh",
+  "933": "ArtifactRouting.test.tsx"
 }

@@ -8,6 +8,7 @@ const mockGenerateInsights = jest.fn();
 const mockGetTranscript = jest.fn();
 const mockSubmitAudio = jest.fn();
 const mockSyncMeetingIndex = jest.fn();
+const mockUploadConfig = jest.fn();
 
 jest.mock('mongoose', () => ({
   models: {
@@ -29,6 +30,11 @@ jest.mock('~/models', () => ({
 jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, _res, next) => {
     req.user = { id: 'user-1', role: 'USER' };
+    next();
+  },
+  configMiddleware: (req, _res, next) => {
+    req.config = { paths: { uploads: '/tmp' } };
+    mockUploadConfig();
     next();
   },
 }));
@@ -59,6 +65,9 @@ jest.mock('~/server/services/Projects/meetingIndex', () => ({
 jest.mock('~/server/routes/files/multer', () => ({
   storage: {
     _handleFile: (_req, file, callback) => {
+      if (!_req.config?.paths?.uploads) {
+        return callback(new Error('Missing upload config'));
+      }
       file.stream.resume();
       file.stream.on('end', () => callback(null, { path: '/tmp/test-meeting.webm' }));
     },
@@ -113,6 +122,7 @@ describe('project meetings routes', () => {
       });
 
     expect(response.status).toBe(202);
+    expect(mockUploadConfig).toHaveBeenCalledTimes(1);
     expect(mockSubmitAudio).toHaveBeenCalledWith('/tmp/test-meeting.webm');
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const { logger } = require('@librechat/data-schemas');
 const { PermissionBits } = require('librechat-data-provider');
 const { createFile } = require('~/models');
-const { requireJwtAuth } = require('~/server/middleware');
+const { configMiddleware, requireJwtAuth } = require('~/server/middleware');
 const {
   canAccessProjectResource,
 } = require('~/server/middleware/accessResources/canAccessProject');
@@ -30,6 +30,7 @@ const upload = multer({
 });
 
 router.use(requireJwtAuth);
+router.use(configMiddleware);
 
 const projectAccess = (permission) =>
   canAccessProjectResource({
