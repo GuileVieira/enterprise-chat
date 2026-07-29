@@ -25,6 +25,9 @@ export interface ProjectMeeting {
   utterances: MeetingUtterance[];
   speakerNames: Record<string, string>;
   insights: MeetingInsights;
+  indexStatus: 'pending' | 'indexed' | 'failed';
+  indexError?: string;
+  indexedAt?: string;
   error?: string;
   recordedAt: string;
   createdAt: string;

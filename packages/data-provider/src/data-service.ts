@@ -899,6 +899,19 @@ export const updateProjectMeetingSpeakers = (
 ): Promise<import('./types/meetings').ProjectMeeting> =>
   request.patch(endpoints.projectMeetingSpeakers(id, meetingId), { speakerNames });
 
+export const updateProjectMeeting = (
+  id: string,
+  meetingId: string,
+  payload: { title: string },
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.patch(endpoints.projectMeeting(id, meetingId), payload);
+
+export const retryProjectMeetingIndex = (
+  id: string,
+  meetingId: string,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.post(endpoints.projectMeetingIndex(id, meetingId));
+
 export const getProjectMetaAdsStatus = (
   id: string,
   params?: q.ProjectMetaAdsStatusParams,

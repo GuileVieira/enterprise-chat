@@ -37,6 +37,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const [error, setError] = useState('');
   const [pendingUpload, setPendingUpload] = useState<PendingRecording | null>(null);
   const [selected, setSelected] = useState<ProjectMeeting | null>(null);
+  const [title, setTitle] = useState('');
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
 
   const meetingsQuery = useQuery<ProjectMeeting[]>(
@@ -90,6 +91,29 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     },
   );
 
+  const updateTitle = useMutation(
+    () => dataService.updateProjectMeeting(projectId, selected?.id ?? '', { title }),
+    {
+      onSuccess: (meeting) => {
+        setSelected(meeting);
+        setTitle(meeting.title);
+        queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+        queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(projectId));
+      },
+    },
+  );
+
+  const retryIndex = useMutation(
+    () => dataService.retryProjectMeetingIndex(projectId, selected?.id ?? ''),
+    {
+      onSuccess: (meeting) => {
+        setSelected(meeting);
+        queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+        queryClient.invalidateQueries(DynamicQueryKeys.projectFiles(projectId));
+      },
+    },
+  );
+
   useEffect(() => {
     if (recording !== 'recording') {
       return;
@@ -108,6 +132,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     const fresh = meetingsQuery.data?.find((meeting) => meeting.id === selectedId);
     if (fresh) {
       setSelected(fresh);
+      setTitle(fresh.title);
       setSpeakerNames(fresh.speakerNames);
     }
   }, [meetingsQuery.data, selectedId]);
@@ -209,6 +234,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
 
   const openMeeting = (meeting: ProjectMeeting) => {
     setSelected(meeting);
+    setTitle(meeting.title);
     setSpeakerNames(meeting.speakerNames);
   };
 
@@ -305,7 +331,12 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       <MeetingDetails
         meeting={selected}
         canEdit={canEdit}
+        title={title}
         speakerNames={speakerNames}
+        indexing={retryIndex.isLoading}
+        onTitleChange={setTitle}
+        onTitleSave={() => updateTitle.mutate()}
+        onIndexRetry={() => retryIndex.mutate()}
         onSpeakerChange={(speaker, name) =>
           setSpeakerNames((current) => ({ ...current, [speaker]: name }))
         }

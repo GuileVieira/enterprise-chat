@@ -26,6 +26,9 @@ export interface IMeeting extends Document {
   utterances: IMeetingUtterance[];
   speakerNames: Map<string, string>;
   insights: IMeetingInsights;
+  indexStatus: 'pending' | 'indexed' | 'failed';
+  indexError?: string;
+  indexedAt?: Date;
   error?: string;
   recordedAt: Date;
   createdAt?: Date;

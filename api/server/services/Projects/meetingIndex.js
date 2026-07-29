@@ -47,7 +47,14 @@ function formatTime(milliseconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-async function syncMeetingIndex({ meeting, project, req, createFile }) {
+async function syncMeetingIndex({
+  meeting,
+  project,
+  req,
+  createFile,
+  deleteVectorsFn = deleteVectors,
+  uploadVectorsFn = uploadVectors,
+}) {
   const file_id = getMeetingFileId(meeting);
   const text = formatMeetingIndexText(meeting, project);
   const filename = `reuniao-${new Date(meeting.recordedAt).toISOString().slice(0, 10)}.txt`;
@@ -55,8 +62,8 @@ async function syncMeetingIndex({ meeting, project, req, createFile }) {
   await fs.promises.writeFile(filepath, text, 'utf8');
   let embeddingResult;
   try {
-    await deleteVectors(req, { file_id, embedded: true });
-    embeddingResult = await uploadVectors({
+    await deleteVectorsFn(req, { file_id, embedded: true });
+    embeddingResult = await uploadVectorsFn({
       req,
       file: {
         path: filepath,

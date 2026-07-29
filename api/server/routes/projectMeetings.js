@@ -57,6 +57,26 @@ function serialize(meeting) {
   };
 }
 
+async function syncMeetingIndexStatus({ meeting, project, req }) {
+  meeting.indexStatus = 'pending';
+  meeting.indexError = undefined;
+  meeting.indexedAt = undefined;
+  await meeting.save();
+  try {
+    await syncMeetingIndex({ meeting, project, req, createFile });
+    meeting.indexStatus = 'indexed';
+    meeting.indexedAt = new Date();
+  } catch (error) {
+    meeting.indexStatus = 'failed';
+    meeting.indexError = error.message || 'Meeting indexing failed';
+    logger.warn('[projectMeetings] indexing unavailable; transcript remains accessible', {
+      error: meeting.indexError,
+      meetingId: String(meeting._id),
+    });
+  }
+  await meeting.save();
+}
+
 router.get('/', projectAccess(PermissionBits.VIEW), async (req, res) => {
   try {
     const meetings = await getMeetingModel()
@@ -134,16 +154,49 @@ router.get('/:meetingId', projectAccess(PermissionBits.VIEW), async (req, res) =
         `Speaker ${speaker}`,
       ]),
     );
-    meeting.insights = await generateInsights(transcript);
-    await meeting.save();
-    const project = await getProject(req);
-    await syncMeetingIndex({ meeting, project, req, createFile });
+    try {
+      meeting.insights = await generateInsights(transcript);
+    } catch (error) {
+      logger.warn('[projectMeetings] insights unavailable; completing transcript without them', {
+        error: error.message,
+        meetingId: String(meeting._id),
+      });
+      meeting.insights = { summary: '', decisions: [], nextSteps: [], tasks: [] };
+    }
     meeting.status = 'completed';
     await meeting.save();
+    const project = await getProject(req);
+    await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
     logger.error('[projectMeetings] status failed', error);
     res.status(502).json({ error: error.message || 'Failed to process meeting' });
+  }
+});
+
+router.patch('/:meetingId', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  try {
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim().slice(0, 150) : '';
+    if (!title) {
+      return res.status(400).json({ error: 'Meeting title is required' });
+    }
+    const meeting = await getMeetingModel().findOne({
+      _id: req.params.meetingId,
+      projectId: req.params.projectId,
+    });
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    meeting.title = title;
+    await meeting.save();
+    if (meeting.status === 'completed') {
+      const project = await getProject(req);
+      await syncMeetingIndexStatus({ meeting, project, req });
+    }
+    res.json(serialize(meeting));
+  } catch (error) {
+    logger.error('[projectMeetings] title update failed', error);
+    res.status(500).json({ error: 'Failed to update meeting title' });
   }
 });
 
@@ -169,11 +222,32 @@ router.patch('/:meetingId/speakers', projectAccess(PermissionBits.EDIT), async (
     );
     await meeting.save();
     const project = await getProject(req);
-    await syncMeetingIndex({ meeting, project, req, createFile });
+    await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
     logger.error('[projectMeetings] speaker update failed', error);
     res.status(500).json({ error: 'Failed to update speakers' });
+  }
+});
+
+router.post('/:meetingId/index', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  try {
+    const meeting = await getMeetingModel().findOne({
+      _id: req.params.meetingId,
+      projectId: req.params.projectId,
+    });
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    if (meeting.status !== 'completed') {
+      return res.status(409).json({ error: 'Meeting transcript is not completed' });
+    }
+    const project = await getProject(req);
+    await syncMeetingIndexStatus({ meeting, project, req });
+    res.json(serialize(meeting));
+  } catch (error) {
+    logger.error('[projectMeetings] index retry failed', error);
+    res.status(500).json({ error: 'Failed to retry meeting indexing' });
   }
 });
 

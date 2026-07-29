@@ -919,10 +919,15 @@
   "917": "start-redis-tls.sh",
   "918": "streamTenant.spec.js",
   "919": ".eslintrc.json",
-  "923": "publishConfig",
+  "920": "useNavHelpers.ts",
+  "921": "dependencies",
+  "922": "mcpServer.ts",
+  "923": "index.js",
   "924": "repository",
   "925": "docker-build.sh",
+  "926": "index.tenant.test.js",
+  "927": "messages.spec.ts",
+  "928": "math",
   "929": "list-users.js",
-  "930": "docker-push.sh",
-  "933": "ArtifactRouting.test.tsx"
+  "930": "docker-push.sh"
 }

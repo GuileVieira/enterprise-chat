@@ -4,7 +4,12 @@ import { useLocalize } from '~/hooks';
 interface MeetingDetailsProps {
   meeting: ProjectMeeting | null;
   canEdit: boolean;
+  title: string;
   speakerNames: Record<string, string>;
+  indexing: boolean;
+  onTitleChange: (title: string) => void;
+  onTitleSave: () => void;
+  onIndexRetry: () => void;
   onSpeakerChange: (speaker: string, name: string) => void;
   onSave: () => void;
 }
@@ -15,7 +20,12 @@ const formatTime = (seconds: number) =>
 export default function MeetingDetails({
   meeting,
   canEdit,
+  title,
   speakerNames,
+  indexing,
+  onTitleChange,
+  onTitleSave,
+  onIndexRetry,
   onSpeakerChange,
   onSave,
 }: MeetingDetailsProps) {
@@ -33,6 +43,43 @@ export default function MeetingDetails({
   const speakers = [...new Set(meeting.utterances.map((item) => item.speaker))];
   return (
     <div className="space-y-6">
+      <section>
+        <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_title')}</h3>
+        <div className="flex gap-2">
+          <input
+            value={title}
+            disabled={!canEdit}
+            maxLength={150}
+            onChange={(event) => onTitleChange(event.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+            aria-label={localize('com_ui_meeting_title')}
+          />
+          {canEdit && (
+            <button type="button" onClick={onTitleSave} className="btn btn-primary">
+              {localize('com_ui_save')}
+            </button>
+          )}
+        </div>
+      </section>
+      <section>
+        <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_index')}</h3>
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
+          <span>{localize(`com_ui_meeting_index_${meeting.indexStatus ?? 'pending'}`)}</span>
+          {canEdit && meeting.indexStatus !== 'indexed' && (
+            <button
+              type="button"
+              disabled={indexing}
+              onClick={onIndexRetry}
+              className="btn btn-neutral"
+            >
+              {localize('com_ui_meeting_retry_index')}
+            </button>
+          )}
+        </div>
+        {meeting.indexStatus === 'failed' && meeting.indexError && (
+          <p className="mt-2 text-xs text-red-500">{meeting.indexError}</p>
+        )}
+      </section>
       <section>
         <h3 className="mb-2 font-medium text-text-primary">
           {localize('com_ui_meeting_participants')}

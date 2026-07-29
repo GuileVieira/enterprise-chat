@@ -1,4 +1,5 @@
-const { formatMeetingIndexText, getMeetingFileId } = require('./meetingIndex');
+const { FileContext } = require('librechat-data-provider');
+const { formatMeetingIndexText, getMeetingFileId, syncMeetingIndex } = require('./meetingIndex');
 
 describe('meetingIndex', () => {
   const meeting = {
@@ -34,5 +35,37 @@ describe('meetingIndex', () => {
     expect(text).toContain('[1:05] Bruno: Eu preparo a campanha.');
     expect(text).toContain('## Decisões\n- Lançar sexta.');
     expect(text).toContain('## Próximos passos\n- Preparar campanha.');
+  });
+
+  it('creates one project-scoped agent file after embedding succeeds', async () => {
+    const createFile = jest.fn().mockResolvedValue({});
+    const deleteVectorsFn = jest.fn().mockResolvedValue(undefined);
+    const uploadVectorsFn = jest.fn().mockResolvedValue({
+      filepath: 'vectordb',
+      embedded: true,
+    });
+
+    await syncMeetingIndex({
+      meeting: { ...meeting, userId: 'user-1' },
+      project: { projectId: 'project-1', tenantId: 'tenant-1', name: 'Projeto Alpha' },
+      req: { user: { id: 'user-1' } },
+      createFile,
+      deleteVectorsFn,
+      uploadVectorsFn,
+    });
+
+    expect(uploadVectorsFn).toHaveBeenCalledWith(
+      expect.objectContaining({ file_id: 'meeting:meeting-1', entity_id: 'project-1' }),
+    );
+    expect(createFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        file_id: 'meeting:meeting-1',
+        projectId: 'project-1',
+        tenantId: 'tenant-1',
+        context: FileContext.agents,
+        embedded: true,
+      }),
+      true,
+    );
   });
 });

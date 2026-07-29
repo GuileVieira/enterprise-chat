@@ -20,7 +20,7 @@ jest.mock('mongoose', () => ({
 }));
 
 jest.mock('@librechat/data-schemas', () => ({
-  logger: { error: jest.fn() },
+  logger: { error: jest.fn(), warn: jest.fn() },
 }));
 
 jest.mock('~/models', () => ({
@@ -93,6 +93,7 @@ function createApp() {
 describe('project meetings routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSyncMeetingIndex.mockResolvedValue({});
   });
 
   it('submits browser audio and persists project meeting ownership and timing', async () => {
@@ -177,13 +178,111 @@ describe('project meetings routes', () => {
       transcript: 'Bom dia.',
       speakerNames: { A: 'Speaker A' },
     });
-    expect(meeting.save).toHaveBeenCalledTimes(2);
+    expect(meeting.save).toHaveBeenCalledTimes(3);
     expect(mockSyncMeetingIndex).toHaveBeenCalledWith(
       expect.objectContaining({
         meeting,
         project: expect.objectContaining({ projectId: 'project-1' }),
       }),
     );
+  });
+
+  it('completes the transcript when optional insights and indexing are unavailable', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      title: 'Reunião',
+      status: 'processing',
+      duration: 5,
+      assemblyTranscriptId: 'transcript-1',
+      utterances: [],
+      speakerNames: new Map(),
+      insights: {},
+      recordedAt: new Date('2026-07-29T20:00:06.645Z'),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockGetTranscript.mockResolvedValue({
+      status: 'completed',
+      text: 'Teste.',
+      utterances: [{ speaker: 'A', text: 'Teste.', start: 0, end: 5000 }],
+    });
+    mockGenerateInsights.mockRejectedValue(
+      new Error('Your account does not have access to LLM Gateway.'),
+    );
+    mockSyncMeetingIndex.mockRejectedValue(new Error('File embedding failed.'));
+
+    const response = await request(createApp()).get('/api/projects/project-1/meetings/meeting-1');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      status: 'completed',
+      transcript: 'Teste.',
+      insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+    });
+    expect(meeting.save).toHaveBeenCalledTimes(3);
+    expect(mockSyncMeetingIndex).toHaveBeenCalledWith(expect.objectContaining({ meeting }));
+  });
+
+  it('renames a completed meeting and reindexes its project file', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      title: 'Reunião',
+      status: 'completed',
+      speakerNames: new Map(),
+      utterances: [],
+      insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+      recordedAt: new Date('2026-07-23T13:00:00.000Z'),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+
+    const response = await request(createApp())
+      .patch('/api/projects/project-1/meetings/meeting-1')
+      .send({ title: 'Planejamento semanal' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.title).toBe('Planejamento semanal');
+    expect(response.body.indexStatus).toBe('indexed');
+    expect(mockSyncMeetingIndex).toHaveBeenCalledWith(expect.objectContaining({ meeting }));
+  });
+
+  it('keeps a failed index visible and allows retrying it', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      title: 'Reunião',
+      status: 'completed',
+      indexStatus: 'failed',
+      speakerNames: new Map(),
+      utterances: [],
+      insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+      recordedAt: new Date('2026-07-23T13:00:00.000Z'),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockSyncMeetingIndex.mockRejectedValue(new Error('File embedding failed.'));
+
+    const response = await request(createApp()).post(
+      '/api/projects/project-1/meetings/meeting-1/index',
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.indexStatus).toBe('failed');
+    expect(response.body.indexError).toBe('File embedding failed.');
   });
 
   it('renames every speaker occurrence through the shared label map and reindexes', async () => {
