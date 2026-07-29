@@ -15815,8 +15815,8 @@
     "semantic_hash": ""
   },
   "docker-compose.prod.yml": {
-    "mtime": 1784319345.9399474,
-    "ast_hash": "f13823d1fdbebf00375c68d676b90b14",
+    "mtime": 1785360687.3974705,
+    "ast_hash": "e09312abf28832a14350016b2c515293",
     "semantic_hash": ""
   },
   "docker-compose.yml": {
@@ -16577,6 +16577,11 @@
   "packages/data-schemas/src/types/meeting.ts": {
     "mtime": 1785358779.6668391,
     "ast_hash": "f12740d43349c9437ccc6d435f89dc70",
+    "semantic_hash": ""
+  },
+  "docs/plans/mongodb-backup-coolify.md": {
+    "mtime": 1785360674.2961447,
+    "ast_hash": "960ba8327aedf48e0f97013941047b18",
     "semantic_hash": ""
   }
 }
