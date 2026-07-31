@@ -38,6 +38,13 @@ interface MeetingUpload {
 const formatTime = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
+const waveformShape = [
+  0.34, 0.48, 0.4, 0.62, 0.52, 0.76, 0.58, 0.88, 0.68, 1, 0.72, 0.9, 0.62, 0.8, 0.8, 0.62, 0.9,
+  0.72, 1, 0.68, 0.88, 0.58, 0.76, 0.52, 0.62, 0.4, 0.48, 0.34,
+];
+
+const idleWaveformScale = (factor: number) => 0.12 + factor * 0.22;
+
 const buildMeetingContext = (meeting: ProjectMeeting) =>
   [
     `# ${meeting.title}`,
@@ -65,23 +72,26 @@ function AudioWaveform({
   label: string;
   barRefs: React.MutableRefObject<Array<HTMLSpanElement | null>>;
 }) {
-  const bars = [0.65, 0.82, 1, 0.76, 0.94, 0.7, 0.9, 0.78, 0.86, 0.62];
   return (
     <div
       role="img"
       aria-label={label}
-      className="flex h-14 items-center justify-center gap-1 rounded-xl border border-border-light bg-surface-primary px-4"
+      className="relative flex h-16 items-center justify-center overflow-hidden rounded-xl border border-border-light bg-surface-primary px-5"
     >
-      {bars.map((factor, index) => (
-        <span
-          key={`${factor}-${index}`}
-          ref={(element) => {
-            barRefs.current[index] = element;
-          }}
-          className={`h-8 w-1 origin-center rounded-full bg-green-500 transition-opacity ${active ? 'opacity-90' : 'opacity-30'}`}
-          style={{ transform: 'scaleY(0.16)' }}
-        />
-      ))}
+      <span aria-hidden="true" className="absolute inset-x-5 h-px bg-border-light opacity-70" />
+      <div className="relative flex items-center justify-center gap-[3px]">
+        {waveformShape.map((factor, index) => (
+          <span
+            key={`${factor}-${index}`}
+            ref={(element) => {
+              barRefs.current[index] = element;
+            }}
+            data-waveform-bar
+            className={`h-9 w-0.5 origin-center rounded-full bg-green-500 transition-[transform,opacity] duration-75 ${active ? 'opacity-90' : 'opacity-45'}`}
+            style={{ transform: `scaleY(${idleWaveformScale(factor)})` }}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -155,9 +165,9 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    waveformBarRefs.current.forEach((bar) => {
+    waveformBarRefs.current.forEach((bar, index) => {
       if (bar) {
-        bar.style.transform = 'scaleY(0.16)';
+        bar.style.transform = `scaleY(${idleWaveformScale(waveformShape[index] ?? 0.5)})`;
       }
     });
     if (closeContext) {
@@ -181,8 +191,8 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       const volume = Math.min(1, rms * 5.5);
       waveformBarRefs.current.forEach((bar, index) => {
         if (bar) {
-          const shape = 0.62 + (1 - Math.abs(index - 4.5) / 5) * 0.38;
-          bar.style.transform = `scaleY(${Math.max(0.16, volume * shape)})`;
+          const shape = waveformShape[index] ?? 0.5;
+          bar.style.transform = `scaleY(${Math.min(1, Math.max(0.12, volume * (0.55 + shape * 0.45)))})`;
         }
       });
       animationFrameRef.current = requestAnimationFrame(frame);
@@ -508,15 +518,17 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
               </div>
               <span className="font-mono text-sm text-text-secondary">{formatTime(elapsed)}</span>
             </div>
-            <AudioWaveform
-              active={recording === 'recording'}
-              barRefs={waveformBarRefs}
-              label={localize(
-                recording === 'recording'
-                  ? 'com_ui_meeting_waveform_recording'
-                  : 'com_ui_meeting_waveform_inactive',
-              )}
-            />
+            {(recording === 'recording' || recording === 'paused') && (
+              <AudioWaveform
+                active={recording === 'recording'}
+                barRefs={waveformBarRefs}
+                label={localize(
+                  recording === 'recording'
+                    ? 'com_ui_meeting_waveform_recording'
+                    : 'com_ui_meeting_waveform_inactive',
+                )}
+              />
+            )}
             <div className="mt-4 space-y-2">
               {recording === 'idle' && !pendingUpload && (
                 <div className="flex items-start justify-center gap-8 py-1">

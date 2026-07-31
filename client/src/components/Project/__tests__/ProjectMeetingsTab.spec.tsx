@@ -156,6 +156,7 @@ describe('ProjectMeetingsTab recorder', () => {
 
   it('uploads an existing audio file for transcription', async () => {
     renderTab();
+    expect(screen.queryByRole('img', { name: 'com_ui_meeting_waveform_inactive' })).toBeNull();
     const audio = new File(['audio'], 'cliente.mp3', { type: 'audio/mpeg' });
 
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
@@ -191,6 +192,9 @@ describe('ProjectMeetingsTab recorder', () => {
     const waveform = await screen.findByRole('img', {
       name: 'com_ui_meeting_waveform_recording',
     });
-    expect(waveform.querySelector('span')).not.toHaveStyle({ transform: 'scaleY(0.16)' });
+    expect(waveform.querySelectorAll('[data-waveform-bar]')).toHaveLength(28);
+    expect(waveform.querySelector('[data-waveform-bar]')).not.toHaveStyle({
+      transform: 'scaleY(0.12)',
+    });
   });
 });
