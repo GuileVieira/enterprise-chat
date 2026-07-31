@@ -1,16 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  ArrowsIn,
-  ArrowsOut,
-  Microphone,
-  Pause,
-  Play,
-  Square,
-  UploadSimple,
-  X,
-} from '@phosphor-icons/react';
+import { ArrowsIn, Microphone, Pause, Play, Square, UploadSimple, X } from '@phosphor-icons/react';
 import { dataService, DynamicQueryKeys, type ProjectMeeting } from 'librechat-data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
 import MeetingDetails from './MeetingDetails';
@@ -109,12 +100,15 @@ function RecorderControl({
   prominent?: boolean;
   tone?: 'neutral' | 'success' | 'danger';
 }) {
-  const toneClass =
-    tone === 'success'
-      ? 'bg-green-600 text-white hover:bg-green-500 focus-visible:ring-green-500 dark:bg-green-500 dark:text-slate-950 dark:hover:bg-green-400'
-      : tone === 'danger'
-        ? 'border border-border-light bg-surface-primary text-text-secondary hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-500 focus-visible:ring-red-500'
-        : 'border border-border-medium bg-surface-primary text-text-primary hover:bg-surface-hover focus-visible:ring-ring-primary';
+  let toneClass =
+    'border border-border-medium bg-surface-primary text-text-primary hover:bg-surface-hover focus-visible:ring-ring-primary';
+  if (tone === 'success') {
+    toneClass =
+      'bg-green-600 text-white hover:bg-green-500 focus-visible:ring-green-500 dark:bg-green-500 dark:text-slate-950 dark:hover:bg-green-400';
+  } else if (tone === 'danger') {
+    toneClass =
+      'border border-border-light bg-surface-primary text-text-secondary hover:border-red-400/50 hover:bg-red-500/10 hover:text-red-500 focus-visible:ring-red-500';
+  }
   return (
     <div className="flex min-w-16 flex-col items-center gap-2">
       <button
@@ -489,30 +483,40 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
 
   return (
     <div
-      className={`${fullscreen ? 'fixed inset-0 z-50 overflow-y-auto bg-surface-primary' : 'grid gap-5 lg:grid-cols-[320px_1fr]'} }`}
+      className={
+        fullscreen
+          ? 'fixed inset-0 z-50 overflow-y-auto bg-surface-primary'
+          : 'grid items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]'
+      }
     >
-      <div
-        className={`${fullscreen ? 'bg-surface-primary/95 sticky top-0 z-10 border-b border-border-light px-6 py-3 backdrop-blur' : 'flex justify-end lg:col-span-2'}`}
-      >
-        <div className={fullscreen ? 'mx-auto flex max-w-7xl justify-end' : ''}>
-          <button
-            type="button"
-            onClick={() => setFullscreen((value) => !value)}
-            className="btn btn-neutral transition active:scale-[0.98]"
-          >
-            {fullscreen ? <ArrowsIn className="h-4 w-4" /> : <ArrowsOut className="h-4 w-4" />}
-            {localize(fullscreen ? 'com_ui_meeting_collapse' : 'com_ui_meeting_expand')}
-          </button>
+      {fullscreen && (
+        <div className="bg-surface-primary/95 sticky top-0 z-10 border-b border-border-light px-6 py-3 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl justify-end">
+            <button
+              type="button"
+              onClick={() => setFullscreen((value) => !value)}
+              className="btn btn-neutral transition active:scale-[0.98]"
+            >
+              <ArrowsIn className="h-4 w-4" />
+              {localize('com_ui_meeting_collapse')}
+            </button>
+          </div>
         </div>
-      </div>
-      <aside className={fullscreen ? 'hidden' : 'space-y-4'}>
+      )}
+      <aside
+        className={
+          fullscreen
+            ? 'hidden'
+            : 'overflow-hidden rounded-2xl border border-border-light bg-surface-secondary'
+        }
+      >
         {canEdit && (
-          <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
-            <div className="mb-3 flex items-center justify-between">
+          <section className="p-5 pb-6">
+            <div className="mb-5 flex items-start justify-between">
               <div>
-                <span className="text-sm font-medium text-text-primary">
+                <h2 className="text-base font-semibold tracking-tight text-text-primary">
                   {localize('com_ui_meeting_recorder')}
-                </span>
+                </h2>
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-text-secondary">
                   <span
                     className={`size-2 rounded-full ${recording === 'recording' ? 'animate-pulse bg-green-500' : 'bg-text-tertiary'}`}
@@ -520,7 +524,9 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                   {localize(`com_ui_meeting_recorder_${recording}`)}
                 </div>
               </div>
-              <span className="font-mono text-sm text-text-secondary">{formatTime(elapsed)}</span>
+              <span className="font-mono text-lg tabular-nums text-text-primary">
+                {formatTime(elapsed)}
+              </span>
             </div>
             {(recording === 'recording' || recording === 'paused') && (
               <AudioWaveform
@@ -535,7 +541,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
             )}
             <div className="mt-4 space-y-2">
               {recording === 'idle' && !pendingUpload && (
-                <div className="flex items-start justify-center gap-8 py-1">
+                <div className="flex items-start justify-center gap-12 py-2">
                   <div className="flex flex-col items-center gap-2">
                     <button
                       type="button"
@@ -646,41 +652,63 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                 onChange={(event) => uploadFile(event.target.files?.[0])}
               />
             </div>
-            {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
-          </div>
+            {error && (
+              <p className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
+                {error}
+              </p>
+            )}
+          </section>
         )}
 
-        <div className="space-y-2">
-          {meetingsQuery.data?.map((meeting) => (
-            <button
-              type="button"
-              key={meeting.id}
-              onClick={() => openMeeting(meeting)}
-              className="w-full rounded-xl border border-border-light bg-surface-secondary p-3 text-left hover:bg-surface-hover"
-            >
-              <div className="text-sm font-medium text-text-primary">{meeting.title}</div>
-              <div
-                className="mt-1 flex items-center gap-1.5 text-xs text-text-secondary"
-                role={meeting.status === 'processing' ? 'status' : undefined}
-                aria-live={meeting.status === 'processing' ? 'polite' : undefined}
+        <section className="border-t border-border-light">
+          <div className="flex items-center justify-between border-b border-border-light px-4 py-3">
+            <h2 className="text-sm font-semibold text-text-primary">
+              {localize('com_ui_meeting_history')}
+            </h2>
+            <span className="font-mono text-xs tabular-nums text-text-tertiary">
+              {meetingsQuery.data?.length ?? 0}
+            </span>
+          </div>
+          <div className="divide-y divide-border-light">
+            {meetingsQuery.data?.map((meeting) => (
+              <button
+                type="button"
+                key={meeting.id}
+                onClick={() => openMeeting(meeting)}
+                aria-current={selected?.id === meeting.id ? 'true' : undefined}
+                className={`relative w-full px-4 py-3.5 text-left transition duration-200 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring-primary ${
+                  selected?.id === meeting.id ? 'bg-surface-hover' : ''
+                }`}
               >
-                {meeting.status === 'processing' && (
-                  <span
-                    aria-hidden="true"
-                    className="size-3 shrink-0 animate-spin rounded-full border-2 border-text-secondary border-t-transparent"
-                  />
+                {selected?.id === meeting.id && (
+                  <span className="absolute inset-y-3 left-0 w-0.5 rounded-r-full bg-green-500" />
                 )}
-                {new Date(meeting.recordedAt).toLocaleString()} · {formatTime(meeting.duration)} ·{' '}
-                {localize(`com_ui_meeting_status_${meeting.status}`)}
+                <div className="truncate pr-2 text-sm font-medium text-text-primary">
+                  {meeting.title}
+                </div>
+                <div
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary"
+                  role={meeting.status === 'processing' ? 'status' : undefined}
+                  aria-live={meeting.status === 'processing' ? 'polite' : undefined}
+                >
+                  {meeting.status === 'processing' && (
+                    <span
+                      aria-hidden="true"
+                      className="size-3 shrink-0 animate-spin rounded-full border-2 border-text-secondary border-t-transparent"
+                    />
+                  )}
+                  {new Date(meeting.recordedAt).toLocaleString()} · {formatTime(meeting.duration)} ·{' '}
+                  {localize(`com_ui_meeting_status_${meeting.status}`)}
+                </div>
+              </button>
+            ))}
+            {!meetingsQuery.isLoading && !meetingsQuery.data?.length && (
+              <div className="px-6 py-10 text-center text-sm leading-6 text-text-secondary">
+                {localize('com_ui_meeting_empty')}
               </div>
-            </button>
-          ))}
-          {!meetingsQuery.isLoading && !meetingsQuery.data?.length && (
-            <div className="rounded-xl border border-dashed border-border-light p-8 text-center text-sm text-text-secondary">
-              {localize('com_ui_meeting_empty')}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </section>
       </aside>
 
       <main className={fullscreen ? 'mx-auto w-full max-w-7xl px-6 py-8' : 'min-w-0'}>
@@ -694,6 +722,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
           canDelete={Boolean(selected && user?.id === selected.userId)}
           deleting={deleteMeeting.isLoading}
           expanded={fullscreen}
+          onExpand={() => setFullscreen(true)}
           onTitleChange={setTitle}
           onTitleSave={() => updateTitle.mutate()}
           onIndexRetry={() => retryIndex.mutate()}

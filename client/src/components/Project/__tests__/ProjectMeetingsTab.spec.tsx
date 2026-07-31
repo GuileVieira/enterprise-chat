@@ -152,6 +152,10 @@ describe('ProjectMeetingsTab recorder', () => {
     const status = await screen.findByRole('status');
     expect(status).toHaveTextContent('com_ui_meeting_status_processing');
     expect(status.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_meeting_history')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Reunião/ }));
+    expect(screen.getByRole('button', { name: /Reunião/ })).toHaveAttribute('aria-current', 'true');
   });
 
   it('uploads an existing audio file for transcription', async () => {

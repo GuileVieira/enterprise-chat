@@ -1,4 +1,4 @@
-import { ChatCircle, Copy, DownloadSimple, Trash } from '@phosphor-icons/react';
+import { ArrowsOut, ChatCircle, Copy, DownloadSimple, Trash } from '@phosphor-icons/react';
 import type { ProjectMeeting } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
@@ -12,6 +12,7 @@ interface MeetingDetailsProps {
   canDelete: boolean;
   deleting: boolean;
   expanded?: boolean;
+  onExpand: () => void;
   onTitleChange: (title: string) => void;
   onTitleSave: () => void;
   onIndexRetry: () => void;
@@ -35,6 +36,7 @@ export default function MeetingDetails({
   canDelete,
   deleting,
   expanded = false,
+  onExpand,
   onTitleChange,
   onTitleSave,
   onIndexRetry,
@@ -46,7 +48,13 @@ export default function MeetingDetails({
 }: MeetingDetailsProps) {
   const localize = useLocalize();
   if (!meeting) {
-    return <div className="text-sm text-text-secondary">{localize('com_ui_meeting_select')}</div>;
+    return (
+      <div className="flex min-h-80 items-center justify-center rounded-2xl border border-dashed border-border-light bg-surface-secondary px-8 text-center">
+        <p className="max-w-sm text-sm leading-6 text-text-secondary">
+          {localize('com_ui_meeting_select')}
+        </p>
+      </div>
+    );
   }
   if (meeting.status !== 'completed') {
     return (
@@ -97,7 +105,9 @@ export default function MeetingDetails({
     URL.revokeObjectURL(url);
   };
   return (
-    <div className="space-y-6">
+    <article
+      className={`space-y-6 ${expanded ? '' : 'rounded-2xl border border-border-light bg-surface-secondary p-6'}`}
+    >
       <div
         className={`flex flex-wrap justify-end gap-2 ${expanded ? 'rounded-2xl bg-surface-secondary p-3' : ''}`}
       >
@@ -120,6 +130,11 @@ export default function MeetingDetails({
             <Trash className="h-4 w-4" /> {localize('com_ui_meeting_delete')}
           </button>
         )}
+        {!expanded && (
+          <button type="button" onClick={onExpand} className="btn btn-neutral">
+            <ArrowsOut className="h-4 w-4" /> {localize('com_ui_meeting_expand')}
+          </button>
+        )}
       </div>
       <div
         className={
@@ -137,7 +152,7 @@ export default function MeetingDetails({
                 disabled={!canEdit}
                 maxLength={150}
                 onChange={(event) => onTitleChange(event.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm"
                 aria-label={localize('com_ui_meeting_title')}
               />
               {canEdit && (
@@ -179,7 +194,7 @@ export default function MeetingDetails({
                   value={speakerNames[speaker] ?? `Speaker ${speaker}`}
                   disabled={!canEdit}
                   onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-                  className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                  className="rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm"
                   aria-label={`Speaker ${speaker}`}
                 />
               ))}
@@ -223,7 +238,7 @@ export default function MeetingDetails({
             {meeting.utterances.map((utterance, index) => (
               <div
                 key={`${utterance.start}-${index}`}
-                className={`rounded-xl p-3 ${expanded ? 'bg-surface-primary' : 'bg-surface-secondary'}`}
+                className="rounded-xl bg-surface-primary p-3"
               >
                 <div className="mb-1 text-xs font-medium text-text-secondary">
                   [{formatTime(utterance.start / 1000)}]{' '}
@@ -246,7 +261,7 @@ export default function MeetingDetails({
           </div>
         </section>
       </div>
-    </div>
+    </article>
   );
 }
 

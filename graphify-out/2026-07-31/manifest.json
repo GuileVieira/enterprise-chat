@@ -16535,13 +16535,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/MeetingDetails.tsx": {
-    "mtime": 1785521426.5233266,
-    "ast_hash": "a52b7c6120eccde3cd3859ca770d9721",
+    "mtime": 1785527708.864473,
+    "ast_hash": "c7603e66378e1242c22029ad2c9b0294",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectMeetingsTab.tsx": {
-    "mtime": 1785527176.361516,
-    "ast_hash": "c32d0d2cc4d4ea21db7aefe352211442",
+    "mtime": 1785527708.8420632,
+    "ast_hash": "31e571f1d4b8802be3f513b4c71df681",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/MeetingDetails.spec.tsx": {
