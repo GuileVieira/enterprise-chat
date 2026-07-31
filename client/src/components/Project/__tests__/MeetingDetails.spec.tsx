@@ -81,6 +81,7 @@ describe('MeetingDetails', () => {
         onDelete={jest.fn()}
       />,
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'com_ui_meeting_transcript' }));
     expect(screen.getAllByText(/Ana/)).toHaveLength(2);
 
     fireEvent.click(screen.getAllByText('com_ui_save')[1]);
@@ -204,9 +205,47 @@ describe('MeetingDetails', () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole('tab', { name: 'com_ui_meeting_transcript' }));
     fireEvent.click(screen.getAllByText('com_ui_meeting_copy_segment')[0]);
     expect(writeText).toHaveBeenCalledWith('[0:00] Ana: Primeira fala.');
     fireEvent.click(screen.getByText('com_ui_meeting_delete'));
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('separates insights and transcript into accessible tabs', () => {
+    render(
+      <MeetingDetails
+        meeting={meeting}
+        canEdit
+        title="Reunião"
+        speakerNames={{ A: 'Ana' }}
+        indexing={false}
+        generatingInsights={false}
+        canDelete={false}
+        deleting={false}
+        onExpand={jest.fn()}
+        onTitleChange={jest.fn()}
+        onTitleSave={jest.fn()}
+        onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
+        onSpeakerChange={jest.fn()}
+        onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('tab', { name: 'com_ui_meeting_summary' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('Resumo')).toBeInTheDocument();
+    expect(screen.queryByText('Primeira fala.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'com_ui_meeting_next_steps' }));
+    expect(screen.getByText('Enviar proposta.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'com_ui_meeting_transcript' }));
+    expect(screen.getByText('Primeira fala.')).toBeInTheDocument();
   });
 });
