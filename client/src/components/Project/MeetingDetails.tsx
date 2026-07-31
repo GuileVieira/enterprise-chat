@@ -11,6 +11,7 @@ interface MeetingDetailsProps {
   generatingInsights: boolean;
   canDelete: boolean;
   deleting: boolean;
+  expanded?: boolean;
   onTitleChange: (title: string) => void;
   onTitleSave: () => void;
   onIndexRetry: () => void;
@@ -33,6 +34,7 @@ export default function MeetingDetails({
   generatingInsights,
   canDelete,
   deleting,
+  expanded = false,
   onTitleChange,
   onTitleSave,
   onIndexRetry,
@@ -96,7 +98,9 @@ export default function MeetingDetails({
   };
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap justify-end gap-2">
+      <div
+        className={`flex flex-wrap justify-end gap-2 ${expanded ? 'rounded-2xl bg-surface-secondary p-3' : ''}`}
+      >
         <button type="button" onClick={onChat} className="btn btn-primary">
           <ChatCircle className="h-4 w-4" /> {localize('com_ui_meeting_chat')}
         </button>
@@ -117,109 +121,131 @@ export default function MeetingDetails({
           </button>
         )}
       </div>
-      <section>
-        <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_title')}</h3>
-        <div className="flex gap-2">
-          <input
-            value={title}
-            disabled={!canEdit}
-            maxLength={150}
-            onChange={(event) => onTitleChange(event.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
-            aria-label={localize('com_ui_meeting_title')}
-          />
-          {canEdit && (
-            <button type="button" onClick={onTitleSave} className="btn btn-primary">
-              {localize('com_ui_save')}
-            </button>
-          )}
-        </div>
-      </section>
-      <section>
-        <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_index')}</h3>
-        <div className="flex items-center gap-2 text-sm text-text-secondary">
-          <span>{localize(`com_ui_meeting_index_${meeting.indexStatus ?? 'pending'}`)}</span>
-          {canEdit && meeting.indexStatus !== 'indexed' && (
+      <div
+        className={
+          expanded ? 'grid items-start gap-8 lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)]' : ''
+        }
+      >
+        <div className={`space-y-6 ${expanded ? 'lg:sticky lg:top-24' : ''}`}>
+          <section>
+            <h3 className="mb-2 font-medium text-text-primary">
+              {localize('com_ui_meeting_title')}
+            </h3>
+            <div className="flex gap-2">
+              <input
+                value={title}
+                disabled={!canEdit}
+                maxLength={150}
+                onChange={(event) => onTitleChange(event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                aria-label={localize('com_ui_meeting_title')}
+              />
+              {canEdit && (
+                <button type="button" onClick={onTitleSave} className="btn btn-primary">
+                  {localize('com_ui_save')}
+                </button>
+              )}
+            </div>
+          </section>
+          <section>
+            <h3 className="mb-2 font-medium text-text-primary">
+              {localize('com_ui_meeting_index')}
+            </h3>
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span>{localize(`com_ui_meeting_index_${meeting.indexStatus ?? 'pending'}`)}</span>
+              {canEdit && meeting.indexStatus !== 'indexed' && (
+                <button
+                  type="button"
+                  disabled={indexing}
+                  onClick={onIndexRetry}
+                  className="btn btn-neutral"
+                >
+                  {localize('com_ui_meeting_retry_index')}
+                </button>
+              )}
+            </div>
+            {meeting.indexStatus === 'failed' && meeting.indexError && (
+              <p className="mt-2 text-xs text-red-500">{meeting.indexError}</p>
+            )}
+          </section>
+          <section>
+            <h3 className="mb-2 font-medium text-text-primary">
+              {localize('com_ui_meeting_participants')}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {speakers.map((speaker) => (
+                <input
+                  key={speaker}
+                  value={speakerNames[speaker] ?? `Speaker ${speaker}`}
+                  disabled={!canEdit}
+                  onChange={(event) => onSpeakerChange(speaker, event.target.value)}
+                  className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                  aria-label={`Speaker ${speaker}`}
+                />
+              ))}
+              {canEdit && (
+                <button type="button" onClick={onSave} className="btn btn-primary">
+                  {localize('com_ui_save')}
+                </button>
+              )}
+            </div>
+          </section>
+          {!hasInsights && canEdit && (
             <button
               type="button"
-              disabled={indexing}
-              onClick={onIndexRetry}
-              className="btn btn-neutral"
+              disabled={generatingInsights}
+              onClick={onInsightsRetry}
+              className="btn btn-primary"
             >
-              {localize('com_ui_meeting_retry_index')}
+              {localize('com_ui_meeting_generate_insights')}
             </button>
           )}
-        </div>
-        {meeting.indexStatus === 'failed' && meeting.indexError && (
-          <p className="mt-2 text-xs text-red-500">{meeting.indexError}</p>
-        )}
-      </section>
-      <section>
-        <h3 className="mb-2 font-medium text-text-primary">
-          {localize('com_ui_meeting_participants')}
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {speakers.map((speaker) => (
-            <input
-              key={speaker}
-              value={speakerNames[speaker] ?? `Speaker ${speaker}`}
-              disabled={!canEdit}
-              onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-              className="rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
-              aria-label={`Speaker ${speaker}`}
+          <div
+            className={expanded ? 'space-y-5 rounded-2xl bg-surface-secondary p-5' : 'space-y-6'}
+          >
+            <Insight title={localize('com_ui_meeting_summary')} text={meeting.insights.summary} />
+            <Insight
+              title={localize('com_ui_meeting_decisions')}
+              items={meeting.insights.decisions}
             />
-          ))}
-          {canEdit && (
-            <button type="button" onClick={onSave} className="btn btn-primary">
-              {localize('com_ui_save')}
-            </button>
-          )}
+            <Insight
+              title={localize('com_ui_meeting_next_steps')}
+              items={meeting.insights.nextSteps}
+            />
+            <Insight title={localize('com_ui_meeting_tasks')} items={meeting.insights.tasks} />
+          </div>
         </div>
-      </section>
-      {!hasInsights && canEdit && (
-        <button
-          type="button"
-          disabled={generatingInsights}
-          onClick={onInsightsRetry}
-          className="btn btn-primary"
-        >
-          {localize('com_ui_meeting_generate_insights')}
-        </button>
-      )}
-      <Insight title={localize('com_ui_meeting_summary')} text={meeting.insights.summary} />
-      <Insight title={localize('com_ui_meeting_decisions')} items={meeting.insights.decisions} />
-      <Insight title={localize('com_ui_meeting_next_steps')} items={meeting.insights.nextSteps} />
-      <Insight title={localize('com_ui_meeting_tasks')} items={meeting.insights.tasks} />
-      <section>
-        <h3 className="mb-3 font-medium text-text-primary">
-          {localize('com_ui_meeting_transcript')}
-        </h3>
-        <div className="space-y-3">
-          {meeting.utterances.map((utterance, index) => (
-            <div
-              key={`${utterance.start}-${index}`}
-              className="rounded-xl bg-surface-secondary p-3"
-            >
-              <div className="mb-1 text-xs font-medium text-text-secondary">
-                [{formatTime(utterance.start / 1000)}]{' '}
-                {speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}
-              </div>
-              <p className="text-sm leading-6 text-text-primary">{utterance.text}</p>
-              <button
-                type="button"
-                onClick={() =>
-                  copy(
-                    `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
-                  )
-                }
-                className="mt-2 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+        <section className={expanded ? 'rounded-2xl bg-surface-secondary p-5' : 'mt-6'}>
+          <h3 className="mb-3 font-medium text-text-primary">
+            {localize('com_ui_meeting_transcript')}
+          </h3>
+          <div className="space-y-3">
+            {meeting.utterances.map((utterance, index) => (
+              <div
+                key={`${utterance.start}-${index}`}
+                className={`rounded-xl p-3 ${expanded ? 'bg-surface-primary' : 'bg-surface-secondary'}`}
               >
-                <Copy className="h-3.5 w-3.5" /> {localize('com_ui_meeting_copy_segment')}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+                <div className="mb-1 text-xs font-medium text-text-secondary">
+                  [{formatTime(utterance.start / 1000)}]{' '}
+                  {speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}
+                </div>
+                <p className="text-sm leading-6 text-text-primary">{utterance.text}</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    copy(
+                      `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
+                    )
+                  }
+                  className="mt-2 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+                >
+                  <Copy className="h-3.5 w-3.5" /> {localize('com_ui_meeting_copy_segment')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

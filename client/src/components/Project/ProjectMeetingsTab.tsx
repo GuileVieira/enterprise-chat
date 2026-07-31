@@ -341,6 +341,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     setError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mimeType = ['audio/webm;codecs=opus', 'audio/mp4'].find((type) =>
         MediaRecorder.isTypeSupported(type),
       );
@@ -369,12 +370,13 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
         }
       };
       recorderRef.current = recorder;
-      streamRef.current = stream;
       recorder.start(5000);
       animateWaveform();
       setElapsed(0);
       setRecording('recording');
     } catch {
+      stopWaveform(true);
+      stopStream();
       setError(localize('com_ui_meeting_microphone_denied'));
     }
   };
@@ -399,8 +401,6 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       return;
     }
     recorder.onstop = async () => {
-      stopWaveform(true);
-      stopStream();
       await chunkWritesRef.current;
       recorderRef.current = null;
       if (cancel) {
@@ -426,6 +426,8 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       });
     };
     recorder.stop();
+    stopWaveform(true);
+    stopStream();
   };
 
   const retryUpload = () => {
@@ -487,21 +489,23 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
 
   return (
     <div
-      className={`grid gap-5 lg:grid-cols-[320px_1fr] ${
-        fullscreen ? 'fixed inset-0 z-[9999] overflow-y-auto bg-surface-primary p-5' : ''
-      }`}
+      className={`${fullscreen ? 'fixed inset-0 z-50 overflow-y-auto bg-surface-primary' : 'grid gap-5 lg:grid-cols-[320px_1fr]'} }`}
     >
-      <div className="flex justify-end lg:col-span-2">
-        <button
-          type="button"
-          onClick={() => setFullscreen((value) => !value)}
-          className="btn btn-neutral"
-        >
-          {fullscreen ? <ArrowsIn className="h-4 w-4" /> : <ArrowsOut className="h-4 w-4" />}
-          {localize(fullscreen ? 'com_ui_meeting_collapse' : 'com_ui_meeting_expand')}
-        </button>
+      <div
+        className={`${fullscreen ? 'bg-surface-primary/95 sticky top-0 z-10 border-b border-border-light px-6 py-3 backdrop-blur' : 'flex justify-end lg:col-span-2'}`}
+      >
+        <div className={fullscreen ? 'mx-auto flex max-w-7xl justify-end' : ''}>
+          <button
+            type="button"
+            onClick={() => setFullscreen((value) => !value)}
+            className="btn btn-neutral transition active:scale-[0.98]"
+          >
+            {fullscreen ? <ArrowsIn className="h-4 w-4" /> : <ArrowsOut className="h-4 w-4" />}
+            {localize(fullscreen ? 'com_ui_meeting_collapse' : 'com_ui_meeting_expand')}
+          </button>
+        </div>
       </div>
-      <div className="space-y-4">
+      <aside className={fullscreen ? 'hidden' : 'space-y-4'}>
         {canEdit && (
           <div className="rounded-xl border border-border-light bg-surface-secondary p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -677,28 +681,31 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
             </div>
           )}
         </div>
-      </div>
+      </aside>
 
-      <MeetingDetails
-        meeting={selected}
-        canEdit={canEdit}
-        title={title}
-        speakerNames={speakerNames}
-        indexing={retryIndex.isLoading}
-        generatingInsights={retryInsights.isLoading}
-        canDelete={Boolean(selected && user?.id === selected.userId)}
-        deleting={deleteMeeting.isLoading}
-        onTitleChange={setTitle}
-        onTitleSave={() => updateTitle.mutate()}
-        onIndexRetry={() => retryIndex.mutate()}
-        onInsightsRetry={() => retryInsights.mutate()}
-        onSpeakerChange={(speaker, name) =>
-          setSpeakerNames((current) => ({ ...current, [speaker]: name }))
-        }
-        onSave={() => updateSpeakers.mutate()}
-        onChat={openChat}
-        onDelete={confirmDelete}
-      />
+      <main className={fullscreen ? 'mx-auto w-full max-w-7xl px-6 py-8' : 'min-w-0'}>
+        <MeetingDetails
+          meeting={selected}
+          canEdit={canEdit}
+          title={title}
+          speakerNames={speakerNames}
+          indexing={retryIndex.isLoading}
+          generatingInsights={retryInsights.isLoading}
+          canDelete={Boolean(selected && user?.id === selected.userId)}
+          deleting={deleteMeeting.isLoading}
+          expanded={fullscreen}
+          onTitleChange={setTitle}
+          onTitleSave={() => updateTitle.mutate()}
+          onIndexRetry={() => retryIndex.mutate()}
+          onInsightsRetry={() => retryInsights.mutate()}
+          onSpeakerChange={(speaker, name) =>
+            setSpeakerNames((current) => ({ ...current, [speaker]: name }))
+          }
+          onSave={() => updateSpeakers.mutate()}
+          onChat={openChat}
+          onDelete={confirmDelete}
+        />
+      </main>
     </div>
   );
 }
