@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowsIn, Microphone, Pause, Play, Square, UploadSimple, X } from '@phosphor-icons/react';
+import {
+  ArrowsIn,
+  MagnifyingGlass,
+  Microphone,
+  Pause,
+  Play,
+  Square,
+  UploadSimple,
+  X,
+} from '@phosphor-icons/react';
 import { dataService, DynamicQueryKeys, type ProjectMeeting } from 'librechat-data-provider';
 import { useAuthContext, useLocalize } from '~/hooks';
 import MeetingDetails from './MeetingDetails';
@@ -35,6 +44,12 @@ const waveformShape = [
 ];
 
 const idleWaveformScale = (factor: number) => 0.12 + factor * 0.22;
+
+const normalizeSearch = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase();
 
 const buildMeetingContext = (meeting: ProjectMeeting) =>
   [
@@ -153,6 +168,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const [title, setTitle] = useState('');
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [fullscreen, setFullscreen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const stopWaveform = (closeContext = false) => {
     if (animationFrameRef.current !== null) {
@@ -325,6 +341,25 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       setSpeakerNames(fresh.speakerNames);
     }
   }, [meetingsQuery.data, selectedId]);
+
+  const filteredMeetings = useMemo(() => {
+    const query = normalizeSearch(search.trim());
+    if (!query) {
+      return meetingsQuery.data ?? [];
+    }
+    return (meetingsQuery.data ?? []).filter((meeting) =>
+      normalizeSearch(
+        [
+          meeting.title,
+          meeting.insights?.summary,
+          meeting.transcript,
+          meeting.utterances?.map((utterance) => utterance.text).join(' '),
+        ]
+          .filter(Boolean)
+          .join(' '),
+      ).includes(query),
+    );
+  }, [meetingsQuery.data, search]);
 
   const stopStream = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -666,11 +701,27 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
               {localize('com_ui_meeting_history')}
             </h2>
             <span className="font-mono text-xs tabular-nums text-text-tertiary">
-              {meetingsQuery.data?.length ?? 0}
+              {filteredMeetings.length}
             </span>
           </div>
+          <div className="border-b border-border-light p-3">
+            <label className="relative block">
+              <span className="sr-only">{localize('com_ui_meeting_search')}</span>
+              <MagnifyingGlass
+                aria-hidden="true"
+                className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={localize('com_ui_meeting_search_placeholder')}
+                className="focus:ring-ring-primary/30 h-10 w-full rounded-lg border border-border-light bg-surface-primary pl-9 pr-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2"
+              />
+            </label>
+          </div>
           <div className="divide-y divide-border-light">
-            {meetingsQuery.data?.map((meeting) => (
+            {filteredMeetings.map((meeting) => (
               <button
                 type="button"
                 key={meeting.id}
@@ -707,6 +758,13 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                 {localize('com_ui_meeting_empty')}
               </div>
             )}
+            {!meetingsQuery.isLoading &&
+              Boolean(meetingsQuery.data?.length) &&
+              !filteredMeetings.length && (
+                <div className="px-6 py-10 text-center text-sm leading-6 text-text-secondary">
+                  {localize('com_ui_meeting_search_empty')}
+                </div>
+              )}
           </div>
         </section>
       </aside>

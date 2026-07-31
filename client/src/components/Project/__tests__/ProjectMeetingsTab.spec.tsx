@@ -173,6 +173,43 @@ describe('ProjectMeetingsTab recorder', () => {
     expect(form.get('duration')).toBe('0');
   });
 
+  it('filters meetings by title, summary, or transcript speech', async () => {
+    mockGetProjectMeetings.mockResolvedValue([
+      {
+        id: 'meeting-sales',
+        title: 'Reunião comercial',
+        status: 'completed',
+        recordedAt: '2026-07-31T20:00:00.000Z',
+        duration: 30,
+        insights: { summary: 'Negociação com cliente', decisions: [], nextSteps: [], tasks: [] },
+        transcript: '',
+        utterances: [],
+        speakerNames: {},
+      },
+      {
+        id: 'meeting-product',
+        title: 'Produto',
+        status: 'completed',
+        recordedAt: '2026-07-30T20:00:00.000Z',
+        duration: 20,
+        insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+        transcript: 'Precisamos revisar a integração financeira',
+        utterances: [],
+        speakerNames: {},
+      },
+    ]);
+    renderTab();
+
+    const search = await screen.findByPlaceholderText('com_ui_meeting_search_placeholder');
+    fireEvent.change(search, { target: { value: 'negociacao' } });
+    expect(screen.getByText('Reunião comercial')).toBeInTheDocument();
+    expect(screen.queryByText('Produto')).toBeNull();
+
+    fireEvent.change(search, { target: { value: 'financeira' } });
+    expect(screen.getByText('Produto')).toBeInTheDocument();
+    expect(screen.queryByText('Reunião comercial')).toBeNull();
+  });
+
   it('scales waveform bars from the real microphone signal level', async () => {
     const analyser = {
       fftSize: 256,
