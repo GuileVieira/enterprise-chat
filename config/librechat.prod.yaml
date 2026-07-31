@@ -4,10 +4,16 @@ cache: true
 
 includedTools:
   - calculator
-  - duckduckgo_search
+  - tavily_search_results_json
+  - fetch_url
   - meta_ads_get_insights
   - meta_ads_budget_manager
   - openrouter_gemini_image_gen
+
+webSearch:
+  searchProvider: tavily
+  scraperProvider: tavily
+  tavilyApiKey: '${TAVILY_API_KEY}'
 
 summarization:
   enabled: true

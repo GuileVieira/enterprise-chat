@@ -275,14 +275,14 @@ describe('ToolService - Action Capability Gating', () => {
       expect(result.actionsEnabled).toBe(false);
     });
 
-    it('should gate duckduckgo_search definitions behind web_search capability', async () => {
+    it('should gate Tavily definitions behind web_search capability', async () => {
       const req = createMockReq([AgentCapabilities.tools]);
       mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
 
       await loadAgentTools({
         req,
         res: {},
-        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        agent: { id: 'agent_123', tools: [Tools.tavily_search_results_json] },
         definitionsOnly: true,
       });
 
@@ -301,12 +301,29 @@ describe('ToolService - Action Capability Gating', () => {
       await loadAgentTools({
         req,
         res: {},
-        agent: { id: 'agent_123', tools: [Tools.duckduckgo_search] },
+        agent: { id: 'agent_123', tools: [Tools.tavily_search_results_json] },
         definitionsOnly: true,
       });
 
       const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
-      expect(callArgs.tools).toContain(Tools.duckduckgo_search);
+      expect(callArgs.tools).toContain(Tools.tavily_search_results_json);
+      expect(callArgs.tools).toContain(Tools.fetch_url);
+    });
+
+    it('maps saved native web_search agents to Tavily and fetch tools', async () => {
+      const capabilities = [AgentCapabilities.tools, AgentCapabilities.web_search];
+      const req = createMockReq(capabilities);
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig(capabilities));
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [Tools.web_search] },
+        definitionsOnly: true,
+      });
+
+      const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
+      expect(callArgs.tools).toEqual([Tools.tavily_search_results_json, Tools.fetch_url]);
     });
   });
 
@@ -481,7 +498,7 @@ describe('ToolService - Action Capability Gating', () => {
       expect(mockLoadActionSets).not.toHaveBeenCalled();
     });
 
-    it('should load duckduckgo_search only when web_search capability is enabled', async () => {
+    it('should load Tavily only when web_search capability is enabled', async () => {
       const req = createMockReq([AgentCapabilities.tools]);
       mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig([AgentCapabilities.tools]));
 
@@ -489,7 +506,7 @@ describe('ToolService - Action Capability Gating', () => {
         req,
         res: {},
         agent: { id: 'agent_123' },
-        toolNames: [Tools.duckduckgo_search],
+        toolNames: [Tools.tavily_search_results_json],
         actionsEnabled: true,
       });
 
@@ -503,13 +520,13 @@ describe('ToolService - Action Capability Gating', () => {
         req,
         res: {},
         agent: { id: 'agent_123' },
-        toolNames: [Tools.duckduckgo_search],
+        toolNames: [Tools.tavily_search_results_json],
         actionsEnabled: true,
       });
 
       expect(mockLoadToolsUtil).toHaveBeenCalledWith(
         expect.objectContaining({
-          tools: [Tools.duckduckgo_search],
+          tools: [Tools.tavily_search_results_json, Tools.fetch_url],
         }),
       );
     });

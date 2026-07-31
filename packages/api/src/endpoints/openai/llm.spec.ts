@@ -366,7 +366,7 @@ describe('getOpenAILLMConfig', () => {
       expect(result.tools).toContainEqual({ type: 'web_search' });
     });
 
-    it('should handle web search and URL fetch with OpenRouter server tools', () => {
+    it('should not depend on the beta OpenRouter URL fetch server tool', () => {
       const result = getOpenAILLMConfig({
         apiKey: 'test-api-key',
         streaming: true,
@@ -377,17 +377,7 @@ describe('getOpenAILLMConfig', () => {
         },
       });
 
-      expect(result.tools).toEqual([
-        { type: 'openrouter:web_search' },
-        {
-          type: 'openrouter:web_fetch',
-          parameters: {
-            engine: 'openrouter',
-            max_uses: 5,
-            max_content_tokens: 20000,
-          },
-        },
-      ]);
+      expect(result.tools).toEqual([{ type: 'openrouter:web_search' }]);
       expect(result.llmConfig.modelKwargs).toBeUndefined();
       expect(result.llmConfig).toHaveProperty('include_reasoning', true);
     });
@@ -408,7 +398,7 @@ describe('getOpenAILLMConfig', () => {
         effort: ReasoningEffort.high,
       });
       expect(result.llmConfig).not.toHaveProperty('include_reasoning');
-      expect(result.tools).toHaveLength(2);
+      expect(result.tools).toEqual([{ type: 'openrouter:web_search' }]);
       expect(result.llmConfig.modelKwargs).not.toHaveProperty('plugins');
     });
 

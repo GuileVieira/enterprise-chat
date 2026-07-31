@@ -12,6 +12,7 @@ const MetaAdsGetInsights = require('./structured/MetaAdsGetInsights');
 const MetaAdsBudgetManager = require('./structured/MetaAdsBudgetManager');
 const TraversaalSearch = require('./structured/TraversaalSearch');
 const DuckDuckGoSearch = require('./structured/DuckDuckGoSearch');
+const FetchUrl = require('./structured/FetchUrl');
 const createOpenAIImageTools = require('./structured/OpenAIImageTools');
 const TavilySearchResults = require('./structured/TavilySearchResults');
 const createGeminiImageTool = require('./structured/GeminiImageGen');
@@ -30,6 +31,7 @@ module.exports = {
   MetaAdsBudgetManager,
   TraversaalSearch,
   DuckDuckGoSearch,
+  FetchUrl,
   StructuredWolfram,
   TavilySearchResults,
   createOpenAIImageTools,

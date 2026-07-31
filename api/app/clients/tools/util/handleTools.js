@@ -24,6 +24,7 @@ const {
   // Basic Tools
   GoogleSearchAPI,
   DuckDuckGoSearch,
+  FetchUrl,
   // Structured Tools
   DALLE3,
   FluxAPI,
@@ -178,6 +179,7 @@ const loadTools = async ({
     calculator: Calculator,
     google: GoogleSearchAPI,
     duckduckgo_search: DuckDuckGoSearch,
+    fetch_url: FetchUrl,
     open_weather: OpenWeather,
     meta_ads_get_insights: MetaAdsGetInsights,
     meta_ads_budget_manager: MetaAdsBudgetManager,

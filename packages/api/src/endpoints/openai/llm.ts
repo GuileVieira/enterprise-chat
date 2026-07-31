@@ -474,17 +474,7 @@ export function getOpenAILLMConfig({
   }
 
   if (useOpenRouter && enableWebSearch) {
-    tools.push(
-      { type: 'openrouter:web_search' },
-      {
-        type: 'openrouter:web_fetch',
-        parameters: {
-          engine: 'openrouter',
-          max_uses: 5,
-          max_content_tokens: 20000,
-        },
-      },
-    );
+    tools.push({ type: 'openrouter:web_search' });
   } else if (enableWebSearch) {
     /** Standard OpenAI web search uses tools API */
     llmConfig.useResponsesApi = true;

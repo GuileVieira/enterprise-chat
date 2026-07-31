@@ -57,6 +57,19 @@ export const googleSearchSchema: ExtendedJsonSchema = {
   required: ['query'],
 };
 
+export const fetchUrlSchema: ExtendedJsonSchema = {
+  type: 'object',
+  properties: {
+    url: {
+      type: 'string',
+      minLength: 1,
+      description: 'A public HTTP(S) URL to read.',
+    },
+  },
+  required: ['url'],
+  additionalProperties: false,
+};
+
 /** DALL-E 3 tool JSON schema */
 export const dalle3Schema: ExtendedJsonSchema = {
   type: 'object',
@@ -346,22 +359,6 @@ export const duckDuckGoSearchSchema: ExtendedJsonSchema = {
       minLength: 1,
       description: 'The web search query.',
     },
-    max_results: {
-      type: 'integer',
-      minimum: 1,
-      maximum: 10,
-      description: 'Maximum search results to return. Defaults to 5.',
-    },
-    fetch_results: {
-      type: 'boolean',
-      description: 'Whether to fetch and extract readable text from each result. Defaults to true.',
-    },
-    max_content_chars: {
-      type: 'integer',
-      minimum: 500,
-      maximum: 12000,
-      description: 'Maximum extracted content characters per fetched result. Defaults to 4000.',
-    },
   },
   required: ['query'],
 };
@@ -581,8 +578,15 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   duckduckgo_search: {
     name: 'duckduckgo_search',
     description:
-      'Search DuckDuckGo and optionally fetch readable text from each result. Useful for open web research without API keys.',
+      'Search DuckDuckGo once for up to 5 public web results. Use fetch_url to read a result. If ok is false, do not retry.',
     schema: duckDuckGoSearchSchema,
+    toolType: 'builtin',
+  },
+  fetch_url: {
+    name: 'fetch_url',
+    description:
+      'When the user provides a public URL or asks what a page contains, call this tool before answering. Never claim URL access is unavailable without calling it.',
+    schema: fetchUrlSchema,
     toolType: 'builtin',
   },
   meta_ads_get_insights: {

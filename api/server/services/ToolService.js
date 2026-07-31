@@ -101,6 +101,19 @@ const normalizeActionToolName = (toolName) => {
   return toolName.slice(0, prefixEnd) + encodedDomain.replace(domainSeparatorRegex, '_');
 };
 
+const normalizeLocalWebTools = (tools = []) => {
+  const normalized = tools.flatMap((tool) =>
+    tool === Tools.web_search ? [Tools.tavily_search_results_json, Tools.fetch_url] : [tool],
+  );
+  if (
+    normalized.includes(Tools.tavily_search_results_json) &&
+    !normalized.includes(Tools.fetch_url)
+  ) {
+    normalized.push(Tools.fetch_url);
+  }
+  return [...new Set(normalized)];
+};
+
 /**
  * Builds a Zod schema from a simple tenant function input schema.
  * @param {Object} simpleSchema
@@ -616,7 +629,7 @@ async function loadToolDefinitionsWrapper({
     agent.tools?.includes(Tools.execute_code) === true &&
     enabledCapabilities.has(AgentCapabilities.execute_code);
 
-  const filteredTools = agent.tools?.filter((tool) => {
+  const filteredTools = normalizeLocalWebTools(agent.tools).filter((tool) => {
     if (tool === Tools.file_search) {
       return checkCapability(AgentCapabilities.file_search);
     }
@@ -626,7 +639,7 @@ async function loadToolDefinitionsWrapper({
     if (tool === Tools.web_search) {
       return checkCapability(AgentCapabilities.web_search);
     }
-    if (tool === Tools.duckduckgo_search) {
+    if (tool === Tools.tavily_search_results_json || tool === Tools.fetch_url) {
       return checkCapability(AgentCapabilities.web_search);
     }
     if (isActionTool(tool)) {
@@ -1054,7 +1067,7 @@ async function loadAgentTools({
   const actionsEnabled = checkCapability(AgentCapabilities.actions);
 
   let includesWebSearch = false;
-  const _agentTools = agent.tools?.filter((tool) => {
+  const _agentTools = normalizeLocalWebTools(agent.tools).filter((tool) => {
     if (tool === Tools.file_search) {
       return checkCapability(AgentCapabilities.file_search);
     } else if (tool === Tools.execute_code) {
@@ -1062,7 +1075,7 @@ async function loadAgentTools({
     } else if (tool === Tools.web_search) {
       includesWebSearch = checkCapability(AgentCapabilities.web_search);
       return includesWebSearch;
-    } else if (tool === Tools.duckduckgo_search) {
+    } else if (tool === Tools.tavily_search_results_json || tool === Tools.fetch_url) {
       return checkCapability(AgentCapabilities.web_search);
     } else if (isActionTool(tool)) {
       return actionsEnabled;
@@ -1457,7 +1470,9 @@ async function loadToolsForExecution({
     );
   }
 
-  const requestedNonSpecialToolNames = toolNames.filter((name) => !specialToolNames.has(name));
+  const requestedNonSpecialToolNames = normalizeLocalWebTools(toolNames).filter(
+    (name) => !specialToolNames.has(name),
+  );
   const allToolNamesToLoad = isPTC
     ? [...new Set([...requestedNonSpecialToolNames, ...ptcOrchestratedToolNames])]
     : requestedNonSpecialToolNames;
@@ -1467,10 +1482,10 @@ async function loadToolsForExecution({
   const tenantFunctionToolNames = [];
 
   for (const name of allToolNamesToLoad) {
-    if (name === Tools.duckduckgo_search && !webSearchEnabled) {
+    if ((name === Tools.tavily_search_results_json || name === Tools.fetch_url) && !webSearchEnabled) {
       logger.warn(
         `[loadToolsForExecution] Capability "${AgentCapabilities.web_search}" disabled. ` +
-          `Skipping DuckDuckGo search. User: ${req.user.id} | Agent: ${agent?.id}`,
+          `Skipping local web tool. User: ${req.user.id} | Agent: ${agent?.id}`,
       );
       continue;
     }

@@ -282,8 +282,28 @@ describe('definitions.ts', () => {
         expect(duckDef).toBeDefined();
         expect(duckDef?.parameters).toBeDefined();
         expect(duckDef?.parameters?.properties).toHaveProperty('query');
-        expect(duckDef?.parameters?.properties).toHaveProperty('fetch_results');
+        expect(duckDef?.parameters?.properties).not.toHaveProperty('fetch_results');
         expect(duckDef?.parameters?.required).toContain('query');
+      });
+
+      it('should include parameters for fetch_url built-in tool', async () => {
+        mockIsBuiltInTool.mockImplementation((name) => name === 'fetch_url');
+
+        const result = await loadToolDefinitions(
+          {
+            userId: 'user-123',
+            agentId: 'agent-123',
+            tools: ['fetch_url'],
+          },
+          {
+            getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+            isBuiltInTool: mockIsBuiltInTool,
+          },
+        );
+
+        const fetchDef = result.toolDefinitions.find((d) => d.name === 'fetch_url');
+        expect(fetchDef?.parameters?.properties).toHaveProperty('url');
+        expect(fetchDef?.parameters?.required).toEqual(['url']);
       });
 
       it('should include parameters for file_search native tool', async () => {

@@ -86,7 +86,14 @@
   {
     "name": "DuckDuckGo Search",
     "pluginKey": "duckduckgo_search",
-    "description": "Search DuckDuckGo and optionally fetch readable text from open web results.",
+    "description": "Search DuckDuckGo for public web results.",
+    "icon": "assets/google-search.svg",
+    "authConfig": []
+  },
+  {
+    "name": "Fetch URL",
+    "pluginKey": "fetch_url",
+    "description": "Read bounded text from a public HTTP(S) URL.",
     "icon": "assets/google-search.svg",
     "authConfig": []
   },

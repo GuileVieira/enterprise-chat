@@ -840,17 +840,7 @@ describe('getOpenAIConfig', () => {
       });
 
       expect(result.llmConfig.modelKwargs).toBeUndefined();
-      expect(result.tools).toEqual([
-        { type: 'openrouter:web_search' },
-        {
-          type: 'openrouter:web_fetch',
-          parameters: {
-            engine: 'openrouter',
-            max_uses: 5,
-            max_content_tokens: 20000,
-          },
-        },
-      ]);
+      expect(result.tools).toEqual([{ type: 'openrouter:web_search' }]);
       // ChatOpenRouter selects the compatible API from the bound server tools.
       expect(result.llmConfig.useResponsesApi).toBeUndefined();
       expect(result.provider).toBe('openrouter');
@@ -888,7 +878,7 @@ describe('getOpenAIConfig', () => {
       expect(result.llmConfig.modelKwargs).toEqual({
         customParam: 'value',
       });
-      expect(result.tools).toHaveLength(2);
+      expect(result.tools).toEqual([{ type: 'openrouter:web_search' }]);
       expect(result.provider).toBe('openrouter');
     });
 
@@ -1266,7 +1256,7 @@ describe('getOpenAIConfig', () => {
         reasoning: { effort: ReasoningEffort.high },
         customParam: 'custom-value',
       });
-      expect(result.tools).toHaveLength(2);
+      expect(result.tools).toEqual([{ type: 'openrouter:web_search' }]);
       expect(result.provider).toBe('openrouter');
     });
   });

@@ -415,8 +415,8 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1785519366.9589117,
-    "ast_hash": "59fa68a0d2ed3568a7eea5d3eae3fa75",
+    "mtime": 1785367958.9407387,
+    "ast_hash": "a953556f6c888a8ecf3de125624babb2",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
@@ -2550,8 +2550,8 @@
     "semantic_hash": ""
   },
   "api/server/services/ToolService.js": {
-    "mtime": 1785519366.8642194,
-    "ast_hash": "4892e2df107cc75e26ae77a41f8fb155",
+    "mtime": 1785432960.3619623,
+    "ast_hash": "20adbb3a01af50fc0754f1dd3f139f6a",
     "semantic_hash": ""
   },
   "api/server/services/Tools/credentials.js": {
@@ -2580,8 +2580,8 @@
     "semantic_hash": ""
   },
   "api/server/services/__tests__/ToolService.spec.js": {
-    "mtime": 1785519367.061752,
-    "ast_hash": "7e637b7716e52ea55c3790d6a146fe93",
+    "mtime": 1785368129.7667713,
+    "ast_hash": "6c452627e22a3dda32259e9094669209",
     "semantic_hash": ""
   },
   "api/server/services/cleanup.js": {
@@ -14055,8 +14055,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/types/assistants.ts": {
-    "mtime": 1785519366.7658455,
-    "ast_hash": "b4b9b13b765d70a5ac5fd81e44235b82",
+    "mtime": 1785367958.6455834,
+    "ast_hash": "496d83a43eada56c24464fefbed17ea0",
     "semantic_hash": ""
   },
   "packages/data-provider/src/types/files.ts": {

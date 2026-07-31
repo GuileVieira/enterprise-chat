@@ -1,15 +1,13 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
 import {
   Globe,
-  GearSix as Settings,
   SlidersHorizontal as Settings2,
   TerminalWindow as TerminalSquareIcon,
 } from '@phosphor-icons/react';
 import { TooltipAnchor, DropdownPopup, PinIcon, VectorIcon } from '@librechat/client';
 import type { MenuItemProps } from '~/common';
 import {
-  AuthType,
   Permissions,
   ArtifactModes,
   PermissionTypes,
@@ -56,25 +54,12 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
 
   const [isPopoverActive, setIsPopoverActive] = useState(false);
   const isDisabled = disabled ?? false;
-  const { webSearch, artifacts, fileSearch, mcpServerManager, codeInterpreter, searchApiKeyForm } =
-    context ?? {};
+  const { webSearch, artifacts, fileSearch, mcpServerManager, codeInterpreter } = context ?? {};
 
-  const { setIsDialogOpen: setIsSearchDialogOpen, menuTriggerRef: searchMenuTriggerRef } =
-    searchApiKeyForm ?? {};
-  const {
-    isPinned: isSearchPinned,
-    setIsPinned: setIsSearchPinned,
-    authData: webSearchAuthData,
-  } = webSearch ?? {};
+  const { isPinned: isSearchPinned, setIsPinned: setIsSearchPinned } = webSearch ?? {};
   const { isPinned: isCodePinned, setIsPinned: setIsCodePinned } = codeInterpreter ?? {};
   const { isPinned: isFileSearchPinned, setIsPinned: setIsFileSearchPinned } = fileSearch ?? {};
   const { isPinned: isArtifactsPinned, setIsPinned: setIsArtifactsPinned } = artifacts ?? {};
-
-  const showWebSearchSettings = useMemo(() => {
-    const authTypes = webSearchAuthData?.authTypes ?? [];
-    if (authTypes.length === 0) return true;
-    return !authTypes.every(([, authType]) => authType === AuthType.SYSTEM_DEFINED);
-  }, [webSearchAuthData?.authTypes]);
 
   const handleWebSearchToggle = useCallback(() => {
     const newValue = !webSearch?.toggleState;
@@ -165,26 +150,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <span>{localize('com_ui_web_search')}</span>
           </div>
           <div className="flex items-center gap-1">
-            {showWebSearchSettings && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsSearchDialogOpen?.(true);
-                }}
-                className={cn(
-                  'rounded p-1 transition-all duration-200',
-                  'hover:bg-surface-secondary hover:shadow-sm',
-                  'text-text-secondary hover:text-text-primary',
-                )}
-                aria-label="Configure web search"
-                ref={searchMenuTriggerRef}
-              >
-                <div className="h-4 w-4">
-                  <Settings className="h-4 w-4" aria-hidden="true" />
-                </div>
-              </button>
-            )}
             <button
               type="button"
               onClick={(e) => {
