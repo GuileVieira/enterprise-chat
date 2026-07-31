@@ -88,7 +88,7 @@ describe('MeetingDetails', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('edits the meeting title and exposes indexed agent access', () => {
+  it('edits the meeting title without showing redundant indexed status', () => {
     const onTitleChange = jest.fn();
     const onTitleSave = jest.fn();
     render(
@@ -116,7 +116,7 @@ describe('MeetingDetails', () => {
       target: { value: 'Planejamento semanal' },
     });
     expect(onTitleChange).toHaveBeenCalledWith('Planejamento semanal');
-    expect(screen.getByText('com_ui_meeting_index_indexed')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_meeting_index_indexed')).toBeNull();
   });
 
   it('retries a meeting that is not indexed', () => {

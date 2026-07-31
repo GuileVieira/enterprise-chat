@@ -128,7 +128,7 @@ export default function MeetingDetails({
       className={`space-y-6 ${expanded ? '' : 'rounded-2xl border border-border-light bg-surface-secondary p-6'}`}
     >
       <div
-        className={`flex flex-wrap justify-end gap-2 ${expanded ? 'rounded-2xl bg-surface-secondary p-3' : ''}`}
+        className={`flex flex-wrap items-center gap-2 ${expanded ? 'rounded-2xl bg-surface-secondary p-3' : ''}`}
       >
         <button type="button" onClick={onChat} className="btn btn-primary">
           <ChatCircle className="h-4 w-4" /> {localize('com_ui_meeting_chat')}
@@ -155,16 +155,18 @@ export default function MeetingDetails({
           </button>
         )}
       </div>
-      <div className="grid gap-6 xl:grid-cols-3">
-        <section>
-          <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_title')}</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-xl bg-surface-primary p-4">
+          <h3 className="mb-3 text-sm font-medium text-text-primary">
+            {localize('com_ui_meeting_title')}
+          </h3>
           <div className="flex gap-2">
             <input
               value={title}
               disabled={!canEdit}
               maxLength={150}
               onChange={(event) => onTitleChange(event.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
               aria-label={localize('com_ui_meeting_title')}
             />
             {canEdit && (
@@ -174,37 +176,18 @@ export default function MeetingDetails({
             )}
           </div>
         </section>
-        <section>
-          <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_index')}</h3>
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <span>{localize(`com_ui_meeting_index_${meeting.indexStatus ?? 'pending'}`)}</span>
-            {canEdit && meeting.indexStatus !== 'indexed' && (
-              <button
-                type="button"
-                disabled={indexing}
-                onClick={onIndexRetry}
-                className="btn btn-neutral"
-              >
-                {localize('com_ui_meeting_retry_index')}
-              </button>
-            )}
-          </div>
-          {meeting.indexStatus === 'failed' && meeting.indexError && (
-            <p className="mt-2 text-xs text-red-500">{meeting.indexError}</p>
-          )}
-        </section>
-        <section>
-          <h3 className="mb-2 font-medium text-text-primary">
+        <section className="rounded-xl bg-surface-primary p-4">
+          <h3 className="mb-3 text-sm font-medium text-text-primary">
             {localize('com_ui_meeting_participants')}
           </h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2">
             {speakers.map((speaker) => (
               <input
                 key={speaker}
                 value={speakerNames[speaker] ?? `Speaker ${speaker}`}
                 disabled={!canEdit}
                 onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-                className="rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
                 aria-label={`Speaker ${speaker}`}
               />
             ))}
@@ -216,6 +199,30 @@ export default function MeetingDetails({
           </div>
         </section>
       </div>
+      {meeting.indexStatus !== 'indexed' && (
+        <div
+          className={`flex flex-wrap items-center gap-3 rounded-xl px-4 py-3 text-sm ${
+            meeting.indexStatus === 'failed'
+              ? 'bg-red-500/10 text-red-500'
+              : 'bg-surface-primary text-text-secondary'
+          }`}
+        >
+          <span>{localize(`com_ui_meeting_index_${meeting.indexStatus ?? 'pending'}`)}</span>
+          {canEdit && (
+            <button
+              type="button"
+              disabled={indexing}
+              onClick={onIndexRetry}
+              className="btn btn-neutral"
+            >
+              {localize('com_ui_meeting_retry_index')}
+            </button>
+          )}
+          {meeting.indexStatus === 'failed' && meeting.indexError && (
+            <span className="text-xs">{meeting.indexError}</span>
+          )}
+        </div>
+      )}
       {!hasInsights && canEdit && (
         <button
           type="button"
