@@ -1,3 +1,4 @@
+import { ChatCircle, Copy, DownloadSimple, Trash } from '@phosphor-icons/react';
 import type { ProjectMeeting } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
@@ -8,12 +9,16 @@ interface MeetingDetailsProps {
   speakerNames: Record<string, string>;
   indexing: boolean;
   generatingInsights: boolean;
+  canDelete: boolean;
+  deleting: boolean;
   onTitleChange: (title: string) => void;
   onTitleSave: () => void;
   onIndexRetry: () => void;
   onInsightsRetry: () => void;
   onSpeakerChange: (speaker: string, name: string) => void;
   onSave: () => void;
+  onChat: () => void;
+  onDelete: () => void;
 }
 
 const formatTime = (seconds: number) =>
@@ -26,12 +31,16 @@ export default function MeetingDetails({
   speakerNames,
   indexing,
   generatingInsights,
+  canDelete,
+  deleting,
   onTitleChange,
   onTitleSave,
   onIndexRetry,
   onInsightsRetry,
   onSpeakerChange,
   onSave,
+  onChat,
+  onDelete,
 }: MeetingDetailsProps) {
   const localize = useLocalize();
   if (!meeting) {
@@ -39,8 +48,18 @@ export default function MeetingDetails({
   }
   if (meeting.status !== 'completed') {
     return (
-      <div className="text-sm text-text-secondary">
-        {localize(`com_ui_meeting_status_${meeting.status}`)}
+      <div className="flex items-center justify-between gap-3 text-sm text-text-secondary">
+        <span>{localize(`com_ui_meeting_status_${meeting.status}`)}</span>
+        {canDelete && (
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={onDelete}
+            className="btn btn-neutral text-red-500"
+          >
+            <Trash className="h-4 w-4" /> {localize('com_ui_meeting_delete')}
+          </button>
+        )}
       </div>
     );
   }
@@ -50,8 +69,54 @@ export default function MeetingDetails({
     meeting.insights.decisions.length > 0 ||
     meeting.insights.nextSteps.length > 0 ||
     meeting.insights.tasks.length > 0;
+  const transcriptText = meeting.utterances
+    .map(
+      (utterance) =>
+        `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
+    )
+    .join('\n\n');
+  const fullText = [
+    meeting.title,
+    new Date(meeting.recordedAt).toLocaleString(),
+    `${localize('com_ui_meeting_summary')}: ${meeting.insights.summary || '-'}`,
+    `${localize('com_ui_meeting_decisions')}: ${meeting.insights.decisions.join('; ') || '-'}`,
+    `${localize('com_ui_meeting_next_steps')}: ${meeting.insights.nextSteps.join('; ') || '-'}`,
+    `${localize('com_ui_meeting_tasks')}: ${meeting.insights.tasks.join('; ') || '-'}`,
+    '',
+    transcriptText,
+  ].join('\n');
+  const copy = (text: string) => void navigator.clipboard.writeText(text);
+  const exportTranscript = () => {
+    const url = URL.createObjectURL(new Blob([fullText], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${meeting.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'reuniao'}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onChat} className="btn btn-primary">
+          <ChatCircle className="h-4 w-4" /> {localize('com_ui_meeting_chat')}
+        </button>
+        <button type="button" onClick={() => copy(fullText)} className="btn btn-neutral">
+          <Copy className="h-4 w-4" /> {localize('com_ui_meeting_copy_all')}
+        </button>
+        <button type="button" onClick={exportTranscript} className="btn btn-neutral">
+          <DownloadSimple className="h-4 w-4" /> {localize('com_ui_meeting_export')}
+        </button>
+        {canDelete && (
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={onDelete}
+            className="btn btn-neutral text-red-500"
+          >
+            <Trash className="h-4 w-4" /> {localize('com_ui_meeting_delete')}
+          </button>
+        )}
+      </div>
       <section>
         <h3 className="mb-2 font-medium text-text-primary">{localize('com_ui_meeting_title')}</h3>
         <div className="flex gap-2">
@@ -140,6 +205,17 @@ export default function MeetingDetails({
                 {speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}
               </div>
               <p className="text-sm leading-6 text-text-primary">{utterance.text}</p>
+              <button
+                type="button"
+                onClick={() =>
+                  copy(
+                    `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
+                  )
+                }
+                className="mt-2 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+              >
+                <Copy className="h-3.5 w-3.5" /> {localize('com_ui_meeting_copy_segment')}
+              </button>
             </div>
           ))}
         </div>

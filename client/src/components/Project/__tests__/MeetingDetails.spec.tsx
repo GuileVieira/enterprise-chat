@@ -45,12 +45,16 @@ describe('MeetingDetails', () => {
         speakerNames={{ A: 'Speaker A' }}
         indexing={false}
         generatingInsights={false}
+        canDelete={false}
+        deleting={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
         onInsightsRetry={jest.fn()}
         onSpeakerChange={onSpeakerChange}
         onSave={onSave}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
@@ -65,12 +69,16 @@ describe('MeetingDetails', () => {
         speakerNames={{ A: 'Ana' }}
         indexing={false}
         generatingInsights={false}
+        canDelete={false}
+        deleting={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
         onInsightsRetry={jest.fn()}
         onSpeakerChange={onSpeakerChange}
         onSave={onSave}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
     expect(screen.getAllByText(/Ana/)).toHaveLength(2);
@@ -90,12 +98,16 @@ describe('MeetingDetails', () => {
         speakerNames={{ A: 'Ana' }}
         indexing={false}
         generatingInsights={false}
+        canDelete={false}
+        deleting={false}
         onTitleChange={onTitleChange}
         onTitleSave={onTitleSave}
         onIndexRetry={jest.fn()}
         onInsightsRetry={jest.fn()}
         onSpeakerChange={jest.fn()}
         onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
@@ -116,12 +128,16 @@ describe('MeetingDetails', () => {
         speakerNames={{ A: 'Ana' }}
         indexing={false}
         generatingInsights={false}
+        canDelete={false}
+        deleting={false}
         onTitleChange={jest.fn()}
         onTitleSave={jest.fn()}
         onIndexRetry={onIndexRetry}
         onInsightsRetry={jest.fn()}
         onSpeakerChange={jest.fn()}
         onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
@@ -143,16 +159,54 @@ describe('MeetingDetails', () => {
         speakerNames={{ A: 'Ana' }}
         indexing={false}
         generatingInsights={false}
+        canDelete={false}
+        deleting={false}
         onTitleChange={jest.fn()}
         onTitleSave={jest.fn()}
         onIndexRetry={jest.fn()}
         onInsightsRetry={onInsightsRetry}
         onSpeakerChange={jest.fn()}
         onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
     fireEvent.click(screen.getByText('com_ui_meeting_generate_insights'));
     expect(onInsightsRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('copies each segment and exposes deletion only to the creator', () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const onDelete = jest.fn();
+    render(
+      <MeetingDetails
+        meeting={meeting}
+        canEdit
+        canDelete
+        deleting={false}
+        title="Reunião"
+        speakerNames={{ A: 'Ana' }}
+        indexing={false}
+        generatingInsights={false}
+        onTitleChange={jest.fn()}
+        onTitleSave={jest.fn()}
+        onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
+        onSpeakerChange={jest.fn()}
+        onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByText('com_ui_meeting_copy_segment')[0]);
+    expect(writeText).toHaveBeenCalledWith('[0:00] Ana: Primeira fala.');
+    fireEvent.click(screen.getByText('com_ui_meeting_delete'));
+    expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });

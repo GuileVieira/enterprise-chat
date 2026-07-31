@@ -10,11 +10,12 @@ const {
 } = require('~/server/middleware/accessResources/canAccessProject');
 const { findProjectForRequest } = require('~/server/services/Projects/access');
 const {
+  deleteTranscript,
   generateInsights,
   getTranscript,
   submitAudio,
 } = require('~/server/services/Projects/assembly');
-const { syncMeetingIndex } = require('~/server/services/Projects/meetingIndex');
+const { deleteMeetingIndex, syncMeetingIndex } = require('~/server/services/Projects/meetingIndex');
 const { storage } = require('~/server/routes/files/multer');
 
 const router = require('express').Router({ mergeParams: true });
@@ -227,6 +228,28 @@ router.patch('/:meetingId/speakers', projectAccess(PermissionBits.EDIT), async (
   } catch (error) {
     logger.error('[projectMeetings] speaker update failed', error);
     res.status(500).json({ error: 'Failed to update speakers' });
+  }
+});
+
+router.delete('/:meetingId', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  try {
+    const meeting = await getMeetingModel().findOne({
+      _id: req.params.meetingId,
+      projectId: req.params.projectId,
+    });
+    if (!meeting) {
+      return res.status(404).json({ error: 'Meeting not found' });
+    }
+    if (String(meeting.userId) !== String(req.user.id)) {
+      return res.status(403).json({ error: 'Only the meeting creator can delete it' });
+    }
+    await deleteTranscript(meeting.assemblyTranscriptId);
+    await deleteMeetingIndex({ meeting, req });
+    await meeting.deleteOne();
+    res.status(204).end();
+  } catch (error) {
+    logger.error('[projectMeetings] delete failed', error);
+    res.status(500).json({ error: 'Failed to delete meeting' });
   }
 });
 

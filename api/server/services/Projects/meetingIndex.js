@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { FileContext, FileSources } = require('librechat-data-provider');
+const { deleteFiles } = require('~/models');
 const { deleteVectors, uploadVectors } = require('~/server/services/Files/VectorDB/crud');
 
 const getMeetingId = (meeting) => String(meeting?._id ?? meeting?.id ?? '');
@@ -107,4 +108,15 @@ async function syncMeetingIndex({
   );
 }
 
-module.exports = { formatMeetingIndexText, getMeetingFileId, syncMeetingIndex };
+async function deleteMeetingIndex({
+  meeting,
+  req,
+  deleteFilesFn = deleteFiles,
+  deleteVectorsFn = deleteVectors,
+}) {
+  const file_id = getMeetingFileId(meeting);
+  await deleteVectorsFn(req, { file_id, embedded: true });
+  return deleteFilesFn([file_id]);
+}
+
+module.exports = { deleteMeetingIndex, formatMeetingIndexText, getMeetingFileId, syncMeetingIndex };

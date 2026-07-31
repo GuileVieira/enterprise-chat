@@ -4,6 +4,8 @@ const request = require('supertest');
 const mockFindOne = jest.fn();
 const mockCreate = jest.fn();
 const mockCreateFile = jest.fn();
+const mockDeleteMeetingIndex = jest.fn();
+const mockDeleteTranscript = jest.fn();
 const mockGenerateInsights = jest.fn();
 const mockGetTranscript = jest.fn();
 const mockSubmitAudio = jest.fn();
@@ -53,12 +55,14 @@ jest.mock('~/server/services/Projects/access', () => ({
 }));
 
 jest.mock('~/server/services/Projects/assembly', () => ({
+  deleteTranscript: (...args) => mockDeleteTranscript(...args),
   generateInsights: (...args) => mockGenerateInsights(...args),
   getTranscript: (...args) => mockGetTranscript(...args),
   submitAudio: (...args) => mockSubmitAudio(...args),
 }));
 
 jest.mock('~/server/services/Projects/meetingIndex', () => ({
+  deleteMeetingIndex: (...args) => mockDeleteMeetingIndex(...args),
   syncMeetingIndex: (...args) => mockSyncMeetingIndex(...args),
 }));
 
@@ -94,6 +98,8 @@ describe('project meetings routes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSyncMeetingIndex.mockResolvedValue({});
+    mockDeleteMeetingIndex.mockResolvedValue({});
+    mockDeleteTranscript.mockResolvedValue(undefined);
   });
 
   it('submits browser audio and persists project meeting ownership and timing', async () => {
@@ -101,6 +107,7 @@ describe('project meetings routes', () => {
       _id: 'meeting-1',
       projectId: 'project-1',
       userId: 'user-1',
+      assemblyTranscriptId: 'transcript-1',
       title: 'Reunião',
       status: 'processing',
       duration: 75,
@@ -347,5 +354,50 @@ describe('project meetings routes', () => {
     expect(response.body.speakerNames).toEqual({ A: 'Ana' });
     expect(meeting.speakerNames.get('A')).toBe('Ana');
     expect(mockSyncMeetingIndex).toHaveBeenCalledWith(expect.objectContaining({ meeting }));
+  });
+
+  it('lets only the meeting creator delete it and removes its project index', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      assemblyTranscriptId: 'transcript-1',
+      deleteOne: jest.fn().mockResolvedValue(undefined),
+    };
+    mockFindOne.mockResolvedValue(meeting);
+
+    const response = await request(createApp()).delete(
+      '/api/projects/project-1/meetings/meeting-1',
+    );
+
+    expect(response.status).toBe(204);
+    expect(mockDeleteTranscript).toHaveBeenCalledWith('transcript-1');
+    expect(mockDeleteMeetingIndex).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meeting,
+        req: expect.objectContaining({ user: { id: 'user-1', role: 'USER' } }),
+      }),
+    );
+    expect(meeting.deleteOne).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects deletion by another project editor', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-2',
+      assemblyTranscriptId: 'transcript-1',
+      deleteOne: jest.fn(),
+    };
+    mockFindOne.mockResolvedValue(meeting);
+
+    const response = await request(createApp()).delete(
+      '/api/projects/project-1/meetings/meeting-1',
+    );
+
+    expect(response.status).toBe(403);
+    expect(mockDeleteMeetingIndex).not.toHaveBeenCalled();
+    expect(mockDeleteTranscript).not.toHaveBeenCalled();
+    expect(meeting.deleteOne).not.toHaveBeenCalled();
   });
 });

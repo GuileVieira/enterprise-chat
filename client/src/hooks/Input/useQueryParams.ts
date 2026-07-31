@@ -24,6 +24,7 @@ import { useChatContext, useChatFormContext } from '~/Providers';
 import store from '~/store';
 
 const META_ADS_BRIEF_PARAM = 'meta_ads_brief';
+const CONTEXT_BRIEF_PARAM = 'context_brief';
 const PROJECT_ID_PARAM = 'project_id';
 
 type QueryParamPreset = TPreset & {
@@ -32,7 +33,7 @@ type QueryParamPreset = TPreset & {
   spec?: string | null;
 };
 
-const readStoredMetaAdsBriefMarkdown = (storageKey: string) => {
+const readStoredBriefMarkdown = (storageKey: string) => {
   if (!storageKey) {
     return '';
   }
@@ -47,7 +48,7 @@ const readStoredMetaAdsBriefMarkdown = (storageKey: string) => {
     sessionStorage.removeItem(storageKey);
     return typeof parsedBrief.markdown === 'string' ? parsedBrief.markdown : '';
   } catch (error) {
-    logger.warn('conversation', 'Failed to read Meta Ads brief from session storage', error);
+    logger.warn('conversation', 'Failed to read brief from session storage', error);
     return '';
   }
 };
@@ -277,17 +278,17 @@ export default function useQueryParams({
         queryParams[key] = value;
       });
 
-      const metaAdsBriefMarkdown = readStoredMetaAdsBriefMarkdown(
-        queryParams[META_ADS_BRIEF_PARAM] ?? '',
+      const briefMarkdown = readStoredBriefMarkdown(
+        queryParams[CONTEXT_BRIEF_PARAM] ?? queryParams[META_ADS_BRIEF_PARAM] ?? '',
       );
       const projectId = queryParams[PROJECT_ID_PARAM] ?? '';
       const forceNewConversation = queryParams.new_conversation === 'true';
 
       // Support both 'prompt' and 'q' as query parameters, with 'prompt' taking precedence
-      const decodedPrompt = metaAdsBriefMarkdown || queryParams.prompt || queryParams.q || '';
-      const shouldAutoSubmit =
-        !metaAdsBriefMarkdown && queryParams.submit?.toLowerCase() === 'true';
+      const decodedPrompt = briefMarkdown || queryParams.prompt || queryParams.q || '';
+      const shouldAutoSubmit = !briefMarkdown && queryParams.submit?.toLowerCase() === 'true';
       delete queryParams[META_ADS_BRIEF_PARAM];
+      delete queryParams[CONTEXT_BRIEF_PARAM];
       delete queryParams[PROJECT_ID_PARAM];
       delete queryParams.new_conversation;
       delete queryParams.prompt;

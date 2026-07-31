@@ -1,4 +1,4 @@
-const { generateInsights, getTranscript, submitAudio } = require('./assembly');
+const { deleteTranscript, generateInsights, getTranscript, submitAudio } = require('./assembly');
 
 describe('AssemblyAI meeting service', () => {
   const originalKey = process.env.ASSEMBLYAI_API_KEY;
@@ -33,6 +33,16 @@ describe('AssemblyAI meeting service', () => {
     expect(global.fetch).toHaveBeenCalledWith(
       'https://api.assemblyai.com/v2/transcript/transcript-1',
       expect.objectContaining({ headers: { authorization: 'test-key' } }),
+    );
+  });
+
+  it('deletes a transcript from AssemblyAI', async () => {
+    global.fetch.mockResolvedValue({ ok: true, status: 204 });
+
+    await expect(deleteTranscript('transcript-1')).resolves.toBeUndefined();
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.assemblyai.com/v2/transcript/transcript-1',
+      expect.objectContaining({ method: 'DELETE', headers: { authorization: 'test-key' } }),
     );
   });
 

@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1785365208.5777838,
-    "ast_hash": "623af239cad9f8548d1c12f2cf4f54ea",
+    "mtime": 1785521028.0266767,
+    "ast_hash": "24d683b49ecf516e2962d364485670fe",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -8150,8 +8150,8 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useQueryParams.ts": {
-    "mtime": 1783954351.740823,
-    "ast_hash": "2b2fa03438b8df889bbe34475229d5d5",
+    "mtime": 1785521120.9473796,
+    "ast_hash": "f5e2b258398f54d0b1c6d25eb81108f2",
     "semantic_hash": ""
   },
   "client/src/hooks/Input/useRequiresKey.ts": {
@@ -8755,8 +8755,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/en/translation.json": {
-    "mtime": 1785365248.5033262,
-    "ast_hash": "2fcf72acd5f5a548836376b25f29a3c0",
+    "mtime": 1785525613.4332283,
+    "ast_hash": "f4f0ba758493c6230110d80c95e7fae3",
     "semantic_hash": ""
   },
   "client/src/locales/es/translation.json": {
@@ -8865,8 +8865,8 @@
     "semantic_hash": ""
   },
   "client/src/locales/pt-BR/translation.json": {
-    "mtime": 1785365248.3960931,
-    "ast_hash": "63e2d2f184352c033ec513a35293df4e",
+    "mtime": 1785525613.3428893,
+    "ast_hash": "5b162fc44fb25b6b6dae47770ac15d78",
     "semantic_hash": ""
   },
   "client/src/locales/pt-PT/translation.json": {
@@ -16505,53 +16505,53 @@
     "semantic_hash": ""
   },
   "api/server/routes/projectMeetings.js": {
-    "mtime": 1785365217.6718178,
-    "ast_hash": "2bc711ba898bdf8b35a3239831ea82ac",
+    "mtime": 1785521450.0265768,
+    "ast_hash": "a895a8601e53ecf3267563b9d4068fa3",
     "semantic_hash": ""
   },
   "api/server/routes/projectMeetings.spec.js": {
-    "mtime": 1785365248.1000137,
-    "ast_hash": "5b77c619b6823caef017a661284a71e3",
+    "mtime": 1785521465.349269,
+    "ast_hash": "2316d379696215fd20a9ad2d20d693c6",
     "semantic_hash": ""
   },
   "api/server/services/Projects/assembly.js": {
-    "mtime": 1785365208.19261,
-    "ast_hash": "6653cdd6c4c4d0c1a7cfd003b322d68e",
+    "mtime": 1785521449.9414575,
+    "ast_hash": "83aa8241e160578cda13fa67f138fab1",
     "semantic_hash": ""
   },
   "api/server/services/Projects/assembly.spec.js": {
-    "mtime": 1785365334.0366971,
-    "ast_hash": "38296844de1c013d5a26a5a9e54b6afb",
+    "mtime": 1785521475.8914165,
+    "ast_hash": "e46252b309a076f9404ace91fc1a2c8d",
     "semantic_hash": ""
   },
   "api/server/services/Projects/meetingIndex.js": {
-    "mtime": 1785358813.5211513,
-    "ast_hash": "5aeb9aa769bfcbb607857090c7969940",
+    "mtime": 1785521027.7754424,
+    "ast_hash": "d4c559d07102047764b14428509ba080",
     "semantic_hash": ""
   },
   "api/server/services/Projects/meetingIndex.spec.js": {
-    "mtime": 1785358813.6103816,
-    "ast_hash": "4e624b8f62e4d43e4bbf610446bbddae",
+    "mtime": 1785521194.584759,
+    "ast_hash": "7f3a7024d30472384bc05a6509e49686",
     "semantic_hash": ""
   },
   "client/src/components/Project/MeetingDetails.tsx": {
-    "mtime": 1785365248.1967318,
-    "ast_hash": "dead9296dd05eb997610e46b8abfe187",
+    "mtime": 1785521426.5233266,
+    "ast_hash": "a52b7c6120eccde3cd3859ca770d9721",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectMeetingsTab.tsx": {
-    "mtime": 1785365248.2947643,
-    "ast_hash": "c5299c39a8f886034b9561d89df3a6e2",
+    "mtime": 1785526772.317509,
+    "ast_hash": "07027de93094c195c8a9ed4a310cebfc",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/MeetingDetails.spec.tsx": {
-    "mtime": 1785365261.5606925,
-    "ast_hash": "7f2296dc32ba69dfae5dd877bd8b15d3",
+    "mtime": 1785521324.4871454,
+    "ast_hash": "0c2bb88d38924eb024c7578904606018",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMeetingsTab.spec.tsx": {
-    "mtime": 1785365270.8857772,
-    "ast_hash": "f74be05311c1f0cea6b7f1fa32fd0eab",
+    "mtime": 1785526817.965012,
+    "ast_hash": "b8127b9b42015a7bbe419b318a5b546b",
     "semantic_hash": ""
   },
   "client/src/components/Project/meetingStorage.ts": {
@@ -16595,8 +16595,8 @@
     "semantic_hash": ""
   },
   "docs/plans/local-web-tools.md": {
-    "mtime": 1785366033.4797418,
-    "ast_hash": "06b18a4eed6c34e5621724d0856bb8c4",
+    "mtime": 1785520381.8729627,
+    "ast_hash": "2f901fa13fac37d2fa96670c028fccae",
     "semantic_hash": ""
   }
 }

@@ -47,6 +47,17 @@ const getTranscript = (id) =>
     headers: getHeaders(),
   });
 
+async function deleteTranscript(id) {
+  const response = await fetch(`${API_URL}/v2/transcript/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  if (!response.ok) {
+    const body = await response.json();
+    throw new Error(body.error || body.message || `AssemblyAI request failed (${response.status})`);
+  }
+}
+
 async function generateInsights(transcript) {
   const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY;
   if (!apiKey) {
@@ -89,4 +100,4 @@ async function generateInsights(transcript) {
   };
 }
 
-module.exports = { generateInsights, getTranscript, submitAudio };
+module.exports = { deleteTranscript, generateInsights, getTranscript, submitAudio };

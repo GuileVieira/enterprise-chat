@@ -906,6 +906,9 @@ export const updateProjectMeeting = (
 ): Promise<import('./types/meetings').ProjectMeeting> =>
   request.patch(endpoints.projectMeeting(id, meetingId), payload);
 
+export const deleteProjectMeeting = (id: string, meetingId: string): Promise<void> =>
+  request.delete(endpoints.projectMeeting(id, meetingId));
+
 export const retryProjectMeetingIndex = (
   id: string,
   meetingId: string,

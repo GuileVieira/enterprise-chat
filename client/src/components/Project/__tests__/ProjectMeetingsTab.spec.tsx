@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
 const mockCreateProjectMeeting = jest.fn();
@@ -12,6 +13,7 @@ const mockSaveMeetingChunk = jest.fn();
 jest.mock('librechat-data-provider', () => ({
   dataService: {
     createProjectMeeting: (...args: unknown[]) => mockCreateProjectMeeting(...args),
+    deleteProjectMeeting: jest.fn(),
     getProjectMeeting: (...args: unknown[]) => mockGetProjectMeeting(...args),
     getProjectMeetings: (...args: unknown[]) => mockGetProjectMeetings(...args),
     retryProjectMeetingIndex: jest.fn(),
@@ -26,6 +28,7 @@ jest.mock('librechat-data-provider', () => ({
 }));
 
 jest.mock('~/hooks', () => ({
+  useAuthContext: () => ({ user: { id: 'user-1' } }),
   useLocalize: () => (key: string) => key,
 }));
 
@@ -63,7 +66,9 @@ const renderTab = () => {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ProjectMeetingsTab projectId="project-1" canEdit />
+      <MemoryRouter>
+        <ProjectMeetingsTab projectId="project-1" canEdit />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 };
@@ -98,16 +103,22 @@ describe('ProjectMeetingsTab recorder', () => {
       status: 'processing',
       speakerNames: {},
     });
+    Reflect.deleteProperty(global, 'AudioContext');
   });
 
   it('starts, pauses, resumes, finishes and submits browser audio', async () => {
     renderTab();
 
-    fireEvent.click(screen.getByText('com_ui_meeting_start'));
-    await screen.findByText('com_ui_meeting_pause');
-    fireEvent.click(screen.getByText('com_ui_meeting_pause'));
-    fireEvent.click(screen.getByText('com_ui_meeting_resume'));
-    fireEvent.click(screen.getByText('com_ui_meeting_finish'));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
+    await screen.findByRole('button', { name: 'com_ui_meeting_pause' });
+    expect(
+      screen.getByRole('img', { name: 'com_ui_meeting_waveform_recording' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_pause' }));
+    expect(screen.getByRole('button', { name: 'com_ui_meeting_upload_audio' })).toBeDisabled();
+    expect(screen.getByText('com_ui_meeting_recorder_paused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_resume' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_finish' }));
 
     await waitFor(() => expect(mockCreateProjectMeeting).toHaveBeenCalledTimes(1));
     expect(mockSaveMeetingChunk).toHaveBeenCalledWith('recording-1', 0, expect.any(Blob));
@@ -119,7 +130,7 @@ describe('ProjectMeetingsTab recorder', () => {
     getUserMedia.mockRejectedValue(new DOMException('Denied', 'NotAllowedError'));
     renderTab();
 
-    fireEvent.click(screen.getByText('com_ui_meeting_start'));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
 
     expect(await screen.findByText('com_ui_meeting_microphone_denied')).toBeInTheDocument();
   });
@@ -141,5 +152,45 @@ describe('ProjectMeetingsTab recorder', () => {
     const status = await screen.findByRole('status');
     expect(status).toHaveTextContent('com_ui_meeting_status_processing');
     expect(status.querySelector('.animate-spin')).toBeInTheDocument();
+  });
+
+  it('uploads an existing audio file for transcription', async () => {
+    renderTab();
+    const audio = new File(['audio'], 'cliente.mp3', { type: 'audio/mpeg' });
+
+    fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [audio] },
+    });
+
+    await waitFor(() => expect(mockCreateProjectMeeting).toHaveBeenCalledTimes(1));
+    const form = mockCreateProjectMeeting.mock.calls[0][1] as FormData;
+    expect(form.get('audio')).toEqual(audio);
+    expect(form.get('duration')).toBe('0');
+  });
+
+  it('scales waveform bars from the real microphone signal level', async () => {
+    const analyser = {
+      fftSize: 256,
+      smoothingTimeConstant: 0,
+      getByteTimeDomainData: (samples: Uint8Array) => samples.fill(200),
+    };
+    class FakeAudioContext {
+      createAnalyser = () => analyser;
+      createMediaStreamSource = () => ({ connect: jest.fn() });
+      close = jest.fn().mockResolvedValue(undefined);
+    }
+    Object.defineProperty(global, 'AudioContext', {
+      configurable: true,
+      value: FakeAudioContext,
+    });
+    jest.spyOn(global, 'requestAnimationFrame').mockReturnValue(1);
+    renderTab();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
+
+    const waveform = await screen.findByRole('img', {
+      name: 'com_ui_meeting_waveform_recording',
+    });
+    expect(waveform.querySelector('span')).not.toHaveStyle({ transform: 'scaleY(0.16)' });
   });
 });

@@ -1,5 +1,10 @@
 const { FileContext } = require('librechat-data-provider');
-const { formatMeetingIndexText, getMeetingFileId, syncMeetingIndex } = require('./meetingIndex');
+const {
+  deleteMeetingIndex,
+  formatMeetingIndexText,
+  getMeetingFileId,
+  syncMeetingIndex,
+} = require('./meetingIndex');
 
 describe('meetingIndex', () => {
   const meeting = {
@@ -67,5 +72,19 @@ describe('meetingIndex', () => {
       }),
       true,
     );
+  });
+
+  it('deletes the project vectors and file for a meeting', async () => {
+    const req = { user: { id: 'user-1' } };
+    const deleteFilesFn = jest.fn().mockResolvedValue({ deletedCount: 1 });
+    const deleteVectorsFn = jest.fn().mockResolvedValue(undefined);
+
+    await deleteMeetingIndex({ meeting, req, deleteFilesFn, deleteVectorsFn });
+
+    expect(deleteVectorsFn).toHaveBeenCalledWith(req, {
+      file_id: 'meeting:meeting-1',
+      embedded: true,
+    });
+    expect(deleteFilesFn).toHaveBeenCalledWith(['meeting:meeting-1']);
   });
 });
