@@ -128,25 +128,28 @@ async function migrateTrafficDiaryIndexes() {
       );
     }
     const indexes = await collection.indexes();
-    const hasOldUniqueIndex = indexes.some((index) => index.name === 'projectId_1_userId_1_date_1');
-    const hasKindUniqueIndex = indexes.some(
-      (index) => index.name === 'projectId_1_userId_1_kind_1_date_1',
+    const hasKeys = (index, keys) => JSON.stringify(index.key) === JSON.stringify(keys);
+    const legacyKeys = { projectId: 1, userId: 1, date: 1 };
+    const diaryKeys = { projectId: 1, userId: 1, kind: 1, date: 1 };
+    const legacyIndexes = indexes.filter((index) => hasKeys(index, legacyKeys));
+    const nonUniqueDiaryIndexes = indexes.filter(
+      (index) => hasKeys(index, diaryKeys) && !index.unique,
     );
-    if (!hasOldUniqueIndex) {
-      if (!hasKindUniqueIndex) {
-        await collection.createIndex(
-          { projectId: 1, userId: 1, kind: 1, date: 1 },
-          { unique: true },
-        );
-        logger.info('[trafficDiaryMigration] Created project/user/kind/date unique index');
-      }
-      return;
+    const hasKindUniqueIndex = indexes.some((index) => hasKeys(index, diaryKeys) && index.unique);
+
+    for (const index of nonUniqueDiaryIndexes) {
+      await collection.dropIndex(index.name);
+      logger.info(`[trafficDiaryMigration] Dropped stale diary index ${index.name}`);
     }
-    await collection.dropIndex('projectId_1_userId_1_date_1');
-    logger.info('[trafficDiaryMigration] Dropped old project/user/date unique index');
+
     if (!hasKindUniqueIndex) {
-      await collection.createIndex({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: true });
+      await collection.createIndex(diaryKeys, { unique: true });
       logger.info('[trafficDiaryMigration] Created project/user/kind/date unique index');
+    }
+
+    for (const index of legacyIndexes) {
+      await collection.dropIndex(index.name);
+      logger.info(`[trafficDiaryMigration] Dropped legacy diary index ${index.name}`);
     }
   } catch (error) {
     if (error?.codeName !== 'NamespaceNotFound') {

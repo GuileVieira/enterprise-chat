@@ -44,7 +44,13 @@ describe('migrateTrafficDiaryIndexes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCollection.updateMany.mockResolvedValue({ modifiedCount: 2 });
-    mockCollection.indexes.mockResolvedValue([{ name: 'projectId_1_userId_1_date_1' }]);
+    mockCollection.indexes.mockResolvedValue([
+      {
+        name: 'legacy_diary_identity',
+        key: { projectId: 1, userId: 1, date: 1 },
+        unique: true,
+      },
+    ]);
     mockCollection.dropIndex.mockResolvedValue(undefined);
     mockCollection.createIndex.mockResolvedValue('projectId_1_userId_1_kind_1_date_1');
   });
@@ -56,7 +62,27 @@ describe('migrateTrafficDiaryIndexes', () => {
       { $or: [{ kind: { $exists: false } }, { kind: null }] },
       { $set: { kind: 'manager' } },
     );
-    expect(mockCollection.dropIndex).toHaveBeenCalledWith('projectId_1_userId_1_date_1');
+    expect(mockCollection.dropIndex).toHaveBeenCalledWith('legacy_diary_identity');
+    expect(mockCollection.createIndex).toHaveBeenCalledWith(
+      { projectId: 1, userId: 1, kind: 1, date: 1 },
+      { unique: true },
+    );
+    expect(mockCollection.createIndex.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCollection.dropIndex.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('replaces a non-unique diary identity index', async () => {
+    mockCollection.indexes.mockResolvedValue([
+      {
+        name: 'diary_identity',
+        key: { projectId: 1, userId: 1, kind: 1, date: 1 },
+      },
+    ]);
+
+    await migrateTrafficDiaryIndexes();
+
+    expect(mockCollection.dropIndex).toHaveBeenCalledWith('diary_identity');
     expect(mockCollection.createIndex).toHaveBeenCalledWith(
       { projectId: 1, userId: 1, kind: 1, date: 1 },
       { unique: true },
