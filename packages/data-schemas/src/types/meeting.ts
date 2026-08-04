@@ -19,9 +19,10 @@ export interface IMeeting extends Document {
   tenantId?: string;
   userId: string;
   title: string;
-  status: 'processing' | 'completed' | 'failed';
+  status: 'uploading' | 'upload_failed' | 'submitting' | 'processing' | 'completed' | 'failed';
   duration: number;
   assemblyTranscriptId: string;
+  mimeType?: string;
   transcript: string;
   utterances: IMeetingUtterance[];
   speakerNames: Map<string, string>;

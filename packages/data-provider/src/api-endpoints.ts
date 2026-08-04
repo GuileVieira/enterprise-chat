@@ -139,6 +139,11 @@ export const archiveProject = (id: string) => `${projectsRoot}/${encodeURICompon
 export const projectMeetings = (id: string) => `${projectById(id)}/meetings`;
 export const projectMeeting = (id: string, meetingId: string) =>
   `${projectMeetings(id)}/${encodeURIComponent(meetingId)}`;
+export const projectMeetingUpload = (id: string) => `${projectMeetings(id)}/uploads`;
+export const projectMeetingChunk = (id: string, meetingId: string, index: number) =>
+  `${projectMeeting(id, meetingId)}/chunks/${index}`;
+export const projectMeetingComplete = (id: string, meetingId: string) =>
+  `${projectMeeting(id, meetingId)}/complete`;
 export const projectMeetingSpeakers = (id: string, meetingId: string) =>
   `${projectMeeting(id, meetingId)}/speakers`;
 export const projectMeetingIndex = (id: string, meetingId: string) =>

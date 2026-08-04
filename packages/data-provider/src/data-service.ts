@@ -892,6 +892,27 @@ export const createProjectMeeting = (
 ): Promise<import('./types/meetings').ProjectMeeting> =>
   request.postMultiPart(endpoints.projectMeetings(id), data);
 
+export const createProjectMeetingUpload = (
+  id: string,
+  payload: { duration: number; recordedAt: string; mimeType: string },
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.post(endpoints.projectMeetingUpload(id), payload);
+
+export const uploadProjectMeetingChunk = (
+  id: string,
+  meetingId: string,
+  index: number,
+  chunk: Blob,
+): Promise<void> => request.putRaw(endpoints.projectMeetingChunk(id, meetingId, index), chunk);
+
+export const completeProjectMeetingUpload = (
+  id: string,
+  meetingId: string,
+  totalChunks: number,
+  duration: number,
+): Promise<import('./types/meetings').ProjectMeeting> =>
+  request.post(endpoints.projectMeetingComplete(id, meetingId), { totalChunks, duration });
+
 export const updateProjectMeetingSpeakers = (
   id: string,
   meetingId: string,

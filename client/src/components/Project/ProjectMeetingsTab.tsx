@@ -11,22 +11,27 @@ import {
   UploadSimple,
   X,
 } from '@phosphor-icons/react';
-import { dataService, DynamicQueryKeys, type ProjectMeeting } from 'librechat-data-provider';
+import { dataService, DynamicQueryKeys } from 'librechat-data-provider';
+import type { ProjectMeeting } from 'librechat-data-provider';
+import type { StoredMeetingRecording } from './meetingStorage';
 import { useAuthContext, useLocalize } from '~/hooks';
 import MeetingDetails from './MeetingDetails';
-import { deleteMeetingChunks, readMeetingChunks, saveMeetingChunk } from './meetingStorage';
+import {
+  deleteMeetingChunk,
+  deleteMeetingChunks,
+  listMeetingChunkIndexes,
+  listMeetingRecordings,
+  readMeetingChunk,
+  saveMeetingChunk,
+  saveMeetingRecording,
+} from './meetingStorage';
 
 interface ProjectMeetingsTabProps {
   projectId: string;
   canEdit: boolean;
 }
 
-interface PendingRecording {
-  key: string;
-  mimeType: string;
-  duration: number;
-  recordedAt: string;
-}
+type PendingRecording = StoredMeetingRecording;
 
 interface MeetingUpload {
   audio: Blob;
@@ -157,10 +162,15 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const recordingKeyRef = useRef('');
   const chunkIndexRef = useRef(0);
   const chunkWritesRef = useRef(Promise.resolve());
+  const chunkUploadsRef = useRef(Promise.resolve());
+  const uploadErrorRef = useRef<unknown>(null);
+  const pendingUploadRef = useRef<PendingRecording | null>(null);
   const startedAtRef = useRef(0);
   const pausedAtRef = useRef(0);
   const pausedTotalRef = useRef(0);
   const [recording, setRecording] = useState<'idle' | 'recording' | 'paused' | 'uploading'>('idle');
+  const [uploadStage, setUploadStage] = useState<'chunks' | 'submitting'>('chunks');
+  const [uploadProgress, setUploadProgress] = useState({ uploaded: 0, total: 0 });
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
   const [pendingUpload, setPendingUpload] = useState<PendingRecording | null>(null);
@@ -169,6 +179,57 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [fullscreen, setFullscreen] = useState(false);
   const [search, setSearch] = useState('');
+
+  const rememberPendingUpload = (pending: PendingRecording | null) => {
+    pendingUploadRef.current = pending;
+    setPendingUpload(pending);
+  };
+
+  const uploadChunk = async (pending: PendingRecording, index: number, chunk: Blob) => {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await dataService.uploadProjectMeetingChunk(projectId, pending.meetingId, index, chunk);
+        await deleteMeetingChunk(pending.key, index);
+        setUploadProgress((progress) => ({
+          uploaded: Math.min(pending.totalChunks, progress.uploaded + 1),
+          total: Math.max(progress.total, pending.totalChunks),
+        }));
+        return;
+      } catch (error) {
+        lastError = error;
+        await new Promise((resolve) => window.setTimeout(resolve, 500 * 2 ** attempt));
+      }
+    }
+    throw lastError;
+  };
+
+  const completePendingUpload = async (pending: PendingRecording) => {
+    const indexes = await listMeetingChunkIndexes(pending.key);
+    setUploadStage('chunks');
+    setUploadProgress({
+      uploaded: pending.totalChunks - indexes.length,
+      total: pending.totalChunks,
+    });
+    for (const index of indexes) {
+      const chunk = await readMeetingChunk(pending.key, index);
+      if (!chunk) {
+        throw new Error('Recorded meeting chunk was not found');
+      }
+      await uploadChunk(pending, index, chunk);
+    }
+    setUploadStage('submitting');
+    const meeting = await dataService.completeProjectMeetingUpload(
+      projectId,
+      pending.meetingId,
+      pending.totalChunks,
+      pending.duration,
+    );
+    await deleteMeetingChunks(pending.key);
+    rememberPendingUpload(null);
+    queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+    setSelected(meeting);
+  };
 
   const stopWaveform = (closeContext = false) => {
     if (animationFrameRef.current !== null) {
@@ -329,6 +390,14 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     [],
   );
 
+  useEffect(() => {
+    void listMeetingRecordings(projectId).then((recordings) => {
+      if (!pendingUploadRef.current && recordings[0]) {
+        rememberPendingUpload(recordings[0]);
+      }
+    });
+  }, [projectId]);
+
   const selectedId = selected?.id;
   useEffect(() => {
     if (!selectedId) {
@@ -368,13 +437,21 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
 
   const start = async () => {
     setError('');
+    let hasMicrophone = false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      hasMicrophone = true;
       streamRef.current = stream;
       const mimeType = ['audio/webm;codecs=opus', 'audio/mp4'].find((type) =>
         MediaRecorder.isTypeSupported(type),
       );
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recordedAt = new Date().toISOString();
+      const meeting = await dataService.createProjectMeetingUpload(projectId, {
+        duration: 0,
+        recordedAt,
+        mimeType: recorder.mimeType || mimeType || 'audio/webm',
+      });
       if (typeof AudioContext !== 'undefined') {
         const audioContext = new AudioContext();
         const analyser = audioContext.createAnalyser();
@@ -385,17 +462,52 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
         analyserRef.current = analyser;
       }
       const key = crypto.randomUUID();
+      const pending = {
+        key,
+        meetingId: meeting.id,
+        projectId,
+        mimeType: recorder.mimeType || mimeType || 'audio/webm',
+        duration: 0,
+        recordedAt,
+        totalChunks: 0,
+      };
+      await saveMeetingRecording(pending);
+      rememberPendingUpload(pending);
       recordingKeyRef.current = key;
       chunkIndexRef.current = 0;
       chunkWritesRef.current = Promise.resolve();
+      chunkUploadsRef.current = Promise.resolve();
+      uploadErrorRef.current = null;
+      setUploadProgress({ uploaded: 0, total: 0 });
       startedAtRef.current = Date.now();
       pausedTotalRef.current = 0;
       recorder.ondataavailable = (event) => {
         if (event.data.size) {
           const index = chunkIndexRef.current++;
-          chunkWritesRef.current = chunkWritesRef.current.then(() =>
-            saveMeetingChunk(key, index, event.data),
-          );
+          pending.totalChunks = index + 1;
+          const write = chunkWritesRef.current
+            .catch(() => undefined)
+            .then(async () => {
+              try {
+                await saveMeetingChunk(key, index, event.data);
+                await saveMeetingRecording(pending);
+              } catch {
+                setError(localize('com_ui_meeting_upload_error'));
+              }
+            });
+          chunkWritesRef.current = write;
+          chunkUploadsRef.current = chunkUploadsRef.current.then(async () => {
+            await write;
+            try {
+              const storedChunk = await readMeetingChunk(key, index);
+              if (!storedChunk) {
+                throw new Error('Recorded meeting chunk was not persisted');
+              }
+              await uploadChunk(pending, index, storedChunk);
+            } catch (error) {
+              uploadErrorRef.current = error;
+            }
+          });
         }
       };
       recorderRef.current = recorder;
@@ -403,10 +515,15 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       animateWaveform();
       setElapsed(0);
       setRecording('recording');
+      queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
     } catch {
       stopWaveform(true);
       stopStream();
-      setError(localize('com_ui_meeting_microphone_denied'));
+      setError(
+        localize(
+          hasMicrophone ? 'com_ui_meeting_upload_error' : 'com_ui_meeting_microphone_denied',
+        ),
+      );
     }
   };
 
@@ -430,58 +547,81 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       return;
     }
     recorder.onstop = async () => {
-      await chunkWritesRef.current;
-      recorderRef.current = null;
-      if (cancel) {
-        await deleteMeetingChunks(recordingKeyRef.current);
+      try {
+        await chunkWritesRef.current;
+        await chunkUploadsRef.current;
+        recorderRef.current = null;
+        const pending = pendingUploadRef.current;
+        if (!pending) {
+          throw new Error('Missing pending meeting upload');
+        }
+        if (cancel) {
+          await dataService.deleteProjectMeeting(projectId, pending.meetingId);
+          await deleteMeetingChunks(pending.key);
+          rememberPendingUpload(null);
+          setRecording('idle');
+          setElapsed(0);
+          queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+          return;
+        }
+        pending.duration = elapsed;
+        pending.totalChunks = chunkIndexRef.current;
+        await saveMeetingRecording(pending);
+        rememberPendingUpload(pending);
+        setRecording('uploading');
+        if (uploadErrorRef.current) {
+          throw uploadErrorRef.current;
+        }
+        await completePendingUpload(pending);
+        setError('');
         setRecording('idle');
-        setElapsed(0);
-        return;
+      } catch {
+        setRecording('idle');
+        setError(localize('com_ui_meeting_upload_error'));
       }
-      const pending = {
-        key: recordingKeyRef.current,
-        mimeType: recorder.mimeType,
-        duration: elapsed,
-        recordedAt: new Date(startedAtRef.current).toISOString(),
-      };
-      setPendingUpload(pending);
-      setRecording('uploading');
-      const chunks = await readMeetingChunks(pending.key);
-      createMeeting.mutate({
-        audio: new Blob(chunks, { type: pending.mimeType }),
-        duration: pending.duration,
-        recordedAt: pending.recordedAt,
-        pendingKey: pending.key,
-      });
     };
     recorder.stop();
     stopWaveform(true);
     stopStream();
   };
 
-  const retryUpload = () => {
+  const retryUpload = async () => {
     if (!pendingUpload) {
       return;
     }
     setError('');
     setRecording('uploading');
-    void readMeetingChunks(pendingUpload.key).then((chunks) =>
-      createMeeting.mutate({
-        audio: new Blob(chunks, { type: pendingUpload.mimeType }),
-        duration: pendingUpload.duration,
-        recordedAt: pendingUpload.recordedAt,
-        pendingKey: pendingUpload.key,
-      }),
-    );
+    setUploadStage('chunks');
+    try {
+      await completePendingUpload(pendingUpload);
+    } catch {
+      setError(localize('com_ui_meeting_upload_error'));
+    } finally {
+      setRecording('idle');
+    }
   };
 
   const discardUpload = async () => {
     if (pendingUpload) {
+      await dataService.deleteProjectMeeting(projectId, pendingUpload.meetingId);
       await deleteMeetingChunks(pendingUpload.key);
     }
-    setPendingUpload(null);
+    rememberPendingUpload(null);
     setError('');
     setElapsed(0);
+  };
+
+  const getUploadStatusLabel = () => {
+    if (uploadStage === 'submitting') {
+      return localize('com_ui_meeting_submitting');
+    }
+    if (uploadProgress.total > 0) {
+      return localize('com_ui_meeting_upload_progress', {
+        uploaded: uploadProgress.uploaded,
+        total: uploadProgress.total,
+      });
+    }
+    return localize('com_ui_meeting_uploading');
   };
 
   const openMeeting = (meeting: ProjectMeeting) => {
@@ -665,7 +805,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                     className="size-3 animate-pulse rounded-full bg-green-500"
                     aria-hidden="true"
                   />
-                  {localize('com_ui_meeting_uploading')}
+                  {getUploadStatusLabel()}
                 </div>
               )}
               {recording !== 'idle' && (

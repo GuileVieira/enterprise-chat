@@ -1,6 +1,8 @@
 const fs = require('fs');
+const path = require('path');
 const multer = require('multer');
 const mongoose = require('mongoose');
+const { pipeline } = require('stream/promises');
 const { logger } = require('@librechat/data-schemas');
 const { PermissionBits } = require('librechat-data-provider');
 const { createFile } = require('~/models');
@@ -19,6 +21,9 @@ const { deleteMeetingIndex, syncMeetingIndex } = require('~/server/services/Proj
 const { storage } = require('~/server/routes/files/multer');
 
 const router = require('express').Router({ mergeParams: true });
+const MAX_CHUNK_BYTES = 8 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 1024 * 1024 * 1024;
+const MAX_CHUNKS = 8640;
 const upload = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 1024 },
@@ -39,6 +44,41 @@ const projectAccess = (permission) =>
   });
 
 const getMeetingModel = () => mongoose.models.Meeting;
+
+const getUploadDirectory = (req, meetingId) =>
+  path.join(req.config.paths.uploads, 'meeting-chunks', req.user.id, meetingId);
+
+async function findOwnedMeeting(req) {
+  return getMeetingModel().findOne({
+    _id: req.params.meetingId,
+    projectId: req.params.projectId,
+    userId: req.user.id,
+  });
+}
+
+async function assembleChunks(directory, totalChunks) {
+  const outputPath = path.join(directory, 'meeting.audio');
+  let totalBytes = 0;
+  async function* chunks() {
+    for (let index = 0; index < totalChunks; index++) {
+      const chunkPath = path.join(directory, `${index}.chunk`);
+      const stat = await fs.promises.stat(chunkPath);
+      totalBytes += stat.size;
+      if (totalBytes > MAX_AUDIO_BYTES) {
+        throw new Error('Meeting audio exceeds the 1 GB limit');
+      }
+      yield* fs.createReadStream(chunkPath);
+    }
+  }
+  try {
+    await pipeline(chunks(), fs.createWriteStream(`${outputPath}.part`));
+    await fs.promises.rename(`${outputPath}.part`, outputPath);
+    return outputPath;
+  } catch (error) {
+    await fs.promises.rm(`${outputPath}.part`, { force: true });
+    throw error;
+  }
+}
 
 async function getProject(req) {
   return (
@@ -87,6 +127,116 @@ router.get('/', projectAccess(PermissionBits.VIEW), async (req, res) => {
   } catch (error) {
     logger.error('[projectMeetings] list failed', error);
     res.status(500).json({ error: 'Failed to list meetings' });
+  }
+});
+
+router.post('/uploads', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  try {
+    const project = await getProject(req);
+    const duration = Number(req.body.duration);
+    const recordedAt = new Date(req.body.recordedAt);
+    const mimeType = typeof req.body.mimeType === 'string' ? req.body.mimeType : '';
+    if (!mimeType.startsWith('audio/')) {
+      return res.status(400).json({ error: 'Audio MIME type required' });
+    }
+    const meetingId = new mongoose.Types.ObjectId();
+    const meeting = await getMeetingModel().create({
+      _id: meetingId,
+      projectId: project.projectId,
+      tenantId: project.tenantId,
+      userId: req.user.id,
+      title: `Reunião de ${new Date().toLocaleDateString('pt-BR')}`,
+      status: 'uploading',
+      assemblyTranscriptId: `upload:${meetingId}`,
+      duration: Number.isFinite(duration) && duration >= 0 ? duration : 0,
+      mimeType,
+      recordedAt: Number.isNaN(recordedAt.getTime()) ? new Date() : recordedAt,
+    });
+    await fs.promises.mkdir(getUploadDirectory(req, String(meeting._id)), { recursive: true });
+    res.status(201).json(serialize(meeting));
+  } catch (error) {
+    logger.error('[projectMeetings] upload initialization failed', error);
+    res.status(500).json({ error: 'Failed to initialize meeting upload' });
+  }
+});
+
+router.put('/:meetingId/chunks/:index', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  const index = Number(req.params.index);
+  const contentLength = Number(req.headers['content-length']);
+  if (!Number.isInteger(index) || index < 0 || index >= MAX_CHUNKS) {
+    return res.status(400).json({ error: 'Invalid chunk index' });
+  }
+  if (!Number.isFinite(contentLength) || contentLength <= 0 || contentLength > MAX_CHUNK_BYTES) {
+    return res.status(413).json({ error: 'Meeting chunk must be between 1 byte and 8 MB' });
+  }
+  try {
+    const meeting = await findOwnedMeeting(req);
+    if (!meeting || !['uploading', 'upload_failed'].includes(meeting.status)) {
+      return res.status(404).json({ error: 'Active meeting upload not found' });
+    }
+    const directory = getUploadDirectory(req, String(meeting._id));
+    const chunkPath = path.join(directory, `${index}.chunk`);
+    await fs.promises.mkdir(directory, { recursive: true });
+    if (fs.existsSync(chunkPath)) {
+      req.resume();
+      return res.status(204).end();
+    }
+    const temporaryPath = `${chunkPath}.part`;
+    await pipeline(req, fs.createWriteStream(temporaryPath));
+    const stat = await fs.promises.stat(temporaryPath);
+    if (stat.size !== contentLength) {
+      await fs.promises.rm(temporaryPath, { force: true });
+      return res.status(400).json({ error: 'Incomplete meeting chunk' });
+    }
+    await fs.promises.rename(temporaryPath, chunkPath);
+    res.status(204).end();
+  } catch (error) {
+    logger.error('[projectMeetings] chunk upload failed', error);
+    res.status(500).json({ error: 'Failed to store meeting chunk' });
+  }
+});
+
+router.post('/:meetingId/complete', projectAccess(PermissionBits.EDIT), async (req, res) => {
+  const totalChunks = Number(req.body.totalChunks);
+  const duration = Number(req.body.duration);
+  try {
+    const meeting = await findOwnedMeeting(req);
+    if (!meeting) {
+      return res.status(404).json({ error: 'Active meeting upload not found' });
+    }
+    if (['processing', 'completed'].includes(meeting.status)) {
+      return res.status(202).json(serialize(meeting));
+    }
+    if (meeting.status === 'submitting') {
+      return res.status(409).json({ error: 'Meeting upload is already being submitted' });
+    }
+    if (!['uploading', 'upload_failed'].includes(meeting.status)) {
+      return res.status(409).json({ error: 'Meeting upload cannot be completed' });
+    }
+    if (!Number.isInteger(totalChunks) || totalChunks <= 0 || totalChunks > MAX_CHUNKS) {
+      return res.status(400).json({ error: 'Invalid meeting chunk count' });
+    }
+    const directory = getUploadDirectory(req, String(meeting._id));
+    const audioPath = await assembleChunks(directory, totalChunks);
+    meeting.status = 'submitting';
+    meeting.error = undefined;
+    meeting.duration = Number.isFinite(duration) && duration >= 0 ? duration : meeting.duration;
+    await meeting.save();
+    const submitted = await submitAudio(audioPath);
+    meeting.assemblyTranscriptId = submitted.id;
+    meeting.status = 'processing';
+    await meeting.save();
+    await fs.promises.rm(directory, { recursive: true, force: true });
+    res.status(202).json(serialize(meeting));
+  } catch (error) {
+    logger.error('[projectMeetings] upload completion failed', error);
+    const meeting = await findOwnedMeeting(req).catch(() => null);
+    if (meeting) {
+      meeting.status = 'upload_failed';
+      meeting.error = error.message || 'Failed to submit meeting';
+      await meeting.save().catch(() => undefined);
+    }
+    res.status(502).json({ error: error.message || 'Failed to submit meeting' });
   }
 });
 
@@ -243,7 +393,13 @@ router.delete('/:meetingId', projectAccess(PermissionBits.EDIT), async (req, res
     if (String(meeting.userId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Only the meeting creator can delete it' });
     }
-    await deleteTranscript(meeting.assemblyTranscriptId);
+    if (meeting.assemblyTranscriptId && !meeting.assemblyTranscriptId.startsWith('upload:')) {
+      await deleteTranscript(meeting.assemblyTranscriptId);
+    }
+    await fs.promises.rm(getUploadDirectory(req, String(meeting._id)), {
+      recursive: true,
+      force: true,
+    });
     await deleteMeetingIndex({ meeting, req });
     await meeting.deleteOne();
     res.status(204).end();

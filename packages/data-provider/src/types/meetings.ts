@@ -1,4 +1,10 @@
-export type MeetingStatus = 'processing' | 'completed' | 'failed';
+export type MeetingStatus =
+  | 'uploading'
+  | 'upload_failed'
+  | 'submitting'
+  | 'processing'
+  | 'completed'
+  | 'failed';
 
 export interface MeetingUtterance {
   speaker: string;

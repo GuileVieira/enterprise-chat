@@ -44,6 +44,10 @@ async function _put(url: string, data?: any) {
   return response.data;
 }
 
+async function _putRaw(url: string, data: Blob): Promise<void> {
+  await axios.put(url, data, { headers: { 'Content-Type': 'application/octet-stream' } });
+}
+
 async function _delete<T>(url: string): Promise<T> {
   const response = await axios.delete(url);
   return response.data;
@@ -187,6 +191,7 @@ export default {
   postMultiPart: _postMultiPart,
   postTTS: _postTTS,
   put: _put,
+  putRaw: _putRaw,
   delete: _delete,
   deleteWithOptions: _deleteWithOptions,
   patch: _patch,

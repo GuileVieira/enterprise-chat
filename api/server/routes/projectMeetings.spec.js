@@ -1,5 +1,8 @@
 const express = require('express');
+const fs = require('fs');
 const request = require('supertest');
+
+const uploadRoot = '/tmp/orqest-project-meeting-tests';
 
 const mockFindOne = jest.fn();
 const mockCreate = jest.fn();
@@ -13,6 +16,13 @@ const mockSyncMeetingIndex = jest.fn();
 const mockUploadConfig = jest.fn();
 
 jest.mock('mongoose', () => ({
+  Types: {
+    ObjectId: class {
+      toString() {
+        return 'meeting-1';
+      }
+    },
+  },
   models: {
     Meeting: {
       create: (...args) => mockCreate(...args),
@@ -35,7 +45,7 @@ jest.mock('~/server/middleware', () => ({
     next();
   },
   configMiddleware: (req, _res, next) => {
-    req.config = { paths: { uploads: '/tmp' } };
+    req.config = { paths: { uploads: uploadRoot } };
     mockUploadConfig();
     next();
   },
@@ -100,6 +110,92 @@ describe('project meetings routes', () => {
     mockSyncMeetingIndex.mockResolvedValue({});
     mockDeleteMeetingIndex.mockResolvedValue({});
     mockDeleteTranscript.mockResolvedValue(undefined);
+  });
+
+  afterEach(async () => {
+    await fs.promises.rm(uploadRoot, { recursive: true, force: true });
+  });
+
+  it('persists an upload session before receiving recorded audio', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      status: 'uploading',
+      assemblyTranscriptId: 'upload:meeting-1',
+      speakerNames: new Map(),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockCreate.mockResolvedValue(meeting);
+
+    const response = await request(createApp())
+      .post('/api/projects/project-1/meetings/uploads')
+      .send({
+        duration: 0,
+        recordedAt: '2026-08-04T15:00:00.000Z',
+        mimeType: 'audio/webm',
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({ id: 'meeting-1', status: 'uploading' });
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: expect.anything(),
+        status: 'uploading',
+        assemblyTranscriptId: 'upload:meeting-1',
+        mimeType: 'audio/webm',
+      }),
+    );
+  });
+
+  it('stores idempotent chunks, assembles them by streaming, and submits the persisted meeting', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      status: 'uploading',
+      duration: 0,
+      assemblyTranscriptId: 'upload:meeting-1',
+      speakerNames: new Map(),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockSubmitAudio.mockImplementation(async (filePath) => {
+      expect(await fs.promises.readFile(filePath, 'utf8')).toBe('first-second');
+      return { id: 'transcript-1' };
+    });
+
+    const first = await request(createApp())
+      .put('/api/projects/project-1/meetings/meeting-1/chunks/0')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from('first-'));
+    const duplicate = await request(createApp())
+      .put('/api/projects/project-1/meetings/meeting-1/chunks/0')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from('ignored'));
+    const second = await request(createApp())
+      .put('/api/projects/project-1/meetings/meeting-1/chunks/1')
+      .set('Content-Type', 'application/octet-stream')
+      .send(Buffer.from('second'));
+    const completed = await request(createApp())
+      .post('/api/projects/project-1/meetings/meeting-1/complete')
+      .send({ totalChunks: 2, duration: 3600 });
+    const repeated = await request(createApp())
+      .post('/api/projects/project-1/meetings/meeting-1/complete')
+      .send({ totalChunks: 2, duration: 3600 });
+
+    expect([first.status, duplicate.status, second.status]).toEqual([204, 204, 204]);
+    expect(completed.status).toBe(202);
+    expect(repeated.status).toBe(202);
+    expect(completed.body).toMatchObject({ status: 'processing', duration: 3600 });
+    expect(meeting.assemblyTranscriptId).toBe('transcript-1');
+    expect(meeting.save).toHaveBeenCalledTimes(2);
+    expect(mockSubmitAudio).toHaveBeenCalledTimes(1);
   });
 
   it('submits browser audio and persists project meeting ownership and timing', async () => {

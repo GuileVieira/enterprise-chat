@@ -4,15 +4,24 @@ import { MemoryRouter } from 'react-router-dom';
 import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
 const mockCreateProjectMeeting = jest.fn();
+const mockCreateProjectMeetingUpload = jest.fn();
+const mockCompleteProjectMeetingUpload = jest.fn();
+const mockDeleteMeetingChunk = jest.fn();
 const mockDeleteMeetingChunks = jest.fn();
 const mockGetProjectMeeting = jest.fn();
 const mockGetProjectMeetings = jest.fn();
-const mockReadMeetingChunks = jest.fn();
+const mockListMeetingChunkIndexes = jest.fn();
+const mockListMeetingRecordings = jest.fn();
+const mockReadMeetingChunk = jest.fn();
 const mockSaveMeetingChunk = jest.fn();
+const mockSaveMeetingRecording = jest.fn();
+const mockUploadProjectMeetingChunk = jest.fn();
 
 jest.mock('librechat-data-provider', () => ({
   dataService: {
     createProjectMeeting: (...args: unknown[]) => mockCreateProjectMeeting(...args),
+    createProjectMeetingUpload: (...args: unknown[]) => mockCreateProjectMeetingUpload(...args),
+    completeProjectMeetingUpload: (...args: unknown[]) => mockCompleteProjectMeetingUpload(...args),
     deleteProjectMeeting: jest.fn(),
     getProjectMeeting: (...args: unknown[]) => mockGetProjectMeeting(...args),
     getProjectMeetings: (...args: unknown[]) => mockGetProjectMeetings(...args),
@@ -20,6 +29,7 @@ jest.mock('librechat-data-provider', () => ({
     retryProjectMeetingInsights: jest.fn(),
     updateProjectMeeting: jest.fn(),
     updateProjectMeetingSpeakers: jest.fn(),
+    uploadProjectMeetingChunk: (...args: unknown[]) => mockUploadProjectMeetingChunk(...args),
   },
   DynamicQueryKeys: {
     projectMeetings: (projectId: string) => ['projectMeetings', projectId],
@@ -33,9 +43,13 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('../meetingStorage', () => ({
+  deleteMeetingChunk: (...args: unknown[]) => mockDeleteMeetingChunk(...args),
   deleteMeetingChunks: (...args: unknown[]) => mockDeleteMeetingChunks(...args),
-  readMeetingChunks: (...args: unknown[]) => mockReadMeetingChunks(...args),
+  listMeetingChunkIndexes: (...args: unknown[]) => mockListMeetingChunkIndexes(...args),
+  listMeetingRecordings: (...args: unknown[]) => mockListMeetingRecordings(...args),
+  readMeetingChunk: (...args: unknown[]) => mockReadMeetingChunk(...args),
   saveMeetingChunk: (...args: unknown[]) => mockSaveMeetingChunk(...args),
+  saveMeetingRecording: (...args: unknown[]) => mockSaveMeetingRecording(...args),
 }));
 
 class FakeMediaRecorder {
@@ -95,9 +109,24 @@ describe('ProjectMeetingsTab recorder', () => {
       getTracks: () => [{ stop: stopTrack }],
     });
     mockSaveMeetingChunk.mockResolvedValue(undefined);
+    mockSaveMeetingRecording.mockResolvedValue(undefined);
+    mockDeleteMeetingChunk.mockResolvedValue(undefined);
     mockGetProjectMeetings.mockResolvedValue([]);
-    mockReadMeetingChunks.mockResolvedValue([new Blob(['audio'], { type: 'audio/webm' })]);
+    mockListMeetingChunkIndexes.mockResolvedValue([]);
+    mockListMeetingRecordings.mockResolvedValue([]);
+    mockReadMeetingChunk.mockResolvedValue(new Blob(['audio'], { type: 'audio/webm' }));
     mockDeleteMeetingChunks.mockResolvedValue(undefined);
+    mockUploadProjectMeetingChunk.mockResolvedValue(undefined);
+    mockCreateProjectMeetingUpload.mockResolvedValue({
+      id: 'meeting-1',
+      status: 'uploading',
+      speakerNames: {},
+    });
+    mockCompleteProjectMeetingUpload.mockResolvedValue({
+      id: 'meeting-1',
+      status: 'processing',
+      speakerNames: {},
+    });
     mockCreateProjectMeeting.mockResolvedValue({
       id: 'meeting-1',
       status: 'processing',
@@ -120,8 +149,15 @@ describe('ProjectMeetingsTab recorder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_resume' }));
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_finish' }));
 
-    await waitFor(() => expect(mockCreateProjectMeeting).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockCompleteProjectMeetingUpload).toHaveBeenCalledTimes(1));
+    expect(mockCreateProjectMeetingUpload).toHaveBeenCalledTimes(1);
     expect(mockSaveMeetingChunk).toHaveBeenCalledWith('recording-1', 0, expect.any(Blob));
+    expect(mockUploadProjectMeetingChunk).toHaveBeenCalledWith(
+      'project-1',
+      'meeting-1',
+      0,
+      expect.any(Blob),
+    );
     expect(stopTrack).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('recording-1'));
   });
@@ -133,6 +169,40 @@ describe('ProjectMeetingsTab recorder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
 
     expect(await screen.findByText('com_ui_meeting_microphone_denied')).toBeInTheDocument();
+  });
+
+  it('restores and completes a pending chunked upload after reload', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'recording-pending',
+        meetingId: 'meeting-pending',
+        projectId: 'project-1',
+        mimeType: 'audio/webm',
+        duration: 1800,
+        recordedAt: '2026-08-04T15:00:00.000Z',
+        totalChunks: 2,
+      },
+    ]);
+    mockListMeetingChunkIndexes.mockResolvedValue([1]);
+
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_retry_upload' }));
+
+    await waitFor(() =>
+      expect(mockCompleteProjectMeetingUpload).toHaveBeenCalledWith(
+        'project-1',
+        'meeting-pending',
+        2,
+        1800,
+      ),
+    );
+    expect(mockUploadProjectMeetingChunk).toHaveBeenCalledWith(
+      'project-1',
+      'meeting-pending',
+      1,
+      expect.any(Blob),
+    );
+    expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('recording-pending');
   });
 
   it('shows an accessible spinner while a transcript is processing', async () => {
