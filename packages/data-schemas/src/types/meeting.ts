@@ -5,6 +5,20 @@ export interface IMeetingUtterance {
   text: string;
   start: number;
   end: number;
+  confidence?: number;
+}
+
+export interface IMeetingParticipant {
+  name: string;
+  source: 'manual' | 'google_meet' | 'zoom' | 'teams';
+  channel?: number;
+}
+
+export interface IMeetingSpeakerIdentification {
+  name: string;
+  source: 'unidentified' | 'assemblyai_participants' | 'channel' | 'manual';
+  confidence: number | null;
+  confirmed: boolean;
 }
 
 export interface IMeetingInsights {
@@ -25,7 +39,10 @@ export interface IMeeting extends Document {
   mimeType?: string;
   transcript: string;
   utterances: IMeetingUtterance[];
+  participants: IMeetingParticipant[];
+  multichannel?: boolean;
   speakerNames: Map<string, string>;
+  speakerIdentifications: Map<string, IMeetingSpeakerIdentification>;
   insights: IMeetingInsights;
   indexStatus: 'pending' | 'indexed' | 'failed';
   indexError?: string;

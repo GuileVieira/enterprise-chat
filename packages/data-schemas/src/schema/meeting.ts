@@ -7,6 +7,34 @@ const UtteranceSchema = new Schema(
     text: { type: String, required: true },
     start: { type: Number, required: true },
     end: { type: Number, required: true },
+    confidence: { type: Number, min: 0, max: 1, default: null },
+  },
+  { _id: false },
+);
+
+const ParticipantSchema = new Schema(
+  {
+    name: { type: String, required: true, maxlength: 35 },
+    source: {
+      type: String,
+      enum: ['manual', 'google_meet', 'zoom', 'teams'],
+      required: true,
+    },
+    channel: { type: Number, min: 1, max: 32 },
+  },
+  { _id: false },
+);
+
+const SpeakerIdentificationSchema = new Schema(
+  {
+    name: { type: String, required: true, maxlength: 100 },
+    source: {
+      type: String,
+      enum: ['unidentified', 'assemblyai_participants', 'channel', 'manual'],
+      required: true,
+    },
+    confidence: { type: Number, min: 0, max: 1, default: null },
+    confirmed: { type: Boolean, required: true },
   },
   { _id: false },
 );
@@ -28,7 +56,10 @@ const meetingSchema = new Schema<IMeeting>(
     mimeType: String,
     transcript: { type: String, default: '' },
     utterances: { type: [UtteranceSchema], default: [] },
+    participants: { type: [ParticipantSchema], default: [] },
+    multichannel: { type: Boolean, default: false },
     speakerNames: { type: Map, of: String, default: {} },
+    speakerIdentifications: { type: Map, of: SpeakerIdentificationSchema, default: {} },
     insights: {
       summary: { type: String, default: '' },
       decisions: { type: [String], default: [] },

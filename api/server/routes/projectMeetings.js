@@ -91,11 +91,93 @@ function serialize(meeting) {
   const value = meeting.toObject ? meeting.toObject() : meeting;
   const speakerNames =
     value.speakerNames instanceof Map ? Object.fromEntries(value.speakerNames) : value.speakerNames;
+  const speakerIdentifications =
+    value.speakerIdentifications instanceof Map
+      ? Object.fromEntries(value.speakerIdentifications)
+      : value.speakerIdentifications;
   return {
     ...value,
     id: String(value._id),
     speakerNames: speakerNames ?? {},
+    speakerIdentifications: speakerIdentifications ?? {},
   };
+}
+
+function parseParticipants(value, source = 'manual') {
+  let candidates = value;
+  if (typeof value === 'string') {
+    try {
+      candidates = JSON.parse(value);
+    } catch {
+      candidates = value.split(',');
+    }
+  }
+  if (!Array.isArray(candidates)) {
+    return [];
+  }
+  const allowedSources = new Set(['manual', 'google_meet', 'zoom', 'teams']);
+  const unique = new Map();
+  for (const candidate of candidates) {
+    const name = (typeof candidate === 'string' ? candidate : candidate?.name)?.trim().slice(0, 35);
+    if (!name) {
+      continue;
+    }
+    let participantSource = allowedSources.has(source) ? source : 'manual';
+    if (typeof candidate === 'object' && allowedSources.has(candidate?.source)) {
+      participantSource = candidate.source;
+    }
+    const channel = Number(typeof candidate === 'object' ? candidate?.channel : undefined);
+    unique.set(name.toLocaleLowerCase(), {
+      name,
+      source: participantSource,
+      ...(Number.isInteger(channel) && channel >= 1 && channel <= 32 ? { channel } : {}),
+    });
+  }
+  return [...unique.values()].slice(0, 50);
+}
+
+function mapTranscriptSpeakers(transcript, participants) {
+  const mapping = transcript.speech_understanding?.response?.speaker_identification?.mapping ?? {};
+  const participantNames = new Set(participants.map((participant) => participant.name));
+  const reverseMapping = new Map(
+    Object.entries(mapping)
+      .filter(([, name]) => participantNames.has(name))
+      .map(([speaker, name]) => [name, speaker]),
+  );
+  const utterances = (transcript.utterances || []).map(
+    ({ speaker, text, start, end, confidence }) => ({
+      speaker: reverseMapping.get(speaker) ?? speaker,
+      text,
+      start,
+      end,
+      ...(Number.isFinite(confidence) ? { confidence } : {}),
+    }),
+  );
+  const speakers = [...new Set(utterances.map((item) => item.speaker))];
+  const speakerNames = new Map();
+  const speakerIdentifications = new Map();
+  for (const speaker of speakers) {
+    const channel = Number(String(speaker).match(/^\d+/)?.[0]);
+    const channelParticipant = Number.isInteger(channel)
+      ? participants.find((participant) => participant.channel === channel)
+      : undefined;
+    const identifiedName = participantNames.has(mapping[speaker]) ? mapping[speaker] : '';
+    const name = channelParticipant?.name || identifiedName || `Speaker ${speaker}`;
+    let source = 'unidentified';
+    if (channelParticipant) {
+      source = 'channel';
+    } else if (identifiedName) {
+      source = 'assemblyai_participants';
+    }
+    speakerNames.set(speaker, name);
+    speakerIdentifications.set(speaker, {
+      name,
+      source,
+      confidence: channelParticipant ? 1 : null,
+      confirmed: Boolean(channelParticipant),
+    });
+  }
+  return { speakerIdentifications, speakerNames, utterances };
 }
 
 async function syncMeetingIndexStatus({ meeting, project, req }) {
@@ -136,6 +218,9 @@ router.post('/uploads', projectAccess(PermissionBits.EDIT), async (req, res) => 
     const duration = Number(req.body.duration);
     const recordedAt = new Date(req.body.recordedAt);
     const mimeType = typeof req.body.mimeType === 'string' ? req.body.mimeType : '';
+    const participants = parseParticipants(req.body.participants, req.body.participantSource);
+    const multichannel =
+      req.body.multichannel === true || participants.some(({ channel }) => channel);
     if (!mimeType.startsWith('audio/')) {
       return res.status(400).json({ error: 'Audio MIME type required' });
     }
@@ -150,6 +235,8 @@ router.post('/uploads', projectAccess(PermissionBits.EDIT), async (req, res) => 
       assemblyTranscriptId: `upload:${meetingId}`,
       duration: Number.isFinite(duration) && duration >= 0 ? duration : 0,
       mimeType,
+      participants,
+      multichannel,
       recordedAt: Number.isNaN(recordedAt.getTime()) ? new Date() : recordedAt,
     });
     await fs.promises.mkdir(getUploadDirectory(req, String(meeting._id)), { recursive: true });
@@ -222,7 +309,10 @@ router.post('/:meetingId/complete', projectAccess(PermissionBits.EDIT), async (r
     meeting.error = undefined;
     meeting.duration = Number.isFinite(duration) && duration >= 0 ? duration : meeting.duration;
     await meeting.save();
-    const submitted = await submitAudio(audioPath);
+    const submitted = await submitAudio(audioPath, {
+      participants: meeting.participants,
+      multichannel: meeting.multichannel,
+    });
     meeting.assemblyTranscriptId = submitted.id;
     meeting.status = 'processing';
     await meeting.save();
@@ -246,7 +336,10 @@ router.post('/', projectAccess(PermissionBits.EDIT), upload.single('audio'), asy
   }
   try {
     const project = await getProject(req);
-    const submitted = await submitAudio(req.file.path);
+    const participants = parseParticipants(req.body.participants, req.body.participantSource);
+    const multichannel =
+      req.body.multichannel === 'true' || participants.some(({ channel }) => channel);
+    const submitted = await submitAudio(req.file.path, { participants, multichannel });
     const duration = Number(req.body.duration);
     const recordedAt = new Date(req.body.recordedAt);
     const meeting = await getMeetingModel().create({
@@ -257,6 +350,8 @@ router.post('/', projectAccess(PermissionBits.EDIT), upload.single('audio'), asy
       status: 'processing',
       duration: Number.isFinite(duration) && duration >= 0 ? duration : 0,
       assemblyTranscriptId: submitted.id,
+      participants,
+      multichannel,
       recordedAt: Number.isNaN(recordedAt.getTime()) ? new Date() : recordedAt,
     });
     res.status(202).json(serialize(meeting));
@@ -293,18 +388,10 @@ router.get('/:meetingId', projectAccess(PermissionBits.VIEW), async (req, res) =
     }
 
     meeting.transcript = transcript.text || '';
-    meeting.utterances = (transcript.utterances || []).map(({ speaker, text, start, end }) => ({
-      speaker,
-      text,
-      start,
-      end,
-    }));
-    meeting.speakerNames = new Map(
-      [...new Set(meeting.utterances.map((item) => item.speaker))].map((speaker) => [
-        speaker,
-        `Speaker ${speaker}`,
-      ]),
-    );
+    const identified = mapTranscriptSpeakers(transcript, meeting.participants ?? []);
+    meeting.utterances = identified.utterances;
+    meeting.speakerNames = identified.speakerNames;
+    meeting.speakerIdentifications = identified.speakerIdentifications;
     try {
       meeting.insights = await generateInsights(transcript);
     } catch (error) {
@@ -369,6 +456,21 @@ router.patch('/:meetingId/speakers', projectAccess(PermissionBits.EDIT), async (
       [...speakers].map((speaker) => {
         const name = typeof names[speaker] === 'string' ? names[speaker].trim().slice(0, 100) : '';
         return [speaker, name || `Speaker ${speaker}`];
+      }),
+    );
+    meeting.speakerIdentifications = new Map(
+      [...speakers].map((speaker) => {
+        const name = meeting.speakerNames.get(speaker);
+        const isNamed = name !== `Speaker ${speaker}`;
+        return [
+          speaker,
+          {
+            name,
+            source: isNamed ? 'manual' : 'unidentified',
+            confidence: isNamed ? 1 : null,
+            confirmed: isNamed,
+          },
+        ];
       }),
     );
     await meeting.save();

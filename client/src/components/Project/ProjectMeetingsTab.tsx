@@ -40,6 +40,16 @@ interface MeetingUpload {
   pendingKey?: string;
 }
 
+const parseParticipantNames = (value: string) => [
+  ...new Map(
+    value
+      .split(/[,;\n]/)
+      .map((name) => name.trim().slice(0, 35))
+      .filter(Boolean)
+      .map((name) => [name.toLocaleLowerCase(), name]),
+  ).values(),
+];
+
 const formatTime = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 
@@ -179,6 +189,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
   const [fullscreen, setFullscreen] = useState(false);
   const [search, setSearch] = useState('');
+  const [participantNames, setParticipantNames] = useState('');
 
   const rememberPendingUpload = (pending: PendingRecording | null) => {
     pendingUploadRef.current = pending;
@@ -300,6 +311,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       );
       data.append('duration', String(upload.duration));
       data.append('recordedAt', upload.recordedAt);
+      data.append('participants', JSON.stringify(parseParticipantNames(participantNames)));
       return dataService.createProjectMeeting(projectId, data);
     },
     {
@@ -451,6 +463,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
         duration: 0,
         recordedAt,
         mimeType: recorder.mimeType || mimeType || 'audio/webm',
+        participants: parseParticipantNames(participantNames),
       });
       if (typeof AudioContext !== 'undefined') {
         const audioContext = new AudioContext();
@@ -703,6 +716,24 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                 {formatTime(elapsed)}
               </span>
             </div>
+            {recording === 'idle' && !pendingUpload && (
+              <label className="mb-4 block">
+                <span className="mb-1.5 block text-xs font-medium text-text-secondary">
+                  {localize('com_ui_meeting_known_participants')}
+                </span>
+                <input
+                  type="text"
+                  value={participantNames}
+                  maxLength={500}
+                  onChange={(event) => setParticipantNames(event.target.value)}
+                  placeholder={localize('com_ui_meeting_known_participants_placeholder')}
+                  className="focus:ring-ring-primary/30 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2"
+                />
+                <span className="mt-1 block text-xs text-text-tertiary">
+                  {localize('com_ui_meeting_known_participants_help')}
+                </span>
+              </label>
+            )}
             {(recording === 'recording' || recording === 'paused') && (
               <AudioWaveform
                 active={recording === 'recording'}

@@ -232,6 +232,9 @@ describe('ProjectMeetingsTab recorder', () => {
     renderTab();
     expect(screen.queryByRole('img', { name: 'com_ui_meeting_waveform_inactive' })).toBeNull();
     const audio = new File(['audio'], 'cliente.mp3', { type: 'audio/mpeg' });
+    fireEvent.change(screen.getByText('com_ui_meeting_known_participants').nextElementSibling!, {
+      target: { value: 'Ana, Bruno, Ana' },
+    });
 
     fireEvent.change(document.querySelector('input[type="file"]') as HTMLInputElement, {
       target: { files: [audio] },
@@ -241,6 +244,7 @@ describe('ProjectMeetingsTab recorder', () => {
     const form = mockCreateProjectMeeting.mock.calls[0][1] as FormData;
     expect(form.get('audio')).toEqual(audio);
     expect(form.get('duration')).toBe('0');
+    expect(form.get('participants')).toBe('["Ana","Bruno"]');
   });
 
   it('filters meetings by title, summary, or transcript speech', async () => {

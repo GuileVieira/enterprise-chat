@@ -136,6 +136,7 @@ describe('project meetings routes', () => {
         duration: 0,
         recordedAt: '2026-08-04T15:00:00.000Z',
         mimeType: 'audio/webm',
+        participants: [{ name: 'Ana', source: 'google_meet', channel: 1 }],
       });
 
     expect(response.status).toBe(201);
@@ -146,6 +147,8 @@ describe('project meetings routes', () => {
         status: 'uploading',
         assemblyTranscriptId: 'upload:meeting-1',
         mimeType: 'audio/webm',
+        participants: [{ name: 'Ana', source: 'google_meet', channel: 1 }],
+        multichannel: true,
       }),
     );
   });
@@ -227,7 +230,10 @@ describe('project meetings routes', () => {
 
     expect(response.status).toBe(202);
     expect(mockUploadConfig).toHaveBeenCalledTimes(1);
-    expect(mockSubmitAudio).toHaveBeenCalledWith('/tmp/test-meeting.webm');
+    expect(mockSubmitAudio).toHaveBeenCalledWith('/tmp/test-meeting.webm', {
+      participants: [],
+      multichannel: false,
+    });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         projectId: 'project-1',
@@ -288,6 +294,65 @@ describe('project meetings routes', () => {
         project: expect.objectContaining({ projectId: 'project-1' }),
       }),
     );
+  });
+
+  it('uses only known participant mappings and preserves confidence and speaker boundaries', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      userId: 'user-1',
+      title: 'Reunião',
+      status: 'processing',
+      duration: 60,
+      assemblyTranscriptId: 'transcript-1',
+      participants: [
+        { name: 'Ana', source: 'google_meet' },
+        { name: 'Bruno', source: 'zoom', channel: 2 },
+      ],
+      utterances: [],
+      speakerNames: new Map(),
+      speakerIdentifications: new Map(),
+      insights: {},
+      recordedAt: new Date('2026-07-23T13:00:00.000Z'),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockGetTranscript.mockResolvedValue({
+      status: 'completed',
+      text: 'Bom dia. Olá.',
+      speech_understanding: {
+        response: { speaker_identification: { status: 'success', mapping: { A: 'Ana' } } },
+      },
+      utterances: [
+        { speaker: 'Ana', text: 'Bom dia.', start: 0, end: 1000, confidence: 0.97 },
+        { speaker: '2', text: 'Olá.', start: 1200, end: 1800, confidence: 0.91 },
+        { speaker: 'C', text: 'Tudo bem.', start: 2000, end: 2600, confidence: 0.71 },
+      ],
+    });
+    mockGenerateInsights.mockResolvedValue({
+      summary: '',
+      decisions: [],
+      nextSteps: [],
+      tasks: [],
+    });
+
+    const response = await request(createApp()).get('/api/projects/project-1/meetings/meeting-1');
+
+    expect(response.status).toBe(200);
+    expect(response.body.utterances).toEqual([
+      { speaker: 'A', text: 'Bom dia.', start: 0, end: 1000, confidence: 0.97 },
+      { speaker: '2', text: 'Olá.', start: 1200, end: 1800, confidence: 0.91 },
+      { speaker: 'C', text: 'Tudo bem.', start: 2000, end: 2600, confidence: 0.71 },
+    ]);
+    expect(response.body.speakerNames).toEqual({ A: 'Ana', 2: 'Bruno', C: 'Speaker C' });
+    expect(response.body.speakerIdentifications).toMatchObject({
+      A: { name: 'Ana', source: 'assemblyai_participants', confidence: null, confirmed: false },
+      2: { name: 'Bruno', source: 'channel', confidence: 1, confirmed: true },
+      C: { name: 'Speaker C', source: 'unidentified', confidence: null, confirmed: false },
+    });
   });
 
   it('completes the transcript when optional insights and indexing are unavailable', async () => {
@@ -448,7 +513,17 @@ describe('project meetings routes', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.speakerNames).toEqual({ A: 'Ana' });
+    expect(response.body.utterances).toEqual([
+      { speaker: 'A', text: 'Primeira fala.', start: 0, end: 1000 },
+      { speaker: 'A', text: 'Segunda fala.', start: 2000, end: 3000 },
+    ]);
     expect(meeting.speakerNames.get('A')).toBe('Ana');
+    expect(meeting.speakerIdentifications.get('A')).toEqual({
+      name: 'Ana',
+      source: 'manual',
+      confidence: 1,
+      confirmed: true,
+    });
     expect(mockSyncMeetingIndex).toHaveBeenCalledWith(expect.objectContaining({ meeting }));
   });
 

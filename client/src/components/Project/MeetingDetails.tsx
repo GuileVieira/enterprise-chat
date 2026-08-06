@@ -78,6 +78,19 @@ export default function MeetingDetails({
     );
   }
   const speakers = [...new Set(meeting.utterances.map((item) => item.speaker))];
+  const identificationLabel = (speaker: string) => {
+    const identification = meeting.speakerIdentifications?.[speaker];
+    if (identification?.source === 'manual' && identification.confirmed) {
+      return localize('com_ui_meeting_speaker_confirmed');
+    }
+    if (identification?.source === 'channel' && identification.confirmed) {
+      return localize('com_ui_meeting_speaker_channel');
+    }
+    if (identification?.source === 'assemblyai_participants') {
+      return localize('com_ui_meeting_speaker_suggested');
+    }
+    return localize('com_ui_meeting_speaker_unidentified');
+  };
   const hasInsights =
     Boolean(meeting.insights.summary) ||
     meeting.insights.decisions.length > 0 ||
@@ -180,16 +193,26 @@ export default function MeetingDetails({
           <h3 className="mb-3 text-sm font-medium text-text-primary">
             {localize('com_ui_meeting_participants')}
           </h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {speakers.map((speaker) => (
-              <input
-                key={speaker}
-                value={speakerNames[speaker] ?? `Speaker ${speaker}`}
-                disabled={!canEdit}
-                onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-                className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
-                aria-label={`Speaker ${speaker}`}
-              />
+              <label key={speaker} className="min-w-40 flex-1">
+                <input
+                  value={speakerNames[speaker] ?? `Speaker ${speaker}`}
+                  disabled={!canEdit}
+                  onChange={(event) => onSpeakerChange(speaker, event.target.value)}
+                  className="w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                  aria-label={`Speaker ${speaker}`}
+                />
+                <span
+                  className={`mt-1 block text-xs ${
+                    meeting.speakerIdentifications?.[speaker]?.source === 'assemblyai_participants'
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-text-tertiary'
+                  }`}
+                >
+                  {identificationLabel(speaker)}
+                </span>
+              </label>
             ))}
             {canEdit && (
               <button type="button" onClick={onSave} className="btn btn-primary">
@@ -277,6 +300,13 @@ export default function MeetingDetails({
                   {speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}
                 </div>
                 <p className="text-sm leading-6 text-text-primary">{utterance.text}</p>
+                {utterance.confidence !== undefined && utterance.confidence < 0.8 && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    {localize('com_ui_meeting_low_transcript_confidence', {
+                      confidence: Math.round(utterance.confidence * 100),
+                    })}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() =>

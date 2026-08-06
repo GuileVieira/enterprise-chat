@@ -66,6 +66,51 @@ describe('AssemblyAI meeting service', () => {
     });
   });
 
+  it('restricts speaker identification to provided participant names', async () => {
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ upload_url: 'https://cdn.assemblyai.com/audio' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'transcript-1', status: 'queued' }),
+      });
+
+    await submitAudio(__filename, {
+      participants: [{ name: 'Ana' }, { name: 'Bruno' }],
+    });
+
+    expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toMatchObject({
+      speaker_labels: true,
+      speech_understanding: {
+        request: {
+          speaker_identification: {
+            speaker_type: 'name',
+            speakers: [{ name: 'Ana' }, { name: 'Bruno' }],
+            effort: 'medium',
+          },
+        },
+      },
+    });
+  });
+
+  it('enables multichannel only when channel metadata is available', async () => {
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ upload_url: 'https://cdn.assemblyai.com/audio' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 'transcript-1', status: 'queued' }),
+      });
+
+    await submitAudio(__filename, { multichannel: true });
+
+    expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toMatchObject({ multichannel: true });
+  });
+
   it('requests structured meeting insights and parses fenced JSON', async () => {
     global.fetch.mockResolvedValue({
       ok: true,

@@ -23,13 +23,18 @@ async function request(url, options) {
   return body;
 }
 
-async function submitAudio(filepath) {
+async function submitAudio(filepath, { participants = [], multichannel = false } = {}) {
   const upload = await request(`${API_URL}/v2/upload`, {
     method: 'POST',
     headers: getHeaders('application/octet-stream'),
     body: fs.createReadStream(filepath),
     duplex: 'half',
   });
+  const speakers = participants
+    .map((participant) => participant?.name?.trim())
+    .filter(Boolean)
+    .slice(0, 50)
+    .map((name) => ({ name }));
   return request(`${API_URL}/v2/transcript`, {
     method: 'POST',
     headers: getHeaders('application/json'),
@@ -38,6 +43,20 @@ async function submitAudio(filepath) {
       speech_models: ['universal-3-5-pro', 'universal-2'],
       language_detection: true,
       speaker_labels: true,
+      ...(multichannel ? { multichannel: true } : {}),
+      ...(speakers.length > 0
+        ? {
+            speech_understanding: {
+              request: {
+                speaker_identification: {
+                  speaker_type: 'name',
+                  speakers,
+                  effort: 'medium',
+                },
+              },
+            },
+          }
+        : {}),
     }),
   });
 }

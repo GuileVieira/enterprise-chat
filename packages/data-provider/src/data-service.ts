@@ -894,7 +894,7 @@ export const createProjectMeeting = (
 
 export const createProjectMeetingUpload = (
   id: string,
-  payload: { duration: number; recordedAt: string; mimeType: string },
+  payload: { duration: number; recordedAt: string; mimeType: string; participants?: string[] },
 ): Promise<import('./types/meetings').ProjectMeeting> =>
   request.post(endpoints.projectMeetingUpload(id), payload);
 

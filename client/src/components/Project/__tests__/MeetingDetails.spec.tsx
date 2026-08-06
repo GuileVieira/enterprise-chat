@@ -19,6 +19,9 @@ const meeting: ProjectMeeting = {
     { speaker: 'A', text: 'Segunda fala.', start: 2000, end: 3000 },
   ],
   speakerNames: { A: 'Ana' },
+  speakerIdentifications: {
+    A: { name: 'Ana', source: 'assemblyai_participants', confidence: null, confirmed: false },
+  },
   insights: {
     summary: 'Resumo',
     decisions: [],
@@ -86,6 +89,36 @@ describe('MeetingDetails', () => {
 
     fireEvent.click(screen.getAllByText('com_ui_save')[1]);
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('flags automatic speaker suggestions and low-confidence utterances', () => {
+    render(
+      <MeetingDetails
+        meeting={{
+          ...meeting,
+          utterances: [{ ...meeting.utterances[0], confidence: 0.72 }],
+        }}
+        canEdit
+        title="Reunião"
+        speakerNames={{ A: 'Ana' }}
+        indexing={false}
+        generatingInsights={false}
+        canDelete={false}
+        deleting={false}
+        onTitleChange={jest.fn()}
+        onTitleSave={jest.fn()}
+        onIndexRetry={jest.fn()}
+        onInsightsRetry={jest.fn()}
+        onSpeakerChange={jest.fn()}
+        onSave={jest.fn()}
+        onChat={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('com_ui_meeting_speaker_suggested')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'com_ui_meeting_transcript' }));
+    expect(screen.getByText('com_ui_meeting_low_transcript_confidence')).toBeInTheDocument();
   });
 
   it('edits the meeting title without showing redundant indexed status', () => {

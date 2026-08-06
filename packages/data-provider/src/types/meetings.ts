@@ -11,6 +11,20 @@ export interface MeetingUtterance {
   text: string;
   start: number;
   end: number;
+  confidence?: number;
+}
+
+export interface MeetingParticipant {
+  name: string;
+  source: 'manual' | 'google_meet' | 'zoom' | 'teams';
+  channel?: number;
+}
+
+export interface MeetingSpeakerIdentification {
+  name: string;
+  source: 'unidentified' | 'assemblyai_participants' | 'channel' | 'manual';
+  confidence: number | null;
+  confirmed: boolean;
 }
 
 export interface MeetingInsights {
@@ -29,7 +43,10 @@ export interface ProjectMeeting {
   duration: number;
   transcript: string;
   utterances: MeetingUtterance[];
+  participants?: MeetingParticipant[];
+  multichannel?: boolean;
   speakerNames: Record<string, string>;
+  speakerIdentifications?: Record<string, MeetingSpeakerIdentification>;
   insights: MeetingInsights;
   indexStatus: 'pending' | 'indexed' | 'failed';
   indexError?: string;
