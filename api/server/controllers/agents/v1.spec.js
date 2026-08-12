@@ -1209,6 +1209,36 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       expect(agent.tool_resources.context.file_ids).toEqual([cloneAuthorFileId]);
     });
 
+    test('duplicateAgentHandler should share owner-created copies with the tenant', async () => {
+      const sourceAgent = await Agent.create({
+        id: `agent_${uuidv4()}`,
+        name: 'Source Agent',
+        provider: 'openai',
+        model: 'gpt-4',
+        author: new mongoose.Types.ObjectId(),
+      });
+      const db = require('~/models');
+      jest.spyOn(db, 'getActions').mockResolvedValueOnce([]);
+      mockReq.user.role = SystemRoles.OWNER;
+      mockReq.user.tenantId = 'tenant-owner';
+      mockReq.params.id = sourceAgent.id;
+
+      await duplicateAgentHandler(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(201);
+      const { agent } = mockRes.json.mock.calls[0][0];
+      expect(grantPermission).toHaveBeenCalledWith(
+        expect.objectContaining({
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-owner',
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: mockReq.user.id,
+        }),
+      );
+    });
+
     test('revertAgentVersionHandler should prune restored file_ids not owned by the agent author', async () => {
       const agentAuthorId = new mongoose.Types.ObjectId();
       const otherUserId = new mongoose.Types.ObjectId();

@@ -843,24 +843,39 @@ const duplicateAgentHandler = async (req, res) => {
     const newAgent = await createAgentInRequestTenant(req, createDuplicatedAgent);
 
     try {
-      await Promise.all([
-        grantPermission({
+      const permissionGrants = [
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.AGENT,
           resourceId: newAgent._id,
           accessRoleId: AccessRoleIds.AGENT_OWNER,
           grantedBy: userId,
-        }),
-        grantPermission({
+        },
+        {
           principalType: PrincipalType.USER,
           principalId: userId,
           resourceType: ResourceType.REMOTE_AGENT,
           resourceId: newAgent._id,
           accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
           grantedBy: userId,
-        }),
-      ]);
+        },
+      ];
+
+      if (req.user.role === SystemRoles.OWNER && req.user.tenantId) {
+        permissionGrants.push({
+          principalType: PrincipalType.TENANT,
+          principalId: req.user.tenantId,
+          resourceType: ResourceType.AGENT,
+          resourceId: newAgent._id,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          grantedBy: userId,
+        });
+      }
+
+      await Promise.all(
+        permissionGrants.map((permissionGrant) => grantPermission(permissionGrant)),
+      );
       logger.debug(
         `[duplicateAgent] Granted owner permissions to user ${userId} for duplicated agent ${newAgent.id}`,
       );

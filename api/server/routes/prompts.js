@@ -373,6 +373,12 @@ const createNewPromptGroup = async (req, res) => {
               }),
             ),
           );
+        } else if (req.user.role === SystemRoles.OWNER && req.user.tenantId) {
+          await grantPromptGroupTenantViewerPermission({
+            userId: req.user.id,
+            promptGroupId: result.prompt.groupId.toString(),
+            tenantId: req.user.tenantId,
+          });
         }
       } catch (permissionError) {
         logger.error(

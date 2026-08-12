@@ -1075,13 +1075,13 @@
     "semantic_hash": ""
   },
   "api/server/controllers/agents/v1.js": {
-    "mtime": 1781719437.3427346,
-    "ast_hash": "21860c8001e98e0d86335a94f990a5a7",
+    "mtime": 1786562285.1475334,
+    "ast_hash": "c56a0c7d99724de4fa155cc2b39e97c0",
     "semantic_hash": ""
   },
   "api/server/controllers/agents/v1.spec.js": {
-    "mtime": 1781719391.6271007,
-    "ast_hash": "d84ef96e58c31f561d93b5714f7fa360",
+    "mtime": 1786562330.397075,
+    "ast_hash": "64efe8987699051c441131fbb738f5f0",
     "semantic_hash": ""
   },
   "api/server/controllers/assistants/chatV1.js": {
@@ -1970,13 +1970,13 @@
     "semantic_hash": ""
   },
   "api/server/routes/prompts.js": {
-    "mtime": 1779209797.077787,
-    "ast_hash": "f073e6e28be2920ea8442cd3440edd85",
+    "mtime": 1786562285.1063838,
+    "ast_hash": "7049f90bde6d71db71489b1d0643389a",
     "semantic_hash": ""
   },
   "api/server/routes/prompts.test.js": {
-    "mtime": 1779209797.078036,
-    "ast_hash": "bfcd3bf5f09cd593c0fb999c1ae0b6fe",
+    "mtime": 1786562416.3181689,
+    "ast_hash": "82a838e1e24f6a24d0bdea11e74c52ad",
     "semantic_hash": ""
   },
   "api/server/routes/roles.js": {

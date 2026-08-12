@@ -142,6 +142,8 @@ Quirks:
 - **Project context injection requires `PROJECT VIEW`.** Agents/assistants may load project instructions, memories, and files only after checking effective project permissions.
 - **Mutating project contents requires project access.** Upload/link files with `projectId` only after project permission checks; reject attaching foreign file IDs or prompt groups the user cannot view.
 - **Project detail and file list must follow project ACL.** `GET /api/projects/:projectId` should rely on project `VIEW` ACL, not global project feature gates after a project is already shared. `GET /api/files?projectId=...` must list files by both `file.projectId` and `project.fileIds` for legacy/linked files.
+- **OWNER-created prompts and agents are tenant-shared.** When a tenant `OWNER` creates a prompt group or creates/duplicates an agent, grant that tenant the matching viewer ACL automatically so every user in the same tenant can use it; never share it with another tenant implicitly.
+- **Creation permissions are not revocation controls.** Disabling prompt or agent `CREATE` must block only future creation; preserve all existing tenant viewer ACL grants and keep previously shared prompts and agents visible and usable.
 - **Project Meta Ads is default-on.** Treat missing `interface.metaAds` as enabled; only `interface.metaAds: false` disables the UI, API routes, and cron. Global YAML config and tenant config overrides may both disable it.
 - **Meta Ads campaign chat is explicit.** The project panel must show metrics without IA/token spend; only open a draft chat when the user selects ad sets and clicks the traffic-agent button. Use `interface.metaAdsTrafficAgentId` to preselect the agent, preserve `projectId`, and never auto-submit that draft.
 
@@ -191,4 +193,3 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
-

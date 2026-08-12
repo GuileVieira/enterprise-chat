@@ -158,6 +158,12 @@ async function setupTestData() {
       email: 'owner@example.com',
       role: SystemRoles.USER,
     }),
+    tenantOwner: await User.create({
+      name: 'Tenant Owner',
+      email: 'tenant-owner@example.com',
+      role: SystemRoles.OWNER,
+      tenantId: 'tenant-a',
+    }),
     viewer: await User.create({
       name: 'Prompt Viewer',
       email: 'viewer@example.com',
@@ -208,7 +214,10 @@ async function setupTestData() {
     },
   ]);
 
-  // Mock getRoleByName
+  setupTestDataRoleMock();
+}
+
+function setupTestDataRoleMock() {
   const { getRoleByName } = require('~/models');
   getRoleByName.mockImplementation((roleName) => {
     switch (roleName) {
@@ -216,6 +225,8 @@ async function setupTestData() {
         return { permissions: { PROMPTS: { USE: true, CREATE: true } } };
       case SystemRoles.ADMIN:
         return { permissions: { PROMPTS: { USE: true, CREATE: true, SHARE: true } } };
+      case SystemRoles.OWNER:
+        return { permissions: { PROMPTS: { USE: true, CREATE: true } } };
       default:
         return null;
     }
@@ -226,6 +237,7 @@ describe('Prompt Routes - ACL Permissions', () => {
   let consoleErrorSpy;
 
   beforeEach(() => {
+    setupTestDataRoleMock();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
   });
 
@@ -267,15 +279,15 @@ describe('Prompt Routes - ACL Permissions', () => {
     expect(tenantEntries.every((entry) => entry.permBits === PermissionBits.VIEW)).toBe(true);
   });
 
-  it('ignores requested tenant sharing when non-admin creates a prompt group', async () => {
-    setTestUser(app, testUsers.owner);
+  it('shares owner-created prompt groups only with the owner tenant', async () => {
+    setTestUser(app, testUsers.tenantOwner);
 
     const response = await request(app)
       .post('/api/prompts')
       .send({
-        group: { name: 'Private Prompt', category: 'ops' },
-        prompt: { prompt: 'Keep private', type: 'text' },
-        shareTenantIds: ['tenant-a'],
+        group: { name: 'Owner Tenant Prompt', category: 'ops' },
+        prompt: { prompt: 'Share with owner tenant', type: 'text' },
+        shareTenantIds: ['tenant-b'],
       });
 
     expect(response.status).toBe(200);
@@ -287,7 +299,47 @@ describe('Prompt Routes - ACL Permissions', () => {
       resourceId: { $in: [groupId.toString(), new ObjectId(groupId)] },
     }).lean();
 
-    expect(tenantEntries).toHaveLength(0);
+    expect(tenantEntries).toHaveLength(1);
+    expect(tenantEntries[0]).toEqual(
+      expect.objectContaining({
+        principalId: 'tenant-a',
+        permBits: PermissionBits.VIEW,
+      }),
+    );
+  });
+
+  it('keeps existing owner prompts tenant-visible after prompt creation is disabled', async () => {
+    setTestUser(app, testUsers.tenantOwner);
+    const created = await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Persistent Tenant Prompt', category: 'ops' },
+        prompt: { prompt: 'Remain shared', type: 'text' },
+      })
+      .expect(200);
+    const groupId = created.body.prompt.groupId.toString();
+
+    const { getRoleByName } = require('~/models');
+    getRoleByName.mockImplementation((roleName) => ({
+      permissions: {
+        PROMPTS: {
+          USE: true,
+          CREATE: roleName !== SystemRoles.OWNER,
+        },
+      },
+    }));
+
+    await request(app)
+      .post('/api/prompts')
+      .send({
+        group: { name: 'Blocked Prompt', category: 'ops' },
+        prompt: { prompt: 'Must not be created', type: 'text' },
+      })
+      .expect(403);
+
+    setTestUser(app, testUsers.tenantViewer);
+    const response = await request(app).get('/api/prompts/groups').expect(200);
+    expect(response.body.promptGroups.map((group) => group._id.toString())).toContain(groupId);
   });
 
   it('lists a tenant-shared admin skill for users in that tenant only', async () => {
