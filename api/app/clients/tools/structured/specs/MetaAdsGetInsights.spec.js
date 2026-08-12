@@ -489,6 +489,51 @@ describe('MetaAdsGetInsights', () => {
     );
   });
 
+  it.each(['region', 'country'])('returns investment and impact by %s', async (breakdown) => {
+    fetch.mockResolvedValueOnce(
+      createResponse({
+        data: [
+          {
+            campaign_id: 'campaign-1',
+            campaign_name: 'Campaign 1',
+            [breakdown]: breakdown === 'region' ? 'Sao Paulo' : 'BR',
+            spend: '12.50',
+            impressions: '1000',
+            reach: '800',
+            clicks: '25',
+            actions: [{ action_type: 'link_click', value: '20' }],
+          },
+        ],
+      }),
+    );
+
+    const result = JSON.parse(
+      await createTool().call({
+        level: 'campaign',
+        since: '2026-07-01',
+        until: '2026-07-31',
+        breakdown,
+        metrics: ['spend', 'impressions', 'reach', 'clicks', 'actions'],
+      }),
+    );
+
+    const url = new URL(fetch.mock.calls[0][0]);
+    expect(url.searchParams.get('breakdowns')).toBe(breakdown);
+    expect(url.searchParams.get('time_increment')).toBeNull();
+    expect(url.searchParams.get('fields').split(',')).toContain(breakdown);
+    expect(result.breakdown).toBe(breakdown);
+    expect(result.tables[breakdown]).toEqual([
+      expect.objectContaining({
+        [breakdown]: breakdown === 'region' ? 'Sao Paulo' : 'BR',
+        spend: 12.5,
+        impressions: 1000,
+        reach: 800,
+        clicks: 25,
+        actions: { link_click: 20 },
+      }),
+    ]);
+  });
+
   it('returns a safe error when project and tenant tokens are missing', async () => {
     getTenantSecret.mockResolvedValue(null);
 

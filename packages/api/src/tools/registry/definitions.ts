@@ -445,8 +445,9 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
     },
     breakdown: {
       type: 'string',
-      enum: ['none', 'day'],
-      description: 'Use day only when daily detail is requested.',
+      enum: ['none', 'day', 'region', 'country'],
+      description:
+        'Optional detail breakdown: day for daily trends, region or country for geographic impact and investment analysis.',
     },
     campaign_id: {
       type: 'string',
@@ -592,7 +593,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_get_insights: {
     name: 'meta_ads_get_insights',
     description:
-      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Fetches every page internally and returns consolidated totals before bounded summary tables, avoiding raw-data context overflow. Use campaign_id, adset_id, or ad_id for drill-down and breakdown=day only for daily detail. Omitted counts indicate more details are available. Historical queries include paused ads that had results in the requested period.',
+      'Read-only Meta Graph API tool for campaign, ad set, or ad-level insights. Fetches every page internally and returns consolidated totals before bounded summary tables, avoiding raw-data context overflow. Use campaign_id, adset_id, or ad_id for drill-down; use breakdown=day for daily detail or breakdown=region/country for geographic impact and investment. Omitted counts indicate more details are available. Historical queries include paused ads that had results in the requested period.',
     schema: metaAdsGetInsightsSchema,
     toolType: 'builtin',
   },

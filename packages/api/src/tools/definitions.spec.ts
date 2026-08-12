@@ -210,6 +210,11 @@ describe('definitions.ts', () => {
             enum: ['campaign', 'adset', 'ad'],
           }),
         );
+        expect(metaAdsDef?.schema.properties?.breakdown).toEqual(
+          expect.objectContaining({
+            enum: ['none', 'day', 'region', 'country'],
+          }),
+        );
       });
 
       it('does not resolve `execute_code` as a builtin tool definition (registered by initializeAgent instead)', async () => {

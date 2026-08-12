@@ -82,8 +82,9 @@ const metaAdsGetInsightsJsonSchema = {
     },
     breakdown: {
       type: 'string',
-      enum: ['none', 'day'],
-      description: 'Use day only when daily detail is requested.',
+      enum: ['none', 'day', 'region', 'country'],
+      description:
+        'Optional detail breakdown: day for daily trends, region or country for geographic impact and investment analysis.',
     },
     campaign_id: {
       type: 'string',
@@ -212,7 +213,7 @@ function buildFiltering(args) {
     .map(([field, value]) => ({ field, operator: 'EQUAL', value }));
 }
 
-function buildFields(level, metrics, byDay) {
+function buildFields(level, metrics, breakdown) {
   const fields = new Set(META_IDENTITY_FIELDS_BY_LEVEL[level]);
   for (const metric of metrics) {
     if (['frequency', 'cpm', 'ctr', 'cpc'].includes(metric)) {
@@ -224,8 +225,10 @@ function buildFields(level, metrics, byDay) {
       fields.add(metric);
     }
   }
-  if (byDay) {
+  if (breakdown === 'day') {
     fields.add('date_start');
+  } else if (['region', 'country'].includes(breakdown)) {
+    fields.add(breakdown);
   }
   return [...fields].join(',');
 }
@@ -245,6 +248,7 @@ class MetaAdsGetInsights extends Tool {
     'In Orqest, use actions.link_click as the Instagram profile visit result metric. ' +
     'Use video_thruplay_watched_actions for ThruPlay; never substitute actions.video_view, which is a 3-second video view. ' +
     'For ad or creative questions, always use level ad: campaign and ad set rows are not creative substitutes. ' +
+    'Use breakdown region or country to compare geographic impact, delivery, and investment. ' +
     'Fetches every Meta page internally, then returns totals before bounded campaign, ad set, ad, and optional daily summary tables. ' +
     'Use campaign_id, adset_id, or ad_id for drill-down; omitted counts indicate more details are available.';
 
@@ -322,7 +326,7 @@ class MetaAdsGetInsights extends Tool {
     after,
     fields,
     filtering,
-    byDay,
+    breakdown,
   }) {
     const params = {
       level,
@@ -330,7 +334,8 @@ class MetaAdsGetInsights extends Tool {
       time_range: JSON.stringify({ since, until }),
       limit,
       ...(filtering.length > 0 ? { filtering: JSON.stringify(filtering) } : {}),
-      ...(byDay ? { time_increment: 1 } : {}),
+      ...(breakdown === 'day' ? { time_increment: 1 } : {}),
+      ...(['region', 'country'].includes(breakdown) ? { breakdowns: breakdown } : {}),
       ...(after ? { after } : {}),
     };
     const payload = await metaGet({
@@ -396,9 +401,14 @@ class MetaAdsGetInsights extends Tool {
         DEFAULT_DETAIL_LIMIT,
         MAX_DETAIL_LIMIT,
       );
-      const byDay = parseEnum(args.breakdown, ['none', 'day'], 'none', 'breakdown') === 'day';
+      const breakdown = parseEnum(
+        args.breakdown,
+        ['none', 'day', 'region', 'country'],
+        'none',
+        'breakdown',
+      );
       const filtering = buildFiltering(args);
-      const fields = buildFields(level, metrics, byDay);
+      const fields = buildFields(level, metrics, breakdown);
       const graphVersion = parseGraphVersion(args.graph_version);
       let nextAfter;
       const projectId =
@@ -410,7 +420,7 @@ class MetaAdsGetInsights extends Tool {
         sortBy,
         sortOrder,
         detailLimit,
-        byDay,
+        breakdown,
       });
       const seenCursors = new Set();
       let status = 200;
@@ -428,7 +438,7 @@ class MetaAdsGetInsights extends Tool {
           after: nextAfter,
           fields,
           filtering,
-          byDay,
+          breakdown,
         });
         if (!page.ok) {
           return JSON.stringify(page);
@@ -483,6 +493,7 @@ class MetaAdsGetInsights extends Tool {
         since,
         until,
         level,
+        breakdown,
         rowsProcessed: result.processedRows,
         pagesFetched,
         metrics,

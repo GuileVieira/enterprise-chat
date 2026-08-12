@@ -3,6 +3,8 @@ const DIMENSIONS = {
   adset: ['campaign_id', 'campaign_name', 'adset_id', 'adset_name'],
   ad: ['campaign_id', 'campaign_name', 'adset_id', 'adset_name', 'ad_id', 'ad_name'],
   day: ['date_start'],
+  region: ['region'],
+  country: ['country'],
 };
 
 const ADDITIVE_METRICS = ['spend', 'impressions', 'reach', 'clicks'];
@@ -70,11 +72,11 @@ function keyFor(row, dimensions) {
   return dimensions.map((field) => row[field] ?? '').join('\u0000');
 }
 
-function createInsightsSummary({ level, metrics, sortBy, sortOrder, detailLimit, byDay }) {
+function createInsightsSummary({ level, metrics, sortBy, sortOrder, detailLimit, breakdown }) {
   const tableNames = ['campaign'];
   if (level !== 'campaign') tableNames.push('adset');
   if (level === 'ad') tableNames.push('ad');
-  if (byDay) tableNames.push('day');
+  if (breakdown !== 'none') tableNames.push(breakdown);
   const maps = Object.fromEntries(tableNames.map((name) => [name, new Map()]));
   const totals = {};
   let processedRows = 0;
