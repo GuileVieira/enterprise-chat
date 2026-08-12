@@ -1731,6 +1731,8 @@ export const imageGenTools = new Set([
   'dall-e',
   'stable-diffusion',
   'flux',
+  'image_gen_oai',
+  'image_edit_oai',
   'gemini_image_gen',
   'openrouter_gemini_image_gen',
 ]);

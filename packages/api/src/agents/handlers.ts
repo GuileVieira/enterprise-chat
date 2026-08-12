@@ -1,3 +1,4 @@
+import { Readable } from 'node:stream';
 import { logger } from '@librechat/data-schemas';
 import { GraphEvents, Constants, CODE_EXECUTION_TOOLS } from '@librechat/agents';
 import type {
@@ -10,6 +11,7 @@ import type {
   ToolExecuteBatchRequest,
 } from '@librechat/agents';
 import { Types } from 'mongoose';
+import { imageGenTools } from 'librechat-data-provider';
 import type { CodeEnvRef } from 'librechat-data-provider';
 import type { StructuredToolInterface } from '@librechat/agents/langchain/tools';
 import type { SkillFileRecord } from './skillFiles';
@@ -156,6 +158,106 @@ const MAX_BINARY_BYTES = 5 * 1024 * 1024;
 const MAX_CACHE_BYTES = 512 * 1024;
 
 const IMAGE_MIMES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+interface ImageArtifact {
+  content?: Array<{
+    type?: string;
+    image_url?: string | { url?: string };
+  }>;
+  file_ids?: string[];
+  session_id?: string;
+  files?: Array<{
+    id: string;
+    resource_id: string;
+    name: string;
+    storage_session_id: string;
+    kind: 'user';
+  }>;
+  [key: string]: unknown;
+}
+
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  'image/gif': 'gif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
+async function primeImageArtifactForCode(
+  toolName: string,
+  artifact: unknown,
+  options: ToolExecuteOptions,
+  codeEnvAvailable: boolean,
+  req?: ServerRequest,
+): Promise<unknown> {
+  if (
+    !codeEnvAvailable ||
+    !imageGenTools.has(toolName) ||
+    !artifact ||
+    !options.batchUploadCodeEnvFiles ||
+    !req
+  ) {
+    return artifact;
+  }
+  const userId = req.user?.id;
+  if (!userId) return artifact;
+
+  const imageArtifact = artifact as ImageArtifact;
+  const uploads: Array<{ stream: NodeJS.ReadableStream; filename: string }> = [];
+  for (let i = 0; i < (imageArtifact.content?.length ?? 0); i++) {
+    const part = imageArtifact.content?.[i];
+    const url = typeof part?.image_url === 'string' ? part.image_url : part?.image_url?.url;
+    const match = url?.match(/^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if (!match) continue;
+    const id = imageArtifact.file_ids?.[i] ?? `generated-${i + 1}`;
+    uploads.push({
+      stream: Readable.from(Buffer.from(match[2], 'base64')),
+      filename: `${toolName}_${id}.${IMAGE_EXTENSION_BY_MIME[match[1]]}`,
+    });
+  }
+  if (uploads.length === 0) return artifact;
+
+  try {
+    const result = await options.batchUploadCodeEnvFiles({
+      req,
+      files: uploads,
+      kind: 'user',
+      id: userId,
+    });
+    return {
+      ...imageArtifact,
+      session_id: result.storage_session_id,
+      files: result.files.map((file) => ({
+        id: file.fileId,
+        resource_id: userId,
+        name: file.filename,
+        storage_session_id: result.storage_session_id,
+        kind: 'user' as const,
+      })),
+    } satisfies ImageArtifact;
+  } catch (error) {
+    logger.error(`[${toolName}] Failed to prime generated image for code execution:`, error);
+    return artifact;
+  }
+}
+
+function addImageSandboxHint(content: unknown, artifact: unknown): unknown {
+  const files = (artifact as ImageArtifact | undefined)?.files;
+  if (!files?.length) return content;
+  const hint = `Generated image available to code tools at: ${files.map((file) => `/mnt/data/${file.name}`).join(', ')}`;
+  if (typeof content === 'string') return `${content}\n\n${hint}`;
+  if (!Array.isArray(content)) return content;
+
+  let added = false;
+  const result = content.map((part: unknown) => {
+    if (added || !part || typeof part !== 'object') return part;
+    const textPart = part as { type?: string; text?: string };
+    if (textPart.type !== 'text' || typeof textPart.text !== 'string') return part;
+    added = true;
+    return { ...textPart, text: `${textPart.text}\n\n${hint}` };
+  });
+  return added ? result : [...result, { type: 'text', text: hint }];
+}
 
 function addLineNumbers(content: string): string {
   const lines = content.split('\n');
@@ -1155,6 +1257,13 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                     configurable: mergedConfigurable,
                     metadata,
                   } as Record<string, unknown>);
+                  const artifact = await primeImageArtifactForCode(
+                    tc.name,
+                    result.artifact,
+                    options,
+                    mergedConfigurable?.codeEnvAvailable === true,
+                    mergedConfigurable?.req as ServerRequest | undefined,
+                  );
 
                   // Code-execution tools emit per-call boilerplate
                   // ("Note: ..." paragraphs and `| <annotation>` per-file
@@ -1167,6 +1276,7 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                     CODE_EXECUTION_TOOLS.has(tc.name) && typeof result.content === 'string'
                       ? cleanCodeToolOutput(result.content)
                       : result.content;
+                  const modelContent = addImageSandboxHint(cleanedContent, artifact);
 
                   if (toolEndCallback) {
                     await toolEndCallback(
@@ -1174,8 +1284,8 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                         output: {
                           name: tc.name,
                           tool_call_id: tc.id,
-                          content: cleanedContent,
-                          artifact: result.artifact,
+                          content: modelContent,
+                          artifact,
                         },
                       },
                       {
@@ -1190,8 +1300,8 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
 
                   return {
                     toolCallId: tc.id,
-                    content: cleanedContent,
-                    artifact: result.artifact,
+                    content: modelContent,
+                    artifact,
                     status: 'success' as const,
                   };
                 } catch (toolError) {

@@ -870,8 +870,8 @@
     "semantic_hash": ""
   },
   "api/package.json": {
-    "mtime": 1779203881.797102,
-    "ast_hash": "35459ada853e13aa1681783a716abfd5",
+    "mtime": 1786562984.4225597,
+    "ast_hash": "2aa89cd6e3677fd8fb518cf497ec655e",
     "semantic_hash": ""
   },
   "api/server/cleanup.js": {
@@ -1075,13 +1075,13 @@
     "semantic_hash": ""
   },
   "api/server/controllers/agents/v1.js": {
-    "mtime": 1781719437.3427346,
-    "ast_hash": "21860c8001e98e0d86335a94f990a5a7",
+    "mtime": 1786562285.1475334,
+    "ast_hash": "c56a0c7d99724de4fa155cc2b39e97c0",
     "semantic_hash": ""
   },
   "api/server/controllers/agents/v1.spec.js": {
-    "mtime": 1781719391.6271007,
-    "ast_hash": "d84ef96e58c31f561d93b5714f7fa360",
+    "mtime": 1786562330.397075,
+    "ast_hash": "64efe8987699051c441131fbb738f5f0",
     "semantic_hash": ""
   },
   "api/server/controllers/assistants/chatV1.js": {
@@ -1970,13 +1970,13 @@
     "semantic_hash": ""
   },
   "api/server/routes/prompts.js": {
-    "mtime": 1779209797.077787,
-    "ast_hash": "f073e6e28be2920ea8442cd3440edd85",
+    "mtime": 1786562285.1063838,
+    "ast_hash": "7049f90bde6d71db71489b1d0643389a",
     "semantic_hash": ""
   },
   "api/server/routes/prompts.test.js": {
-    "mtime": 1779209797.078036,
-    "ast_hash": "bfcd3bf5f09cd593c0fb999c1ae0b6fe",
+    "mtime": 1786562416.3181689,
+    "ast_hash": "82a838e1e24f6a24d0bdea11e74c52ad",
     "semantic_hash": ""
   },
   "api/server/routes/roles.js": {
@@ -9915,8 +9915,8 @@
     "semantic_hash": ""
   },
   "packages/api/package.json": {
-    "mtime": 1779201843.2151165,
-    "ast_hash": "e16e94325e965fa85716921661e97212",
+    "mtime": 1786562984.4259028,
+    "ast_hash": "2fa0d40994462f044e5485624b7d54bd",
     "semantic_hash": ""
   },
   "packages/api/rollup.config.js": {
@@ -10155,13 +10155,13 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/handlers.spec.ts": {
-    "mtime": 1779203841.2396047,
-    "ast_hash": "3efbbfaf033d055780a6864b5f20e45a",
+    "mtime": 1786563182.1886296,
+    "ast_hash": "3c2461907a7e00ebd29150eff789d69d",
     "semantic_hash": ""
   },
   "packages/api/src/agents/handlers.ts": {
-    "mtime": 1779199271.583326,
-    "ast_hash": "bab9eaf2b391a70561ea9ab799e7844f",
+    "mtime": 1786564176.6139088,
+    "ast_hash": "ed8cc6bb535d489bbe32143c121036e6",
     "semantic_hash": ""
   },
   "packages/api/src/agents/index.ts": {
@@ -10285,8 +10285,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/run.ts": {
-    "mtime": 1779199271.5866663,
-    "ast_hash": "b415e2124d4a85e73118b07f22733a2a",
+    "mtime": 1786564176.6544983,
+    "ast_hash": "41bc31ae7c72b0a70dd19810d77a3b4a",
     "semantic_hash": ""
   },
   "packages/api/src/agents/skillConfigurable.spec.ts": {
@@ -13945,8 +13945,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/config.ts": {
-    "mtime": 1783556435.5950406,
-    "ast_hash": "aeb4f35e8d115c42823e0fbc1117c380",
+    "mtime": 1786564176.5737083,
+    "ast_hash": "7b0ec69f8e79a73ef6adde249f1ecf50",
     "semantic_hash": ""
   },
   "packages/data-provider/src/createPayload.spec.ts": {
@@ -15755,8 +15755,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1784751203.3492026,
-    "ast_hash": "450ef7d6e8cde3df8550f504ba5901d0",
+    "mtime": 1786562686.5336404,
+    "ast_hash": "82783fab9837cb76ef7fa7a692203bf1",
     "semantic_hash": ""
   },
   "DESIGN.md": {

@@ -4,6 +4,7 @@ import {
   KnownEndpoints,
   MAX_SUBAGENT_DEPTH,
   MAX_SUBAGENT_RUN_CONFIGS,
+  imageGenTools,
   extractEnvVariable,
   providerEndpointMap,
   normalizeEndpointName,
@@ -989,6 +990,7 @@ export async function createRun({
     customHandlers,
     indexTokenCountMap,
     initialSessions,
+    codeSessionToolNames: [...imageGenTools],
     calibrationRatio,
     ...(enableToolOutputReferences && {
       toolOutputReferences: { enabled: true },

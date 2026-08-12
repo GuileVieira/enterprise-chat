@@ -35,10 +35,12 @@ function createHandler(
 function invokeHandler(
   handler: ReturnType<typeof createToolExecuteHandler>,
   toolCalls: ToolCallRequest[],
+  configurable?: Record<string, unknown>,
 ): Promise<ToolExecuteResult[]> {
   return new Promise((resolve, reject) => {
     const request: ToolExecuteBatchRequest = {
       toolCalls,
+      configurable,
       resolve,
       reject,
     };
@@ -61,6 +63,83 @@ function skillsInScope(): unknown[] {
 }
 
 describe('createToolExecuteHandler', () => {
+  describe('image artifact code-session bridge', () => {
+    it('uploads generated image bytes and returns a code-session artifact', async () => {
+      const imageTool = {
+        name: 'image_gen_oai',
+        invoke: jest.fn().mockResolvedValue({
+          content: [{ type: 'text', text: 'image ready' }],
+          artifact: {
+            content: [
+              {
+                type: 'image_url',
+                image_url: { url: 'data:image/png;base64,aGVsbG8=' },
+              },
+            ],
+            file_ids: ['mongo-image-id'],
+          },
+        }),
+      };
+      const loadTools: ToolExecuteOptions['loadTools'] = jest.fn(async () => ({
+        loadedTools: [imageTool] as never[],
+      }));
+      const batchUploadCodeEnvFiles = jest.fn().mockResolvedValue({
+        storage_session_id: 'image-storage-session',
+        files: [{ fileId: 'code-file-id', filename: 'image_gen_oai_mongo-image-id.png' }],
+      });
+      const toolEndCallback = jest.fn();
+      const handler = createToolExecuteHandler({
+        loadTools,
+        batchUploadCodeEnvFiles,
+        toolEndCallback,
+      });
+
+      const [result] = await invokeHandler(
+        handler,
+        [{ id: 'image-call', name: 'image_gen_oai', args: { prompt: 'chart' } }],
+        { req: { user: { id: 'user-1' } }, codeEnvAvailable: true },
+      );
+
+      expect(batchUploadCodeEnvFiles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'user',
+          id: 'user-1',
+          files: [expect.objectContaining({ filename: 'image_gen_oai_mongo-image-id.png' })],
+        }),
+      );
+      expect(result.artifact).toEqual(
+        expect.objectContaining({
+          session_id: 'image-storage-session',
+          files: [
+            {
+              id: 'code-file-id',
+              resource_id: 'user-1',
+              name: 'image_gen_oai_mongo-image-id.png',
+              storage_session_id: 'image-storage-session',
+              kind: 'user',
+            },
+          ],
+        }),
+      );
+      expect(result.content).toEqual([
+        expect.objectContaining({
+          type: 'text',
+          text: expect.stringContaining(
+            'Generated image available to code tools at: /mnt/data/image_gen_oai_mongo-image-id.png',
+          ),
+        }),
+      ]);
+      expect(toolEndCallback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          output: expect.objectContaining({
+            artifact: expect.objectContaining({ session_id: 'image-storage-session' }),
+          }),
+        }),
+        expect.any(Object),
+      );
+    });
+  });
+
   describe('code execution session context passthrough', () => {
     it('passes session_id and _injected_files from codeSessionContext to toolCallConfig', async () => {
       const capturedConfigs: Record<string, unknown>[] = [];
