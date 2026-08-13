@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import axios from 'axios';
+import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { setTokenHeader } from './headers-helpers';
 import * as endpoints from './api-endpoints';
 import type * as t from './types';
@@ -9,8 +10,11 @@ async function _get<T>(url: string, options?: AxiosRequestConfig): Promise<T> {
   return response.data;
 }
 
-async function _getResponse<T>(url: string, options?: AxiosRequestConfig): Promise<T> {
-  return await axios.get(url, { ...options });
+async function _getResponse<T>(
+  url: string,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<T>> {
+  return axios.get<T>(url, { ...options });
 }
 
 async function _post(url: string, data?: any) {

@@ -12,6 +12,8 @@ meili_data*
 librechat*
 Dockerfile*
 docs
+graphify-out
+sites
 
 # Ignore all hidden files
 .*
