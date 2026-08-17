@@ -18,6 +18,7 @@ const mockDeleteToolCalls = jest.fn();
 const mockDeleteUserAgents = jest.fn();
 const mockDeleteUserPrompts = jest.fn();
 const mockDeleteUserSkills = jest.fn();
+const mockDeleteConfig = jest.fn();
 
 jest.mock('@librechat/data-schemas', () => ({
   logger: { error: jest.fn(), info: jest.fn() },
@@ -29,6 +30,7 @@ jest.mock('librechat-data-provider', () => ({
   CacheKeys: {},
   Constants: { mcp_delimiter: '::', mcp_prefix: 'mcp_' },
   FileSources: {},
+  PrincipalType: { USER: 'user' },
 }));
 
 jest.mock('@librechat/api', () => ({
@@ -58,6 +60,7 @@ jest.mock('~/models', () => ({
   deleteUserAgents: (...args) => mockDeleteUserAgents(...args),
   deleteUserPrompts: (...args) => mockDeleteUserPrompts(...args),
   deleteUserSkills: (...args) => mockDeleteUserSkills(...args),
+  deleteConfig: (...args) => mockDeleteConfig(...args),
   deleteTransactions: jest.fn(),
   deleteBalances: jest.fn(),
   deleteAllAgentApiKeys: jest.fn(),
@@ -133,6 +136,7 @@ function stubDeletionMocks() {
   mockDeleteUserAgents.mockResolvedValue();
   mockDeleteUserPrompts.mockResolvedValue();
   mockDeleteUserSkills.mockResolvedValue(0);
+  mockDeleteConfig.mockResolvedValue();
 }
 
 beforeEach(() => {
@@ -154,6 +158,10 @@ describe('deleteUserController - 2FA enforcement', () => {
     expect(mockDeleteUserAgents).toHaveBeenCalledWith('user1');
     expect(mockDeleteUserPrompts).toHaveBeenCalledWith('user1');
     expect(mockDeleteUserSkills).toHaveBeenCalledWith('user1');
+    expect(mockDeleteConfig).toHaveBeenCalledWith('user', 'user1');
+    expect(mockProcessDeleteRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ req: expect.objectContaining({ user: req.user }) }),
+    );
     expect(mockVerifyOTPOrBackupCode).not.toHaveBeenCalled();
   });
 

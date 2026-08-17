@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { PrincipalType, SystemRoles } from 'librechat-data-provider';
+import { SystemRoles } from 'librechat-data-provider';
 import type { IUser, UserDeleteResult } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { ServerRequest } from '~/types/http';
@@ -53,11 +53,9 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
   return {
     findUsers: jest.fn().mockResolvedValue([]),
     countUsers: jest.fn().mockResolvedValue(0),
-    deleteUserById: jest
+    deleteUser: jest
       .fn()
       .mockResolvedValue({ deletedCount: 1, message: 'User was deleted successfully.' }),
-    deleteConfig: jest.fn().mockResolvedValue(null),
-    deleteAclEntries: jest.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
@@ -332,7 +330,7 @@ describe('createAdminUsersHandlers', () => {
         deletedCount: 1,
         message: 'User was deleted successfully.',
       };
-      const deps = createDeps({ deleteUserById: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
@@ -344,7 +342,7 @@ describe('createAdminUsersHandlers', () => {
 
     it('returns fallback message when result.message is empty', async () => {
       const result: UserDeleteResult = { deletedCount: 1, message: '' };
-      const deps = createDeps({ deleteUserById: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
@@ -367,7 +365,7 @@ describe('createAdminUsersHandlers', () => {
 
       expect(status).toHaveBeenCalledWith(403);
       expect(json).toHaveBeenCalledWith({ error: 'Cannot delete your own account' });
-      expect(deps.deleteUserById).not.toHaveBeenCalled();
+      expect(deps.deleteUser).not.toHaveBeenCalled();
     });
 
     it('returns 400 when deleting the last admin', async () => {
@@ -383,7 +381,7 @@ describe('createAdminUsersHandlers', () => {
 
       expect(status).toHaveBeenCalledWith(400);
       expect(json).toHaveBeenCalledWith({ error: 'Cannot delete the last admin user' });
-      expect(deps.deleteUserById).not.toHaveBeenCalled();
+      expect(deps.deleteUser).not.toHaveBeenCalled();
       expect(deps.countUsers).toHaveBeenCalledWith({ role: SystemRoles.ADMIN });
     });
 
@@ -399,7 +397,7 @@ describe('createAdminUsersHandlers', () => {
       await handlers.deleteUser(req, res);
 
       expect(status).toHaveBeenCalledWith(200);
-      expect(deps.deleteUserById).toHaveBeenCalledWith(targetId);
+      expect(deps.deleteUser).toHaveBeenCalledWith(req, targetId);
     });
 
     it('does not check admin count when target is a regular user', async () => {
@@ -416,54 +414,18 @@ describe('createAdminUsersHandlers', () => {
       expect(deps.countUsers).not.toHaveBeenCalled();
     });
 
-    it('cascades cleanup of Config and AclEntries', async () => {
+    it('delegates the complete cascade to the injected delete service', async () => {
       const result: UserDeleteResult = {
         deletedCount: 1,
         message: 'User was deleted successfully.',
       };
-      const deps = createDeps({ deleteUserById: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
       const handlers = createAdminUsersHandlers(deps);
-      const { req, res, status } = createReqRes({ params: { id: validUserId } });
+      const { req, res } = createReqRes({ params: { id: validUserId } });
 
       await handlers.deleteUser(req, res);
 
-      expect(status).toHaveBeenCalledWith(200);
-      expect(deps.deleteConfig).toHaveBeenCalledWith(PrincipalType.USER, validUserId);
-      expect(deps.deleteAclEntries).toHaveBeenCalledWith({
-        principalType: PrincipalType.USER,
-        principalId: expect.any(Types.ObjectId),
-      });
-    });
-
-    it('returns success even when cascade cleanup partially fails', async () => {
-      const result: UserDeleteResult = {
-        deletedCount: 1,
-        message: 'User was deleted successfully.',
-      };
-      const deps = createDeps({
-        deleteUserById: jest.fn().mockResolvedValue(result),
-        deleteConfig: jest.fn().mockRejectedValue(new Error('cleanup failed')),
-      });
-      const handlers = createAdminUsersHandlers(deps);
-      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
-
-      await handlers.deleteUser(req, res);
-
-      expect(status).toHaveBeenCalledWith(200);
-      expect(json).toHaveBeenCalledWith({ message: 'User was deleted successfully.' });
-    });
-
-    it('does not cascade when user is not found', async () => {
-      const result: UserDeleteResult = { deletedCount: 0, message: '' };
-      const deps = createDeps({ deleteUserById: jest.fn().mockResolvedValue(result) });
-      const handlers = createAdminUsersHandlers(deps);
-      const { req, res, status } = createReqRes({ params: { id: validUserId } });
-
-      await handlers.deleteUser(req, res);
-
-      expect(status).toHaveBeenCalledWith(404);
-      expect(deps.deleteConfig).not.toHaveBeenCalled();
-      expect(deps.deleteAclEntries).not.toHaveBeenCalled();
+      expect(deps.deleteUser).toHaveBeenCalledWith(req, validUserId);
     });
 
     it('returns 400 for invalid ObjectId', async () => {
@@ -479,7 +441,7 @@ describe('createAdminUsersHandlers', () => {
 
     it('returns 404 when user not found', async () => {
       const result: UserDeleteResult = { deletedCount: 0, message: '' };
-      const deps = createDeps({ deleteUserById: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
@@ -491,7 +453,7 @@ describe('createAdminUsersHandlers', () => {
 
     it('returns 500 on error', async () => {
       const deps = createDeps({
-        deleteUserById: jest.fn().mockRejectedValue(new Error('db crash')),
+        deleteUser: jest.fn().mockRejectedValue(new Error('db crash')),
       });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });

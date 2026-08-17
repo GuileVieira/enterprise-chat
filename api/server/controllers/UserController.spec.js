@@ -23,6 +23,7 @@ jest.mock('~/models', () => {
     deleteConversationTags: jest.fn().mockResolvedValue(undefined),
     deleteAllUserMemories: jest.fn().mockResolvedValue(undefined),
     deleteTransactions: jest.fn().mockResolvedValue(undefined),
+    deleteConfig: jest.fn().mockResolvedValue(undefined),
     deleteAclEntries: jest.fn().mockResolvedValue(undefined),
     updateUserPlugins: jest.fn(),
     deleteAssistants: jest.fn().mockResolvedValue(undefined),
@@ -69,13 +70,21 @@ jest.mock('sharp', () =>
 );
 
 jest.mock('@librechat/api', () => ({
-  ...jest.requireActual('@librechat/api'),
   needsRefresh: jest.fn(),
   getNewS3URL: jest.fn(),
+  MCPOAuthHandler: {},
+  MCPTokenStorage: {},
+  normalizeHttpError: jest.fn(),
+  extractWebSearchEnvVars: jest.fn(),
+  violationCache: jest.fn(() => ({})),
 }));
 
 jest.mock('~/server/services/Files/process', () => ({
   processDeleteRequest: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('~/server/services/Config/getCachedTools', () => ({
+  invalidateCachedTools: jest.fn(),
 }));
 
 jest.mock('~/server/services/Config', () => ({
@@ -182,15 +191,16 @@ describe('deleteUserController', () => {
     expect(group.memberIds).toEqual(['other']);
   });
 
-  it('should still succeed when deleteConvos throws', async () => {
+  it('should retain the user when conversation cleanup fails', async () => {
     const userId = new mongoose.Types.ObjectId();
     deleteConvos.mockRejectedValueOnce(new Error('no convos'));
+    const { deleteUserById } = require('~/models');
 
     const req = { user: { id: userId.toString(), _id: userId, email: 'convos@test.com' } };
     await deleteUserController(req, mockRes);
 
-    expect(mockRes.status).toHaveBeenCalledWith(200);
-    expect(mockRes.send).toHaveBeenCalledWith({ message: 'User deleted' });
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(deleteUserById).not.toHaveBeenCalled();
   });
 
   it('should return 500 when a critical operation fails', async () => {

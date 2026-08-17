@@ -1,9 +1,10 @@
 const express = require('express');
 const { createAdminUsersHandlers } = require('@librechat/api');
-const { SystemCapabilities } = require('@librechat/data-schemas');
+const { runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
 const { requireCapability } = require('~/server/middleware/roles/capabilities');
 const { requireJwtAuth } = require('~/server/middleware');
 const { registerUser } = require('~/server/services/AuthService');
+const { deleteUserData } = require('~/server/controllers/UserController');
 const db = require('~/models');
 
 const router = express.Router();
@@ -15,9 +16,14 @@ const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
 const handlers = createAdminUsersHandlers({
   findUsers: db.findUsers,
   countUsers: db.countUsers,
-  deleteUserById: db.deleteUserById,
-  deleteConfig: db.deleteConfig,
-  deleteAclEntries: db.deleteAclEntries,
+  deleteUser: (req, userId) =>
+    runAsSystem(async () => {
+      const user = await db.getUserById(userId);
+      if (!user) {
+        return { deletedCount: 0, message: 'User not found' };
+      }
+      return deleteUserData(req, user);
+    }),
 });
 
 router.use(requireJwtAuth, requireAdminAccess);

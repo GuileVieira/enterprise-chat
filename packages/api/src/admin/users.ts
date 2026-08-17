@@ -1,9 +1,7 @@
-import { Types } from 'mongoose';
-import { PrincipalType, SystemRoles } from 'librechat-data-provider';
+import { SystemRoles } from 'librechat-data-provider';
 import { logger, runAsSystem, isValidObjectIdString } from '@librechat/data-schemas';
 import type {
   IUser,
-  IConfig,
   AdminUserListItem,
   AdminUserSearchResult,
   UserDeleteResult,
@@ -25,26 +23,11 @@ export interface AdminUsersDeps {
     options?: { limit?: number; offset?: number; sort?: Record<string, 1 | -1> },
   ) => Promise<IUser[]>;
   countUsers: (filter?: FilterQuery<IUser>) => Promise<number>;
-  /**
-   * Thin data-layer delete — removes the User document only.
-   * Full cascade of user-owned resources (conversations, messages, files, tokens, etc.)
-   * is handled by `UserController.deleteUserController` in the self-delete flow.
-   * This admin endpoint currently cascades Config and AclEntries.
-   * A future iteration should consolidate the full cascade into a shared service function.
-   */
-  deleteUserById: (userId: string) => Promise<UserDeleteResult>;
-  deleteConfig: (
-    principalType: PrincipalType,
-    principalId: string | Types.ObjectId,
-  ) => Promise<IConfig | null>;
-  deleteAclEntries: (filter: {
-    principalType: PrincipalType;
-    principalId: string | Types.ObjectId;
-  }) => Promise<void>;
+  deleteUser: (req: ServerRequest, userId: string) => Promise<UserDeleteResult>;
 }
 
 export function createAdminUsersHandlers(deps: AdminUsersDeps) {
-  const { findUsers, countUsers, deleteUserById, deleteConfig, deleteAclEntries } = deps;
+  const { findUsers, countUsers, deleteUser } = deps;
 
   async function listUsersHandler(req: ServerRequest, res: Response) {
     try {
@@ -151,7 +134,7 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps) {
         }
       }
 
-      const result = await deleteUserById(id);
+      const result = await deleteUser(req, id);
 
       if (result.deletedCount === 0) {
         return res.status(404).json({ error: 'User not found' });
@@ -164,17 +147,6 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps) {
             `[adminUsers] CRITICAL: last admin deleted via race condition, user: ${id}. ` +
               'Manual DB intervention required to restore an ADMIN user.',
           );
-        }
-      }
-
-      const objectId = new Types.ObjectId(id);
-      const cleanupResults = await Promise.allSettled([
-        deleteConfig(PrincipalType.USER, id),
-        deleteAclEntries({ principalType: PrincipalType.USER, principalId: objectId }),
-      ]);
-      for (const r of cleanupResults) {
-        if (r.status === 'rejected') {
-          logger.error('[adminUsers] cascade cleanup failed for user:', id, r.reason);
         }
       }
 

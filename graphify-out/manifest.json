@@ -940,13 +940,13 @@
     "semantic_hash": ""
   },
   "api/server/controllers/UserController.js": {
-    "mtime": 1779199271.3573158,
-    "ast_hash": "6c3602dc479a164bab3024f92b74a84e",
+    "mtime": 1786978399.5423262,
+    "ast_hash": "0b176578e4ce172e738ba1c84f796320",
     "semantic_hash": ""
   },
   "api/server/controllers/UserController.spec.js": {
-    "mtime": 1779199271.3574817,
-    "ast_hash": "fe7dd52c8e77900ce29d5789e990dd5b",
+    "mtime": 1786978451.84021,
+    "ast_hash": "6e2e0c22e89e2f5dd51edd7bcd1af87f",
     "semantic_hash": ""
   },
   "api/server/controllers/__tests__/PermissionsController.spec.js": {
@@ -965,8 +965,8 @@
     "semantic_hash": ""
   },
   "api/server/controllers/__tests__/deleteUser.spec.js": {
-    "mtime": 1779199271.3581698,
-    "ast_hash": "e10eec217064c2fde7ba67716da1d0c4",
+    "mtime": 1786978338.2073078,
+    "ast_hash": "cf4a46ff5cf33060542f21a0782aa337",
     "semantic_hash": ""
   },
   "api/server/controllers/__tests__/deleteUserMcpServers.spec.js": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/admin/users.js": {
-    "mtime": 1786976470.1314902,
-    "ast_hash": "93a95c40a427c38077183da1b603e925",
+    "mtime": 1786978410.995588,
+    "ast_hash": "bb80fa3835b69b6cbc6d6082f430b79d",
     "semantic_hash": ""
   },
   "api/server/routes/agents/__tests__/abort.spec.js": {
@@ -10010,13 +10010,13 @@
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.spec.ts": {
-    "mtime": 1777407818.6197727,
-    "ast_hash": "b31a3701cc388a4361ed0711e5945cbc",
+    "mtime": 1786978321.4007297,
+    "ast_hash": "6bf9a279e81be540691871b8c5e7b6f0",
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.ts": {
-    "mtime": 1779203841.207619,
-    "ast_hash": "fd0b80122731c87242cd600c437490ba",
+    "mtime": 1786978288.3696063,
+    "ast_hash": "42232c2598b6c795ada5f73e3e63d6d8",
     "semantic_hash": ""
   },
   "packages/api/src/agents/__tests__/estimateMediaTokensForMessage.spec.ts": {

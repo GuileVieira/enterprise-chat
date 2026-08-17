@@ -14,6 +14,7 @@ const {
   Constants,
   FileSources,
   ResourceType,
+  PrincipalType,
 } = require('librechat-data-provider');
 const { updateUserPluginAuth, deleteUserPluginAuth } = require('~/server/services/PluginService');
 const { verifyOTPOrBackupCode } = require('~/server/services/twoFactorService');
@@ -95,6 +96,35 @@ const deleteUserFiles = async (req) => {
   } catch (error) {
     logger.error('[deleteUserFiles]', error);
   }
+};
+
+const deleteUserData = async (req, user) => {
+  await db.deleteMessages({ user: user.id });
+  await db.deleteAllUserSessions({ userId: user.id });
+  await db.deleteTransactions({ user: user.id });
+  await db.deleteUserKey({ userId: user.id, all: true });
+  await db.deleteBalances({ user: user._id });
+  await db.deletePresets(user.id);
+  await db.deleteConvos(user.id);
+  await deleteUserPluginAuth(user.id, null, true);
+  await db.deleteAllSharedLinks(user.id);
+  await deleteUserFiles({ ...req, user });
+  await db.deleteFiles(null, user.id);
+  await db.deleteToolCalls(user.id);
+  await db.deleteUserAgents(user.id);
+  await db.deleteAllAgentApiKeys(user._id);
+  await db.deleteAssistants({ user: user.id });
+  await db.deleteConversationTags({ user: user.id });
+  await db.deleteAllUserMemories(user.id);
+  await db.deleteUserPrompts(user.id);
+  await db.deleteUserSkills(user.id);
+  await deleteUserMcpServers(user.id);
+  await db.deleteActions({ user: user.id });
+  await db.deleteTokens({ userId: user.id });
+  await db.removeUserFromAllGroups(user.id);
+  await db.deleteConfig(PrincipalType.USER, user.id);
+  await db.deleteAclEntries({ principalId: user._id });
+  return db.deleteUserById(user.id);
 };
 
 /**
@@ -322,35 +352,7 @@ const deleteUserController = async (req, res) => {
       }
     }
 
-    await db.deleteMessages({ user: user.id });
-    await db.deleteAllUserSessions({ userId: user.id });
-    await db.deleteTransactions({ user: user.id });
-    await db.deleteUserKey({ userId: user.id, all: true });
-    await db.deleteBalances({ user: user._id });
-    await db.deletePresets(user.id);
-    try {
-      await db.deleteConvos(user.id);
-    } catch (error) {
-      logger.error('[deleteUserController] Error deleting user convos, likely no convos', error);
-    }
-    await deleteUserPluginAuth(user.id, null, true);
-    await db.deleteUserById(user.id);
-    await db.deleteAllSharedLinks(user.id);
-    await deleteUserFiles(req);
-    await db.deleteFiles(null, user.id);
-    await db.deleteToolCalls(user.id);
-    await db.deleteUserAgents(user.id);
-    await db.deleteAllAgentApiKeys(user._id);
-    await db.deleteAssistants({ user: user.id });
-    await db.deleteConversationTags({ user: user.id });
-    await db.deleteAllUserMemories(user.id);
-    await db.deleteUserPrompts(user.id);
-    await db.deleteUserSkills(user.id);
-    await deleteUserMcpServers(user.id);
-    await db.deleteActions({ user: user.id });
-    await db.deleteTokens({ userId: user.id });
-    await db.removeUserFromAllGroups(user.id);
-    await db.deleteAclEntries({ principalId: user._id });
+    await deleteUserData(req, user);
     logger.info(`User deleted account. Email: ${user.email} ID: ${user.id}`);
     res.status(200).send({ message: 'User deleted' });
   } catch (err) {
@@ -555,6 +557,7 @@ module.exports = {
   getTermsStatusController,
   acceptTermsController,
   deleteUserController,
+  deleteUserData,
   verifyEmailController,
   updateUserPluginsController,
   resendVerificationController,
