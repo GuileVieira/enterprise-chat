@@ -1832,6 +1832,8 @@
   "com_admin_delete_user": "Delete user",
   "com_admin_delete_user_confirm": "Delete {{0}}? This action cannot be undone.",
   "com_admin_delete_user_error": "Could not delete the user.",
+  "com_admin_edit_user": "Edit name",
+  "com_admin_edit_user_error": "Could not update the name.",
   "com_admin_dashboard": "Dashboard",
   "com_admin_dashboard_description": "Monitor users, tenants, permissions, functions, secrets, and live configuration from one operational view.",
   "com_admin_dashboard_title": "Super Admin Console",

@@ -1375,6 +1375,10 @@ export function deleteAdminUser(id: string): Promise<unknown> {
   return request.delete(endpoints.adminUserById(id));
 }
 
+export function updateAdminUser(id: string, name: string): Promise<unknown> {
+  return request.patch(endpoints.adminUserById(id), { name });
+}
+
 /* Admin Groups */
 export function listAdminGroups(
   page: number = 1,

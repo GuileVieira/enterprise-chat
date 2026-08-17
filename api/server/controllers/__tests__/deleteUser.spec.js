@@ -110,7 +110,7 @@ jest.mock('~/cache', () => ({
   getLogStores: jest.fn(),
 }));
 
-const { deleteUserController } = require('~/server/controllers/UserController');
+const { deleteUserData, deleteUserController } = require('~/server/controllers/UserController');
 
 function createRes() {
   const res = {};
@@ -142,6 +142,22 @@ function stubDeletionMocks() {
 beforeEach(() => {
   jest.clearAllMocks();
   stubDeletionMocks();
+});
+
+describe('deleteUserData', () => {
+  it('uses _id when a lean admin user has no id virtual', async () => {
+    const user = { _id: '507f1f77bcf86cd799439011', email: 'admin-delete@test.com' };
+
+    await deleteUserData({ user: { id: 'admin-id' } }, user);
+
+    expect(mockDeleteAllUserSessions).toHaveBeenCalledWith({ userId: user._id });
+    expect(mockDeleteUserById).toHaveBeenCalledWith(user._id);
+    expect(mockProcessDeleteRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        req: expect.objectContaining({ user: { ...user, id: user._id } }),
+      }),
+    );
+  });
 });
 
 describe('deleteUserController - 2FA enforcement', () => {

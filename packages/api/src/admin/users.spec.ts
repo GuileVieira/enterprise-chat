@@ -53,6 +53,7 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
   return {
     findUsers: jest.fn().mockResolvedValue([]),
     countUsers: jest.fn().mockResolvedValue(0),
+    updateUser: jest.fn().mockResolvedValue(mockUser()),
     deleteUser: jest
       .fn()
       .mockResolvedValue({ deletedCount: 1, message: 'User was deleted successfully.' }),
@@ -462,6 +463,58 @@ describe('createAdminUsersHandlers', () => {
 
       expect(status).toHaveBeenCalledWith(500);
       expect(json).toHaveBeenCalledWith({ error: 'Failed to delete user' });
+    });
+  });
+
+  describe('updateUser', () => {
+    it('trims and updates the user name', async () => {
+      const updateUser = jest.fn().mockResolvedValue(mockUser({ name: 'Novo Nome' }));
+      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+      req.body = { name: '  Novo Nome  ' };
+
+      await handlers.updateUser(req, res);
+
+      expect(updateUser).toHaveBeenCalledWith(validUserId, { name: 'Novo Nome' });
+      expect(status).toHaveBeenCalledWith(200);
+      expect(json).toHaveBeenCalledWith({ user: expect.objectContaining({ name: 'Novo Nome' }) });
+    });
+
+    it.each([undefined, '', '   '])('rejects invalid name %p', async (name) => {
+      const updateUser = jest.fn();
+      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
+      const { req, res, status } = createReqRes({ params: { id: validUserId } });
+      req.body = { name };
+
+      await handlers.updateUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(updateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects names longer than 200 characters', async () => {
+      const updateUser = jest.fn();
+      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
+      const { req, res, status } = createReqRes({ params: { id: validUserId } });
+      req.body = { name: 'a'.repeat(201) };
+
+      await handlers.updateUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(updateUser).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when user does not exist', async () => {
+      const handlers = createAdminUsersHandlers(
+        createDeps({ updateUser: jest.fn().mockResolvedValue(null) }),
+      );
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+      req.body = { name: 'Novo Nome' };
+
+      await handlers.updateUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(404);
+      expect(json).toHaveBeenCalledWith({ error: 'User not found' });
     });
   });
 });

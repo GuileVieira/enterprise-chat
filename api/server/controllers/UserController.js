@@ -99,32 +99,38 @@ const deleteUserFiles = async (req) => {
 };
 
 const deleteUserData = async (req, user) => {
-  await db.deleteMessages({ user: user.id });
-  await db.deleteAllUserSessions({ userId: user.id });
-  await db.deleteTransactions({ user: user.id });
-  await db.deleteUserKey({ userId: user.id, all: true });
+  const userId = user.id ?? user._id?.toString();
+  if (!userId) {
+    throw new Error('User ID is required for deletion');
+  }
+  const normalizedUser = { ...user, id: userId };
+
+  await db.deleteMessages({ user: userId });
+  await db.deleteAllUserSessions({ userId });
+  await db.deleteTransactions({ user: userId });
+  await db.deleteUserKey({ userId, all: true });
   await db.deleteBalances({ user: user._id });
-  await db.deletePresets(user.id);
-  await db.deleteConvos(user.id);
-  await deleteUserPluginAuth(user.id, null, true);
-  await db.deleteAllSharedLinks(user.id);
-  await deleteUserFiles({ ...req, user });
-  await db.deleteFiles(null, user.id);
-  await db.deleteToolCalls(user.id);
-  await db.deleteUserAgents(user.id);
+  await db.deletePresets(userId);
+  await db.deleteConvos(userId);
+  await deleteUserPluginAuth(userId, null, true);
+  await db.deleteAllSharedLinks(userId);
+  await deleteUserFiles({ ...req, user: normalizedUser });
+  await db.deleteFiles(null, userId);
+  await db.deleteToolCalls(userId);
+  await db.deleteUserAgents(userId);
   await db.deleteAllAgentApiKeys(user._id);
-  await db.deleteAssistants({ user: user.id });
-  await db.deleteConversationTags({ user: user.id });
-  await db.deleteAllUserMemories(user.id);
-  await db.deleteUserPrompts(user.id);
-  await db.deleteUserSkills(user.id);
-  await deleteUserMcpServers(user.id);
-  await db.deleteActions({ user: user.id });
-  await db.deleteTokens({ userId: user.id });
-  await db.removeUserFromAllGroups(user.id);
-  await db.deleteConfig(PrincipalType.USER, user.id);
+  await db.deleteAssistants({ user: userId });
+  await db.deleteConversationTags({ user: userId });
+  await db.deleteAllUserMemories(userId);
+  await db.deleteUserPrompts(userId);
+  await db.deleteUserSkills(userId);
+  await deleteUserMcpServers(userId);
+  await db.deleteActions({ user: userId });
+  await db.deleteTokens({ userId });
+  await db.removeUserFromAllGroups(userId);
+  await db.deleteConfig(PrincipalType.USER, userId);
   await db.deleteAclEntries({ principalId: user._id });
-  return db.deleteUserById(user.id);
+  return db.deleteUserById(userId);
 };
 
 /**

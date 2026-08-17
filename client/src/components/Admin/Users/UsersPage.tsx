@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Plus,
+  PencilSimple as Pencil,
   Trash as Trash2,
   SpinnerGap as Loader2,
   MagnifyingGlass as Search,
@@ -25,6 +26,7 @@ import {
   AdminPageHeader,
 } from '../common';
 import CreateUserModal from './CreateUserModal';
+import EditUserModal from './EditUserModal';
 
 interface PendingUser {
   _id: string;
@@ -37,6 +39,7 @@ const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<PendingUser | null>(null);
+  const [editingUser, setEditingUser] = useState<PendingUser | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const navigate = useNavigate();
   const localize = useLocalize();
@@ -172,6 +175,12 @@ const UsersPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
                         <AdminIconButton
+                          onClick={() => setEditingUser(user)}
+                          label={localize('com_admin_edit_user')}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </AdminIconButton>
+                        <AdminIconButton
                           onClick={() => navigate('/admin/roles')}
                           label={localize('com_admin_manage_role')}
                         >
@@ -213,11 +222,7 @@ const UsersPage: React.FC = () => {
       )}
 
       <CreateUserModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-      {deleteError && (
-        <p role="alert" className="text-sm text-red-600">
-          {deleteError}
-        </p>
-      )}
+      <EditUserModal user={editingUser} onClose={() => setEditingUser(null)} />
       <AdminConfirmDialog
         isOpen={pendingDelete != null}
         title={localize('com_admin_delete_user')}
@@ -227,7 +232,11 @@ const UsersPage: React.FC = () => {
         confirmLabel={localize('com_ui_delete')}
         cancelLabel={localize('com_ui_cancel')}
         isLoading={deleteUser.isLoading}
-        onCancel={() => setPendingDelete(null)}
+        error={deleteError}
+        onCancel={() => {
+          setDeleteError('');
+          setPendingDelete(null);
+        }}
         onConfirm={handleDelete}
       />
     </div>

@@ -1701,5 +1701,7 @@
   "com_admin_role_ad_manager": "AD-MANAGER",
   "com_admin_delete_user": "Excluir usuário",
   "com_admin_delete_user_confirm": "Excluir {{0}}? Esta ação não pode ser desfeita.",
-  "com_admin_delete_user_error": "Não foi possível excluir o usuário."
+  "com_admin_delete_user_error": "Não foi possível excluir o usuário.",
+  "com_admin_edit_user": "Editar nome",
+  "com_admin_edit_user_error": "Não foi possível atualizar o nome."
 }

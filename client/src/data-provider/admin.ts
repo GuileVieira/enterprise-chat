@@ -57,6 +57,21 @@ export const useDeleteAdminUserMutation = (): UseMutationResult<
   });
 };
 
+export const useUpdateAdminUserMutation = (): UseMutationResult<
+  unknown,
+  t.TError | undefined,
+  { id: string; name: string },
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(({ id, name }) => dataService.updateAdminUser(id, name), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.adminUsers]);
+      queryClient.invalidateQueries([QueryKeys.adminUsersSearch]);
+    },
+  });
+};
+
 /* Admin Groups */
 export const useListAdminGroups = (
   page: number = 1,

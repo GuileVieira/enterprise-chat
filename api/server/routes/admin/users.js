@@ -16,6 +16,7 @@ const requireManageUsers = requireCapability(SystemCapabilities.MANAGE_USERS);
 const handlers = createAdminUsersHandlers({
   findUsers: db.findUsers,
   countUsers: db.countUsers,
+  updateUser: db.updateUser,
   deleteUser: (req, userId) =>
     runAsSystem(async () => {
       const user = await db.getUserById(userId);
@@ -30,6 +31,7 @@ router.use(requireJwtAuth, requireAdminAccess);
 
 router.get('/', requireReadUsers, handlers.listUsers);
 router.get('/search', requireReadUsers, handlers.searchUsers);
+router.patch('/:id', requireManageUsers, handlers.updateUser);
 router.delete('/:id', requireManageUsers, handlers.deleteUser);
 
 router.post('/', requireManageUsers, async (req, res) => {

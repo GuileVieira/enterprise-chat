@@ -382,6 +382,7 @@ interface AdminConfirmDialogProps {
   confirmLabel: string;
   cancelLabel: string;
   isLoading?: boolean;
+  error?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -391,6 +392,7 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
   isOpen,
   onCancel,
   isLoading,
+  error,
   onConfirm,
   cancelLabel,
   description,
@@ -414,6 +416,11 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
               {title}
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-red-600">
+                {error}
+              </p>
+            )}
           </div>
           <AdminIconButton label={cancelLabel} onClick={onCancel}>
             <X className="size-4" />

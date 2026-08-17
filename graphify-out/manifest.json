@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1786976470.2135663,
-    "ast_hash": "0cf22f138086bf69b8fb66fa5a8a35b8",
+    "mtime": 1786980983.7105713,
+    "ast_hash": "ae1acdf8ec3bc0f00511ef776292a4da",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -940,8 +940,8 @@
     "semantic_hash": ""
   },
   "api/server/controllers/UserController.js": {
-    "mtime": 1786978399.5423262,
-    "ast_hash": "0b176578e4ce172e738ba1c84f796320",
+    "mtime": 1786980926.2840679,
+    "ast_hash": "9bb5a2ebd4c11e399b53858315362f3e",
     "semantic_hash": ""
   },
   "api/server/controllers/UserController.spec.js": {
@@ -965,8 +965,8 @@
     "semantic_hash": ""
   },
   "api/server/controllers/__tests__/deleteUser.spec.js": {
-    "mtime": 1786978338.2073078,
-    "ast_hash": "cf4a46ff5cf33060542f21a0782aa337",
+    "mtime": 1786981084.2721434,
+    "ast_hash": "550e2a443c1e6c87105f34cef6183303",
     "semantic_hash": ""
   },
   "api/server/controllers/__tests__/deleteUserMcpServers.spec.js": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/admin/users.js": {
-    "mtime": 1786978410.995588,
-    "ast_hash": "bb80fa3835b69b6cbc6d6082f430b79d",
+    "mtime": 1786980958.0356042,
+    "ast_hash": "048af6ee253752c09ba772121c9c38b0",
     "semantic_hash": ""
   },
   "api/server/routes/agents/__tests__/abort.spec.js": {
@@ -3315,8 +3315,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Admin/Users/UsersPage.tsx": {
-    "mtime": 1786977150.10991,
-    "ast_hash": "eb25e28715f41e5f417e430f3fd50740",
+    "mtime": 1786981168.4537964,
+    "ast_hash": "e5d17009675b3892321f323a74b04448",
     "semantic_hash": ""
   },
   "client/src/components/Admin/__tests__/AdminLayout.spec.tsx": {
@@ -3330,8 +3330,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Admin/common.tsx": {
-    "mtime": 1779206733.760093,
-    "ast_hash": "d35536cfeb1a31be3c47bdcc9ea54319",
+    "mtime": 1786981168.4042454,
+    "ast_hash": "873dfd4457d6f14fa437a06b46ea64f2",
     "semantic_hash": ""
   },
   "client/src/components/Admin/index.ts": {
@@ -7600,8 +7600,8 @@
     "semantic_hash": ""
   },
   "client/src/data-provider/admin.ts": {
-    "mtime": 1786976470.2543073,
-    "ast_hash": "fc5c6feee00b86a712cfbc1b7a2e660e",
+    "mtime": 1786980983.7539248,
+    "ast_hash": "3b802a58b5399db4447d9bfda7f43053",
     "semantic_hash": ""
   },
   "client/src/data-provider/categories.ts": {
@@ -10010,13 +10010,13 @@
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.spec.ts": {
-    "mtime": 1786978321.4007297,
-    "ast_hash": "6bf9a279e81be540691871b8c5e7b6f0",
+    "mtime": 1786981139.4501462,
+    "ast_hash": "b0cc252e59d4208bb7587ac588f8609c",
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.ts": {
-    "mtime": 1786978288.3696063,
-    "ast_hash": "42232c2598b6c795ada5f73e3e63d6d8",
+    "mtime": 1786981139.411635,
+    "ast_hash": "35f5a465ef9ea3eff4eca6fd87d40984",
     "semantic_hash": ""
   },
   "packages/api/src/agents/__tests__/estimateMediaTokensForMessage.spec.ts": {
@@ -16642,6 +16642,16 @@
   "scripts/test-meta-ads-accounts.cjs": {
     "mtime": 1781219412.7719593,
     "ast_hash": "8bf282a9efea09da0d8643716bc436c6",
+    "semantic_hash": ""
+  },
+  "client/src/components/Admin/Users/EditUserModal.spec.tsx": {
+    "mtime": 1786981049.9023058,
+    "ast_hash": "647ed3cd681a1359a06fe85c4b0113d0",
+    "semantic_hash": ""
+  },
+  "client/src/components/Admin/Users/EditUserModal.tsx": {
+    "mtime": 1786981084.3101509,
+    "ast_hash": "b35e8156e11bc3ea3dd326ecf3595d3e",
     "semantic_hash": ""
   }
 }

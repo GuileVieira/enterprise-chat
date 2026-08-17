@@ -23,11 +23,12 @@ export interface AdminUsersDeps {
     options?: { limit?: number; offset?: number; sort?: Record<string, 1 | -1> },
   ) => Promise<IUser[]>;
   countUsers: (filter?: FilterQuery<IUser>) => Promise<number>;
+  updateUser: (userId: string, updateData: Partial<IUser>) => Promise<IUser | null>;
   deleteUser: (req: ServerRequest, userId: string) => Promise<UserDeleteResult>;
 }
 
 export function createAdminUsersHandlers(deps: AdminUsersDeps) {
-  const { findUsers, countUsers, deleteUser } = deps;
+  const { findUsers, countUsers, updateUser, deleteUser } = deps;
 
   async function listUsersHandler(req: ServerRequest, res: Response) {
     try {
@@ -157,9 +158,42 @@ export function createAdminUsersHandlers(deps: AdminUsersDeps) {
     }
   }
 
+  async function updateUserHandler(req: ServerRequest, res: Response) {
+    try {
+      const { id } = req.params as { id: string };
+      if (!isValidObjectIdString(id)) {
+        return res.status(400).json({ error: 'Invalid user ID format' });
+      }
+
+      const { name: rawName } = req.body as { name?: unknown };
+      if (typeof rawName !== 'string') {
+        return res.status(400).json({ error: 'Name is required' });
+      }
+      const name = rawName.trim();
+      if (!name) {
+        return res.status(400).json({ error: 'Name cannot be empty' });
+      }
+      if (name.length > MAX_SEARCH_LENGTH) {
+        return res
+          .status(400)
+          .json({ error: `Name must not exceed ${MAX_SEARCH_LENGTH} characters` });
+      }
+
+      const user = await runAsSystem(() => updateUser(id, { name }));
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      return res.status(200).json({ user });
+    } catch (error) {
+      logger.error('[adminUsers] updateUser error:', error);
+      return res.status(500).json({ error: 'Failed to update user' });
+    }
+  }
+
   return {
     listUsers: listUsersHandler,
     searchUsers: searchUsersHandler,
+    updateUser: updateUserHandler,
     deleteUser: deleteUserHandler,
   };
 }
