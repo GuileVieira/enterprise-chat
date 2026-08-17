@@ -380,13 +380,13 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {
-    "mtime": 1785869752.3684394,
-    "ast_hash": "f8425f0ad7eb4c9ce18b2691c0395813",
+    "mtime": 1786976470.1725762,
+    "ast_hash": "b78331b435f22ca53d56fa25e67af190",
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1786042696.2001848,
-    "ast_hash": "46ac266e0b27c84594ded93a3db2ada6",
+    "mtime": 1786976470.2135663,
+    "ast_hash": "0cf22f138086bf69b8fb66fa5a8a35b8",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/admin/users.js": {
-    "mtime": 1779203545.3626049,
-    "ast_hash": "28430ebffd2b7c810b72f02bb3003d8b",
+    "mtime": 1786976470.1314902,
+    "ast_hash": "93a95c40a427c38077183da1b603e925",
     "semantic_hash": ""
   },
   "api/server/routes/agents/__tests__/abort.spec.js": {
@@ -3315,8 +3315,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Admin/Users/UsersPage.tsx": {
-    "mtime": 1779206733.7597914,
-    "ast_hash": "ec5ae3bcef0b46c7c2387c2d0d774407",
+    "mtime": 1786977150.10991,
+    "ast_hash": "eb25e28715f41e5f417e430f3fd50740",
     "semantic_hash": ""
   },
   "client/src/components/Admin/__tests__/AdminLayout.spec.tsx": {
@@ -7600,8 +7600,8 @@
     "semantic_hash": ""
   },
   "client/src/data-provider/admin.ts": {
-    "mtime": 1779206652.6154647,
-    "ast_hash": "7c987de7f6f95b21e3c407049fb86bc2",
+    "mtime": 1786976470.2543073,
+    "ast_hash": "fc5c6feee00b86a712cfbc1b7a2e660e",
     "semantic_hash": ""
   },
   "client/src/data-provider/categories.ts": {

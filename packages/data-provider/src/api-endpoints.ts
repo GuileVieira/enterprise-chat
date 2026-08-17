@@ -507,6 +507,7 @@ export const updateMetaAdsPermissions = (roleName: string) => `${getRole(roleNam
 /* Admin Users */
 export const adminUsers = () => `${BASE_URL}/api/admin/users`;
 export const adminUsersSearch = (q: string) => `${adminUsers()}/search?q=${encodeURIComponent(q)}`;
+export const adminUserById = (id: string) => `${adminUsers()}/${encodeURIComponent(id)}`;
 
 /* Admin Groups */
 export const adminGroups = () => `${BASE_URL}/api/admin/groups`;

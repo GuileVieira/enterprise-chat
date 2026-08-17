@@ -1698,5 +1698,8 @@
   "com_ui_project_prompt_snippets": "Snippets de Prompt",
   "com_ui_project_no_prompt_snippets": "Nenhum snippet de prompt ainda. Adicione um para ter acesso rápido no chat.",
   "com_admin_permission_meta_ads": "Meta Ads",
-  "com_admin_role_ad_manager": "AD-MANAGER"
+  "com_admin_role_ad_manager": "AD-MANAGER",
+  "com_admin_delete_user": "Excluir usuário",
+  "com_admin_delete_user_confirm": "Excluir {{0}}? Esta ação não pode ser desfeita.",
+  "com_admin_delete_user_error": "Não foi possível excluir o usuário."
 }

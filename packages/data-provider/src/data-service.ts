@@ -1371,6 +1371,10 @@ export function createAdminUser(payload: {
   return request.post(endpoints.adminUsers(), payload);
 }
 
+export function deleteAdminUser(id: string): Promise<unknown> {
+  return request.delete(endpoints.adminUserById(id));
+}
+
 /* Admin Groups */
 export function listAdminGroups(
   page: number = 1,

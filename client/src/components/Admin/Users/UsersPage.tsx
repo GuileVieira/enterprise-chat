@@ -1,23 +1,47 @@
 import React, { useState } from 'react';
-import { Plus, MagnifyingGlass as Search, Shield, Users } from '@phosphor-icons/react';
+import {
+  Plus,
+  Trash as Trash2,
+  SpinnerGap as Loader2,
+  MagnifyingGlass as Search,
+  Shield,
+  Users,
+} from '@phosphor-icons/react';
 import { useNavigate } from 'react-router-dom';
 import { useLocalize } from '~/hooks';
-import { useListAdminUsers, useSearchAdminUsers } from '~/data-provider/admin';
+import { useAuthContext } from '~/hooks/AuthContext';
+import {
+  useListAdminUsers,
+  useSearchAdminUsers,
+  useDeleteAdminUserMutation,
+} from '~/data-provider/admin';
 import {
   AdminBadge,
   AdminPanel,
   AdminSkeleton,
   AdminIconButton,
   AdminEmptyState,
+  AdminConfirmDialog,
   AdminPageHeader,
 } from '../common';
 import CreateUserModal from './CreateUserModal';
 
+interface PendingUser {
+  _id: string;
+  name?: string;
+  username: string;
+  email: string;
+}
+
 const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PendingUser | null>(null);
+  const [deleteError, setDeleteError] = useState('');
   const navigate = useNavigate();
   const localize = useLocalize();
+  const { user: currentUser } = useAuthContext();
+  const deleteUser = useDeleteAdminUserMutation();
 
   const { data: listData, isLoading: listLoading } = useListAdminUsers(1, 50);
   const { data: searchData, isLoading: searchLoading } = useSearchAdminUsers(searchQuery, {
@@ -37,6 +61,28 @@ const UsersPage: React.FC = () => {
           user.username.toLowerCase().includes(searchQuery.toLowerCase()),
       );
 
+  const handleDelete = async () => {
+    if (pendingDelete == null || pendingDelete._id === currentUser?.id) {
+      return;
+    }
+    setDeleteError('');
+    try {
+      await deleteUser.mutateAsync(pendingDelete._id);
+      setPendingDelete(null);
+    } catch (error) {
+      const requestError = error as {
+        message?: string;
+        response?: { data?: { error?: string; message?: string } };
+      };
+      setDeleteError(
+        requestError.response?.data?.error ??
+          requestError.response?.data?.message ??
+          requestError.message ??
+          localize('com_admin_delete_user_error'),
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -49,7 +95,7 @@ const UsersPage: React.FC = () => {
           className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-active-alt"
         >
           <Plus className="h-4 w-4" />
-          Create User
+          {localize('com_admin_create_user')}
         </button>
       </div>
 
@@ -124,12 +170,31 @@ const UsersPage: React.FC = () => {
                       </AdminBadge>
                     </td>
                     <td className="px-6 py-4">
-                      <AdminIconButton
-                        onClick={() => navigate('/admin/roles')}
-                        label={localize('com_admin_manage_role')}
-                      >
-                        <Shield className="h-4 w-4" />
-                      </AdminIconButton>
+                      <div className="flex items-center gap-1">
+                        <AdminIconButton
+                          onClick={() => navigate('/admin/roles')}
+                          label={localize('com_admin_manage_role')}
+                        >
+                          <Shield className="h-4 w-4" />
+                        </AdminIconButton>
+                        {user._id !== currentUser?.id && (
+                          <AdminIconButton
+                            onClick={() => {
+                              setDeleteError('');
+                              setPendingDelete(user);
+                            }}
+                            disabled={deleteUser.isLoading}
+                            label={localize('com_admin_delete_user')}
+                            tone="danger"
+                          >
+                            {deleteUser.isLoading && pendingDelete?._id === user._id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </AdminIconButton>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -148,6 +213,23 @@ const UsersPage: React.FC = () => {
       )}
 
       <CreateUserModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      {deleteError && (
+        <p role="alert" className="text-sm text-red-600">
+          {deleteError}
+        </p>
+      )}
+      <AdminConfirmDialog
+        isOpen={pendingDelete != null}
+        title={localize('com_admin_delete_user')}
+        description={localize('com_admin_delete_user_confirm', {
+          0: pendingDelete?.name ?? pendingDelete?.email ?? '',
+        })}
+        confirmLabel={localize('com_ui_delete')}
+        cancelLabel={localize('com_ui_cancel')}
+        isLoading={deleteUser.isLoading}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
