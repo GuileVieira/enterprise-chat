@@ -77,6 +77,16 @@ describe('localStrategy tenant-aware login', () => {
     expect(result).toEqual({ user, info: undefined });
   });
 
+  it('rejects a disabled user before checking the password', async () => {
+    getTenantId.mockReturnValue('local-teste');
+    findUser.mockResolvedValue(createUser({ disabled: true, tenantId: 'local-teste' }));
+
+    const result = await callLogin();
+
+    expect(result).toEqual({ user: false, info: { message: 'Account disabled.' } });
+    expect(comparePassword).not.toHaveBeenCalled();
+  });
+
   it('uses ORQEST_TENANT_ID as local fallback when no pre-auth tenant is present', async () => {
     const user = createUser({ tenantId: 'local-teste' });
     process.env.ORQEST_TENANT_ID = 'local-teste';

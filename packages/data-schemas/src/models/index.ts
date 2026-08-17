@@ -36,6 +36,7 @@ import { createTenantFunctionModel } from './tenantFunction';
 import { createTenantSecretModel } from './tenantSecret';
 import { createTrafficDiaryModel } from './trafficDiary';
 import { createMeetingModel } from './meeting';
+import { createAdminAuditModel } from './adminAudit';
 
 /**
  * Creates all database models for all collections
@@ -80,5 +81,6 @@ export function createModels(mongoose: typeof import('mongoose')) {
     TenantSecret: createTenantSecretModel(mongoose),
     TrafficDiaryEntry: createTrafficDiaryModel(mongoose),
     Meeting: createMeetingModel(mongoose),
+    AdminAudit: createAdminAuditModel(mongoose),
   };
 }

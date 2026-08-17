@@ -1021,9 +1021,38 @@ export type AdminUser = {
   username: string;
   email: string;
   role: string;
+  disabled: boolean;
   tenantId?: string;
   emailVerified?: boolean;
   createdAt?: string;
+};
+
+export type AdminUserProject = {
+  id: string;
+  projectId: string;
+  name?: string;
+  permissions?: number;
+  direct?: boolean;
+};
+
+export type AdminUserAudit = {
+  _id: string;
+  actorId: string;
+  action: string;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AdminUserDetailResponse = {
+  user: AdminUser;
+  permissions: string[];
+  capabilities: string[];
+  groups: Array<{ id: string; name: string }>;
+  projects: AdminUserProject[];
+  availableProjects: AdminUserProject[];
+  audits: AdminUserAudit[];
 };
 
 export type ListUsersResponse = {

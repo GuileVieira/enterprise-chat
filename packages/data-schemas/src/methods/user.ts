@@ -1,4 +1,5 @@
 import mongoose, { FilterQuery } from 'mongoose';
+import type { Model } from 'mongoose';
 import type { RefillIntervalUnit } from 'librechat-data-provider';
 import type { IUser, BalanceConfig, CreateUserRequest, UserDeleteResult } from '~/types';
 import { escapeRegExp } from '~/utils/string';
@@ -9,6 +10,10 @@ export const DEFAULT_SESSION_EXPIRY = 1000 * 60 * 15;
 
 /** Factory function that takes mongoose instance and returns the methods */
 export function createUserMethods(mongoose: typeof import('mongoose')) {
+  async function removeUserFromTenant(userId: string): Promise<IUser | null> {
+    const User = mongoose.models.User as Model<IUser>;
+    return User.findByIdAndUpdate(userId, { $unset: { tenantId: 1 } }, { new: true }).lean<IUser>();
+  }
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
    * Handles both direct email fields and $or arrays containing email conditions.
@@ -196,6 +201,9 @@ export function createUserMethods(mongoose: typeof import('mongoose')) {
     if (!user) {
       throw new Error('No user provided');
     }
+    if (user.disabled) {
+      throw new Error('Account disabled');
+    }
 
     const expires = expiresIn ?? DEFAULT_SESSION_EXPIRY;
 
@@ -347,6 +355,7 @@ export function createUserMethods(mongoose: typeof import('mongoose')) {
   }
 
   return {
+    removeUserFromTenant,
     findUser,
     findUsers,
     countUsers,

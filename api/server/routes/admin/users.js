@@ -17,6 +17,22 @@ const handlers = createAdminUsersHandlers({
   findUsers: db.findUsers,
   countUsers: db.countUsers,
   updateUser: db.updateUser,
+  getRoleByName: db.getRoleByName,
+  getUserPrincipals: db.getUserPrincipals,
+  getCapabilitiesForPrincipals: db.getCapabilitiesForPrincipals,
+  findEntriesByPrincipal: db.findEntriesByPrincipal,
+  findProjectsByObjectIds: db.findProjectsByObjectIds,
+  getProjects: db.getProjects,
+  getUserGroups: db.getUserGroups,
+  listAdminAudits: db.listAdminAudits,
+  recordAdminAudit: db.recordAdminAudit,
+  deleteAllUserSessions: db.deleteAllUserSessions,
+  removeUserFromAllGroups: db.removeUserFromAllGroups,
+  deleteAclEntries: db.deleteAclEntries,
+  removeUserFromTenant: db.removeUserFromTenant,
+  getProjectById: db.getProjectById,
+  grantPermission: db.grantPermission,
+  revokePermission: db.revokePermission,
   deleteUser: (req, userId) =>
     runAsSystem(async () => {
       const user = await db.getUserById(userId);
@@ -31,7 +47,11 @@ router.use(requireJwtAuth, requireAdminAccess);
 
 router.get('/', requireReadUsers, handlers.listUsers);
 router.get('/search', requireReadUsers, handlers.searchUsers);
+router.get('/:id', requireReadUsers, handlers.getUser);
 router.patch('/:id', requireManageUsers, handlers.updateUser);
+router.delete('/:id/tenant', requireManageUsers, handlers.removeFromTenant);
+router.post('/:id/projects/:projectId', requireManageUsers, handlers.setProjectAccess);
+router.delete('/:id/projects/:projectId', requireManageUsers, handlers.removeProjectAccess);
 router.delete('/:id', requireManageUsers, handlers.deleteUser);
 
 router.post('/', requireManageUsers, async (req, res) => {
@@ -39,6 +59,15 @@ router.post('/', requireManageUsers, async (req, res) => {
     const { email, name, username, password, tenantId, role } = req.body;
     if (!email || !name || !username) {
       return res.status(400).json({ message: 'Email, name, and username are required.' });
+    }
+    if (role && !(await runAsSystem(() => db.getRoleByName(role)))) {
+      return res.status(400).json({ message: 'Invalid role.' });
+    }
+    const existing = await runAsSystem(() =>
+      db.findUser({ email, ...(tenantId ? { tenantId } : {}) }, '_id'),
+    );
+    if (existing) {
+      return res.status(409).json({ message: 'A user with this email already exists.' });
     }
 
     const generatedPassword = password || Math.random().toString(36).slice(-18);
@@ -57,6 +86,21 @@ router.post('/', requireManageUsers, async (req, res) => {
 
     if (result.status !== 200) {
       return res.status(result.status).json({ message: result.message });
+    }
+
+    const created = await runAsSystem(() =>
+      db.findUser({ email, ...(tenantId ? { tenantId } : {}) }, '_id tenantId role'),
+    );
+    if (created) {
+      await runAsSystem(() =>
+        db.recordAdminAudit({
+          actorId: req.user._id ?? req.user.id,
+          targetUserId: created._id,
+          tenantId: created.tenantId,
+          action: 'user.created',
+          after: { email, name, username, role: created.role, tenantId: created.tenantId },
+        }),
+      );
     }
 
     return res

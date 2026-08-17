@@ -74,6 +74,9 @@ async function passportLogin(req, email, password, done) {
       if (!user) {
         return { user: null, info: { message: 'Email does not exist.' }, reason: 'not-found' };
       }
+      if (user.disabled) {
+        return { user: null, info: { message: 'Account disabled.' }, reason: 'disabled' };
+      }
       if (!user.password) {
         return { user: null, info: { message: 'Email does not exist.' }, reason: 'no-password' };
       }
@@ -112,7 +115,11 @@ async function passportLogin(req, email, password, done) {
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
       return done(null, false, result.info);
     }
-    if (result.reason === 'not-found' || result.reason === 'no-password') {
+    if (
+      result.reason === 'not-found' ||
+      result.reason === 'no-password' ||
+      result.reason === 'disabled'
+    ) {
       logError(`Passport Local Strategy - ${result.reason}`, { email });
       logger.error(`[Login] [Login failed] [Username: ${email}] [Request-IP: ${req.ip}]`);
       return done(null, false, result.info);

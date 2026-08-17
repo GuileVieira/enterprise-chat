@@ -17,6 +17,11 @@ describe('User Methods', () => {
   });
 
   describe('generateToken', () => {
+    it('rejects disabled users', async () => {
+      await expect(
+        userMethods.generateToken({ ...mockUser, disabled: true } as IUser),
+      ).rejects.toThrow('Account disabled');
+    });
     const mockUser = {
       _id: new mongoose.Types.ObjectId('aaaaaaaaaaaaaaaaaaaaaaaa'),
       username: 'testuser',

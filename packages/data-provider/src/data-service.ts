@@ -1375,8 +1375,27 @@ export function deleteAdminUser(id: string): Promise<unknown> {
   return request.delete(endpoints.adminUserById(id));
 }
 
-export function updateAdminUser(id: string, name: string): Promise<unknown> {
-  return request.patch(endpoints.adminUserById(id), { name });
+export function getAdminUser(id: string): Promise<q.AdminUserDetailResponse> {
+  return request.get(endpoints.adminUserById(id));
+}
+
+export function updateAdminUser(
+  id: string,
+  changes: { name?: string; role?: string; disabled?: boolean },
+): Promise<unknown> {
+  return request.patch(endpoints.adminUserById(id), changes);
+}
+
+export function removeAdminUserFromTenant(id: string): Promise<unknown> {
+  return request.delete(endpoints.adminUserTenant(id));
+}
+
+export function grantAdminUserProject(id: string, projectId: string): Promise<unknown> {
+  return request.post(endpoints.adminUserProject(id, projectId));
+}
+
+export function revokeAdminUserProject(id: string, projectId: string): Promise<unknown> {
+  return request.delete(endpoints.adminUserProject(id, projectId));
 }
 
 /* Admin Groups */

@@ -4,47 +4,57 @@ import EditUserModal from './EditUserModal';
 
 const mockMutateAsync = jest.fn();
 
-jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string) => {
-    const labels: Record<string, string> = {
-      com_admin_edit_user: 'Edit name',
-      com_admin_name: 'Name',
-      com_admin_edit_user_error: 'Update failed',
-      com_ui_cancel: 'Cancel',
-      com_ui_save: 'Save',
-    };
-    return labels[key] ?? key;
-  },
+jest.mock('~/hooks', () => ({ useLocalize: () => (key: string) => key }));
+jest.mock('~/hooks/AuthContext', () => ({ useAuthContext: () => ({ user: { id: 'admin-1' } }) }));
+jest.mock('~/data-provider/roles', () => ({
+  useListRoles: () => ({ data: { roles: [{ name: 'USER' }, { name: 'ADMIN' }] } }),
 }));
-
 jest.mock('~/data-provider/admin', () => ({
-  useUpdateAdminUserMutation: () => ({
+  useGetAdminUser: () => ({
     isLoading: false,
-    mutateAsync: mockMutateAsync,
+    data: {
+      user: {
+        _id: 'user-1',
+        name: 'Nome Antigo',
+        email: 'user@test.com',
+        role: 'USER',
+        disabled: false,
+      },
+      permissions: ['PROJECTS.USE'],
+      capabilities: ['READ_USERS'],
+      groups: [],
+      projects: [],
+      availableProjects: [],
+      audits: [],
+    },
   }),
+  useUpdateAdminUserMutation: () => ({ isLoading: false, mutateAsync: mockMutateAsync }),
+  useRemoveAdminUserFromTenantMutation: () => ({ isLoading: false, mutateAsync: jest.fn() }),
+  useAdminUserProjectMutation: () => ({ isLoading: false, mutateAsync: jest.fn() }),
 }));
 
 describe('EditUserModal', () => {
-  beforeEach(() => {
-    mockMutateAsync.mockReset();
-    mockMutateAsync.mockResolvedValue({});
-  });
+  beforeEach(() => mockMutateAsync.mockResolvedValue({}));
 
-  it('trims and submits the edited name', async () => {
-    const onClose = jest.fn();
+  it('updates trimmed name and role', async () => {
     render(
       <EditUserModal
         user={{ _id: 'user-1', name: 'Nome Antigo', email: 'user@test.com' }}
-        onClose={onClose}
+        onClose={jest.fn()}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  Nome Novo  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({ id: 'user-1', name: 'Nome Novo' });
-      expect(onClose).toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('com_admin_name'), {
+      target: { value: '  Nome Novo  ' },
     });
+    fireEvent.change(screen.getByLabelText('com_admin_role'), { target: { value: 'ADMIN' } });
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_save' }));
+
+    await waitFor(() =>
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        id: 'user-1',
+        changes: { name: 'Nome Novo', role: 'ADMIN' },
+      }),
+    );
   });
 });

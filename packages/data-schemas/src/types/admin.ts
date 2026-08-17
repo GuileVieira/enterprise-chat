@@ -120,6 +120,7 @@ export type AdminUserListItem = {
   email: string;
   avatar: string;
   role: string;
+  disabled: boolean;
   provider: string;
   tenantId?: string;
   createdAt?: string;

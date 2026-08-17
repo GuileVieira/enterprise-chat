@@ -153,7 +153,10 @@ const UsersPage: React.FC = () => {
                     className="border-b border-border-light transition-colors hover:bg-surface-tertiary"
                   >
                     <td className="px-6 py-4 font-medium text-text-primary">
-                      {user.name ?? user.username}
+                      <span>{user.name ?? user.username}</span>
+                      {user.disabled && (
+                        <AdminBadge tone="danger">{localize('com_admin_disabled')}</AdminBadge>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-text-secondary">{user.email}</td>
                     <td className="px-6 py-4 text-text-secondary">{user.username}</td>

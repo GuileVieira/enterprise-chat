@@ -1,4 +1,5 @@
 export { default as actionSchema } from './action';
+export { default as adminAuditSchema } from './adminAudit';
 export { default as agentSchema } from './agent';
 export { default as agentApiKeySchema } from './agentApiKey';
 export { default as agentCategorySchema } from './agentCategory';

@@ -32,13 +32,14 @@ function createReqRes(
   overrides: {
     params?: Record<string, string>;
     query?: Record<string, string | string[]>;
+    body?: Record<string, unknown>;
     user?: { _id?: Types.ObjectId; id?: string; role?: string; tenantId?: string };
   } = {},
 ) {
   const req = {
     params: overrides.params ?? {},
     query: overrides.query ?? {},
-    body: {},
+    body: overrides.body ?? {},
     user: overrides.user ?? { _id: new Types.ObjectId(), role: 'admin' },
   } as unknown as ServerRequest;
 
@@ -57,6 +58,22 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
     deleteUser: jest
       .fn()
       .mockResolvedValue({ deletedCount: 1, message: 'User was deleted successfully.' }),
+    getRoleByName: jest.fn().mockResolvedValue({ name: 'USER' }),
+    getUserPrincipals: jest.fn().mockResolvedValue([]),
+    getCapabilitiesForPrincipals: jest.fn().mockResolvedValue([]),
+    findEntriesByPrincipal: jest.fn().mockResolvedValue([]),
+    findProjectsByObjectIds: jest.fn().mockResolvedValue([]),
+    getProjects: jest.fn().mockResolvedValue([]),
+    getUserGroups: jest.fn().mockResolvedValue([]),
+    listAdminAudits: jest.fn().mockResolvedValue([]),
+    recordAdminAudit: jest.fn().mockResolvedValue({}),
+    deleteAllUserSessions: jest.fn().mockResolvedValue({ deletedCount: 0 }),
+    removeUserFromAllGroups: jest.fn().mockResolvedValue(undefined),
+    deleteAclEntries: jest.fn().mockResolvedValue({ deletedCount: 0 }),
+    removeUserFromTenant: jest.fn().mockResolvedValue(mockUser({ tenantId: undefined })),
+    getProjectById: jest.fn().mockResolvedValue(null),
+    grantPermission: jest.fn().mockResolvedValue(null),
+    revokePermission: jest.fn().mockResolvedValue({ deletedCount: 0 }),
     ...overrides,
   };
 }
@@ -331,7 +348,10 @@ describe('createAdminUsersHandlers', () => {
         deletedCount: 1,
         message: 'User was deleted successfully.',
       };
-      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({
+        deleteUser: jest.fn().mockResolvedValue(result),
+        findUsers: jest.fn().mockResolvedValue([mockUser()]),
+      });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
@@ -343,7 +363,10 @@ describe('createAdminUsersHandlers', () => {
 
     it('returns fallback message when result.message is empty', async () => {
       const result: UserDeleteResult = { deletedCount: 1, message: '' };
-      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({
+        deleteUser: jest.fn().mockResolvedValue(result),
+        findUsers: jest.fn().mockResolvedValue([mockUser()]),
+      });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
@@ -420,7 +443,10 @@ describe('createAdminUsersHandlers', () => {
         deletedCount: 1,
         message: 'User was deleted successfully.',
       };
-      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
+      const deps = createDeps({
+        deleteUser: jest.fn().mockResolvedValue(result),
+        findUsers: jest.fn().mockResolvedValue([mockUser()]),
+      });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res } = createReqRes({ params: { id: validUserId } });
 
@@ -455,6 +481,7 @@ describe('createAdminUsersHandlers', () => {
     it('returns 500 on error', async () => {
       const deps = createDeps({
         deleteUser: jest.fn().mockRejectedValue(new Error('db crash')),
+        findUsers: jest.fn().mockResolvedValue([mockUser()]),
       });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
@@ -469,9 +496,13 @@ describe('createAdminUsersHandlers', () => {
   describe('updateUser', () => {
     it('trims and updates the user name', async () => {
       const updateUser = jest.fn().mockResolvedValue(mockUser({ name: 'Novo Nome' }));
-      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
-      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
-      req.body = { name: '  Novo Nome  ' };
+      const handlers = createAdminUsersHandlers(
+        createDeps({ updateUser, findUsers: jest.fn().mockResolvedValue([mockUser()]) }),
+      );
+      const { req, res, status, json } = createReqRes({
+        params: { id: validUserId },
+        body: { name: '  Novo Nome  ' },
+      });
 
       await handlers.updateUser(req, res);
 
@@ -482,9 +513,13 @@ describe('createAdminUsersHandlers', () => {
 
     it.each([undefined, '', '   '])('rejects invalid name %p', async (name) => {
       const updateUser = jest.fn();
-      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
-      const { req, res, status } = createReqRes({ params: { id: validUserId } });
-      req.body = { name };
+      const handlers = createAdminUsersHandlers(
+        createDeps({ updateUser, findUsers: jest.fn().mockResolvedValue([mockUser()]) }),
+      );
+      const { req, res, status } = createReqRes({
+        params: { id: validUserId },
+        body: { name },
+      });
 
       await handlers.updateUser(req, res);
 
@@ -494,9 +529,13 @@ describe('createAdminUsersHandlers', () => {
 
     it('rejects names longer than 200 characters', async () => {
       const updateUser = jest.fn();
-      const handlers = createAdminUsersHandlers(createDeps({ updateUser }));
-      const { req, res, status } = createReqRes({ params: { id: validUserId } });
-      req.body = { name: 'a'.repeat(201) };
+      const handlers = createAdminUsersHandlers(
+        createDeps({ updateUser, findUsers: jest.fn().mockResolvedValue([mockUser()]) }),
+      );
+      const { req, res, status } = createReqRes({
+        params: { id: validUserId },
+        body: { name: 'a'.repeat(201) },
+      });
 
       await handlers.updateUser(req, res);
 
@@ -508,13 +547,100 @@ describe('createAdminUsersHandlers', () => {
       const handlers = createAdminUsersHandlers(
         createDeps({ updateUser: jest.fn().mockResolvedValue(null) }),
       );
-      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
-      req.body = { name: 'Novo Nome' };
+      const { req, res, status, json } = createReqRes({
+        params: { id: validUserId },
+        body: { name: 'Novo Nome' },
+      });
 
       await handlers.updateUser(req, res);
 
       expect(status).toHaveBeenCalledWith(404);
       expect(json).toHaveBeenCalledWith({ error: 'User not found' });
     });
+  });
+
+  it('disables a user, revokes sessions, and records an audit', async () => {
+    const target = mockUser({ _id: new Types.ObjectId(validUserId), disabled: false });
+    const updated = mockUser({ _id: target._id, disabled: true });
+    const deps = createDeps({
+      findUsers: jest.fn().mockResolvedValue([target]),
+      updateUser: jest.fn().mockResolvedValue(updated),
+    });
+    const handlers = createAdminUsersHandlers(deps);
+    const { req, res, status } = createReqRes({
+      params: { id: validUserId },
+      body: { disabled: true },
+    });
+
+    await handlers.updateUser(req, res);
+
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith(validUserId);
+    expect(deps.recordAdminAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'user.updated', targetUserId: validUserId }),
+    );
+  });
+
+  it('returns effective permissions, groups, projects, and audits', async () => {
+    const target = mockUser({ _id: new Types.ObjectId(validUserId), tenantId: 'tenant-1' });
+    const projectObjectId = new Types.ObjectId();
+    const deps = createDeps({
+      findUsers: jest.fn().mockResolvedValue([target]),
+      getUserPrincipals: jest
+        .fn()
+        .mockResolvedValue([{ principalType: 'user', principalId: target._id }]),
+      getCapabilitiesForPrincipals: jest.fn().mockResolvedValue([{ capability: 'READ_USERS' }]),
+      getRoleByName: jest.fn().mockResolvedValue({
+        name: 'USER',
+        permissions: { PROJECTS: { USE: true } },
+      }),
+      getUserGroups: jest.fn().mockResolvedValue([{ _id: new Types.ObjectId(), name: 'Time' }]),
+      findEntriesByPrincipal: jest
+        .fn()
+        .mockResolvedValue([{ resourceId: projectObjectId, principalType: 'user', permBits: 1 }]),
+      findProjectsByObjectIds: jest
+        .fn()
+        .mockResolvedValue([
+          { _id: projectObjectId, projectId: 'project-1', name: 'Projeto', tenantId: 'tenant-1' },
+        ]),
+      getProjects: jest
+        .fn()
+        .mockResolvedValue([
+          { _id: projectObjectId, projectId: 'project-1', name: 'Projeto', tenantId: 'tenant-1' },
+        ]),
+      listAdminAudits: jest.fn().mockResolvedValue([{ action: 'user.updated' }]),
+    });
+    const handlers = createAdminUsersHandlers(deps);
+    const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+
+    await handlers.getUser(req, res);
+
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        capabilities: ['READ_USERS'],
+        permissions: ['PROJECTS.USE'],
+        groups: [expect.objectContaining({ name: 'Time' })],
+        projects: [expect.objectContaining({ projectId: 'project-1', direct: true })],
+        audits: [expect.objectContaining({ action: 'user.updated' })],
+      }),
+    );
+  });
+
+  it('removes tenant membership, sessions, groups, and direct ACL entries', async () => {
+    const target = mockUser({ _id: new Types.ObjectId(validUserId), tenantId: 'tenant-1' });
+    const deps = createDeps({ findUsers: jest.fn().mockResolvedValue([target]) });
+    const handlers = createAdminUsersHandlers(deps);
+    const { req, res, status } = createReqRes({ params: { id: validUserId } });
+
+    await handlers.removeFromTenant(req, res);
+
+    expect(status).toHaveBeenCalledWith(200);
+    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith(validUserId);
+    expect(deps.removeUserFromAllGroups).toHaveBeenCalledWith(validUserId);
+    expect(deps.deleteAclEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ principalType: 'user' }),
+    );
+    expect(deps.removeUserFromTenant).toHaveBeenCalledWith(validUserId);
   });
 });

@@ -17,20 +17,35 @@ export interface ProjectDeps {
 }
 
 export function createProjectMethods(mongoose: typeof import('mongoose'), deps?: ProjectDeps) {
-  async function getProjects() {
+  async function findProjectsByObjectIds(
+    ids: Array<string | Types.ObjectId>,
+  ): Promise<Array<IProject & { _id: Types.ObjectId }>> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const Project = mongoose.models.Project as Model<IProject>;
+    return Project.find({ _id: { $in: ids } })
+      .sort({ updatedAt: -1 })
+      .lean<Array<IProject & { _id: Types.ObjectId }>>();
+  }
+  async function getProjects(): Promise<Array<IProject & { _id: Types.ObjectId }>> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
-      return await Project.find({}).sort({ updatedAt: -1 }).lean();
+      return await Project.find({})
+        .sort({ updatedAt: -1 })
+        .lean<Array<IProject & { _id: Types.ObjectId }>>();
     } catch (error) {
       logger.error('[getProjects] Error getting projects', error);
       throw new Error('Error getting projects');
     }
   }
 
-  async function getProjectById(projectId: string) {
+  async function getProjectById(
+    projectId: string,
+  ): Promise<(IProject & { _id: Types.ObjectId }) | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
-      return await Project.findOne({ projectId }).lean();
+      return await Project.findOne({ projectId }).lean<IProject & { _id: Types.ObjectId }>();
     } catch (error) {
       logger.error('[getProjectById] Error getting project', error);
       throw new Error('Error getting project');
@@ -190,6 +205,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
   }
 
   return {
+    findProjectsByObjectIds,
     getProjects,
     getProjectById,
     findProjectById,

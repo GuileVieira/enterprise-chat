@@ -380,13 +380,13 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {
-    "mtime": 1786976470.1725762,
-    "ast_hash": "b78331b435f22ca53d56fa25e67af190",
+    "mtime": 1786987287.3497012,
+    "ast_hash": "8e676c05c71b51463ffe8087618436de",
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1786980983.7105713,
-    "ast_hash": "ae1acdf8ec3bc0f00511ef776292a4da",
+    "mtime": 1786987287.393377,
+    "ast_hash": "76bec6fd0413b0b1fb4ecdf737e70e10",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -405,8 +405,8 @@
     "semantic_hash": "3c4036529ec185ec6e3b7cefd85a7f04"
   },
   "packages/data-provider/src/types/queries.ts": {
-    "mtime": 1784840571.157629,
-    "ast_hash": "730e7068e08526d25876bcf386d6066d",
+    "mtime": 1786988119.153881,
+    "ast_hash": "f2c26e883d1deb023c42421f37dc50b2",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/project.ts": {
@@ -1685,8 +1685,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/admin/users.js": {
-    "mtime": 1786980958.0356042,
-    "ast_hash": "048af6ee253752c09ba772121c9c38b0",
+    "mtime": 1786987713.4504428,
+    "ast_hash": "c7f74437eecfcb68cb978704c7a99cc6",
     "semantic_hash": ""
   },
   "api/server/routes/agents/__tests__/abort.spec.js": {
@@ -2830,8 +2830,8 @@
     "semantic_hash": ""
   },
   "api/strategies/jwtStrategy.js": {
-    "mtime": 1779203341.0791311,
-    "ast_hash": "38ce14874c491585f7bf2a7e577ac2c2",
+    "mtime": 1786987080.8762045,
+    "ast_hash": "e61727ba07885327444f0f57b815c5f0",
     "semantic_hash": ""
   },
   "api/strategies/ldapStrategy.js": {
@@ -2845,13 +2845,13 @@
     "semantic_hash": ""
   },
   "api/strategies/localStrategy.js": {
-    "mtime": 1779209936.5054052,
-    "ast_hash": "21f0c237298ee2cd4ed5516accbd0bf4",
+    "mtime": 1786987080.9266715,
+    "ast_hash": "ba2e2b5663503dbad396ce161e55d8e5",
     "semantic_hash": ""
   },
   "api/strategies/localStrategy.spec.js": {
-    "mtime": 1779209936.5056298,
-    "ast_hash": "96e55c026f781c9d7c525d618b25ed04",
+    "mtime": 1786987785.781494,
+    "ast_hash": "48eb884a0c4f8ea7709fc6e8edacb56b",
     "semantic_hash": ""
   },
   "api/strategies/openIdJwtStrategy.js": {
@@ -3315,8 +3315,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Admin/Users/UsersPage.tsx": {
-    "mtime": 1786981168.4537964,
-    "ast_hash": "e5d17009675b3892321f323a74b04448",
+    "mtime": 1786987388.8573768,
+    "ast_hash": "25491312155657891f858e7256404d08",
     "semantic_hash": ""
   },
   "client/src/components/Admin/__tests__/AdminLayout.spec.tsx": {
@@ -7600,8 +7600,8 @@
     "semantic_hash": ""
   },
   "client/src/data-provider/admin.ts": {
-    "mtime": 1786980983.7539248,
-    "ast_hash": "3b802a58b5399db4447d9bfda7f43053",
+    "mtime": 1786987287.4397833,
+    "ast_hash": "cd228e9a3416b1416d2315304c4ab0dd",
     "semantic_hash": ""
   },
   "client/src/data-provider/categories.ts": {
@@ -10010,13 +10010,13 @@
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.spec.ts": {
-    "mtime": 1786981139.4501462,
-    "ast_hash": "b0cc252e59d4208bb7587ac588f8609c",
+    "mtime": 1786988119.2927585,
+    "ast_hash": "f7d454381952a976037aa56a8d6ef8bb",
     "semantic_hash": ""
   },
   "packages/api/src/admin/users.ts": {
-    "mtime": 1786981139.411635,
-    "ast_hash": "35f5a465ef9ea3eff4eca6fd87d40984",
+    "mtime": 1786988119.104583,
+    "ast_hash": "711f6873ed217b007550aa5d43d560c2",
     "semantic_hash": ""
   },
   "packages/api/src/agents/__tests__/estimateMediaTokensForMessage.spec.ts": {
@@ -13990,8 +13990,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/keys.ts": {
-    "mtime": 1784840628.51497,
-    "ast_hash": "9cbfb43395ef1e836f425c0c513f9eea",
+    "mtime": 1786987287.3058147,
+    "ast_hash": "7ef285d50bd6611664f6f4955a5f6b41",
     "semantic_hash": ""
   },
   "packages/data-provider/src/mcp.ts": {
@@ -14475,8 +14475,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/index.ts": {
-    "mtime": 1779203545.4032624,
-    "ast_hash": "8cbc6e1fa41f76ca118518228b578532",
+    "mtime": 1786987080.6593163,
+    "ast_hash": "b63e9e9e7a81f05b5ce77140ee51411a",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/key.ts": {
@@ -14525,8 +14525,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/project.ts": {
-    "mtime": 1781219412.7704048,
-    "ast_hash": "3fffc49bd738cd21525c0f19dc877fa9",
+    "mtime": 1786987259.993813,
+    "ast_hash": "447f9507a264a52c17b99b3ae0315e80",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/prompt.spec.ts": {
@@ -14650,13 +14650,13 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/user.test.ts": {
-    "mtime": 1777407818.7030518,
-    "ast_hash": "29f145a4dd3323216101db25d0ec679c",
+    "mtime": 1786987649.3138006,
+    "ast_hash": "c99206c9b582eccf6f93061101c3be8e",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/user.ts": {
-    "mtime": 1779199271.674762,
-    "ast_hash": "d0a1aeaa7aac1950f4afcfb03dfd0674",
+    "mtime": 1786987649.2673864,
+    "ast_hash": "bb52369f939447dcae9a7dc0ad9433de",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/userGroup.methods.spec.ts": {
@@ -14775,8 +14775,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/index.ts": {
-    "mtime": 1784840628.515585,
-    "ast_hash": "401ed9d0e452d1eebea90a90a23cf080",
+    "mtime": 1786986973.0958679,
+    "ast_hash": "06194d1d2a5de7fa18e6fafbfc034671",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/models/key.ts": {
@@ -14985,8 +14985,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/index.ts": {
-    "mtime": 1779203079.786621,
-    "ast_hash": "3daa2d355331abe2de517ccc2a20cafe",
+    "mtime": 1786986973.0568507,
+    "ast_hash": "fccf44f2b861aa093d1c277d57e2fb2a",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/key.ts": {
@@ -15085,8 +15085,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/user.ts": {
-    "mtime": 1779199271.6795158,
-    "ast_hash": "194e446c62d343b02a73d161af795b5f",
+    "mtime": 1786987080.7511497,
+    "ast_hash": "fefa8c34bc590ca6ee125fa4e16aa223",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/accessRole.ts": {
@@ -15105,8 +15105,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/admin.ts": {
-    "mtime": 1779203841.2085733,
-    "ast_hash": "73824f6d103b6ca3963813f0e2a14f26",
+    "mtime": 1786987203.5501468,
+    "ast_hash": "aab25fc234035d69576eab0601b8d1d1",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/agent.ts": {
@@ -15170,8 +15170,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/index.ts": {
-    "mtime": 1783903277.7715027,
-    "ast_hash": "e0d1cd2d1d681784bc4c51be6e420c33",
+    "mtime": 1786986973.0156512,
+    "ast_hash": "54d22f68f9f007fd73388f31898e909d",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/mcp.ts": {
@@ -15250,8 +15250,8 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/user.ts": {
-    "mtime": 1779199271.682459,
-    "ast_hash": "695b5a3b1e25476758559a1b49be21cf",
+    "mtime": 1786987080.7044697,
+    "ast_hash": "86faaa9a92fcbe1f6c5c04b5d6d977a9",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/types/web.ts": {
@@ -16645,13 +16645,33 @@
     "semantic_hash": ""
   },
   "client/src/components/Admin/Users/EditUserModal.spec.tsx": {
-    "mtime": 1786981049.9023058,
-    "ast_hash": "647ed3cd681a1359a06fe85c4b0113d0",
+    "mtime": 1786988119.2479978,
+    "ast_hash": "e9bba5b7ceffb2f8b123e4ffe3076e71",
     "semantic_hash": ""
   },
   "client/src/components/Admin/Users/EditUserModal.tsx": {
-    "mtime": 1786981084.3101509,
-    "ast_hash": "b35e8156e11bc3ea3dd326ecf3595d3e",
+    "mtime": 1786988270.6885607,
+    "ast_hash": "11783e66b3cdb1e4ae774a4e8c68cfbb",
+    "semantic_hash": ""
+  },
+  "packages/data-schemas/src/methods/adminAudit.ts": {
+    "mtime": 1786986972.9715745,
+    "ast_hash": "43a48fc01208d484afe4f1a40be87a66",
+    "semantic_hash": ""
+  },
+  "packages/data-schemas/src/models/adminAudit.ts": {
+    "mtime": 1786986972.9316354,
+    "ast_hash": "f4ab78614fa50efd885a0486c73d284f",
+    "semantic_hash": ""
+  },
+  "packages/data-schemas/src/schema/adminAudit.ts": {
+    "mtime": 1786986972.8897526,
+    "ast_hash": "9eeadb3f9e85938c8ad28cbabba0edc1",
+    "semantic_hash": ""
+  },
+  "packages/data-schemas/src/types/adminAudit.ts": {
+    "mtime": 1786987234.5395846,
+    "ast_hash": "145d85d2c89b45e079d0c2d34cfe34fd",
     "semantic_hash": ""
   }
 }

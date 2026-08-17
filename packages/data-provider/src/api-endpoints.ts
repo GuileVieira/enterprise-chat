@@ -508,6 +508,9 @@ export const updateMetaAdsPermissions = (roleName: string) => `${getRole(roleNam
 export const adminUsers = () => `${BASE_URL}/api/admin/users`;
 export const adminUsersSearch = (q: string) => `${adminUsers()}/search?q=${encodeURIComponent(q)}`;
 export const adminUserById = (id: string) => `${adminUsers()}/${encodeURIComponent(id)}`;
+export const adminUserTenant = (id: string) => `${adminUserById(id)}/tenant`;
+export const adminUserProject = (id: string, projectId: string) =>
+  `${adminUserById(id)}/projects/${encodeURIComponent(projectId)}`;
 
 /* Admin Groups */
 export const adminGroups = () => `${BASE_URL}/api/admin/groups`;

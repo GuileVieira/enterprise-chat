@@ -88,6 +88,7 @@ export enum QueryKeys {
   favorites = 'favorites',
   /* Admin */
   adminUsers = 'adminUsers',
+  adminUser = 'adminUser',
   adminUsersSearch = 'adminUsersSearch',
   adminGroups = 'adminGroups',
   adminGroup = 'adminGroup',

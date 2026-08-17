@@ -66,6 +66,7 @@ import { createConfigMethods, type ConfigMethods } from './config';
 /* Tenant Functions */
 import { createTenantFunctionMethods, type TenantFunctionMethods } from './tenantFunction';
 import { createTenantSecretMethods, type TenantSecretMethods } from './tenantSecret';
+import { createAdminAuditMethods, type AdminAuditMethods } from './adminAudit';
 
 export { RoleConflictError, DEFAULT_REFRESH_TOKEN_EXPIRY, DEFAULT_SESSION_EXPIRY };
 export { tokenValues, cacheTokenValues, premiumTokenValues, defaultRate };
@@ -105,7 +106,8 @@ export type AllMethods = UserMethods &
   AgentMethods &
   ConfigMethods &
   TenantFunctionMethods &
-  TenantSecretMethods;
+  TenantSecretMethods &
+  AdminAuditMethods;
 
 /** Dependencies injected from the api layer into createMethods */
 export interface CreateMethodsDeps {
@@ -242,6 +244,7 @@ export function createMethods(
     /* Tenant Functions */
     ...createTenantFunctionMethods(mongoose),
     ...createTenantSecretMethods(mongoose),
+    ...createAdminAuditMethods(mongoose),
   };
 }
 
@@ -290,4 +293,5 @@ export type {
   ConfigMethods,
   TenantFunctionMethods,
   TenantSecretMethods,
+  AdminAuditMethods,
 };

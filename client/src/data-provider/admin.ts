@@ -57,19 +57,51 @@ export const useDeleteAdminUserMutation = (): UseMutationResult<
   });
 };
 
+export const useGetAdminUser = (
+  id: string,
+  config?: UseQueryOptions<t.AdminUserDetailResponse>,
+): QueryObserverResult<t.AdminUserDetailResponse> =>
+  useQuery<t.AdminUserDetailResponse>(
+    [QueryKeys.adminUser, id],
+    () => dataService.getAdminUser(id),
+    { retry: false, enabled: Boolean(id), ...config },
+  );
+
 export const useUpdateAdminUserMutation = (): UseMutationResult<
   unknown,
   t.TError | undefined,
-  { id: string; name: string },
+  { id: string; changes: { name?: string; role?: string; disabled?: boolean } },
   unknown
 > => {
   const queryClient = useQueryClient();
-  return useMutation(({ id, name }) => dataService.updateAdminUser(id, name), {
+  return useMutation(({ id, changes }) => dataService.updateAdminUser(id, changes), {
     onSuccess: () => {
       queryClient.invalidateQueries([QueryKeys.adminUsers]);
       queryClient.invalidateQueries([QueryKeys.adminUsersSearch]);
+      queryClient.invalidateQueries([QueryKeys.adminUser]);
     },
   });
+};
+
+export const useRemoveAdminUserFromTenantMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation((id: string) => dataService.removeAdminUserFromTenant(id), {
+    onSuccess: () => {
+      queryClient.invalidateQueries([QueryKeys.adminUsers]);
+      queryClient.invalidateQueries([QueryKeys.adminUser]);
+    },
+  });
+};
+
+export const useAdminUserProjectMutation = (action: 'grant' | 'revoke') => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ id, projectId }: { id: string; projectId: string }) =>
+      action === 'grant'
+        ? dataService.grantAdminUserProject(id, projectId)
+        : dataService.revokeAdminUserProject(id, projectId),
+    { onSuccess: () => queryClient.invalidateQueries([QueryKeys.adminUser]) },
+  );
 };
 
 /* Admin Groups */

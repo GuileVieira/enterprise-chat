@@ -23,7 +23,10 @@ const jwtLogin = () =>
           }
           return u;
         });
-        if (user) {
+        if (user?.disabled) {
+          logger.warn('[jwtLogin] JwtStrategy => disabled user: ' + payload?.id);
+          done(null, false);
+        } else if (user) {
           user.id = user._id.toString();
           done(null, user);
         } else {
