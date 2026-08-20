@@ -794,6 +794,27 @@ describe('File Routes - Delete with Agent Access', () => {
   });
 
   describe('GET /files/download/:userId/:file_id', () => {
+    it('downloads generated indexed text from MongoDB', async () => {
+      const userFileId = uuidv4();
+      await createFile({
+        user: otherUserId,
+        file_id: userFileId,
+        filename: 'reuniao-2026-08-19.txt',
+        filepath: FileSources.vectordb,
+        bytes: 17,
+        type: 'text/plain',
+        source: FileSources.text,
+        text: 'Resumo da reunião',
+      });
+
+      const response = await request(app).get(`/files/download/${otherUserId}/${userFileId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.toString()).toBe('Resumo da reunião');
+      expect(response.headers['content-disposition']).toContain('reuniao-2026-08-19.txt');
+      expect(getStrategyFunctions).not.toHaveBeenCalled();
+    });
+
     it('streams proxied downloads by default when a direct URL is available', async () => {
       const userFileId = uuidv4();
       const getDownloadURL = jest.fn().mockResolvedValue('https://cdn.example.com/file.pdf?signed');

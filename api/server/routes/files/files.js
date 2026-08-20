@@ -659,6 +659,15 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       );
     };
 
+    if (file.source === FileSources.text) {
+      const withText = await db.findFileById(file_id);
+      if (typeof withText?.text !== 'string') {
+        return res.status(404).send('File content not found');
+      }
+      setHeaders();
+      return res.send(Buffer.from(withText.text, 'utf8'));
+    }
+
     if (checkOpenAIStorage(file.source)) {
       req.body = { model: file.model };
       const endpointMap = {
