@@ -63,6 +63,13 @@ export function getSharedMessages(shareId: string): Promise<t.TSharedMessagesRes
   return request.get(endpoints.shareMessages(shareId));
 }
 
+export function getSharedArtifactMessages(
+  shareId: string,
+  artifactId: string,
+): Promise<t.TSharedMessagesResponse> {
+  return request.get(endpoints.sharedArtifactMessages(shareId, artifactId));
+}
+
 export function getTenantSharedMessages(shareId: string): Promise<t.TSharedMessagesResponse> {
   return request.get(endpoints.tenantShareMessages(shareId));
 }

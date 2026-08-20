@@ -34,6 +34,24 @@ export const useGetSharedMessages = (
   );
 };
 
+export const useGetSharedArtifactMessages = (
+  shareId: string,
+  artifactId: string,
+  config?: UseQueryOptions<t.TSharedMessagesResponse>,
+): QueryObserverResult<t.TSharedMessagesResponse> => {
+  return useQuery<t.TSharedMessagesResponse>(
+    [QueryKeys.sharedMessages, shareId, artifactId],
+    () => dataService.getSharedArtifactMessages(shareId, artifactId),
+    {
+      enabled: !!shareId && !!artifactId,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
 export const useGetTenantSharedMessages = (
   shareId: string,
   config?: UseQueryOptions<t.TSharedMessagesResponse>,

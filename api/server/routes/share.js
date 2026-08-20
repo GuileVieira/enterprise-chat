@@ -13,6 +13,7 @@ const {
 } = require('~/models');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
 const { forkSharedConversation } = require('~/server/utils/import/fork');
+const { sanitizeSharedArtifactMessages } = require('~/server/services/Artifacts/share');
 const router = express.Router();
 
 /**
@@ -23,6 +24,23 @@ const allowSharedLinks =
 
 if (allowSharedLinks) {
   const allowSharedLinksPublic = isEnabled(process.env.ALLOW_SHARED_LINKS_PUBLIC);
+  router.get('/:shareId/artifact/:artifactId', async (req, res) => {
+    try {
+      const share = await getSharedMessages(req.params.shareId);
+      if (!share) {
+        return res.status(404).end();
+      }
+
+      return res.status(200).json({
+        shareId: share.shareId,
+        conversationId: share.conversationId,
+        messages: sanitizeSharedArtifactMessages(share.messages, req.params.artifactId),
+      });
+    } catch (error) {
+      logger.error('Error getting shared artifact:', error);
+      return res.status(500).json({ message: 'Error getting shared artifact' });
+    }
+  });
   router.get(
     '/:shareId',
     allowSharedLinksPublic ? (req, res, next) => next() : requireJwtAuth,

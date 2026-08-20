@@ -6,7 +6,7 @@ import { buildTree } from 'librechat-data-provider';
 import type { TStartupConfig } from 'librechat-data-provider';
 import { Spinner, useMediaQuery } from '@librechat/client';
 import {
-  useGetSharedMessages,
+  useGetSharedArtifactMessages,
   useGetTenantSharedMessages,
 } from 'librechat-data-provider/react-query';
 import type { SandpackPreviewRef } from '@codesandbox/sandpack-react/unstyled';
@@ -29,11 +29,12 @@ export default function ShareArtifactView({
 }) {
   const localize = useLocalize();
   const [searchParams] = useSearchParams();
+  const artifactId = searchParams.get('artifact') ?? '';
   const artifacts = useRecoilValue(store.artifactsState);
   const previewRef = useRef<SandpackPreviewRef>();
   const isSmallScreen = useMediaQuery('(max-width: 1023px)');
   const { data: startupConfig } = useGetStartupConfig();
-  const publicShare = useGetSharedMessages(shareId, {
+  const publicShare = useGetSharedArtifactMessages(shareId, artifactId, {
     enabled: !isTenantShare && !!shareId,
   });
   const tenantShare = useGetTenantSharedMessages(shareId, {
@@ -44,7 +45,7 @@ export default function ShareArtifactView({
   const messagesTree = dataTree?.length === 0 ? null : (dataTree ?? null);
   const targetId = findShareArtifactId(
     artifacts,
-    searchParams.get('artifact'),
+    artifactId,
     searchParams.get('artifactHash'),
     searchParams.get('artifactIndex'),
   );

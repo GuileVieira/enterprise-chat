@@ -70,6 +70,8 @@ export const messagesBranch = () => `${messagesRoot}/branch`;
 
 const shareRoot = `${BASE_URL}/api/share`;
 export const shareMessages = (shareId: string) => `${shareRoot}/${shareId}`;
+export const sharedArtifactMessages = (shareId: string, artifactId: string) =>
+  `${shareMessages(shareId)}/artifact/${encodeURIComponent(artifactId)}`;
 export const tenantShareMessages = (shareId: string) => `${shareRoot}/tenant/${shareId}`;
 export const getSharedLink = (conversationId: string, targetMessageId?: string) =>
   `${shareRoot}/link/${conversationId}${targetMessageId ? `?targetMessageId=${encodeURIComponent(targetMessageId)}` : ''}`;

@@ -85,6 +85,36 @@ describe('tenant conversation sharing routes', () => {
     expect(db.getTenantSharedMessages).not.toHaveBeenCalled();
   });
 
+  test('allows anonymous access only to selected artifact content', async () => {
+    db.getSharedMessages.mockResolvedValue({
+      shareId: 'share-1',
+      title: 'Private conversation title',
+      conversationId: 'anon-conv',
+      messages: [
+        {
+          messageId: 'message-1',
+          conversationId: 'anon-conv',
+          text: [
+            'private conversation text',
+            ':::artifact{identifier="report" type="text/html" title="Report"}',
+            '<h1>Public artifact</h1>',
+            ':::',
+          ].join('\n'),
+        },
+      ],
+    });
+
+    const res = await request(app).get(
+      '/api/share/share-1/artifact/report_text%2Fhtml_report_original-message',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBeUndefined();
+    expect(res.body.createdAt).toBeUndefined();
+    expect(res.body.messages[0].text).toContain('<h1>Public artifact</h1>');
+    expect(res.body.messages[0].text).not.toContain('private conversation text');
+  });
+
   test('returns a same-tenant share preview for authenticated users', async () => {
     db.getTenantSharedMessages.mockResolvedValue({
       shareId: 'share-1',

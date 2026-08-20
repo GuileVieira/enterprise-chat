@@ -75,6 +75,7 @@ export default function ShareButton({
     );
 
   const shareId = share?.shareId ?? '';
+  const isArtifactShare = linkSearch?.artifactId != null;
   const createTenantShareLink = () => {
     tenantShareMutation.mutate({ conversationId, targetMessageId: shareTargetMessageId });
   };
@@ -86,7 +87,7 @@ export default function ShareButton({
         buttons={button}
         showCloseButton={true}
         showCancelButton={false}
-        title={localize('com_ui_share_link_to_chat')}
+        title={localize(isArtifactShare ? 'com_ui_share_artifact' : 'com_ui_share_link_to_chat')}
         className="max-h-[90vh] max-w-[550px] overflow-y-auto"
         main={
           <div id="share-conversation-dialog">
@@ -115,29 +116,36 @@ export default function ShareButton({
               )}
 
               {shareId && (
-                <div className="flex items-center gap-2 rounded-md bg-surface-secondary p-2">
-                  <div className="flex-1 break-all text-sm text-text-secondary">{sharedLink}</div>
-                  <span className="sr-only" aria-live="polite" aria-atomic="true">
-                    {announcement}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    aria-label={localize('com_ui_copy_link')}
-                    onClick={() => {
-                      if (isCopying) {
-                        return;
-                      }
-                      copyLinkAndAnnounce(setIsCopying);
-                    }}
-                    className={cn('shrink-0', isCopying ? 'cursor-default' : '')}
-                  >
-                    {isCopying ? (
-                      <CopyCheck className="size-4" aria-hidden="true" />
-                    ) : (
-                      <Copy className="size-4" aria-hidden="true" />
+                <div>
+                  <div className="mb-2 text-sm font-medium text-text-primary">
+                    {localize(
+                      isArtifactShare ? 'com_ui_share_artifact_link' : 'com_ui_share_chat_link',
                     )}
-                  </Button>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-md bg-surface-secondary p-2">
+                    <div className="flex-1 break-all text-sm text-text-secondary">{sharedLink}</div>
+                    <span className="sr-only" aria-live="polite" aria-atomic="true">
+                      {announcement}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-label={localize('com_ui_copy_link')}
+                      onClick={() => {
+                        if (isCopying) {
+                          return;
+                        }
+                        copyLinkAndAnnounce(setIsCopying);
+                      }}
+                      className={cn('shrink-0', isCopying ? 'cursor-default' : '')}
+                    >
+                      {isCopying ? (
+                        <CopyCheck className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Copy className="size-4" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
               <div className="mt-3 rounded-md border border-border-light p-3">
