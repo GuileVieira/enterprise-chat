@@ -10,14 +10,16 @@ import {
   AlertDialogAction,
   Spinner,
 } from '@librechat/client';
-import { Check, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
+import { Check, DownloadSimple, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import type { TFile } from 'librechat-data-provider';
 import {
+  useFileDownload,
   useUploadFileMutation,
   useDeleteFilesMutation,
   useUpdateProjectMutation,
 } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import { triggerDownload } from '~/utils';
 import ProjectDiaryFiles from './ProjectDiaryFiles';
 
 interface ProjectFileUploaderProps {
@@ -26,6 +28,33 @@ interface ProjectFileUploaderProps {
   isLoading: boolean;
   onFilesChange: () => void;
   canEdit?: boolean;
+}
+
+function ProjectFileDownload({ file }: { file: TFile }) {
+  const localize = useLocalize();
+  const { refetch, isFetching } = useFileDownload(file.user, file.file_id, {
+    source: file.source,
+  });
+
+  const download = async () => {
+    const result = await refetch();
+    if (result.data) {
+      triggerDownload(result.data, file.filename);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={isFetching}
+      onClick={() => void download()}
+      className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-primary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary disabled:opacity-50"
+      title={localize('com_ui_download')}
+      aria-label={`${localize('com_ui_download')} ${file.filename}`}
+    >
+      {isFetching ? <Spinner className="size-4" /> : <DownloadSimple className="size-4" />}
+    </button>
+  );
 }
 
 export default function ProjectFileUploader({
@@ -256,16 +285,19 @@ export default function ProjectFileUploader({
                   </div>
                 </div>
               </div>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => handleDelete(file)}
-                  className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
-                  title={localize('com_ui_delete')}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              <div className="flex shrink-0 items-center gap-1">
+                <ProjectFileDownload file={file} />
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(file)}
+                    className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
+                    title={localize('com_ui_delete')}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

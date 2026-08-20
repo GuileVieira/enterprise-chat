@@ -212,6 +212,7 @@ describe('project meetings routes', () => {
       duration: 75,
       speakerNames: new Map(),
       recordedAt: new Date('2026-07-23T13:00:00.000Z'),
+      save: jest.fn().mockResolvedValue(undefined),
       toObject() {
         return serializeDocument(this);
       },
@@ -239,11 +240,48 @@ describe('project meetings routes', () => {
         projectId: 'project-1',
         tenantId: 'tenant-1',
         userId: 'user-1',
+        status: 'submitting',
         duration: 75,
-        assemblyTranscriptId: 'transcript-1',
+        assemblyTranscriptId: 'upload:meeting-1',
+        mimeType: 'audio/webm',
         recordedAt: new Date('2026-07-23T13:00:00.000Z'),
       }),
     );
+    expect(meeting).toMatchObject({
+      assemblyTranscriptId: 'transcript-1',
+      status: 'processing',
+    });
+    expect(meeting.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a failed audio submission visible in meeting history', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      status: 'submitting',
+      assemblyTranscriptId: 'upload:meeting-1',
+      speakerNames: new Map(),
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockCreate.mockResolvedValue(meeting);
+    mockSubmitAudio.mockRejectedValue(new Error('Assembly upload unavailable'));
+
+    const response = await request(createApp())
+      .post('/api/projects/project-1/meetings')
+      .field('recordedAt', '2026-07-23T13:00:00.000Z')
+      .attach('audio', Buffer.from('audio'), {
+        filename: 'meeting.webm',
+        contentType: 'audio/webm',
+      });
+
+    expect(response.status).toBe(502);
+    expect(meeting).toMatchObject({
+      status: 'failed',
+      error: 'Assembly upload unavailable',
+    });
+    expect(meeting.save).toHaveBeenCalledTimes(1);
   });
 
   it('finalizes a completed AssemblyAI transcript and indexes project context', async () => {

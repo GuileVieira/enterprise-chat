@@ -33,13 +33,6 @@ interface ProjectMeetingsTabProps {
 
 type PendingRecording = StoredMeetingRecording;
 
-interface MeetingUpload {
-  audio: Blob;
-  duration: number;
-  recordedAt: string;
-  pendingKey?: string;
-}
-
 const parseParticipantNames = (value: string) => [
   ...new Map(
     value
@@ -296,35 +289,9 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     },
     {
       refetchInterval: (meetings) =>
-        meetings?.some((meeting) => meeting.status === 'processing') ? 5000 : false,
-    },
-  );
-
-  const createMeeting = useMutation(
-    async (upload: MeetingUpload) => {
-      const data = new FormData();
-      const extension = upload.audio.type.includes('mp4') ? 'mp4' : 'webm';
-      data.append(
-        'audio',
-        upload.audio,
-        upload.audio instanceof File ? upload.audio.name : `meeting.${extension}`,
-      );
-      data.append('duration', String(upload.duration));
-      data.append('recordedAt', upload.recordedAt);
-      data.append('participants', JSON.stringify(parseParticipantNames(participantNames)));
-      return dataService.createProjectMeeting(projectId, data);
-    },
-    {
-      onSuccess: (meeting, upload) => {
-        if (upload.pendingKey) {
-          void deleteMeetingChunks(upload.pendingKey);
-        }
-        setPendingUpload(null);
-        queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
-        setSelected(meeting);
-      },
-      onError: () => setError(localize('com_ui_meeting_upload_error')),
-      onSettled: () => setRecording('idle'),
+        meetings?.some((meeting) => ['submitting', 'processing'].includes(meeting.status))
+          ? 5000
+          : false,
     },
   );
 
@@ -643,13 +610,46 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     setSpeakerNames(meeting.speakerNames);
   };
 
-  const uploadFile = (file?: File) => {
+  const uploadFile = async (file?: File) => {
     if (!file) {
       return;
     }
     setError('');
     setRecording('uploading');
-    createMeeting.mutate({ audio: file, duration: 0, recordedAt: new Date().toISOString() });
+    try {
+      const meeting = await dataService.createProjectMeetingUpload(projectId, {
+        duration: 0,
+        recordedAt: new Date().toISOString(),
+        mimeType: file.type || 'audio/webm',
+        participants: parseParticipantNames(participantNames),
+      });
+      queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+      const chunkSize = 5 * 1024 * 1024;
+      const totalChunks = Math.ceil(file.size / chunkSize);
+      setUploadProgress({ uploaded: 0, total: totalChunks });
+      for (let index = 0; index < totalChunks; index++) {
+        await dataService.uploadProjectMeetingChunk(
+          projectId,
+          meeting.id,
+          index,
+          file.slice(index * chunkSize, (index + 1) * chunkSize),
+        );
+        setUploadProgress({ uploaded: index + 1, total: totalChunks });
+      }
+      setUploadStage('submitting');
+      const submitted = await dataService.completeProjectMeetingUpload(
+        projectId,
+        meeting.id,
+        totalChunks,
+        0,
+      );
+      setSelected(submitted);
+      queryClient.invalidateQueries(DynamicQueryKeys.projectMeetings(projectId));
+    } catch {
+      setError(localize('com_ui_meeting_upload_error'));
+    } finally {
+      setRecording('idle');
+    }
   };
 
   const openChat = () => {
@@ -855,7 +855,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                 accept="audio/*"
                 className="hidden"
                 aria-label={localize('com_ui_meeting_upload_audio')}
-                onChange={(event) => uploadFile(event.target.files?.[0])}
+                onChange={(event) => void uploadFile(event.target.files?.[0])}
               />
             </div>
             {error && (

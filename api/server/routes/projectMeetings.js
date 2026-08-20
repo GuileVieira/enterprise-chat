@@ -334,29 +334,41 @@ router.post('/', projectAccess(PermissionBits.EDIT), upload.single('audio'), asy
   if (!req.file) {
     return res.status(400).json({ error: 'Audio file required' });
   }
+  let meeting;
   try {
     const project = await getProject(req);
     const participants = parseParticipants(req.body.participants, req.body.participantSource);
     const multichannel =
       req.body.multichannel === 'true' || participants.some(({ channel }) => channel);
-    const submitted = await submitAudio(req.file.path, { participants, multichannel });
     const duration = Number(req.body.duration);
     const recordedAt = new Date(req.body.recordedAt);
-    const meeting = await getMeetingModel().create({
+    const meetingId = new mongoose.Types.ObjectId();
+    meeting = await getMeetingModel().create({
+      _id: meetingId,
       projectId: project.projectId,
       tenantId: project.tenantId,
       userId: req.user.id,
       title: req.body.title?.trim() || `Reunião de ${new Date().toLocaleDateString('pt-BR')}`,
-      status: 'processing',
+      status: 'submitting',
       duration: Number.isFinite(duration) && duration >= 0 ? duration : 0,
-      assemblyTranscriptId: submitted.id,
+      assemblyTranscriptId: `upload:${meetingId}`,
+      mimeType: req.file.mimetype,
       participants,
       multichannel,
       recordedAt: Number.isNaN(recordedAt.getTime()) ? new Date() : recordedAt,
     });
+    const submitted = await submitAudio(req.file.path, { participants, multichannel });
+    meeting.assemblyTranscriptId = submitted.id;
+    meeting.status = 'processing';
+    await meeting.save();
     res.status(202).json(serialize(meeting));
   } catch (error) {
     logger.error('[projectMeetings] create failed', error);
+    if (meeting) {
+      meeting.status = 'failed';
+      meeting.error = error.message || 'Failed to submit meeting';
+      await meeting.save().catch(() => undefined);
+    }
     res.status(502).json({ error: error.message || 'Failed to submit meeting' });
   } finally {
     await fs.promises.rm(req.file.path, { force: true });

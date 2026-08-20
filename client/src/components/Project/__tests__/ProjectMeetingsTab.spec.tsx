@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
-const mockCreateProjectMeeting = jest.fn();
 const mockCreateProjectMeetingUpload = jest.fn();
 const mockCompleteProjectMeetingUpload = jest.fn();
 const mockDeleteMeetingChunk = jest.fn();
@@ -19,7 +18,6 @@ const mockUploadProjectMeetingChunk = jest.fn();
 
 jest.mock('librechat-data-provider', () => ({
   dataService: {
-    createProjectMeeting: (...args: unknown[]) => mockCreateProjectMeeting(...args),
     createProjectMeetingUpload: (...args: unknown[]) => mockCreateProjectMeetingUpload(...args),
     completeProjectMeetingUpload: (...args: unknown[]) => mockCompleteProjectMeetingUpload(...args),
     deleteProjectMeeting: jest.fn(),
@@ -123,11 +121,6 @@ describe('ProjectMeetingsTab recorder', () => {
       speakerNames: {},
     });
     mockCompleteProjectMeetingUpload.mockResolvedValue({
-      id: 'meeting-1',
-      status: 'processing',
-      speakerNames: {},
-    });
-    mockCreateProjectMeeting.mockResolvedValue({
       id: 'meeting-1',
       status: 'processing',
       speakerNames: {},
@@ -240,11 +233,20 @@ describe('ProjectMeetingsTab recorder', () => {
       target: { files: [audio] },
     });
 
-    await waitFor(() => expect(mockCreateProjectMeeting).toHaveBeenCalledTimes(1));
-    const form = mockCreateProjectMeeting.mock.calls[0][1] as FormData;
-    expect(form.get('audio')).toEqual(audio);
-    expect(form.get('duration')).toBe('0');
-    expect(form.get('participants')).toBe('["Ana","Bruno"]');
+    await waitFor(() => expect(mockCreateProjectMeetingUpload).toHaveBeenCalledTimes(1));
+    expect(mockCreateProjectMeetingUpload).toHaveBeenCalledWith('project-1', {
+      duration: 0,
+      recordedAt: expect.any(String),
+      mimeType: 'audio/mpeg',
+      participants: ['Ana', 'Bruno'],
+    });
+    expect(mockUploadProjectMeetingChunk).toHaveBeenCalledWith(
+      'project-1',
+      'meeting-1',
+      0,
+      expect.any(Blob),
+    );
+    await waitFor(() => expect(mockCompleteProjectMeetingUpload).toHaveBeenCalledTimes(1));
   });
 
   it('filters meetings by title, summary, or transcript speech', async () => {

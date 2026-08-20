@@ -11,6 +11,7 @@ type UploadCallbacks = {
 const mockUploadMutate = jest.fn();
 const mockUpdateProjectMutate = jest.fn();
 const mockDeleteFilesMutate = jest.fn();
+const mockDownloadRefetch = jest.fn();
 let mockUploadCallbacks: UploadCallbacks = {};
 
 jest.mock('~/data-provider', () => ({
@@ -20,6 +21,7 @@ jest.mock('~/data-provider', () => ({
   }),
   useUpdateProjectMutation: jest.fn(() => ({ mutate: mockUpdateProjectMutate })),
   useDeleteFilesMutation: jest.fn(() => ({ mutate: mockDeleteFilesMutate })),
+  useFileDownload: jest.fn(() => ({ refetch: mockDownloadRefetch, isFetching: false })),
   useProjectMetaAdsDiaryQuery: jest.fn(() => ({
     data: { entries: [] },
     isLoading: false,
@@ -62,10 +64,23 @@ describe('ProjectFileUploader', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUploadCallbacks = {};
+    mockDownloadRefetch.mockResolvedValue({ data: 'blob:brief' });
     Object.defineProperty(global.crypto, 'randomUUID', {
       configurable: true,
       value: jest.fn(() => 'new-file-id'),
     });
+  });
+
+  it('downloads an attached project file', async () => {
+    const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation();
+    renderUploader([createFile({ user: 'owner-1' })]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_download brief.pdf' }));
+
+    expect(mockDownloadRefetch).toHaveBeenCalledTimes(1);
+    await act(async () => undefined);
+    expect(click).toHaveBeenCalledTimes(1);
+    click.mockRestore();
   });
 
   it('shows upload and indexing status while the request is pending', () => {
