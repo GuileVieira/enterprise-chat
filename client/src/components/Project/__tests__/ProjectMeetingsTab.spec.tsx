@@ -88,6 +88,8 @@ const renderTab = () => {
 describe('ProjectMeetingsTab recorder', () => {
   const stopTrack = jest.fn();
   const getUserMedia = jest.fn();
+  const releaseWakeLock = jest.fn();
+  const requestWakeLock = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -99,12 +101,20 @@ describe('ProjectMeetingsTab recorder', () => {
       configurable: true,
       value: { getUserMedia },
     });
+    Object.defineProperty(global.navigator, 'wakeLock', {
+      configurable: true,
+      value: { request: requestWakeLock },
+    });
     Object.defineProperty(global, 'MediaRecorder', {
       configurable: true,
       value: FakeMediaRecorder,
     });
     getUserMedia.mockResolvedValue({
       getTracks: () => [{ stop: stopTrack }],
+    });
+    requestWakeLock.mockResolvedValue({
+      addEventListener: jest.fn(),
+      release: releaseWakeLock,
     });
     mockSaveMeetingChunk.mockResolvedValue(undefined);
     mockSaveMeetingRecording.mockResolvedValue(undefined);
@@ -133,13 +143,18 @@ describe('ProjectMeetingsTab recorder', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
     await screen.findByRole('button', { name: 'com_ui_meeting_pause' });
+    await waitFor(() => expect(requestWakeLock).toHaveBeenCalledWith('screen'));
+    expect(screen.getByText('com_ui_meeting_keep_page_open')).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'com_ui_meeting_waveform_recording' }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_pause' }));
+    await waitFor(() => expect(releaseWakeLock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('com_ui_meeting_keep_page_open')).toBeNull();
     expect(screen.getByRole('button', { name: 'com_ui_meeting_upload_audio' })).toBeDisabled();
     expect(screen.getByText('com_ui_meeting_recorder_paused')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_resume' }));
+    await waitFor(() => expect(requestWakeLock).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_finish' }));
 
     await waitFor(() => expect(mockCompleteProjectMeetingUpload).toHaveBeenCalledTimes(1));

@@ -1048,6 +1048,7 @@
   "com_ui_meeting_retry_upload": "Tentar envio novamente",
   "com_ui_meeting_discard_upload": "Descartar gravação",
   "com_ui_meeting_microphone_denied": "Permissão do microfone negada. Libere o acesso no navegador e tente novamente.",
+  "com_ui_meeting_keep_page_open": "Mantenha o Orqest aberto nesta tela durante toda a gravação. Trocar de aplicativo ou bloquear o celular pode interromper o áudio.",
   "com_ui_meeting_empty": "Nenhuma reunião gravada.",
   "com_ui_meeting_select": "Selecione uma reunião para ver os detalhes.",
   "com_ui_meeting_status_processing": "Processando transcrição",

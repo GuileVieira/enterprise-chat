@@ -159,6 +159,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const waveformBarRefs = useRef<Array<HTMLSpanElement | null>>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -359,6 +360,47 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       setElapsed(Math.floor((Date.now() - startedAtRef.current - pausedTotalRef.current) / 1000));
     }, 1000);
     return () => window.clearInterval(timer);
+  }, [recording]);
+
+  useEffect(() => {
+    if (recording !== 'recording') {
+      return;
+    }
+    let cancelled = false;
+    const requestWakeLock = async () => {
+      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') {
+        return;
+      }
+      try {
+        const wakeLock = await navigator.wakeLock.request('screen');
+        if (cancelled) {
+          void wakeLock.release();
+          return;
+        }
+        wakeLockRef.current = wakeLock;
+        wakeLock.addEventListener('release', () => {
+          if (wakeLockRef.current === wakeLock) {
+            wakeLockRef.current = null;
+          }
+        });
+      } catch {
+        wakeLockRef.current = null;
+      }
+    };
+    void requestWakeLock();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !wakeLockRef.current) {
+        void requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      const wakeLock = wakeLockRef.current;
+      wakeLockRef.current = null;
+      void wakeLock?.release();
+    };
   }, [recording]);
 
   useEffect(
@@ -744,6 +786,14 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                     : 'com_ui_meeting_waveform_inactive',
                 )}
               />
+            )}
+            {recording === 'recording' && (
+              <p
+                role="status"
+                className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-300"
+              >
+                {localize('com_ui_meeting_keep_page_open')}
+              </p>
             )}
             <div className="mt-4 space-y-2">
               {recording === 'idle' && !pendingUpload && (
