@@ -179,6 +179,7 @@ describe('UploadSkillDialog', () => {
   });
 
   it('imports every skill subfolder from a selected parent folder', async () => {
+    const appendSpy = jest.spyOn(FormData.prototype, 'append');
     const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
     const directoryInput = container.querySelector('input[webkitdirectory]');
     if (!(directoryInput instanceof HTMLInputElement)) {
@@ -192,10 +193,13 @@ describe('UploadSkillDialog', () => {
     });
 
     await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
+    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(File), 'meta-ads.md');
+    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(File), 'copy.md');
     expect(await screen.findAllByText('Imported')).toHaveLength(2);
     expect(mockShowToast).toHaveBeenCalledWith({
       status: 'success',
       message: '2 of 2 skills imported',
     });
+    appendSpy.mockRestore();
   });
 });

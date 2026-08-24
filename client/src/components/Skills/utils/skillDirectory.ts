@@ -51,3 +51,13 @@ export async function createSkillArchive(directory: SkillDirectory): Promise<Fil
   const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
   return new File([blob], `${directory.name}.skill`, { type: 'application/zip' });
 }
+
+export async function createSkillImportFile(directory: SkillDirectory): Promise<File> {
+  const skillMd = directory.files.find(
+    ({ relativePath }) => relativePath.toUpperCase() === 'SKILL.MD',
+  );
+  if (directory.files.length === 1 && skillMd) {
+    return new File([skillMd.file], `${directory.name}.md`, { type: 'text/markdown' });
+  }
+  return createSkillArchive(directory);
+}

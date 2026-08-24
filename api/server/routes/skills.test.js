@@ -152,6 +152,7 @@ afterEach(async () => {
   await AclEntry.deleteMany({});
   currentTestUser = testUsers.owner;
   mockFileConfig = undefined;
+  delete process.env.SKILL_IMPORT_ALLOW_CODE;
 });
 
 afterAll(async () => {
@@ -325,6 +326,25 @@ describe('Skill routes', () => {
   });
 
   describe('POST /api/skills/import', () => {
+    it('stores an imported Markdown file as the skill body without creating file records', async () => {
+      const markdown = [
+        '---',
+        'name: markdown-only-skill',
+        'description: Markdown-only route test skill.',
+        '---',
+        '# Markdown Only',
+      ].join('\n');
+
+      const res = await request(app).post('/api/skills/import').attach('file', markdown, {
+        filename: 'markdown-only.md',
+        contentType: 'text/markdown',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.body).toBe(markdown);
+      expect(await SkillFile.countDocuments({ skillId: res.body._id })).toBe(0);
+    });
+
     it('enforces fileConfig.skills.fileSizeLimit before import handling', async () => {
       mockFileConfig = {
         skills: {
@@ -346,8 +366,7 @@ describe('Skill routes', () => {
     });
 
     it('persists storage metadata for imported skill files', async () => {
-      const savedFilepath =
-        'https://cdn.example.com/r/us-east-2/uploads/user123/imported-script.sh';
+      const savedFilepath = 'https://cdn.example.com/r/us-east-2/uploads/user123/reference.txt';
       const saveBuffer = jest.fn().mockResolvedValue(savedFilepath);
       const { getFileStrategy } = require('~/server/utils/getFileStrategy');
       const { getStrategyFunctions } = require('~/server/services/Files/strategies');
@@ -365,7 +384,7 @@ describe('Skill routes', () => {
           '# Imported Skill',
         ].join('\n'),
       );
-      zip.file('scripts/imported-script.sh', 'echo imported');
+      zip.file('references/reference.txt', 'Imported reference');
       const buffer = await zip.generateAsync({ type: 'nodebuffer' });
 
       const res = await request(app).post('/api/skills/import').attach('file', buffer, {
@@ -382,16 +401,43 @@ describe('Skill routes', () => {
       );
 
       const savedFile = await SkillFile.findOne({
-        relativePath: 'scripts/imported-script.sh',
+        relativePath: 'references/reference.txt',
       }).lean();
       expect(savedFile).toEqual(
         expect.objectContaining({
           filepath: savedFilepath,
           source: 'cloudfront',
-          storageKey: 'r/us-east-2/uploads/user123/imported-script.sh',
+          storageKey: 'r/us-east-2/uploads/user123/reference.txt',
           storageRegion: 'us-east-2',
         }),
       );
+    });
+
+    it('blocks code files by default without storing them', async () => {
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: blocked-code-skill',
+          'description: Skill with code blocked by default.',
+          '---',
+          '# Blocked Code',
+        ].join('\n'),
+      );
+      zip.file('scripts/analyze.py', 'print("blocked")');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      const res = await request(app).post('/api/skills/import').attach('file', buffer, {
+        filename: 'blocked-code.skill',
+        contentType: 'application/zip',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body._importSummary).toEqual(
+        expect.objectContaining({ filesProcessed: 1, filesSucceeded: 0, filesFailed: 1 }),
+      );
+      expect(await SkillFile.countDocuments({ skillId: res.body._id })).toBe(0);
     });
   });
 

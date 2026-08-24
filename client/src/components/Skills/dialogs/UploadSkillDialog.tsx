@@ -11,7 +11,7 @@ import type { TSkill } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
-import { collectSkillDirectories, createSkillArchive } from '../utils';
+import { collectSkillDirectories, createSkillImportFile } from '../utils';
 import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
@@ -131,7 +131,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
       for (const directory of directories) {
         try {
-          const skill = await importFile(await createSkillArchive(directory));
+          const skill = await importFile(await createSkillImportFile(directory));
           const summary = getImportSummary(skill);
           succeeded++;
           setBatchResults((results) =>

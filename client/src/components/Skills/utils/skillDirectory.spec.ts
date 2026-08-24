@@ -1,4 +1,8 @@
-import { collectSkillDirectories, createSkillArchive } from './skillDirectory';
+import {
+  collectSkillDirectories,
+  createSkillArchive,
+  createSkillImportFile,
+} from './skillDirectory';
 
 function directoryFile(path: string, content: string): File {
   const file = new File([content], path.split('/').at(-1));
@@ -30,5 +34,15 @@ describe('skillDirectory', () => {
     expect(
       collectSkillDirectories([directoryFile('skills/incomplete/reference.md', '# Missing')]),
     ).toEqual([]);
+  });
+
+  it('uses the Markdown handler when a skill has no auxiliary files', async () => {
+    const [directory] = collectSkillDirectories([
+      directoryFile('skills/meta-ads/SKILL.md', '# Meta Ads'),
+    ]);
+
+    const file = await createSkillImportFile(directory);
+    expect(file.name).toBe('meta-ads.md');
+    expect(file.type).toBe('text/markdown');
   });
 });
