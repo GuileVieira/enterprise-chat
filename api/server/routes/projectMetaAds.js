@@ -328,7 +328,7 @@ function validateDiaryAnswers(value) {
     const text = typeof answer?.answer === 'string' ? answer.answer.trim() : '';
     const parentQuestionId =
       typeof answer?.parentQuestionId === 'string' ? answer.parentQuestionId.trim() : undefined;
-    if (!id || !question || text.length > 4000 || question.length > 500) {
+    if (!id || !question || text.length > 20000 || question.length > 500) {
       throw Object.assign(new Error('Invalid diary answer.'), { statusCode: 400 });
     }
     return { id, question, answer: text, ...(parentQuestionId ? { parentQuestionId } : {}) };

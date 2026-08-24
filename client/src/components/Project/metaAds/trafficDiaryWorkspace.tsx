@@ -394,6 +394,7 @@ export function TrafficDiaryWorkspace({
                       {item.parentQuestionId ? (
                         <input
                           value={item.question}
+                          maxLength={500}
                           disabled={!canEditEntry}
                           onChange={(event) =>
                             setAnswers((current) =>
@@ -414,6 +415,7 @@ export function TrafficDiaryWorkspace({
                       )}
                       <textarea
                         value={item.answer}
+                        maxLength={20000}
                         disabled={!canEditEntry}
                         onChange={(event) => updateAnswer(item.id, event.target.value)}
                         rows={3}

@@ -769,6 +769,20 @@ describe('projectMetaAds diary validation', () => {
     ]);
   });
 
+  it('accepts diary answers up to 20,000 characters and rejects larger values', () => {
+    expect(
+      router._validateDiaryAnswersForTest([
+        { id: 'measurement', question: 'Métricas', answer: 'a'.repeat(20000) },
+      ]),
+    ).toHaveLength(1);
+
+    expect(() =>
+      router._validateDiaryAnswersForTest([
+        { id: 'measurement', question: 'Métricas', answer: 'a'.repeat(20001) },
+      ]),
+    ).toThrow('Invalid diary answer.');
+  });
+
   it('accepts any ISO day, not only Mondays', () => {
     expect(router._validateDiaryDateForTest('2026-07-14')).toBe('2026-07-14');
   });
