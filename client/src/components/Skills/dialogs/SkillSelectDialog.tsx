@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, Check, EarthIcon, User, Plus, Star, ListFilter, X } from 'lucide-react';
+import { Search, Check, Eye, EarthIcon, User, Plus, Star, ListFilter, X } from 'lucide-react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { OGDialog, OGDialogContent } from '@librechat/client';
@@ -13,8 +13,9 @@ import {
   useHasAccess,
   useSkillFavorites,
 } from '~/hooks';
-import { useListSkillsQuery } from '~/data-provider';
+import { useGetSkillByIdQuery, useListSkillsQuery } from '~/data-provider';
 import { CategoryIcon } from '~/components/Prompts';
+import SkillDetail from '~/components/Skills/display/SkillDetail';
 import { cn } from '~/utils';
 
 interface SkillSelectDialogProps {
@@ -66,6 +67,7 @@ interface SkillCardProps {
   isShared: boolean;
   isPublic: boolean;
   onToggle: (skillId: string) => void;
+  onView: (skillId: string) => void;
   onToggleFavorite: (skillId: string) => void;
   localize: ReturnType<typeof useLocalize>;
 }
@@ -77,27 +79,35 @@ function SkillCard({
   isShared,
   isPublic,
   onToggle,
+  onView,
   onToggleFavorite,
   localize,
 }: SkillCardProps) {
   return (
-    <button
-      type="button"
-      onClick={() => onToggle(skill._id)}
-      onMouseDown={(e) => e.preventDefault()}
-      aria-pressed={selected}
+    <div
       className={cn(
-        'group relative flex h-32 cursor-pointer flex-col rounded-xl border p-3.5 text-left transition-all duration-200',
+        'group relative flex h-32 flex-col rounded-xl border p-3.5 text-left transition-all duration-200',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
         selected
           ? 'border-green-500/70 bg-green-500/[0.06]'
           : 'border-border-light hover:border-border-medium hover:bg-surface-tertiary',
       )}
     >
-      <div className="flex w-full items-start gap-2">
-        <p className="min-w-0 flex-1 truncate pr-1 text-sm font-semibold text-text-primary">
-          {skill.name}
-        </p>
+      <div className="flex min-h-0 flex-1 items-start gap-2">
+        <button
+          type="button"
+          onClick={() => onToggle(skill._id)}
+          onMouseDown={(event) => event.preventDefault()}
+          aria-pressed={selected}
+          className="min-w-0 flex-1 text-left focus:outline-none"
+        >
+          <p className="truncate pr-1 text-sm font-semibold text-text-primary">{skill.name}</p>
+          {skill.description && (
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-secondary">
+              {skill.description}
+            </p>
+          )}
+        </button>
         <span
           role="button"
           tabIndex={0}
@@ -124,11 +134,6 @@ function SkillCard({
           <Star className={cn('size-4', isFavorite && 'fill-current')} aria-hidden="true" />
         </span>
       </div>
-      {skill.description && (
-        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-secondary">
-          {skill.description}
-        </p>
-      )}
       <div className="mt-auto flex w-full items-center gap-1.5 pt-2">
         {skill.category && (
           <span className="inline-flex items-center gap-1 rounded-full bg-surface-tertiary px-2 py-0.5 text-[10px] text-text-tertiary">
@@ -154,9 +159,17 @@ function SkillCard({
             <EarthIcon className="size-2.5" aria-hidden="true" />
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => onView(skill._id)}
+          className="ml-auto flex size-7 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+          aria-label={localize('com_ui_view_skill')}
+        >
+          <Eye className="size-4" aria-hidden="true" />
+        </button>
         <span
           className={cn(
-            'ml-auto flex size-5 shrink-0 items-center justify-center rounded-full transition-all duration-200',
+            'flex size-5 shrink-0 items-center justify-center rounded-full transition-all duration-200',
             selected ? 'scale-100 bg-green-500 text-white opacity-100' : 'scale-75 opacity-0',
           )}
           aria-hidden="true"
@@ -164,7 +177,7 @@ function SkillCard({
           <Check className="size-3" strokeWidth={3} />
         </span>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -175,6 +188,7 @@ function SkillSelectDialog({ isOpen, setIsOpen }: SkillSelectDialogProps) {
   const { control, setValue } = useFormContext<AgentForm>();
   const [searchValue, setSearchValue] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>(SystemCategories.ALL);
+  const [previewSkillId, setPreviewSkillId] = useState<string | null>(null);
   const { isFavorite: isFavoriteSkill, toggle: toggleFavoriteSkill } = useSkillFavorites();
 
   const hasCreateAccess = useHasAccess({
@@ -183,6 +197,7 @@ function SkillSelectDialog({ isOpen, setIsOpen }: SkillSelectDialogProps) {
   });
 
   const { data: skillsData } = useListSkillsQuery(LIST_QUERY_OPTIONS);
+  const previewSkillQuery = useGetSkillByIdQuery(previewSkillId);
   const { categories } = useCategories({ className: 'size-4', hasAccess: true });
   const typedCategories = categories as SkillCategory[] | undefined;
 
@@ -214,6 +229,7 @@ function SkillSelectDialog({ isOpen, setIsOpen }: SkillSelectDialogProps) {
     setIsOpen(false);
     setSearchValue('');
     setActiveFilter(SystemCategories.ALL);
+    setPreviewSkillId(null);
   }, [setIsOpen]);
 
   const handleCreate = useCallback(() => {
@@ -303,20 +319,31 @@ function SkillSelectDialog({ isOpen, setIsOpen }: SkillSelectDialogProps) {
 
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2 px-6 py-4">
-              <div className="relative flex-1">
-                <Search
-                  className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary"
-                  aria-hidden="true"
-                />
-                <input
-                  type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder={localize('com_ui_search_skills')}
-                  aria-label={localize('com_ui_search_skills')}
-                  className="h-10 w-full rounded-xl border border-border-light bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
-                />
-              </div>
+              {previewSkillId ? (
+                <button
+                  type="button"
+                  onClick={() => setPreviewSkillId(null)}
+                  className="flex h-10 items-center gap-2 rounded-xl border border-border-light px-3 text-sm text-text-secondary transition-colors hover:border-border-medium hover:bg-surface-hover hover:text-text-primary"
+                >
+                  {localize('com_ui_back')}
+                </button>
+              ) : (
+                <div className="relative flex-1">
+                  <Search
+                    className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-tertiary"
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="text"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    placeholder={localize('com_ui_search_skills')}
+                    aria-label={localize('com_ui_search_skills')}
+                    className="h-10 w-full rounded-xl border border-border-light bg-transparent pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-border-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+                  />
+                </div>
+              )}
+              {previewSkillId && <div className="flex-1" />}
               <button
                 type="button"
                 onClick={handleClose}
@@ -327,36 +354,57 @@ function SkillSelectDialog({ isOpen, setIsOpen }: SkillSelectDialogProps) {
               </button>
             </div>
 
-            <div
-              className="flex-1 overflow-y-auto p-4"
-              role="group"
-              aria-label={localize('com_ui_add_skills')}
-            >
-              {visibleSkills.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {visibleSkills.map((skill) => (
-                    <SkillCard
-                      key={skill._id}
-                      skill={skill}
-                      selected={selectedSet.has(skill._id)}
-                      isFavorite={isFavoriteSkill(skill._id)}
-                      isShared={skill.author !== user?.id && Boolean(skill.authorName)}
-                      isPublic={skill.isPublic === true}
-                      onToggle={handleToggleSkill}
-                      onToggleFavorite={toggleFavoriteSkill}
-                      localize={localize}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <Search className="size-8 text-text-tertiary opacity-40" aria-hidden="true" />
-                  <p className="mt-3 text-sm text-text-secondary">
-                    {localize('com_ui_no_skills_found')}
-                  </p>
-                </div>
-              )}
-            </div>
+            {previewSkillId ? (
+              <div className="min-h-0 flex-1 border-t border-border-light">
+                {previewSkillQuery.data ? (
+                  <SkillDetail
+                    skill={previewSkillQuery.data}
+                    onEdit={() => {
+                      handleClose();
+                      navigate(`/skills/${previewSkillId}/edit`);
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-text-secondary">
+                    {previewSkillQuery.isError
+                      ? localize('com_ui_skill_not_found')
+                      : localize('com_ui_loading')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                className="flex-1 overflow-y-auto p-4"
+                role="group"
+                aria-label={localize('com_ui_add_skills')}
+              >
+                {visibleSkills.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {visibleSkills.map((skill) => (
+                      <SkillCard
+                        key={skill._id}
+                        skill={skill}
+                        selected={selectedSet.has(skill._id)}
+                        isFavorite={isFavoriteSkill(skill._id)}
+                        isShared={skill.author !== user?.id && Boolean(skill.authorName)}
+                        isPublic={skill.isPublic === true}
+                        onToggle={handleToggleSkill}
+                        onView={setPreviewSkillId}
+                        onToggleFavorite={toggleFavoriteSkill}
+                        localize={localize}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <Search className="size-8 text-text-tertiary opacity-40" aria-hidden="true" />
+                    <p className="mt-3 text-sm text-text-secondary">
+                      {localize('com_ui_no_skills_found')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </OGDialogContent>

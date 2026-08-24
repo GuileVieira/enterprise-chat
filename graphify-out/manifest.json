@@ -730,12 +730,12 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/util/handleTools.js": {
-    "mtime": 1785367958.5471253,
+    "mtime": 1787601316.122471,
     "ast_hash": "fab38e17016236dbacd3ffdb027a96b9",
     "semantic_hash": ""
   },
   "api/app/clients/tools/util/handleTools.test.js": {
-    "mtime": 1777407818.42756,
+    "mtime": 1787601062.3245106,
     "ast_hash": "77bd6057f388e441c3c7b93739e52fa2",
     "semantic_hash": ""
   },
@@ -5960,12 +5960,12 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAdsChatBrief.spec.ts": {
-    "mtime": 1781296909.3306181,
+    "mtime": 1787601316.2225552,
     "ast_hash": "0f5e40aee5fa866e9f59100a4e86a600",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAdsChatBrief.ts": {
-    "mtime": 1781550955.196726,
+    "mtime": 1787601316.1727192,
     "ast_hash": "b82d216a0ddc5687d069f922268f81fb",
     "semantic_hash": ""
   },
@@ -7100,8 +7100,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/SkillSelectDialog.tsx": {
-    "mtime": 1779199271.50414,
-    "ast_hash": "d4610756ab39739f1cd72e94caff92da",
+    "mtime": 1787602720.3688338,
+    "ast_hash": "0bb3133d18343228ea1fa72937fca118",
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/UploadSkillDialog.tsx": {
@@ -16697,6 +16697,16 @@
   "client/src/utils/preloadRecovery.ts": {
     "mtime": 1787592450.545015,
     "ast_hash": "649a97703b0b5faa53a5fac0533db17d",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/dialogs/__tests__/SkillSelectDialog.spec.tsx": {
+    "mtime": 1787602799.7356396,
+    "ast_hash": "2afb635bbd193ae63df3cc178a8e1fdc",
+    "semantic_hash": ""
+  },
+  "docs/prompts/meta-ads-agent.md": {
+    "mtime": 1787602106.6689966,
+    "ast_hash": "5b1f5e0ac4a05d28eadd79edb7c72c79",
     "semantic_hash": ""
   }
 }

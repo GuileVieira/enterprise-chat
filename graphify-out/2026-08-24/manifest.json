@@ -5,13 +5,13 @@
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1787598550.3227103,
-    "ast_hash": "ef267e70767d203bcb9d6a03d3a4b9ca",
+    "mtime": 1787599371.5760784,
+    "ast_hash": "c4c5d7087d255ef8ea1842cf8d448079",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
-    "mtime": 1787598600.504181,
-    "ast_hash": "125eeda9451d96167cb368438ea76698",
+    "mtime": 1787599405.6619995,
+    "ast_hash": "5cc01e5dca7d13f5a83e71044d55362d",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/defaults.spec.js": {
@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsBudgetManager.js": {
-    "mtime": 1787598423.4763365,
-    "ast_hash": "8e14983d0454c35627a5840e3d42eb0d",
+    "mtime": 1787599371.533605,
+    "ast_hash": "00b356effc799e8f6549be7af0be84dd",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
@@ -12100,8 +12100,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/definitions.ts": {
-    "mtime": 1787598333.4006476,
-    "ast_hash": "2caa1385fc3d3022a4e9d8befc7f39e6",
+    "mtime": 1787599298.4279766,
+    "ast_hash": "777fe9783da38af353b33a1740928f25",
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/index.ts": {
@@ -16685,8 +16685,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsBudgetManager.spec.js": {
-    "mtime": 1787598423.5253255,
-    "ast_hash": "bc0d97cc8d13192f2b466dfc9ca38c5e",
+    "mtime": 1787599320.4862416,
+    "ast_hash": "57ab30deac2c43ce616b5edb3f154305",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/preloadRecovery.test.ts": {
