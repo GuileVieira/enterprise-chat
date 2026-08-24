@@ -7,6 +7,10 @@ import './mobile.css';
 import { ApiErrorBoundaryProvider } from './hooks/ApiErrorBoundaryContext';
 import 'katex/dist/katex.min.css';
 import 'katex/dist/contrib/copy-tex.js';
+import { clearPreloadReload, recoverFromPreloadError } from './utils/preloadRecovery';
+
+window.addEventListener('load', clearPreloadReload, { once: true });
+window.addEventListener('vite:preloadError', recoverFromPreloadError);
 
 const container = document.getElementById('root');
 const root = createRoot(container);
