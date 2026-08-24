@@ -1,3 +1,6 @@
+jest.mock('~/models', () => ({}));
+jest.mock('~/server/services/Config/app', () => ({ getAppConfig: jest.fn() }));
+
 const {
   DEFAULT_RULES,
   normalizeAdAccountId,
@@ -1113,8 +1116,11 @@ describe('Meta Ads budget service persistence safety', () => {
       getAppConfig: jest.fn(async () => ({ interfaceConfig: { metaAds: true } })),
     }));
 
-    const metaPost = jest.fn(async () => ({}));
-    const updateMetaEntityStatus = jest.fn(async () => ({}));
+    const metaPost = jest.fn(async () => ({ success: true }));
+    const metaGet = jest.fn(async ({ path }) => ({ id: path, name: 'Updated entity' }));
+    const updateMetaEntityStatus = jest.fn(async () => ({ success: true }));
+    const copyMetaEntity = jest.fn(async () => ({ copied_adset_id: 'adset-copy' }));
+    const updateMetaEntityName = jest.fn(async () => ({ success: true }));
     const getAdSetDailyBudget = jest.fn(async () => latestBudget);
     const getEntityDailyBudget = jest.fn(
       async () => latestEntityBudget ?? { dailyBudget: latestBudget },
@@ -1147,7 +1153,10 @@ describe('Meta Ads budget service persistence safety', () => {
       listCampaignInsights,
       listAdSets,
       listAdSetInsights,
+      metaGet,
       metaPost,
+      copyMetaEntity,
+      updateMetaEntityName,
       updateMetaEntityStatus,
     }));
 
@@ -1172,7 +1181,10 @@ describe('Meta Ads budget service persistence safety', () => {
       listAdSets,
       listAdSetInsights,
       makeFindChain,
+      metaGet,
       metaPost,
+      copyMetaEntity,
+      updateMetaEntityName,
       updateMetaEntityStatus,
       projectFind,
       projectUpdateOne,
@@ -3750,6 +3762,125 @@ describe('Meta Ads budget service persistence safety', () => {
       }),
     ).rejects.toThrow('Bloqueado pelo limite mensal');
     expect(metaPost).not.toHaveBeenCalled();
+  });
+
+  it('records a campaign status only after Meta confirms it', async () => {
+    const { budget, createAutomationAction, updateMetaEntityStatus } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+
+    const result = await budget.updateProjectMetaAdsEntityStatus({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      entityLevel: 'campaign',
+      entityId: 'campaign-1',
+      status: 'PAUSED',
+      actor: 'tool',
+      actorUserId: 'u1',
+    });
+
+    expect(updateMetaEntityStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'campaign-1', status: 'PAUSED' }),
+    );
+    expect(createAutomationAction).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ entityLevel: 'campaign', entityId: 'campaign-1', status: 'PAUSED' });
+  });
+
+  it('returns the confirmed id when Meta duplicates and renames an ad set', async () => {
+    const { budget, copyMetaEntity, updateMetaEntityName } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+
+    const result = await budget.duplicateProjectMetaAdsEntity({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      entityLevel: 'adset',
+      entityId: 'adset-1',
+      targetName: 'Ad set copy',
+      actor: 'tool',
+      actorUserId: 'u1',
+    });
+
+    expect(copyMetaEntity).toHaveBeenCalledWith(expect.objectContaining({ entityId: 'adset-1' }));
+    expect(updateMetaEntityName).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'adset-copy', name: 'Ad set copy' }),
+    );
+    expect(result.duplicatedEntityId).toBe('adset-copy');
+  });
+
+  it('rejects a duplicate response without a new Meta entity id', async () => {
+    const { budget, copyMetaEntity, updateMetaEntityName } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+    copyMetaEntity.mockResolvedValue({ success: true });
+
+    await expect(
+      budget.duplicateProjectMetaAdsEntity({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'adset',
+        entityId: 'adset-1',
+        targetName: 'Ad set copy',
+        actor: 'tool',
+        actorUserId: 'u1',
+      }),
+    ).rejects.toMatchObject({ statusCode: 502 });
+    expect(updateMetaEntityName).not.toHaveBeenCalled();
+  });
+
+  it('updates only whitelisted Meta fields and confirms them with a fresh read', async () => {
+    const { budget, metaGet, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+    metaGet.mockResolvedValue({
+      id: 'adset-1',
+      targeting: { age_min: 25 },
+      optimization_goal: 'REACH',
+    });
+
+    const result = await budget.updateProjectMetaAdsEntityFields({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      entityLevel: 'adset',
+      entityId: 'adset-1',
+      fields: { targeting: { age_min: 25 }, optimization_goal: 'REACH' },
+      actor: 'tool',
+      actorUserId: 'u1',
+    });
+
+    expect(metaPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'adset-1',
+        body: { targeting: { age_min: 25 }, optimization_goal: 'REACH' },
+      }),
+    );
+    expect(metaGet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'adset-1',
+        params: { fields: 'id,targeting,optimization_goal' },
+      }),
+    );
+    expect(result.updatedFields).toEqual(['targeting', 'optimization_goal']);
+  });
+
+  it('rejects non-whitelisted Meta fields before calling the provider', async () => {
+    const { budget, metaGet, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+
+    await expect(
+      budget.updateProjectMetaAdsEntityFields({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'ad',
+        entityId: 'ad-1',
+        fields: { daily_budget: 1, unknown_field: true },
+        actor: 'tool',
+        actorUserId: 'u1',
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(metaPost).not.toHaveBeenCalled();
+    expect(metaGet).not.toHaveBeenCalled();
   });
 
   it('uses only the latest snapshot per ad set when building campaign summaries', async () => {

@@ -189,9 +189,9 @@
     "authConfig": []
   },
   {
-    "name": "Meta Ads Budget Manager",
+    "name": "Meta Ads Campaign Manager",
     "pluginKey": "meta_ads_budget_manager",
-    "description": "Review and apply Meta Ads budget recommendations for project-linked ad accounts.",
+    "description": "Read and change project-linked Meta Ads campaigns, ad sets, ads, creative metadata, audiences, targeting, budgets, statuses, schedules, bidding, and duplicates.",
     "icon": "assets/logo.svg",
     "authConfig": []
   },

@@ -7,8 +7,12 @@ const {
 } = require('~/server/services/Projects/access');
 const {
   analyzeProject,
+  applyManualBudgetChange,
   applyRecommendation,
+  duplicateProjectMetaAdsEntity,
   getProjectMetaAdsStatus,
+  updateProjectMetaAdsEntityFields,
+  updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
 
 const metaAdsBudgetManagerJsonSchema = {
@@ -22,6 +26,13 @@ const metaAdsBudgetManagerJsonSchema = {
         'run_now',
         'approve_change',
         'pause_automation',
+        'update_budget',
+        'pause_campaign',
+        'activate_campaign',
+        'duplicate_adset',
+        'update_entity',
+        'set_status',
+        'duplicate_entity',
       ],
       description:
         'Action to run. Use approve_change only after showing the recommendation to the user.',
@@ -33,6 +44,43 @@ const metaAdsBudgetManagerJsonSchema = {
     recommendation_id: {
       type: 'string',
       description: 'Recommendation id. Required for approve_change.',
+    },
+    entity_id: {
+      type: 'string',
+      description: 'Meta campaign or ad set id, depending on the action.',
+    },
+    entity_name: {
+      type: 'string',
+      description: 'Optional current entity name, stored in the action history.',
+    },
+    daily_budget: {
+      type: 'number',
+      description: 'New daily budget in the ad account currency. Required for update_budget.',
+    },
+    target_name: {
+      type: 'string',
+      description: 'Name for the duplicated ad set. Required for duplicate_adset.',
+    },
+    entity_level: {
+      type: 'string',
+      enum: ['campaign', 'adset', 'ad', 'creative', 'custom_audience'],
+      description:
+        'Meta entity level. Budget supports campaign/adset; status supports campaign/adset/ad.',
+    },
+    reason: {
+      type: 'string',
+      description: 'Optional reason recorded with a manual budget update.',
+    },
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'PAUSED'],
+      description: 'Required for set_status.',
+    },
+    fields: {
+      type: 'object',
+      description:
+        'Whitelisted fields for update_entity. Campaign: name, bid_strategy, spend_cap, special_ad_categories. Ad set: name, bid_amount, billing_event, optimization_goal, targeting, start_time, end_time, promoted_object. Ad: name, creative, conversion_domain, ad schedule. Creative: name, adlabels, status. Custom audience: metadata and rules; customer data upload is not supported.',
+      additionalProperties: true,
     },
   },
   required: ['action', 'project_id'],
@@ -54,9 +102,9 @@ function parseArgs(args) {
 class MetaAdsBudgetManager extends Tool {
   name = 'meta_ads_budget_manager';
   description =
-    'Manage Meta Ads budget recommendations for a project. ' +
-    'Reads the project Meta Ads status, creates recommendations, pauses automation, and applies one approved recommendation. ' +
-    'Requires project VIEW for status and project EDIT for run, pause, or apply.';
+    'Read and change Meta Ads for a project-linked ad account. ' +
+    'Can update campaigns, ad sets, ads, creative metadata, custom audience metadata, budgets, statuses, targeting, schedules, bidding, and duplicate campaigns or ad sets. ' +
+    'Write actions call the Meta Graph API and require project EDIT permission.';
 
   schema = metaAdsBudgetManagerJsonSchema;
 
@@ -91,7 +139,18 @@ class MetaAdsBudgetManager extends Tool {
   async _call(rawArgs) {
     try {
       const args = parseArgs(rawArgs);
-      const writeActions = new Set(['run_now', 'approve_change', 'pause_automation']);
+      const writeActions = new Set([
+        'run_now',
+        'approve_change',
+        'pause_automation',
+        'update_budget',
+        'pause_campaign',
+        'activate_campaign',
+        'duplicate_adset',
+        'update_entity',
+        'set_status',
+        'duplicate_entity',
+      ]);
       const requiredPermission = writeActions.has(args.action)
         ? PermissionBits.EDIT
         : PermissionBits.VIEW;
@@ -134,7 +193,148 @@ class MetaAdsBudgetManager extends Tool {
         return JSON.stringify({ ok: true, project: updatedProject });
       }
 
-      throw new Error(`Unsupported action: ${args.action}`);
+      const directActions = new Set([
+        'update_budget',
+        'pause_campaign',
+        'activate_campaign',
+        'duplicate_adset',
+        'update_entity',
+        'set_status',
+        'duplicate_entity',
+      ]);
+      if (!directActions.has(args.action)) {
+        throw new Error(`Unsupported action: ${args.action}`);
+      }
+      const entityId = typeof args.entity_id === 'string' ? args.entity_id.trim() : '';
+      if (!entityId) {
+        throw new Error(`entity_id is required for ${args.action}.`);
+      }
+      const common = {
+        projectId: project.projectId,
+        tenantId: this.req.user.tenantId,
+        entityId,
+        entityName: args.entity_name,
+        actor: 'tool',
+        actorUserId: this.req.user.id,
+      };
+
+      if (args.action === 'update_entity') {
+        const result = await updateProjectMetaAdsEntityFields({
+          ...common,
+          entityLevel: args.entity_level,
+          fields: args.fields,
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: {
+            confirmed: true,
+            entityId: result.entityId,
+            updatedFields: result.updatedFields,
+          },
+          ...result,
+        });
+      }
+
+      if (args.action === 'set_status') {
+        if (!['campaign', 'adset', 'ad'].includes(args.entity_level)) {
+          throw new Error('entity_level must be campaign, adset, or ad for set_status.');
+        }
+        if (!['ACTIVE', 'PAUSED'].includes(args.status)) {
+          throw new Error('status is required for set_status.');
+        }
+        const result = await updateProjectMetaAdsEntityStatus({
+          ...common,
+          entityLevel: args.entity_level,
+          status: args.status,
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: { confirmed: true, entityId, status: result.status },
+          ...result,
+        });
+      }
+
+      if (args.action === 'duplicate_entity') {
+        if (!['campaign', 'adset'].includes(args.entity_level)) {
+          throw new Error('entity_level must be campaign or adset for duplicate_entity.');
+        }
+        if (typeof args.target_name !== 'string' || args.target_name.trim().length === 0) {
+          throw new Error('target_name is required for duplicate_entity.');
+        }
+        const result = await duplicateProjectMetaAdsEntity({
+          ...common,
+          entityLevel: args.entity_level,
+          targetName: args.target_name,
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: {
+            confirmed: true,
+            sourceEntityId: result.sourceEntityId,
+            duplicatedEntityId: result.duplicatedEntityId,
+          },
+          ...result,
+        });
+      }
+
+      if (args.action === 'update_budget') {
+        if (!['campaign', 'adset'].includes(args.entity_level)) {
+          throw new Error('entity_level is required for update_budget.');
+        }
+        if (!Number.isFinite(args.daily_budget)) {
+          throw new Error('daily_budget is required for update_budget.');
+        }
+        const result = await applyManualBudgetChange({
+          ...common,
+          entityLevel: args.entity_level,
+          dailyBudget: args.daily_budget,
+          reason: args.reason || 'Budget updated through Meta Ads tool.',
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: { confirmed: true, entityId, dailyBudget: args.daily_budget },
+          ...result,
+        });
+      }
+
+      if (args.action === 'pause_campaign' || args.action === 'activate_campaign') {
+        const result = await updateProjectMetaAdsEntityStatus({
+          ...common,
+          entityLevel: 'campaign',
+          status: args.action === 'pause_campaign' ? 'PAUSED' : 'ACTIVE',
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: { confirmed: true, entityId, status: result.status },
+          ...result,
+        });
+      }
+
+      if (args.action === 'duplicate_adset') {
+        if (typeof args.target_name !== 'string' || args.target_name.trim().length === 0) {
+          throw new Error('target_name is required for duplicate_adset.');
+        }
+        const result = await duplicateProjectMetaAdsEntity({
+          ...common,
+          entityLevel: 'adset',
+          targetName: args.target_name,
+        });
+        return JSON.stringify({
+          ok: true,
+          action: args.action,
+          confirmation: {
+            confirmed: true,
+            sourceEntityId: result.sourceEntityId,
+            duplicatedEntityId: result.duplicatedEntityId,
+          },
+          ...result,
+        });
+      }
     } catch (error) {
       return JSON.stringify({
         ok: false,

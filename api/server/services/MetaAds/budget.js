@@ -14,6 +14,7 @@ const {
   listCampaigns,
   listAdSetInsights,
   listAdSets,
+  metaGet,
   metaPost,
   updateMetaEntityName,
   updateMetaEntityStatus,
@@ -34,6 +35,37 @@ const statusPeriodCache = new Map();
 const ACTION_COOLDOWN_MINUTES = {
   budget_change: 60,
   pause_ad: 60,
+};
+const META_ADS_EDITABLE_FIELDS = {
+  campaign: new Set(['name', 'bid_strategy', 'spend_cap', 'special_ad_categories']),
+  adset: new Set([
+    'name',
+    'bid_amount',
+    'billing_event',
+    'optimization_goal',
+    'targeting',
+    'start_time',
+    'end_time',
+    'promoted_object',
+  ]),
+  ad: new Set([
+    'name',
+    'creative',
+    'conversion_domain',
+    'ad_schedule_start_time',
+    'ad_schedule_end_time',
+  ]),
+  creative: new Set(['name', 'adlabels', 'status']),
+  custom_audience: new Set([
+    'name',
+    'description',
+    'rule',
+    'rule_aggregation',
+    'retention_days',
+    'opt_out_link',
+    'allowed_domains',
+    'use_in_campaigns',
+  ]),
 };
 const DEFAULT_RULES = {
   targetCpa: 45,
@@ -5751,7 +5783,7 @@ async function applyManualBudgetChange({
     throw Object.assign(new Error(monthlyGuard.proposal.reason), { statusCode: 400 });
   }
 
-  await metaPost({
+  const providerResult = await metaPost({
     path: encodeURIComponent(entityId),
     token,
     graphVersion,
@@ -5760,6 +5792,11 @@ async function applyManualBudgetChange({
       daily_budget: dailyBudgetToCents(nextDailyBudget),
     },
   });
+  if (providerResult?.success !== true) {
+    throw Object.assign(new Error('Meta Ads did not confirm the budget update.'), {
+      statusCode: 502,
+    });
+  }
 
   const { MetaAdsBudgetChange } = getModels();
   const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
@@ -5783,6 +5820,100 @@ async function applyManualBudgetChange({
     reason,
   });
   return { change };
+}
+
+function validateMetaAdsEditableFields(entityLevel, fields) {
+  const allowedFields = META_ADS_EDITABLE_FIELDS[entityLevel];
+  if (!allowedFields) {
+    throw Object.assign(new Error('Invalid Meta Ads editable entity level.'), { statusCode: 400 });
+  }
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) {
+    throw Object.assign(new Error('Meta Ads edit fields must be an object.'), { statusCode: 400 });
+  }
+  const entries = Object.entries(fields);
+  if (entries.length === 0) {
+    throw Object.assign(new Error('At least one Meta Ads edit field is required.'), {
+      statusCode: 400,
+    });
+  }
+  const unsupportedFields = entries.map(([key]) => key).filter((key) => !allowedFields.has(key));
+  if (unsupportedFields.length > 0) {
+    throw Object.assign(
+      new Error(`Unsupported ${entityLevel} fields: ${unsupportedFields.join(', ')}.`),
+      { statusCode: 400, data: { allowedFields: [...allowedFields] } },
+    );
+  }
+  if (JSON.stringify(fields).length > 100_000) {
+    throw Object.assign(new Error('Meta Ads edit payload is too large.'), { statusCode: 400 });
+  }
+  return Object.fromEntries(entries);
+}
+
+async function updateProjectMetaAdsEntityFields({
+  projectId,
+  tenantId,
+  entityLevel,
+  entityId,
+  fields,
+  actor,
+  actorUserId,
+}) {
+  const normalizedEntityId = typeof entityId === 'string' ? entityId.trim() : '';
+  if (!normalizedEntityId) {
+    throw Object.assign(new Error('Meta Ads entity id is required.'), { statusCode: 400 });
+  }
+  const sanitizedFields = validateMetaAdsEditableFields(entityLevel, fields);
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw Object.assign(new Error('Project not found.'), { statusCode: 404 });
+  }
+  const projectTenantId = getProjectTenantId(project, tenantId);
+  if (tenantId && projectTenantId !== tenantId) {
+    throw Object.assign(new Error('Project does not belong to this tenant.'), { statusCode: 403 });
+  }
+
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await metaPost({
+    path: encodeURIComponent(normalizedEntityId),
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} update`,
+    body: sanitizedFields,
+  });
+  const confirmation = await metaGet({
+    path: encodeURIComponent(normalizedEntityId),
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} update confirmation`,
+    params: { fields: ['id', ...Object.keys(sanitizedFields)].join(',') },
+  });
+  if (String(confirmation?.id ?? '') !== normalizedEntityId) {
+    throw Object.assign(new Error('Meta Ads did not confirm the entity update.'), {
+      statusCode: 502,
+    });
+  }
+  logger.info('[MetaAdsBudget] entity fields updated', {
+    projectId,
+    tenantId: projectTenantId,
+    entityLevel,
+    entityId: normalizedEntityId,
+    fields: Object.keys(sanitizedFields),
+    actor,
+    actorUserId,
+  });
+  return {
+    entityLevel,
+    entityId: normalizedEntityId,
+    updatedFields: Object.keys(sanitizedFields),
+    current: confirmation,
+  };
 }
 
 async function updateProjectMetaAdsEntityStatus({
@@ -5822,13 +5953,18 @@ async function updateProjectMetaAdsEntityStatus({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
-  await updateMetaEntityStatus({
+  const providerResult = await updateMetaEntityStatus({
     entityId: normalizedEntityId,
     entityLevel,
     status,
     token,
     graphVersion,
   });
+  if (providerResult?.success !== true) {
+    throw Object.assign(new Error('Meta Ads did not confirm the status update.'), {
+      statusCode: 502,
+    });
+  }
   const { MetaAdsAutomationAction } = getModels();
   await MetaAdsAutomationAction.create({
     tenantId: projectTenantId,
@@ -5919,13 +6055,22 @@ async function duplicateProjectMetaAdsEntity({
     graphVersion,
   });
   const duplicatedEntityId = getCopiedMetaEntityId(entityLevel, payload);
-  if (duplicatedEntityId) {
-    await updateMetaEntityName({
-      entityId: duplicatedEntityId,
-      entityLevel,
-      name: normalizedTargetName,
-      token,
-      graphVersion,
+  if (!duplicatedEntityId) {
+    throw Object.assign(new Error('Meta Ads did not return the duplicated entity id.'), {
+      statusCode: 502,
+    });
+  }
+  const renameResult = await updateMetaEntityName({
+    entityId: duplicatedEntityId,
+    entityLevel,
+    name: normalizedTargetName,
+    token,
+    graphVersion,
+  });
+  if (renameResult?.success !== true) {
+    throw Object.assign(new Error('Meta Ads duplicated the entity but did not confirm its name.'), {
+      statusCode: 502,
+      data: { duplicatedEntityId },
     });
   }
   logger.info('[MetaAdsBudget] entity duplicated', {
@@ -6051,6 +6196,7 @@ module.exports = {
   resolveMetaAccessToken,
   runCron,
   updateProjectMetaAdStatus,
+  updateProjectMetaAdsEntityFields,
   updateProjectMetaAdsEntityStatus,
   validateMetaAdsRules,
 };

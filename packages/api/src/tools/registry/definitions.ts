@@ -481,7 +481,20 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
   properties: {
     action: {
       type: 'string',
-      enum: ['get_status', 'list_recommendations', 'run_now', 'approve_change', 'pause_automation'],
+      enum: [
+        'get_status',
+        'list_recommendations',
+        'run_now',
+        'approve_change',
+        'pause_automation',
+        'update_budget',
+        'pause_campaign',
+        'activate_campaign',
+        'duplicate_adset',
+        'update_entity',
+        'set_status',
+        'duplicate_entity',
+      ],
       description:
         'Action to run. Use approve_change only after showing the recommendation to the user.',
     },
@@ -492,6 +505,43 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
     recommendation_id: {
       type: 'string',
       description: 'Recommendation id. Required for approve_change.',
+    },
+    entity_id: {
+      type: 'string',
+      description: 'Meta campaign or ad set id, depending on the action.',
+    },
+    entity_name: {
+      type: 'string',
+      description: 'Optional current entity name, stored in the action history.',
+    },
+    daily_budget: {
+      type: 'number',
+      description: 'New daily budget in the ad account currency. Required for update_budget.',
+    },
+    target_name: {
+      type: 'string',
+      description: 'Name for the duplicated ad set. Required for duplicate_adset.',
+    },
+    entity_level: {
+      type: 'string',
+      enum: ['campaign', 'adset', 'ad', 'creative', 'custom_audience'],
+      description:
+        'Meta entity level. Budget supports campaign/adset; status supports campaign/adset/ad.',
+    },
+    reason: {
+      type: 'string',
+      description: 'Optional reason recorded with a manual budget update.',
+    },
+    status: {
+      type: 'string',
+      enum: ['ACTIVE', 'PAUSED'],
+      description: 'Required for set_status.',
+    },
+    fields: {
+      type: 'object',
+      description:
+        'Whitelisted fields for update_entity. Campaign: name, bid_strategy, spend_cap, special_ad_categories. Ad set: name, bid_amount, billing_event, optimization_goal, targeting, start_time, end_time, promoted_object. Ad: name, creative, conversion_domain, ad schedule. Creative: name, adlabels, status. Custom audience: metadata and rules; customer data upload is not supported.',
+      additionalProperties: true,
     },
   },
   required: ['action', 'project_id'],
@@ -600,7 +650,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_budget_manager: {
     name: 'meta_ads_budget_manager',
     description:
-      'Manage Meta Ads budget recommendations for a project-linked ad account. Can read status, list recommendations, run analysis now, pause automation, and apply one approved recommendation. Requires project permissions.',
+      'Read and change Meta Ads for a project-linked ad account. Can update campaigns, ad sets, ads, creative metadata, custom audience metadata, budgets, statuses, targeting, schedules, bidding, and duplicate campaigns or ad sets. Write actions call the Meta Graph API and require project EDIT permission.',
     schema: metaAdsBudgetManagerSchema,
     toolType: 'builtin',
   },
