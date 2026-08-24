@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState } from 'react';
-import { Upload } from 'lucide-react';
+import { FolderOpen, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OGDialog, OGDialogContent, Spinner, useToastContext } from '@librechat/client';
 import {
@@ -7,13 +7,39 @@ import {
   mergeFileConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
+import type { TSkill } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
+import type { TranslationKeys } from '~/hooks';
 import { useLocalize } from '~/hooks';
+import { collectSkillDirectories, createSkillArchive } from '../utils';
 import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+}
+
+interface BatchResult {
+  name: string;
+  path: string;
+  status: 'pending' | 'success' | 'warning' | 'error';
+  error?: string;
+}
+
+const batchStatusKeys: Record<BatchResult['status'], TranslationKeys> = {
+  pending: 'com_ui_skill_import_pending',
+  success: 'com_ui_skill_import_success',
+  warning: 'com_ui_skill_import_warning',
+  error: 'com_ui_skill_import_error',
+};
+
+interface SkillImportSummary {
+  filesFailed: number;
+  errors: Array<{ path: string; error?: string }>;
+}
+
+function getImportSummary(skill: TSkill): SkillImportSummary | undefined {
+  return (skill as TSkill & { _importSummary?: SkillImportSummary })._importSummary;
 }
 
 function formatMegabytes(bytes: number): string {
@@ -26,7 +52,10 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
   const navigate = useNavigate();
   const { showToast } = useToastContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const directoryInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isBatchImporting, setIsBatchImporting] = useState(false);
+  const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
   const { data: skillFileConfig = { fileConfig: defaultFileConfig } } = useGetFileConfig({
     select: (data) => ({
       configuredSizeLimitMb: data?.skills?.fileSizeLimit,
@@ -41,38 +70,101 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       ? `${configuredSizeLimitMb}`
       : formatMegabytes(skillImportSizeLimit);
 
-  const importMutation = useImportSkillMutation({
-    onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
-      setIsOpen(false);
-      navigate(`/skills/${skill._id}`);
-    },
-    onError: (error: unknown) => {
-      const errData = (error as { response?: { data?: { error?: string; message?: string } } })
-        ?.response?.data;
-      const message =
-        errData?.message ?? errData?.error ?? localize('com_ui_create_skill_upload_error');
-      showToast({ status: 'error', message });
-    },
-  });
+  const importMutation = useImportSkillMutation();
+  const isImporting = importMutation.isLoading || isBatchImporting;
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (importMutation.isLoading) {
-        return;
-      }
+  const getErrorMessage = useCallback(
+    (error: unknown) => {
+      if (error instanceof Error && !('response' in error)) return error.message;
+      const data = (error as { response?: { data?: { error?: string; message?: string } } })
+        ?.response?.data;
+      return data?.message ?? data?.error ?? localize('com_ui_create_skill_upload_error');
+    },
+    [localize],
+  );
+
+  const importFile = useCallback(
+    async (file: File) => {
       if (file.size > skillImportSizeLimit) {
-        showToast({
-          status: 'error',
-          message: localize('com_ui_skill_upload_size_error', { 0: displayedSizeLimit }),
-        });
-        return;
+        throw new Error(localize('com_ui_skill_upload_size_error', { 0: displayedSizeLimit }));
       }
       const formData = new FormData();
       formData.append('file', file, file.name);
-      importMutation.mutate(formData);
+      return importMutation.mutateAsync(formData);
     },
-    [displayedSizeLimit, importMutation, localize, showToast, skillImportSizeLimit],
+    [displayedSizeLimit, importMutation, localize, skillImportSizeLimit],
+  );
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      if (isImporting) return;
+      try {
+        const skill = await importFile(file);
+        const summary = getImportSummary(skill);
+        showToast({
+          status: summary?.filesFailed ? 'warning' : 'success',
+          message: summary?.filesFailed
+            ? localize('com_ui_skill_import_with_ignored', { 0: summary.filesFailed })
+            : localize('com_ui_skill_created'),
+        });
+        setIsOpen(false);
+        navigate(`/skills/${skill._id}`);
+      } catch (error) {
+        showToast({ status: 'error', message: getErrorMessage(error) });
+      }
+    },
+    [getErrorMessage, importFile, isImporting, localize, navigate, setIsOpen, showToast],
+  );
+
+  const handleDirectoryInput = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const directories = collectSkillDirectories(Array.from(event.target.files ?? []));
+      event.target.value = '';
+      if (directories.length === 0) {
+        showToast({ status: 'error', message: localize('com_ui_skill_folder_empty') });
+        return;
+      }
+
+      setIsBatchImporting(true);
+      setBatchResults(directories.map(({ name, path }) => ({ name, path, status: 'pending' })));
+      let succeeded = 0;
+
+      for (const directory of directories) {
+        try {
+          const skill = await importFile(await createSkillArchive(directory));
+          const summary = getImportSummary(skill);
+          succeeded++;
+          setBatchResults((results) =>
+            results.map((result) =>
+              result.path === directory.path
+                ? {
+                    ...result,
+                    status: summary?.filesFailed ? 'warning' : 'success',
+                    error: summary?.errors
+                      .map(({ path, error }) => `${path}: ${error ?? 'ignored'}`)
+                      .join('; '),
+                  }
+                : result,
+            ),
+          );
+        } catch (error) {
+          setBatchResults((results) =>
+            results.map((result) =>
+              result.path === directory.path
+                ? { ...result, status: 'error', error: getErrorMessage(error) }
+                : result,
+            ),
+          );
+        }
+      }
+
+      setIsBatchImporting(false);
+      showToast({
+        status: succeeded === directories.length ? 'success' : 'warning',
+        message: localize('com_ui_skill_folder_result', { 0: succeeded, 1: directories.length }),
+      });
+    },
+    [getErrorMessage, importFile, localize, showToast],
   );
 
   const handleFileInput = useCallback(
@@ -116,22 +208,54 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              disabled={importMutation.isLoading}
+              disabled={isImporting}
               className={cn(
                 'flex h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-text-secondary transition-colors',
                 isDragging
                   ? 'border-border-heavy bg-surface-hover'
                   : 'border-border-medium hover:bg-surface-hover',
-                importMutation.isLoading && 'cursor-wait opacity-50',
+                isImporting && 'cursor-wait opacity-50',
               )}
             >
-              {importMutation.isLoading ? (
+              {isImporting ? (
                 <Spinner className="size-8" />
               ) : (
                 <Upload className="size-8 text-text-secondary" aria-hidden="true" />
               )}
               {localize('com_ui_skill_upload_drag')}
             </button>
+
+            <button
+              type="button"
+              onClick={() => directoryInputRef.current?.click()}
+              disabled={isImporting}
+              className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border-medium text-sm text-text-primary transition-colors hover:bg-surface-hover disabled:cursor-wait disabled:opacity-50"
+            >
+              <FolderOpen className="size-4" aria-hidden="true" />
+              {localize('com_ui_skill_select_parent_folder')}
+            </button>
+
+            {batchResults.length > 0 && (
+              <ul className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-border-light p-2 text-xs">
+                {batchResults.map((result) => (
+                  <li key={result.path} className="flex items-start justify-between gap-3">
+                    <span className="truncate text-text-primary">{result.name}</span>
+                    <span
+                      className={cn(
+                        'shrink-0',
+                        result.status === 'success' && 'text-green-500',
+                        result.status === 'warning' && 'text-yellow-500',
+                        result.status === 'error' && 'text-red-500',
+                        result.status === 'pending' && 'text-text-secondary',
+                      )}
+                      title={result.error}
+                    >
+                      {localize(batchStatusKeys[result.status])}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="flex flex-col gap-3 text-xs text-text-secondary">
               <div>
@@ -151,6 +275,16 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             accept=".zip,.skill,.md"
             className="hidden"
             onChange={handleFileInput}
+          />
+          <input
+            ref={(node) => {
+              directoryInputRef.current = node;
+              node?.setAttribute('webkitdirectory', '');
+            }}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleDirectoryInput}
           />
         </div>
       </OGDialogContent>

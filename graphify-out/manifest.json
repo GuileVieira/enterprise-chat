@@ -2990,8 +2990,8 @@
     "semantic_hash": ""
   },
   "client/package.json": {
-    "mtime": 1783910714.8604724,
-    "ast_hash": "8878f2355830f7792102ebc74b9938d6",
+    "mtime": 1787603430.1005995,
+    "ast_hash": "fb9562227f940df21c31e16a3f91e2d1",
     "semantic_hash": ""
   },
   "client/src/@types/i18next.d.ts": {
@@ -7105,13 +7105,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/UploadSkillDialog.tsx": {
-    "mtime": 1779199271.5045784,
-    "ast_hash": "b403f033fca5eaddc3b86d1b506cd939",
+    "mtime": 1787603811.1328619,
+    "ast_hash": "f06bafed9930cad7e8cc445ca61b5740",
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/__tests__/UploadSkillDialog.spec.tsx": {
-    "mtime": 1779199271.5047123,
-    "ast_hash": "66bcd2ade1f2ef7ce98e74592fa81278",
+    "mtime": 1787603737.045367,
+    "ast_hash": "83f9e812ab2c477fb4e73c92dcbfad11",
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/index.ts": {
@@ -7255,8 +7255,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Skills/utils/index.ts": {
-    "mtime": 1779199271.5102665,
-    "ast_hash": "1609f5ff2a08c2980fbb65913dc66542",
+    "mtime": 1787603554.8895173,
+    "ast_hash": "86233cfa95c7d2a1318dbc4d90205224",
     "semantic_hash": ""
   },
   "client/src/components/Skills/utils/parseSkillMd.ts": {
@@ -11845,8 +11845,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/skills/import.ts": {
-    "mtime": 1779199271.6141727,
-    "ast_hash": "ddfb0142c4709aa8e88e046c29b0df1d",
+    "mtime": 1787603769.2194524,
+    "ast_hash": "18df7328b7fdb39a4a40370aa06ee7ee",
     "semantic_hash": ""
   },
   "packages/api/src/skills/index.ts": {
@@ -16707,6 +16707,21 @@
   "docs/prompts/meta-ads-agent.md": {
     "mtime": 1787602106.6689966,
     "ast_hash": "5b1f5e0ac4a05d28eadd79edb7c72c79",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/utils/skillDirectory.spec.ts": {
+    "mtime": 1787603554.8486025,
+    "ast_hash": "1ae8fd1c9e4e17307dc075b68e2c4cc5",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/utils/skillDirectory.ts": {
+    "mtime": 1787603554.8037236,
+    "ast_hash": "e3d1fa57bbe8a961f983bc0886f13a8d",
+    "semantic_hash": ""
+  },
+  "packages/api/src/skills/import.spec.ts": {
+    "mtime": 1787603769.267715,
+    "ast_hash": "26ed4c5b79e9152f5e6ffb8298b579ca",
     "semantic_hash": ""
   }
 }

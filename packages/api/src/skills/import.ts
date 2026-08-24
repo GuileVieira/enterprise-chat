@@ -20,6 +20,43 @@ const MAX_DECOMPRESSED_BYTES = 500 * 1024 * 1024; // 500 MB total decompressed
 const MAX_ENTRIES = 500;
 const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
 const SKILL_MD = 'SKILL.md';
+const CODE_EXTENSIONS = new Set([
+  '.c',
+  '.cc',
+  '.cpp',
+  '.cs',
+  '.css',
+  '.go',
+  '.h',
+  '.hpp',
+  '.html',
+  '.java',
+  '.js',
+  '.jsx',
+  '.kt',
+  '.php',
+  '.py',
+  '.rb',
+  '.rs',
+  '.sh',
+  '.sql',
+  '.svelte',
+  '.swift',
+  '.ts',
+  '.tsx',
+  '.vue',
+]);
+
+export function isSkillCodeImportEnabled(value = process.env.SKILL_IMPORT_ALLOW_CODE): boolean {
+  return value === 'true';
+}
+
+export function isSkillCodeFileBlocked(
+  relativePath: string,
+  codeImportEnabled = isSkillCodeImportEnabled(),
+): boolean {
+  return !codeImportEnabled && CODE_EXTENSIONS.has(path.extname(relativePath).toLowerCase());
+}
 
 export interface ImportLimits {
   maxZipBytes: number;
@@ -484,6 +521,15 @@ async function handleZip(
 
     if (!relativePath || !isSafePath(relativePath)) {
       fileResults.push({ path: normalized, status: 'error', error: 'Invalid path' });
+      continue;
+    }
+
+    if (isSkillCodeFileBlocked(relativePath)) {
+      fileResults.push({
+        path: relativePath,
+        status: 'error',
+        error: 'Code file blocked (set SKILL_IMPORT_ALLOW_CODE=true to enable)',
+      });
       continue;
     }
 
