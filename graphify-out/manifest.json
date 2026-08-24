@@ -5,13 +5,13 @@
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1784757756.0588357,
-    "ast_hash": "1196296558c39b8eadb5525c0bb7b51a",
+    "mtime": 1787599371.5760784,
+    "ast_hash": "c4c5d7087d255ef8ea1842cf8d448079",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
-    "mtime": 1784757883.090876,
-    "ast_hash": "758128d133f5b13bd0dac78efaa19d96",
+    "mtime": 1787599405.6619995,
+    "ast_hash": "5cc01e5dca7d13f5a83e71044d55362d",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/defaults.spec.js": {
@@ -605,8 +605,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsBudgetManager.js": {
-    "mtime": 1781219412.7585313,
-    "ast_hash": "7f92b872181d79ba08bf2c801d367a4f",
+    "mtime": 1787599371.533605,
+    "ast_hash": "00b356effc799e8f6549be7af0be84dd",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
@@ -8930,8 +8930,8 @@
     "semantic_hash": ""
   },
   "client/src/main.jsx": {
-    "mtime": 1777407818.5940845,
-    "ast_hash": "70982ace7047ff2110ba5f2ae678161a",
+    "mtime": 1787592450.544516,
+    "ast_hash": "995a75ada1bc03b2372b81e71f412039",
     "semantic_hash": ""
   },
   "client/src/routes/ChatRoute.tsx": {
@@ -12100,8 +12100,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/definitions.ts": {
-    "mtime": 1786558764.7888184,
-    "ast_hash": "ce987254d47485f5914ccc220ef59610",
+    "mtime": 1787599298.4279766,
+    "ast_hash": "777fe9783da38af353b33a1740928f25",
     "semantic_hash": ""
   },
   "packages/api/src/tools/registry/index.ts": {
@@ -16682,6 +16682,21 @@
   "api/server/services/Artifacts/share.spec.js": {
     "mtime": 1787190888.4790668,
     "ast_hash": "6165bd22e011921a9f852ef528de28b4",
+    "semantic_hash": ""
+  },
+  "api/app/clients/tools/structured/specs/MetaAdsBudgetManager.spec.js": {
+    "mtime": 1787599320.4862416,
+    "ast_hash": "57ab30deac2c43ce616b5edb3f154305",
+    "semantic_hash": ""
+  },
+  "client/src/utils/__tests__/preloadRecovery.test.ts": {
+    "mtime": 1787592450.5447922,
+    "ast_hash": "bd4d14f2ba345cf2f79d01ac722eba54",
+    "semantic_hash": ""
+  },
+  "client/src/utils/preloadRecovery.ts": {
+    "mtime": 1787592450.545015,
+    "ast_hash": "649a97703b0b5faa53a5fac0533db17d",
     "semantic_hash": ""
   }
 }
