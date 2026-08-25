@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import {
   BookmarkSimple,
   Brain,
+  CursorClick,
   Folder,
   NotePencil,
   Paperclip,
@@ -30,6 +31,7 @@ import FilesPanel from '~/components/SidePanel/Files/Panel';
 import ProjectsPanel from '~/components/SidePanel/Projects/ProjectsPanel';
 import { useHasAccess, useMCPServerManager } from '~/hooks';
 import { PromptsAccordion } from '~/components/Prompts';
+import { SkillsAccordion } from '~/components/Skills/sidebar';
 
 export default function useSideNavLinks({
   hidePanel,
@@ -66,6 +68,10 @@ export default function useSideNavLinks({
   });
   const hasAccessToAgents = useHasAccess({
     permissionType: PermissionTypes.AGENTS,
+    permission: Permissions.USE,
+  });
+  const hasAccessToSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
     permission: Permissions.USE,
   });
   const hasAccessToCreateAgents = useHasAccess({
@@ -130,6 +136,16 @@ export default function useSideNavLinks({
         icon: NotePencil,
         id: 'prompts',
         Component: PromptsAccordion,
+      });
+    }
+
+    if (hasAccessToSkills) {
+      links.push({
+        title: 'com_ui_skills',
+        label: '',
+        icon: CursorClick,
+        id: 'skills',
+        Component: SkillsAccordion,
       });
     }
 
@@ -217,6 +233,7 @@ export default function useSideNavLinks({
     hasAccessToAgents,
     hasAccessToCreateAgents,
     hasAccessToPrompts,
+    hasAccessToSkills,
     hasAccessToMemories,
     hasAccessToReadMemories,
     interfaceConfig.parameters,
