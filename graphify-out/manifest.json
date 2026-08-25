@@ -2990,8 +2990,8 @@
     "semantic_hash": ""
   },
   "client/package.json": {
-    "mtime": 1787603430.1005995,
-    "ast_hash": "fb9562227f940df21c31e16a3f91e2d1",
+    "mtime": 1787681428.0623302,
+    "ast_hash": "75ec7af522cd080bf289f5f357ea9224",
     "semantic_hash": ""
   },
   "client/src/@types/i18next.d.ts": {
