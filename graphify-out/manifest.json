@@ -380,13 +380,13 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/api-endpoints.ts": {
-    "mtime": 1787190888.4768002,
-    "ast_hash": "a5b8d5571055b1118991cc04515f48ae",
+    "mtime": 1787621792.3408713,
+    "ast_hash": "e6706c733a3e099bfe0d2f3e09e04fcc",
     "semantic_hash": ""
   },
   "packages/data-provider/src/data-service.ts": {
-    "mtime": 1787190888.4775016,
-    "ast_hash": "ed5d7db5c16f1b33ea42a9fad6e154a2",
+    "mtime": 1787621792.3917568,
+    "ast_hash": "f1771218aa8c6802a834478b56a5d2cc",
     "semantic_hash": ""
   },
   "packages/data-provider/src/permissions.ts": {
@@ -2005,8 +2005,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/skills.js": {
-    "mtime": 1779199271.3816962,
-    "ast_hash": "ad1f1f7f7599a9cb443ac6f545d7b2ee",
+    "mtime": 1787621751.3856428,
+    "ast_hash": "6935d057516bf0a236f88e16220aec3b",
     "semantic_hash": ""
   },
   "api/server/routes/skills.tenant.test.js": {
@@ -7195,13 +7195,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Skills/lists/SkillList.tsx": {
-    "mtime": 1779199271.5080688,
-    "ast_hash": "79c7dbd0d944fb5f8e5856d92f638cfa",
+    "mtime": 1787621826.8344424,
+    "ast_hash": "1e4057850408d17c62a381154a61d3f5",
     "semantic_hash": ""
   },
   "client/src/components/Skills/lists/SkillListItem.tsx": {
-    "mtime": 1779199271.5083222,
-    "ast_hash": "d058e35ccceb590b440102e6852f2763",
+    "mtime": 1787621826.7921016,
+    "ast_hash": "87a4e93d7701453c9eaa8de6356c464d",
     "semantic_hash": ""
   },
   "client/src/components/Skills/lists/index.ts": {
@@ -11850,8 +11850,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/skills/index.ts": {
-    "mtime": 1779199271.6143997,
-    "ast_hash": "b5b1e55fe462601e4b755692cb7e2cab",
+    "mtime": 1787621751.331096,
+    "ast_hash": "6f8bb10cbee10cac114cf87249a9dbc2",
     "semantic_hash": ""
   },
   "packages/api/src/skills/skillStates.ts": {
@@ -16722,6 +16722,21 @@
   "packages/api/src/skills/import.spec.ts": {
     "mtime": 1787603769.267715,
     "ast_hash": "26ed4c5b79e9152f5e6ffb8298b579ca",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/lists/SkillList.spec.tsx": {
+    "mtime": 1787621894.7162821,
+    "ast_hash": "63d8a894fce2043d5a8989f9bf640ed5",
+    "semantic_hash": ""
+  },
+  "packages/api/src/skills/export.spec.ts": {
+    "mtime": 1787622172.8940253,
+    "ast_hash": "c855ec66df97223980f6370bb84ab440",
+    "semantic_hash": ""
+  },
+  "packages/api/src/skills/export.ts": {
+    "mtime": 1787621909.9621449,
+    "ast_hash": "26c2790e5085e51bb6c5b56af11c2f8d",
     "semantic_hash": ""
   }
 }

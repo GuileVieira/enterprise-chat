@@ -5,6 +5,7 @@ const express = require('express');
 const {
   createSkillsHandlers,
   createImportHandler,
+  createExportSkillsHandler,
   generateCheckAccess,
   getStorageMetadata,
   resolveRequestTenantId,
@@ -170,6 +171,15 @@ const importHandler = createImportHandler({
   grantPermission,
 });
 
+const exportHandler = createExportSkillsHandler({
+  getSkillById,
+  listSkillFiles,
+  findAccessibleResources,
+  findPubliclyAccessibleResources,
+  getStrategyFunctions,
+  isValidObjectIdString,
+});
+
 // ---------------------------------------------------------------------------
 // Per-file upload handler (add a single file to an existing skill)
 // ---------------------------------------------------------------------------
@@ -286,6 +296,7 @@ router.post(
 
 router.get('/', handlers.list);
 router.post('/', checkSkillCreate, handlers.create);
+router.get('/export', exportHandler);
 
 router.get(
   '/:id',

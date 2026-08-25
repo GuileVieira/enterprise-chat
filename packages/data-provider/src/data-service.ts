@@ -1254,6 +1254,13 @@ export function importSkill(formData: FormData): Promise<sk.TSkill> {
   return request.postMultiPart(endpoints.importSkill(), formData);
 }
 
+export function exportSkills(ids: string[]): Promise<AxiosResponse<Blob>> {
+  return request.getResponse(endpoints.exportSkills(ids), {
+    responseType: 'blob',
+    headers: { Accept: 'application/zip' },
+  });
+}
+
 export function getSkillFileContent(
   skillId: string,
   relativePath: string,

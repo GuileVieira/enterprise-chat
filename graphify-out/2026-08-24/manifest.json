@@ -8375,8 +8375,8 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Nav/useSideNavLinks.ts": {
-    "mtime": 1779209046.968948,
-    "ast_hash": "fc3cbda6bdf5a94cca040b79616aa172",
+    "mtime": 1787620976.4285557,
+    "ast_hash": "e3d1f1f032fd8c20e5e5137ff2ec85ca",
     "semantic_hash": ""
   },
   "client/src/hooks/Nav/useUnifiedSidebarLinks.ts": {

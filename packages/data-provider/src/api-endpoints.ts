@@ -443,6 +443,8 @@ export const getAllPromptGroups = () => `${prompts()}/all`;
 /* Skills */
 export const skills = () => `${BASE_URL}/api/skills`;
 export const importSkill = () => `${skills()}/import`;
+export const exportSkills = (ids: string[]) =>
+  `${skills()}/export?${new URLSearchParams({ ids: ids.join(',') }).toString()}`;
 
 export const getSkill = (id: string) => `${skills()}/${encodeURIComponent(id)}`;
 

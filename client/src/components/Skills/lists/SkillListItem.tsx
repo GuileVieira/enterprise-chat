@@ -10,10 +10,12 @@ import { cn } from '~/utils';
 
 interface SkillListItemProps {
   skill: TSkill;
+  selected: boolean;
   isActive: boolean;
   isExpanded: boolean;
   activeFile: string | null;
   onToggleExpand: (skillId: string) => void;
+  onToggleSelected: (skillId: string) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -256,10 +258,12 @@ function InlineFileTree({
 
 function SkillListItem({
   skill,
+  selected,
   isActive,
   isExpanded,
   activeFile,
   onToggleExpand,
+  onToggleSelected,
 }: SkillListItemProps) {
   const navigate = useNavigate();
   const localize = useLocalize();
@@ -316,6 +320,14 @@ function SkillListItem({
         aria-current={isActive ? 'true' : undefined}
         aria-expanded={hasFiles ? expanded : undefined}
       >
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelected(skill._id)}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`${localize('com_ui_select')} ${skill.name}`}
+          className="size-4 shrink-0 accent-green-600"
+        />
         <span className="flex size-6 shrink-0 items-center justify-center">
           <span className="flex size-6 items-center justify-center rounded-md border border-border-light bg-surface-primary shadow-sm">
             <ScrollText className="size-3.5 text-text-secondary" aria-hidden="true" />
