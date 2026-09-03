@@ -1494,6 +1494,7 @@ describe('getCacheMultiplier', () => {
 describe('Google Model Tests', () => {
   const googleModels = [
     'gemini-3',
+    'gemini-3.8-flash',
     'gemini-3.1-pro-preview',
     'gemini-3.1-pro-preview-customtools',
     'gemini-3.1-flash-lite-preview',
@@ -1541,6 +1542,7 @@ describe('Google Model Tests', () => {
   it('should map to the correct model keys', () => {
     const expected = {
       'gemini-3': 'gemini-3',
+      'gemini-3.8-flash': 'gemini-3.8-flash',
       'gemini-3.1-pro-preview': 'gemini-3.1',
       'gemini-3.1-pro-preview-customtools': 'gemini-3.1',
       'gemini-3.1-flash-lite-preview': 'gemini-3.1-flash-lite',
@@ -1643,6 +1645,19 @@ describe('Google Model Tests', () => {
     );
     expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(
       cacheTokenValues['gemini-3.1-flash-lite'].read,
+    );
+  });
+
+  it('should return current Gemini 3.8 Flash rates', () => {
+    const model = 'google/gemini-3.8-flash';
+    expect(getMultiplier({ model, tokenType: 'prompt' })).toBe(
+      tokenValues['gemini-3.8-flash'].prompt,
+    );
+    expect(getMultiplier({ model, tokenType: 'completion' })).toBe(
+      tokenValues['gemini-3.8-flash'].completion,
+    );
+    expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(
+      cacheTokenValues['gemini-3.8-flash'].read,
     );
   });
 });
@@ -2057,6 +2072,19 @@ describe('GLM Model Tests', () => {
 });
 
 describe('Claude Model Tests', () => {
+  it('should return current Claude Fable 5.1 rates', () => {
+    const model = 'anthropic/claude-fable-5.1';
+    expect(getMultiplier({ model, tokenType: 'prompt' })).toBe(
+      tokenValues['claude-fable-5.1'].prompt,
+    );
+    expect(getMultiplier({ model, tokenType: 'completion' })).toBe(
+      tokenValues['claude-fable-5.1'].completion,
+    );
+    expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(
+      cacheTokenValues['claude-fable-5.1'].read,
+    );
+  });
+
   it('should return correct prompt and completion rates for Claude 4 models', () => {
     expect(getMultiplier({ model: 'claude-sonnet-4', tokenType: 'prompt' })).toBe(
       tokenValues['claude-sonnet-4'].prompt,

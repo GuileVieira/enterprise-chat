@@ -117,6 +117,7 @@ const googleModels = {
   'gemini-3-pro-image': 1000000,
   'gemini-3.1': 1000000,
   'gemini-3.1-flash-lite': 1000000,
+  'gemini-3.8-flash': 1048576,
 };
 
 const anthropicModels = {
@@ -342,6 +343,7 @@ const aggregateModels = {
   'gpt-oss-20b': 131000,
   'gpt-oss:120b': 131000,
   'gpt-oss-120b': 131000,
+  'claude-fable-5.1': 1000000,
   ...qwenModels,
   ...xAIModels,
   ...googleModels,
@@ -376,6 +378,8 @@ export const modelMaxOutputs = {
   'gpt-5-nano': 128000,
   'gpt-5-pro': 128000,
   'gpt-5.2-pro': 128000,
+  'gemini-3.8-flash': 65536,
+  'claude-fable-5.1': 128000,
   'gpt-oss-20b': 131000,
   'gpt-oss-120b': 131000,
   system_default: 32000,
