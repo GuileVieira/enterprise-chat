@@ -50,7 +50,7 @@ describe('createPayload', () => {
   it('routes custom models through the agents chat runtime', () => {
     const submission = createSubmission();
     submission.endpointOption = {
-      endpoint: 'OpenRouter',
+      endpoint: 'OpenRouter' as EModelEndpoint,
       endpointType: EModelEndpoint.custom,
       model: 'google/gemini-3.8-flash',
     };
