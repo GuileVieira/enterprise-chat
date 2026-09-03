@@ -25,6 +25,7 @@ const {
   getTransactionsConfig,
   resolveRecursionLimit,
   createMemoryProcessor,
+  getTenantMemoryUserIds,
   loadAgent: loadAgentFn,
   createMultiAgentMapper,
   filterMalformedContentParts,
@@ -545,17 +546,34 @@ class AgentClient extends BaseClient {
     const userId = this.options.req.user.id + '';
     this.processMemory = undefined;
 
+    let memoryUserIds = [userId];
+    try {
+      memoryUserIds = await getTenantMemoryUserIds(user, { findUsers: db.findUsers });
+    } catch (error) {
+      logger.error(
+        '[api/server/controllers/agents/client.js #useMemory] Error loading tenant owners',
+        error,
+      );
+    }
+
+    let sharedMemories;
+    try {
+      const formattedMemories = await Promise.all(
+        memoryUserIds.map((id) => db.getFormattedMemories({ userId: id })),
+      );
+      sharedMemories = formattedMemories
+        .map(({ withoutKeys }) => withoutKeys)
+        .filter(Boolean)
+        .join('\n\n');
+    } catch (error) {
+      logger.error(
+        '[api/server/controllers/agents/client.js #useMemory] Error loading shared memories',
+        error,
+      );
+    }
+
     if (!isMemoryAgentEnabled(memoryConfig)) {
-      try {
-        const { withoutKeys } = await db.getFormattedMemories({ userId });
-        return withoutKeys;
-      } catch (error) {
-        logger.error(
-          '[api/server/controllers/agents/client.js #useMemory] Error loading memories',
-          error,
-        );
-        return;
-      }
+      return sharedMemories;
     }
 
     /** @type {Agent} */
@@ -656,7 +674,7 @@ class AgentClient extends BaseClient {
     const messageId = this.responseMessageId + '';
     const conversationId = this.conversationId + '';
     const streamId = this.options.req?._resumableStreamId || null;
-    const [withoutKeys, processMemory] = await createMemoryProcessor({
+    const [personalMemories, processMemory] = await createMemoryProcessor({
       userId,
       config,
       messageId,
@@ -672,7 +690,7 @@ class AgentClient extends BaseClient {
     });
 
     this.processMemory = processMemory;
-    return withoutKeys;
+    return sharedMemories ?? personalMemories;
   }
 
   /**
