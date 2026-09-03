@@ -1,6 +1,8 @@
 import type { TSubmission } from './types';
+
 import createPayload from './createPayload';
 import { EModelEndpoint } from './schemas';
+import { EndpointURLs } from './config';
 
 const messageId = '00000000-0000-0000-0000-000000000001';
 const parentMessageId = '00000000-0000-0000-0000-000000000000';
@@ -36,11 +38,25 @@ describe('createPayload', () => {
 
   it('clears stale project ids when the conversation has no active project', () => {
     const submission = createSubmission();
-    (submission.endpointOption as typeof submission.endpointOption & { projectId?: string }).projectId =
-      'stale-project';
+    (
+      submission.endpointOption as typeof submission.endpointOption & { projectId?: string }
+    ).projectId = 'stale-project';
 
     const { payload } = createPayload(submission);
 
     expect(payload.projectId).toBeUndefined();
+  });
+
+  it('routes custom models through the agents chat runtime', () => {
+    const submission = createSubmission();
+    submission.endpointOption = {
+      endpoint: 'OpenRouter',
+      endpointType: EModelEndpoint.custom,
+      model: 'google/gemini-3.8-flash',
+    };
+
+    const { server } = createPayload(submission);
+
+    expect(server).toBe(`${EndpointURLs[EModelEndpoint.agents]}/OpenRouter`);
   });
 });

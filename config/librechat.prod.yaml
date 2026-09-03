@@ -20,6 +20,10 @@ summarization:
   provider: OpenRouter
   model: google/gemini-3.8-flash
 
+memory:
+  disabled: false
+  personalize: true
+
 interface:
   modelSelect: true
   parameters: true
