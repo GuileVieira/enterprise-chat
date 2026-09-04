@@ -1,5 +1,13 @@
-import { MAX_SUBAGENTS } from 'librechat-data-provider';
-import { agentCreateSchema, agentUpdateSchema, agentSubagentsSchema } from './validation';
+import { EModelEndpoint, MAX_SUBAGENTS } from 'librechat-data-provider';
+
+import type { Agent } from 'librechat-data-provider';
+
+import {
+  agentCreateSchema,
+  agentUpdateSchema,
+  validateAgentModel,
+  agentSubagentsSchema,
+} from './validation';
 
 describe('agentSubagentsSchema', () => {
   it('accepts enabled:true with a list within the cap', () => {
@@ -79,5 +87,61 @@ describe('agentUpdateSchema with subagents', () => {
       subagents: { enabled: true, agent_ids: oversized },
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('validateAgentModel fallback', () => {
+  it('uses the first configured model when the agent model is invalid', async () => {
+    const agent = {
+      provider: 'OpenRouter',
+      model: 'removed-model',
+      model_parameters: { model: 'removed-model', temperature: 0.2 },
+    } as Agent;
+    const logViolation = jest.fn();
+
+    const result = await validateAgentModel({
+      agent,
+      logViolation,
+      req: {} as never,
+      res: {} as never,
+      modelsConfig: {
+        [EModelEndpoint.assistants]: ['gpt-assistant'],
+        OpenRouter: ['openai/gpt-5.6-luna', 'google/gemini-3.8-flash'],
+      },
+    });
+
+    expect(result).toEqual({
+      isValid: true,
+      fallback: { provider: 'OpenRouter', model: 'openai/gpt-5.6-luna' },
+    });
+    expect(agent).toMatchObject({
+      provider: 'OpenRouter',
+      model: 'openai/gpt-5.6-luna',
+      model_parameters: { model: 'openai/gpt-5.6-luna', temperature: 0.2 },
+    });
+    expect(logViolation).not.toHaveBeenCalled();
+  });
+
+  it('moves to the first allowed provider when the saved provider is unavailable', async () => {
+    const agent = { provider: 'RemovedProvider', model: null } as Agent;
+
+    const result = await validateAgentModel({
+      agent,
+      req: {} as never,
+      res: {} as never,
+      logViolation: jest.fn(),
+      allowedProviders: new Set(['OpenRouter']),
+      modelsConfig: {
+        [EModelEndpoint.google]: ['gemini-available-but-not-allowed'],
+        OpenRouter: ['openai/gpt-5.6-luna'],
+      },
+    });
+
+    expect(result.fallback).toEqual({
+      provider: 'OpenRouter',
+      model: 'openai/gpt-5.6-luna',
+    });
+    expect(agent.provider).toBe('OpenRouter');
+    expect(agent.model).toBe('openai/gpt-5.6-luna');
   });
 });

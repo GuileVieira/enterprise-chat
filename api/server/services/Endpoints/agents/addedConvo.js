@@ -87,6 +87,7 @@ const processAddedConvo = async ({
       modelsConfig,
       logViolation,
       agent: addedAgent,
+      allowedProviders,
     });
 
     if (!addedValidation.isValid) {

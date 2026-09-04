@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_SUBAGENTS, ViolationTypes, ErrorTypes } from 'librechat-data-provider';
+import { EModelEndpoint, MAX_SUBAGENTS, ViolationTypes, ErrorTypes } from 'librechat-data-provider';
 import type { Agent, TModelsConfig } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 
@@ -134,6 +134,7 @@ export interface ValidateAgentModelParams {
   res: Response;
   agent: Agent;
   modelsConfig: TModelsConfig;
+  allowedProviders?: Set<string>;
   logViolation: (
     req: LooseRequest,
     res: Response,
@@ -145,9 +146,36 @@ export interface ValidateAgentModelParams {
 
 interface ValidateAgentModelResult {
   isValid: boolean;
+  fallback?: { provider: string; model: string };
   error?: {
     message: string;
   };
+}
+
+const unsupportedAgentProviders = new Set<string>([
+  EModelEndpoint.agents,
+  EModelEndpoint.assistants,
+  EModelEndpoint.azureAssistants,
+]);
+
+function getFallbackModel(
+  endpoint: string,
+  modelsConfig: TModelsConfig,
+  allowedProviders?: Set<string>,
+): { provider: string; model: string } | undefined {
+  const providers = [endpoint, ...Object.keys(modelsConfig)];
+  for (const provider of new Set(providers)) {
+    if (unsupportedAgentProviders.has(provider)) {
+      continue;
+    }
+    if (allowedProviders?.size && !allowedProviders.has(provider)) {
+      continue;
+    }
+    const model = modelsConfig[provider]?.[0];
+    if (model) {
+      return { provider, model };
+    }
+  }
 }
 
 /**
@@ -161,17 +189,8 @@ interface ValidateAgentModelResult {
 export async function validateAgentModel(
   params: ValidateAgentModelParams,
 ): Promise<ValidateAgentModelResult> {
-  const { req, res, agent, modelsConfig, logViolation } = params;
+  const { req, res, agent, modelsConfig, allowedProviders, logViolation } = params;
   const { model, provider: endpoint } = agent;
-
-  if (!model) {
-    return {
-      isValid: false,
-      error: {
-        message: `{ "type": "${ErrorTypes.MISSING_MODEL}", "info": "${endpoint}" }`,
-      },
-    };
-  }
 
   if (!modelsConfig) {
     return {
@@ -183,6 +202,29 @@ export async function validateAgentModel(
   }
 
   const availableModels = modelsConfig[endpoint];
+  const validModel = !!model && availableModels?.includes(model);
+
+  if (validModel) {
+    return { isValid: true };
+  }
+
+  const fallback = getFallbackModel(endpoint, modelsConfig, allowedProviders);
+  if (fallback) {
+    agent.provider = fallback.provider;
+    agent.model = fallback.model;
+    agent.model_parameters = { ...agent.model_parameters, model: fallback.model };
+    return { isValid: true, fallback };
+  }
+
+  if (!model) {
+    return {
+      isValid: false,
+      error: {
+        message: `{ "type": "${ErrorTypes.MISSING_MODEL}", "info": "${endpoint}" }`,
+      },
+    };
+  }
+
   if (!availableModels) {
     return {
       isValid: false,
@@ -190,12 +232,6 @@ export async function validateAgentModel(
         message: `{ "type": "${ErrorTypes.ENDPOINT_MODELS_NOT_LOADED}", "info": "${endpoint}" }`,
       },
     };
-  }
-
-  const validModel = !!availableModels.find((availableModel) => availableModel === model);
-
-  if (validModel) {
-    return { isValid: true };
   }
 
   const { ILLEGAL_MODEL_REQ_SCORE: score = 1 } = process.env ?? {};

@@ -253,20 +253,27 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
   }
 
   const modelsConfig = await getModelsConfig(req);
+  const allowedProviders = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.allowedProviders);
   const validationResult = await validateAgentModel({
     req,
     res,
     modelsConfig,
     logViolation,
     agent: primaryAgent,
+    allowedProviders,
   });
 
   if (!validationResult.isValid) {
     throw new Error(validationResult.error?.message);
   }
+  if (validationResult.fallback) {
+    endpointOption.model_parameters = {
+      ...endpointOption.model_parameters,
+      model: validationResult.fallback.model,
+    };
+  }
 
   const agentConfigs = new Map();
-  const allowedProviders = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.allowedProviders);
 
   /** Event-driven mode: only load tool definitions, not full instances */
   const loadTools = createToolLoader(signal, streamId, true);
@@ -616,6 +623,7 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
         agent,
         modelsConfig,
         logViolation,
+        allowedProviders,
       });
       if (!validation.isValid) {
         logger.warn(

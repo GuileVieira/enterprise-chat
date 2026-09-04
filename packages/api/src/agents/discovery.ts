@@ -223,6 +223,7 @@ export async function discoverConnectedAgents(
       agent,
       modelsConfig,
       logViolation,
+      allowedProviders,
     });
 
     if (!validation.isValid) {
