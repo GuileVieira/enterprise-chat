@@ -51,6 +51,7 @@ import type { TFilterFilesByAgentAccess } from './resources';
  */
 const DEFAULT_RESERVE_RATIO = 0.05;
 const temporalSpecialVarRegex = /{{\s*(current_date|current_datetime|iso_datetime)\s*}}/i;
+const META_ADS_TRAFFIC_TOOLS = ['meta_ads_get_insights', 'meta_ads_budget_manager'];
 
 function hasTemporalSpecialVars(text: string): boolean {
   return temporalSpecialVarRegex.test(text);
@@ -711,7 +712,11 @@ export async function initializeAgent(
     }
   }
 
-  const savedToolNames = agent.tools ?? [];
+  const configuredTrafficAgentId = req.config?.interfaceConfig?.metaAdsTrafficAgentId;
+  const savedToolNames =
+    configuredTrafficAgentId === agent.id
+      ? [...new Set([...(agent.tools ?? []), ...META_ADS_TRAFFIC_TOOLS])]
+      : (agent.tools ?? []);
   const baseToolNames =
     hasProjectFiles && !savedToolNames.includes(Tools.file_search)
       ? [...savedToolNames, Tools.file_search]

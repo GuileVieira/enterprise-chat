@@ -225,9 +225,7 @@ function countNamedWebSearchTools(tools: unknown[] | undefined): number {
   );
 }
 
-function countWebSearchDefinitions(
-  toolDefinitions: Array<{ name: string }> | undefined,
-): number {
+function countWebSearchDefinitions(toolDefinitions: Array<{ name: string }> | undefined): number {
   return (
     toolDefinitions?.filter((toolDefinition) => toolDefinition.name === Tools.web_search).length ??
     0
@@ -1026,6 +1024,32 @@ describe('initializeAgent — skill `allowed-tools` union (Phase 6)', () => {
       author: { toString: () => userId } as unknown as import('mongoose').Types.ObjectId,
       ...(allowedTools !== undefined ? { allowedTools } : {}),
     });
+
+  it('always loads Meta Ads tools for the configured traffic agent', async () => {
+    const { agent, req, res, loadTools, db } = createMocks();
+    req.config = {
+      interfaceConfig: { metaAdsTrafficAgentId: agent.id },
+    } as ServerRequest['config'];
+
+    await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(loadTools).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tools: ['meta_ads_get_insights', 'meta_ads_budget_manager'],
+      }),
+    );
+  });
 
   it('passes the union of agent.tools + allowed-tools to loadTools and merges resulting toolDefinitions', async () => {
     const { agent, req, res, loadTools, db } = createMocks();
