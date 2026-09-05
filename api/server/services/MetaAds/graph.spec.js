@@ -32,6 +32,7 @@ const {
   copyMetaEntity,
   updateMetaEntityName,
   updateMetaAdStatus,
+  validateMetaAdsAccess,
 } = require('./graph');
 
 describe('Meta Ads Graph client', () => {
@@ -62,6 +63,29 @@ describe('Meta Ads Graph client', () => {
 
     expect(getMetaGraphVersion()).toBe('v24.0');
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/act_123/adsets');
+  });
+
+  it('validates account access and reports missing campaign write permission', async () => {
+    fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ id: 'act_123' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ data: [{ permission: 'ads_read', status: 'granted' }] }),
+      });
+
+    await expect(
+      validateMetaAdsAccess({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
+    ).resolves.toEqual({
+      valid: true,
+      canRead: true,
+      canManage: false,
+      missingPermissions: ['ads_management'],
+    });
   });
 
   it('falls back to the default Meta Graph API version for deprecated versions', async () => {

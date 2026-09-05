@@ -35,7 +35,10 @@ const {
   recordProjectMetaAdsRuleChange,
   updateProjectMetaAdsEntityStatus,
 } = require('~/server/services/MetaAds/budget');
-const { isSupportedMetaGraphVersion } = require('~/server/services/MetaAds/graph');
+const {
+  isSupportedMetaGraphVersion,
+  validateMetaAdsAccess,
+} = require('~/server/services/MetaAds/graph');
 const {
   deleteTrafficDiaryIndex,
   syncTrafficDiaryIndex,
@@ -817,6 +820,7 @@ async function prepareMetaAdsSettingsUpdate({
   metaAccessToken,
   resolveProject = resolveProjectForMetaAdsSettings,
   upsertSecret = upsertTenantSecret,
+  validateToken = validateMetaAdsAccess,
 }) {
   const normalized = normalizeMetaAds(metaAds);
   const trimmedToken = typeof metaAccessToken === 'string' ? metaAccessToken.trim() : '';
@@ -830,6 +834,18 @@ async function prepareMetaAdsSettingsUpdate({
   const project = await resolveProject(projectId);
   if (!project) {
     return null;
+  }
+
+  const validation = await validateToken({
+    adAccountId: normalized.adAccountId,
+    token: trimmedToken,
+    graphVersion: normalized.graphVersion,
+  });
+  if (!validation.canRead || !validation.canManage) {
+    throw Object.assign(
+      new Error('Meta token requires ads_management and access to the configured ad account.'),
+      { statusCode: 400, details: validation.missingPermissions },
+    );
   }
 
   const projectSecretName = getProjectMetaTokenSecretName(project.projectId || projectId);
@@ -1234,6 +1250,22 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
       return res.status(400).json({ message: 'Invalid metaAccessToken format' });
     }
     const tenantId = req.user.tenantId || getTenantId();
+    const project = await resolveProjectForMetaAdsSettings(req.params.projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const metaAds = normalizeMetaAds(project.metaAds ?? {});
+    const validation = await validateMetaAdsAccess({
+      adAccountId: metaAds.adAccountId,
+      token,
+      graphVersion: metaAds.graphVersion,
+    });
+    if (!validation.canRead || !validation.canManage) {
+      return res.status(400).json({
+        message: 'Meta token requires ads_management and access to the configured ad account.',
+        details: validation.missingPermissions,
+      });
+    }
     await upsertTenantSecret(
       tenantId,
       META_ACCESS_TOKEN_SECRET_NAME,

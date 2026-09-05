@@ -18,6 +18,7 @@ const {
   metaPost,
   updateMetaEntityName,
   updateMetaEntityStatus,
+  validateMetaAdsAccess,
 } = require('~/server/services/MetaAds/graph');
 
 const META_TOKEN_SECRET_NAME = 'meta_graph_access_token';
@@ -31,6 +32,7 @@ const MIN_SAMPLE_SPEND = 10;
 const STATUS_PERIOD_CACHE_TTL_MS = 10 * 60 * 1000;
 const STATUS_PERIOD_TODAY_CACHE_TTL_MS = 10 * 60 * 1000;
 const STATUS_PERIOD_HISTORICAL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const META_CUSTOM_CONVERSION_PREFIX = 'offsite_conversion.custom.';
 const statusPeriodCache = new Map();
 const ACTION_COOLDOWN_MINUTES = {
   budget_change: 60,
@@ -1702,6 +1704,48 @@ function filterAggregateResultTypes(resultTypeBreakdown, preservedResultType = '
     return resultTypeBreakdown.filter((resultType) => resultType.resultType !== 'page_engagement');
   }
   return resultTypeBreakdown;
+}
+
+async function resolveCustomConversionLabels({ rows, token, graphVersion }) {
+  const ids = [
+    ...new Set(
+      rows
+        .flatMap((row) => (Array.isArray(row?.actions) ? row.actions : []))
+        .map((action) => action?.action_type)
+        .filter((actionType) => /^offsite_conversion\.custom\.\d+$/.test(actionType))
+        .map((actionType) => actionType.slice(META_CUSTOM_CONVERSION_PREFIX.length)),
+    ),
+  ];
+  const labels = {};
+  for (let index = 0; index < ids.length; index += 50) {
+    const batch = ids.slice(index, index + 50);
+    const payload = await metaGet({
+      path: '',
+      token,
+      params: { ids: batch.join(','), fields: 'id,name' },
+      graphVersion,
+      resourceLabel: 'custom conversion labels',
+    });
+    for (const id of batch) {
+      const name = typeof payload?.[id]?.name === 'string' ? payload[id].name.trim() : '';
+      if (name) {
+        labels[`${META_CUSTOM_CONVERSION_PREFIX}${id}`] = name;
+      }
+    }
+  }
+  return labels;
+}
+
+function applyCustomConversionLabels(campaigns, labels) {
+  const visit = (entity) => {
+    for (const resultType of entity?.resultTypeBreakdown ?? []) {
+      resultType.label = labels[resultType.resultType] || resultType.label;
+    }
+    for (const child of [...(entity?.adSets ?? []), ...(entity?.ads ?? [])]) {
+      visit(child);
+    }
+  };
+  campaigns.forEach(visit);
 }
 
 function aggregateInsightRows(rows = []) {
@@ -5392,7 +5436,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     MetaAdsRecommendation.find(query).sort({ createdAt: -1 }).limit(50).lean(),
     MetaAdsBudgetChange.find(query).sort({ createdAt: -1 }).limit(100).lean(),
   ]);
-  const credentials = project
+  let credentials = project
     ? await resolveMetaCredentialStatus({
         tenantId: getProjectTenantId(project, fallbackTenantId),
         metaAds: withImplicitProjectTokenSecret(
@@ -5421,6 +5465,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
   let currency;
   let monthlyBudgetStatus;
   let goalProgress;
+  let customConversionLabels = {};
   const snapshotOnly = options.scope === 'snapshot';
   if (project?.metaAds?.adAccountId && !snapshotOnly) {
     try {
@@ -5431,6 +5476,25 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
       const token = await getAccessToken(tenantId, metaAds);
       const adAccountId = normalizeAdAccountId(metaAds.adAccountId);
       const effectiveGraphVersion = getMetaGraphVersion(metaAds.graphVersion);
+      try {
+        credentials = {
+          ...credentials,
+          ...(await validateMetaAdsAccess({
+            adAccountId,
+            token,
+            graphVersion: effectiveGraphVersion,
+          })),
+        };
+      } catch (error) {
+        credentials = {
+          ...credentials,
+          valid: false,
+          canRead: false,
+          canManage: false,
+          error: error.message,
+        };
+        throw error;
+      }
       const hasPeriod = Boolean(options.datePreset || options.since || options.until);
       const periodRange = hasPeriod ? resolveStatusPeriod(options) : undefined;
       const targetResultType = metaAds.rules?.targetResultType;
@@ -5454,6 +5518,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
         adDiagnostics = cached.adDiagnostics;
         campaignInsights = cached.campaignInsights;
         adDailyInsights = cached.adDailyInsights ?? [];
+        customConversionLabels = cached.customConversionLabels ?? {};
         liveSnapshots = cached.liveSnapshots;
         currency = cached.currency;
       };
@@ -5594,6 +5659,17 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               adInsights: liveAdInsights,
               adSummaries,
             });
+            customConversionLabels = await resolveCustomConversionLabels({
+              rows: [...liveCampaignInsights, ...insights, ...liveAdInsights],
+              token,
+              graphVersion: effectiveGraphVersion,
+            }).catch((error) => {
+              logger.error('[MetaAdsBudget] custom conversion label enrichment failed', {
+                projectId,
+                message: error.message,
+              });
+              return {};
+            });
             setCachedStatusPeriod(cacheKey, {
               campaignConfigs,
               adsetConfigs,
@@ -5603,6 +5679,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
               adDailyInsights,
               liveSnapshots,
               currency,
+              customConversionLabels,
             });
           } catch (error) {
             const stalePeriod = cacheKey
@@ -5690,6 +5767,7 @@ async function getProjectMetaAdsStatus(projectId, fallbackTenantId, options = {}
     accountProfile: project?.metaAds?.accountProfile,
     targetResultType: project?.metaAds?.rules?.targetResultType,
   });
+  applyCustomConversionLabels(campaigns, customConversionLabels);
   if (adDiagnostics) {
     adDiagnostics = {
       ...adDiagnostics,
@@ -5889,6 +5967,26 @@ function validateMetaAdsEditableFields(entityLevel, fields) {
   return Object.fromEntries(entries);
 }
 
+function metaFieldMatches(expected, actual) {
+  if (expected && typeof expected === 'object') {
+    if (!actual || typeof actual !== 'object') {
+      return false;
+    }
+    const normalize = (value) =>
+      Array.isArray(value)
+        ? value.map(normalize)
+        : value && typeof value === 'object'
+          ? Object.fromEntries(
+              Object.keys(value)
+                .sort()
+                .map((key) => [key, normalize(value[key])]),
+            )
+          : value;
+    return JSON.stringify(normalize(expected)) === JSON.stringify(normalize(actual));
+  }
+  return String(actual) === String(expected);
+}
+
 async function updateProjectMetaAdsEntityFields({
   projectId,
   tenantId,
@@ -5945,6 +6043,15 @@ async function updateProjectMetaAdsEntityFields({
     throw Object.assign(new Error('Meta Ads did not confirm the entity update.'), {
       statusCode: 502,
     });
+  }
+  const mismatchedFields = Object.entries(sanitizedFields)
+    .filter(([key, value]) => !metaFieldMatches(value, confirmation?.[key]))
+    .map(([key]) => key);
+  if (mismatchedFields.length > 0) {
+    throw Object.assign(
+      new Error(`Meta Ads readback did not match updated fields: ${mismatchedFields.join(', ')}.`),
+      { statusCode: 502, data: { mismatchedFields } },
+    );
   }
   logger.info('[MetaAdsBudget] entity fields updated', {
     projectId,
@@ -6232,6 +6339,7 @@ module.exports = {
   DEFAULT_RULES,
   _buildCreativePauseRecommendationsForTest: buildCreativePauseRecommendations,
   _buildGoalProgressForTest: buildGoalProgress,
+  _applyCustomConversionLabelsForTest: applyCustomConversionLabels,
   _calculateMetricsForTest: calculateMetrics,
   _canonicalizeMetaActionTypeForTest: canonicalizeMetaActionType,
   _getMetaAdsMonthRangeForTest: getMetaAdsMonthRange,

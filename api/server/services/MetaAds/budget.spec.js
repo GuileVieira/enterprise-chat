@@ -20,6 +20,7 @@ const {
   _resolveStatusPeriodForTest,
   _buildCreativePauseRecommendationsForTest,
   _buildGoalProgressForTest,
+  _applyCustomConversionLabelsForTest,
   _resolveMonthlyBudgetForTest,
 } = require('./budget');
 
@@ -39,6 +40,27 @@ describe('Meta Ads budget service', () => {
 
     expect(result.action).toBe('hold');
     expect(result.proposedDailyBudget).toBe(100);
+  });
+
+  it('labels custom payment conversions throughout the campaign summary', () => {
+    const campaigns = [
+      {
+        resultTypeBreakdown: [{ resultType: 'offsite_conversion.custom.987', totalResults: 2 }],
+        adSets: [
+          {
+            resultTypeBreakdown: [{ resultType: 'offsite_conversion.custom.987', totalResults: 2 }],
+            ads: [],
+          },
+        ],
+      },
+    ];
+
+    _applyCustomConversionLabelsForTest(campaigns, {
+      'offsite_conversion.custom.987': 'PIX aprovado',
+    });
+
+    expect(campaigns[0].resultTypeBreakdown[0].label).toBe('PIX aprovado');
+    expect(campaigns[0].adSets[0].resultTypeBreakdown[0].label).toBe('PIX aprovado');
   });
 
   it('increases budget when CPA and ROAS are healthy', () => {
@@ -1151,6 +1173,12 @@ describe('Meta Ads budget service persistence safety', () => {
     const listAdSetInsights = jest.fn(async (options) =>
       typeof insights === 'function' ? insights(options) : insights,
     );
+    const validateMetaAdsAccess = jest.fn(async () => ({
+      valid: true,
+      canRead: true,
+      canManage: true,
+      missingPermissions: [],
+    }));
 
     jest.doMock('~/server/services/MetaAds/graph', () => ({
       getMetaGraphVersion: (value) => value || 'v25.0',
@@ -1169,6 +1197,7 @@ describe('Meta Ads budget service persistence safety', () => {
       copyMetaEntity,
       updateMetaEntityName,
       updateMetaEntityStatus,
+      validateMetaAdsAccess,
     }));
 
     const budget = require('./budget');
@@ -1197,6 +1226,7 @@ describe('Meta Ads budget service persistence safety', () => {
       copyMetaEntity,
       updateMetaEntityName,
       updateMetaEntityStatus,
+      validateMetaAdsAccess,
       projectFind,
       projectUpdateOne,
       updateMany,
@@ -1684,7 +1714,7 @@ describe('Meta Ads budget service persistence safety', () => {
   });
 
   it('queries Meta Ads status by project and tenant', async () => {
-    const { budget, makeFindChain } = loadBudgetWithMocks({
+    const { budget, makeFindChain, validateMetaAdsAccess } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
     });
 
@@ -1693,6 +1723,11 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(makeFindChain).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: 'p1', tenantId: 'tenant-a' }),
     );
+    expect(validateMetaAdsAccess).toHaveBeenCalledWith({
+      adAccountId: 'act_123',
+      token: 'meta-token',
+      graphVersion: 'v25.0',
+    });
   });
 
   it('returns snapshot status without calling Meta Graph', async () => {
@@ -3992,6 +4027,34 @@ describe('Meta Ads budget service persistence safety', () => {
       }),
     ).rejects.toMatchObject({ statusCode: 502 });
     expect(metaGet).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not confirm an entity edit when provider readback differs', async () => {
+    const { budget, metaGet } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
+    });
+    metaGet
+      .mockResolvedValueOnce({ id: 'campaign-1', account_id: '123' })
+      .mockResolvedValueOnce({ id: 'campaign-1', name: 'Old name' });
+
+    await expect(
+      budget.updateProjectMetaAdsEntityFields({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        fields: { name: 'New name' },
+        actor: 'tool',
+        actorUserId: 'u1',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      data: { mismatchedFields: ['name'] },
+    });
   });
 
   it('rejects writes to entities outside the project ad account', async () => {

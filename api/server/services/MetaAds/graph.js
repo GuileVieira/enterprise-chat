@@ -857,6 +857,40 @@ async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
     : undefined;
 }
 
+async function validateMetaAdsAccess({ adAccountId, token, graphVersion }) {
+  if (!/^act_\d+$/.test(adAccountId ?? '')) {
+    throw createMetaGraphError('A valid Meta ad account is required to validate the token.', {
+      statusCode: 400,
+    });
+  }
+  await metaGet({
+    path: encodeURIComponent(adAccountId),
+    token,
+    params: { fields: 'id' },
+    graphVersion,
+    resourceLabel: 'ad account access validation',
+  });
+  const payload = await metaGet({
+    path: 'me/permissions',
+    token,
+    params: { fields: 'permission,status' },
+    graphVersion,
+    resourceLabel: 'Meta token permission validation',
+  });
+  const granted = new Set(
+    (Array.isArray(payload?.data) ? payload.data : [])
+      .filter((permission) => permission?.status === 'granted')
+      .map((permission) => permission?.permission),
+  );
+  const canManage = granted.has('ads_management');
+  return {
+    valid: true,
+    canRead: canManage || granted.has('ads_read'),
+    canManage,
+    missingPermissions: canManage ? [] : ['ads_management'],
+  };
+}
+
 async function listAdSets({ adAccountId, token, graphVersion, includeInactive = false }) {
   logger.debug('[MetaAdsGraph] listing adsets', { adAccountId, graphVersion });
   const path = `${encodeURIComponent(adAccountId)}/adsets`;
@@ -1279,5 +1313,6 @@ module.exports = {
   updateMetaEntityName,
   updateMetaEntityStatus,
   updateMetaAdStatus,
+  validateMetaAdsAccess,
   clearMetaGraphReadCacheForTests,
 };

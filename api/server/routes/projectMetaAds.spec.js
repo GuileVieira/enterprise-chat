@@ -12,6 +12,7 @@ const mockCanAccessProjectResource = jest.fn(({ requiredPermission }) => (_req, 
   return next();
 });
 const mockGetRoleByName = jest.fn();
+const mockValidateMetaAdsAccess = jest.fn();
 
 jest.mock('~/models', () => ({
   createFile: jest.fn(),
@@ -40,6 +41,16 @@ jest.mock('~/server/middleware/accessResources/canAccessProject', () => ({
 
 jest.mock('~/server/services/Config/app', () => ({
   getAppConfig: jest.fn(async () => ({ interfaceConfig: { metaAds: true } })),
+}));
+
+jest.mock('~/server/services/MetaAds/graph', () => ({
+  isSupportedMetaGraphVersion: (value) => /^v(?:2[4-9]|[3-9]\d)\.0$/.test(value),
+  validateMetaAdsAccess: (...args) => mockValidateMetaAdsAccess(...args),
+}));
+
+jest.mock('~/server/services/Files/VectorDB/crud', () => ({
+  deleteVectors: jest.fn(async () => undefined),
+  uploadVectors: jest.fn(async () => ({ embedded: true, filepath: 'vectordb' })),
 }));
 
 jest.mock('~/server/services/MetaAds/budget', () => ({
@@ -101,6 +112,12 @@ function withDiaryIndexLifecycle(model) {
 beforeEach(() => {
   mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
   mockDeniedProjectPermission = null;
+  mockValidateMetaAdsAccess.mockResolvedValue({
+    valid: true,
+    canRead: true,
+    canManage: true,
+    missingPermissions: [],
+  });
   mockGetRoleByName.mockImplementation(async (roleName) => ({
     name: roleName,
     permissions: {
@@ -754,6 +771,33 @@ describe('projectMetaAds settings normalization', () => {
     });
     expect(result.metaAds).not.toHaveProperty('metaAccessToken');
     expect(result.metaAds).not.toHaveProperty('accessToken');
+    expect(mockValidateMetaAdsAccess).toHaveBeenCalledWith({
+      adAccountId: 'act_123456',
+      token: `EAA${'a'.repeat(48)}`,
+      graphVersion: undefined,
+    });
+  });
+
+  it('rejects a project token without campaign write permission before storing it', async () => {
+    const upsertSecret = jest.fn();
+    mockValidateMetaAdsAccess.mockResolvedValueOnce({
+      valid: true,
+      canRead: true,
+      canManage: false,
+      missingPermissions: ['ads_management'],
+    });
+
+    await expect(
+      router._prepareMetaAdsSettingsUpdateForTest({
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        metaAds: { adAccountId: 'act_123' },
+        metaAccessToken: `EAA${'a'.repeat(48)}`,
+        resolveProject: jest.fn(async () => ({ projectId: 'p1', tenantId: 'tenant-x' })),
+        upsertSecret,
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, details: ['ads_management'] });
+    expect(upsertSecret).not.toHaveBeenCalled();
   });
 
   it('does not alter project credentials when no token is submitted', async () => {
@@ -1259,6 +1303,11 @@ describe('projectMetaAds tenant token route', () => {
 
   it('saves the tenant global Meta token using the canonical secret name', async () => {
     const token = `EAA${'g'.repeat(48)}`;
+    getProjectById.mockResolvedValueOnce({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123' },
+    });
 
     const response = await request(createApp())
       .put('/projects/p1/meta-ads/tenant-token')
@@ -1278,6 +1327,28 @@ describe('projectMetaAds tenant token route', () => {
       },
     });
     expect(JSON.stringify(response.body)).not.toContain(token);
+  });
+
+  it('rejects a tenant token without campaign write permission', async () => {
+    getProjectById.mockResolvedValueOnce({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123' },
+    });
+    mockValidateMetaAdsAccess.mockResolvedValueOnce({
+      valid: true,
+      canRead: true,
+      canManage: false,
+      missingPermissions: ['ads_management'],
+    });
+
+    const response = await request(createApp())
+      .put('/projects/p1/meta-ads/tenant-token')
+      .send({ metaAccessToken: `EAA${'g'.repeat(48)}` })
+      .expect(400);
+
+    expect(response.body.details).toEqual(['ads_management']);
+    expect(upsertTenantSecret).not.toHaveBeenCalled();
   });
 
   it('rejects empty tenant global Meta tokens', async () => {

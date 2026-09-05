@@ -1140,6 +1140,7 @@
   "com_ui_project_meta_ads_save_project_token": "Salvar token do projeto",
   "com_ui_project_meta_ads_tenant_token_configured": "Usando token global da tenant",
   "com_ui_project_meta_ads_token_missing": "Nenhum token configurado",
+  "com_ui_project_meta_ads_token_invalid_permissions": "Token sem ads_management ou acesso à conta",
   "com_ui_project_meta_ads_use_tenant_token": "Remover token local e usar token global",
   "com_ui_project_meta_ads_graph_version": "Versão Graph API",
   "com_ui_project_meta_ads_graph_version_hint": "Deixe vazio para usar a versão global da Meta Graph API.",

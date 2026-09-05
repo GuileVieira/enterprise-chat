@@ -2119,6 +2119,7 @@
   "com_ui_project_meta_ads_save_project_token": "Save project token",
   "com_ui_project_meta_ads_tenant_token_configured": "Using tenant global token",
   "com_ui_project_meta_ads_token_missing": "No token configured",
+  "com_ui_project_meta_ads_token_invalid_permissions": "Token lacks ads_management or account access",
   "com_ui_project_meta_ads_use_tenant_token": "Remove local token and use global token",
   "com_ui_project_meta_ads_graph_version": "Graph API version",
   "com_ui_project_meta_ads_graph_version_global": "Use global ({{0}})",

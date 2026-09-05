@@ -162,6 +162,34 @@ describe('MetaAdsBudgetManager write actions', () => {
     expect(updateProjectMetaAdsEntityStatus).not.toHaveBeenCalled();
   });
 
+  it('returns safe Meta permission diagnostics to the agent', async () => {
+    updateProjectMetaAdsEntityStatus.mockRejectedValue(
+      Object.assign(new Error('Token Meta Ads sem ads_management.'), {
+        statusCode: 403,
+        data: { code: 200, error_subcode: 18157520, access_token: 'must-not-leak' },
+      }),
+    );
+
+    const output = JSON.parse(
+      await createTool()._call({
+        action: 'pause_campaign',
+        project_id: 'project-1',
+        entity_id: 'campaign-1',
+      }),
+    );
+
+    expect(output).toEqual({
+      ok: false,
+      error: {
+        message: 'Token Meta Ads sem ads_management.',
+        statusCode: 403,
+        code: 200,
+        subcode: 18157520,
+      },
+    });
+    expect(JSON.stringify(output)).not.toContain('must-not-leak');
+  });
+
   it('updates whitelisted ad set targeting and returns provider readback', async () => {
     updateProjectMetaAdsEntityFields.mockResolvedValue({
       entityLevel: 'adset',

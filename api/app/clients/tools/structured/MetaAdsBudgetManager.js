@@ -362,10 +362,16 @@ class MetaAdsBudgetManager extends Tool {
         });
       }
     } catch (error) {
+      const statusCode = Number(error?.statusCode);
+      const code = Number(error?.data?.code);
+      const subcode = Number(error?.data?.error_subcode);
       return JSON.stringify({
         ok: false,
         error: {
           message: error instanceof Error ? error.message : 'Meta Ads budget manager failed.',
+          ...(Number.isFinite(statusCode) ? { statusCode } : {}),
+          ...(Number.isFinite(code) ? { code } : {}),
+          ...(Number.isFinite(subcode) ? { subcode } : {}),
         },
       });
     }

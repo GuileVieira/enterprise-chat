@@ -147,6 +147,7 @@ export type ProjectTrafficDiaryResponse = {
 
 export type ProjectMetaAdsResultTypeBreakdown = {
   resultType: string;
+  label?: string;
   totalSpend: number;
   totalResults: number;
   averageCostPerResult: number | null;
@@ -555,6 +556,11 @@ export type ProjectMetaAdsStatus = {
     projectConfigured: boolean;
     tenantConfigured: boolean;
     secretName?: string;
+    valid?: boolean;
+    canRead?: boolean;
+    canManage?: boolean;
+    missingPermissions?: string[];
+    error?: string;
   };
   graphVersion?: {
     effective: string;

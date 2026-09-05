@@ -185,6 +185,9 @@ function calculateConversionValue(campaigns: ProjectMetaAdsCampaignSummary[]) {
 export function getMetaAdsTokenStatusKey(
   credentials: ProjectMetaAdsStatus['credentials'] | undefined,
 ): TranslationKeys {
+  if (credentials?.valid === false || credentials?.canManage === false) {
+    return 'com_ui_project_meta_ads_token_invalid_permissions';
+  }
   if (credentials?.effectiveSource === 'project') {
     return 'com_ui_project_meta_ads_project_token_configured';
   }

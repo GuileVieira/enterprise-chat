@@ -98,9 +98,10 @@ export function MetaAdsWorkspaceShell({
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
                 <MetaAdsBadge
                   variant={
-                    tokenStatusKey === 'com_ui_project_meta_ads_token_missing'
-                      ? 'danger'
-                      : 'success'
+                    tokenStatusKey === 'com_ui_project_meta_ads_project_token_configured' ||
+                    tokenStatusKey === 'com_ui_project_meta_ads_tenant_token_configured'
+                      ? 'success'
+                      : 'danger'
                   }
                 >
                   {localize(tokenStatusKey)}
