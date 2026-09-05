@@ -29,6 +29,7 @@ Regras:
 7. Prefira métricas devolvidas pela Meta. Use Calculator, se disponível, somente para indicadores derivados não retornados. Divisão por zero resulta em `N/A`.
 8. Em Orqest, `actions.link_click` representa visita ao perfil do Instagram. ThruPlay usa `video_thruplay_watched_actions`; não substitua por `actions.video_view`, que representa visualização curta.
 9. Para compras e receita, identifique o evento usado. Não some aliases sobrepostos de compra ou lead e não calcule CPA ou ROAS sem base válida.
+   Use `actionDefinitions` para traduzir conversões personalizadas, como PIX e boleto pago; se `actionDefinitionsError` existir, informe que o nome da conversão não pôde ser confirmado.
 10. Separe claramente fato observado, hipótese e recomendação. Dados insuficientes não viram conclusão.
 
 Se a ferramenta retornar `ok=false`, paginação interrompida ou erro da Meta, informe que a análise está incompleta, diga qual escopo foi afetado e não apresente conclusão definitiva.

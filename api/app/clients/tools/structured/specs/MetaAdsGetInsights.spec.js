@@ -137,6 +137,45 @@ describe('MetaAdsGetInsights', () => {
     expect(filtering).toBeNull();
   });
 
+  it('resolves custom conversion ids so payment events keep their Meta names', async () => {
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({
+          data: [
+            {
+              campaign_id: 'campaign-1',
+              actions: [{ action_type: 'offsite_conversion.custom.987', value: '12' }],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          987: { id: '987', name: 'Boleto pago', custom_event_type: 'PURCHASE' },
+        }),
+      );
+
+    const result = JSON.parse(
+      await createTool().call({
+        since: '2026-05-01',
+        until: '2026-05-07',
+        level: 'campaign',
+        metrics: ['actions'],
+      }),
+    );
+
+    expect(result.actionDefinitions).toEqual({
+      'offsite_conversion.custom.987': {
+        id: '987',
+        name: 'Boleto pago',
+        custom_event_type: 'PURCHASE',
+      },
+    });
+    const url = new URL(fetch.mock.calls[1][0]);
+    expect(url.searchParams.get('ids')).toBe('987');
+    expect(url.searchParams.get('fields')).toBe('id,name,custom_event_type');
+  });
+
   it('enriches ad-level insights with the real ad and creative identifiers', async () => {
     fetch
       .mockResolvedValueOnce(

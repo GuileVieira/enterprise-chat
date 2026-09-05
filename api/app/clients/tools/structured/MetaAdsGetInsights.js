@@ -28,6 +28,7 @@ const MAX_LIMIT = 500;
 const MAX_INTERNAL_PAGES = 1000;
 const MAX_DATE_RANGE_DAYS = 120;
 const META_AD_IDS_BATCH_SIZE = 50;
+const META_CUSTOM_CONVERSION_PREFIX = 'offsite_conversion.custom.';
 const DEFAULT_DETAIL_LIMIT = 25;
 const MAX_DETAIL_LIMIT = 100;
 
@@ -245,6 +246,7 @@ class MetaAdsGetInsights extends Tool {
     'Requires an accessible project with Meta Ads credentials. ' +
     'Defaults to the configured project ad account and supports level campaign, adset, or ad. ' +
     'Returns the same performance fields used by the project Meta Ads panel: spend, impressions, reach, frequency, clicks, CPM, CTR, CPC, actions, cost per action, video 75%, ThruPlay, and ROAS. ' +
+    'Custom conversion action IDs are resolved in actionDefinitions so named payment events such as PIX or paid boleto remain identifiable. ' +
     'In Orqest, use actions.link_click as the Instagram profile visit result metric. ' +
     'Use video_thruplay_watched_actions for ThruPlay; never substitute actions.video_view, which is a 3-second video view. ' +
     'For ad or creative questions, always use level ad: campaign and ad set rows are not creative substitutes. ' +
@@ -376,6 +378,32 @@ class MetaAdsGetInsights extends Tool {
     return details;
   }
 
+  async getCustomConversionDetails({ accessToken, graphVersion, actionTypes }) {
+    const details = {};
+    const ids = actionTypes
+      .filter((actionType) => actionType.startsWith(META_CUSTOM_CONVERSION_PREFIX))
+      .map((actionType) => actionType.slice(META_CUSTOM_CONVERSION_PREFIX.length));
+    for (let index = 0; index < ids.length; index += META_AD_IDS_BATCH_SIZE) {
+      const batch = ids.slice(index, index + META_AD_IDS_BATCH_SIZE);
+      const payload = await metaGet({
+        path: '',
+        token: accessToken,
+        params: {
+          ids: batch.join(','),
+          fields: 'id,name,custom_event_type',
+        },
+        graphVersion,
+        resourceLabel: 'custom conversion details',
+      });
+      for (const conversion of Object.values(payload ?? {})) {
+        if (conversion && typeof conversion.id === 'string') {
+          details[`${META_CUSTOM_CONVERSION_PREFIX}${conversion.id}`] = conversion;
+        }
+      }
+    }
+    return details;
+  }
+
   async _call(args) {
     try {
       const adAccountId =
@@ -461,6 +489,22 @@ class MetaAdsGetInsights extends Tool {
       }
 
       const result = summary.build();
+      const actionTypes = [
+        ...Object.keys(result.totals.actions ?? {}),
+        ...Object.keys(result.totals.action_values ?? {}),
+      ];
+      let actionDefinitions = {};
+      let actionDefinitionsError;
+      try {
+        actionDefinitions = await this.getCustomConversionDetails({
+          accessToken: metaAccess.accessToken,
+          graphVersion,
+          actionTypes: [...new Set(actionTypes)],
+        });
+      } catch (error) {
+        actionDefinitionsError =
+          error instanceof Error ? error.message : 'Custom conversion lookup failed.';
+      }
       if (level === 'ad') {
         const adIds = result.tables.ad.map((row) => row.ad_id).filter(Boolean);
         if (adIds.length > 0) {
@@ -506,6 +550,8 @@ class MetaAdsGetInsights extends Tool {
           ].filter(([, value]) => typeof value === 'string' && value.length > 0),
         ),
         totals: result.totals,
+        actionDefinitions,
+        ...(actionDefinitionsError ? { actionDefinitionsError } : {}),
         tables: result.tables,
         details: {
           available: result.available,
