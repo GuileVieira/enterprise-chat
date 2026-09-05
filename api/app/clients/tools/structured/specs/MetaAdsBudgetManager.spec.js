@@ -9,8 +9,9 @@ const {
   findProjectForRequest,
   userCanAccessProject,
 } = require('~/server/services/Projects/access');
+const { getRoleByName } = require('~/models');
 
-jest.mock('~/models', () => ({ updateProject: jest.fn() }));
+jest.mock('~/models', () => ({ updateProject: jest.fn(), getRoleByName: jest.fn() }));
 jest.mock('~/server/services/Projects/access', () => ({
   findProjectForRequest: jest.fn(),
   userCanAccessProject: jest.fn(),
@@ -27,7 +28,7 @@ jest.mock('~/server/services/MetaAds/budget', () => ({
 
 function createTool() {
   return new MetaAdsBudgetManager({
-    req: { user: { id: 'user-1', tenantId: 'tenant-1' } },
+    req: { user: { id: 'user-1', role: 'AD-MANAGER', tenantId: 'tenant-1' } },
   });
 }
 
@@ -36,6 +37,22 @@ describe('MetaAdsBudgetManager write actions', () => {
     jest.clearAllMocks();
     findProjectForRequest.mockResolvedValue({ projectId: 'project-1', tenantId: 'tenant-1' });
     userCanAccessProject.mockResolvedValue(true);
+    getRoleByName.mockResolvedValue(null);
+  });
+
+  it('blocks users whose role lacks Meta Ads USE permission', async () => {
+    const tool = new MetaAdsBudgetManager({
+      req: { user: { id: 'user-1', role: 'REPORTER', tenantId: 'tenant-1' } },
+    });
+    getRoleByName.mockResolvedValue({ permissions: { META_ADS: { USE: false } } });
+
+    const output = JSON.parse(await tool._call({ action: 'get_status', project_id: 'project-1' }));
+
+    expect(output).toEqual({
+      ok: false,
+      error: { message: 'Insufficient Meta Ads permissions.' },
+    });
+    expect(findProjectForRequest).not.toHaveBeenCalled();
   });
 
   it('updates budget through the tenant-scoped Meta Graph service', async () => {

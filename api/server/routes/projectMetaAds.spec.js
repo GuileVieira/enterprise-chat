@@ -1,10 +1,16 @@
 const express = require('express');
 const request = require('supertest');
 const mongoose = require('mongoose');
-const { SystemRoles } = require('librechat-data-provider');
+const { PermissionBits, SystemRoles } = require('librechat-data-provider');
 
 let mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
-const mockCanAccessProjectResource = jest.fn(() => (_req, _res, next) => next());
+let mockDeniedProjectPermission = null;
+const mockCanAccessProjectResource = jest.fn(({ requiredPermission }) => (_req, res, next) => {
+  if (mockDeniedProjectPermission === requiredPermission) {
+    return res.status(403).json({ message: 'Project access denied' });
+  }
+  return next();
+});
 const mockGetRoleByName = jest.fn();
 
 jest.mock('~/models', () => ({
@@ -94,6 +100,7 @@ function withDiaryIndexLifecycle(model) {
 
 beforeEach(() => {
   mockRouteUser = { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-x' };
+  mockDeniedProjectPermission = null;
   mockGetRoleByName.mockImplementation(async (roleName) => ({
     name: roleName,
     permissions: {
@@ -105,6 +112,22 @@ beforeEach(() => {
       },
     },
   }));
+});
+
+describe('projectMetaAds project ACL', () => {
+  it('allows reads but blocks writes without project EDIT', async () => {
+    mockDeniedProjectPermission = PermissionBits.EDIT;
+    getProjectMetaAdsStatus.mockResolvedValue({ campaigns: [] });
+
+    await request(createApp()).get('/projects/p1/meta-ads').expect(200);
+    await request(createApp())
+      .post('/projects/p1/meta-ads/duplicates')
+      .send({ entityLevel: 'campaign', entityId: 'campaign-1', targetName: 'Copy' })
+      .expect(403);
+
+    expect(getProjectMetaAdsStatus).toHaveBeenCalled();
+    expect(duplicateProjectMetaAdsEntity).not.toHaveBeenCalled();
+  });
 });
 
 describe('projectMetaAds settings normalization', () => {

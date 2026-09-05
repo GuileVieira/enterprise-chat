@@ -1,6 +1,11 @@
 const { Tool } = require('@librechat/agents/langchain/tools');
-const { PermissionBits } = require('librechat-data-provider');
-const { updateProject } = require('~/models');
+const {
+  Permissions,
+  SystemRoles,
+  PermissionBits,
+  PermissionTypes,
+} = require('librechat-data-provider');
+const { updateProject, getRoleByName } = require('~/models');
 const {
   findProjectForRequest,
   userCanAccessProject,
@@ -86,6 +91,12 @@ const metaAdsBudgetManagerJsonSchema = {
   required: ['action', 'project_id'],
 };
 
+const META_ADS_SYSTEM_ROLES = new Set([
+  SystemRoles.ADMIN,
+  SystemRoles.OWNER,
+  SystemRoles.AD_MANAGER,
+]);
+
 function parseArgs(args) {
   if (!args || typeof args !== 'object') {
     throw new Error('Arguments are required.');
@@ -117,6 +128,20 @@ class MetaAdsBudgetManager extends Tool {
     this.req = fields.req;
   }
 
+  async requireMetaAdsAccess() {
+    const roleName = this.req?.user?.role;
+    if (!roleName) {
+      throw new Error('Insufficient Meta Ads permissions.');
+    }
+    if (META_ADS_SYSTEM_ROLES.has(roleName)) {
+      return;
+    }
+    const role = await getRoleByName(roleName);
+    if (role?.permissions?.[PermissionTypes.META_ADS]?.[Permissions.USE] !== true) {
+      throw new Error('Insufficient Meta Ads permissions.');
+    }
+  }
+
   async requireProject(projectId, requiredPermission) {
     if (!this.req?.user) {
       throw new Error('User context is required.');
@@ -139,6 +164,7 @@ class MetaAdsBudgetManager extends Tool {
   async _call(rawArgs) {
     try {
       const args = parseArgs(rawArgs);
+      await this.requireMetaAdsAccess();
       const writeActions = new Set([
         'run_now',
         'approve_change',

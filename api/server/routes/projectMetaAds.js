@@ -178,8 +178,8 @@ async function requireMetaAdsRoleAccess(req, res, next) {
 }
 
 const metaAdsAccess = [requireMetaAdsProjectView, requireMetaAdsRoleAccess];
-const metaAdsClientActionAccess = metaAdsAccess;
-const metaAdsDiaryEditAccess = metaAdsAccess;
+const metaAdsClientActionAccess = [requireMetaAdsProjectEdit, requireMetaAdsRoleAccess];
+const metaAdsDiaryEditAccess = metaAdsClientActionAccess;
 
 function getDiaryActor(user) {
   return {
@@ -952,7 +952,7 @@ router.get('/runs', metaAdsAccess, async (req, res) => {
   }
 });
 
-router.get('/diary', requireMetaAdsProjectView, async (req, res) => {
+router.get('/diary', metaAdsAccess, async (req, res) => {
   try {
     const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
     if (!TrafficDiaryEntry) {
@@ -1122,7 +1122,7 @@ router.post('/diary/:entryId/reopen', metaAdsDiaryEditAccess, async (req, res) =
   }
 });
 
-router.post('/diary/:entryId/reprocess', requireMetaAdsProjectEdit, async (req, res) => {
+router.post('/diary/:entryId/reprocess', metaAdsDiaryEditAccess, async (req, res) => {
   try {
     const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;
     if (!TrafficDiaryEntry || !mongoose.Types.ObjectId.isValid(req.params.entryId)) {
