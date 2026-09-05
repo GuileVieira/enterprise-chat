@@ -415,8 +415,8 @@
     "semantic_hash": "b4538f3c5e5a4422e7e7191e8a9adc9d"
   },
   "config/librechat.prod.yaml": {
-    "mtime": 1785519366.9589117,
-    "ast_hash": "59fa68a0d2ed3568a7eea5d3eae3fa75",
+    "mtime": 1788396303.283517,
+    "ast_hash": "5974cb37ec443f8c553662c383735824",
     "semantic_hash": ""
   },
   ".devcontainer/devcontainer.json": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "api/server/controllers/agents/client.js": {
-    "mtime": 1781819849.5777376,
-    "ast_hash": "92e239f63f31e97e7cabb77bd599273e",
+    "mtime": 1788459390.1039565,
+    "ast_hash": "3cbb01395e65763301bea61191dd8790",
     "semantic_hash": ""
   },
   "api/server/controllers/agents/client.test.js": {
@@ -2160,8 +2160,8 @@
     "semantic_hash": ""
   },
   "api/server/services/Endpoints/agents/addedConvo.js": {
-    "mtime": 1781820388.2558732,
-    "ast_hash": "f1e0eb3c4879cbe695677e6a23bbcedb",
+    "mtime": 1788484526.0470111,
+    "ast_hash": "e917859095f9cd153530daa178f82ba8",
     "semantic_hash": ""
   },
   "api/server/services/Endpoints/agents/addedConvo.spec.js": {
@@ -2180,8 +2180,8 @@
     "semantic_hash": ""
   },
   "api/server/services/Endpoints/agents/initialize.js": {
-    "mtime": 1781820388.3514318,
-    "ast_hash": "b97603e182495f8953244d9cbb1f3cfe",
+    "mtime": 1788484526.0466893,
+    "ast_hash": "91783d2325cdb51703c3c5406c16424c",
     "semantic_hash": ""
   },
   "api/server/services/Endpoints/agents/initialize.spec.js": {
@@ -10140,8 +10140,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/discovery.ts": {
-    "mtime": 1781819849.3851326,
-    "ast_hash": "88eaa9dc56d4672392c4841f6c623cfc",
+    "mtime": 1788484526.0473332,
+    "ast_hash": "57943e6bcb9d50576f17718bddf6907d",
     "semantic_hash": ""
   },
   "packages/api/src/agents/edges.spec.ts": {
@@ -10355,13 +10355,13 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/validation.spec.ts": {
-    "mtime": 1779199271.588879,
-    "ast_hash": "ee8b3d9ab127b0a7729cfc1518a57823",
+    "mtime": 1788484692.614162,
+    "ast_hash": "daed3e20df8254d74d6a5b8390622b16",
     "semantic_hash": ""
   },
   "packages/api/src/agents/validation.ts": {
-    "mtime": 1779199271.5890534,
-    "ast_hash": "18874871d5d9f41052f86bbd917e8580",
+    "mtime": 1788484526.0457766,
+    "ast_hash": "a9f32abbd700a67198cb9dcf772b6a02",
     "semantic_hash": ""
   },
   "packages/api/src/apiKeys/handlers.ts": {
@@ -11585,8 +11585,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/memory/index.ts": {
-    "mtime": 1777407818.6481793,
-    "ast_hash": "ca8de5a3ad54ae327449c5fe6c38f787",
+    "mtime": 1788459348.7228003,
+    "ast_hash": "3e5afbb72e13b6945a1af932a2620413",
     "semantic_hash": ""
   },
   "packages/api/src/middleware/__tests__/concurrency.cache_integration.spec.ts": {
@@ -12560,8 +12560,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/utils/tokens.ts": {
-    "mtime": 1779199271.6281981,
-    "ast_hash": "ef46dd1e3f04fdc86896719689bd1bf3",
+    "mtime": 1788391877.7535918,
+    "ast_hash": "5f584f5bdd1e314a45ba36a34332779d",
     "semantic_hash": ""
   },
   "packages/api/src/utils/tracing.ts": {
@@ -13950,8 +13950,8 @@
     "semantic_hash": ""
   },
   "packages/data-provider/src/createPayload.spec.ts": {
-    "mtime": 1779473548.650256,
-    "ast_hash": "82f891984c6d8fb29ea701248e7bd296",
+    "mtime": 1788400655.9413815,
+    "ast_hash": "08baeb255e0214386ffafb956f770bbd",
     "semantic_hash": ""
   },
   "packages/data-provider/src/createPayload.ts": {
@@ -14635,13 +14635,13 @@
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/tx.spec.ts": {
-    "mtime": 1779199271.674277,
-    "ast_hash": "5b42c3d9b75ab19613dfc7a89d068114",
+    "mtime": 1788391895.047919,
+    "ast_hash": "f5223a2a1306872bc4ca2fd5beb0e846",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/tx.ts": {
-    "mtime": 1779199271.6744213,
-    "ast_hash": "232fdd1ae1335b4a62516f225089b4b3",
+    "mtime": 1788391877.7018185,
+    "ast_hash": "ca278a3751e3861f7d33e1ee2f584fd1",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/methods/user.methods.spec.ts": {
@@ -16737,6 +16737,16 @@
   "packages/api/src/skills/export.ts": {
     "mtime": 1787621909.9621449,
     "ast_hash": "26c2790e5085e51bb6c5b56af11c2f8d",
+    "semantic_hash": ""
+  },
+  "packages/api/src/memory/tenant.spec.ts": {
+    "mtime": 1788459384.3547351,
+    "ast_hash": "4c9d250a21a288ac93873f8d89bb7132",
+    "semantic_hash": ""
+  },
+  "packages/api/src/memory/tenant.ts": {
+    "mtime": 1788459402.7204309,
+    "ast_hash": "e63f4b43988a504d8ec82b98cc0546bf",
     "semantic_hash": ""
   }
 }
