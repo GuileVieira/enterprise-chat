@@ -63,7 +63,8 @@ const metaAdsGetInsightsJsonSchema = {
     metrics: {
       type: 'array',
       items: { type: 'string', enum: METRICS },
-      description: 'Metrics needed for the analysis. Defaults to core delivery metrics.',
+      description:
+        'Metrics needed for the analysis. Defaults to delivery, conversions, conversion value, and purchase ROAS.',
     },
     sort_by: {
       type: 'string',

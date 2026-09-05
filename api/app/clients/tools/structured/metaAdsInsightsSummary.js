@@ -9,8 +9,14 @@ const DIMENSIONS = {
 
 const ADDITIVE_METRICS = ['spend', 'impressions', 'reach', 'clicks'];
 const DERIVED_METRICS = ['frequency', 'cpm', 'ctr', 'cpc'];
-const DEFAULT_METRICS = [...ADDITIVE_METRICS, ...DERIVED_METRICS];
-const METRICS = [...DEFAULT_METRICS, 'actions', 'action_values', 'purchase_roas'];
+const DEFAULT_METRICS = [
+  ...ADDITIVE_METRICS,
+  ...DERIVED_METRICS,
+  'actions',
+  'action_values',
+  'purchase_roas',
+];
+const METRICS = DEFAULT_METRICS;
 
 function number(value) {
   const parsed = Number(value);
