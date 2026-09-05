@@ -28,6 +28,7 @@ const {
   listCampaignInsights,
   listAdSetInsights,
   metaGet,
+  metaPost,
   copyMetaEntity,
   updateMetaEntityName,
   updateMetaAdStatus,
@@ -845,6 +846,26 @@ describe('Meta Ads Graph client', () => {
     );
   });
 
+  it('requires ads_management in write permission errors', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () =>
+        JSON.stringify({ error: { code: 200, message: '(#200) Permissions error' } }),
+    });
+
+    await expect(
+      metaPost({
+        path: 'campaign-1',
+        token: 'token',
+        body: { status: 'PAUSED' },
+        resourceLabel: 'campaign update',
+      }),
+    ).rejects.toThrow(
+      'Token Meta Ads sem permissão para campaign-1. Conceda ads_management ao app/token e confirme acesso à conta de anúncio.',
+    );
+  });
+
   it('adds response context when Meta returns non-JSON text', async () => {
     fetch.mockResolvedValueOnce({
       ok: true,
@@ -976,7 +997,7 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][0]).toContain('/v24.0/campaign-1/copies');
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
       deep_copy: true,
-      status_option: 'INHERITED_FROM_SOURCE',
+      status_option: 'PAUSED',
       rename_options: {
         rename_strategy: 'ONLY_TOP_LEVEL',
         rename_prefix: '',

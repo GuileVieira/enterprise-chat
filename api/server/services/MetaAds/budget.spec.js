@@ -1123,7 +1123,12 @@ describe('Meta Ads budget service persistence safety', () => {
     }));
 
     const metaPost = jest.fn(async () => ({ success: true }));
-    const metaGet = jest.fn(async ({ path }) => ({ id: path, name: 'Updated entity' }));
+    const metaGet = jest.fn(async ({ path }) => ({
+      id: path,
+      account_id: '123',
+      name: 'Updated entity',
+      configured_status: 'PAUSED',
+    }));
     const updateMetaEntityStatus = jest.fn(async () => ({ success: true }));
     const copyMetaEntity = jest.fn(async () => ({ copied_adset_id: 'adset-copy' }));
     const updateMetaEntityName = jest.fn(async () => ({ success: true }));
@@ -1418,6 +1423,66 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(metaPost).not.toHaveBeenCalled();
   });
 
+  it('does not persist a recommendation when Meta rejects the budget write', async () => {
+    const { budget, createAutomationAction, createChange, findByIdAndUpdate, metaPost } =
+      loadBudgetWithMocks({
+        project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+        recommendation: {
+          _id: 'rec1',
+          tenantId: 'tenant-a',
+          projectId: 'p1',
+          entityId: 'adset-1',
+          action: 'increase',
+          status: 'pending',
+          currentDailyBudget: 100,
+          proposedDailyBudget: 115,
+        },
+        latestEntityBudget: { dailyBudget: 100 },
+      });
+    metaPost.mockResolvedValue({ success: false });
+
+    await expect(
+      budget.applyRecommendation({
+        recommendationId: 'rec1',
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        actor: 'user',
+      }),
+    ).rejects.toMatchObject({ statusCode: 502 });
+    expect(createChange).not.toHaveBeenCalled();
+    expect(createAutomationAction).not.toHaveBeenCalled();
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a pause recommendation when Meta rejects the status write', async () => {
+    const { budget, createAutomationAction, findByIdAndUpdate, updateMetaEntityStatus } =
+      loadBudgetWithMocks({
+        project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
+        recommendation: {
+          _id: 'rec1',
+          tenantId: 'tenant-a',
+          projectId: 'p1',
+          entityId: 'ad-1',
+          entityLevel: 'ad',
+          action: 'pause',
+          status: 'pending',
+          proposedStatus: 'PAUSED',
+        },
+      });
+    updateMetaEntityStatus.mockResolvedValue({ success: false });
+
+    await expect(
+      budget.applyRecommendation({
+        recommendationId: 'rec1',
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        actor: 'user',
+      }),
+    ).rejects.toMatchObject({ statusCode: 502 });
+    expect(createAutomationAction).not.toHaveBeenCalled();
+    expect(findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('blocks stale recommendations when the Meta daily budget changed', async () => {
     const { budget, findByIdAndUpdate, metaPost } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { adAccountId: 'act_123' } },
@@ -1524,7 +1589,7 @@ describe('Meta Ads budget service persistence safety', () => {
           },
         }),
       )
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ success: true });
 
     const result = await budget.applyRecommendation({
       recommendationId: 'rec1',
@@ -3623,7 +3688,11 @@ describe('Meta Ads budget service persistence safety', () => {
       project: {
         projectId: 'p1',
         tenantId: 'tenant-a',
-        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+        metaAds: {
+          tokenSecretName: 'secret',
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, maxDailyBudget: 500 },
+        },
       },
       latestEntityBudget: { dailyBudget: 70 },
     });
@@ -3665,7 +3734,11 @@ describe('Meta Ads budget service persistence safety', () => {
       project: {
         projectId: 'p1',
         tenantId: 'tenant-a',
-        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+        metaAds: {
+          tokenSecretName: 'secret',
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, maxDailyBudget: 500 },
+        },
       },
       latestEntityBudget: { dailyBudget: 70 },
       adsets: [{ id: 'adset-abo', campaign_id: 'campaign-abo' }],
@@ -3709,7 +3782,11 @@ describe('Meta Ads budget service persistence safety', () => {
       project: {
         projectId: 'p1',
         tenantId: 'tenant-a',
-        metaAds: { tokenSecretName: 'secret', rules: { ...DEFAULT_RULES, maxDailyBudget: 500 } },
+        metaAds: {
+          tokenSecretName: 'secret',
+          adAccountId: 'act_123',
+          rules: { ...DEFAULT_RULES, maxDailyBudget: 500 },
+        },
       },
       latestEntityBudget: { dailyBudget: 70 },
     });
@@ -3743,7 +3820,7 @@ describe('Meta Ads budget service persistence safety', () => {
           adAccountId: 'act_123',
           rules: { ...DEFAULT_RULES, maxDailyBudget: 2000 },
           monthlyBudget: {
-            month: '2026-07',
+            month: new Date().toISOString().slice(0, 7),
             baseAmount: 100,
             additionalAmount: 0,
             allowedOverspendPct: 0,
@@ -3772,7 +3849,11 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('records a campaign status only after Meta confirms it', async () => {
     const { budget, createAutomationAction, updateMetaEntityStatus } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
     });
 
     const result = await budget.updateProjectMetaAdsEntityStatus({
@@ -3793,8 +3874,18 @@ describe('Meta Ads budget service persistence safety', () => {
   });
 
   it('returns the confirmed id when Meta duplicates and renames an ad set', async () => {
-    const { budget, copyMetaEntity, updateMetaEntityName } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    const { budget, copyMetaEntity, metaGet, updateMetaEntityName } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
+    });
+    metaGet.mockResolvedValueOnce({ id: 'adset-1', account_id: '123' }).mockResolvedValueOnce({
+      id: 'adset-copy',
+      account_id: '123',
+      name: 'Ad set copy',
+      configured_status: 'PAUSED',
     });
 
     const result = await budget.duplicateProjectMetaAdsEntity({
@@ -3807,7 +3898,9 @@ describe('Meta Ads budget service persistence safety', () => {
       actorUserId: 'u1',
     });
 
-    expect(copyMetaEntity).toHaveBeenCalledWith(expect.objectContaining({ entityId: 'adset-1' }));
+    expect(copyMetaEntity).toHaveBeenCalledWith(
+      expect.objectContaining({ entityId: 'adset-1', statusOption: 'PAUSED' }),
+    );
     expect(updateMetaEntityName).toHaveBeenCalledWith(
       expect.objectContaining({ entityId: 'adset-copy', name: 'Ad set copy' }),
     );
@@ -3816,7 +3909,11 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('rejects a duplicate response without a new Meta entity id', async () => {
     const { budget, copyMetaEntity, updateMetaEntityName } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
     });
     copyMetaEntity.mockResolvedValue({ success: true });
 
@@ -3836,9 +3933,13 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('updates only whitelisted Meta fields and confirms them with a fresh read', async () => {
     const { budget, metaGet, metaPost } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
     });
-    metaGet.mockResolvedValue({
+    metaGet.mockResolvedValueOnce({ id: 'adset-1', account_id: '123' }).mockResolvedValueOnce({
       id: 'adset-1',
       targeting: { age_min: 25 },
       optimization_goal: 'REACH',
@@ -3871,7 +3972,11 @@ describe('Meta Ads budget service persistence safety', () => {
 
   it('does not report a campaign edit when Meta does not confirm the write', async () => {
     const { budget, metaGet, metaPost } = loadBudgetWithMocks({
-      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
     });
     metaPost.mockResolvedValue({ success: false });
 
@@ -3886,8 +3991,73 @@ describe('Meta Ads budget service persistence safety', () => {
         actorUserId: 'u1',
       }),
     ).rejects.toMatchObject({ statusCode: 502 });
-    expect(metaGet).not.toHaveBeenCalled();
+    expect(metaGet).toHaveBeenCalledTimes(1);
   });
+
+  it('rejects writes to entities outside the project ad account', async () => {
+    const { budget, metaGet, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { tokenSecretName: 'secret', adAccountId: 'act_123' },
+      },
+    });
+    metaGet.mockResolvedValueOnce({ id: 'campaign-foreign', account_id: '999' });
+
+    await expect(
+      budget.updateProjectMetaAdsEntityFields({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'campaign-foreign',
+        fields: { name: 'Wrong account' },
+        actor: 'tool',
+        actorUserId: 'u1',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(metaPost).not.toHaveBeenCalled();
+  });
+
+  it.each(['budget', 'status', 'duplicate'])(
+    'blocks a foreign-account entity before the %s provider write',
+    async (operation) => {
+      const context = loadBudgetWithMocks({
+        project: {
+          projectId: 'p1',
+          tenantId: 'tenant-a',
+          metaAds: {
+            tokenSecretName: 'secret',
+            adAccountId: 'act_123',
+            rules: { ...DEFAULT_RULES, maxDailyBudget: 500 },
+          },
+        },
+        latestEntityBudget: { dailyBudget: 70 },
+      });
+      context.metaGet.mockResolvedValueOnce({ id: 'foreign-1', account_id: '999' });
+      const common = {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'foreign-1',
+        actor: 'tool',
+        actorUserId: 'u1',
+      };
+      const write =
+        operation === 'budget'
+          ? context.budget.applyManualBudgetChange({ ...common, dailyBudget: 100 })
+          : operation === 'status'
+            ? context.budget.updateProjectMetaAdsEntityStatus({ ...common, status: 'PAUSED' })
+            : context.budget.duplicateProjectMetaAdsEntity({
+                ...common,
+                targetName: 'Foreign copy',
+              });
+
+      await expect(write).rejects.toMatchObject({ statusCode: 403 });
+      expect(context.metaPost).not.toHaveBeenCalled();
+      expect(context.updateMetaEntityStatus).not.toHaveBeenCalled();
+      expect(context.copyMetaEntity).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects non-whitelisted Meta fields before calling the provider', async () => {
     const { budget, metaGet, metaPost } = loadBudgetWithMocks({

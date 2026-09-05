@@ -1348,6 +1348,32 @@ function normalizeAdAccountId(value) {
   return digits ? `act_${digits}` : value;
 }
 
+async function assertMetaEntityBelongsToAdAccount({ entityId, adAccountId, token, graphVersion }) {
+  const expectedAccountId = normalizeAdAccountId(adAccountId);
+  if (!expectedAccountId) {
+    throw Object.assign(new Error('Meta Ads ad account is not configured.'), { statusCode: 400 });
+  }
+  const entity = await metaGet({
+    path: encodeURIComponent(entityId),
+    token,
+    graphVersion,
+    resourceLabel: 'entity ownership check',
+    params: { fields: 'id,account_id' },
+  });
+  if (normalizeAdAccountId(entity?.account_id) !== expectedAccountId) {
+    throw Object.assign(new Error('Meta Ads entity does not belong to the project ad account.'), {
+      statusCode: 403,
+    });
+  }
+  return entity;
+}
+
+function requireMetaWriteSuccess(result, message) {
+  if (result?.success !== true) {
+    throw Object.assign(new Error(message), { statusCode: 502 });
+  }
+}
+
 function getScheduleIntervalMinutes(metaAds = {}) {
   const interval = Number(metaAds.scheduleIntervalMinutes);
   return SCHEDULE_INTERVALS.has(interval) ? interval : DEFAULT_SCHEDULE_INTERVAL_MINUTES;
@@ -4442,14 +4468,21 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
   const metaAds = withImplicitProjectTokenSecret(recommendation.projectId, project?.metaAds ?? {});
   const token = await getAccessToken(recommendation.tenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await assertMetaEntityBelongsToAdAccount({
+    entityId: recommendation.entityId,
+    adAccountId: metaAds.adAccountId,
+    token,
+    graphVersion,
+  });
   if (recommendation.action === 'pause') {
-    await updateMetaEntityStatus({
+    const providerResult = await updateMetaEntityStatus({
       entityId: recommendation.entityId,
       entityLevel: recommendation.entityLevel || 'ad',
       status: recommendation.proposedStatus || 'PAUSED',
       token,
       graphVersion,
     });
+    requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the status update.');
     await MetaAdsAutomationAction.create({
       tenantId: recommendation.tenantId,
       projectId: recommendation.projectId,
@@ -4511,7 +4544,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
   let appliedDailyBudget = recommendation.proposedDailyBudget;
   let finalReason = recommendation.reason;
   try {
-    await metaPost({
+    const providerResult = await metaPost({
       path: encodeURIComponent(recommendation.entityId),
       token,
       graphVersion,
@@ -4520,6 +4553,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
         daily_budget: dailyBudgetToCents(appliedDailyBudget),
       },
     });
+    requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the budget update.');
   } catch (error) {
     const metaMinimumBudget = getMetaMinimumBudget(error);
     if (metaMinimumBudget == null || metaMinimumBudget <= appliedDailyBudget) {
@@ -4538,7 +4572,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
     }
     appliedDailyBudget = metaMinimumBudget;
     finalReason = `Meta exigiu orçamento mínimo de ${formatCurrencyPtBr(metaMinimumBudget)}; aplicado esse mínimo em vez de ${formatCurrencyPtBr(recommendation.proposedDailyBudget)}.`;
-    await metaPost({
+    const providerResult = await metaPost({
       path: encodeURIComponent(recommendation.entityId),
       token,
       graphVersion,
@@ -4547,6 +4581,7 @@ async function applyRecommendation({ recommendationId, projectId, tenantId, acto
         daily_budget: dailyBudgetToCents(appliedDailyBudget),
       },
     });
+    requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the budget update.');
   }
   const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
     recommendation.currentDailyBudget,
@@ -5724,6 +5759,12 @@ async function applyManualBudgetChange({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await assertMetaEntityBelongsToAdAccount({
+    entityId,
+    adAccountId: metaAds.adAccountId,
+    token,
+    graphVersion,
+  });
   let campaignId = entityLevel === 'campaign' ? entityId : undefined;
   let adsetId = entityLevel === 'adset' ? entityId : undefined;
   if (entityLevel === 'adset') {
@@ -5795,11 +5836,7 @@ async function applyManualBudgetChange({
       daily_budget: dailyBudgetToCents(nextDailyBudget),
     },
   });
-  if (providerResult?.success !== true) {
-    throw Object.assign(new Error('Meta Ads did not confirm the budget update.'), {
-      statusCode: 502,
-    });
-  }
+  requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the budget update.');
 
   const { MetaAdsBudgetChange } = getModels();
   const { deltaDailyBudget, deltaPercent } = calculateBudgetDelta(
@@ -5883,6 +5920,12 @@ async function updateProjectMetaAdsEntityFields({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await assertMetaEntityBelongsToAdAccount({
+    entityId: normalizedEntityId,
+    adAccountId: metaAds.adAccountId,
+    token,
+    graphVersion,
+  });
   const providerResult = await metaPost({
     path: encodeURIComponent(normalizedEntityId),
     token,
@@ -5890,11 +5933,7 @@ async function updateProjectMetaAdsEntityFields({
     resourceLabel: `${entityLevel} update`,
     body: sanitizedFields,
   });
-  if (providerResult?.success !== true) {
-    throw Object.assign(new Error('Meta Ads did not confirm the entity update.'), {
-      statusCode: 502,
-    });
-  }
+  requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the entity update.');
   const confirmation = await metaGet({
     path: encodeURIComponent(normalizedEntityId),
     token,
@@ -5961,6 +6000,12 @@ async function updateProjectMetaAdsEntityStatus({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await assertMetaEntityBelongsToAdAccount({
+    entityId: normalizedEntityId,
+    adAccountId: metaAds.adAccountId,
+    token,
+    graphVersion,
+  });
   const providerResult = await updateMetaEntityStatus({
     entityId: normalizedEntityId,
     entityLevel,
@@ -5968,11 +6013,7 @@ async function updateProjectMetaAdsEntityStatus({
     token,
     graphVersion,
   });
-  if (providerResult?.success !== true) {
-    throw Object.assign(new Error('Meta Ads did not confirm the status update.'), {
-      statusCode: 502,
-    });
-  }
+  requireMetaWriteSuccess(providerResult, 'Meta Ads did not confirm the status update.');
   const { MetaAdsAutomationAction } = getModels();
   await MetaAdsAutomationAction.create({
     tenantId: projectTenantId,
@@ -6054,10 +6095,16 @@ async function duplicateProjectMetaAdsEntity({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  await assertMetaEntityBelongsToAdAccount({
+    entityId: normalizedEntityId,
+    adAccountId: metaAds.adAccountId,
+    token,
+    graphVersion,
+  });
   const payload = await copyMetaEntity({
     entityId: normalizedEntityId,
     entityLevel,
-    statusOption: 'INHERITED_FROM_SOURCE',
+    statusOption: 'PAUSED',
     deepCopy: true,
     token,
     graphVersion,
@@ -6075,8 +6122,24 @@ async function duplicateProjectMetaAdsEntity({
     token,
     graphVersion,
   });
-  if (renameResult?.success !== true) {
-    throw Object.assign(new Error('Meta Ads duplicated the entity but did not confirm its name.'), {
+  requireMetaWriteSuccess(
+    renameResult,
+    'Meta Ads duplicated the entity but did not confirm its name.',
+  );
+  const confirmation = await metaGet({
+    path: encodeURIComponent(duplicatedEntityId),
+    token,
+    graphVersion,
+    resourceLabel: `${entityLevel} copy confirmation`,
+    params: { fields: 'id,name,configured_status,account_id' },
+  });
+  if (
+    String(confirmation?.id ?? '') !== duplicatedEntityId ||
+    confirmation?.name !== normalizedTargetName ||
+    confirmation?.configured_status !== 'PAUSED' ||
+    normalizeAdAccountId(confirmation?.account_id) !== normalizeAdAccountId(metaAds.adAccountId)
+  ) {
+    throw Object.assign(new Error('Meta Ads did not confirm the duplicated entity.'), {
       statusCode: 502,
       data: { duplicatedEntityId },
     });
@@ -6097,7 +6160,7 @@ async function duplicateProjectMetaAdsEntity({
     sourceEntityId: normalizedEntityId,
     duplicatedEntityId,
     duplicatedEntityName: normalizedTargetName,
-    status: 'INHERITED_FROM_SOURCE',
+    status: 'PAUSED',
   };
 }
 

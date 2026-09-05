@@ -322,8 +322,9 @@ function getBodySnippet(text) {
   return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }
 
-function formatMetaPermissionError({ adAccountId }) {
-  return `Token Meta Ads sem permissão para ${adAccountId}. Conceda ads_read ou ads_management ao app/token e confirme acesso à conta de anúncio.`;
+function formatMetaPermissionError({ adAccountId, write = false }) {
+  const permission = write ? 'ads_management' : 'ads_read ou ads_management';
+  return `Token Meta Ads sem permissão para ${adAccountId}. Conceda ${permission} ao app/token e confirme acesso à conta de anúncio.`;
 }
 
 function createMetaGraphError(message, details = {}) {
@@ -507,11 +508,11 @@ function getAdAccountIdFromPath(path) {
   return adAccountId || 'ad account';
 }
 
-function getMetaErrorMessage({ payload, path, bodySnippet, status }) {
+function getMetaErrorMessage({ payload, path, bodySnippet, status, write = false }) {
   const metaError = payload?.error;
   const message = metaError?.message;
   if (metaError?.code === 200 || /ads_management|ads_read|permission/i.test(message ?? '')) {
-    return formatMetaPermissionError({ adAccountId: getAdAccountIdFromPath(path) });
+    return formatMetaPermissionError({ adAccountId: getAdAccountIdFromPath(path), write });
   }
   return (
     message ||
@@ -521,7 +522,14 @@ function getMetaErrorMessage({ payload, path, bodySnippet, status }) {
   );
 }
 
-async function readMetaResponse({ response, path, graphVersion, params, resourceLabel }) {
+async function readMetaResponse({
+  response,
+  path,
+  graphVersion,
+  params,
+  resourceLabel,
+  write = false,
+}) {
   const body = await response.text();
   const bodySnippet = getBodySnippet(body);
   let payload;
@@ -550,7 +558,13 @@ async function readMetaResponse({ response, path, graphVersion, params, resource
   }
 
   if (!response.ok) {
-    const message = getMetaErrorMessage({ payload, path, bodySnippet, status: response.status });
+    const message = getMetaErrorMessage({
+      payload,
+      path,
+      bodySnippet,
+      status: response.status,
+      write,
+    });
     logger.error('[MetaAdsGraph] Meta request failed', {
       path,
       graphVersion,
@@ -732,6 +746,7 @@ async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 
     graphVersion: resolvedGraphVersion,
     params: Object.keys(body),
     resourceLabel,
+    write: true,
   });
 }
 
@@ -797,7 +812,7 @@ async function updateMetaAdStatus({ adId, status, token, graphVersion }) {
 async function copyMetaEntity({
   entityId,
   entityLevel,
-  statusOption = 'INHERITED_FROM_SOURCE',
+  statusOption = 'PAUSED',
   deepCopy = true,
   token,
   graphVersion,
