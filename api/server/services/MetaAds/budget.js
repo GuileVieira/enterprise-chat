@@ -1328,6 +1328,9 @@ function validateMetaAdsCreativeRules(rules = {}) {
 }
 
 function withImplicitProjectTokenSecret(projectId, metaAds = {}) {
+  if (metaAds.credentialMode === 'tenant_default') {
+    return { ...metaAds, tokenSecretName: '' };
+  }
   if (normalizeSecretName(metaAds.tokenSecretName)) {
     return metaAds;
   }

@@ -823,6 +823,9 @@ async function prepareMetaAdsSettingsUpdate({
   if (!trimmedToken) {
     return { metaAds: normalized };
   }
+  if (!looksLikeMetaAccessToken(trimmedToken)) {
+    throw Object.assign(new Error('Invalid metaAccessToken format'), { statusCode: 400 });
+  }
 
   const project = await resolveProject(projectId);
   if (!project) {

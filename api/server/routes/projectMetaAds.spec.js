@@ -754,6 +754,22 @@ describe('projectMetaAds settings normalization', () => {
       }),
     });
   });
+
+  it('rejects invalid project Meta token formats before storing a secret', async () => {
+    const upsertSecret = jest.fn();
+
+    await expect(
+      router._prepareMetaAdsSettingsUpdateForTest({
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        metaAds: { adAccountId: 'act_123' },
+        metaAccessToken: 'not-a-meta-token',
+        resolveProject: jest.fn(),
+        upsertSecret,
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(upsertSecret).not.toHaveBeenCalled();
+  });
 });
 
 describe('projectMetaAds diary validation', () => {

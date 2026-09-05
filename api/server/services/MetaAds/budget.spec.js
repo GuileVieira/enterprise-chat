@@ -719,6 +719,12 @@ describe('Meta Ads budget service', () => {
     ).toEqual({
       tokenSecretName: 'custom-project-secret',
     });
+    expect(
+      withImplicitProjectTokenSecret('p1', {
+        credentialMode: 'tenant_default',
+        tokenSecretName: '',
+      }),
+    ).toEqual({ credentialMode: 'tenant_default', tokenSecretName: '' });
   });
 
   it('normalizes numeric Meta account ids to act_ format', () => {
