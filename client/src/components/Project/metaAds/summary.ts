@@ -117,21 +117,26 @@ export function buildSummaryResultTypeOptions(
     for (const resultType of summary.resultTypes) {
       const rawResultTypeKey = resultType.resultType || 'UNKNOWN';
       const resultTypeKey = canonicalResultTypes[rawResultTypeKey] ?? rawResultTypeKey;
-      if (isEcommerce && resultTypeKey !== 'purchase') {
+      const isCustomConversion = /^offsite_conversion\.custom\.\d+$/.test(resultTypeKey);
+      if (isEcommerce && resultTypeKey !== 'purchase' && !isCustomConversion) {
         continue;
       }
-      if (!allowedResultTypes.has(resultTypeKey)) {
+      if (!allowedResultTypes.has(resultTypeKey) && !isCustomConversion) {
         continue;
       }
       const option =
         options.get(resultTypeKey) ??
         ({
           resultType: resultTypeKey,
+          label: resultType.label !== rawResultTypeKey ? resultType.label : undefined,
           totalSpend: 0,
           totalResults: 0,
           averageCostPerResult: null,
           spendKeys: new Set<string>(),
         } satisfies SummaryResultTypeOption);
+      if (resultType.label && resultType.label !== rawResultTypeKey) {
+        option.label = resultType.label;
+      }
       const spendKey = `${summary.objective || 'UNKNOWN'}:${Number(resultType.totalSpend ?? 0)}`;
       if (!option.spendKeys?.has(spendKey)) {
         option.totalSpend += Number(resultType.totalSpend ?? 0);
@@ -150,6 +155,7 @@ export function buildSummaryResultTypeOptions(
           : null;
       return {
         resultType: option.resultType,
+        label: option.label,
         totalSpend: Number(option.totalSpend.toFixed(2)),
         totalResults: Number(option.totalResults.toFixed(2)),
         averageCostPerResult,

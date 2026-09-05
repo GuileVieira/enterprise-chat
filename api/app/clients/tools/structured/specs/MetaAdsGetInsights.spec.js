@@ -4,8 +4,11 @@ const {
   findProjectForRequest,
   userCanAccessProject,
 } = require('~/server/services/Projects/access');
+const { getRoleByName } = require('~/models');
 
 jest.mock('node-fetch', () => jest.fn());
+jest.mock('~/models', () => ({ getRoleByName: jest.fn() }));
+jest.mock('~/server/services/Config/app', () => ({ getAppConfig: jest.fn() }));
 jest.mock('~/server/services/Projects/access', () => ({
   findProjectForRequest: jest.fn(),
   userCanAccessProject: jest.fn(),
@@ -62,6 +65,7 @@ describe('MetaAdsGetInsights', () => {
       metaAds: { adAccountId: 'act_123' },
     });
     userCanAccessProject.mockResolvedValue(true);
+    getRoleByName.mockResolvedValue({ permissions: { META_ADS: { USE: true } } });
     fetch.mockResolvedValue(
       createResponse({
         data: [
@@ -74,6 +78,34 @@ describe('MetaAdsGetInsights', () => {
         ],
       }),
     );
+  });
+
+  it('blocks users whose role lacks Meta Ads USE permission', async () => {
+    getRoleByName.mockResolvedValue({ permissions: { META_ADS: { USE: false } } });
+
+    const result = JSON.parse(
+      await createTool({
+        req: { user: { id: 'user-x', tenantId: 'tenant-x', role: 'REPORTER' } },
+      }).call({ since: '2026-05-01', until: '2026-05-07' }),
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: { message: 'Insufficient Meta Ads permissions.' },
+    });
+    expect(findProjectForRequest).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('allows built-in Meta Ads system roles without a custom role lookup', async () => {
+    const result = JSON.parse(
+      await createTool({
+        req: { user: { id: 'owner-x', tenantId: 'tenant-x', role: 'OWNER' } },
+      }).call({ since: '2026-05-01', until: '2026-05-07' }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(getRoleByName).not.toHaveBeenCalled();
   });
 
   it('forces Meta Graph insight params and project-scoped tenant bearer auth', async () => {
@@ -151,7 +183,14 @@ describe('MetaAdsGetInsights', () => {
       )
       .mockResolvedValueOnce(
         createResponse({
-          987: { id: '987', name: 'Boleto pago', custom_event_type: 'PURCHASE' },
+          987: {
+            id: '987',
+            name: ' Boleto pago ',
+            custom_event_type: 'PURCHASE',
+            description: 'Pagamento confirmado',
+            rule: '{"and":[{"event_name":{"eq":"Purchase"}}]}',
+            event_source_id: 'pixel-1',
+          },
         }),
       );
 
@@ -169,11 +208,104 @@ describe('MetaAdsGetInsights', () => {
         id: '987',
         name: 'Boleto pago',
         custom_event_type: 'PURCHASE',
+        description: 'Pagamento confirmado',
+        rule: '{"and":[{"event_name":{"eq":"Purchase"}}]}',
+        event_source_id: 'pixel-1',
       },
     });
     const url = new URL(fetch.mock.calls[1][0]);
     expect(url.searchParams.get('ids')).toBe('987');
-    expect(url.searchParams.get('fields')).toBe('id,name,custom_event_type');
+    expect(url.searchParams.get('fields')).toBe(
+      'id,name,custom_event_type,description,rule,event_source_id',
+    );
+  });
+
+  it('keeps successful custom conversion batches when a later batch fails', async () => {
+    const actionTypes = Array.from(
+      { length: 51 },
+      (_, index) => `offsite_conversion.custom.${index + 1}`,
+    );
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({
+          data: [
+            {
+              campaign_id: 'campaign-1',
+              actions: actionTypes.map((action_type) => ({ action_type, value: '1' })),
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse(
+          Object.fromEntries(
+            Array.from({ length: 50 }, (_, index) => {
+              const id = String(index + 1);
+              return [id, { id, name: `Payment ${id}`, custom_event_type: 'PURCHASE' }];
+            }),
+          ),
+        ),
+      )
+      .mockResolvedValueOnce(
+        createResponse({ error: { message: 'Permission denied', code: 200 } }, false, 403),
+      );
+
+    const result = JSON.parse(
+      await createTool().call({
+        since: '2026-05-01',
+        until: '2026-05-07',
+        level: 'campaign',
+        metrics: ['actions'],
+      }),
+    );
+
+    expect(Object.keys(result.actionDefinitions)).toHaveLength(50);
+    expect(result.unresolvedActionDefinitions).toEqual(['offsite_conversion.custom.51']);
+    expect(result.actionDefinitionsError).toContain('Token Meta Ads sem permissão');
+  });
+
+  it('reports malformed, unnamed, and per-id failed custom conversions', async () => {
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({
+          data: [
+            {
+              campaign_id: 'campaign-1',
+              actions: [
+                { action_type: 'offsite_conversion.custom.invalid', value: '1' },
+                { action_type: 'offsite_conversion.custom.1', value: '1' },
+                { action_type: 'offsite_conversion.custom.2', value: '1' },
+              ],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({
+          1: { id: '1', name: '   ', custom_event_type: 'PURCHASE' },
+          2: { error: { message: 'Conversion unavailable' } },
+        }),
+      );
+
+    const result = JSON.parse(
+      await createTool().call({
+        since: '2026-05-01',
+        until: '2026-05-07',
+        level: 'campaign',
+        metrics: ['actions'],
+      }),
+    );
+
+    expect(result.actionDefinitions).toEqual({});
+    expect(result.unresolvedActionDefinitions).toEqual([
+      'offsite_conversion.custom.invalid',
+      'offsite_conversion.custom.1',
+      'offsite_conversion.custom.2',
+    ]);
+    expect(result.actionDefinitionsError).toContain('Invalid custom conversion action type');
+    expect(result.actionDefinitionsError).toContain('Custom conversion 1 has no usable name');
+    expect(result.actionDefinitionsError).toContain('Conversion unavailable');
+    expect(new URL(fetch.mock.calls[1][0]).searchParams.get('ids')).toBe('1,2');
   });
 
   it('enriches ad-level insights with the real ad and creative identifiers', async () => {
@@ -205,6 +337,9 @@ describe('MetaAdsGetInsights', () => {
         impressions: 0,
         reach: 0,
         clicks: 0,
+        actions: {},
+        action_values: {},
+        purchase_roas: 0,
         frequency: 0,
         cpm: 0,
         ctr: 0,

@@ -185,7 +185,7 @@ export function MetaAdsSummaryCards({
                   }`}
                 >
                   <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                    {getResultTypeLabel(option.resultType, localize)}
+                    {option.label || getResultTypeLabel(option.resultType, localize)}
                   </div>
                   <div className="mt-2 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-3">
                     <span>

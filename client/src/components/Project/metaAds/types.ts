@@ -213,6 +213,7 @@ export type EvolutionHoverPoint = {
 
 export type SummaryResultTypeOption = {
   resultType: string;
+  label?: string;
   totalSpend: number;
   totalResults: number;
   averageCostPerResult: number | null;

@@ -1,5 +1,11 @@
 const { Tool } = require('@librechat/agents/langchain/tools');
-const { PermissionBits } = require('librechat-data-provider');
+const {
+  Permissions,
+  SystemRoles,
+  PermissionBits,
+  PermissionTypes,
+} = require('librechat-data-provider');
+const { getRoleByName } = require('~/models');
 const {
   findProjectForRequest,
   userCanAccessProject,
@@ -31,6 +37,11 @@ const META_AD_IDS_BATCH_SIZE = 50;
 const META_CUSTOM_CONVERSION_PREFIX = 'offsite_conversion.custom.';
 const DEFAULT_DETAIL_LIMIT = 25;
 const MAX_DETAIL_LIMIT = 100;
+const META_ADS_SYSTEM_ROLES = new Set([
+  SystemRoles.ADMIN,
+  SystemRoles.OWNER,
+  SystemRoles.AD_MANAGER,
+]);
 
 const metaAdsGetInsightsJsonSchema = {
   type: 'object',
@@ -269,6 +280,20 @@ class MetaAdsGetInsights extends Tool {
     this.projectId = fields.projectId;
   }
 
+  async requireMetaAdsAccess() {
+    const roleName = this.req?.user?.role;
+    if (!roleName) {
+      throw new Error('Insufficient Meta Ads permissions.');
+    }
+    if (META_ADS_SYSTEM_ROLES.has(roleName)) {
+      return;
+    }
+    const role = await getRoleByName(roleName);
+    if (role?.permissions?.[PermissionTypes.META_ADS]?.[Permissions.USE] !== true) {
+      throw new Error('Insufficient Meta Ads permissions.');
+    }
+  }
+
   async getProject(projectId, adAccountId) {
     if (!projectId) {
       throw new Error('Project context is required for Meta Ads insights.');
@@ -381,28 +406,58 @@ class MetaAdsGetInsights extends Tool {
 
   async getCustomConversionDetails({ accessToken, graphVersion, actionTypes }) {
     const details = {};
-    const ids = actionTypes
-      .filter((actionType) => actionType.startsWith(META_CUSTOM_CONVERSION_PREFIX))
-      .map((actionType) => actionType.slice(META_CUSTOM_CONVERSION_PREFIX.length));
+    const unresolvedActionTypes = [];
+    const errors = [];
+    const actionTypeById = new Map();
+    for (const actionType of actionTypes) {
+      if (!actionType.startsWith(META_CUSTOM_CONVERSION_PREFIX)) {
+        continue;
+      }
+      const id = actionType.slice(META_CUSTOM_CONVERSION_PREFIX.length);
+      if (!/^\d+$/.test(id)) {
+        unresolvedActionTypes.push(actionType);
+        errors.push(`Invalid custom conversion action type: ${actionType}.`);
+        continue;
+      }
+      actionTypeById.set(id, actionType);
+    }
+    const ids = [...actionTypeById.keys()];
     for (let index = 0; index < ids.length; index += META_AD_IDS_BATCH_SIZE) {
       const batch = ids.slice(index, index + META_AD_IDS_BATCH_SIZE);
-      const payload = await metaGet({
-        path: '',
-        token: accessToken,
-        params: {
-          ids: batch.join(','),
-          fields: 'id,name,custom_event_type',
-        },
-        graphVersion,
-        resourceLabel: 'custom conversion details',
-      });
-      for (const conversion of Object.values(payload ?? {})) {
-        if (conversion && typeof conversion.id === 'string') {
-          details[`${META_CUSTOM_CONVERSION_PREFIX}${conversion.id}`] = conversion;
+      try {
+        const payload = await metaGet({
+          path: '',
+          token: accessToken,
+          params: {
+            ids: batch.join(','),
+            fields: 'id,name,custom_event_type,description,rule,event_source_id',
+          },
+          graphVersion,
+          resourceLabel: 'custom conversion details',
+        });
+        for (const id of batch) {
+          const actionType = actionTypeById.get(id);
+          const conversion = payload?.[id];
+          const name = typeof conversion?.name === 'string' ? conversion.name.trim() : '';
+          if (!conversion || String(conversion.id ?? '') !== id || !name) {
+            unresolvedActionTypes.push(actionType);
+            const reason =
+              conversion?.error?.message || `Custom conversion ${id} has no usable name.`;
+            errors.push(reason);
+            continue;
+          }
+          details[actionType] = { ...conversion, name };
         }
+      } catch (error) {
+        unresolvedActionTypes.push(...batch.map((id) => actionTypeById.get(id)));
+        errors.push(error instanceof Error ? error.message : 'Custom conversion lookup failed.');
       }
     }
-    return details;
+    return {
+      details,
+      unresolvedActionTypes: [...new Set(unresolvedActionTypes)],
+      errors: [...new Set(errors)],
+    };
   }
 
   async _call(args) {
@@ -410,6 +465,7 @@ class MetaAdsGetInsights extends Tool {
       const adAccountId =
         typeof args.ad_account_id === 'string' && args.ad_account_id ? args.ad_account_id : '';
       const { since, until } = args;
+      await this.requireMetaAdsAccess();
       if (adAccountId) {
         validateAdAccountId(adAccountId);
       }
@@ -495,14 +551,21 @@ class MetaAdsGetInsights extends Tool {
         ...Object.keys(result.totals.action_values ?? {}),
       ];
       let actionDefinitions = {};
+      let unresolvedActionDefinitions = [];
       let actionDefinitionsError;
       try {
-        actionDefinitions = await this.getCustomConversionDetails({
+        const customConversions = await this.getCustomConversionDetails({
           accessToken: metaAccess.accessToken,
           graphVersion,
           actionTypes: [...new Set(actionTypes)],
         });
+        actionDefinitions = customConversions.details;
+        unresolvedActionDefinitions = customConversions.unresolvedActionTypes;
+        actionDefinitionsError = customConversions.errors.join(' ') || undefined;
       } catch (error) {
+        unresolvedActionDefinitions = actionTypes.filter((actionType) =>
+          actionType.startsWith(META_CUSTOM_CONVERSION_PREFIX),
+        );
         actionDefinitionsError =
           error instanceof Error ? error.message : 'Custom conversion lookup failed.';
       }
@@ -552,6 +615,7 @@ class MetaAdsGetInsights extends Tool {
         ),
         totals: result.totals,
         actionDefinitions,
+        ...(unresolvedActionDefinitions.length > 0 ? { unresolvedActionDefinitions } : {}),
         ...(actionDefinitionsError ? { actionDefinitionsError } : {}),
         tables: result.tables,
         details: {
