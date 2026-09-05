@@ -1,17 +1,17 @@
 {
   "api/server/routes/projectMetaAds.js": {
-    "mtime": 1787583832.2537563,
-    "ast_hash": "6e0dc661521bca96f09472aa465d9e4a",
+    "mtime": 1788632859.9131188,
+    "ast_hash": "ade948222920e4013bd07f61a8feaf0e",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.js": {
-    "mtime": 1788631129.4703772,
-    "ast_hash": "45c9a9e14ea62f91230bae597b2e2fe4",
+    "mtime": 1788632729.9430516,
+    "ast_hash": "b62d9b26c53688669b307ceaab8781e2",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/budget.spec.js": {
-    "mtime": 1788631129.471513,
-    "ast_hash": "af6c94e7482812c16203c087aaf5e286",
+    "mtime": 1788632756.1970296,
+    "ast_hash": "d954d9053df01ca3cd2bb36418a337fb",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/defaults.spec.js": {
@@ -20,13 +20,13 @@
     "semantic_hash": "861e6584598281311a39505317576a9a"
   },
   "api/server/services/MetaAds/graph.js": {
-    "mtime": 1783440401.884019,
-    "ast_hash": "d876d77751a55634c3eeb02830ce4ede",
+    "mtime": 1788632611.5515957,
+    "ast_hash": "1736b10bee90661d0461804f1e5d1b8e",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/graph.spec.js": {
-    "mtime": 1783440284.9711945,
-    "ast_hash": "05eeca79ae5a0e250345c06d7340de14",
+    "mtime": 1788632729.8171844,
+    "ast_hash": "3a4eceaea919a15589a5d34c7146c128",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectDetailPage.tsx": {
@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectMetaAdsPanel.tsx": {
-    "mtime": 1784750877.5296917,
-    "ast_hash": "161eb699a62ed6b9717a399f1d863a9d",
+    "mtime": 1788632070.6551728,
+    "ast_hash": "0c1df41c1e0ea72ab54bbcf19630a506",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/aiPerformanceWorkspace.tsx": {
@@ -230,8 +230,8 @@
     "semantic_hash": "a6f2f61a7b950042917c8139578ea849"
   },
   "client/src/components/Project/metaAds/overviewState.ts": {
-    "mtime": 1783539882.4168363,
-    "ast_hash": "e8a0ab118f77b346e70e19e682029caf",
+    "mtime": 1788632611.5535266,
+    "ast_hash": "5d6fdc3acb88bd7fa9ec228431e42a85",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/overviewTable.tsx": {
@@ -340,14 +340,14 @@
     "semantic_hash": "848c6da652951f007817703b4d2dde40"
   },
   "client/src/components/Project/metaAds/summary.ts": {
-    "mtime": 1784757756.147762,
-    "ast_hash": "33ae9b88ce342ce4f7b9faf17063da19",
+    "mtime": 1788632374.0043523,
+    "ast_hash": "555380c8b06634730748e97247c6aa75",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/summaryCards.tsx": {
-    "mtime": 1783365594.9529243,
-    "ast_hash": "538528e71a1ca514db47572f5eb293e3",
-    "semantic_hash": "538528e71a1ca514db47572f5eb293e3"
+    "mtime": 1788632088.5242188,
+    "ast_hash": "6571103ae4452059f63b7020c299227a",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/table.ts": {
     "mtime": 1783434283.6410675,
@@ -355,8 +355,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/types.ts": {
-    "mtime": 1783903420.4677591,
-    "ast_hash": "f53d92f5183c7f6bcccf774eb479171c",
+    "mtime": 1788632088.523384,
+    "ast_hash": "00745fe7506fa6c2c63d1282187acb1b",
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/ui.tsx": {
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/workspaceShell.tsx": {
-    "mtime": 1783905617.7137299,
-    "ast_hash": "d47d45b2215bfd93072533f238dbd946",
+    "mtime": 1788632611.5538492,
+    "ast_hash": "a9c1a135292ec8c46e5a093bc4baa42e",
     "semantic_hash": ""
   },
   "client/src/data-provider/mutations.ts": {
@@ -405,8 +405,8 @@
     "semantic_hash": "3c4036529ec185ec6e3b7cefd85a7f04"
   },
   "packages/data-provider/src/types/queries.ts": {
-    "mtime": 1786988119.153881,
-    "ast_hash": "f2c26e883d1deb023c42421f37dc50b2",
+    "mtime": 1788632611.5531301,
+    "ast_hash": "5982fc3a5ae10c9950cfd921e9b064ed",
     "semantic_hash": ""
   },
   "packages/data-schemas/src/schema/project.ts": {
@@ -605,13 +605,13 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsBudgetManager.js": {
-    "mtime": 1787599371.533605,
-    "ast_hash": "00b356effc799e8f6549be7af0be84dd",
+    "mtime": 1788632681.5309722,
+    "ast_hash": "7a1746ece08b63007323297508541136",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/MetaAdsGetInsights.js": {
-    "mtime": 1788631297.55104,
-    "ast_hash": "5b6d64e55ca1f83fbeaceb765b8a841f",
+    "mtime": 1788632262.7174714,
+    "ast_hash": "981c0ecb6b255ff2a15f2b1f3e2b9ad6",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/OpenAIImageTools.js": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsGetInsights.spec.js": {
-    "mtime": 1788631289.1071398,
-    "ast_hash": "a5a4db2af2e9bd529bc2a68178ad7e35",
+    "mtime": 1788632343.1096714,
+    "ast_hash": "db8c393ca968ad347ce6841fdeab94ca",
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/OpenRouterGeminiImageGen.spec.js": {
@@ -1950,8 +1950,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/projectMetaAds.spec.js": {
-    "mtime": 1787583832.3540928,
-    "ast_hash": "8e10777b3071800668325043db8d77f9",
+    "mtime": 1788632777.7127008,
+    "ast_hash": "9aefe78fcd88e3e1e77ecc123ec10a3e",
     "semantic_hash": ""
   },
   "api/server/routes/projects.js": {
@@ -5940,8 +5940,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1784757770.9644618,
-    "ast_hash": "200184af2317cfd1a7e2be3a0f3f6aba",
+    "mtime": 1788632129.1398876,
+    "ast_hash": "66b5ded042d5fd4d085605e3a4ab8f2a",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {
@@ -10025,8 +10025,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/__tests__/initialize.test.ts": {
-    "mtime": 1779474252.7665482,
-    "ast_hash": "9110420a403fa36eece7c8ceeaa98d55",
+    "mtime": 1788632335.589499,
+    "ast_hash": "da29a8a3036c92b4ac0dbfecc99aa844",
     "semantic_hash": ""
   },
   "packages/api/src/agents/__tests__/load.spec.ts": {
@@ -10170,8 +10170,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/agents/initialize.ts": {
-    "mtime": 1781820203.9421692,
-    "ast_hash": "0f5dd144c48a6aaed1b97540c2d40c21",
+    "mtime": 1788632277.3705878,
+    "ast_hash": "1cc754f5df705abbfd41ba85192aa077",
     "semantic_hash": ""
   },
   "packages/api/src/agents/legacy.test.ts": {
@@ -16495,8 +16495,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/metaAdsInsightsSummary.js": {
-    "mtime": 1786558764.6929612,
-    "ast_hash": "0f0c25cc4565857ecf5af816762143b2",
+    "mtime": 1788631832.5832694,
+    "ast_hash": "5a5ad1e66f85d9f581207eb5a96d8260",
     "semantic_hash": ""
   },
   "api/server/routes/projectMeetings.js": {
@@ -16685,8 +16685,8 @@
     "semantic_hash": ""
   },
   "api/app/clients/tools/structured/specs/MetaAdsBudgetManager.spec.js": {
-    "mtime": 1787599320.4862416,
-    "ast_hash": "57ab30deac2c43ce616b5edb3f154305",
+    "mtime": 1788632681.531374,
+    "ast_hash": "dbf71d2826911f713361b420f5cf8292",
     "semantic_hash": ""
   },
   "client/src/utils/__tests__/preloadRecovery.test.ts": {
@@ -16705,8 +16705,8 @@
     "semantic_hash": ""
   },
   "docs/prompts/meta-ads-agent.md": {
-    "mtime": 1788631306.8313012,
-    "ast_hash": "a46fbc7fae89130793fe8092abf71db2",
+    "mtime": 1788632062.277907,
+    "ast_hash": "9a6303282fdd9a255bb68c7fe190bece",
     "semantic_hash": ""
   },
   "client/src/components/Skills/utils/skillDirectory.spec.ts": {
@@ -16747,6 +16747,11 @@
   "packages/api/src/memory/tenant.ts": {
     "mtime": 1788459402.7204309,
     "ast_hash": "e63f4b43988a504d8ec82b98cc0546bf",
+    "semantic_hash": ""
+  },
+  "client/src/components/Project/metaAds/summary.spec.ts": {
+    "mtime": 1788632088.5245445,
+    "ast_hash": "2033cef1b321a202f8dda8c62f29f65c",
     "semantic_hash": ""
   }
 }
