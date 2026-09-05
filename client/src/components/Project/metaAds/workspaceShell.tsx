@@ -96,7 +96,15 @@ export function MetaAdsWorkspaceShell({
                 {localize('com_ui_project_meta_ads_title')}
               </h3>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
-                <MetaAdsBadge variant="success">{localize(tokenStatusKey)}</MetaAdsBadge>
+                <MetaAdsBadge
+                  variant={
+                    tokenStatusKey === 'com_ui_project_meta_ads_token_missing'
+                      ? 'danger'
+                      : 'success'
+                  }
+                >
+                  {localize(tokenStatusKey)}
+                </MetaAdsBadge>
                 <MetaAdsBadge className="font-normal">{automationMode}</MetaAdsBadge>
                 <MetaAdsBadge className="font-normal">
                   {localize('com_ui_project_meta_ads_schedule_minutes', {

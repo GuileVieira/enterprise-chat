@@ -250,12 +250,8 @@ export default function ProjectMetaAdsPanel({
   const isStatusLoading = Boolean(statusQuery.isLoading || statusQuery.isFetching);
   const isInitialStatusLoading = isStatusLoading && !statusQuery.data;
   const canManageTenantToken = user?.role === SystemRoles.ADMIN;
-  const canUseMetaAdsActions =
-    canEdit ||
-    user?.role === SystemRoles.ADMIN ||
-    user?.role === SystemRoles.OWNER ||
-    user?.role === SystemRoles.AD_MANAGER;
-  const canEditMetaAdsDiary = canUseMetaAdsActions;
+  const canUseMetaAdsActions = canEdit;
+  const canEditMetaAdsDiary = canEdit;
 
   const pendingRecommendations =
     statusQuery.data?.recommendations.filter((item) => item.status === 'pending') ?? [];
@@ -470,7 +466,7 @@ export default function ProjectMetaAdsPanel({
         onCloseBiRank={() => biWorkspace.setSelectedBiRankItem(null)}
         cleanName={cleanDashboardName}
         token={{
-          configured: Boolean(tokenCredentials),
+          configured: tokenCredentials?.effectiveSource !== 'missing' && Boolean(tokenCredentials),
           tenantConfigured: Boolean(statusQuery.data?.credentials?.tenantConfigured),
           statusLabel: localize(tokenStatusKey),
           effectiveGraphVersion: statusQuery.data?.graphVersion?.effective ?? 'v25.0',

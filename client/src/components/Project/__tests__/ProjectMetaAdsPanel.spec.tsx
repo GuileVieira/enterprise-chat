@@ -530,64 +530,13 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.getByRole('button', { name: 'com_ui_project_meta_ads_rules' })).toBeDisabled();
   });
 
-  it('lets an AD-MANAGER without project edit save Meta Ads project settings and token', async () => {
+  it('does not let an AD-MANAGER bypass project edit access', () => {
     mockUserRole = 'AD-MANAGER';
     render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
 
-    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
-    const accountDialog = screen.getByRole('dialog', {
-      name: 'com_ui_project_meta_ads_account_credentials',
-    });
-    const token = `EAA${'a'.repeat(48)}`;
-    fireEvent.change(within(accountDialog).getByPlaceholderText('123456789'), {
-      target: { value: '123-456-789' },
-    });
-    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
-    const credentialsDialog = screen.getAllByRole('dialog')[1];
-    expect(
-      within(credentialsDialog).getAllByPlaceholderText(
-        'com_ui_project_meta_ads_token_placeholder',
-      ),
-    ).toHaveLength(1);
-    fireEvent.change(
-      within(credentialsDialog).getAllByPlaceholderText(
-        'com_ui_project_meta_ads_token_placeholder',
-      )[0],
-      {
-        target: { value: token },
-      },
-    );
-    fireEvent.click(
-      within(credentialsDialog).getByText('com_ui_project_meta_ads_save_project_token'),
-    );
-
-    expect(mockMutateSettings).toHaveBeenCalledWith(
-      {
-        projectId: 'p1',
-        metaAds: expect.objectContaining({
-          adAccountId: 'act_123456789',
-          tokenSecretName: '',
-          credentialMode: 'tenant_default',
-          scheduleIntervalMinutes: 180,
-        }),
-        metaAccessToken: token,
-      },
-      expect.any(Object),
-    );
-    const savePayload = mockMutateSettings.mock.calls[0][0] as {
-      metaAds: Record<string, unknown>;
-    };
-    expect(savePayload.metaAds).not.toHaveProperty('metaAccessToken');
-    await waitFor(() =>
-      expect(
-        screen.queryByText('com_ui_project_meta_ads_manage_tokens_hint'),
-      ).not.toBeInTheDocument(),
-    );
-    expect(mockRefetchStatus).toHaveBeenCalled();
-    expect(mockShowToast).toHaveBeenCalledWith({
-      message: 'com_ui_saved',
-      status: 'success',
-    });
+    expect(screen.getByRole('button', { name: 'com_ui_project_meta_ads_run' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'com_ui_project_meta_ads_rules' })).toBeDisabled();
+    expect(mockMutateSettings).not.toHaveBeenCalled();
   });
 
   it('saves a selected schedule interval', () => {
@@ -2056,7 +2005,7 @@ describe('ProjectMetaAdsPanel', () => {
     expect(mockRefetchStatus).toHaveBeenCalled();
   });
 
-  it('allows an AD-MANAGER without project edit to use Meta Ads ad actions and preview', () => {
+  it('allows an AD-MANAGER with project edit to use Meta Ads ad actions and preview', () => {
     mockStatusData.currency = 'BRL';
     mockStatusData.campaigns = [
       {
@@ -2125,7 +2074,7 @@ describe('ProjectMetaAdsPanel', () => {
     ];
 
     mockUserRole = 'AD-MANAGER';
-    render(<ProjectMetaAdsPanel project={project} canEdit={false} />);
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 
     expect(screen.getAllByText('com_ui_project_meta_ads_level_campaign').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_level_ad_set').length).toBeGreaterThan(0);
