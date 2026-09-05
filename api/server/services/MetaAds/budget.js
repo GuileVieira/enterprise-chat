@@ -5880,13 +5880,18 @@ async function updateProjectMetaAdsEntityFields({
   );
   const token = await getAccessToken(projectTenantId, metaAds);
   const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
-  await metaPost({
+  const providerResult = await metaPost({
     path: encodeURIComponent(normalizedEntityId),
     token,
     graphVersion,
     resourceLabel: `${entityLevel} update`,
     body: sanitizedFields,
   });
+  if (providerResult?.success !== true) {
+    throw Object.assign(new Error('Meta Ads did not confirm the entity update.'), {
+      statusCode: 502,
+    });
+  }
   const confirmation = await metaGet({
     path: encodeURIComponent(normalizedEntityId),
     token,

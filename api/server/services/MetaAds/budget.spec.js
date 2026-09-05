@@ -3863,6 +3863,26 @@ describe('Meta Ads budget service persistence safety', () => {
     expect(result.updatedFields).toEqual(['targeting', 'optimization_goal']);
   });
 
+  it('does not report a campaign edit when Meta does not confirm the write', async () => {
+    const { budget, metaGet, metaPost } = loadBudgetWithMocks({
+      project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
+    });
+    metaPost.mockResolvedValue({ success: false });
+
+    await expect(
+      budget.updateProjectMetaAdsEntityFields({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        entityLevel: 'campaign',
+        entityId: 'campaign-1',
+        fields: { name: 'Campaign renamed' },
+        actor: 'tool',
+        actorUserId: 'u1',
+      }),
+    ).rejects.toMatchObject({ statusCode: 502 });
+    expect(metaGet).not.toHaveBeenCalled();
+  });
+
   it('rejects non-whitelisted Meta fields before calling the provider', async () => {
     const { budget, metaGet, metaPost } = loadBudgetWithMocks({
       project: { projectId: 'p1', tenantId: 'tenant-a', metaAds: { tokenSecretName: 'secret' } },
