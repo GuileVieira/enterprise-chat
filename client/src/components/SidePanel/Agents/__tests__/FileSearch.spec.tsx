@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { EModelEndpoint, mergeFileConfig } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
@@ -62,14 +62,65 @@ jest.mock('@librechat/client', () => ({
   DropdownPopup: () => null,
 }));
 
-function Wrapper({ provider, children }: { provider?: string; children: React.ReactNode }) {
+function Wrapper({
+  provider,
+  fileSearch = false,
+  children,
+}: {
+  provider?: string;
+  fileSearch?: boolean;
+  children: React.ReactNode;
+}) {
   const methods = useForm<AgentForm>({
-    defaultValues: { provider: provider as AgentForm['provider'] },
+    defaultValues: {
+      provider: provider as AgentForm['provider'],
+      file_search: fileSearch,
+    },
   });
   return <FormProvider {...methods}>{children}</FormProvider>;
 }
 
 describe('FileSearch', () => {
+  it('opens file input for a saved agent with File Search enabled', () => {
+    const { container } = render(
+      <Wrapper fileSearch={true}>
+        <FileSearch agent_id="agent_123" />
+      </Wrapper>,
+    );
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) {
+      throw new Error('File input not found');
+    }
+    const click = jest.spyOn(input, 'click');
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_upload_file_search' }));
+
+    expect(click).toHaveBeenCalled();
+    expect(input).not.toBeDisabled();
+  });
+
+  it('explains that File Search must be enabled for a saved agent', () => {
+    render(
+      <Wrapper fileSearch={false}>
+        <FileSearch agent_id="agent_123" />
+      </Wrapper>,
+    );
+
+    expect(screen.getByRole('button', { name: 'com_ui_upload_file_search' })).toBeDisabled();
+    expect(screen.getByText('com_agents_file_search_enable_upload')).toBeInTheDocument();
+  });
+
+  it('keeps upload disabled until the agent is saved', () => {
+    render(
+      <Wrapper fileSearch={true}>
+        <FileSearch agent_id="new-agent" />
+      </Wrapper>,
+    );
+
+    expect(screen.getByRole('button', { name: 'com_ui_upload_file_search' })).toBeDisabled();
+    expect(screen.getByText('com_agents_file_search_disabled')).toBeInTheDocument();
+  });
+
   it('renders upload UI when file uploads are not disabled', () => {
     mockFileConfig = mergeFileConfig({ endpoints: { default: { fileLimit: 10 } } });
     render(

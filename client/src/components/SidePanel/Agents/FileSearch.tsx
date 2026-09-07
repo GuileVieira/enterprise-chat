@@ -69,7 +69,17 @@ function FileSearch({
   const isUploadDisabled = endpointFileConfig?.disabled ?? false;
 
   const sharePointEnabled = startupConfig?.sharePointFilePickerEnabled;
-  const disabledUploadButton = isEphemeralAgent(agent_id) || fileSearchChecked === false;
+  const isAgentPersisted = !isEphemeralAgent(agent_id);
+  const disabledUploadButton = !isAgentPersisted || fileSearchChecked !== true;
+  let disabledMessage:
+    | 'com_agents_file_search_disabled'
+    | 'com_agents_file_search_enable_upload'
+    | null = null;
+  if (!isAgentPersisted) {
+    disabledMessage = 'com_agents_file_search_disabled';
+  } else if (fileSearchChecked !== true) {
+    disabledMessage = 'com_agents_file_search_enable_upload';
+  }
 
   const handleSharePointFilesSelected = async (sharePointFiles: any[]) => {
     try {
@@ -178,10 +188,8 @@ function FileSearch({
           />
         </div>
         {/* Disabled Message */}
-        {agent_id ? null : (
-          <div className="text-xs text-text-secondary">
-            {localize('com_agents_file_search_disabled')}
-          </div>
+        {disabledMessage != null && (
+          <div className="text-xs text-text-secondary">{localize(disabledMessage)}</div>
         )}
       </div>
 
