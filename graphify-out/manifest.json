@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "api/server/controllers/agents/client.js": {
-    "mtime": 1788459390.1039565,
-    "ast_hash": "3cbb01395e65763301bea61191dd8790",
+    "mtime": 1788824991.7852712,
+    "ast_hash": "b551fd222679a7c950b8b504e10c3e8b",
     "semantic_hash": ""
   },
   "api/server/controllers/agents/client.test.js": {
@@ -1840,8 +1840,8 @@
     "semantic_hash": ""
   },
   "api/server/routes/files/files.agents.test.js": {
-    "mtime": 1779199271.377287,
-    "ast_hash": "2b225e482add0efd5309bf4540b1d29a",
+    "mtime": 1788824985.644032,
+    "ast_hash": "3f6d5689f17d0c8ee0099051e877b447",
     "semantic_hash": ""
   },
   "api/server/routes/files/files.js": {
@@ -2375,7 +2375,7 @@
     "semantic_hash": ""
   },
   "api/server/services/Files/VectorDB/crud.js": {
-    "mtime": 1779203639.2993379,
+    "mtime": 1788824394.9668515,
     "ast_hash": "1410c8996aa317a613816bc5d7caa817",
     "semantic_hash": ""
   },
@@ -6475,13 +6475,13 @@
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/FileContext.tsx": {
-    "mtime": 1779206733.8137407,
+    "mtime": 1788824435.9169555,
     "ast_hash": "7120a345c488ce45617e36ebc13b502f",
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/FileSearch.tsx": {
-    "mtime": 1779206733.8140378,
-    "ast_hash": "0df47c98cca79bb8a1179e4131b2ba9e",
+    "mtime": 1788824663.5818884,
+    "ast_hash": "c74f82e25c07c62cadb64165f1c935aa",
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/FileSearchCheckbox.tsx": {
@@ -6650,13 +6650,13 @@
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/__tests__/FileContext.spec.tsx": {
-    "mtime": 1777407818.547585,
+    "mtime": 1788824436.1190226,
     "ast_hash": "7a3a0d68c6de7f45b846c2125e9b1bf2",
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/__tests__/FileSearch.spec.tsx": {
-    "mtime": 1777407818.5476801,
-    "ast_hash": "f961b05a1f16980bb014f4c347b29f43",
+    "mtime": 1788824587.6042562,
+    "ast_hash": "bb1e920eece6df024dd2c77a8dfba32a",
     "semantic_hash": ""
   },
   "client/src/components/SidePanel/Agents/config.ts": {
@@ -7995,7 +7995,7 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Files/__tests__/useFileHandling.test.ts": {
-    "mtime": 1784747084.9510112,
+    "mtime": 1788824436.0696695,
     "ast_hash": "0e7d1d0a62f8a3d779cc463c9ed772b1",
     "semantic_hash": ""
   },
@@ -8035,7 +8035,7 @@
     "semantic_hash": ""
   },
   "client/src/hooks/Files/useFileHandling.ts": {
-    "mtime": 1781717766.2271652,
+    "mtime": 1788824436.0175004,
     "ast_hash": "a351e437fe47043a47421745eb8e4154",
     "semantic_hash": ""
   },
@@ -16752,6 +16752,16 @@
   "client/src/components/Project/metaAds/summary.spec.ts": {
     "mtime": 1788632088.5245445,
     "ast_hash": "2033cef1b321a202f8dda8c62f29f65c",
+    "semantic_hash": ""
+  },
+  "api/server/services/Agents/humanization.js": {
+    "mtime": 1788824991.7338448,
+    "ast_hash": "5da9571f05c1367deadd1e4cb6d14b2c",
+    "semantic_hash": ""
+  },
+  "api/server/services/Agents/humanization.spec.js": {
+    "mtime": 1788824991.8431635,
+    "ast_hash": "7ae5b6aafeb0a1b3d6d7bdd67ca323bf",
     "semantic_hash": ""
   }
 }
