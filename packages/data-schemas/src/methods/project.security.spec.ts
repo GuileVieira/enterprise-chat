@@ -74,3 +74,14 @@ it('excludes foreign linked files and keeps tenant-owned legacy files', async ()
   );
   expect(result.map((f) => f.file_id).sort()).toEqual(['current', 'legacy']);
 });
+
+it('filters own projects without changing tenant-wide callers', async () => {
+  await inTenant('a', async () => {
+    await projects.createProject('owner', { name: 'Own' });
+    await projects.createProject('someone-else', { name: 'Other' });
+    expect(await projects.getProjects('owner')).toHaveLength(1);
+    expect(await projects.getProjects('stranger')).toHaveLength(0);
+    expect(await projects.getProjects()).toHaveLength(2);
+  });
+  await inTenant('b', async () => expect(await projects.getProjects('owner')).toHaveLength(0));
+});
