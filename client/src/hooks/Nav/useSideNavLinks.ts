@@ -74,10 +74,6 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.SKILLS,
     permission: Permissions.USE,
   });
-  const hasAccessToCreateAgents = useHasAccess({
-    permissionType: PermissionTypes.AGENTS,
-    permission: Permissions.CREATE,
-  });
   const hasAccessToUseMCPSettings = useHasAccess({
     permissionType: PermissionTypes.MCP_SERVERS,
     permission: Permissions.USE,
@@ -98,7 +94,6 @@ export default function useSideNavLinks({
     if (
       endpointsConfig?.[EModelEndpoint.agents] &&
       hasAccessToAgents &&
-      hasAccessToCreateAgents &&
       endpointsConfig[EModelEndpoint.agents].disableBuilder !== true
     ) {
       links.push({
@@ -231,7 +226,6 @@ export default function useSideNavLinks({
     endpointsConfig,
     keyProvided,
     hasAccessToAgents,
-    hasAccessToCreateAgents,
     hasAccessToPrompts,
     hasAccessToSkills,
     hasAccessToMemories,

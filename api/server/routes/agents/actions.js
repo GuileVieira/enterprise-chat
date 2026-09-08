@@ -27,9 +27,9 @@ const { canAccessAgentResource } = require('~/server/middleware');
 
 const router = express.Router();
 
-const checkAgentCreate = generateCheckAccess({
+const checkAgentAccess = generateCheckAccess({
   permissionType: PermissionTypes.AGENTS,
-  permissions: [Permissions.USE, Permissions.CREATE],
+  permissions: [Permissions.USE],
   getRoleByName: db.getRoleByName,
 });
 
@@ -80,7 +80,7 @@ router.post(
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'agent_id',
   }),
-  checkAgentCreate,
+  checkAgentAccess,
   async (req, res) => {
     try {
       const { agent_id } = req.params;
@@ -243,7 +243,7 @@ router.delete(
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'agent_id',
   }),
-  checkAgentCreate,
+  checkAgentAccess,
   async (req, res) => {
     try {
       const { agent_id, action_id } = req.params;

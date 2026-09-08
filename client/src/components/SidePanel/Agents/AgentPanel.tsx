@@ -9,6 +9,8 @@ import {
   ResourceType,
   EModelEndpoint,
   PermissionBits,
+  PermissionTypes,
+  Permissions,
   isAssistantsEndpoint,
 } from 'librechat-data-provider';
 import type { FieldNamesMarkedBoolean } from 'react-hook-form';
@@ -24,7 +26,7 @@ import {
 } from '~/data-provider';
 import { createProviderOption, getDefaultAgentFormValues } from '~/utils';
 import { useResourcePermissions } from '~/hooks/useResourcePermissions';
-import { useSelectAgent, useLocalize, useAuthContext } from '~/hooks';
+import { useSelectAgent, useLocalize, useAuthContext, useHasAccess } from '~/hooks';
 import { useAgentPanelContext } from '~/Providers/AgentPanelContext';
 import AgentPanelSkeleton from './AgentPanelSkeleton';
 import AdvancedPanel from './Advanced/AdvancedPanel';
@@ -215,6 +217,10 @@ export const isAvatarUploadOnlyDirty = (
 export default function AgentPanel() {
   const localize = useLocalize();
   const { user } = useAuthContext();
+  const canCreate = useHasAccess({
+    permissionType: PermissionTypes.AGENTS,
+    permission: Permissions.CREATE,
+  });
   const { showToast } = useToastContext();
   const {
     activePanel,
@@ -459,9 +465,10 @@ export default function AgentPanel() {
         });
       }
 
+      if (!canCreate) return;
       create.mutate({ ...basePayload, model, tools, provider });
     },
-    [agent_id, create, dirtyFields, handleAvatarUpload, update, showToast, localize],
+    [agent_id, canCreate, create, dirtyFields, handleAvatarUpload, update, showToast, localize],
   );
 
   const handleSelectAgent = useCallback(() => {
@@ -472,7 +479,7 @@ export default function AgentPanel() {
 
   const canEditAgent = useMemo(() => {
     if (!agentQuery.data?.id) {
-      return true;
+      return canCreate;
     }
 
     if (user?.role === SystemRoles.ADMIN) {
@@ -480,7 +487,7 @@ export default function AgentPanel() {
     }
 
     return canEdit;
-  }, [agentQuery.data?.id, user?.role, canEdit]);
+  }, [agentQuery.data?.id, user?.role, canEdit, canCreate]);
 
   return (
     <FormProvider {...methods}>
@@ -509,7 +516,7 @@ export default function AgentPanel() {
                     reset(getDefaultAgentFormValues());
                     setCurrentAgentId(undefined);
                   }}
-                  disabled={agentQuery.isInitialLoading}
+                  disabled={agentQuery.isInitialLoading || !canCreate}
                   aria-label={localize('com_ui_create_new_agent')}
                 >
                   <Plus className="mr-1 h-4 w-4" aria-hidden="true" />

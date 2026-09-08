@@ -76,7 +76,6 @@ router.get('/categories', v1.getAgentCategories);
  */
 router.post('/', checkAgentCreate, v1.createAgent);
 
-
 /**
  * Retrieves basic agent information (VIEW permission required).
  * Returns safe, non-sensitive agent data for viewing purposes.
@@ -119,7 +118,7 @@ router.get(
  */
 router.patch(
   '/:id',
-  checkAgentCreate,
+  checkAgentAccess,
   canAccessAgentResource({
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'id',
@@ -161,7 +160,7 @@ router.post(
  */
 router.delete(
   '/:id',
-  checkAgentCreate,
+  checkAgentAccess,
   canAccessAgentResource({
     requiredPermission: PermissionBits.DELETE,
     resourceIdParam: 'id',
@@ -178,7 +177,7 @@ router.delete(
  */
 router.post(
   '/:id/revert',
-  checkAgentCreate,
+  checkAgentAccess,
   canAccessAgentResource({
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'id',

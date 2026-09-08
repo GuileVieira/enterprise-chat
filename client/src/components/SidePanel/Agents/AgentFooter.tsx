@@ -41,6 +41,10 @@ export default function AgentFooter({
   const { control } = methods;
   const agent = useWatch({ control, name: 'agent' });
   const agent_id = useWatch({ control, name: 'id' });
+  const canCreate = useHasAccess({
+    permissionType: PermissionTypes.AGENTS,
+    permission: Permissions.CREATE,
+  });
   const hasAccessToShareAgents = useHasAccess({
     permissionType: PermissionTypes.AGENTS,
     permission: Permissions.SHARE,
@@ -120,12 +124,13 @@ export default function AgentFooter({
             </GenericGrantAccessDialog>
           )}
         {(agent?.author === user?.id || user?.role === SystemRoles.ADMIN || canEditThisAgent) &&
-          !permissionsLoading && <DuplicateAgent agent_id={agent_id} />}
+          !permissionsLoading &&
+          canCreate && <DuplicateAgent agent_id={agent_id} />}
         {/* Submit Button */}
         <button
           className="btn btn-primary focus:shadow-outline flex h-9 w-full items-center justify-center px-4 py-2 font-semibold text-white hover:bg-surface-submit-hover focus:border-surface-submit"
           type="submit"
-          disabled={isSaving}
+          disabled={isSaving || (!agent_id && !canCreate)}
           aria-busy={isSaving}
         >
           {renderSaveButton()}
