@@ -1710,8 +1710,9 @@ export const updateMemory = (
   key: string,
   value: string,
   originalKey?: string,
+  expectedUpdatedAt?: string,
 ): Promise<q.TUserMemory> => {
-  return request.patch(endpoints.memory(originalKey || key), { key, value });
+  return request.patch(endpoints.memory(originalKey || key), { key, value, expectedUpdatedAt });
 };
 
 export const updateMemoryPreferences = (preferences: {

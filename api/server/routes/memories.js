@@ -7,11 +7,20 @@ const {
   getRoleByName,
   createMemory,
   deleteMemory,
-  setMemory,
+  updateMemory,
 } = require('~/models');
 const { requireJwtAuth, configMiddleware } = require('~/server/middleware');
 
 const router = express.Router();
+const memoryStatus = (error) =>
+  ({
+    MEMORY_LIMIT: 400,
+    MEMORY_INVALID: 400,
+    MEMORY_NOT_FOUND: 404,
+    MEMORY_BUSY: 409,
+    MEMORY_DUPLICATE: 409,
+    MEMORY_CONFLICT: 409,
+  })[error.code] || 500;
 
 const memoryPayloadLimit = express.json({ limit: '100kb' });
 
@@ -78,7 +87,7 @@ router.get('/', checkMemoryRead, configMiddleware, async (req, res) => {
       usagePercentage,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(memoryStatus(error)).json({ error: error.message, code: error.code });
   }
 });
 
@@ -118,29 +127,12 @@ router.post('/', memoryPayloadLimit, checkMemoryCreate, configMiddleware, async 
   try {
     const tokenCount = Tokenizer.getTokenCount(value, 'o200k_base');
 
-    const memories = await getAllUserMemories(req.user.id);
-
-    const appConfig = req.config;
-    const memoryConfig = appConfig?.memory;
-    const tokenLimit = memoryConfig?.tokenLimit;
-
-    if (tokenLimit) {
-      const currentTotalTokens = memories.reduce(
-        (sum, memory) => sum + (memory.tokenCount || 0),
-        0,
-      );
-      if (currentTotalTokens + tokenCount > tokenLimit) {
-        return res.status(400).json({
-          error: `Adding this memory would exceed the token limit of ${tokenLimit}. Current usage: ${currentTotalTokens} tokens.`,
-        });
-      }
-    }
-
     const result = await createMemory({
       userId: req.user.id,
       key: key.trim(),
       value: value.trim(),
       tokenCount,
+      tokenLimit: memoryConfig?.tokenLimit,
     });
 
     if (!result.ok) {
@@ -155,7 +147,7 @@ router.post('/', memoryPayloadLimit, checkMemoryCreate, configMiddleware, async 
     if (error.message && error.message.includes('already exists')) {
       return res.status(409).json({ error: 'Memory with this key already exists.' });
     }
-    res.status(500).json({ error: error.message });
+    res.status(memoryStatus(error)).json({ error: error.message, code: error.code });
   }
 });
 
@@ -186,7 +178,7 @@ router.patch('/preferences', checkMemoryOptOut, async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(memoryStatus(error)).json({ error: error.message, code: error.code });
   }
 });
 
@@ -204,7 +196,19 @@ router.patch('/:key', memoryPayloadLimit, checkMemoryUpdate, configMiddleware, a
     return res.status(400).json({ error: 'Value is required and must be a non-empty string.' });
   }
 
-  const newKey = bodyKey || urlKey;
+  const newKey = bodyKey ?? urlKey;
+  if (typeof newKey !== 'string' || !/^[a-z_]+$/.test(newKey)) {
+    return res
+      .status(400)
+      .json({ error: 'Key must only contain lowercase letters and underscores.' });
+  }
+  const { expectedUpdatedAt } = req.body;
+  if (
+    expectedUpdatedAt != null &&
+    (typeof expectedUpdatedAt !== 'string' || !Number.isFinite(Date.parse(expectedUpdatedAt)))
+  ) {
+    return res.status(400).json({ error: 'Invalid memory version.' });
+  }
   const appConfig = req.config;
   const memoryConfig = appConfig?.memory;
   const charLimit = memoryConfig?.charLimit || 10000;
@@ -231,38 +235,17 @@ router.patch('/:key', memoryPayloadLimit, checkMemoryUpdate, configMiddleware, a
       return res.status(404).json({ error: 'Memory not found.' });
     }
 
-    if (newKey !== urlKey) {
-      const keyExists = memories.find((m) => m.key === newKey);
-      if (keyExists) {
-        return res.status(409).json({ error: 'Memory with this key already exists.' });
-      }
-
-      const createResult = await createMemory({
-        userId: req.user.id,
-        key: newKey,
-        value,
-        tokenCount,
-      });
-
-      if (!createResult.ok) {
-        return res.status(500).json({ error: 'Failed to create new memory.' });
-      }
-
-      const deleteResult = await deleteMemory({ userId: req.user.id, key: urlKey });
-      if (!deleteResult.ok) {
-        return res.status(500).json({ error: 'Failed to delete old memory.' });
-      }
-    } else {
-      const result = await setMemory({
-        userId: req.user.id,
-        key: newKey,
-        value,
-        tokenCount,
-      });
-
-      if (!result.ok) {
-        return res.status(500).json({ error: 'Failed to update memory.' });
-      }
+    const result = await updateMemory({
+      userId: req.user.id,
+      originalKey: urlKey,
+      key: newKey,
+      value,
+      tokenCount,
+      tokenLimit: memoryConfig?.tokenLimit,
+      expectedUpdatedAt: expectedUpdatedAt ?? existingMemory.updated_at?.toISOString(),
+    });
+    if (!result.ok) {
+      return res.status(400).json({ error: 'Failed to update memory.' });
     }
 
     const updatedMemories = await getAllUserMemories(req.user.id);
@@ -270,7 +253,7 @@ router.patch('/:key', memoryPayloadLimit, checkMemoryUpdate, configMiddleware, a
 
     res.json({ updated: true, memory: updatedMemory });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(memoryStatus(error)).json({ error: error.message, code: error.code });
   }
 });
 
@@ -291,7 +274,7 @@ router.delete('/:key', checkMemoryDelete, async (req, res) => {
 
     res.json({ deleted: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(memoryStatus(error)).json({ error: error.message, code: error.code });
   }
 });
 

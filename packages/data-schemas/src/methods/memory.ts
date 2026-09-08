@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { randomUUID } from 'node:crypto';
 import logger from '~/config/winston';
 import type * as t from '~/types';
 
@@ -11,92 +12,97 @@ const formatDate = (date: Date): string => {
 
 // Factory function that takes mongoose instance and returns the methods
 export function createMemoryMethods(mongoose: typeof import('mongoose')) {
-  /**
-   * Creates a new memory entry for a user
-   * Throws an error if a memory with the same key already exists
-   */
-  async function createMemory({
-    userId,
-    key,
-    value,
-    tokenCount = 0,
-  }: t.SetMemoryParams): Promise<t.MemoryResult> {
+  const memoryError = (message: string, code: string): Error & { code: string } =>
+    Object.assign(new Error(message), { code });
+
+  async function withMemoryWrite<T>(
+    userId: string | Types.ObjectId,
+    write: () => Promise<T>,
+  ): Promise<T> {
+    const User = mongoose.models.User;
+    const token = `${Date.now()}:${randomUUID()}`;
+    const owner = await User.findOneAndUpdate(
+      { _id: userId, memoryWriteLock: null },
+      { $set: { memoryWriteLock: token } },
+    ).select('_id');
+    if (!owner) {
+      throw memoryError('Memory is being updated. Please retry.', 'MEMORY_BUSY');
+    }
+    // ponytail: no lock expiry; after a process crash, clear its lock only after confirming it stopped.
+    // An expiring lock could let a paused writer exceed the budget on standalone MongoDB.
     try {
-      if (key?.toLowerCase() === 'nothing') {
-        return { ok: false };
-      }
-
-      const MemoryEntry = mongoose.models.MemoryEntry;
-      const existingMemory = await MemoryEntry.findOne({ userId, key });
-      if (existingMemory) {
-        throw new Error('Memory with this key already exists');
-      }
-
-      await MemoryEntry.create({
-        userId,
-        key,
-        value,
-        tokenCount,
-        updated_at: new Date(),
-      });
-
-      return { ok: true };
-    } catch (error) {
-      throw new Error(
-        `Failed to create memory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      return await write();
+    } finally {
+      await User.updateOne(
+        { _id: userId, memoryWriteLock: token },
+        { $unset: { memoryWriteLock: 1 } },
       );
     }
   }
 
-  /**
-   * Sets or updates a memory entry for a user
-   */
-  async function setMemory({
-    userId,
-    key,
-    value,
-    tokenCount = 0,
-  }: t.SetMemoryParams): Promise<t.MemoryResult> {
-    try {
-      if (key?.toLowerCase() === 'nothing') {
-        return { ok: false };
-      }
-
-      const MemoryEntry = mongoose.models.MemoryEntry;
-      await MemoryEntry.findOneAndUpdate(
-        { userId, key },
-        {
-          value,
-          tokenCount,
-          updated_at: new Date(),
-        },
-        {
-          upsert: true,
-          new: true,
-        },
-      );
-
-      return { ok: true };
-    } catch (error) {
-      throw new Error(
-        `Failed to set memory: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+  async function writeMemory(
+    params: t.SetMemoryParams,
+    mode: 'create' | 'set' | 'update',
+    originalKey = params.key,
+    expectedUpdatedAt?: string,
+  ): Promise<t.MemoryResult> {
+    const { userId, key, value, tokenCount = 0, tokenLimit } = params;
+    if (!/^[a-z_]+$/.test(key) || !value.trim() || !Number.isFinite(tokenCount) || tokenCount < 0) {
+      throw memoryError('Invalid memory key, value or token count.', 'MEMORY_INVALID');
     }
+    if (key === 'nothing') return { ok: false };
+    return withMemoryWrite(userId, async () => {
+      const memories = await getAllUserMemories(userId);
+      const existing = memories.find((memory) => memory.key === originalKey);
+      if (
+        (mode === 'create' && existing) ||
+        (key !== originalKey && memories.some((memory) => memory.key === key))
+      ) {
+        throw memoryError('Memory with this key already exists.', 'MEMORY_DUPLICATE');
+      }
+      if (mode === 'update' && !existing) {
+        throw memoryError('Memory not found.', 'MEMORY_NOT_FOUND');
+      }
+      if (
+        expectedUpdatedAt &&
+        existing?.updated_at?.getTime() !== new Date(expectedUpdatedAt).getTime()
+      ) {
+        throw memoryError('Memory changed. Reload before saving.', 'MEMORY_CONFLICT');
+      }
+      const currentTotal = memories.reduce((total, memory) => total + (memory.tokenCount || 0), 0);
+      const nextTotal = currentTotal - (existing?.tokenCount || 0) + tokenCount;
+      if (
+        tokenLimit != null &&
+        tokenLimit > 0 &&
+        nextTotal > tokenLimit &&
+        nextTotal > currentTotal
+      ) {
+        throw memoryError(`Memory would exceed token limit of ${tokenLimit}.`, 'MEMORY_LIMIT');
+      }
+      const MemoryEntry = mongoose.models.MemoryEntry;
+      const updated_at = new Date(Math.max(Date.now(), (existing?.updated_at?.getTime() || 0) + 1));
+      if (existing) {
+        const updated = await MemoryEntry.findOneAndUpdate(
+          { _id: existing._id, userId, key: originalKey },
+          { $set: { key, value, tokenCount, updated_at } },
+          { runValidators: true },
+        );
+        if (!updated) throw memoryError('Memory changed. Reload before saving.', 'MEMORY_CONFLICT');
+      } else {
+        await MemoryEntry.create({ userId, key, value, tokenCount, updated_at });
+      }
+      return { ok: true };
+    });
   }
 
-  /**
-   * Deletes a specific memory entry for a user
-   */
+  const createMemory = (params: t.SetMemoryParams) => writeMemory(params, 'create');
+  const setMemory = (params: t.SetMemoryParams) => writeMemory(params, 'set');
+  const updateMemory = (params: t.UpdateMemoryParams) =>
+    writeMemory(params, 'update', params.originalKey, params.expectedUpdatedAt);
+
   async function deleteMemory({ userId, key }: t.DeleteMemoryParams): Promise<t.MemoryResult> {
-    try {
-      const MemoryEntry = mongoose.models.MemoryEntry;
-      const result = await MemoryEntry.findOneAndDelete({ userId, key });
-      return { ok: !!result };
-    } catch (error) {
-      throw new Error(
-        `Failed to delete memory: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
+    const result = await mongoose.models.MemoryEntry.findOneAndDelete({ userId, key });
+    return { ok: !!result };
   }
 
   /**
@@ -176,6 +182,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')) {
   return {
     setMemory,
     createMemory,
+    updateMemory,
     deleteMemory,
     getAllUserMemories,
     getFormattedMemories,

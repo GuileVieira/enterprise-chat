@@ -132,6 +132,7 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    memoryWriteLock: { type: String, select: false },
     personalization: {
       type: {
         memories: {

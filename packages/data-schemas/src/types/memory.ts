@@ -26,6 +26,12 @@ export interface SetMemoryParams {
   key: string;
   value: string;
   tokenCount?: number;
+  tokenLimit?: number;
+}
+
+export interface UpdateMemoryParams extends SetMemoryParams {
+  originalKey: string;
+  expectedUpdatedAt?: string;
 }
 
 export interface DeleteMemoryParams {

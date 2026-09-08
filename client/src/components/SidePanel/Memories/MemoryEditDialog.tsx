@@ -70,7 +70,10 @@ export default function MemoryEditDialog({
           errorMessage = axiosError.response.data.error;
 
           // Check for duplicate key error
-          if (axiosError.response?.status === 409 || errorMessage.includes('already exists')) {
+          if (
+            axiosError.response?.data?.code === 'MEMORY_DUPLICATE' ||
+            errorMessage.includes('already exists')
+          ) {
             errorMessage = localize('com_ui_memory_key_exists');
           }
           // Check for key validation error (lowercase and underscores only)
@@ -117,6 +120,7 @@ export default function MemoryEditDialog({
     updateMemory({
       key: key.trim(),
       value: value.trim(),
+      expectedUpdatedAt: memory.updated_at,
       ...(originalKey !== key.trim() && { originalKey }),
     });
   };

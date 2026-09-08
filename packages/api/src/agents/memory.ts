@@ -80,7 +80,7 @@ The \`delete_memory\` tool should only be used in two scenarios:
 
 ${validKeys && validKeys.length > 0 ? `\nVALID KEYS: ${validKeys.join(', ')}` : ''}
 
-${tokenLimit ? `\nTOKEN LIMIT: Maximum ${tokenLimit} tokens per memory value.` : ''}
+${tokenLimit ? `\nTOKEN LIMIT: Maximum ${tokenLimit} tokens across all saved memories.` : ''}
 
 When in doubt, and the user hasn't asked to remember or forget anything, END THE TURN IMMEDIATELY.`;
 
@@ -92,7 +92,6 @@ export const createMemoryTool = ({
   setMemory,
   validKeys,
   tokenLimit,
-  totalTokens = 0,
 }: {
   userId: string | ObjectId;
   setMemory: MemoryMethods['setMemory'];
@@ -100,9 +99,6 @@ export const createMemoryTool = ({
   tokenLimit?: number;
   totalTokens?: number;
 }): DynamicStructuredTool => {
-  const remainingTokens = tokenLimit ? tokenLimit - totalTokens : Infinity;
-  const isOverflowing = tokenLimit ? remainingTokens <= 0 : false;
-
   return tool(
     async ({ key, value }) => {
       try {
@@ -117,45 +113,6 @@ export const createMemoryTool = ({
 
         const tokenCount = Tokenizer.getTokenCount(value, 'o200k_base');
 
-        if (isOverflowing) {
-          const errorArtifact: Record<Tools.memory, MemoryArtifact> = {
-            [Tools.memory]: {
-              key: 'system',
-              type: 'error',
-              value: JSON.stringify({
-                errorType: 'already_exceeded',
-                tokenCount: Math.abs(remainingTokens),
-                totalTokens: totalTokens,
-                tokenLimit: tokenLimit!,
-              }),
-              tokenCount: totalTokens,
-            },
-          };
-          return [`Memory storage exceeded. Cannot save new memories.`, errorArtifact];
-        }
-
-        if (tokenLimit) {
-          const newTotalTokens = totalTokens + tokenCount;
-          const newRemainingTokens = tokenLimit - newTotalTokens;
-
-          if (newRemainingTokens < 0) {
-            const errorArtifact: Record<Tools.memory, MemoryArtifact> = {
-              [Tools.memory]: {
-                key: 'system',
-                type: 'error',
-                value: JSON.stringify({
-                  errorType: 'would_exceed',
-                  tokenCount: Math.abs(newRemainingTokens),
-                  totalTokens: newTotalTokens,
-                  tokenLimit,
-                }),
-                tokenCount: totalTokens,
-              },
-            };
-            return [`Memory storage would exceed limit. Cannot save this memory.`, errorArtifact];
-          }
-        }
-
         const artifact: Record<Tools.memory, MemoryArtifact> = {
           [Tools.memory]: {
             key,
@@ -165,7 +122,7 @@ export const createMemoryTool = ({
           },
         };
 
-        const result = await setMemory({ userId, key, value, tokenCount });
+        const result = await setMemory({ userId, key, value, tokenCount, tokenLimit });
         if (result.ok) {
           logger.debug(`Memory set for key "${key}" (${tokenCount} tokens) for user "${userId}"`);
           return [`Memory set for key "${key}" (${tokenCount} tokens)`, artifact];

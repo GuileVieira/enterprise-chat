@@ -71,62 +71,28 @@ describe('createMemoryTool', () => {
 
   // Memory overflow tests
   describe('overflow handling', () => {
-    it('should return error artifact when memory is already overflowing', async () => {
+    it('delegates quota to the atomic writer even when the snapshot is full', async () => {
       const tool = createMemoryTool({
         userId: 'test-user',
         setMemory: mockSetMemory,
         tokenLimit: 100,
-        totalTokens: 150, // Already over limit
-      });
-
-      // Call the underlying function directly since invoke() doesn't handle responseFormat in tests
-      const result = await tool.func({ key: 'test', value: 'new memory' });
-      expect(result).toHaveLength(2);
-      expect(result[0]).toBe('Memory storage exceeded. Cannot save new memories.');
-
-      const artifacts = result[1] as Record<Tools.memory, MemoryArtifact>;
-      expect(artifacts[Tools.memory]).toBeDefined();
-      expect(artifacts[Tools.memory].type).toBe('error');
-      expect(artifacts[Tools.memory].key).toBe('system');
-
-      const errorData = JSON.parse(artifacts[Tools.memory].value as string);
-      expect(errorData).toEqual({
-        errorType: 'already_exceeded',
-        tokenCount: 50,
         totalTokens: 150,
-        tokenLimit: 100,
       });
-
-      expect(mockSetMemory).not.toHaveBeenCalled();
+      const result = await tool.func({ key: 'test', value: 'small' });
+      expect(result[0]).toContain('Memory set');
+      expect(mockSetMemory).toHaveBeenCalledWith(expect.objectContaining({ tokenLimit: 100 }));
     });
 
-    it('should return error artifact when new memory would exceed limit', async () => {
+    it('does not report a successful update when the atomic writer rejects quota', async () => {
+      mockSetMemory.mockRejectedValue(new Error('Memory would exceed token limit.'));
       const tool = createMemoryTool({
         userId: 'test-user',
         setMemory: mockSetMemory,
         tokenLimit: 100,
-        totalTokens: 80,
       });
-
-      // This would put us at 101 tokens total, exceeding the limit
-      const result = await tool.func({ key: 'test', value: 'This is a 20 char str' });
-      expect(result).toHaveLength(2);
-      expect(result[0]).toBe('Memory storage would exceed limit. Cannot save this memory.');
-
-      const artifacts = result[1] as Record<Tools.memory, MemoryArtifact>;
-      expect(artifacts[Tools.memory]).toBeDefined();
-      expect(artifacts[Tools.memory].type).toBe('error');
-      expect(artifacts[Tools.memory].key).toBe('system');
-
-      const errorData = JSON.parse(artifacts[Tools.memory].value as string);
-      expect(errorData).toEqual({
-        errorType: 'would_exceed',
-        tokenCount: 1, // Math.abs(-1)
-        totalTokens: 101,
-        tokenLimit: 100,
-      });
-
-      expect(mockSetMemory).not.toHaveBeenCalled();
+      const result = await tool.func({ key: 'test', value: 'new value' });
+      expect(result[0]).toContain('Error setting memory');
+      expect(result[1]).toBeUndefined();
     });
 
     it('should successfully save memory when below limit', async () => {
@@ -152,6 +118,7 @@ describe('createMemoryTool', () => {
         key: 'test',
         value: 'small memory',
         tokenCount: 12,
+        tokenLimit: 100,
       });
     });
   });

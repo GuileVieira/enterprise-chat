@@ -28,14 +28,19 @@ export const useDeleteMemoryMutation = () => {
   });
 };
 
-export type UpdateMemoryParams = { key: string; value: string; originalKey?: string };
+export type UpdateMemoryParams = {
+  key: string;
+  value: string;
+  originalKey?: string;
+  expectedUpdatedAt?: string;
+};
 export const useUpdateMemoryMutation = (
   options?: UseMutationOptions<TUserMemory, Error, UpdateMemoryParams>,
 ) => {
   const queryClient = useQueryClient();
   return useMutation(
-    ({ key, value, originalKey }: UpdateMemoryParams) =>
-      dataService.updateMemory(key, value, originalKey),
+    ({ key, value, originalKey, expectedUpdatedAt }: UpdateMemoryParams) =>
+      dataService.updateMemory(key, value, originalKey, expectedUpdatedAt),
     {
       ...options,
       onSuccess: (...params) => {
