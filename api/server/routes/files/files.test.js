@@ -238,7 +238,10 @@ describe('File Routes - Delete with Agent Access', () => {
         }),
       );
       await runAsSystem(async () =>
-        User.updateOne({ _id: otherUserId }, { $set: { tenantId: currentTenantId } }),
+        User.updateMany(
+          { _id: { $in: [authorId, otherUserId] } },
+          { $set: { tenantId: currentTenantId } },
+        ),
       );
       const { grantPermission } = require('~/server/services/PermissionService');
       await grantPermission({
