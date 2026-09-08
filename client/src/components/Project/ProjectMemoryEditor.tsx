@@ -53,7 +53,7 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
   }, [memories, project.projectId, updateMutation]);
 
   return (
-    <div className="space-y-4">
+    <fieldset disabled={updateMutation.isLoading} className="min-w-0 space-y-4">
       <div className="flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-2xl text-sm leading-6 text-text-secondary">
           {localize('com_ui_project_memories_description')}
@@ -118,6 +118,11 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
         <Plus className="h-4 w-4" />
         {localize('com_ui_project_add_memory')}
       </button>
-    </div>
+      {updateMutation.isError && (
+        <p role="alert" className="text-sm text-red-600">
+          {localize('com_ui_project_memories_save_error')}
+        </p>
+      )}
+    </fieldset>
   );
 }
