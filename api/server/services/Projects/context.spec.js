@@ -35,7 +35,7 @@ jest.mock('mongoose', () => ({
 jest.mock('~/models', () => ({
   getConvo: (...args) => mockGetConvo(...args),
   getProjectById: (...args) => mockGetProjectById(...args),
-  getFiles: (...args) => mockGetFiles(...args),
+  getTenantFiles: (...args) => mockGetFiles(...args),
   getAllUserMemories: (...args) => mockGetAllUserMemories(...args),
 }));
 
@@ -78,13 +78,9 @@ describe('loadProjectContext', () => {
     expect(mockCheckPermission).toHaveBeenCalledWith(
       expect.objectContaining({ resourceId: 'mongo-project' }),
     );
-    expect(mockGetFiles).toHaveBeenCalledWith(
-      {
-        $or: [{ projectId: 'proj-123' }, { file_id: { $in: ['linked-file'] } }],
-      },
-      null,
-      { text: 0 },
-    );
+    expect(mockGetFiles).toHaveBeenCalledWith(undefined, {
+      $or: [{ projectId: 'proj-123' }, { file_id: { $in: ['linked-file'] } }],
+    });
     expect(result).toEqual({
       projectId: 'proj-123',
       projectInstructions: 'Project instructions',

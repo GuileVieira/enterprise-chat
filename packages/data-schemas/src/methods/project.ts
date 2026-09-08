@@ -1,5 +1,10 @@
 import type { Model, Types } from 'mongoose';
-import { PrincipalType, ResourceType, PermissionBits } from 'librechat-data-provider';
+import {
+  PrincipalType,
+  ResourceType,
+  PermissionBits,
+  createProjectSchema,
+} from 'librechat-data-provider';
 import logger from '~/config/winston';
 import { getTenantId } from '~/config/tenantContext';
 import type { IProject } from '~/types';
@@ -14,6 +19,14 @@ export interface ProjectDeps {
     permBits: number,
     grantedBy: string | Types.ObjectId,
   ) => Promise<unknown>;
+}
+
+const editableFields = new Set(Object.keys(createProjectSchema.omit({ accessLevel: true }).shape));
+
+function assertEditableFields(data: object): void {
+  if (Object.keys(data).some((key) => !editableFields.has(key))) {
+    throw new Error('Invalid project fields');
+  }
 }
 
 export function createProjectMethods(mongoose: typeof import('mongoose'), deps?: ProjectDeps) {
@@ -81,13 +94,14 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
   ) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
+      assertEditableFields(data);
       const projectId = crypto.randomUUID();
       const tenantId = getTenantId();
       const project = new Project({
+        ...data,
         projectId,
         user,
         ...(tenantId && { tenantId }),
-        ...data,
       });
       await project.save();
 
@@ -125,10 +139,11 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
   ) {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
+      assertEditableFields(data);
       return await Project.findOneAndUpdate(
         { projectId },
         { $set: data },
-        { new: true, lean: true },
+        { new: true, lean: true, runValidators: true },
       );
     } catch (error) {
       logger.error('[updateProject] Error updating project', error);

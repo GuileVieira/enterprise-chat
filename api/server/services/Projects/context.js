@@ -125,15 +125,9 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
     let projectFileIds = [];
     if (project?.projectId) {
       const declaredIds = Array.isArray(project.fileIds) ? project.fileIds.filter(Boolean) : [];
-      const projectFiles = await runAsSystem(async () =>
-        db.getFiles(
-          {
-            $or: [{ projectId: project.projectId }, { file_id: { $in: declaredIds } }],
-          },
-          null,
-          { text: 0 },
-        ),
-      );
+      const projectFiles = await db.getTenantFiles(project.tenantId, {
+        $or: [{ projectId: project.projectId }, { file_id: { $in: declaredIds } }],
+      });
       projectFileIds = [
         ...new Set((projectFiles ?? []).map((file) => file?.file_id).filter(Boolean)),
       ];

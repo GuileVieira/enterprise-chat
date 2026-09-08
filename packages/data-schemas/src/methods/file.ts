@@ -2,6 +2,8 @@ import logger from '../config/winston';
 import { EToolResources, FileContext } from 'librechat-data-provider';
 import type { FilterQuery, SortOrder, Model } from 'mongoose';
 import type { IMongoFile } from '~/types/file';
+import type { IUser } from '~/types/user';
+import { runAsSystem } from '~/config/tenantContext';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 
 /** Factory function that takes mongoose instance and returns the file methods */
@@ -45,6 +47,23 @@ export function createFileMethods(mongoose: typeof import('mongoose')) {
       query.select({ text: 0 });
     }
     return await query.sort(sortOptions).lean<IMongoFile[]>();
+  }
+
+  /** Explicit tenant scope for privileged project reads, including legacy files whose owner belongs to the tenant. */
+  async function getTenantFiles(
+    tenantId: string | undefined,
+    filter: FilterQuery<IMongoFile>,
+  ): Promise<IMongoFile[]> {
+    return runAsSystem(async () => {
+      const User = mongoose.models.User as Model<IUser>;
+      const owners = await User.find({ tenantId: tenantId || null })
+        .select('_id')
+        .lean();
+      const scope: FilterQuery<IMongoFile> = tenantId
+        ? { $or: [{ tenantId }, { tenantId: null, user: { $in: owners.map((u) => u._id) } }] }
+        : { tenantId: null, user: { $in: owners.map((u) => u._id) } };
+      return (await getFiles({ $and: [filter, scope] })) ?? [];
+    });
   }
 
   /**
@@ -469,6 +488,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')) {
   return {
     findFileById,
     getFiles,
+    getTenantFiles,
     getFilesByProjectId,
     getToolFilesByIds,
     getCodeGeneratedFiles,

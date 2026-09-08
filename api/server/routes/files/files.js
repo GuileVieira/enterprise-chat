@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const express = require('express');
 const { EnvVar } = require('@librechat/agents');
-const { logger, runAsSystem, SystemCapabilities } = require('@librechat/data-schemas');
+const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   logAxiosError,
   refreshS3FileUrls,
@@ -73,6 +73,7 @@ router.get('/', async (req, res) => {
   try {
     const appConfig = req.config;
     const filter = { user: req.user.id };
+    let projectTenantId;
     if (req.query.projectId) {
       const projectId = req.query.projectId;
       const { allowed, project } = await hasProjectAccess({
@@ -84,6 +85,7 @@ router.get('/', async (req, res) => {
         return res.status(403).json({ message: 'Insufficient project permissions' });
       }
       delete filter.user;
+      projectTenantId = project.tenantId;
       const fileIds = Array.isArray(project?.fileIds) ? project.fileIds.filter(Boolean) : [];
       filter.$or = [{ projectId: project.projectId }];
       if (fileIds.length > 0) {
@@ -91,7 +93,7 @@ router.get('/', async (req, res) => {
       }
     }
     const files = req.query.projectId
-      ? await runAsSystem(async () => db.getFiles(filter))
+      ? await db.getTenantFiles(projectTenantId, filter)
       : await db.getFiles(filter);
     if (appConfig.fileStrategy === FileSources.s3) {
       try {

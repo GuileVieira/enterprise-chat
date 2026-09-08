@@ -1,11 +1,13 @@
 const express = require('express');
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger } = require('@librechat/data-schemas');
 const { generateCheckAccess } = require('@librechat/api');
 const {
   PermissionBits,
   PermissionTypes,
   Permissions,
   ResourceType,
+  createProjectSchema,
+  updateProjectSchema,
 } = require('librechat-data-provider');
 const {
   getProjects,
@@ -19,7 +21,7 @@ const {
   findAccessibleResources,
   deleteAclEntries,
   getRoleByName,
-  getFiles,
+  getTenantFiles,
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 const { checkPermission } = require('~/server/services/PermissionService');
@@ -68,25 +70,31 @@ const validateProjectUpdate = async ({ req, res }) => {
 
   if (Array.isArray(fileIds) && fileIds.length > 0) {
     const uniqueFileIds = [...new Set(fileIds)];
-    const project =
-      req.resourceAccess?.resourceInfo ||
-      (await findProjectForRequest({ projectId: req.params.projectId, user: req.user }));
-    const existingProjectFileIds = Array.isArray(project?.fileIds)
-      ? project.fileIds.filter(Boolean)
-      : [];
-    const files = await runAsSystem(async () =>
-      getFiles(
-        {
-          file_id: { $in: uniqueFileIds },
-          $or: [{ projectId: project?.projectId }, { file_id: { $in: existingProjectFileIds } }],
-        },
-        null,
-        { text: 0 },
-      ),
-    );
-    if ((files?.length ?? 0) !== uniqueFileIds.length) {
+    const files = await getTenantFiles(req.user.tenantId, { file_id: { $in: uniqueFileIds } });
+    if (files.length !== uniqueFileIds.length) {
       res.status(403).json({ error: 'Insufficient file permissions' });
       return false;
+    }
+    for (const file of files) {
+      if (file.user?.toString() === req.user.id) {
+        continue;
+      }
+      const sourceProject = file.projectId
+        ? await findProjectForRequest({ projectId: file.projectId, user: req.user })
+        : null;
+      const projectAccess =
+        sourceProject?._id &&
+        (await checkPermission({
+          userId: req.user.id,
+          role: req.user.role,
+          resourceType: ResourceType.PROJECT,
+          resourceId: sourceProject._id,
+          requiredPermission: PermissionBits.VIEW,
+        }));
+      if (!projectAccess) {
+        res.status(403).json({ error: 'Insufficient file permissions' });
+        return false;
+      }
     }
   }
 
@@ -147,7 +155,15 @@ router.get('/', async (req, res) => {
  */
 router.post('/', checkProjectCreate, async (req, res) => {
   try {
-    const project = await createProject(req.user.id, req.body);
+    const parsed = createProjectSchema.omit({ accessLevel: true }).strict().safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Invalid project fields' });
+    }
+    req.body = parsed.data;
+    if (!(await validateProjectUpdate({ req, res }))) {
+      return;
+    }
+    const project = await createProject(req.user.id, parsed.data);
     await ensureTenantUsersProjectViewAccess({ project, grantedBy: req.user.id });
     res.status(201).json(project);
   } catch (error) {
@@ -192,6 +208,11 @@ router.put(
   canAccessProjectResource({ requiredPermission: PermissionBits.EDIT }),
   async (req, res) => {
     try {
+      const parsed = updateProjectSchema.omit({ accessLevel: true }).strict().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid project fields' });
+      }
+      req.body = parsed.data;
       const isValidUpdate = await validateProjectUpdate({ req, res });
       if (!isValidUpdate) {
         return;

@@ -9,7 +9,7 @@ jest.mock('~/models', () => ({
   getProjects: jest.fn(),
   getProjectById: jest.fn(),
   findProjectById: jest.fn(),
-  getFiles: jest.fn(),
+  getTenantFiles: jest.fn(),
   createProject: jest.fn(),
   updateProject: jest.fn(),
   deleteProject: jest.fn(),
@@ -64,7 +64,7 @@ describe('Projects Routes', () => {
     updateProject,
     deleteProject,
     archiveProject,
-    getFiles,
+    getTenantFiles,
     getUserPrincipals,
     findAccessibleResources,
     grantPermission,
@@ -177,6 +177,52 @@ describe('Projects Routes', () => {
     });
   });
 
+  describe('project input security', () => {
+    it.each(['projectId', 'tenantId', 'user', '_id', 'fileIds.0', 'accessLevel'])(
+      'rejects protected field %s before persistence',
+      async (field) => {
+        for (const method of ['post', 'put']) {
+          const url = method === 'post' ? '/api/projects' : '/api/projects/proj-1';
+          const response = await request(app)
+            [method](url)
+            .send({ name: 'Project', [field]: 'bad' });
+          expect(response.status).toBe(400);
+        }
+        expect(createProject).not.toHaveBeenCalled();
+        expect(updateProject).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['post', 'put'])('authorizes links on %s', async (method) => {
+      const url = method === 'post' ? '/api/projects' : '/api/projects/proj-1';
+      getTenantFiles.mockResolvedValue([
+        { file_id: 'file', user: 'another-user', projectId: 'source' },
+      ]);
+      mockFindProjectForRequest.mockResolvedValue({ _id: 'source-mongo' });
+      checkPermission.mockResolvedValue(false);
+      expect(
+        (
+          await request(app)
+            [method](url)
+            .send({ name: 'Project', fileIds: ['file'] })
+        ).status,
+      ).toBe(403);
+      checkPermission.mockResolvedValue(true);
+      createProject.mockResolvedValue({ projectId: 'created' });
+      updateProject.mockResolvedValue({ projectId: 'proj-1' });
+      expect(
+        (
+          await request(app)
+            [method](url)
+            .send({ name: 'Project', fileIds: ['file'] })
+        ).status,
+      ).toBe(method === 'post' ? 201 : 200);
+      expect(checkPermission).toHaveBeenCalledWith(
+        expect.objectContaining({ resourceId: 'source-mongo' }),
+      );
+    });
+  });
+
   describe('GET /:projectId', () => {
     it('should return a project by id', async () => {
       const mockProject = { projectId: 'proj-1', name: 'Project One', user: 'test-user-123' };
@@ -236,7 +282,7 @@ describe('Projects Routes', () => {
     });
 
     it('should reject fileIds that are not already attached to the project', async () => {
-      getFiles.mockResolvedValue([]);
+      getTenantFiles.mockResolvedValue([]);
 
       const response = await request(app)
         .put('/api/projects/proj-1')
