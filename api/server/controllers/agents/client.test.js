@@ -2433,6 +2433,29 @@ describe('AgentClient - titleConvo', () => {
       });
     });
 
+    it.each(['missing', 'null', 'initialize-error', 'processor-error'])(
+      'preserves existing memories when extraction fails: %s',
+      async (failure) => {
+        mockCheckAccess.mockResolvedValue(true);
+        mockGetFormattedMemories.mockResolvedValue({ withoutKeys: 'preserved context' });
+        mockInitializeAgent.mockResolvedValue(mockAgent);
+        mockCreateMemoryProcessor.mockResolvedValue(['personal', jest.fn()]);
+        if (failure === 'missing') {
+          mockReq.config.memory.agent.id = 'removed';
+          mockLoadAgent.mockResolvedValue(null);
+        } else if (failure === 'null') {
+          mockInitializeAgent.mockResolvedValue(null);
+        } else if (failure === 'initialize-error') {
+          mockInitializeAgent.mockRejectedValue(new Error('Unavailable'));
+        } else {
+          mockCreateMemoryProcessor.mockRejectedValue(new Error('Unavailable'));
+        }
+        client = new AgentClient(mockOptions);
+        expect(await client.useMemory()).toBe('preserved context');
+        expect(client.processMemory).toBeUndefined();
+      },
+    );
+
     it('should use current agent when memory config agent.id matches current agent id', async () => {
       mockCheckAccess.mockResolvedValue(true);
       mockInitializeAgent.mockResolvedValue({
@@ -2591,7 +2614,7 @@ describe('AgentClient - titleConvo', () => {
       expect(mockCreateMemoryProcessor).not.toHaveBeenCalled();
       expect(client.processMemory).toBeUndefined();
       expect(errorSpy).toHaveBeenCalledWith(
-        '[api/server/controllers/agents/client.js #useMemory] Error loading memories',
+        '[api/server/controllers/agents/client.js #useMemory] Error loading shared memories',
         expect.any(Error),
       );
     });

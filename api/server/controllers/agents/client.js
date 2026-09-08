@@ -577,121 +577,129 @@ class AgentClient extends BaseClient {
       return sharedMemories;
     }
 
-    /** @type {Agent} */
-    let prelimAgent;
-    const allowedProviders = new Set(
-      appConfig?.endpoints?.[EModelEndpoint.agents]?.allowedProviders,
-    );
     try {
-      if (memoryConfig.agent?.id != null && memoryConfig.agent.id !== this.options.agent.id) {
-        prelimAgent = await loadAgent({
-          req: this.options.req,
-          agent_id: memoryConfig.agent.id,
-          endpoint: EModelEndpoint.agents,
-        });
-      } else if (memoryConfig.agent?.id != null) {
-        prelimAgent = this.options.agent;
-      } else if (
-        memoryConfig.agent?.id == null &&
-        memoryConfig.agent?.model != null &&
-        memoryConfig.agent?.provider != null
-      ) {
-        prelimAgent = { id: Constants.EPHEMERAL_AGENT_ID, ...memoryConfig.agent };
+      /** @type {Agent} */
+      let prelimAgent;
+      const allowedProviders = new Set(
+        appConfig?.endpoints?.[EModelEndpoint.agents]?.allowedProviders,
+      );
+      try {
+        if (memoryConfig.agent?.id != null && memoryConfig.agent.id !== this.options.agent.id) {
+          prelimAgent = await loadAgent({
+            req: this.options.req,
+            agent_id: memoryConfig.agent.id,
+            endpoint: EModelEndpoint.agents,
+          });
+        } else if (memoryConfig.agent?.id != null) {
+          prelimAgent = this.options.agent;
+        } else if (
+          memoryConfig.agent?.id == null &&
+          memoryConfig.agent?.model != null &&
+          memoryConfig.agent?.provider != null
+        ) {
+          prelimAgent = { id: Constants.EPHEMERAL_AGENT_ID, ...memoryConfig.agent };
+        }
+      } catch (error) {
+        logger.error(
+          '[api/server/controllers/agents/client.js #useMemory] Error loading agent for memory',
+          error,
+        );
       }
-    } catch (error) {
-      logger.error(
-        '[api/server/controllers/agents/client.js #useMemory] Error loading agent for memory',
-        error,
+
+      if (!prelimAgent) {
+        return sharedMemories;
+      }
+
+      /** Forward the same `execute_code` capability gate the chat flow uses —
+       *  memory agents are unlikely to list `execute_code`, but if one does,
+       *  Phase 8 relies on this flag to expand the string into
+       *  `bash_tool` + `read_file` (pre-Phase 8 the legacy `execute_code`
+       *  tool registered unconditionally; without this passthrough the
+       *  memory path would silently lose code-execution tooling). */
+      const memoryCapabilities = new Set(
+        appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities,
       );
-    }
-
-    if (!prelimAgent) {
-      return;
-    }
-
-    /** Forward the same `execute_code` capability gate the chat flow uses —
-     *  memory agents are unlikely to list `execute_code`, but if one does,
-     *  Phase 8 relies on this flag to expand the string into
-     *  `bash_tool` + `read_file` (pre-Phase 8 the legacy `execute_code`
-     *  tool registered unconditionally; without this passthrough the
-     *  memory path would silently lose code-execution tooling). */
-    const memoryCapabilities = new Set(appConfig?.endpoints?.[EModelEndpoint.agents]?.capabilities);
-    const projectContext = await loadProjectContext({
-      req: this.options.req,
-      conversationId: this.conversationId,
-      projectId: this.options.projectId,
-    });
-    const agent = await initializeAgent(
-      {
+      const projectContext = await loadProjectContext({
         req: this.options.req,
-        res: this.options.res,
-        agent: prelimAgent,
-        allowedProviders,
-        endpointOption: {
-          endpoint: !isEphemeralAgentId(prelimAgent.id)
-            ? EModelEndpoint.agents
-            : memoryConfig.agent?.provider,
+        conversationId: this.conversationId,
+        projectId: this.options.projectId,
+      });
+      const agent = await initializeAgent(
+        {
+          req: this.options.req,
+          res: this.options.res,
+          agent: prelimAgent,
+          allowedProviders,
+          endpointOption: {
+            endpoint: !isEphemeralAgentId(prelimAgent.id)
+              ? EModelEndpoint.agents
+              : memoryConfig.agent?.provider,
+          },
+          codeEnvAvailable: memoryCapabilities.has(AgentCapabilities.execute_code),
+          projectFileIds: projectContext.projectFileIds,
+          projectId: projectContext.projectId,
         },
-        codeEnvAvailable: memoryCapabilities.has(AgentCapabilities.execute_code),
-        projectFileIds: projectContext.projectFileIds,
-        projectId: projectContext.projectId,
-      },
-      {
-        getFiles: db.getFiles,
-        getUserKey: db.getUserKey,
-        getConvoFiles: db.getConvoFiles,
-        updateFilesUsage: db.updateFilesUsage,
-        getUserKeyValues: db.getUserKeyValues,
-        getToolFilesByIds: db.getToolFilesByIds,
-        getCodeGeneratedFiles: db.getCodeGeneratedFiles,
-        filterFilesByAgentAccess,
-      },
-    );
-
-    if (!agent) {
-      logger.warn(
-        '[api/server/controllers/agents/client.js #useMemory] No agent found for memory',
-        memoryConfig,
+        {
+          getFiles: db.getFiles,
+          getUserKey: db.getUserKey,
+          getConvoFiles: db.getConvoFiles,
+          updateFilesUsage: db.updateFilesUsage,
+          getUserKeyValues: db.getUserKeyValues,
+          getToolFilesByIds: db.getToolFilesByIds,
+          getCodeGeneratedFiles: db.getCodeGeneratedFiles,
+          filterFilesByAgentAccess,
+        },
       );
-      return;
+
+      if (!agent) {
+        logger.warn(
+          '[api/server/controllers/agents/client.js #useMemory] No agent found for memory',
+          memoryConfig,
+        );
+        return sharedMemories;
+      }
+
+      const llmConfig = Object.assign(
+        {
+          provider: agent.provider,
+          model: agent.model,
+        },
+        agent.model_parameters,
+      );
+
+      /** @type {import('@librechat/api').MemoryConfig} */
+      const config = {
+        validKeys: memoryConfig.validKeys,
+        instructions: agent.instructions,
+        llmConfig,
+        tokenLimit: memoryConfig.tokenLimit,
+      };
+
+      const messageId = this.responseMessageId + '';
+      const conversationId = this.conversationId + '';
+      const streamId = this.options.req?._resumableStreamId || null;
+      const [personalMemories, processMemory] = await createMemoryProcessor({
+        userId,
+        config,
+        messageId,
+        streamId,
+        conversationId,
+        memoryMethods: {
+          setMemory: db.setMemory,
+          deleteMemory: db.deleteMemory,
+          getFormattedMemories: db.getFormattedMemories,
+        },
+        res: this.options.res,
+        user: createSafeUser(this.options.req.user),
+      });
+
+      this.processMemory = processMemory;
+      return sharedMemories ?? personalMemories;
+    } catch (error) {
+      this.processMemory = undefined;
+      logger.error('[AgentClient] Memory extraction initialization failed', error);
+      return sharedMemories;
     }
-
-    const llmConfig = Object.assign(
-      {
-        provider: agent.provider,
-        model: agent.model,
-      },
-      agent.model_parameters,
-    );
-
-    /** @type {import('@librechat/api').MemoryConfig} */
-    const config = {
-      validKeys: memoryConfig.validKeys,
-      instructions: agent.instructions,
-      llmConfig,
-      tokenLimit: memoryConfig.tokenLimit,
-    };
-
-    const messageId = this.responseMessageId + '';
-    const conversationId = this.conversationId + '';
-    const streamId = this.options.req?._resumableStreamId || null;
-    const [personalMemories, processMemory] = await createMemoryProcessor({
-      userId,
-      config,
-      messageId,
-      streamId,
-      conversationId,
-      memoryMethods: {
-        setMemory: db.setMemory,
-        deleteMemory: db.deleteMemory,
-        getFormattedMemories: db.getFormattedMemories,
-      },
-      res: this.options.res,
-      user: createSafeUser(this.options.req.user),
-    });
-
-    this.processMemory = processMemory;
-    return sharedMemories ?? personalMemories;
   }
 
   /**
