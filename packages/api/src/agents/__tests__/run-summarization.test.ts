@@ -8,6 +8,7 @@ import {
   MAX_SUBAGENT_RUN_CONFIGS,
 } from 'librechat-data-provider';
 import { createRun } from '~/agents/run';
+import { HUMANIZATION_INSTRUCTIONS, withHumanization } from '~/prompts/humanization';
 
 // Mock winston logger — `format` must be callable so @librechat/data-schemas
 // dist module-load completes cleanly; see api/test/__mocks__/logger.js.
@@ -463,7 +464,10 @@ describe('stable/dynamic system instructions', () => {
       ],
     });
 
-    expect(agents[0].instructions).toBe('Static tool instructions\nBase instructions');
+    expect(agents[0].instructions).toBe(
+      withHumanization('Static tool instructions\nBase instructions'),
+    );
+    expect(agents[0].additional_instructions).not.toContain(HUMANIZATION_INSTRUCTIONS);
     expect(agents[0].additional_instructions).toBe('Conversation Date & Time: anchor\nMemory tail');
   });
 });
@@ -961,6 +965,9 @@ describe('subagentConfigs', () => {
       description: 'Deep web research',
     });
     expect(configs[0].agentInputs).toBeDefined();
+    expect(configs[0].agentInputs).toEqual(
+      expect.objectContaining({ instructions: expect.stringContaining(HUMANIZATION_INSTRUCTIONS) }),
+    );
     expect(configs[0].self).toBeUndefined();
   });
 

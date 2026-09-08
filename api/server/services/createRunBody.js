@@ -1,3 +1,5 @@
+const { withHumanization } = require('@librechat/api');
+
 /**
  * Obtains the date string in 'YYYY-MM-DD' format.
  *
@@ -74,9 +76,7 @@ const createRunBody = ({
     systemInstructions += `\n${endpointOption.artifactsPrompt}`;
   }
 
-  if (systemInstructions.trim()) {
-    body.additional_instructions = systemInstructions.trim();
-  }
+  body.additional_instructions = withHumanization(systemInstructions.trim());
 
   if (instructions) {
     body.instructions = instructions;

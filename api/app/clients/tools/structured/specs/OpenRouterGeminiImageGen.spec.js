@@ -13,6 +13,7 @@ jest.mock('@librechat/data-schemas', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
+  withHumanization: jest.requireActual('@librechat/api').withHumanization,
   getBalanceConfig: jest.fn(() => ({ enabled: true })),
   getTransactionsConfig: jest.fn(() => ({ enabled: true })),
   openRouterGeminiToolkit: {
@@ -107,7 +108,11 @@ describe('OpenRouterGeminiImageGen', () => {
         image_size: '2K',
       },
     });
-    expect(payload.messages[0].content[0]).toEqual({
+    expect(payload.messages[0]).toMatchObject({
+      role: 'system',
+      content: expect.stringContaining('naturalidade'),
+    });
+    expect(payload.messages[1].content[0]).toEqual({
       type: 'text',
       text: 'photo of a glass building at sunrise',
     });
@@ -197,7 +202,7 @@ describe('OpenRouterGeminiImageGen', () => {
     });
 
     const payload = JSON.parse(global.fetch.mock.calls[0][1].body);
-    expect(payload.messages[0].content).toEqual([
+    expect(payload.messages[1].content).toEqual([
       { type: 'text', text: 'edit this image' },
       {
         type: 'image_url',

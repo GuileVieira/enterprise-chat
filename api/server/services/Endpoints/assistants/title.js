@@ -1,4 +1,4 @@
-const { isEnabled, sanitizeTitle } = require('@librechat/api');
+const { isEnabled, sanitizeTitle, withHumanization } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 const { CacheKeys } = require('librechat-data-provider');
 const getLogStores = require('~/cache/getLogStores');
@@ -23,6 +23,10 @@ Título:`;
   const completion = await openai.chat.completions.create({
     model: 'gpt-3.5-turbo',
     messages: [
+      {
+        role: 'system',
+        content: withHumanization(),
+      },
       {
         role: 'user',
         content: titlePrompt,

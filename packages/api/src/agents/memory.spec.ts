@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { Run, Providers } from '@librechat/agents';
+import { withHumanization } from '~/prompts/humanization';
 import type { IUser } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import { processMemory } from './memory';
@@ -377,7 +378,7 @@ describe('Memory Agent Header Resolution', () => {
     const runConfig = (Run.create as jest.Mock).mock.calls[0][0];
 
     // For non-Bedrock providers, instructions should be passed to graphConfig
-    expect(runConfig.graphConfig.instructions).toBe('test instructions');
+    expect(runConfig.graphConfig.instructions).toBe(withHumanization('test instructions'));
     expect(runConfig.graphConfig.additional_instructions).toBeDefined();
   });
 

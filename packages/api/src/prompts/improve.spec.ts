@@ -81,6 +81,7 @@ describe('improvePromptText', () => {
     expect(body.model).toBe('anthropic/claude-opus-4.7');
     expect(body.promptCache).toBe(true);
     expect(body.messages[0].role).toBe('system');
+    expect(body.messages[0].content).toContain('naturalidade');
     expect(body.messages[0].content).toContain('Nano Banana Pro');
     expect(body.messages[1]).toEqual({
       role: 'user',

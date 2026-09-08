@@ -25,6 +25,7 @@ const {
   parseText,
   processAudioFile,
   getStorageMetadata,
+  withHumanization,
 } = require('@librechat/api');
 const {
   convertImage,
@@ -121,6 +122,12 @@ const extractImageTextWithOpenRouter = async ({ file }) => {
         temperature: 0,
         max_tokens: maxTokens,
         messages: [
+          {
+            role: 'system',
+            content: withHumanization(
+              'Extraia texto fielmente para indexação. Preserve quebras de linha, números, pontuação e ordem de leitura. Retorne somente o texto extraído.',
+            ),
+          },
           {
             role: 'user',
             content: [

@@ -21,6 +21,7 @@ import type { Response as ServerResponse } from 'express';
 import { GenerationJobManager } from '~/stream/GenerationJobManager';
 import { resolveHeaders, createSafeUser } from '~/utils';
 import Tokenizer from '~/utils/tokenizer';
+import { withHumanization } from '~/prompts/humanization';
 
 type RequiredMemoryMethods = Pick<
   MemoryMethods,
@@ -425,12 +426,14 @@ ${memory ?? 'No existing memories'}`;
      */
     const isBedrock = llmConfig?.provider === Providers.BEDROCK;
 
-    let graphInstructions: string | undefined = instructions;
+    let graphInstructions: string | undefined = withHumanization(instructions);
     let graphAdditionalInstructions: string | undefined = memoryStatus;
     let processedMessages = messages;
 
     if (isBedrock) {
-      const combinedInstructions = [instructions, memoryStatus].filter(Boolean).join('\n\n');
+      const combinedInstructions = [withHumanization(instructions), memoryStatus]
+        .filter(Boolean)
+        .join('\n\n');
 
       if (messages.length > 0) {
         const firstMessage = messages[0];

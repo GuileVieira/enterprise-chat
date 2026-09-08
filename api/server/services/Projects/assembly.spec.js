@@ -136,6 +136,10 @@ describe('AssemblyAI meeting service', () => {
     });
     expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
       model: 'anthropic/claude-sonnet-5',
+      messages: [
+        expect.objectContaining({ role: 'system', content: expect.stringContaining('JSON') }),
+        expect.objectContaining({ role: 'user', content: expect.stringContaining('Vou enviar') }),
+      ],
     });
     expect(global.fetch.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
     expect(global.fetch.mock.calls[0][1].headers.authorization).toBe('Bearer openrouter-test-key');

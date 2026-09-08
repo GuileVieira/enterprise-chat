@@ -3,6 +3,7 @@ const { logger } = require('@librechat/data-schemas');
 const { getBufferString, HumanMessage } = require('@librechat/agents/langchain/messages');
 const {
   createRun,
+  withHumanization,
   isEnabled,
   checkAccess,
   buildToolSet,
@@ -1370,7 +1371,7 @@ class AgentClient extends BaseClient {
         inputText: text,
         contentParts: this.contentParts,
         titleMethod: endpointConfig?.titleMethod,
-        titlePrompt: endpointConfig?.titlePrompt ?? DEFAULT_PT_BR_TITLE_PROMPT,
+        titlePrompt: withHumanization(endpointConfig?.titlePrompt ?? DEFAULT_PT_BR_TITLE_PROMPT),
         titlePromptTemplate:
           endpointConfig?.titlePromptTemplate ?? DEFAULT_PT_BR_TITLE_PROMPT_TEMPLATE,
         chainOptions: {

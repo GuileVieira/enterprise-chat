@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import nodeFetch from 'node-fetch';
+import { withHumanization } from './humanization';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = 'anthropic/claude-opus-4.7';
@@ -172,7 +173,7 @@ export const improvePromptText = async (
     model: OPENROUTER_MODEL,
     promptCache: true,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: withHumanization(SYSTEM_PROMPT) },
       { role: 'user', content: `<user_prompt>\n${escapeXml(normalized)}\n</user_prompt>` },
     ],
   };

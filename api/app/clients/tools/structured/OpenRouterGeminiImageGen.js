@@ -2,10 +2,7 @@ const { v4 } = require('uuid');
 const { tool } = require('@langchain/core/tools');
 const { logger } = require('@librechat/data-schemas');
 const { ContentTypes } = require('librechat-data-provider');
-const {
-  getBalanceConfig,
-  getTransactionsConfig,
-} = require('@librechat/api');
+const { getBalanceConfig, getTransactionsConfig, withHumanization } = require('@librechat/api');
 const openRouterGeminiToolkit =
   require('@librechat/api').openRouterGeminiToolkit || require('./openRouterGeminiToolkit');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
@@ -209,7 +206,10 @@ function createOpenRouterGeminiImageTool(fields = {}) {
       const body = {
         model: OPENROUTER_GEMINI_IMAGE_MODEL,
         modalities: ['image', 'text'],
-        messages: [{ role: 'user', content }],
+        messages: [
+          { role: 'system', content: withHumanization() },
+          { role: 'user', content },
+        ],
       };
 
       if (aspectRatio || imageSize) {

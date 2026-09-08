@@ -7,6 +7,7 @@ const {
   checkBalance,
   getBalanceConfig,
   getModelMaxTokens,
+  withHumanization,
 } = require('@librechat/api');
 const {
   Time,
@@ -427,7 +428,7 @@ const chatV1 = async (req, res) => {
 
       visionPromise = openai.chat.completions
         .create({
-          messages: [visionMessage],
+          messages: [{ role: 'system', content: withHumanization() }, visionMessage],
           max_tokens: 4000,
         })
         .catch((error) => {

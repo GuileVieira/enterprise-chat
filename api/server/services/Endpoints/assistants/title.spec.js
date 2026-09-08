@@ -59,6 +59,11 @@ describe('assistants addTitle', () => {
       expect.objectContaining({
         messages: [
           expect.objectContaining({
+            role: 'system',
+            content: expect.stringContaining('naturalidade'),
+          }),
+          expect.objectContaining({
+            role: 'user',
             content: expect.stringContaining('português do Brasil'),
           }),
         ],

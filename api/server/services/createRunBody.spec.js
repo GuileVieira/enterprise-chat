@@ -1,4 +1,5 @@
 const { createRunBody } = require('./createRunBody');
+const { withHumanization } = require('@librechat/api');
 
 describe('createRunBody', () => {
   const baseOptions = {
@@ -11,6 +12,7 @@ describe('createRunBody', () => {
     expect(body).toEqual({
       assistant_id: 'asst_123',
       model: 'gpt-4',
+      additional_instructions: withHumanization(),
     });
   });
 
@@ -19,7 +21,7 @@ describe('createRunBody', () => {
       ...baseOptions,
       promptPrefix: 'You are a helpful assistant.',
     });
-    expect(body.additional_instructions).toBe('You are a helpful assistant.');
+    expect(body.additional_instructions).toBe(withHumanization('You are a helpful assistant.'));
   });
 
   it('should include projectInstructions before promptPrefix', () => {
@@ -29,7 +31,7 @@ describe('createRunBody', () => {
       promptPrefix: 'You are a helpful assistant.',
     });
     expect(body.additional_instructions).toBe(
-      'Project context: build a website.You are a helpful assistant.',
+      withHumanization('Project context: build a website.You are a helpful assistant.'),
     );
   });
 
@@ -38,7 +40,9 @@ describe('createRunBody', () => {
       ...baseOptions,
       projectInstructions: 'Project context: build a website.',
     });
-    expect(body.additional_instructions).toBe('Project context: build a website.');
+    expect(body.additional_instructions).toBe(
+      withHumanization('Project context: build a website.'),
+    );
   });
 
   it('should merge instructions into body.instructions', () => {
@@ -57,7 +61,7 @@ describe('createRunBody', () => {
         artifactsPrompt: 'Use artifacts.',
       },
     });
-    expect(body.additional_instructions).toBe('Prefix.\nUse artifacts.');
+    expect(body.additional_instructions).toBe(withHumanization('Prefix.\nUse artifacts.'));
   });
 
   it('should prepend projectInstructions before promptPrefix and append artifactsPrompt', () => {
@@ -69,7 +73,9 @@ describe('createRunBody', () => {
         artifactsPrompt: 'Use artifacts.',
       },
     });
-    expect(body.additional_instructions).toBe('Project context.Prefix.\nUse artifacts.');
+    expect(body.additional_instructions).toBe(
+      withHumanization('Project context.Prefix.\nUse artifacts.'),
+    );
   });
 
   it('should include datetime when append_current_datetime is true', () => {
@@ -80,7 +86,7 @@ describe('createRunBody', () => {
       },
       clientTimestamp: '2024-01-15T10:30:00.000Z',
     });
-    expect(body.additional_instructions).toMatch(/^Current date and time: 2024-01-15 10:30:00/);
+    expect(body.additional_instructions).toContain('Current date and time: 2024-01-15 10:30:00');
   });
 
   it('should include datetime + projectInstructions + promptPrefix in correct order', () => {
@@ -94,7 +100,7 @@ describe('createRunBody', () => {
       clientTimestamp: '2024-01-15T10:30:00.000Z',
     });
     expect(body.additional_instructions).toBe(
-      'Current date and time: 2024-01-15 10:30:00\nProject context.Prefix.',
+      withHumanization('Current date and time: 2024-01-15 10:30:00\nProject context.Prefix.'),
     );
   });
 
@@ -105,7 +111,7 @@ describe('createRunBody', () => {
       projectMemories: 'Memories.',
       promptPrefix: 'Prefix.',
     });
-    expect(body.additional_instructions).toBe('Instructions.\nMemories.Prefix.');
+    expect(body.additional_instructions).toBe(withHumanization('Instructions.\nMemories.Prefix.'));
   });
 
   it('should include only projectMemories when no projectInstructions', () => {
@@ -113,7 +119,7 @@ describe('createRunBody', () => {
       ...baseOptions,
       projectMemories: 'Memories.',
     });
-    expect(body.additional_instructions).toBe('Memories.');
+    expect(body.additional_instructions).toBe(withHumanization('Memories.'));
   });
 
   it('should include datetime + instructions + memories + prefix + artifacts in correct order', () => {
@@ -129,7 +135,9 @@ describe('createRunBody', () => {
       clientTimestamp: '2024-01-15T10:30:00.000Z',
     });
     expect(body.additional_instructions).toBe(
-      'Current date and time: 2024-01-15 10:30:00\nInstructions.\nMemories.Prefix.\nArtifacts.',
+      withHumanization(
+        'Current date and time: 2024-01-15 10:30:00\nInstructions.\nMemories.Prefix.\nArtifacts.',
+      ),
     );
   });
 });

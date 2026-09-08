@@ -36,6 +36,7 @@ import { getProviderConfig } from '~/endpoints/config/providers';
 import { resolveHeaders, createSafeUser } from '~/utils/env';
 import { getOpenAIConfig } from '~/endpoints/openai/config';
 import { isUserProvided } from '~/utils/common';
+import { withHumanization } from '~/prompts/humanization';
 
 /** Expected shape of JSON tool search results */
 interface ToolSearchJsonResult {
@@ -823,7 +824,9 @@ export async function createRun({
     const toolInstructions = joinInstructionMap(agent.toolContextMap);
     const dynamicToolInstructions = joinInstructionMap(agent.dynamicToolContextMap);
 
-    const systemContent = [toolInstructions, agent.instructions ?? ''].join('\n').trim();
+    const systemContent = withHumanization(
+      [toolInstructions, agent.instructions ?? ''].join('\n').trim(),
+    );
 
     const additionalInstructions = [dynamicToolInstructions, agent.additional_instructions ?? '']
       .join('\n')
