@@ -50,6 +50,25 @@ describe('preprocessLaTeX', () => {
     expect(preprocessLaTeX(content)).toBe(expected);
   });
 
+  test('escapes Brazilian real values separated from the symbol', () => {
+    const content = '**Faixa:** entre R$ **500 mil** e R$\u00a0_780 mil_, ou R$1.000 por mês';
+    const expected =
+      '**Faixa:** entre R\\$ **500 mil** e R\\$\u00a0_780 mil_, ou R\\$1.000 por mês';
+    expect(preprocessLaTeX(content)).toBe(expected);
+  });
+
+  test('keeps spaced math distinct from Brazilian real values', () => {
+    const content = 'Receita de R$ 500 mil, com fórmula $ 2x + 1 $';
+    const expected = 'Receita de R\\$ 500 mil, com fórmula $$ 2x + 1 $$';
+    expect(preprocessLaTeX(content)).toBe(expected);
+  });
+
+  test('keeps code regions intact after escaping earlier currency values', () => {
+    const content = 'R$ 500 e R$ 780: `$valor$`; fórmula $x + 1$';
+    const expected = 'R\\$ 500 e R\\$ 780: `$valor$`; fórmula $$x + 1$$';
+    expect(preprocessLaTeX(content)).toBe(expected);
+  });
+
   test('escapes currency with commas', () => {
     const content = 'The price is $1,000,000 for this item.';
     const expected = 'The price is \\$1,000,000 for this item.';

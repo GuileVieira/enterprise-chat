@@ -4,7 +4,7 @@ const MHCHEM_PU_REGEX = /\$\\pu\{/g;
 const MHCHEM_CE_ESCAPED_REGEX = /\$\\\\ce\{[^}]*\}\$/g;
 const MHCHEM_PU_ESCAPED_REGEX = /\$\\\\pu\{[^}]*\}\$/g;
 const CURRENCY_REGEX =
-  /(?<![\\$])\$(?!\$)(?=\d+(?:,\d{3})*(?:\.\d+)?(?:[KMBkmb])?(?:\s|$|[^a-zA-Z\d]))/g;
+  /(?<![\\$])\$(?!\$)(?=(?:(?<=R\$)[^\S\r\n]*(?:[*_]{1,2})?)?\d+(?:,\d{3})*(?:\.\d+)?(?:[KMBkmb])?(?:\s|$|[^a-zA-Z\d]))/g;
 const SINGLE_DOLLAR_REGEX = /(?<!\\)\$(?!\$)((?:[^$\n]|\\[$])+?)(?<!\\)(?<!`)\$(?!\$)/g;
 
 /**
@@ -111,8 +111,8 @@ export function preprocessLaTeX(content: string): string {
     processed = escapeMhchem(content);
   }
 
-  // Find all code block regions once
-  const codeRegions = findCodeBlockRegions(processed);
+  // Find code block regions before changing offsets
+  let codeRegions = findCodeBlockRegions(processed);
 
   // First pass: escape currency dollar signs
   const parts: string[] = [];
@@ -131,6 +131,7 @@ export function preprocessLaTeX(content: string): string {
   }
   parts.push(processed.substring(lastIndex));
   processed = parts.join('');
+  codeRegions = findCodeBlockRegions(processed);
 
   // Second pass: convert single dollar delimiters to double dollars
   const result: string[] = [];
