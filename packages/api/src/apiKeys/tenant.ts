@@ -46,7 +46,11 @@ export function createTenantApiHandlers(deps: Dependencies) {
     return users[0];
   }
 
-  async function catalog(user: IUser, tenantId: string): Promise<TTenantApiCatalog> {
+  async function catalog(
+    user: IUser,
+    tenantId: string,
+    includeShared = false,
+  ): Promise<TTenantApiCatalog> {
     const userId = String(user._id);
     const [agents, projects] = await Promise.all([
       deps.getAgents({ tenantId }),
@@ -56,9 +60,20 @@ export function createTenantApiHandlers(deps: Dependencies) {
     for (const agent of agents) {
       if (agent.tenantId !== tenantId) continue;
       const permissions = await getRemoteAgentPermissions(deps, userId, user.role, agent._id);
-      if (!(permissions & PermissionBits.VIEW)) continue;
+      const apiAvailable = Boolean(permissions & PermissionBits.VIEW);
+      if (!apiAvailable) {
+        if (!includeShared) continue;
+        const sharedPermissions = await deps.getEffectivePermissions({
+          userId,
+          role: user.role,
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+        });
+        if (!(sharedPermissions & PermissionBits.VIEW)) continue;
+      }
       result.agents.push({
         id: agent.id,
+        ...(includeShared ? { apiAvailable } : {}),
         name: agent.name ?? agent.id,
         description: agent.description,
         provider: agent.provider,
@@ -100,7 +115,7 @@ export function createTenantApiHandlers(deps: Dependencies) {
         }
         const principal = await owner(tenantId);
         if (!principal) return res.status(409).json({ error: 'tenant_api_owner_required' });
-        if (req.method === 'GET') return res.json(await catalog(principal, tenantId));
+        if (req.method === 'GET') return res.json(await catalog(principal, tenantId, true));
         const name = req.body.name;
         if (typeof name !== 'string' || !name.trim() || name.trim().length > 100) {
           return res.status(400).json({ error: 'invalid_key_name' });

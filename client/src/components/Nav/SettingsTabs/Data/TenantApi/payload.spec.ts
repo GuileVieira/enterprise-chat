@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { tenantApiCommand, tenantApiPayload } from './payload';
+import { tenantApiCommand, tenantApiPayload, tenantProjectsCsv } from './payload';
 
 it('copies agent + project context with no credential in the payload or example', () => {
   const payload = tenantApiPayload('agent-1', 'project-1', 'Use project context');
@@ -40,4 +40,14 @@ it('runs the copied shell command with the environment placeholder and preserves
   );
   expect(output).toContain('Authorization: Bearer test-only-credential');
   expect(output).toContain(payload);
+});
+
+it('exports every project with CSV escaping and neutralizes spreadsheet formulas', () => {
+  expect(
+    tenantProjectsCsv([
+      { projectId: 'one', name: 'A, "B"\nC' },
+      { projectId: 'two', name: '=1+1' },
+    ]),
+  ).toBe('projectId,name\r\n"one","A, ""B""\nC"\r\n"two","\'=1+1"');
+  expect(tenantProjectsCsv([])).toBe('projectId,name');
 });

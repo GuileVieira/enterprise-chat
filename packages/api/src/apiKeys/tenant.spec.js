@@ -167,7 +167,10 @@ it('uses the same tenant and ACL for preview, key catalog and project context', 
     .set('X-Tenant-Id', 'tenant-b')
     .set('Authorization', `Bearer ${body.key}`)
     .expect(200);
-  expect(remote.body).toEqual(preview.body);
+  expect(preview.body).toEqual({
+    ...remote.body,
+    agents: remote.body.agents.map((agent) => ({ ...agent, apiAvailable: true })),
+  });
   expect(remote.body.agents.map((agent) => agent.id)).toEqual(['agent-tenant-a']);
   expect(remote.body.projects.map((project) => project.projectId)).toEqual(['project-tenant-a']);
   expect(JSON.stringify(remote.body)).not.toContain(body.key);
@@ -238,4 +241,42 @@ it('rejects missing, expired and personal keys on the tenant catalog', async () 
     .get('/remote/catalog')
     .set('Authorization', `Bearer ${personal.key}`)
     .expect(403);
+});
+
+it('shows shared agent IDs in management without granting remote access or exposing private agents', async () => {
+  await tenantStorage.run({ tenantId: 'tenant-a' }, async () => {
+    for (const id of ['shared-agent', 'private-agent']) {
+      const agent = await mongoose.models.Agent.create({
+        id,
+        name: id,
+        provider: 'openai',
+        model: 'test',
+        author: new mongoose.Types.ObjectId(),
+      });
+      if (id === 'shared-agent') {
+        await db.grantPermission(
+          PrincipalType.USER,
+          ownerA._id,
+          ResourceType.AGENT,
+          agent._id,
+          PermissionBits.VIEW,
+          ownerA._id,
+        );
+      }
+    }
+  });
+  const preview = await request(app)
+    .get('/keys/catalog?tenantId=tenant-a')
+    .set('X-Test-User', 'owner-a@test.local')
+    .expect(200);
+  expect(preview.body.agents).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: 'shared-agent', apiAvailable: false })]),
+  );
+  expect(preview.body.agents.some((agent) => agent.id === 'private-agent')).toBe(false);
+  const { body } = await create().expect(201);
+  const remote = await request(app)
+    .get('/remote/catalog')
+    .set('Authorization', `Bearer ${body.key}`)
+    .expect(200);
+  expect(remote.body.agents.map((agent) => agent.id)).toEqual(['agent-tenant-a']);
 });

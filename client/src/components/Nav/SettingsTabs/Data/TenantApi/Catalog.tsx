@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, useToastContext } from '@librechat/client';
 import { apiBaseUrl, dataService, QueryKeys } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
-import { tenantApiCommand, tenantApiPayload } from './payload';
+import { tenantApiCommand, tenantApiPayload, tenantProjectsCsv } from './payload';
 
 export default function Catalog({ tenantId }: { tenantId: string }) {
   const localize = useLocalize();
@@ -17,6 +17,8 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
   });
   const selectedAgent =
     data?.agents.find((agent) => agent.id === agentId)?.id ?? data?.agents[0]?.id ?? '';
+  const apiAvailable =
+    data?.agents.find((agent) => agent.id === selectedAgent)?.apiAvailable !== false;
   const selectedProject = data?.projects.some((project) => project.projectId === projectId)
     ? projectId
     : '';
@@ -56,6 +58,9 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
           {data?.agents.map((agent) => (
             <option key={agent.id} value={agent.id}>
               {agent.name} — {agent.id}
+              {agent.apiAvailable === false
+                ? ` — ${localize('com_ui_tenant_api_shared_only')}`
+                : ''}
             </option>
           ))}
         </select>
@@ -87,6 +92,15 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
           ))}
         </select>
       </label>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={!data?.projects.length}
+        onClick={() => copy(tenantProjectsCsv(data?.projects ?? []))}
+      >
+        {localize('com_ui_tenant_api_copy_projects_csv')}
+      </Button>
       <ul className="max-h-48 space-y-2 overflow-y-auto">
         {data?.projects.map((project) => (
           <li
@@ -123,7 +137,7 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
         <Button
           type="button"
           variant="outline"
-          disabled={!selectedAgent}
+          disabled={!selectedAgent || !apiAvailable}
           onClick={() => copy(payload)}
         >
           {localize('com_ui_tenant_api_copy_payload')}
@@ -131,7 +145,7 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
         <Button
           type="button"
           variant="outline"
-          disabled={!selectedAgent}
+          disabled={!selectedAgent || !apiAvailable}
           onClick={() => copy(tenantApiCommand(endpoint, payload))}
         >
           {localize('com_ui_tenant_api_copy_curl')}

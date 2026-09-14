@@ -793,6 +793,12 @@ export type TUpdateSkillNodeRequest = {
 export type TTenantApiCatalog = {
   tenantId: string;
   ownerId: string;
-  agents: { id: string; name: string; description?: string; provider?: string }[];
+  agents: {
+    id: string;
+    name: string;
+    description?: string;
+    apiAvailable?: boolean;
+    provider?: string;
+  }[];
   projects: { projectId: string; name: string; description?: string }[];
 };

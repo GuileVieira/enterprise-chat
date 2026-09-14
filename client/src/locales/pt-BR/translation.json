@@ -1749,6 +1749,8 @@
   "com_ui_tenant_api_principal": "Chaves do tenant usam as permissões do OWNER ativo mais antigo. Se ele perder o papel ou sair do tenant, a chave deixa de funcionar.",
   "com_ui_tenant_api_catalog": "Agentes e projetos para a API",
   "com_ui_tenant_api_context": "O projeto adiciona instruções, memórias e arquivos para busca/RAG. Prompts salvos não entram automaticamente. Envie projectId em cada chamada e mantenha o histórico em messages.",
+  "com_ui_tenant_api_copy_projects_csv": "Copiar todos os projetos como CSV",
+  "com_ui_tenant_api_shared_only": "Compartilhado no chat; sem acesso à API",
   "com_ui_tenant_api_agent": "Agente",
   "com_ui_tenant_api_project": "Projeto",
   "com_ui_tenant_api_no_agents": "Nenhum agente com acesso remoto disponível",
