@@ -3,13 +3,15 @@ import { ResourceType, PermissionBits, hasPermissions } from 'librechat-data-pro
 import type { Request, Response, NextFunction } from 'express';
 import type { IUser } from '@librechat/data-schemas';
 import type { Types } from 'mongoose';
-import { tenantContextMiddleware } from '../middleware';
+import { tenantContextMiddleware } from '../middleware/tenant';
 import { getRemoteAgentPermissions } from './service';
 
 export interface ApiKeyAuthDependencies {
   validateAgentApiKey: (apiKey: string) => Promise<{
     userId: Types.ObjectId;
     keyId: Types.ObjectId;
+    tenantId?: string;
+    scope?: 'tenant';
   } | null>;
   findUser: (query: { _id: string | Types.ObjectId }) => Promise<IUser | null>;
 }
@@ -29,6 +31,8 @@ export interface RemoteAgentAccessDependencies {
 export interface ApiKeyAuthRequest extends Request {
   user?: IUser & { id: string };
   apiKeyId?: Types.ObjectId;
+  tenantId?: string;
+  tenantApiKey?: boolean;
 }
 
 export interface RemoteAgentAccessRequest extends ApiKeyAuthRequest {
@@ -85,6 +89,19 @@ export function createRequireApiKeyAuth(deps: ApiKeyAuthDependencies) {
             code: 'invalid_api_key',
           },
         });
+      }
+
+      if (keyValidation.scope === 'tenant') {
+        if (
+          !keyValidation.tenantId ||
+          user.tenantId !== keyValidation.tenantId ||
+          user.role !== 'OWNER' ||
+          user.disabled === true
+        ) {
+          return res.status(401).json({ error: { code: 'invalid_api_key' } });
+        }
+        req.tenantId = keyValidation.tenantId;
+        req.tenantApiKey = true;
       }
 
       user.id = (user._id as Types.ObjectId).toString();

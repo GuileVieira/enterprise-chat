@@ -72,6 +72,8 @@ export enum QueryKeys {
   activeJobs = 'activeJobs',
   /* Agent API Keys */
   agentApiKeys = 'agentApiKeys',
+  tenantApiKeys = 'tenantApiKeys',
+  tenantApiCatalog = 'tenantApiCatalog',
   /* Skills */
   skills = 'skills',
   skill = 'skill',
@@ -113,6 +115,8 @@ export const DynamicQueryKeys = {
 
 export enum MutationKeys {
   createAgentApiKey = 'createAgentApiKey',
+  createTenantApiKey = 'createTenantApiKey',
+  deleteTenantApiKey = 'deleteTenantApiKey',
   deleteAgentApiKey = 'deleteAgentApiKey',
   fileUpload = 'fileUpload',
   fileDelete = 'fileDelete',

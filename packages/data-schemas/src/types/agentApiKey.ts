@@ -10,9 +10,12 @@ export interface IAgentApiKey extends Document {
   createdAt: Date;
   updatedAt: Date;
   tenantId?: string;
+  scope?: 'tenant';
 }
 
 export interface AgentApiKeyCreateData {
+  scope?: 'tenant';
+  tenantId?: string;
   userId: Types.ObjectId | string;
   name: string;
   expiresAt?: Date | null;

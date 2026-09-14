@@ -23,6 +23,7 @@ import {
   AdminStatGrid,
 } from '../common';
 import CreateUserModal from '../Users/CreateUserModal';
+import TenantApi from '~/components/Nav/SettingsTabs/Data/TenantApi';
 import type { AdminUser } from 'librechat-data-provider';
 
 const TenantDetailPage: React.FC = () => {
@@ -72,6 +73,8 @@ const TenantDetailPage: React.FC = () => {
           </div>
         }
       />
+
+      <TenantApi tenantId={tenantId} />
 
       {isLoading && (
         <AdminPanel className="p-4">

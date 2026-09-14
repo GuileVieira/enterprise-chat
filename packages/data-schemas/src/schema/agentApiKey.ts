@@ -10,6 +10,7 @@ export interface IAgentApiKey extends Document {
   createdAt: Date;
   updatedAt: Date;
   tenantId?: string;
+  scope?: 'tenant';
 }
 
 const agentApiKeySchema: Schema<IAgentApiKey> = new Schema(
@@ -43,6 +44,7 @@ const agentApiKeySchema: Schema<IAgentApiKey> = new Schema(
     expiresAt: {
       type: Date,
     },
+    scope: { type: String, enum: ['tenant'] },
     tenantId: {
       type: String,
       index: true,

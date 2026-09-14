@@ -1785,3 +1785,15 @@ export interface ActiveJobsResponse {
 export const getActiveJobs = (): Promise<ActiveJobsResponse> => {
   return request.get(endpoints.activeJobs());
 };
+
+export const getTenantApiKeys = (tenantId: string): Promise<t.TAgentApiKeyListResponse> =>
+  request.get(endpoints.tenantApiKeys(tenantId));
+export const getTenantApiCatalog = (tenantId: string): Promise<t.TTenantApiCatalog> =>
+  request.get(endpoints.tenantApiKeys(tenantId, '/catalog'));
+export const createTenantApiKey = (
+  tenantId: string,
+  payload: t.TAgentApiKeyCreateRequest,
+): Promise<t.TAgentApiKeyCreateResponse> =>
+  request.post(endpoints.tenantApiKeys(tenantId), payload);
+export const deleteTenantApiKey = (tenantId: string, id: string): Promise<void> =>
+  request.delete(endpoints.tenantApiKeys(tenantId, `/${encodeURIComponent(id)}`));

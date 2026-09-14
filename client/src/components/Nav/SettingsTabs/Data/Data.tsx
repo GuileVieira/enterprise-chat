@@ -7,6 +7,7 @@ import { DeleteCache } from './DeleteCache';
 import { RevokeKeys } from './RevokeKeys';
 import { ClearChats } from './ClearChats';
 import SharedLinks from './SharedLinks';
+import TenantApi from './TenantApi';
 import { useHasAccess } from '~/hooks';
 
 function Data() {
@@ -26,6 +27,7 @@ function Data() {
       <div className="pb-3">
         <SharedLinks />
       </div>
+      <TenantApi />
       {hasAccessToApiKeys && (
         <div className="pb-3">
           <AgentApiKeys />

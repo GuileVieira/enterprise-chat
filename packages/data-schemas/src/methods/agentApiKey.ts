@@ -28,6 +28,8 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
 
       const apiKeyDoc = await AgentApiKey.create({
         userId: data.userId,
+        scope: data.scope,
+        tenantId: data.tenantId,
         name: data.name,
         keyHash,
         keyPrefix,
@@ -48,9 +50,12 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
-  async function validateAgentApiKey(
-    apiKey: string,
-  ): Promise<{ userId: Types.ObjectId; keyId: Types.ObjectId } | null> {
+  async function validateAgentApiKey(apiKey: string): Promise<{
+    userId: Types.ObjectId;
+    keyId: Types.ObjectId;
+    tenantId?: string;
+    scope?: 'tenant';
+  } | null> {
     try {
       return await runAsSystem(async () => {
         const AgentApiKey = mongoose.models.AgentApiKey;
@@ -66,11 +71,24 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
           return null;
         }
 
+        if (keyDoc.scope === 'tenant') {
+          if (!keyDoc.tenantId || keyDoc.tenantId === '__SYSTEM__') return null;
+          const owner = await mongoose.models.User.exists({
+            _id: keyDoc.userId,
+            tenantId: keyDoc.tenantId,
+            role: 'OWNER',
+            disabled: { $ne: true },
+          });
+          if (!owner) return null;
+        }
+
         await AgentApiKey.updateOne({ _id: keyDoc._id }, { $set: { lastUsedAt: new Date() } });
 
         return {
           userId: keyDoc.userId,
           keyId: keyDoc._id as Types.ObjectId,
+          tenantId: keyDoc.tenantId,
+          scope: keyDoc.scope,
         };
       });
     } catch (error) {
@@ -82,7 +100,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
   async function listAgentApiKeys(userId: string | Types.ObjectId): Promise<AgentApiKeyListItem[]> {
     try {
       const AgentApiKey = mongoose.models.AgentApiKey;
-      const keys = (await AgentApiKey.find({ userId })
+      const keys = (await AgentApiKey.find({ userId, scope: { $ne: 'tenant' } })
         .sort({ createdAt: -1 })
         .lean()) as unknown as IAgentApiKey[];
 
@@ -106,7 +124,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
   ): Promise<boolean> {
     try {
       const AgentApiKey = mongoose.models.AgentApiKey;
-      const result = await AgentApiKey.deleteOne({ _id: keyId, userId });
+      const result = await AgentApiKey.deleteOne({ _id: keyId, userId, scope: { $ne: 'tenant' } });
       return result.deletedCount > 0;
     } catch (error) {
       logger.error('[deleteAgentApiKey] Error deleting API key:', error);
@@ -134,6 +152,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
       const keyDoc = (await AgentApiKey.findOne({
         _id: keyId,
         userId,
+        scope: { $ne: 'tenant' },
       }).lean()) as IAgentApiKey | null;
 
       if (!keyDoc) {
@@ -154,7 +173,32 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')) {
     }
   }
 
+  async function listTenantApiKeys(tenantId: string): Promise<AgentApiKeyListItem[]> {
+    const keys = await mongoose.models.AgentApiKey.find({ tenantId, scope: 'tenant' })
+      .sort({ createdAt: -1 })
+      .lean<IAgentApiKey[]>();
+    return keys.map((key) => ({
+      id: String(key._id),
+      name: key.name,
+      keyPrefix: key.keyPrefix,
+      createdAt: key.createdAt,
+      expiresAt: key.expiresAt,
+      lastUsedAt: key.lastUsedAt,
+    }));
+  }
+
+  async function deleteTenantApiKey(tenantId: string, id: string): Promise<boolean> {
+    const result = await mongoose.models.AgentApiKey.deleteOne({
+      _id: id,
+      tenantId,
+      scope: 'tenant',
+    });
+    return result.deletedCount > 0;
+  }
+
   return {
+    listTenantApiKeys,
+    deleteTenantApiKey,
     createAgentApiKey,
     validateAgentApiKey,
     listAgentApiKeys,

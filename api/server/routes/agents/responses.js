@@ -28,6 +28,7 @@ const {
 const { configMiddleware } = require('~/server/middleware');
 const {
   checkAgentPermission,
+  requireProjectAccess,
   preAuthTenantMiddleware,
   requireRemoteAgentAuth,
   checkRemoteAgentsFeature,
@@ -81,7 +82,7 @@ router.use(checkRemoteAgentsFeature);
  *   "usage": { ... }
  * }
  */
-router.post('/', checkAgentPermission, createResponse);
+router.post('/', checkAgentPermission, requireProjectAccess, createResponse);
 
 /**
  * @route GET /v1/responses/models

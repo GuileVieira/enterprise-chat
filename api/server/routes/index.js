@@ -25,6 +25,7 @@ const skills = require('./skills');
 const balance = require('./balance');
 const actions = require('./actions');
 const apiKeys = require('./apiKeys');
+const tenantApiKeys = require('./tenantApiKeys');
 const banner = require('./banner');
 const search = require('./search');
 const models = require('./models');
@@ -56,6 +57,7 @@ module.exports = {
   adminSecrets,
   keys,
   apiKeys,
+  tenantApiKeys,
   user,
   tags,
   roles,

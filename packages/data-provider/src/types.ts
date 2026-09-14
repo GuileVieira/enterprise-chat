@@ -238,6 +238,7 @@ export type TBackupCode = {
 };
 
 export type TUser = {
+  tenantId?: string;
   id: string;
   username: string;
   email: string;
@@ -787,4 +788,11 @@ export type TUpdateSkillNodeRequest = {
   name?: string;
   parentId?: string | null;
   order?: number;
+};
+
+export type TTenantApiCatalog = {
+  tenantId: string;
+  ownerId: string;
+  agents: { id: string; name: string; description?: string; provider?: string }[];
+  projects: { projectId: string; name: string; description?: string }[];
 };

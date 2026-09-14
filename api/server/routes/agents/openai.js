@@ -25,6 +25,8 @@ const {
 const { configMiddleware } = require('~/server/middleware');
 const {
   checkAgentPermission,
+  requireProjectAccess,
+  remoteCatalog,
   preAuthTenantMiddleware,
   requireRemoteAgentAuth,
   checkRemoteAgentsFeature,
@@ -58,7 +60,12 @@ router.use(checkRemoteAgentsFeature);
  * Response (non-streaming):
  * - Standard OpenAI chat.completion format
  */
-router.post('/chat/completions', checkAgentPermission, OpenAIChatCompletionController);
+router.post(
+  '/chat/completions',
+  checkAgentPermission,
+  requireProjectAccess,
+  OpenAIChatCompletionController,
+);
 
 /**
  * @route GET /v1/models
@@ -79,7 +86,11 @@ router.post('/chat/completions', checkAgentPermission, OpenAIChatCompletionContr
  *   ]
  * }
  */
-router.get('/models', ListModelsController);
+router.get('/catalog', remoteCatalog);
+router.get('/projects', remoteCatalog);
+router.get('/models', (req, res) =>
+  req.tenantApiKey ? remoteCatalog(req, res) : ListModelsController(req, res),
+);
 
 /**
  * @route GET /v1/models/:model
