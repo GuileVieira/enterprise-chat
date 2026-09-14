@@ -1,0 +1,190 @@
+{
+  "base": "75d196f31264f729960e1743cc4c61665a9afbc7",
+  "ours": "36b1461b6a6bb90edfdc79dd1abd136d70ab87b4",
+  "upstream": "7fe9a45894f28547b0da498daa02e27355718b02",
+  "base_date": "2026-05-18 \ud83d\udce6 chore: Bump `@librechat/agents` to v3.1.88 (#13187)",
+  "commits": "546\t1348",
+  "local_changed": 1579,
+  "upstream_changed": 4370,
+  "overlap": 589,
+  "local_only_paths": 990,
+  "upstream_only_paths": 3781,
+  "overlap_by_area": {
+    "packages/api": 43,
+    "client/src": 333,
+    "api/app": 6,
+    "api/server": 80,
+    "packages/client": 27,
+    "packages/data-schemas": 49,
+    "api/strategies": 1,
+    "client/vite.config.ts": 1,
+    "helm/librechat": 4,
+    "packages/data-provider": 22,
+    "AGENTS.md": 1,
+    "api/test": 2,
+    "docker-compose.yml": 1,
+    "Dockerfile": 1,
+    "client/index.html": 1,
+    "config/create-user.js": 1,
+    "api/package.json": 1,
+    "client/tailwind.config.cjs": 1,
+    ".gitignore": 1,
+    "Dockerfile.multi": 1,
+    "README.md": 1,
+    "deploy-compose.yml": 1,
+    "package-lock.json": 1,
+    "CLAUDE.md": 1,
+    "api/db": 2,
+    "client/package.json": 1,
+    "package.json": 1,
+    "librechat.example.yaml": 1,
+    "api/models": 1,
+    ".env.example": 1,
+    "bun.lock": 1
+  },
+  "conflict_paths": 414,
+  "conflict_messages": 414,
+  "conflict_by_type": {
+    "CONFLICT (content)": 390,
+    "CONFLICT (add/add)": 4,
+    "CONFLICT (modify/delete)": 20
+  },
+  "conflict_by_area": {
+    ".env.example": 1,
+    ".gitignore": 1,
+    "AGENTS.md": 1,
+    "Dockerfile": 1,
+    "Dockerfile.multi": 1,
+    "README.md": 1,
+    "api/app": 2,
+    "api/package.json": 1,
+    "api/server": 63,
+    "api/strategies": 1,
+    "bun.lock": 1,
+    "client/index.html": 1,
+    "client/package.json": 1,
+    "client/src": 234,
+    "client/vite.config.ts": 1,
+    "config/create-user.js": 1,
+    "librechat.example.yaml": 1,
+    "package-lock.json": 1,
+    "package.json": 1,
+    "packages/api": 27,
+    "packages/client": 24,
+    "packages/data-provider": 16,
+    "packages/data-schemas": 32
+  },
+  "synthetic_tree": "7aa0d542b4830e670bb1163413a2631d976fc186",
+  "overlap_nonconflicting": 175,
+  "conflicts_outside_overlap": 0,
+  "local_added_upstream_absent": 911,
+  "upstream_deleted_local_changed": [
+    "client/src/components/Artifacts/Mermaid.tsx",
+    "client/src/components/Chat/Input/CircleRender.tsx",
+    "client/src/components/Chat/Messages/Content/Parts/EditTextPart.tsx",
+    "client/src/components/Nav/Bookmarks/BookmarkNav.tsx",
+    "client/src/components/Nav/Favorites/FavoritesList.tsx",
+    "client/src/components/Nav/NewChat.tsx",
+    "client/src/components/Nav/SettingsTabs/Data/AgentApiKeys.tsx",
+    "client/src/components/Nav/SettingsTabs/Data/Data.tsx",
+    "client/src/components/Nav/SettingsTabs/Speech/Speech.tsx",
+    "client/src/components/SidePanel/Agents/ActionsPanel.tsx",
+    "client/src/components/SidePanel/Agents/Code/Action.tsx",
+    "client/src/components/SidePanel/Agents/Code/Form.tsx",
+    "client/src/components/SidePanel/Agents/MCPTool.tsx",
+    "client/src/components/SidePanel/Agents/Search/Form.tsx",
+    "client/src/components/SidePanel/Agents/UnconfiguredMCPTool.tsx",
+    "client/src/components/Skills/dialogs/SkillSelectDialog.tsx",
+    "client/src/components/Tools/MCPToolItem.tsx",
+    "client/src/components/Tools/MCPToolSelectDialog.tsx",
+    "client/src/components/Tools/ToolSelectDialog.tsx",
+    "client/src/hooks/Endpoint/Icons.tsx"
+  ],
+  "local_no_graph_changed": 1073,
+  "conflict_test_paths": 46,
+  "conflict_locale_paths": 15,
+  "overlap_no_graph": 589,
+  "marker_blocks": 1026,
+  "top_marker_paths": [
+    [
+      "package-lock.json",
+      147
+    ],
+    [
+      "client/src/hooks/SSE/useResumableSSE.ts",
+      21
+    ],
+    [
+      "client/src/locales/pt-BR/translation.json",
+      14
+    ],
+    [
+      "api/server/services/Files/process.js",
+      13
+    ],
+    [
+      "api/server/services/ToolService.js",
+      13
+    ],
+    [
+      "api/server/services/Endpoints/agents/initialize.js",
+      11
+    ],
+    [
+      "client/src/components/Chat/Input/ChatForm.tsx",
+      10
+    ],
+    [
+      "client/src/locales/en/translation.json",
+      10
+    ],
+    [
+      "api/server/controllers/__tests__/PermissionsController.spec.js",
+      9
+    ],
+    [
+      "client/src/components/Conversations/ConvoOptions/ConvoOptions.tsx",
+      9
+    ],
+    [
+      "packages/api/src/agents/initialize.ts",
+      9
+    ],
+    [
+      "api/app/clients/tools/util/fileSearch.js",
+      8
+    ],
+    [
+      "api/server/controllers/agents/responses.js",
+      8
+    ],
+    [
+      "api/server/controllers/agents/v1.js",
+      8
+    ],
+    [
+      "client/src/components/Chat/Messages/Content/ToolCallGroup.tsx",
+      8
+    ],
+    [
+      "client/src/utils/conversationTags.spec.ts",
+      8
+    ],
+    [
+      "packages/data-schemas/src/methods/share.ts",
+      8
+    ],
+    [
+      "api/server/controllers/agents/client.js",
+      7
+    ],
+    [
+      "api/server/controllers/agents/openai.js",
+      7
+    ],
+    [
+      "client/src/components/Share/ShareView.tsx",
+      7
+    ]
+  ]
+}
