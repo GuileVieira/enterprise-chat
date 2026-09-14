@@ -2,13 +2,34 @@
  * Helper function to create a color value that uses CSS variables with alpha support
  * This is a CommonJS version for use in tailwind.config.js
  */
+const HSL_VARIABLES = new Set([
+  '--background',
+  '--foreground',
+  '--primary',
+  '--primary-foreground',
+  '--secondary',
+  '--secondary-foreground',
+  '--muted',
+  '--muted-foreground',
+  '--accent',
+  '--accent-foreground',
+  '--destructive-foreground',
+  '--border',
+  '--input',
+  '--ring',
+  '--card',
+  '--card-foreground',
+]);
+
 function withOpacity(variableName) {
   return ({ opacityValue }) => {
     if (opacityValue !== undefined) {
-      // The CSS variable already contains rgb() so we need to extract the values
-      return `rgba(var(${variableName}), ${opacityValue})`.replace('rgb(', '').replace(')', '');
+      if (HSL_VARIABLES.has(variableName)) {
+        return `hsl(var(${variableName}) / ${opacityValue})`;
+      }
+      return `color-mix(in srgb, var(${variableName}) calc(${opacityValue} * 100%), transparent)`;
     }
-    return `var(${variableName})`;
+    return HSL_VARIABLES.has(variableName) ? `hsl(var(${variableName}))` : `var(${variableName})`;
   };
 }
 

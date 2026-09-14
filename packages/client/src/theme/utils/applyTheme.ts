@@ -18,6 +18,44 @@ function validateRGB(rgb: string): boolean {
   });
 }
 
+const HSL_VARIABLES = new Set<string>([
+  '--background',
+  '--foreground',
+  '--primary',
+  '--primary-foreground',
+  '--secondary',
+  '--secondary-foreground',
+  '--muted',
+  '--muted-foreground',
+  '--accent',
+  '--accent-foreground',
+  '--destructive-foreground',
+  '--border',
+  '--input',
+  '--ring',
+  '--card',
+  '--card-foreground',
+]);
+
+function rgbToHsl(rgb: string): string {
+  const [red, green, blue] = rgb
+    .split(/\s+/)
+    .map(Number)
+    .map((channel) => channel / 255);
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const format = (value: number) => Number(value.toFixed(2));
+  if (max === min) return `0 0% ${format(lightness * 100)}%`;
+  const delta = max - min;
+  const saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+  let hue: number;
+  if (max === red) hue = (green - blue) / delta + (green < blue ? 6 : 0);
+  else if (max === green) hue = (blue - red) / delta + 2;
+  else hue = (red - green) / delta + 4;
+  return `${format(hue * 60)} ${format(saturation * 100)}% ${format(lightness * 100)}%`;
+}
+
 /**
  * Maps theme RGB values to CSS variables
  */
@@ -108,8 +146,6 @@ export default function applyTheme(themeRGB?: IThemeRGB) {
       return;
     }
 
-    // Set the CSS variable as rgb() value for compatibility
-    // This ensures existing CSS that expects color values (not space-separated RGB) continues to work
-    root.style.setProperty(cssVar, `rgb(${value})`);
+    root.style.setProperty(cssVar, HSL_VARIABLES.has(cssVar) ? rgbToHsl(value) : `rgb(${value})`);
   });
 }

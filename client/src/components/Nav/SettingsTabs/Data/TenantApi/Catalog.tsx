@@ -48,7 +48,7 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
       <label className="block space-y-1">
         <span>{localize('com_ui_tenant_api_agent')}</span>
         <select
-          className="w-full rounded border border-border-light bg-background p-2"
+          className="w-full rounded-lg border border-border-medium bg-background p-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
           value={selectedAgent}
           onChange={(event) => setAgentId(event.target.value)}
         >
@@ -80,7 +80,7 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
       <label className="block space-y-1">
         <span>{localize('com_ui_tenant_api_project')}</span>
         <select
-          className="w-full rounded border border-border-light bg-background p-2"
+          className="w-full rounded-lg border border-border-medium bg-background p-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
           value={selectedProject}
           onChange={(event) => setProjectId(event.target.value)}
         >
@@ -105,11 +105,11 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
         {data?.projects.map((project) => (
           <li
             key={project.projectId}
-            className="flex items-center justify-between gap-2 rounded border border-border-light p-2"
+            className="flex items-center justify-between gap-2 rounded-lg border border-border-light p-2"
           >
             <div className="min-w-0">
               <p className="break-words">{project.name}</p>
-              <code className="break-all text-xs">{project.projectId}</code>
+              <code className="break-all text-xs text-text-secondary">{project.projectId}</code>
             </div>
             <Button
               type="button"
@@ -130,7 +130,7 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
           readOnly
           value={payload}
           rows={10}
-          className="w-full rounded border border-border-light bg-background p-2 font-mono text-xs"
+          className="w-full rounded-lg border border-border-medium bg-background p-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
         />
       </label>
       <div className="flex flex-wrap gap-2">

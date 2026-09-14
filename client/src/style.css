@@ -130,59 +130,60 @@ html {
   --switch-unchecked: 0 0% 58%;
 }
 .dark {
-  --brand-purple: #9b7ee2;
-  --presentation: #201f1a;
-  --text-primary: #f4f1e8;
-  --text-secondary: #d0cabd;
-  --text-secondary-alt: #b2aa9d;
-  --text-tertiary: #928a7e;
+  --brand-purple: #91a37a;
+  --presentation: #202020;
+  --text-primary: #f1f1f1;
+  --text-secondary: #c8c8c8;
+  --text-secondary-alt: #a8a8a8;
+  --text-tertiary: #a0a0a0;
   --text-warning: #d39a35;
+  --ring-primary: #91a37a;
   --text-destructive: #f87171;
-  --header-primary: rgba(32, 31, 26, 0.92);
-  --header-hover: #2d2b25;
-  --header-button-hover: #343129;
-  --surface-active: #444037;
-  --surface-active-alt: #37342d;
-  --surface-hover: #302d27;
-  --surface-hover-alt: #3a362f;
-  --surface-primary: #191815;
-  --surface-primary-alt: #201f1a;
-  --surface-primary-contrast: #28251f;
-  --surface-secondary: #24221d;
-  --surface-secondary-alt: #2b2822;
-  --surface-tertiary: #312e27;
-  --surface-tertiary-alt: #3a362e;
-  --surface-dialog: #24221d;
-  --surface-submit: #4a453a;
-  --surface-submit-hover: #5a5346;
+  --header-primary: #1c1c1c;
+  --header-hover: #282828;
+  --header-button-hover: #303030;
+  --surface-active: #404040;
+  --surface-active-alt: #303030;
+  --surface-hover: #282828;
+  --surface-hover-alt: #383838;
+  --surface-primary: #141414;
+  --surface-primary-alt: #1c1c1c;
+  --surface-primary-contrast: #242424;
+  --surface-secondary: #202020;
+  --surface-secondary-alt: #282828;
+  --surface-tertiary: #303030;
+  --surface-tertiary-alt: #383838;
+  --surface-dialog: #202020;
+  --surface-submit: #4f5a42;
+  --surface-submit-hover: #606e50;
   --surface-destructive: var(--red-800);
   --surface-destructive-hover: var(--red-900);
-  --surface-chat: #24221d;
-  --border-light: rgba(244, 241, 232, 0.1);
-  --border-medium-alt: rgba(244, 241, 232, 0.17);
-  --border-medium: rgba(244, 241, 232, 0.16);
-  --border-heavy: rgba(244, 241, 232, 0.26);
-  --border-xheavy: rgba(244, 241, 232, 0.38);
+  --surface-chat: #202020;
+  --border-light: #3b3b3b;
+  --border-medium-alt: #707070;
+  --border-medium: #707070;
+  --border-heavy: #909090;
+  --border-xheavy: #9a9a9a;
   --border-destructive: var(--red-500);
   /* These are test styles */
 
-  --background: 0 0% 7%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --primary: 41 12% 29%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
+  --background: 0 0% 7.84%;
+  --foreground: 0 0% 94.51%;
+  --card: 0 0% 10.98%;
+  --card-foreground: 0 0% 94.51%;
+  --primary: 87.5 15.38% 30.59%;
+  --primary-foreground: 0 0% 98.04%;
+  --secondary: 0 0% 12.55%;
+  --secondary-foreground: 0 0% 78.43%;
+  --muted: 0 0% 15.69%;
+  --muted-foreground: 0 0% 65.88%;
+  --accent: 90 12.5% 18.82%;
+  --accent-foreground: 0 0% 94.51%;
   --destructive: 0 62.8% 40.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 79 20% 55%;
+  --destructive-foreground: 0 0% 98.04%;
+  --border: 0 0% 43.92%;
+  --input: 0 0% 43.92%;
+  --ring: 86.34 18.22% 55.88%;
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;
@@ -1535,8 +1536,7 @@ html {
 
 .dark body,
 .dark html {
-  --tw-bg-opacity: 1;
-  background-color: rgb(25 24 21 / var(--tw-bg-opacity));
+  background-color: var(--surface-primary);
 }
 
 #__next,
@@ -1808,8 +1808,7 @@ html {
 }
 .dark body,
 .dark html {
-  --tw-bg-opacity: 1;
-  background-color: rgb(25 24 21 / var(--tw-bg-opacity));
+  background-color: var(--surface-primary);
 }
 #__next,
 #root {
