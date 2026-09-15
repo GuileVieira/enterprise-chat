@@ -3,7 +3,7 @@ const { sleep } = require('@librechat/agents');
 const { logger } = require('@librechat/data-schemas');
 const {
   sendEvent,
-  withHumanization,
+  withSystemPrompt,
   countTokens,
   checkBalance,
   createBalanceReservations,
@@ -473,7 +473,7 @@ const chatV1 = async (req, res) => {
 
       visionPromise = openai.chat.completions
         .create({
-          messages: [{ role: 'system', content: withHumanization() }, visionMessage],
+          messages: [{ role: 'system', content: withSystemPrompt() }, visionMessage],
           max_tokens: 4000,
         })
         .catch((error) => {

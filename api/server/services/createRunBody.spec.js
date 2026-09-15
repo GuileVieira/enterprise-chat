@@ -5,8 +5,8 @@ const {
   normalizeClientTimestamp,
 } = require('./createRunBody');
 
-const HUMANIZATION_PREFIX =
-  'Escreva com naturalidade, clareza e concisão, seguindo o tom solicitado. Evite clichês, repetições e linguagem artificial. Preserve fatos, citações, código e formato exigido. Em JSON, extrações, transcrições e ferramentas, cumpra o contrato sem comentários adicionais.\n\n';
+const { GLOBAL_SYSTEM_PROMPT } = require('@librechat/api');
+const SYSTEM_PROMPT_PREFIX = `${GLOBAL_SYSTEM_PROMPT}\n\n`;
 
 describe('createRunBody client timestamp normalization', () => {
   beforeEach(() => {
@@ -34,7 +34,7 @@ describe('createRunBody client timestamp normalization', () => {
     ).toEqual({
       assistant_id: 'assistant-id',
       model: 'model',
-      additional_instructions: `${HUMANIZATION_PREFIX}Current date and time: 2026-07-24 12:30:45`,
+      additional_instructions: `${SYSTEM_PROMPT_PREFIX}Current date and time: 2026-07-24 12:30:45`,
     });
   });
 
@@ -54,7 +54,7 @@ describe('createRunBody client timestamp normalization', () => {
     ).toEqual({
       assistant_id: 'assistant-id',
       model: 'model',
-      additional_instructions: `${HUMANIZATION_PREFIX}Current date and time: 2026-07-24 23:30:45`,
+      additional_instructions: `${SYSTEM_PROMPT_PREFIX}Current date and time: 2026-07-24 23:30:45`,
     });
   });
 
@@ -77,7 +77,7 @@ describe('createRunBody client timestamp normalization', () => {
 
     expect(normalizeClientTimestamp(clientTimestamp)).toBeUndefined();
     expect(body.additional_instructions).toBe(
-      `${HUMANIZATION_PREFIX}Current date and time: 2026-07-24 12:34:56`,
+      `${SYSTEM_PROMPT_PREFIX}Current date and time: 2026-07-24 12:34:56`,
     );
     expect(body.additional_instructions).not.toContain(clientTimestamp);
   });

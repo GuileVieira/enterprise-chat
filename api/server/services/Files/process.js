@@ -42,7 +42,7 @@ const {
   hasActiveFileFieldPolicy,
   sendUploadSuccess,
   getStorageMetadata,
-  withHumanization,
+  withSystemPrompt,
   contentFilterBlockResponse,
   ContentFilterError,
   isContentFilterError,
@@ -153,7 +153,7 @@ const extractImageTextWithOpenRouter = async ({ file }) => {
         messages: [
           {
             role: 'system',
-            content: withHumanization(
+            content: withSystemPrompt(
               'Extraia texto fielmente para indexação. Preserve quebras de linha, números, pontuação e ordem de leitura. Retorne somente o texto extraído.',
             ),
           },

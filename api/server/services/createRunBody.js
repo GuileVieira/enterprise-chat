@@ -1,4 +1,4 @@
-const { withHumanization } = require('@librechat/api');
+const { withSystemPrompt } = require('@librechat/api');
 const LOCAL_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 const ZONED_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -111,7 +111,7 @@ const createRunBody = ({
     systemInstructions += `\n${endpointOption.artifactsPrompt}`;
   }
 
-  body.additional_instructions = withHumanization(systemInstructions.trim());
+  body.additional_instructions = withSystemPrompt(systemInstructions.trim());
 
   if (instructions) {
     body.instructions = instructions;

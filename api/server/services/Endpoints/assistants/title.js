@@ -1,7 +1,7 @@
 const {
   isEnabled,
   sanitizeTitle,
-  withHumanization,
+  withSystemPrompt,
   getAttachmentTitleText,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
@@ -31,7 +31,7 @@ Título:`;
     messages: [
       {
         role: 'system',
-        content: withHumanization(),
+        content: withSystemPrompt(),
       },
       {
         role: 'user',

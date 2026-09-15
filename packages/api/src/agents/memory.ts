@@ -41,7 +41,7 @@ import { contentFilterModelBoundBlockResponse } from '~/middleware/contentFilter
 import { extractMemoryContent } from '~/protection/adapters/submissions';
 import { assertModelBoundContent } from '~/middleware/modelBoundContent';
 import { GenerationJobManager } from '~/stream/GenerationJobManager';
-import { withHumanization } from '~/prompts/humanization';
+import { withSystemPrompt } from '~/prompts/systemPrompt';
 import { inspectContent } from '~/protection/runtime';
 import { checkAccess } from '~/middleware/access';
 import { isMemoryEnabled } from '~/memory';
@@ -940,12 +940,12 @@ ${memory ?? 'No existing memories'}`;
      */
     const isBedrock = llmConfig?.provider === Providers.BEDROCK;
 
-    let graphInstructions: string | undefined = withHumanization(instructions);
+    let graphInstructions: string | undefined = withSystemPrompt(instructions);
     let graphAdditionalInstructions: string | undefined = memoryStatus;
     let processedMessages = messages;
 
     if (isBedrock) {
-      const combinedInstructions = [withHumanization(instructions), memoryStatus]
+      const combinedInstructions = [withSystemPrompt(instructions), memoryStatus]
         .filter(Boolean)
         .join('\n\n');
 

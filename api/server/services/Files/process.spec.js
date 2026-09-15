@@ -129,7 +129,7 @@ jest.mock('@librechat/api', () => {
     },
     isContentFilterError: jest.fn((error) => error?.body != null),
     sanitizeFilename: jest.fn((n) => n),
-    withHumanization: jest.fn((value) => value),
+    withSystemPrompt: jest.fn((value) => value),
     /** Grants both; these specs vary the capability set, not the role. */
     resolveToolRoleGrants: jest.fn(async () => ({ runCode: true, fileSearch: true })),
     parseText: jest.fn().mockResolvedValue({ text: '', bytes: 0 }),

@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { withHumanization } = require('@librechat/api');
+const { withSystemPrompt } = require('@librechat/api');
 
 const API_URL = 'https://api.assemblyai.com';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -98,7 +98,7 @@ async function generateInsights(transcript) {
       messages: [
         {
           role: 'system',
-          content: withHumanization(
+          content: withSystemPrompt(
             'Analise a transcrição em português. Responda somente JSON válido no formato ' +
               '{"summary":"string","decisions":["string"],"nextSteps":["string"],"tasks":["string"]}. ' +
               'Não invente itens; use arrays vazios quando ausentes.',

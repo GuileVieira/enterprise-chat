@@ -11,7 +11,7 @@ const {
   getBalanceConfig,
   getEnvProxyDispatcher,
   getTransactionsConfig,
-  withHumanization,
+  withSystemPrompt,
 } = require('@librechat/api');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { spendTokens, getFiles } = require('~/models');
@@ -360,7 +360,7 @@ function createGeminiImageTool(fields = {}) {
       const geminiModel = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
       const config = {
         responseModalities: ['TEXT', 'IMAGE'],
-        systemInstruction: withHumanization(),
+        systemInstruction: withSystemPrompt(),
       };
 
       const supportsImageSize = !geminiModel.includes('gemini-2.5-flash-image');

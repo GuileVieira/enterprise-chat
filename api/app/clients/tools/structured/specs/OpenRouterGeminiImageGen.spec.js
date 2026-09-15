@@ -13,7 +13,7 @@ jest.mock('@librechat/data-schemas', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
-  withHumanization: jest.requireActual('@librechat/api').withHumanization,
+  withSystemPrompt: jest.requireActual('@librechat/api').withSystemPrompt,
   getBalanceConfig: jest.fn(() => ({ enabled: true })),
   getTransactionsConfig: jest.fn(() => ({ enabled: true })),
   openRouterGeminiToolkit: {

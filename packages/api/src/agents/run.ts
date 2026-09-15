@@ -123,7 +123,7 @@ import { getPluginHookSource } from '~/agents/hooks/source';
 import { getOpenAIConfig } from '~/endpoints/openai/config';
 import { createStepBudgetHook } from '~/agents/stepBudget';
 import { buildHITLRunWiring } from '~/agents/hitl/runtime';
-import { withHumanization } from '~/prompts/humanization';
+import { withSystemPrompt } from '~/prompts/systemPrompt';
 import { buildLangfuseConfig } from '~/langfuse/config';
 import { applyTestRunHook } from '~/agents/testHook';
 import { isUserProvided } from '~/utils/common';
@@ -2394,7 +2394,7 @@ export async function createRun({
     const toolInstructions = joinInstructionMap(agent.toolContextMap);
     const dynamicToolInstructions = joinInstructionMap(agent.dynamicToolContextMap);
 
-    const systemContent = withHumanization(
+    const systemContent = withSystemPrompt(
       [toolInstructions, agent.instructions ?? ''].join('\n').trim(),
     );
 

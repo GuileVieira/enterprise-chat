@@ -6,6 +6,7 @@ import {
   FileSources,
   MAX_SUBAGENT_DEPTH,
   MAX_SUBAGENT_RUN_CONFIGS,
+  encodeEphemeralAgentId,
 } from 'librechat-data-provider';
 import type { CompactionSemanticIndex, SubagentTaskConfig, AgentInputs } from '@librechat/agents';
 import type { SummarizationConfig, TEndpoint } from 'librechat-data-provider';
@@ -14,7 +15,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 import type { OpenAI } from 'openai';
 import type { ModelBoundChatModelCallback } from '~/middleware/modelBoundContent';
 import type { OpenAIConfiguration, AzureOptions } from '~/types';
-import { HUMANIZATION_INSTRUCTIONS, withHumanization } from '~/prompts/humanization';
+import { GLOBAL_SYSTEM_PROMPT, withSystemPrompt } from '~/prompts/systemPrompt';
 import { initializeOpenAI } from '~/endpoints/openai/initialize';
 import { isAskUserQuestionAdminDisabled } from '~/agents/run';
 import { getOpenAIConfig } from '~/endpoints/openai/config';
@@ -2089,12 +2090,13 @@ describe('initialSummary passthrough', () => {
 // Suite 7: stable/dynamic system instructions
 // ---------------------------------------------------------------------------
 describe('stable/dynamic system instructions', () => {
-  it('keeps static tool and agent instructions separate from dynamic runtime tail', async () => {
+  it('injects global, project, and memory context for a direct LLM ephemeral agent', async () => {
     const agents = await callAndCapture({
       agents: [
         makeAgent({
-          instructions: 'Base instructions',
-          additional_instructions: 'Memory tail',
+          id: encodeEphemeralAgentId({ endpoint: 'openAI', model: 'gpt-4o' }),
+          instructions: 'Project instructions\n\nDirect model instructions',
+          additional_instructions: '# Existing memory about the user:\nPrefers concise answers',
           toolContextMap: { web_search: 'Static tool instructions' },
           dynamicToolContextMap: { web_search: 'Conversation Date & Time: anchor' },
         }),
@@ -2102,10 +2104,14 @@ describe('stable/dynamic system instructions', () => {
     });
 
     expect(agents[0].instructions).toBe(
-      withHumanization('Static tool instructions\nBase instructions'),
+      withSystemPrompt(
+        'Static tool instructions\nProject instructions\n\nDirect model instructions',
+      ),
     );
-    expect(agents[0].additional_instructions).not.toContain(HUMANIZATION_INSTRUCTIONS);
-    expect(agents[0].additional_instructions).toBe('Conversation Date & Time: anchor\nMemory tail');
+    expect(agents[0].additional_instructions).not.toContain(GLOBAL_SYSTEM_PROMPT);
+    expect(agents[0].additional_instructions).toBe(
+      'Conversation Date & Time: anchor\n# Existing memory about the user:\nPrefers concise answers',
+    );
   });
 });
 
@@ -2786,7 +2792,7 @@ describe('subagentConfigs', () => {
     });
     expect(configs[0].agentInputs).toBeDefined();
     expect(configs[0].agentInputs).toEqual(
-      expect.objectContaining({ instructions: expect.stringContaining(HUMANIZATION_INSTRUCTIONS) }),
+      expect.objectContaining({ instructions: expect.stringContaining(GLOBAL_SYSTEM_PROMPT) }),
     );
     expect(configs[0].self).toBeUndefined();
   });
