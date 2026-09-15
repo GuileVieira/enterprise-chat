@@ -15,7 +15,7 @@ describe('GroupIcon', () => {
     );
 
     expect(screen.queryByRole('img', { name: 'Custom' })).not.toBeInTheDocument();
-    expect(container.querySelector('svg')).toBeInTheDocument();
+    expect(container.querySelector('.lucide-bot')).toBeInTheDocument();
     expect(screen.getByTitle('My Agents')).toBeInTheDocument();
   });
 

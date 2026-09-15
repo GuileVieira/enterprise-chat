@@ -1,4 +1,4 @@
-import { Feather } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { Sparkles } from '@librechat/client';
 import { EModelEndpoint } from 'librechat-data-provider';
 
@@ -18,7 +18,7 @@ export function EntityEndpointMark({
   className?: string;
 }) {
   if (endpoint === EModelEndpoint.agents) {
-    return <Feather className={className} aria-hidden="true" />;
+    return <Bot className={className} aria-hidden="true" />;
   }
 
   if (endpoint === EModelEndpoint.assistants || endpoint === EModelEndpoint.azureAssistants) {

@@ -72,12 +72,13 @@ describe('ConvoIcon', () => {
   });
 
   it('falls back to the agent mark when the agent has no avatar', () => {
-    renderIcon({
+    const { container } = renderIcon({
       endpoint: EModelEndpoint.agents,
       agent_id: 'missing_agent',
     } as TConversation);
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(container.querySelector('.lucide-bot')).toBeInTheDocument();
   });
 
   it('keeps the assistant avatar rather than provider art', () => {
