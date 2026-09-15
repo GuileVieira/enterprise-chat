@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spinner, TooltipAnchor } from '@librechat/client';
 import {
   PencilSimple as Pencil,
   Plug as PlugZap,
@@ -7,7 +8,6 @@ import {
   Trash as Trash2,
   X,
 } from '@phosphor-icons/react';
-import { Spinner, TooltipAnchor } from '@librechat/client';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -63,9 +63,9 @@ export default function MCPCardActions({
   const buttonBaseClass = cn(
     'flex size-7 items-center justify-center rounded-md',
     'transition-colors duration-150',
-    'text-text-secondary hover:text-text-primary',
+    'text-text-secondary hover:text-text-secondary',
     'hover:bg-surface-tertiary',
-    'focus:outline-none focus-visible:ring-2 focus-visible:ring-border-heavy',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary',
   );
 
   // Loading state - show spinner (with cancel option)
@@ -99,7 +99,7 @@ export default function MCPCardActions({
           >
             <div className="relative size-4">
               <Spinner className="size-4 group-hover:opacity-0" />
-              <X className="absolute inset-0 size-4 text-red-500 opacity-0 group-hover:opacity-100" />
+              <X className="absolute inset-0 size-4 text-text-destructive opacity-0 group-hover:opacity-100" />
             </div>
           </TooltipAnchor>
         ) : (
@@ -132,7 +132,7 @@ export default function MCPCardActions({
       )}
 
       {/* Connect button - for disconnected or error states */}
-      {(isDisconnected || isError) && (
+      {(isDisconnected || isError) && !serverStatus?.requestScoped && (
         <TooltipAnchor
           description={localize('com_nav_mcp_connect')}
           side="top"
@@ -145,8 +145,9 @@ export default function MCPCardActions({
         </TooltipAnchor>
       )}
 
-      {/* Configure button - for connected servers with custom vars */}
-      {isConnected && hasCustomUserVars && (
+      {/* On-demand servers stay idle between requests, so their user variables
+          must remain configurable without a live transport connection. */}
+      {(isConnected || serverStatus?.requestScoped) && hasCustomUserVars && (
         <TooltipAnchor
           description={localize('com_ui_configure')}
           side="top"
@@ -160,7 +161,7 @@ export default function MCPCardActions({
       )}
 
       {/* Refresh button - for connected servers (allows reconnection) */}
-      {isConnected && (
+      {isConnected && !serverStatus?.requestScoped && (
         <TooltipAnchor
           description={localize('com_nav_mcp_reconnect')}
           side="top"
@@ -178,12 +179,12 @@ export default function MCPCardActions({
         <TooltipAnchor
           description={localize('com_ui_revoke')}
           side="top"
-          className={cn(buttonBaseClass, 'text-red-500 hover:text-red-600')}
+          className={buttonBaseClass}
           aria-label={localize('com_ui_revoke')}
           role="button"
           onClick={onRevoke}
         >
-          <Trash2 className="size-3.5" aria-hidden="true" />
+          <Trash2 className="size-3.5 text-text-destructive" aria-hidden="true" />
         </TooltipAnchor>
       )}
     </div>

@@ -9,11 +9,21 @@ import type {
   ProjectMetaAdsStatus,
   TProject,
 } from 'librechat-data-provider';
-import English from '~/locales/en/translation.json';
 import PortugueseBrazil from '~/locales/pt-BR/translation.json';
 import ProjectMetaAdsPanel from '../ProjectMetaAdsPanel';
+import English from '~/locales/en/translation.json';
 
-const mockMutateSettings = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
+type SettingsMutationOptions = {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+};
+type BudgetMutationError = { response: { data: { message: string } } };
+type BudgetMutationOptions = {
+  onSuccess?: (response: unknown) => void;
+  onError?: (error: BudgetMutationError) => void;
+};
+
+const mockMutateSettings = jest.fn((_payload: unknown, options?: SettingsMutationOptions) =>
   options?.onSuccess?.(),
 );
 const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
@@ -21,23 +31,22 @@ const mockMutateTenantToken = jest.fn((_payload: unknown, options?: { onSuccess?
 );
 const mockMutateRun = jest.fn();
 const mockMutateApply = jest.fn();
-const mockMutateBudget = jest.fn(
-  (_payload: unknown, options?: { onSuccess?: (response: unknown) => void }) =>
-    options?.onSuccess?.({
-      change: {
-        _id: 'change-default',
-        entityLevel: 'campaign',
-        entityId: 'campaign-cbo',
-        entityName: 'CBO Messages',
-        previousDailyBudget: 100,
-        newDailyBudget: 125,
-        deltaDailyBudget: 25,
-        deltaPercent: 25,
-        actor: 'user',
-        reason: 'manual-ui',
-        createdAt: '2026-07-06T12:00:00.000-03:00',
-      },
-    }),
+const mockMutateBudget = jest.fn((_payload: unknown, options?: BudgetMutationOptions) =>
+  options?.onSuccess?.({
+    change: {
+      _id: 'change-default',
+      entityLevel: 'campaign',
+      entityId: 'campaign-cbo',
+      entityName: 'CBO Messages',
+      previousDailyBudget: 100,
+      newDailyBudget: 125,
+      deltaDailyBudget: 25,
+      deltaPercent: 25,
+      actor: 'user',
+      reason: 'manual-ui',
+      createdAt: '2026-07-06T12:00:00.000-03:00',
+    },
+  }),
 );
 const mockMutateDuplicate = jest.fn();
 const mockMutateEntityStatus = jest.fn();
@@ -131,15 +140,17 @@ jest.mock('@librechat/client', () => ({
     children,
     className,
     style,
+    overlayClassName,
     overlayStyle,
   }: {
     children: React.ReactNode;
     className?: string;
     style?: React.CSSProperties;
+    overlayClassName?: string;
     overlayStyle?: React.CSSProperties;
   }) => (
     <>
-      <div data-testid="mock-dialog-overlay" style={overlayStyle} />
+      <div data-testid="mock-dialog-overlay" className={overlayClassName} style={overlayStyle} />
       <div role="dialog" className={className} style={style}>
         {children}
       </div>
@@ -2937,9 +2948,8 @@ describe('ProjectMetaAdsPanel', () => {
         adSets: [],
       },
     ];
-    mockMutateSettings.mockImplementationOnce(
-      (_payload: unknown, options?: { onError?: (error: Error) => void }) =>
-        options?.onError?.(new Error('Save failed')),
+    mockMutateSettings.mockImplementationOnce((_payload, options) =>
+      options?.onError?.(new Error('Save failed')),
     );
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -4001,20 +4011,14 @@ describe('ProjectMetaAdsPanel', () => {
         adSets: [],
       },
     ];
-    mockMutateBudget.mockImplementationOnce(
-      (
-        _payload,
-        options?: {
-          onError?: (error: { response: { data: { message: string } } }) => void;
-        },
-      ) =>
-        options?.onError?.({
-          response: {
-            data: {
-              message: 'Manual Meta Ads budget is outside the effective rule limits.',
-            },
+    mockMutateBudget.mockImplementationOnce((_payload, options) =>
+      options?.onError?.({
+        response: {
+          data: {
+            message: 'Manual Meta Ads budget is outside the effective rule limits.',
           },
-        }),
+        },
+      }),
     );
 
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
@@ -4296,8 +4300,8 @@ describe('ProjectMetaAdsPanel', () => {
       within(prospectingRow as HTMLElement).getByText('com_ui_project_meta_ads_view_details'),
     );
     expect(screen.getByRole('dialog')).toHaveTextContent('com_ui_project_meta_ads_rule_details');
-    expect(screen.getByRole('dialog')).toHaveStyle({ zIndex: 10040 });
-    expect(screen.getByTestId('mock-dialog-overlay')).toHaveStyle({ zIndex: 10030 });
+    expect(screen.getByRole('dialog')).toHaveClass('!z-[10040]');
+    expect(screen.getByTestId('mock-dialog-overlay')).toHaveClass('!z-[10030]');
     expect(screen.getAllByText('com_ui_project_meta_ads_before').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_after').length).toBeGreaterThan(0);
     expect(screen.getAllByText('com_ui_project_meta_ads_average_in_period').length).toBeGreaterThan(

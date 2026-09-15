@@ -1,17 +1,19 @@
 import React, { forwardRef } from 'react';
+import { useRecoilValue } from 'recoil';
 import { useWatch } from 'react-hook-form';
 import { ArrowUp } from '@phosphor-icons/react';
-import type { Control } from 'react-hook-form';
 import { TooltipAnchor } from '@librechat/client';
-import { useRecoilValue } from 'recoil';
+import type { Control } from 'react-hook-form';
+import { cn, isSubmittableMessage } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 import store from '~/store';
 
 type SendButtonProps = {
   disabled: boolean;
   control: Control<{ text: string }>;
   index: number;
+  /** Number of attached files; attachments allow sending without text */
+  fileCount?: number;
 };
 
 const SubmitButton = React.memo(
@@ -27,7 +29,7 @@ const SubmitButton = React.memo(
             id="send-button"
             disabled={props.disabled}
             className={cn(
-              'rounded-full bg-text-primary p-1.5 text-text-primary outline-offset-4 transition-all duration-200 disabled:cursor-not-allowed disabled:text-text-secondary disabled:opacity-10',
+              'size-theme-control rounded-theme-control-round bg-text-primary p-theme-compact text-text-primary outline-offset-4 transition-all duration-theme-normal disabled:cursor-not-allowed disabled:text-text-secondary disabled:opacity-10',
             )}
             data-testid="send-button"
             type="submit"
@@ -46,10 +48,8 @@ const SendButton = React.memo(
   forwardRef((props: SendButtonProps, ref: React.ForwardedRef<HTMLButtonElement>) => {
     const data = useWatch({ control: props.control });
     const activeHiddenPrompt = useRecoilValue(store.activeHiddenPromptByIndex(props.index));
-    const content = data?.text?.trim();
-    return (
-      <SubmitButton ref={ref} disabled={props.disabled || (!content && !activeHiddenPrompt)} />
-    );
+    const canSubmit = isSubmittableMessage(data?.text, props.fileCount) || !!activeHiddenPrompt;
+    return <SubmitButton ref={ref} disabled={props.disabled || !canSubmit} />;
   }),
 );
 

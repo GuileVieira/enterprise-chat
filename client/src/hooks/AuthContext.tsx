@@ -8,12 +8,14 @@ import {
   createContext,
 } from 'react';
 import { debounce } from 'lodash';
-import { useRecoilState, useSetRecoilState } from 'recoil';
+import { getDefaultStore } from 'jotai';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRecoilState, useSetRecoilState } from 'recoil';
 import {
   apiBaseUrl,
   QueryKeys,
+  ErrorTypes,
   SystemRoles,
   roleDefaults,
   setTokenHeader,
@@ -23,14 +25,22 @@ import {
 import type * as t from 'librechat-data-provider';
 import type { ReactNode } from 'react';
 import {
+  SESSION_KEY,
+  isSafeRedirect,
+  getPostLoginRedirect,
+  clearComposerDraftStorage,
+  clearRetainedFileDeletions,
+  openFileDeletionRetention,
+} from '~/utils';
+import {
   useGetRole,
   useGetUserQuery,
   useLoginUserMutation,
   useLogoutUserMutation,
   useRefreshTokenMutation,
 } from '~/data-provider';
+import { resetChatFilterSessionAtom } from '~/components/Conversations/chatFilters';
 import { TAuthConfig, TUserContext, TAuthContext, TResError } from '~/common';
-import { SESSION_KEY, isSafeRedirect, getPostLoginRedirect } from '~/utils';
 import useTimeout from './useTimeout';
 import store from '~/store';
 
@@ -39,6 +49,18 @@ const AuthContext = (import.meta.hot?.data?.__AuthContext ??
 if (import.meta.hot) {
   import.meta.hot.data.__AuthContext = AuthContext;
 }
+
+/** Client state belonging to the session that is ending. Drafts go out with the retained
+ * deletions rather than being left to the next sign-in: a social sign-in returns through the
+ * silent refresh and never passes the login mutation that clears them, and the browser tab keeps
+ * its identity across an in-app account switch, so the account on the way out is the only place
+ * that reliably sees the transition. Both are cleared together so neither can be added to an exit
+ * path the other was wired into. */
+const endSessionClientState = (): void => {
+  getDefaultStore().set(resetChatFilterSessionAtom);
+  clearRetainedFileDeletions();
+  clearComposerDraftStorage();
+};
 
 const AuthContextProvider = ({
   authConfig,
@@ -53,9 +75,11 @@ const AuthContextProvider = ({
   const [token, setToken] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(authConfig?.test === true);
   const setQueriesEnabled = useSetRecoilState<boolean>(store.queriesEnabled);
   const queryClient = useQueryClient();
   const previousRolesRef = useRef<Record<string, t.TRole | null | undefined>>({});
+  const roleIdentityRef = useRef<string | undefined>(undefined);
 
   const userRoleName = user?.role ?? '';
   const isCustomRole = isAuthenticated && !!user?.role && !isSystemRoleName(user.role);
@@ -75,18 +99,18 @@ const AuthContextProvider = ({
   const { data: customRole = null } = useGetRole(isCustomRole ? userRoleName : '_', {
     enabled: isCustomRole,
   });
+  const systemRoleData: Record<string, t.TRole | null | undefined> = {
+    [SystemRoles.OWNER]: ownerRole,
+    [SystemRoles.AD_MANAGER]: adManagerRole,
+    [SystemRoles.ADMIN]: adminRole,
+    [SystemRoles.USER]: userRole,
+  };
+  const currentRole = isCustomRole ? customRole : systemRoleData[userRoleName];
   const isRoleLoading =
     isAuthenticated &&
     !!user?.role &&
-    (isCustomRole
-      ? customRole == null && previousRolesRef.current[user.role] == null
-      : user.role === SystemRoles.OWNER
-        ? ownerRole == null && previousRolesRef.current[user.role] == null
-        : user.role === SystemRoles.AD_MANAGER
-          ? adManagerRole == null && previousRolesRef.current[user.role] == null
-          : user.role === SystemRoles.ADMIN
-            ? adminRole == null && previousRolesRef.current[user.role] == null
-            : userRole == null && previousRolesRef.current[user.role] == null);
+    currentRole == null &&
+    previousRolesRef.current[user.role] == null;
 
   const navigate = useNavigate();
 
@@ -94,15 +118,34 @@ const AuthContextProvider = ({
     () =>
       debounce((userContext: TUserContext) => {
         const { token, isAuthenticated, user, redirect } = userContext;
+        const nextRoleIdentity =
+          isAuthenticated && user ? `${user.tenantId ?? ''}:${user.id ?? ''}` : undefined;
+        if (roleIdentityRef.current !== nextRoleIdentity) {
+          previousRolesRef.current = {};
+          queryClient.removeQueries([QueryKeys.roles]);
+          queryClient.removeQueries([QueryKeys.rolesList]);
+          roleIdentityRef.current = nextRoleIdentity;
+        }
         setUser(user);
         setToken(token);
         setTokenHeader(token);
         setIsAuthenticated(isAuthenticated);
+        setIsAuthReady(true);
         if (isAuthenticated) {
           setQueriesEnabled(true);
           queryClient.invalidateQueries([QueryKeys.projects]);
+          /** The clear on the way out latches retention shut so a DELETE that settles afterwards
+           * cannot write the departing account's payload back in. This is the only place that
+           * knows a new session exists to reopen it for. */
+          openFileDeletionRetention();
         } else {
           queryClient.removeQueries([QueryKeys.projects]);
+          /** Cleanup still queued from a failed delete belongs to the account that uploaded
+           * those files, and losing the session passes through here every way it can happen: the
+           * explicit logout, a silent refresh that comes back empty, and a failed user query.
+           * Carrying the queue across would retry it under whoever signs in next, which the
+           * ownership check rejects forever instead of cleaning anything up. */
+          endSessionClientState();
         }
 
         const searchParams = new URLSearchParams(window.location.search);
@@ -138,7 +181,8 @@ const AuthContextProvider = ({
     },
     onError: (error: TResError | unknown) => {
       const resError = error as TResError;
-      doSetError(resError.message);
+      const code = resError.response?.data?.code;
+      doSetError(code === ErrorTypes.AUTH_CROSS_ORIGIN ? code : resError.message);
       // Preserve a valid redirect_to across login failures so the deep link survives retries.
       // Cannot use buildLoginRedirectUrl() here — it reads the current pathname (already /login)
       // and would return plain /login, dropping the redirect_to destination.
@@ -153,15 +197,17 @@ const AuthContextProvider = ({
   const logoutUser = useLogoutUserMutation({
     onSuccess: (data) => {
       if (data.redirect) {
-        /** data.redirect is the IdP's end_session_endpoint URL — an absolute URL generated
+        /** data.redirect is the IdP's end_session_endpoint URL: an absolute URL generated
          * server-side from trusted IdP metadata (not user input), so isSafeRedirect is bypassed.
          * setUserContext is debounced (50ms) and won't fire before page unload, so clear the
-         * axios Authorization header synchronously to prevent in-flight requests. */
+         * axios Authorization header and deletion state synchronously to prevent in-flight requests. */
         isExternalRedirectRef.current = true;
         setTokenHeader(undefined);
+        endSessionClientState();
         window.location.replace(data.redirect);
         return;
       }
+      endSessionClientState();
       setUserContext({
         token: undefined,
         isAuthenticated: false,
@@ -170,6 +216,7 @@ const AuthContextProvider = ({
       });
     },
     onError: (error) => {
+      endSessionClientState();
       doSetError((error as Error).message);
       setUserContext({
         token: undefined,
@@ -199,7 +246,6 @@ const AuthContextProvider = ({
 
   const silentRefresh = useCallback(() => {
     if (authConfig?.test === true) {
-      console.log('Test mode. Skipping silent refresh.');
       return;
     }
     if (isExternalRedirectRef.current) {
@@ -228,20 +274,28 @@ const AuthContextProvider = ({
           return;
         }
         console.log('Token is not present. User is not authenticated.');
+        endSessionClientState();
+        setIsAuthReady(true);
         if (authConfig?.test === true) {
           return;
         }
-        navigate(buildLoginRedirectUrl());
+        if (authConfig?.optional !== true) {
+          navigate(buildLoginRedirectUrl());
+        }
       },
       onError: (error) => {
         if (isExternalRedirectRef.current) {
           return;
         }
         console.log('refreshToken mutation error:', error);
+        endSessionClientState();
+        setIsAuthReady(true);
         if (authConfig?.test === true) {
           return;
         }
-        navigate(buildLoginRedirectUrl());
+        if (authConfig?.optional !== true) {
+          navigate(buildLoginRedirectUrl());
+        }
       },
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deps are stable at mount; adding refreshToken causes infinite re-fire
@@ -254,8 +308,12 @@ const AuthContextProvider = ({
     if (userQuery.data) {
       setUser(userQuery.data);
     } else if (userQuery.isError) {
+      endSessionClientState();
       doSetError((userQuery.error as Error).message);
-      navigate(buildLoginRedirectUrl(), { replace: true });
+      setIsAuthReady(true);
+      if (authConfig?.optional !== true) {
+        navigate(buildLoginRedirectUrl(), { replace: true });
+      }
     }
     if (error != null && error && isAuthenticated) {
       doSetError(undefined);
@@ -263,6 +321,9 @@ const AuthContextProvider = ({
     if (token == null || !token || !isAuthenticated) {
       silentRefresh();
     }
+    /** `doSetError` is `useTimeout`'s inner closure, rebuilt every render, and this effect calls
+     * `silentRefresh`: depending on it would re-fire the refresh mutation on every render. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     token,
     isAuthenticated,
@@ -293,47 +354,58 @@ const AuthContextProvider = ({
     };
   }, [setUserContext, user]);
 
-  const memoedValue = useMemo(() => {
-    const roles = {
-      ...previousRolesRef.current,
-      [SystemRoles.USER]: userRole ?? previousRolesRef.current[SystemRoles.USER] ?? null,
-      [SystemRoles.ADMIN]: adminRole ?? previousRolesRef.current[SystemRoles.ADMIN] ?? null,
-      [SystemRoles.OWNER]:
-        ownerRole ?? previousRolesRef.current[SystemRoles.OWNER] ?? roleDefaults[SystemRoles.OWNER],
-      [SystemRoles.AD_MANAGER]:
-        adManagerRole ??
-        previousRolesRef.current[SystemRoles.AD_MANAGER] ??
-        roleDefaults[SystemRoles.AD_MANAGER],
-      ...(isCustomRole
-        ? { [userRoleName]: customRole ?? previousRolesRef.current[userRoleName] ?? null }
-        : {}),
-    };
-    previousRolesRef.current = roles;
-    return {
+  const memoedValue = useMemo(
+    () => {
+      const roles = {
+        ...previousRolesRef.current,
+        [SystemRoles.USER]: userRole ?? previousRolesRef.current[SystemRoles.USER] ?? null,
+        [SystemRoles.ADMIN]: adminRole ?? previousRolesRef.current[SystemRoles.ADMIN] ?? null,
+        [SystemRoles.OWNER]:
+          ownerRole ??
+          previousRolesRef.current[SystemRoles.OWNER] ??
+          roleDefaults[SystemRoles.OWNER],
+        [SystemRoles.AD_MANAGER]:
+          adManagerRole ??
+          previousRolesRef.current[SystemRoles.AD_MANAGER] ??
+          roleDefaults[SystemRoles.AD_MANAGER],
+        ...(isCustomRole
+          ? { [userRoleName]: customRole ?? previousRolesRef.current[userRoleName] ?? null }
+          : {}),
+      };
+      previousRolesRef.current = roles;
+      return {
+        user,
+        token,
+        error,
+        login,
+        logout,
+        setError,
+        roles,
+        isRoleLoading,
+        isAuthenticated,
+        isAuthReady,
+      };
+    },
+
+    /** `login` is a plain function rebuilt every render, so depending on it would rebuild this
+     * context value every render and re-render every consumer of auth state. */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
       user,
-      token,
       error,
-      login,
-      logout,
-      setError,
-      roles,
-      isRoleLoading,
       isAuthenticated,
-    };
-  }, [
-    user,
-    error,
-    isAuthenticated,
-    token,
-    userRole,
-    adminRole,
-    ownerRole,
-    adManagerRole,
-    isCustomRole,
-    userRoleName,
-    customRole,
-    isRoleLoading,
-  ]);
+      isAuthReady,
+      token,
+      userRole,
+      adminRole,
+      ownerRole,
+      adManagerRole,
+      isCustomRole,
+      userRoleName,
+      customRole,
+      isRoleLoading,
+    ],
+  );
 
   return <AuthContext.Provider value={memoedValue}>{children}</AuthContext.Provider>;
 };

@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
+import { useSearchParams } from 'react-router-dom';
 import { EModelEndpoint, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type {
   TPreset,
@@ -39,6 +40,16 @@ export default function useSelectMention({
   const getDefaultConversation = useDefaultConvo();
   const modularChat = useRecoilValue(store.modularChat);
   const availableTools = useRecoilValue(store.availableTools);
+  const [searchParams] = useSearchParams();
+  /**
+   * Project scope is read from React Router's search params (the same source the
+   * project chip reads), not window.location — new-chat params are written to the
+   * URL via raw history.pushState, so window.location can drift out of sync.
+   */
+  const routeProjectId = useMemo(() => {
+    const projectId = searchParams.get('projectId')?.trim();
+    return projectId || null;
+  }, [searchParams]);
 
   const onSelectSpec = useCallback(
     (spec?: TModelSpec) => {
@@ -47,9 +58,11 @@ export default function useSelectMention({
       }
 
       const conversation = getConversation();
-      const { preset } = spec;
-      preset.iconURL = getModelSpecIconURL(spec);
-      preset.spec = spec.name;
+      const preset = {
+        ...spec.preset,
+        iconURL: getModelSpecIconURL(spec),
+        spec: spec.name,
+      } as TPreset;
       const { endpoint } = preset;
       const newEndpoint = endpoint ?? '';
       if (!newEndpoint) {
@@ -96,9 +109,11 @@ export default function useSelectMention({
         /* We don't reset the latest message, only when changing settings mid-converstion */
         logger.info('conversation', 'Switching conversation to new spec (modular)', conversation);
         newConversation({
-          template: currentConvo,
+          template: {
+            ...currentConvo,
+            projectId: routeProjectId ?? conversation?.projectId ?? null,
+          },
           preset,
-          keepLatestMessage: true,
           keepAddedConvos: true,
         });
         return;
@@ -106,7 +121,10 @@ export default function useSelectMention({
 
       logger.info('conversation', 'Switching conversation to new spec', conversation);
       newConversation({
-        template: { ...(template as Partial<TConversation>) },
+        template: {
+          ...(template as Partial<TConversation>),
+          projectId: routeProjectId ?? conversation?.projectId ?? null,
+        },
         preset,
         keepAddedConvos: isModular,
       });
@@ -118,6 +136,7 @@ export default function useSelectMention({
       newConversation,
       endpointsConfig,
       assistantsMap,
+      routeProjectId,
     ],
   );
 
@@ -191,9 +210,14 @@ export default function useSelectMention({
           currentConvo,
         );
         newConversation({
-          template: currentConvo,
-          preset: currentConvo,
-          keepLatestMessage: true,
+          template: {
+            ...currentConvo,
+            projectId: routeProjectId ?? conversation?.projectId ?? null,
+          },
+          preset: {
+            ...currentConvo,
+            projectId: routeProjectId ?? conversation?.projectId ?? null,
+          },
           keepAddedConvos: true,
         });
         return;
@@ -201,12 +225,22 @@ export default function useSelectMention({
 
       logger.info('conversation', 'Switching conversation to new endpoint/model', template);
       newConversation({
-        template: { ...(template as Partial<TConversation>) },
+        template: {
+          ...(template as Partial<TConversation>),
+          projectId: routeProjectId ?? conversation?.projectId ?? null,
+        },
         preset: { ...kwargs, spec: null, iconURL: null, modelLabel: null, endpoint: newEndpoint },
         keepAddedConvos: isNewModular,
       });
     },
-    [getConversation, getDefaultConversation, modularChat, newConversation, endpointsConfig],
+    [
+      getConversation,
+      getDefaultConversation,
+      modularChat,
+      newConversation,
+      endpointsConfig,
+      routeProjectId,
+    ],
   );
 
   const onSelectPreset = useCallback(
@@ -256,7 +290,6 @@ export default function useSelectMention({
         newConversation({
           template: currentConvo,
           preset: newPreset,
-          keepLatestMessage: true,
           keepAddedConvos: true,
           disableParams,
         });
@@ -265,7 +298,7 @@ export default function useSelectMention({
 
       logger.info('conversation', 'Switching conversation to new preset', template);
       newConversation({
-        template: conversation?.projectId ? { projectId: conversation.projectId } : undefined,
+        template: { projectId: routeProjectId ?? conversation?.projectId ?? null },
         preset: newPreset,
         keepAddedConvos: isModular,
         disableParams,
@@ -278,6 +311,7 @@ export default function useSelectMention({
       newConversation,
       endpointsConfig,
       getDefaultConversation,
+      routeProjectId,
     ],
   );
 

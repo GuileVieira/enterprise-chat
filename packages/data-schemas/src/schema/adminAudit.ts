@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import type { IAdminAudit } from '~/types';
 
-const adminAuditSchema = new Schema<IAdminAudit>(
+const adminAuditSchema: Schema<IAdminAudit> = new Schema<IAdminAudit>(
   {
     tenantId: { type: String, index: true },
     actorId: { type: Schema.Types.ObjectId, required: true, index: true },

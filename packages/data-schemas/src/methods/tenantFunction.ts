@@ -1,7 +1,25 @@
 import type { FilterQuery, Model } from 'mongoose';
 import type { ITenantFunction } from '~/types';
 
-export function createTenantFunctionMethods(mongoose: typeof import('mongoose')) {
+export function createTenantFunctionMethods(mongoose: typeof import('mongoose')): {
+  createTenantFunction: (
+    data: Omit<ITenantFunction, 'createdAt' | 'updatedAt'>,
+  ) => Promise<ITenantFunction>;
+  getTenantFunctions: (searchParams: FilterQuery<ITenantFunction>) => Promise<ITenantFunction[]>;
+  countTenantFunctions: (searchParams?: FilterQuery<ITenantFunction>) => Promise<number>;
+  getTenantFunctionById: (tenantId: string, id: string) => Promise<ITenantFunction | null>;
+  updateTenantFunction: (
+    tenantId: string,
+    id: string,
+    updates: Partial<ITenantFunction>,
+  ) => Promise<ITenantFunction | null>;
+  toggleTenantFunction: (
+    tenantId: string,
+    id: string,
+    isActive: boolean,
+  ) => Promise<ITenantFunction | null>;
+  deleteTenantFunction: (tenantId: string, id: string) => Promise<ITenantFunction | null>;
+} {
   /**
    * Creates a new tenant function.
    */

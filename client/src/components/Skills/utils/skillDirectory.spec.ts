@@ -5,7 +5,7 @@ import {
 } from './skillDirectory';
 
 function directoryFile(path: string, content: string): File {
-  const file = new File([content], path.split('/').at(-1));
+  const file = new File([content], path.split('/').at(-1) ?? path);
   Object.defineProperty(file, 'webkitRelativePath', { value: path });
   return file;
 }

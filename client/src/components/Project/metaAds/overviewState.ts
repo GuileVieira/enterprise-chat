@@ -1,7 +1,12 @@
-import type { ProjectMetaAdsCampaignSummary, ProjectMetaAdsStatus } from 'librechat-data-provider';
-import type { useLocalize } from '~/hooks';
+import type {
+  ProjectMetaAdsAdSetSummary,
+  ProjectMetaAdsCampaignSummary,
+  ProjectMetaAdsStatus,
+} from 'librechat-data-provider';
+import type { MetaAdsSummaryCardItem } from './summaryCards';
+import type { MetaAdsSettingsState } from './types';
 import type { TranslationKeys } from '~/hooks';
-import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
+import type { useLocalize } from '~/hooks';
 import {
   buildObjectiveSummaries,
   buildSummaryResultTypeOptions,
@@ -10,9 +15,8 @@ import {
   isEcommerceContext,
   resolveAverageFrequency,
 } from './summary';
+import { formatMetric, formatMoney, getObjectiveLabel, getResultTypeLabel } from './formatters';
 import { compareNumberSort, getMetricValue } from './table';
-import type { MetaAdsSettingsState } from './types';
-import type { MetaAdsSummaryCardItem } from './summaryCards';
 
 type OverviewStateInput = {
   campaigns: ProjectMetaAdsCampaignSummary[];
@@ -62,11 +66,14 @@ export function buildMetaAdsOverviewState({
     localize,
   });
   const hasCampaignData = campaigns.length > 0;
-  const objectiveSummaries = hasCampaignData
-    ? buildObjectiveSummaries(summaryCampaigns)
-    : summary?.objectives && summary.objectives.length > 0
-      ? summary.objectives
-      : buildObjectiveSummaries(campaigns);
+  let objectiveSummaries: ReturnType<typeof buildObjectiveSummaries>;
+  if (hasCampaignData) {
+    objectiveSummaries = buildObjectiveSummaries(summaryCampaigns);
+  } else if (summary?.objectives && summary.objectives.length > 0) {
+    objectiveSummaries = summary.objectives;
+  } else {
+    objectiveSummaries = buildObjectiveSummaries(campaigns);
+  }
   const visibleSummary = hasCampaignData ? buildVisibleCampaignSummary(summaryCampaigns) : null;
   const scopedObjectiveSummary = getScopedObjectiveSummary(objectiveSummaries, objectiveFilter);
   const hasMixedObjectiveSummary = objectiveFilter === 'all' && objectiveSummaries.length > 1;
@@ -115,12 +122,14 @@ export function buildMetaAdsOverviewState({
   const summaryConversionValue = isEcommerceDashboard
     ? calculateConversionValue(summaryCampaigns)
     : null;
-  const summaryAverageRoas =
-    isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalSpend ?? 0) > 0
-      ? Number((summaryConversionValue / Number(summaryTotalSpend)).toFixed(2))
-      : isEcommerceDashboard
-        ? calculateWeightedRoas(summaryCampaigns)
-        : null;
+  let summaryAverageRoas: number | null = null;
+  if (isEcommerceDashboard) {
+    if (summaryConversionValue != null && Number(summaryTotalSpend ?? 0) > 0) {
+      summaryAverageRoas = Number((summaryConversionValue / Number(summaryTotalSpend)).toFixed(2));
+    } else {
+      summaryAverageRoas = calculateWeightedRoas(summaryCampaigns);
+    }
+  }
   const summaryAverageTicket =
     isEcommerceDashboard && summaryConversionValue != null && Number(summaryTotalResults ?? 0) > 0
       ? Number((summaryConversionValue / Number(summaryTotalResults)).toFixed(2))
@@ -261,7 +270,7 @@ export function buildMetaAdsSummaryCardItems({
   monthlyBudget: ProjectMetaAdsStatus['monthlyBudget'] | undefined;
   investmentGoalContext?: string | string[];
   summaryMetricContext: string | undefined;
-  goalContext?: string;
+  goalContext?: string | string[];
   conversionValueGoalContext?: string | string[];
   roasGoalContext?: string | string[];
   summaryResultTypeOptionsLength: number;
@@ -512,14 +521,14 @@ function filterCampaignByResultType(
   }
 
   const adSets = campaign.adSets
-    .map((adset) => {
+    .map((adset): ProjectMetaAdsAdSetSummary | null => {
       const ads = (adset.ads ?? []).filter((ad) => matchesResultType(ad, resultTypeFilter));
       if (!matchesResultType(adset, resultTypeFilter) && ads.length === 0) {
         return null;
       }
       return { ...adset, ads };
     })
-    .filter((adset): adset is ProjectMetaAdsCampaignSummary['adSets'][number] => adset !== null);
+    .filter((adset): adset is ProjectMetaAdsAdSetSummary => adset !== null);
 
   if (!matchesResultType(campaign, resultTypeFilter) && adSets.length === 0) {
     return null;

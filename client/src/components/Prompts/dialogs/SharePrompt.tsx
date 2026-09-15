@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShareNetwork as Share2Icon } from '@phosphor-icons/react';
 import { Button, TooltipAnchor } from '@librechat/client';
+import { ShareNetwork as Share2Icon } from '@phosphor-icons/react';
 import {
   SystemRoles,
   Permissions,
@@ -61,7 +61,7 @@ const SharePrompt = React.memo(
             <Button
               variant="outline"
               size="icon"
-              className="size-9 border-border-medium"
+              className="border-border-medium"
               aria-label={localize('com_ui_share')}
               disabled={disabled}
             >

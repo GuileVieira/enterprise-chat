@@ -1,8 +1,13 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
+import { RecoilRoot } from 'recoil';
 import { render, fireEvent } from 'test/layout-test-utils';
 import TextToSpeechSwitch from '../TextToSpeechSwitch';
-import { RecoilRoot } from 'recoil';
+
+const mockSpeechConfig = jest.fn(() => ({}));
+jest.mock('librechat-data-provider/react-query', () => ({
+  useGetCustomConfigSpeechQuery: () => ({ data: mockSpeechConfig() }),
+}));
 
 describe('TextToSpeechSwitch', () => {
   /**
@@ -12,6 +17,18 @@ describe('TextToSpeechSwitch', () => {
 
   beforeEach(() => {
     mockSetTextToSpeech = jest.fn();
+    mockSpeechConfig.mockReturnValue({});
+  });
+
+  it('is disabled when the server disables text to speech', () => {
+    mockSpeechConfig.mockReturnValue({ textToSpeech: false });
+    const { getByTestId } = render(
+      <RecoilRoot>
+        <TextToSpeechSwitch />
+      </RecoilRoot>,
+    );
+
+    expect(getByTestId('TextToSpeech')).toBeDisabled();
   });
 
   it('renders correctly', () => {

@@ -1,8 +1,8 @@
 import { useState, useId, useMemo } from 'react';
 import * as Menu from '@ariakit/react/menu';
 import { Column } from '@tanstack/react-table';
-import { FunnelX as FilterX, Funnel as ListFilter } from '@phosphor-icons/react';
 import { DropdownPopup, TooltipAnchor } from '@librechat/client';
+import { FunnelX as FilterX, Funnel as ListFilter } from '@phosphor-icons/react';
 import { ArrowDownIcon, ArrowUpIcon, CaretSortIcon } from '@radix-ui/react-icons';
 import type { MenuItemProps } from '~/common';
 import { useLocalize, TranslationKeys } from '~/hooks';
@@ -105,7 +105,7 @@ export function SortFilterHeader<TData, TValue>({
                 aria-pressed={column.getIsFiltered() ? 'true' : 'false'}
                 aria-current={sortState ? 'true' : 'false'}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-lg px-2 py-0 text-xs transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[open]:bg-surface-hover sm:px-2 sm:py-2 sm:text-sm',
+                  'inline-flex items-center gap-2 rounded-lg px-2 py-0 text-xs transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary data-[open]:bg-surface-hover sm:px-2 sm:py-2 sm:text-sm',
                   column.getIsFiltered() && 'border-b-2 border-b-border-xheavy',
                 )}
               >

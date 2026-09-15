@@ -14,6 +14,11 @@ const {
   safeValidatePromptGroupUpdate,
   createEmptyPromptGroupsResponse,
   filterAccessibleIdsBySharedLogic,
+  inspectPromptContent,
+  projectStoredPrompts,
+  projectStoredPromptGroup,
+  projectStoredPromptGroups,
+  contentFilterBlockResponse,
 } = require('@librechat/api');
 const {
   Permissions,
@@ -46,6 +51,7 @@ const {
   canAccessPromptViaGroup,
   promptUsageLimiter,
   requireJwtAuth,
+  configMiddleware,
 } = require('~/server/middleware');
 const {
   findPubliclyAccessibleResources,
@@ -116,6 +122,15 @@ const normalizeShareTenantIds = (shareTenantIds) => {
   ];
 };
 
+const blockFilteredPromptContent = (req, res, promptData) => {
+  const finding = inspectPromptContent(promptData, req.config?.filters);
+  if (finding == null) {
+    return false;
+  }
+  res.status(400).json(contentFilterBlockResponse(finding));
+  return true;
+};
+
 const checkPromptAccess = generateCheckAccess({
   permissionType: PermissionTypes.PROMPTS,
   permissions: [Permissions.USE],
@@ -145,6 +160,7 @@ router.get(
   canAccessPromptGroupResource({
     requiredPermission: PermissionBits.VIEW,
   }),
+  configMiddleware,
   async (req, res) => {
     const { groupId } = req.params;
 
@@ -155,7 +171,11 @@ router.get(
         return res.status(404).send({ message: 'Prompt group not found' });
       }
 
-      res.status(200).send(group);
+      if (blockFilteredPromptContent(req, res, { group })) {
+        return;
+      }
+
+      res.status(200).send(projectStoredPromptGroup(group, req.config?.filters));
     } catch (error) {
       logger.error('Error getting prompt group', error);
       res.status(500).send({ message: 'Error getting prompt group' });
@@ -167,7 +187,7 @@ router.get(
  * Route to fetch all prompt groups (ACL-aware)
  * GET /all
  */
-router.get('/all', async (req, res) => {
+router.get('/all', configMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { name, category } = req.query;
@@ -225,7 +245,13 @@ router.get('/all', async (req, res) => {
       return res.status(200).send([]);
     }
 
-    const groupsWithPublicFlag = markPublicPromptGroups(promptGroups, publiclyAccessibleIds);
+    const readablePromptGroups = projectStoredPromptGroups(promptGroups, req.config?.filters, {
+      forReuse: true,
+    });
+    const groupsWithPublicFlag = markPublicPromptGroups(
+      readablePromptGroups,
+      publiclyAccessibleIds,
+    );
     res.status(200).send(groupsWithPublicFlag);
   } catch (error) {
     logger.error(error);
@@ -237,7 +263,7 @@ router.get('/all', async (req, res) => {
  * Route to fetch paginated prompt groups with filters (ACL-aware)
  * GET /groups
  */
-router.get('/groups', async (req, res) => {
+router.get('/groups', configMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const { pageSize, limit, cursor, name, category } = req.query;
@@ -314,7 +340,11 @@ router.get('/groups', async (req, res) => {
     }
 
     const { data: promptGroups = [], has_more = false, after = null } = result;
-    const groupsWithPublicFlag = markPublicPromptGroups(promptGroups, publiclyAccessibleIds);
+    const readablePromptGroups = projectStoredPromptGroups(promptGroups, req.config?.filters);
+    const groupsWithPublicFlag = markPublicPromptGroups(
+      readablePromptGroups,
+      publiclyAccessibleIds,
+    );
 
     const response = formatPromptGroupsResponse({
       promptGroups: groupsWithPublicFlag,
@@ -343,6 +373,10 @@ const createNewPromptGroup = async (req, res) => {
 
     if (!prompt || !group || !group.name) {
       return res.status(400).send({ error: 'Prompt and group name are required' });
+    }
+
+    if (blockFilteredPromptContent(req, res, { prompt, group })) {
+      return;
     }
 
     const saveData = {
@@ -420,6 +454,10 @@ const addPromptToGroup = async (req, res) => {
       return res.status(400).send({ error: 'Prompt type must be "text" or "chat"' });
     }
 
+    if (blockFilteredPromptContent(req, res, { prompt })) {
+      return;
+    }
+
     // Ensure the prompt is associated with the correct group
     prompt.groupId = groupId;
 
@@ -438,7 +476,7 @@ const addPromptToGroup = async (req, res) => {
 };
 
 // Create new prompt group (requires CREATE permission)
-router.post('/', checkPromptCreate, createNewPromptGroup);
+router.post('/', checkPromptCreate, configMiddleware, createNewPromptGroup);
 
 // Add prompt to existing group (requires EDIT permission on the group)
 router.post(
@@ -447,6 +485,7 @@ router.post(
   canAccessPromptGroupResource({
     requiredPermission: PermissionBits.EDIT,
   }),
+  configMiddleware,
   addPromptToGroup,
 );
 
@@ -503,6 +542,10 @@ const patchPromptGroup = async (req, res) => {
       });
     }
 
+    if (blockFilteredPromptContent(req, res, { group: validationResult.data })) {
+      return;
+    }
+
     const promptGroup = await updatePromptGroup(filter, validationResult.data);
     res.status(200).send(promptGroup);
   } catch (error) {
@@ -517,6 +560,7 @@ router.patch(
   canAccessPromptGroupResource({
     requiredPermission: PermissionBits.EDIT,
   }),
+  configMiddleware,
   patchPromptGroup,
 );
 
@@ -527,9 +571,14 @@ router.patch(
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'promptId',
   }),
+  configMiddleware,
   async (req, res) => {
     try {
       const { promptId } = req.params;
+      const prompt = await getPrompt({ _id: promptId });
+      if (blockFilteredPromptContent(req, res, { prompt })) {
+        return;
+      }
       const result = await makePromptProduction(promptId);
       res.status(200).send(result);
     } catch (error) {
@@ -545,14 +594,18 @@ router.get(
     requiredPermission: PermissionBits.VIEW,
     resourceIdParam: 'promptId',
   }),
+  configMiddleware,
   async (req, res) => {
     const { promptId } = req.params;
     const prompt = await runAsSystem(() => getPrompt({ _id: promptId }));
+    if (blockFilteredPromptContent(req, res, { prompt })) {
+      return;
+    }
     res.status(200).send(prompt);
   },
 );
 
-router.get('/', async (req, res) => {
+router.get('/', configMiddleware, async (req, res) => {
   try {
     const author = req.user.id;
     const { groupId } = req.query;
@@ -596,7 +649,10 @@ router.get('/', async (req, res) => {
 
       // If user has access, fetch all prompts in the group (not just their own)
       const prompts = await runAsSystem(() => getPrompts({ groupId: new ObjectId(groupId) }));
-      return res.status(200).send(prompts);
+      const readablePrompts = Array.isArray(prompts)
+        ? projectStoredPrompts(prompts, req.config?.filters)
+        : prompts;
+      return res.status(200).send(readablePrompts);
     }
 
     // If no groupId, return user's own prompts
@@ -612,7 +668,10 @@ router.get('/', async (req, res) => {
       delete query.author;
     }
     const prompts = await getPrompts(query);
-    res.status(200).send(prompts);
+    const readablePrompts = Array.isArray(prompts)
+      ? projectStoredPrompts(prompts, req.config?.filters)
+      : prompts;
+    res.status(200).send(readablePrompts);
   } catch (error) {
     logger.error(error);
     res.status(500).send({ error: 'Error getting prompts' });

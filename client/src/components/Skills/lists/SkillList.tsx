@@ -1,26 +1,39 @@
 import { useState } from 'react';
-import { ChevronRight, Download, LoaderCircle } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { Skeleton, TooltipAnchor, useToastContext } from '@librechat/client';
 import { dataService } from 'librechat-data-provider';
-import type { TSkill } from 'librechat-data-provider';
-import { useLocalize } from '~/hooks';
+import { ChevronRight, Download, LoaderCircle } from 'lucide-react';
+import { Skeleton, TooltipAnchor, useToastContext } from '@librechat/client';
+import type { TSkillSummary } from 'librechat-data-provider';
 import SkillListItem from './SkillListItem';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface SkillListProps {
-  skills: TSkill[];
-  isLoading: boolean;
+  skills: TSkillSummary[];
+  isLoading?: boolean;
   activeSkillId?: string;
+  sectionOpen?: boolean;
+  onSectionOpenChange?: (open: boolean) => void;
 }
 
 /** Collapsible skill list. Active/inactive toggling lives in the detail view. */
-export default function SkillList({ skills, isLoading, activeSkillId }: SkillListProps) {
+export default function SkillList({
+  skills,
+  isLoading = false,
+  activeSkillId,
+  sectionOpen: controlledSectionOpen,
+  onSectionOpenChange,
+}: SkillListProps) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const [searchParams] = useSearchParams();
   const activeFile = searchParams.get('file');
-  const [sectionOpen, setSectionOpen] = useState(true);
+  const [internalSectionOpen, setInternalSectionOpen] = useState(true);
+  const sectionOpen = controlledSectionOpen ?? internalSectionOpen;
+  const setSectionOpen = (open: boolean) => {
+    setInternalSectionOpen(open);
+    onSectionOpenChange?.(open);
+  };
   const [expandedSkillId, setExpandedSkillId] = useState<string | null>(activeSkillId ?? null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
@@ -82,7 +95,7 @@ export default function SkillList({ skills, isLoading, activeSkillId }: SkillLis
       <div className="flex items-center justify-between px-2 pb-2">
         <button
           type="button"
-          onClick={() => setSectionOpen((prev) => !prev)}
+          onClick={() => setSectionOpen(!sectionOpen)}
           className="flex cursor-pointer items-center gap-1.5"
           aria-expanded={sectionOpen}
         >

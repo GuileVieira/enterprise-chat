@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import type { ITenantFunction } from '~/types';
 
-const tenantFunctionSchema = new Schema<ITenantFunction>(
+const tenantFunctionSchema: Schema<ITenantFunction> = new Schema<ITenantFunction>(
   {
     id: {
       type: String,

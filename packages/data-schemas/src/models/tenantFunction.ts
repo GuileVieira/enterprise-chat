@@ -1,8 +1,11 @@
-import tenantFunctionSchema from '~/schema/tenantFunction';
-import { applyTenantIsolation } from '~/models/plugins/tenantIsolation';
+import type { Model } from 'mongoose';
 import type { ITenantFunction } from '~/types';
+import { applyTenantIsolation } from '~/models/plugins/tenantIsolation';
+import tenantFunctionSchema from '~/schema/tenantFunction';
 
-export function createTenantFunctionModel(mongoose: typeof import('mongoose')) {
+export function createTenantFunctionModel(
+  mongoose: typeof import('mongoose'),
+): Model<ITenantFunction> {
   applyTenantIsolation(tenantFunctionSchema);
   return (
     mongoose.models.TenantFunction ||

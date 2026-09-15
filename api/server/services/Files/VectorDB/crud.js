@@ -64,7 +64,7 @@ const deleteVectors = async (req, file) => {
  *            - filepath: The path where the file is saved.
  *            - bytes: The size of the file in bytes.
  */
-async function uploadVectors({ req, file, file_id, entity_id, storageMetadata }) {
+async function uploadVectors({ req, file, file_id, entity_id, storageMetadata, signal }) {
   if (!process.env.RAG_API_URL) {
     logger.warn('RAG_API_URL not defined, skipping vector database upload');
     return {
@@ -92,6 +92,7 @@ async function uploadVectors({ req, file, file_id, entity_id, storageMetadata })
     const formHeaders = formData.getHeaders();
 
     const response = await axios.post(`${process.env.RAG_API_URL}/embed`, formData, {
+      ...(signal ? { signal } : {}),
       headers: {
         Authorization: `Bearer ${jwtToken}`,
         accept: 'application/json',

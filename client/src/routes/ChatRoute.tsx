@@ -1,18 +1,35 @@
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilCallback, useRecoilValue } from 'recoil';
 import { Spinner, useToastContext } from '@librechat/client';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Constants, EModelEndpoint } from 'librechat-data-provider';
 import { useGetModelsQuery } from 'librechat-data-provider/react-query';
-import type { TPreset } from 'librechat-data-provider';
 import {
+  Constants,
+  EModelEndpoint,
+  PermissionBits,
+  isAgentsEndpoint,
+  isEphemeralAgentId,
+} from 'librechat-data-provider';
+import type { TPreset, TAgentsMap } from 'librechat-data-provider';
+import {
+  defaultSpecAwaitsAgents,
   mergeQuerySettingsWithSpec,
   processValidSettings,
   getDefaultModelSpec,
   getModelSpecPreset,
+  hasModelSelection,
   isNotFoundError,
+  isTemporaryConversation,
   logger,
+  clearMessagesCache,
 } from '~/utils';
+import {
+  useGetConvoIdQuery,
+  useGetStartupConfig,
+  useGetEndpointsQuery,
+  useListAgentsQuery,
+} from '~/data-provider';
 import {
   useAssistantListMap,
   useIdChangeEffect,
@@ -20,8 +37,7 @@ import {
   useNewConvo,
   useLocalize,
 } from '~/hooks';
-import { useGetConvoIdQuery, useGetStartupConfig, useGetEndpointsQuery } from '~/data-provider';
-import { ToolCallsMapProvider } from '~/Providers';
+import { ToolCallsMapProvider, useAgentsMapContext } from '~/Providers';
 import ChatView from '~/components/Chat/ChatView';
 import { NotificationSeverity } from '~/common';
 import useAuthRedirect from './useAuthRedirect';
@@ -31,6 +47,7 @@ import store from '~/store';
 export default function ChatRoute() {
   const { data: startupConfig } = useGetStartupConfig();
   const { isAuthenticated, user, roles } = useAuthRedirect();
+  const queryClient = useQueryClient();
 
   const defaultTemporaryChat = useRecoilValue(temporaryStore.defaultTemporaryChat);
   const setIsTemporary = useRecoilCallback(
@@ -40,17 +57,18 @@ export default function ChatRoute() {
       },
     [],
   );
-  useAppStartup({ startupConfig, user });
-
   const index = 0;
   const [searchParams] = useSearchParams();
   const { conversationId = '' } = useParams();
   useIdChangeEffect(conversationId);
   const { hasSetConversation, conversation } = store.useCreateConversationAtom(index);
+  const mcpWarmupAllowed =
+    conversation != null &&
+    !(isAgentsEndpoint(conversation.endpoint) && isEphemeralAgentId(conversation.agent_id ?? ''));
+  useAppStartup({ startupConfig, user, mcpWarmupAllowed });
   const { newConversation } = useNewConvo();
   const { showToast } = useToastContext();
   const localize = useLocalize();
-
   const modelsQuery = useGetModelsQuery({
     enabled: isAuthenticated,
     refetchOnMount: 'always',
@@ -61,8 +79,18 @@ export default function ChatRoute() {
   });
   const endpointsQuery = useGetEndpointsQuery({ enabled: isAuthenticated });
   const assistantListMap = useAssistantListMap();
+  /** The map comes from Root's shared context (one mapping pass app-wide); the
+   * select-less observer only tracks settle state. Only a loaded list may
+   * invalidate a stored agent pick: on a transient catalog failure (retries are
+   * disabled) the map stays unknown, the pick stays trusted, and the gate below
+   * releases so the landing never hangs on the error. */
+  const agentsMap: TAgentsMap | undefined = useAgentsMapContext();
+  const agentsQuery = useListAgentsQuery(
+    { requiredPermission: PermissionBits.VIEW },
+    { enabled: isAuthenticated },
+  );
 
-  const isTemporaryChat = conversation && conversation.expiredAt ? true : false;
+  const isTemporaryChat = isTemporaryConversation(conversation);
 
   useEffect(() => {
     if (conversationId === Constants.NEW_CONVO) {
@@ -80,6 +108,7 @@ export default function ChatRoute() {
   useEffect(() => {
     // Wait for roles to load so hasAgentAccess has a definitive value in useNewConvo
     const rolesLoaded = roles?.USER != null;
+    const isNewConvo = conversationId === Constants.NEW_CONVO;
     const shouldSetConvo =
       (startupConfig && rolesLoaded && !hasSetConversation.current && !modelsQuery.data?.initial) ??
       false;
@@ -88,20 +117,48 @@ export default function ChatRoute() {
       return;
     }
 
-    const isNewConvo = conversationId === Constants.NEW_CONVO;
+    const queryParams: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      if (key !== 'prompt' && key !== 'q' && key !== 'submit') {
+        queryParams[key] = value;
+      }
+    });
+    const querySettings = processValidSettings(queryParams);
+
+    const notFoundConvo =
+      Boolean(conversationId) &&
+      !isNewConvo &&
+      initialConvoQuery.isError &&
+      isNotFoundError(initialConvoQuery.error);
+
+    /** A stored agent pick can only be validated against the loaded agent list
+     * (it may name an agent since deleted, or one from another org sharing this
+     * browser storage). Defer the first conversation until the list settles.
+     * A URL naming its own selection skips the wait only on the new-chat branch,
+     * where it takes precedence over the stored pick; the 404 fallback never
+     * applies query settings, so it always waits. */
+    const awaitsAgentList =
+      agentsMap == null &&
+      !agentsQuery.isError &&
+      defaultSpecAwaitsAgents(startupConfig, endpointsQuery.data);
+    if (awaitsAgentList && (notFoundConvo || (isNewConvo && !hasModelSelection(querySettings)))) {
+      return;
+    }
 
     const getNewConvoPreset = () => {
-      const result = getDefaultModelSpec(startupConfig);
-      const spec = result?.default ?? result?.last;
-      const specPreset = spec ? getModelSpecPreset(spec) : undefined;
+      /** A spec named in the URL is an explicit selection: it must resolve to its own
+       * full preset, or stale last-selection state (endpoint/agent) fills the gaps.
+       * Names absent from the client config (e.g. `showInMenu: false`) stay in the
+       * query settings untouched, since they remain resolvable server-side by name. */
+      const urlSpec = querySettings.spec
+        ? startupConfig?.modelSpecs?.list?.find((spec) => spec.name === querySettings.spec)
+        : undefined;
 
-      const queryParams: Record<string, string> = {};
-      searchParams.forEach((value, key) => {
-        if (key !== 'prompt' && key !== 'q' && key !== 'submit') {
-          queryParams[key] = value;
-        }
-      });
-      const querySettings = processValidSettings(queryParams);
+      const result = urlSpec
+        ? undefined
+        : getDefaultModelSpec(startupConfig, endpointsQuery.data, agentsMap);
+      const spec = urlSpec ?? result?.default ?? result?.last ?? result?.softDefault;
+      const specPreset = spec ? getModelSpecPreset(spec) : undefined;
 
       if (Object.keys(querySettings).length > 0) {
         return mergeQuerySettingsWithSpec(specPreset, querySettings);
@@ -113,9 +170,9 @@ export default function ChatRoute() {
       const preset = getNewConvoPreset();
 
       logger.log('conversation', 'ChatRoute, new convo effect', conversation);
+      clearMessagesCache(queryClient, conversation?.conversationId);
       newConversation({
         modelsData: modelsQuery.data,
-        template: conversation ? conversation : undefined,
         ...(preset ? { preset } : {}),
       });
 
@@ -127,7 +184,6 @@ export default function ChatRoute() {
         /* this is necessary to load all existing settings */
         preset: initialConvoQuery.data as TPreset,
         modelsData: modelsQuery.data,
-        keepLatestMessage: true,
       });
       hasSetConversation.current = true;
     } else if (
@@ -137,8 +193,8 @@ export default function ChatRoute() {
       initialConvoQuery.isError &&
       isNotFoundError(initialConvoQuery.error)
     ) {
-      const result = getDefaultModelSpec(startupConfig);
-      const spec = result?.default ?? result?.last;
+      const result = getDefaultModelSpec(startupConfig, endpointsQuery.data, agentsMap);
+      const spec = result?.default ?? result?.last ?? result?.softDefault;
       showToast({
         message: localize('com_ui_conversation_not_found'),
         severity: NotificationSeverity.WARNING,
@@ -161,9 +217,9 @@ export default function ChatRoute() {
       const preset = getNewConvoPreset();
 
       logger.log('conversation', 'ChatRoute new convo, assistants effect', conversation);
+      clearMessagesCache(queryClient, conversation?.conversationId);
       newConversation({
         modelsData: modelsQuery.data,
-        template: conversation ? conversation : undefined,
         ...(preset ? { preset } : {}),
       });
       hasSetConversation.current = true;
@@ -176,7 +232,6 @@ export default function ChatRoute() {
         template: initialConvoQuery.data,
         preset: initialConvoQuery.data as TPreset,
         modelsData: modelsQuery.data,
-        keepLatestMessage: true,
       });
       hasSetConversation.current = true;
     }
@@ -184,12 +239,16 @@ export default function ChatRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     roles,
+    agentsMap,
+    agentsQuery.isError,
     startupConfig,
     initialConvoQuery.data,
     initialConvoQuery.isError,
     endpointsQuery.data,
     modelsQuery.data,
     assistantListMap,
+    queryClient,
+    conversation?.conversationId,
   ]);
 
   if (endpointsQuery.isLoading || modelsQuery.isLoading) {

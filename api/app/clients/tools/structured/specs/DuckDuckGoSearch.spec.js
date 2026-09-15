@@ -1,6 +1,36 @@
+jest.mock('duck-duck-scrape', () => ({ search: jest.fn() }));
+
+const { search } = require('duck-duck-scrape');
 const DuckDuckGoSearchTool = require('../DuckDuckGoSearch');
 
 describe('DuckDuckGoSearchTool', () => {
+  it('uses the direct DuckDuckGo adapter and normalizes its results', async () => {
+    search.mockResolvedValue({
+      results: [
+        {
+          title: ' Direct result ',
+          url: 'https://example.com/direct',
+          description: ' Direct snippet ',
+        },
+      ],
+    });
+
+    const output = JSON.parse(await new DuckDuckGoSearchTool()._call({ query: ' direct docs ' }));
+
+    expect(search).toHaveBeenCalledWith('direct docs');
+    expect(output).toEqual({
+      ok: true,
+      query: 'direct docs',
+      results: [
+        {
+          title: 'Direct result',
+          url: 'https://example.com/direct',
+          snippet: 'Direct snippet',
+        },
+      ],
+    });
+  });
+
   it('ignores legacy arguments and returns at most five normalized results without fetching pages', async () => {
     const searchTool = {
       invoke: jest.fn().mockResolvedValue(

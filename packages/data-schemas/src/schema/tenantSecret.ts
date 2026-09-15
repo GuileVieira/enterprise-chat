@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import type { ITenantSecret } from '~/types';
 
-const tenantSecretSchema = new Schema<ITenantSecret>(
+const tenantSecretSchema: Schema<ITenantSecret> = new Schema<ITenantSecret>(
   {
     tenantId: {
       type: String,

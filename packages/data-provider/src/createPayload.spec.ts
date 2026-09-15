@@ -8,7 +8,7 @@ const messageId = '00000000-0000-0000-0000-000000000001';
 const parentMessageId = '00000000-0000-0000-0000-000000000000';
 
 describe('createPayload', () => {
-  const createSubmission = (projectId?: string): TSubmission =>
+  const createSubmission = (projectId?: string | null): TSubmission =>
     ({
       messages: [],
       isTemporary: false,
@@ -45,6 +45,12 @@ describe('createPayload', () => {
     const { payload } = createPayload(submission);
 
     expect(payload.projectId).toBeUndefined();
+  });
+
+  it('preserves an explicit project clear in the request payload', () => {
+    const { payload } = createPayload(createSubmission(null));
+
+    expect(payload.projectId).toBeNull();
   });
 
   it('routes custom models through the agents chat runtime', () => {

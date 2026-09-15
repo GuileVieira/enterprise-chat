@@ -1,9 +1,9 @@
 import React from 'react';
+import { jest } from '@jest/globals';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { jest } from '@jest/globals';
-import VirtualizedAgentGrid from '../VirtualizedAgentGrid';
 import type t from 'librechat-data-provider';
+import VirtualizedAgentGrid from '../VirtualizedAgentGrid';
 
 // Mock react-virtualized
 jest.mock('react-virtualized', () => ({
@@ -126,14 +126,16 @@ jest.mock('~/hooks', () => ({
   },
 }));
 
-jest.mock('../SmartLoader', () => ({
-  useHasData: () => true,
-}));
-
 jest.mock('../AgentCard', () => {
-  return function MockAgentCard({ agent, onClick }: { agent: t.Agent; onClick: () => void }) {
+  return function MockAgentCard({
+    agent,
+    onSelect,
+  }: {
+    agent: t.Agent;
+    onSelect: (agent: t.Agent) => void;
+  }) {
     return (
-      <div data-testid={`agent-card-${agent.id}`} onClick={onClick}>
+      <div data-testid={`agent-card-${agent.id}`} onClick={() => onSelect(agent)}>
         <h3>{agent.name}</h3>
         <p>{agent.description}</p>
       </div>
@@ -220,9 +222,9 @@ describe('VirtualizedAgentGrid', () => {
     renderComponent();
 
     // Should show loading spinner
-    const spinner = document.querySelector('.spinner');
+    const spinner = document.querySelector('svg');
     expect(spinner).toBeInTheDocument();
-    expect(spinner).toHaveClass('h-8 w-8 text-primary');
+    expect(spinner).toHaveClass('h-8 w-8 text-text-primary');
   });
 
   it('has proper accessibility attributes', async () => {

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, EModelEndpoint, PermissionBits } from 'librechat-data-provider';
 import type {
+  Agent,
   AgentListResponse,
   TEndpointsConfig,
   TStartupConfig,
@@ -25,7 +26,8 @@ import store from '~/store';
 
 const META_ADS_BRIEF_PARAM = 'meta_ads_brief';
 const CONTEXT_BRIEF_PARAM = 'context_brief';
-const PROJECT_ID_PARAM = 'project_id';
+const PROJECT_ID_PARAM = 'projectId';
+const LEGACY_PROJECT_ID_PARAM = 'project_id';
 
 type QueryParamPreset = TPreset & {
   iconURL?: string | null;
@@ -52,8 +54,9 @@ const readStoredBriefMarkdown = (storageKey: string) => {
     return '';
   }
 };
+const PROJECT_ID_SEARCH_PARAM = 'projectId';
 
-const injectAgentIntoAgentsMap = (queryClient: QueryClient, agent: any) => {
+const injectAgentIntoAgentsMap = (queryClient: QueryClient, agent: Agent) => {
   const editCacheKey = [QueryKeys.agents, { requiredPermission: PermissionBits.EDIT }];
   const editCache = queryClient.getQueryData<AgentListResponse>(editCacheKey);
 
@@ -101,6 +104,15 @@ export default function useQueryParams({
 
   const urlAgentId = searchParams.get('agent_id') || '';
   const { data: urlAgent } = useGetAgentByIdQuery(urlAgentId);
+
+  const getPreservedSearchParams = useCallback(() => {
+    const preservedParams = new URLSearchParams();
+    const projectId = searchParams.get(PROJECT_ID_SEARCH_PARAM);
+    if (projectId) {
+      preservedParams.set(PROJECT_ID_SEARCH_PARAM, projectId);
+    }
+    return preservedParams;
+  }, [searchParams]);
 
   /**
    * Applies settings from URL query parameters to create a new conversation.
@@ -192,7 +204,6 @@ export default function useQueryParams({
         newConversation({
           template: currentConvo,
           preset: newPreset,
-          keepLatestMessage: true,
           keepAddedConvos: true,
         });
         return;
@@ -268,8 +279,8 @@ export default function useQueryParams({
       }
     })();
 
-    setSearchParams(new URLSearchParams(), { replace: true });
-  }, [methods, submitMessage, setSearchParams]);
+    setSearchParams(getPreservedSearchParams(), { replace: true });
+  }, [methods, submitMessage, setSearchParams, getPreservedSearchParams]);
 
   useEffect(() => {
     const processQueryParams = () => {
@@ -281,7 +292,7 @@ export default function useQueryParams({
       const briefMarkdown = readStoredBriefMarkdown(
         queryParams[CONTEXT_BRIEF_PARAM] ?? queryParams[META_ADS_BRIEF_PARAM] ?? '',
       );
-      const projectId = queryParams[PROJECT_ID_PARAM] ?? '';
+      const projectId = queryParams[PROJECT_ID_PARAM] ?? queryParams[LEGACY_PROJECT_ID_PARAM] ?? '';
       const forceNewConversation = queryParams.new_conversation === 'true';
 
       // Support both 'prompt' and 'q' as query parameters, with 'prompt' taking precedence
@@ -290,6 +301,7 @@ export default function useQueryParams({
       delete queryParams[META_ADS_BRIEF_PARAM];
       delete queryParams[CONTEXT_BRIEF_PARAM];
       delete queryParams[PROJECT_ID_PARAM];
+      delete queryParams[LEGACY_PROJECT_ID_PARAM];
       delete queryParams.new_conversation;
       delete queryParams.prompt;
       delete queryParams.q;
@@ -340,7 +352,7 @@ export default function useQueryParams({
 
         // Defer URL cleanup until after submission completes (processSubmission handles it)
         if (!pendingSubmitRef.current) {
-          setSearchParams(new URLSearchParams(), { replace: true });
+          setSearchParams(getPreservedSearchParams(), { replace: true });
         }
       };
 
@@ -408,6 +420,7 @@ export default function useQueryParams({
     newConversation,
     submitMessage,
     setSearchParams,
+    getPreservedSearchParams,
     queryClient,
     processSubmission,
     areSettingsApplied,

@@ -1,23 +1,38 @@
 import { renderHook, act } from '@testing-library/react';
-import { ContentTypes } from 'librechat-data-provider';
-
-import useContentHandler from '~/hooks/SSE/useContentHandler';
+import { ContentTypes, EModelEndpoint } from 'librechat-data-provider';
 import type { EventSubmission, TMessage } from 'librechat-data-provider';
+import useContentHandler from '~/hooks/SSE/useContentHandler';
 
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({}),
 }));
 
-const buildSubmission = (): EventSubmission =>
-  ({
-    initialResponse: {
-      messageId: 'response-1',
+const buildSubmission = (): EventSubmission => {
+  const initialResponse: TMessage = {
+    messageId: 'response-1',
+    conversationId: 'conversation-1',
+    parentMessageId: 'message-1',
+    sender: 'Assistant',
+    isCreatedByUser: false,
+    text: '',
+    content: [],
+  };
+  return {
+    initialResponse,
+    userMessage: {
+      messageId: 'message-1',
       conversationId: 'conversation-1',
-      parentMessageId: 'message-1',
-      text: '',
-      content: [],
+      parentMessageId: '00000000-0000-0000-0000-000000000000',
+      sender: 'User',
+      isCreatedByUser: true,
+      text: 'Hello',
     },
-  }) as EventSubmission;
+    isTemporary: false,
+    messages: [],
+    conversation: { conversationId: 'conversation-1' },
+    endpointOption: { endpoint: EModelEndpoint.openAI },
+  };
+};
 
 describe('useContentHandler', () => {
   it('ignores malformed content events without a type', () => {

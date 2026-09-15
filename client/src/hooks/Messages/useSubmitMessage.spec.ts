@@ -48,6 +48,10 @@ jest.mock('~/hooks/AuthContext', () => ({
   })),
 }));
 
+jest.mock('~/hooks/Messages/useLatestMessage', () => ({
+  useGetLatestMessage: jest.fn(() => () => mockLatestMessage),
+}));
+
 jest.mock('librechat-data-provider', () => ({
   replaceSpecialVars: jest.fn(({ text }) => text),
 }));
@@ -92,8 +96,8 @@ describe('useSubmitMessage', () => {
     });
 
     expect(mockAsk).toHaveBeenCalledWith(
-      { text: 'hello', hiddenPromptContext: null },
-      { addedConvo: undefined },
+      { text: 'hello' },
+      expect.objectContaining({ addedConvo: undefined }),
     );
     expect(mockSetActiveHiddenPrompt).toHaveBeenCalledWith(null);
     expect(mockReset).toHaveBeenCalled();
@@ -108,8 +112,8 @@ describe('useSubmitMessage', () => {
     });
 
     expect(mockAsk).toHaveBeenCalledWith(
-      { text: '', hiddenPromptContext: null },
-      { addedConvo: undefined },
+      { text: '' },
+      expect.objectContaining({ addedConvo: undefined }),
     );
     expect(mockReset).toHaveBeenCalled();
     expect(warnSpy).not.toHaveBeenCalled();

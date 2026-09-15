@@ -1,8 +1,9 @@
 import { memo, useId, useMemo, useState, useCallback } from 'react';
-import { useRecoilValue, useSetRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
+import { useParams } from 'react-router-dom';
+import { DropdownPopup } from '@librechat/client';
+import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { CaretDown, Check, Folder } from '@phosphor-icons/react';
-import { DropdownPopup, useMediaQuery } from '@librechat/client';
 import {
   Constants,
   getConfigDefaults,
@@ -10,7 +11,6 @@ import {
   Permissions,
 } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
-import ModelSelector from './Menus/Endpoints/ModelSelector';
 import {
   useGetProjectFiles,
   useGetStartupConfig,
@@ -18,12 +18,15 @@ import {
   useProjectByIdQuery,
   useProjectsQuery,
 } from '~/data-provider';
+import { HeaderMenu, NewChat, OpenSidebar, PresetsMenu } from './Menus';
+import { TemporaryChat, TemporaryChatIndicator } from './TemporaryChat';
+import ModelSelector from './Menus/Endpoints/ModelSelector';
+import { TraceButton, useTraceControl } from './Trace';
 import ExportAndShareMenu from './ExportAndShareMenu';
-import { OpenSidebar, PresetsMenu } from './Menus';
-import BookmarkMenu from './Menus/BookmarkMenu';
-import { TemporaryChat } from './TemporaryChat';
-import AddMultiConvo from './AddMultiConvo';
+import SubagentThreadLink from './SubagentThreadLink';
 import { useHasAccess, useLocalize } from '~/hooks';
+import BookmarkMenu from './Menus/BookmarkMenu';
+import AddMultiConvo from './AddMultiConvo';
 import { cn } from '~/utils';
 import store from '~/store';
 
@@ -83,10 +86,16 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
           },
           {
             onSuccess: (updatedConversation) => {
-              setConversation(updatedConversation);
+              setConversation((currentConversation) =>
+                currentConversation?.conversationId === conversation?.conversationId
+                  ? updatedConversation
+                  : currentConversation,
+              );
             },
             onError: () => {
-              setSelectedProjectId(projectId || null);
+              setSelectedProjectId((currentProjectId) =>
+                currentProjectId === nextProjectId ? projectId || null : currentProjectId,
+              );
             },
           },
         );
@@ -195,7 +204,7 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
               'border-border-light bg-surface-primary-alt text-text-primary shadow-sm transition-all duration-200',
               'hover:border-border-medium hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary',
               isMenuOpen &&
-                'border-ring-primary bg-surface-hover shadow-[0_0_0_3px_hsl(var(--ring-primary)/0.18)]',
+                'shadow-[0_0_0_3px_rgb(var(--ring-primary) / 0.18)] border-ring-primary bg-surface-hover',
             )}
           >
             <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
@@ -224,10 +233,19 @@ function ProjectSelectorBadges({ conversation }: { conversation?: TConversation 
   );
 }
 
-function Header() {
+function Header({
+  parentConversationId,
+  readOnly = false,
+}: {
+  parentConversationId?: string;
+  readOnly?: boolean;
+}) {
   const { data: startupConfig } = useGetStartupConfig();
   const navVisible = useRecoilValue(store.sidebarExpanded);
+  const isSubmitting = useRecoilValue(store.isSubmittingFamily(0));
   const conversation = useRecoilValue(store.conversationByIndex(0));
+  const { conversationId: routeConversationId } = useParams();
+  const isNewChat = routeConversationId == null || routeConversationId === Constants.NEW_CONVO;
 
   const interfaceConfig = useMemo(
     () => startupConfig?.interface ?? defaultInterface,
@@ -238,61 +256,64 @@ function Header() {
     permissionType: PermissionTypes.BOOKMARKS,
     permission: Permissions.USE,
   });
-
   const hasAccessToMultiConvo = useHasAccess({
     permissionType: PermissionTypes.MULTI_CONVO,
     permission: Permissions.USE,
   });
-
   const hasAccessToTemporaryChat = useHasAccess({
     permissionType: PermissionTypes.TEMPORARY_CHAT,
     permission: Permissions.USE,
   });
-
-  const isSmallScreen = useMediaQuery('(max-width: 768px)');
+  const trace = useTraceControl({
+    conversationId: isNewChat ? null : routeConversationId,
+    traceViewer: interfaceConfig.traceViewer,
+    isSubmitting,
+    enabled: parentConversationId == null,
+  });
+  const hiddenBehindNav = navVisible === true && 'max-md:hidden';
 
   return (
-    <div className="via-presentation/70 md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 absolute top-0 z-10 flex h-[52px] w-full items-center justify-between bg-gradient-to-b from-presentation to-transparent p-2 font-semibold text-text-primary 2xl:via-transparent">
-      <div className="hide-scrollbar flex w-full items-center justify-between gap-2 overflow-x-auto">
-        <div className="mx-1 flex items-center">
-          <OpenSidebar className="md:hidden" />
-          {!(navVisible && isSmallScreen) && (
-            <div
-              className={cn(
-                'flex items-center gap-2 pl-2',
-                !isSmallScreen ? 'transition-all duration-200 ease-in-out' : '',
-              )}
-            >
-              <ModelSelector startupConfig={startupConfig} />
-              <ProjectSelectorBadges conversation={conversation} />
-              {interfaceConfig.presets === true && interfaceConfig.modelSelect && <PresetsMenu />}
-              {hasAccessToBookmarks === true && <BookmarkMenu />}
-              {interfaceConfig.multiConvo === true && hasAccessToMultiConvo === true && (
-                <AddMultiConvo />
-              )}
-              {isSmallScreen && (
-                <>
-                  <ExportAndShareMenu
-                    isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
-                  />
-                  {hasAccessToTemporaryChat === true && <TemporaryChat />}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+    <div className="absolute top-0 z-10 flex h-[52px] w-full items-center gap-2 bg-gradient-to-b from-presentation via-presentation/70 to-transparent p-2 font-semibold text-text-primary md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 2xl:via-transparent">
+      <div className="flex flex-shrink-0 items-center md:hidden">
+        <OpenSidebar testId="header-open-sidebar-button" />
+      </div>
 
-        {!isSmallScreen && (
-          <div className="flex items-center gap-2">
-            <ExportAndShareMenu
-              isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
-            />
-            {hasAccessToTemporaryChat === true && <TemporaryChat />}
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 items-center gap-2 md:pl-3 md:transition-all md:duration-200 md:ease-in-out',
+          hiddenBehindNav,
+        )}
+      >
+        {parentConversationId != null && (
+          <SubagentThreadLink threadId={parentConversationId} labelClassName="hidden lg:inline" />
+        )}
+        {!readOnly && <ModelSelector startupConfig={startupConfig} />}
+        {!readOnly && <ProjectSelectorBadges conversation={conversation} />}
+        {!readOnly && interfaceConfig.presets === true && interfaceConfig.modelSelect === true && (
+          <PresetsMenu />
+        )}
+        {hasAccessToBookmarks === true && (
+          <div className="hidden items-center md:flex">
+            <BookmarkMenu />
+          </div>
+        )}
+        {hasAccessToMultiConvo === true && (
+          <div className="hidden items-center md:flex">
+            <AddMultiConvo />
           </div>
         )}
       </div>
-      {/* Empty div for spacing */}
-      <div />
+
+      <div className={cn('flex flex-shrink-0 items-center gap-2', hiddenBehindNav)}>
+        {hasAccessToTemporaryChat === true && <TemporaryChatIndicator />}
+        {!isNewChat && <NewChat className="md:hidden" />}
+        <HeaderMenu startupConfig={startupConfig} trace={trace} className="md:hidden" />
+        <div className="hidden items-center gap-2 md:flex">
+          {trace.show && <TraceButton onClick={trace.open} />}
+          <ExportAndShareMenu isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false} />
+          {hasAccessToTemporaryChat === true && <TemporaryChat />}
+        </div>
+      </div>
     </div>
   );
 }

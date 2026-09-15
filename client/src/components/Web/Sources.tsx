@@ -13,6 +13,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import {
+  Button,
   OGDialog,
   AnimatedTabs,
   OGDialogClose,
@@ -26,8 +27,8 @@ import { FaviconImage, getCleanDomain } from '~/components/Web/SourceHovercard';
 import SourcesErrorBoundary from './SourcesErrorBoundary';
 import { useFileDownload } from '~/data-provider';
 import { useSearchContext } from '~/Providers';
-import { useLocalize } from '~/hooks';
 import { cn, triggerDownload } from '~/utils';
+import { useLocalize } from '~/hooks';
 import store from '~/store';
 
 interface SourceItemProps {
@@ -89,7 +90,7 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
               </a>
             }
           />
-          <Ariakit.HovercardDisclosure className="absolute right-2 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-ring">
+          <Ariakit.HovercardDisclosure className="absolute right-2 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary">
             <VisuallyHidden>
               {localize('com_citation_more_details', { label: domain })}
             </VisuallyHidden>
@@ -97,7 +98,6 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
           </Ariakit.HovercardDisclosure>
 
           <Ariakit.Hovercard
-            animated
             gutter={16}
             className={cn(
               'z-[999] w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-border-medium bg-surface-secondary p-3 text-text-primary shadow-lg',
@@ -180,6 +180,7 @@ type AgentFileSource = {
   filename: string;
   bytes?: number;
   type?: string;
+  source?: string;
   pages?: number[];
   relevance?: number;
   pageRelevance?: Record<number, number>;
@@ -358,7 +359,9 @@ const FileItem = React.memo(function FileItem({
             </span>
           )}
         </div>
-        {error && <div className="mt-1 text-xs text-red-500">{getErrorMessage(error)}</div>}
+        {error && (
+          <div className="mt-1 text-xs text-text-destructive">{getErrorMessage(error)}</div>
+        )}
       </button>
     );
   }
@@ -390,7 +393,7 @@ const FileItem = React.memo(function FileItem({
           </span>
         )}
       </div>
-      {error && <div className="mt-1 text-xs text-red-500">{getErrorMessage(error)}</div>}
+      {error && <div className="mt-1 text-xs text-text-destructive">{getErrorMessage(error)}</div>}
     </button>
   );
 });
@@ -459,8 +462,8 @@ const SourcesGroup = React.memo(function SourcesGroup({
             </div>
           </OGDialogTrigger>
         )}
-        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-primary p-0 md:max-w-[600px]">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-primary px-3 py-2">
+        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-dialog p-0 md:max-w-[600px]">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-dialog px-3 py-2">
             <OGDialogTitle className="text-base font-medium">
               {localize('com_sources_title')}
             </OGDialogTitle>
@@ -555,8 +558,8 @@ function FilesGroup({ files, messageId, conversationId, limit = 3 }: FilesGroupP
             </div>
           </OGDialogTrigger>
         )}
-        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-primary p-0 md:max-w-[600px]">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-primary px-3 py-2">
+        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-dialog p-0 md:max-w-[600px]">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-dialog px-3 py-2">
             <OGDialogTitle className="text-base font-medium">
               {localize('com_sources_agent_files')}
             </OGDialogTitle>
@@ -760,7 +763,7 @@ function SourcesComponent({ messageId, conversationId }: SourcesProps = {}) {
         containerClassName="flex min-w-full mb-4"
         tabListClassName="flex items-center mb-2 border-b border-border-light overflow-x-auto"
         tabPanelClassName="w-full overflow-x-auto scrollbar-none md:mx-0 md:px-0"
-        tabClassName="flex items-center whitespace-nowrap text-xs font-medium text-token-text-secondary px-1 pt-2 pb-1 border-b-2 border-transparent data-[state=active]:text-text-primary outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabClassName="flex items-center whitespace-nowrap text-xs font-medium text-token-text-secondary px-1 pt-2 pb-1 border-b-2 border-transparent data-[state=active]:text-text-primary outline-none focus:ring-2 focus:ring-text-primary focus:ring-offset-2"
       />
     </div>
   );
@@ -787,13 +790,15 @@ export default function Sources(props: SourcesProps) {
       <div className="mb-2 text-sm text-text-secondary">
         {localize('com_sources_error_fallback')}
       </div>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => window.location.reload()}
-        className="hover:bg-surface-primary-hover rounded-md bg-surface-primary px-3 py-1 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+        className="rounded-md bg-surface-primary px-3 py-1 text-sm text-text-primary hover:bg-surface-hover"
         aria-label={localize('com_sources_reload_page')}
       >
         {localize('com_ui_refresh')}
-      </button>
+      </Button>
     </div>
   );
 

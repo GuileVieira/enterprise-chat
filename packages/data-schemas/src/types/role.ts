@@ -60,6 +60,7 @@ export interface IRole extends Document {
       [Permissions.CREATE]?: boolean;
       [Permissions.SHARE]?: boolean;
       [Permissions.SHARE_PUBLIC]?: boolean;
+      [Permissions.CONFIGURE_OBO]?: boolean;
     };
     [PermissionTypes.PROJECTS]?: {
       [Permissions.USE]?: boolean;
@@ -81,6 +82,15 @@ export interface IRole extends Document {
     };
     [PermissionTypes.META_ADS]?: {
       [Permissions.USE]?: boolean;
+    };
+    [PermissionTypes.SHARED_LINKS]?: {
+      [Permissions.CREATE]?: boolean;
+      [Permissions.SHARE]?: boolean;
+      [Permissions.SHARE_PUBLIC]?: boolean;
+    };
+    [PermissionTypes.SCHEDULES]?: {
+      [Permissions.USE]?: boolean;
+      [Permissions.CREATE]?: boolean;
     };
   };
   tenantId?: string;

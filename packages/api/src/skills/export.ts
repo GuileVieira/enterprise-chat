@@ -1,10 +1,10 @@
 import JSZip from 'jszip';
 import yaml from 'js-yaml';
-import { ResourceType, PermissionBits } from 'librechat-data-provider';
 import { logger } from '@librechat/data-schemas';
+import { ResourceType, PermissionBits } from 'librechat-data-provider';
+import type { ISkill, ISkillFile } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
-import type { ISkill, ISkillFile } from '@librechat/data-schemas';
 import type { ServerRequest, StrategyFunctions } from '~/types';
 
 const MAX_EXPORT_SKILLS = 50;
@@ -94,8 +94,10 @@ async function readFile(
   return Buffer.concat(chunks);
 }
 
-export function createExportSkillsHandler(deps: ExportSkillsDeps) {
-  return async function exportSkillsHandler(req: ServerRequest, res: Response) {
+export function createExportSkillsHandler(
+  deps: ExportSkillsDeps,
+): (req: ServerRequest, res: Response) => Promise<Response> {
+  return async function exportSkillsHandler(req: ServerRequest, res: Response): Promise<Response> {
     try {
       const user = req.user;
       if (!user?.id) {
@@ -193,7 +195,7 @@ export function createExportSkillsHandler(deps: ExportSkillsDeps) {
   };
 }
 
-export const exportSkillsLimits = {
+export const exportSkillsLimits: { maxSkills: number; maxBytes: number } = {
   maxSkills: MAX_EXPORT_SKILLS,
   maxBytes: MAX_EXPORT_BYTES,
 };

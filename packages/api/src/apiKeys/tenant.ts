@@ -1,9 +1,9 @@
 import { Types } from 'mongoose';
 import { tenantStorage, SYSTEM_TENANT_ID, logger } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits, SystemRoles } from 'librechat-data-provider';
-import type { Request, Response, NextFunction } from 'express';
 import type { AllMethods, IUser } from '@librechat/data-schemas';
 import type { TTenantApiCatalog } from 'librechat-data-provider';
+import type { Request, Response, NextFunction } from 'express';
 import type { GetRemoteAgentPermissionsDeps } from './service';
 import { getRemoteAgentPermissions } from './service';
 
@@ -36,7 +36,15 @@ export function resolveTenantKeyManagement(
   return tenantId;
 }
 
-export function createTenantApiHandlers(deps: Dependencies) {
+export function createTenantApiHandlers(deps: Dependencies): {
+  manage: (req: TenantRequest, res: Response) => Promise<Response>;
+  remoteCatalog: (req: TenantRequest, res: Response) => Promise<Response>;
+  requireProjectAccess: (
+    req: TenantRequest,
+    res: Response,
+    next: NextFunction,
+  ) => Promise<Response | void>;
+} {
   async function owner(tenantId: string): Promise<IUser | undefined> {
     const users = await deps.findUsers(
       { tenantId, role: SystemRoles.OWNER, disabled: { $ne: true } },
@@ -90,7 +98,7 @@ export function createTenantApiHandlers(deps: Dependencies) {
       if (!(permissions & PermissionBits.VIEW)) continue;
       result.projects.push({
         projectId: project.projectId,
-        name: project.name,
+        name: project.name ?? project.projectId,
         description: project.description,
       });
     }

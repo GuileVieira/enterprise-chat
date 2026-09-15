@@ -1,32 +1,30 @@
-import type { TCustomConfigSpeechResponse } from 'librechat-data-provider';
-
 export type SpeechFeatureKey = 'speechToText' | 'textToSpeech';
 
 type SpeechFeatureValue = boolean | string | number | undefined;
-type SpeechConfig = TCustomConfigSpeechResponse &
-  Partial<Record<SpeechFeatureKey, SpeechFeatureValue>> & {
-    message?: string;
-  };
+export type SpeechConfig = Record<string, SpeechFeatureValue> & {
+  message?: string;
+  speechToText?: SpeechFeatureValue;
+  textToSpeech?: SpeechFeatureValue;
+};
 
 const getSpeechFeatureValue = (
-  config: TCustomConfigSpeechResponse | undefined,
+  config: SpeechConfig | undefined,
   key: SpeechFeatureKey,
 ): SpeechFeatureValue => {
-  return (config as SpeechConfig | undefined)?.[key];
+  return config?.[key];
 };
 
 export const isSpeechFeatureDisabled = (
-  config: TCustomConfigSpeechResponse | undefined,
+  config: SpeechConfig | undefined,
   key: SpeechFeatureKey,
 ): boolean => {
-  const speechConfig = config as SpeechConfig | undefined;
-  if (!speechConfig || speechConfig.message === 'not_found') {
+  if (!config || config.message === 'not_found') {
     return false;
   }
   return getSpeechFeatureValue(config, key) === false;
 };
 
 export const isSpeechFeatureEnabled = (
-  config: TCustomConfigSpeechResponse | undefined,
+  config: SpeechConfig | undefined,
   key: SpeechFeatureKey,
 ): boolean => !isSpeechFeatureDisabled(config, key);

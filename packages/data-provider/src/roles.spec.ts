@@ -90,7 +90,9 @@ describe('roleDefaults', () => {
           permType === PermissionTypes.PROMPTS ||
           permType === PermissionTypes.AGENTS ||
           permType === PermissionTypes.SKILLS ||
-          permType === PermissionTypes.PROJECTS;
+          permType === PermissionTypes.PROJECTS ||
+          permType === PermissionTypes.SHARED_LINKS ||
+          permType === PermissionTypes.SCHEDULES;
 
         expect({
           permType,
@@ -212,5 +214,47 @@ describe('roleDefaults', () => {
         [Permissions.SHARE_PUBLIC]: false,
       });
     });
+  });
+
+  describe('MCP_SERVERS.CONFIGURE_OBO defaults', () => {
+    it('grants ADMIN CONFIGURE_OBO by default', () => {
+      const adminMcp = roleDefaults[SystemRoles.ADMIN].permissions[
+        PermissionTypes.MCP_SERVERS
+      ] as Record<string, boolean>;
+      expect(adminMcp[Permissions.CONFIGURE_OBO]).toBe(true);
+    });
+
+    it('does not grant CONFIGURE_OBO to USER by default — gates the OBO config layer', () => {
+      const userMcp = roleDefaults[SystemRoles.USER].permissions[
+        PermissionTypes.MCP_SERVERS
+      ] as Record<string, boolean>;
+      expect(userMcp[Permissions.CONFIGURE_OBO]).toBe(false);
+    });
+  });
+
+  describe('merged permission defaults', () => {
+    it.each([SystemRoles.USER, SystemRoles.OWNER, SystemRoles.AD_MANAGER])(
+      'keeps existing shared-link access and restricted OBO defaults for %s',
+      (role) => {
+        const permissions = roleDefaults[role].permissions;
+        expect(permissions[PermissionTypes.SHARED_LINKS]).toEqual({
+          [Permissions.CREATE]: true,
+          [Permissions.SHARE]: true,
+          [Permissions.SHARE_PUBLIC]: true,
+        });
+        expect(permissions[PermissionTypes.MCP_SERVERS][Permissions.CONFIGURE_OBO]).toBe(false);
+      },
+    );
+
+    it.each(Object.values(SystemRoles))(
+      'keeps local and upstream permission blocks for %s',
+      (role) => {
+        const permissions = roleDefaults[role].permissions;
+        expect(permissions[PermissionTypes.PROJECTS]).toBeDefined();
+        expect(permissions[PermissionTypes.META_ADS]).toBeDefined();
+        expect(permissions[PermissionTypes.SHARED_LINKS]).toBeDefined();
+        expect(permissions[PermissionTypes.SCHEDULES]).toBeDefined();
+      },
+    );
   });
 });

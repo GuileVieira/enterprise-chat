@@ -1,16 +1,18 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
-import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { DropdownPopup, Skeleton } from '@librechat/client';
-import { AccessRoleIds, PermissionBits, ResourceType } from 'librechat-data-provider';
+import { CaretDown as ChevronDown } from '@phosphor-icons/react';
 import { useGetAccessRolesQuery } from 'librechat-data-provider/react-query';
+import { AccessRoleIds, PermissionBits, ResourceType } from 'librechat-data-provider';
 import type { AccessRole } from 'librechat-data-provider';
 import type * as t from '~/common';
 import { cn, getRoleLocalizationKeys } from '~/utils';
+import { RESOURCE_CONFIGS } from '~/utils';
 import { useLocalize } from '~/hooks';
 
 interface AccessRolesPickerProps {
   id?: string;
+  ariaLabel?: string;
   resourceType?: ResourceType;
   selectedRoleId?: AccessRoleIds | string;
   onRoleChange: (roleId: AccessRoleIds) => void;
@@ -31,6 +33,16 @@ const resourceRoleIds: Record<
     editor: AccessRoleIds.PROJECT_EDITOR,
     owner: AccessRoleIds.PROJECT_OWNER,
   },
+  [ResourceType.CODE_ENVIRONMENT]: {
+    viewer: AccessRoleIds.CODE_ENVIRONMENT_VIEWER,
+    editor: AccessRoleIds.CODE_ENVIRONMENT_EDITOR,
+    owner: AccessRoleIds.CODE_ENVIRONMENT_OWNER,
+  },
+  [ResourceType.SKILL]: {
+    viewer: AccessRoleIds.SKILL_VIEWER,
+    editor: AccessRoleIds.SKILL_EDITOR,
+    owner: AccessRoleIds.SKILL_OWNER,
+  },
   [ResourceType.PROMPTGROUP]: {
     viewer: AccessRoleIds.PROMPTGROUP_VIEWER,
     editor: AccessRoleIds.PROMPTGROUP_EDITOR,
@@ -45,6 +57,11 @@ const resourceRoleIds: Record<
     viewer: AccessRoleIds.REMOTE_AGENT_VIEWER,
     editor: AccessRoleIds.REMOTE_AGENT_EDITOR,
     owner: AccessRoleIds.REMOTE_AGENT_OWNER,
+  },
+  [ResourceType.SHARED_LINK]: {
+    viewer: AccessRoleIds.SHARED_LINK_VIEWER,
+    editor: AccessRoleIds.SHARED_LINK_VIEWER,
+    owner: AccessRoleIds.SHARED_LINK_OWNER,
   },
 };
 
@@ -95,12 +112,14 @@ const getRoleIdFromRole = (resourceType: ResourceType, role: AccessRole): Access
 
 export default function AccessRolesPicker({
   id,
+  ariaLabel,
   resourceType = ResourceType.AGENT,
   selectedRoleId = AccessRoleIds.AGENT_VIEWER,
   onRoleChange,
   className = '',
 }: AccessRolesPickerProps) {
   const localize = useLocalize();
+  const menuId = React.useId();
   const [isOpen, setIsOpen] = React.useState(false);
   const { data: accessRoles, isLoading: rolesLoading } = useGetAccessRolesQuery(resourceType);
 
@@ -113,6 +132,11 @@ export default function AccessRolesPicker({
     };
   };
 
+  const ownerRoleId = RESOURCE_CONFIGS[resourceType]?.defaultOwnerRoleId;
+  const filteredRoles =
+    resourceType === ResourceType.SHARED_LINK
+      ? (accessRoles || []).filter((role) => role.accessRoleId !== ownerRoleId)
+      : accessRoles || [];
   const selectedRole = accessRoles?.find((role) => role.accessRoleId === selectedRoleId);
   const fallbackRoleId = getFallbackRoleId(resourceType, selectedRoleId);
   const selectedRoleInfo = selectedRole
@@ -123,14 +147,14 @@ export default function AccessRolesPicker({
     return <Skeleton className="h-10 w-24 rounded-lg" />;
   }
 
-  const dropdownItems: t.MenuItemProps[] = accessRoles.map((role: AccessRole) => {
+  const dropdownItems: t.MenuItemProps[] = filteredRoles.map((role: AccessRole) => {
     const roleId = getRoleIdFromRole(resourceType, role);
     const localizedInfo = getLocalizedRoleInfo(roleId);
     return {
       id: role.accessRoleId,
       label: localizedInfo.name,
       onClick: () => {
-        onRoleChange(roleId);
+        onRoleChange(role.accessRoleId);
         setIsOpen(false);
       },
       render: (props) => (
@@ -145,14 +169,17 @@ export default function AccessRolesPicker({
   });
 
   return (
-    <div className={className} id={id}>
+    <div className={className}>
       <DropdownPopup
-        menuId="access-roles-menu"
+        menuId={`access-roles-menu-${menuId}`}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         trigger={
           <Ariakit.MenuButton
-            aria-label={selectedRoleInfo?.description || 'Select role'}
+            id={id}
+            aria-label={
+              ariaLabel || selectedRoleInfo?.description || localize('com_ui_role_select')
+            }
             className={cn(
               'flex items-center justify-between gap-2 rounded-xl border border-border-light bg-transparent px-3 py-2 text-sm transition-colors hover:bg-surface-tertiary',
             )}

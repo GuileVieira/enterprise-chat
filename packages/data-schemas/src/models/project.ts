@@ -1,9 +1,10 @@
+import type { Model } from 'mongoose';
 import type * as t from '~/types';
 import { applyTenantIsolation } from '~/models/plugins/tenantIsolation';
 import mongoMeili from '~/models/plugins/mongoMeili';
 import projectSchema from '~/schema/project';
 
-export function createProjectModel(mongoose: typeof import('mongoose')) {
+export function createProjectModel(mongoose: typeof import('mongoose')): Model<t.IProject> {
   applyTenantIsolation(projectSchema);
   if (process.env.MEILI_HOST && process.env.MEILI_MASTER_KEY) {
     projectSchema.plugin(mongoMeili, {

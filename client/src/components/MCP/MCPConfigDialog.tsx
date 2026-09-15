@@ -1,16 +1,16 @@
 import React, { useMemo } from 'react';
 import {
-  Warning as AlertTriangle,
-  Keyhole as KeyRound,
-  Plug as PlugZap,
-} from '@phosphor-icons/react';
-import {
   Spinner,
   OGDialog,
   OGDialogTitle,
   OGDialogHeader,
   OGDialogContent,
 } from '@librechat/client';
+import {
+  Warning as AlertTriangle,
+  Keyhole as KeyRound,
+  Plug as PlugZap,
+} from '@phosphor-icons/react';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import type { ConfigFieldDetail } from '~/common';
 import ServerInitializationSection from './ServerInitializationSection';
@@ -95,7 +95,7 @@ export default function MCPConfigDialog({
     // Connecting: blue (in progress)
     if (connectionState === 'connecting') {
       return (
-        <div className="flex items-center gap-2 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-950 dark:text-blue-400">
+        <div className="flex items-center gap-2 rounded-full bg-status-info-subtle px-2 py-0.5 text-xs font-medium text-status-info">
           <Spinner className="size-3" />
           <span>{localize('com_ui_connecting')}</span>
         </div>
@@ -107,7 +107,7 @@ export default function MCPConfigDialog({
       if (requiresOAuth) {
         // Needs OAuth: amber (requires action)
         return (
-          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+          <div className="flex items-center gap-2 rounded-full bg-status-warning-subtle px-2 py-0.5 text-xs font-medium text-status-warning">
             <KeyRound className="size-3" aria-hidden="true" />
             <span>{localize('com_nav_mcp_status_needs_auth')}</span>
           </div>
@@ -115,7 +115,7 @@ export default function MCPConfigDialog({
       }
       // Simply disconnected: gray (neutral)
       return (
-        <div className="flex items-center gap-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+        <div className="flex items-center gap-2 rounded-full bg-status-neutral-subtle px-2 py-0.5 text-xs font-medium text-status-neutral">
           <PlugZap className="size-3" aria-hidden="true" />
           <span>{localize('com_nav_mcp_status_disconnected')}</span>
         </div>
@@ -125,7 +125,7 @@ export default function MCPConfigDialog({
     // Error: red
     if (connectionState === 'error') {
       return (
-        <div className="flex items-center gap-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600 dark:bg-red-950 dark:text-red-400">
+        <div className="flex items-center gap-2 rounded-full bg-status-error-subtle px-2 py-0.5 text-xs font-medium text-status-error">
           <AlertTriangle className="size-3" aria-hidden="true" />
           <span>{localize('com_ui_error')}</span>
         </div>
@@ -135,8 +135,8 @@ export default function MCPConfigDialog({
     // Connected: green
     if (connectionState === 'connected') {
       return (
-        <div className="flex items-center gap-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600 dark:bg-green-950 dark:text-green-400">
-          <div className="size-1.5 rounded-full bg-green-500" />
+        <div className="flex items-center gap-2 rounded-full bg-status-success-subtle px-2 py-0.5 text-xs font-medium text-status-success">
+          <div className="size-1.5 rounded-full bg-status-success" />
           <span>{localize('com_ui_active')}</span>
         </div>
       );

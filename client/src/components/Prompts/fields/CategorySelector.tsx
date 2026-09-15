@@ -1,28 +1,32 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useTranslation } from 'react-i18next';
 import { DropdownPopup } from '@librechat/client';
-import { LocalStorageKeys, SystemRoles } from 'librechat-data-provider';
 import { useFormContext, Controller } from 'react-hook-form';
+import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
+import { LocalStorageKeys, SystemRoles } from 'librechat-data-provider';
 import type { MenuItemProps } from '@librechat/client';
 import type { ReactNode } from 'react';
-import { SlidersHorizontal as Settings2 } from '@phosphor-icons/react';
-import { usePromptGroupsContext } from '~/Providers';
-import { useCategories, useAuthContext } from '~/hooks';
 import { CategoryAdminModal } from '~/components/Prompts';
+import { useCategories, useAuthContext } from '~/hooks';
+import { usePromptGroupsContext } from '~/Providers';
 import { cn } from '~/utils';
 
 interface CategorySelectorProps {
   currentCategory?: string;
   onValueChange?: (value: string) => void;
   className?: string;
+  portal?: boolean;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
   currentCategory,
   onValueChange,
   className = '',
+  portal = true,
 }) => {
+  const instanceId = useId();
+  const menuId = `${instanceId}-category-menu`;
   const { t } = useTranslation();
   const formContext = useFormContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,7 +66,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     if (!categories) return [];
 
     const items: MenuItemProps[] = categories.map((category) => ({
-      id: category.value,
+      id: `${menuId}-item-${category.value}`,
       label: category.label,
       icon: 'icon' in category ? category.icon : undefined,
       onClick: () => {
@@ -90,12 +94,12 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     }
 
     return items;
-  }, [categories, formContext, setValue, onValueChange, isAdmin, t]);
+  }, [categories, formContext, menuId, setValue, onValueChange, isAdmin, t]);
 
   const trigger = (
     <Ariakit.MenuButton
       className={cn(
-        'focus:ring-offset-ring-offset relative inline-flex h-9 items-center justify-between rounded-xl border border-border-medium bg-transparent px-3 text-sm text-text-primary transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground focus:ring-ring-primary',
+        'focus:ring-offset-ring-offset hover:bg-accent hover:text-accent-foreground relative inline-flex h-9 items-center justify-between rounded-xl border border-border-medium bg-transparent px-3 text-sm text-text-primary transition-all duration-200 ease-in-out focus:ring-ring-primary',
         'gap-2 sm:w-fit',
         className,
       )}
@@ -119,11 +123,13 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         items={menuItems}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
-        menuId="category-selector-menu"
+        menuId={menuId}
         className="mt-2"
-        portal={true}
+        portal={portal}
       />
-      <CategoryAdminModal open={showAdminModal} onClose={() => setShowAdminModal(false)} />
+      {isAdmin && (
+        <CategoryAdminModal open={showAdminModal} onClose={() => setShowAdminModal(false)} />
+      )}
     </>
   );
 

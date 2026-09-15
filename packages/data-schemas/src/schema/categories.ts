@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 import type { ICategory } from '~/types';
 
-const categoriesSchema = new Schema<ICategory>(
+const categoriesSchema: Schema<ICategory> = new Schema<ICategory>(
   {
     label: {
       type: String,

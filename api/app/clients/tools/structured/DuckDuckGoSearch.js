@@ -1,5 +1,5 @@
 const { Tool } = require('@langchain/core/tools');
-const { DuckDuckGoSearch } = require('@langchain/community/tools/duckduckgo_search');
+const { search } = require('duck-duck-scrape');
 
 const MAX_RESULTS = 5;
 
@@ -61,7 +61,9 @@ class DuckDuckGoSearchTool extends Tool {
     }
 
     try {
-      const searchTool = this.searchTool ?? new DuckDuckGoSearch({ maxResults: MAX_RESULTS });
+      const searchTool = this.searchTool ?? {
+        invoke: async (searchQuery) => (await search(searchQuery)).results,
+      };
       const rawResults = await searchTool.invoke(query);
       const results = parseSearchResults(rawResults)
         .map((result) => ({

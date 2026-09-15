@@ -1,14 +1,25 @@
 const express = require('express');
 const {
   isEnabled,
+  isLangfuseConnectionAvailable,
+  isLangfuseFanoutEnabled,
   getBalanceConfig,
   getCloudFrontConfig,
+  getAppConfigOptionsFromUser,
+  resolveBuildInfo,
+  resolveTitleTiming,
   sanitizeModelSpecs,
+  excludeHiddenModelSpecs,
+  isFileSnapshotEnabled,
+  getEndpointsDropParamsMap,
+  resolveCodeEnvironmentDecisionVersion,
+  resolveCodeEnvironmentMoveVersion,
 } = require('@librechat/api');
-const { defaultSocialLogins } = require('librechat-data-provider');
+const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
-const { hasCapability } = require('~/server/middleware/roles/capabilities');
+const { hasCapability, hasConfigCapability } = require('~/server/middleware/roles/capabilities');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
+const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
 
 const router = express.Router();
@@ -26,15 +37,29 @@ const shareLinkBaseUrl = process.env.SHARE_LINK_BASE_URL || '';
 const sharePointFilePickerEnabled = isEnabled(process.env.ENABLE_SHAREPOINT_FILEPICKER);
 const openidReuseTokens = isEnabled(process.env.OPENID_REUSE_TOKENS);
 
+/**
+ * Resolve build metadata eagerly at module load so the first `/api/config`
+ * request does not pay the cost of `execFileSync('git', ...)` on the hot path.
+ * The resolver caches its result after the first call.
+ */
+resolveBuildInfo();
+
 function isBirthday() {
   const today = new Date();
   return today.getMonth() === 1 && today.getDate() === 11;
 }
 
-function buildSharedPayload() {
+/**
+ * Pre-login fields rendered by the unauthenticated login, registration, password-reset,
+ * and email-verification pages. Any field added here is readable by anonymous callers
+ * of `GET /api/config`, so keep this set strictly to what those pages need.
+ *
+ * See client consumers under `client/src/components/Auth/` and `client/src/routes/Layouts/Startup.tsx`.
+ */
+function buildPreLoginPayload() {
   const isOpenIdEnabled =
     !!process.env.OPENID_CLIENT_ID &&
-    !!process.env.OPENID_CLIENT_SECRET &&
+    (isEnabled(process.env.OPENID_USE_PKCE) || !!process.env.OPENID_CLIENT_SECRET?.trim()) &&
     !!process.env.OPENID_ISSUER &&
     !!process.env.OPENID_SESSION_SECRET;
 
@@ -75,20 +100,6 @@ function buildSharedPayload() {
       !!process.env.EMAIL_PASSWORD &&
       !!process.env.EMAIL_FROM,
     passwordResetEnabled,
-    showBirthdayIcon:
-      isBirthday() ||
-      isEnabled(process.env.SHOW_BIRTHDAY_ICON) ||
-      process.env.SHOW_BIRTHDAY_ICON === '',
-    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || '',
-    sharedLinksEnabled,
-    publicSharedLinksEnabled,
-    shareLinkBaseUrl,
-    analyticsGtmId: process.env.ANALYTICS_GTM_ID,
-    openidReuseTokens,
-    /** Read inline (not module-level) for per-request evaluation and test isolation */
-    allowAccountDeletion:
-      process.env.ALLOW_ACCOUNT_DELETION === undefined ||
-      isEnabled(process.env.ALLOW_ACCOUNT_DELETION),
   };
 
   const minPasswordLength = parseInt(process.env.MIN_PASSWORD_LENGTH, 10);
@@ -100,11 +111,68 @@ function buildSharedPayload() {
     payload.ldap = ldap;
   }
 
+  return payload;
+}
+
+/**
+ * Fields shared by authenticated chat and share-view config. Anonymous share
+ * views receive these through `/api/share/:shareId/config` after share access
+ * checks, not through the generic startup config endpoint.
+ */
+function buildPublicSharePayload() {
+  /** @type {Partial<TStartupConfig>} */
+  const payload = {
+    analyticsGtmId: process.env.ANALYTICS_GTM_ID,
+  };
+
   if (typeof process.env.CUSTOM_FOOTER === 'string') {
     payload.customFooter = process.env.CUSTOM_FOOTER;
   }
 
   return payload;
+}
+
+/**
+ * Post-login fields appended only when `req.user` is present. These describe the
+ * authenticated UX (account-settings links, share-link feature flags, birthday icon,
+ * openid token-reuse marker) and are not needed on the pre-login screens, so they
+ * are not exposed to unauthenticated callers.
+ */
+function buildPostLoginPayload() {
+  /** @type {Partial<TStartupConfig>} */
+  const payload = {
+    showBirthdayIcon:
+      isBirthday() ||
+      isEnabled(process.env.SHOW_BIRTHDAY_ICON) ||
+      process.env.SHOW_BIRTHDAY_ICON === '',
+    helpAndFaqURL: process.env.HELP_AND_FAQ_URL || '',
+    sharedLinksEnabled,
+    publicSharedLinksEnabled,
+    shareLinkBaseUrl,
+    openidReuseTokens,
+    /** Read inline (not module-level) for per-request evaluation and test isolation */
+    allowAccountDeletion:
+      process.env.ALLOW_ACCOUNT_DELETION === undefined ||
+      isEnabled(process.env.ALLOW_ACCOUNT_DELETION),
+  };
+
+  return payload;
+}
+
+function buildBuildInfoPayload(interfaceConfig) {
+  if (interfaceConfig?.buildInfo === false) {
+    return undefined;
+  }
+  const info = resolveBuildInfo();
+  if (!info.commit && !info.branch && !info.buildDate) {
+    return undefined;
+  }
+  return {
+    commit: info.commit,
+    commitShort: info.commitShort,
+    branch: info.branch,
+    buildDate: info.buildDate,
+  };
 }
 
 function buildWebSearchConfig(appConfig) {
@@ -145,8 +213,9 @@ function buildCloudFrontStartupConfig() {
 
 router.get('/', async function (req, res) {
   try {
-    const sharedPayload = buildSharedPayload();
-    const cloudFront = buildCloudFrontStartupConfig();
+    const preLoginPayload = buildPreLoginPayload();
+    const publicSharePayload = buildPublicSharePayload();
+    const rum = getRumConfig();
 
     if (!req.user) {
       const tenantId = getTenantId();
@@ -154,14 +223,15 @@ router.get('/', async function (req, res) {
 
       /** @type {Partial<TStartupConfig>} */
       const payload = {
-        ...sharedPayload,
+        ...preLoginPayload,
         socialLogins: baseConfig?.registration?.socialLogins ?? defaultSocialLogins,
         turnstile: baseConfig?.turnstileConfig,
-        ...(cloudFront ? { cloudFront } : {}),
+        ...(rum ? { rum } : {}),
       };
 
       const interfaceConfig = baseConfig?.interfaceConfig;
-      if (interfaceConfig?.privacyPolicy || interfaceConfig?.termsOfService) {
+      const buildInfoDisabled = interfaceConfig?.buildInfo === false;
+      if (interfaceConfig?.privacyPolicy || interfaceConfig?.termsOfService || buildInfoDisabled) {
         payload.interface = {};
         if (interfaceConfig.privacyPolicy) {
           payload.interface.privacyPolicy = interfaceConfig.privacyPolicy;
@@ -169,26 +239,70 @@ router.get('/', async function (req, res) {
         if (interfaceConfig.termsOfService) {
           payload.interface.termsOfService = interfaceConfig.termsOfService;
         }
+        if (buildInfoDisabled) {
+          payload.interface.buildInfo = false;
+        }
+      }
+
+      const unauthBuildInfo = buildBuildInfoPayload(interfaceConfig);
+      if (unauthBuildInfo) {
+        payload.buildInfo = unauthBuildInfo;
       }
 
       return res.status(200).send(payload);
     }
 
-    const appConfig = await getAppConfig({
-      role: req.user.role,
-      userId: req.user.id,
-      tenantId: req.user.tenantId || getTenantId(),
-    });
+    const appConfig = await getAppConfig(getAppConfigOptionsFromUser(req.user));
+    const codeEnvironmentDecisionVersion = resolveCodeEnvironmentDecisionVersion(
+      process.env.CODE_ENVIRONMENT_DECISION_VERSION,
+    );
+    const codeEnvironmentMoveVersion = resolveCodeEnvironmentMoveVersion(appConfig);
+
+    const endpointsDropParamsMap = getEndpointsDropParamsMap(appConfig?.endpoints);
 
     const balanceConfig = getBalanceConfig(appConfig);
+    const cloudFront = buildCloudFrontStartupConfig();
+    const langfuseFanoutEnabled = isLangfuseFanoutEnabled();
+    const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
+    let langfuseConnectionAccess = false;
+
+    if (langfuseConnectionAvailable) {
+      try {
+        const userId = req.user.id ?? req.user._id?.toString();
+        if (userId) {
+          const capabilityUser = {
+            id: userId,
+            role: req.user.role ?? '',
+            tenantId: req.user.tenantId,
+            idOnTheSource: req.user.idOnTheSource ?? null,
+          };
+          const hasAdminAccess = await hasCapability(
+            capabilityUser,
+            SystemCapabilities.ACCESS_ADMIN,
+          );
+          if (hasAdminAccess) {
+            langfuseConnectionAccess = await hasConfigCapability(capabilityUser, 'langfuse');
+          }
+        }
+      } catch (err) {
+        logger.warn(`[config] Langfuse capability check failed: ${err.message}`);
+      }
+    }
 
     /** @type {TStartupConfig} */
     const payload = {
-      ...sharedPayload,
+      ...preLoginPayload,
+      ...publicSharePayload,
+      ...buildPostLoginPayload(),
+      sharedLinksSnapshotFilesEnabled: sharedLinksEnabled && isFileSnapshotEnabled(appConfig),
       socialLogins: appConfig?.registration?.socialLogins ?? defaultSocialLogins,
       interface: appConfig?.interfaceConfig,
+      titleGenerationTiming: resolveTitleTiming({
+        appConfig,
+        endpoint: EModelEndpoint.agents,
+      }),
       turnstile: appConfig?.turnstileConfig,
-      modelSpecs: sanitizeModelSpecs(appConfig?.modelSpecs),
+      modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,
@@ -199,7 +313,16 @@ router.get('/', async function (req, res) {
       conversationImportMaxFileSize: process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES
         ? parseInt(process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES, 10)
         : 0,
+      langfuseFanoutEnabled,
+      langfuseConnectionAccess,
+      insightsEnabled: isEnabled(process.env.ENABLE_INSIGHTS),
+      compactionEnabled: appConfig?.summarization?.enabled !== false,
+      ...(codeEnvironmentDecisionVersion != null ? { codeEnvironmentDecisionVersion } : {}),
+      ...(codeEnvironmentMoveVersion != null ? { codeEnvironmentMoveVersion } : {}),
       ...(cloudFront ? { cloudFront } : {}),
+      ...(rum ? { rum } : {}),
+      fileUploadSseEnabled: isEnabled(process.env.FILE_UPLOAD_SSE_ENABLED),
+      endpointsDropParamsMap: endpointsDropParamsMap,
     };
 
     const webSearch = buildWebSearchConfig(appConfig);
@@ -207,15 +330,24 @@ router.get('/', async function (req, res) {
       payload.webSearch = webSearch;
     }
 
-    if (!payload.allowAccountDeletion) {
+    const buildInfo = buildBuildInfoPayload(appConfig?.interfaceConfig);
+    if (buildInfo) {
+      payload.buildInfo = buildInfo;
+    }
+
+    const adminPanelURL = process.env.ADMIN_PANEL_URL;
+    if (adminPanelURL || !payload.allowAccountDeletion) {
       try {
         const userId = req.user.id ?? req.user._id?.toString();
         if (userId) {
-          const canDelete = await hasCapability(
+          const hasAdminAccess = await hasCapability(
             { id: userId, role: req.user.role ?? '', tenantId: req.user.tenantId },
             SystemCapabilities.ACCESS_ADMIN,
           );
-          if (canDelete) {
+          if (hasAdminAccess && adminPanelURL) {
+            payload.adminPanelURL = adminPanelURL;
+          }
+          if (hasAdminAccess && !payload.allowAccountDeletion) {
             payload.allowAccountDeletion = true;
           }
         }

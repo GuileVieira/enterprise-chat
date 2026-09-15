@@ -3,7 +3,7 @@
  */
 
 const mongoose = require('mongoose');
-const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { logger, getTenantId, SYSTEM_TENANT_ID, runAsSystem } = require('@librechat/data-schemas');
 const {
   ResourceType,
   SystemRoles,
@@ -11,23 +11,99 @@ const {
   AccessRoleIds,
   PermissionBits,
 } = require('librechat-data-provider');
-const { enrichRemoteAgentPrincipals, backfillRemoteAgentPermissions } = require('@librechat/api');
+const {
+  enrichRemoteAgentPrincipals,
+  createPrincipalSearch,
+  backfillRemoteAgentPermissions,
+  auditInsightsPermissionChanges,
+  getInsightsPrincipalState,
+  maskAgentInsightsBit,
+  sanitizeInsightsPermissionPrincipals,
+  validateInsightsPermissionUpdates,
+} = require('@librechat/api');
 const {
   bulkUpdateResourcePermissions,
+  grantPermission,
+  restoreInsightsPermissionChanges,
   ensureGroupPrincipalExists,
   getResourcePermissionsMap,
   findAccessibleResources,
   getEffectivePermissions,
   ensurePrincipalExists,
   getAvailableRoles,
-  grantPermission,
 } = require('~/server/services/PermissionService');
 const {
   entraIdPrincipalFeatureEnabled,
   searchEntraIdPrincipals,
 } = require('~/server/services/GraphApiService');
 const db = require('~/models');
+const { invalidateCodeEnvironmentConfigCache } = require('~/server/services/Config');
 const { findProjectForRequest } = require('~/server/services/Projects/access');
+
+const matchesCurrentTenant = (principal, tenantId) => {
+  if (!tenantId || tenantId === SYSTEM_TENANT_ID) {
+    return true;
+  }
+  return principal?.tenantId === tenantId;
+};
+
+const isAdminUser = (user) => user?.role === SystemRoles.ADMIN;
+const getUserTenantId = async (userId) => {
+  if (!userId || typeof db.getUserById !== 'function') return undefined;
+  const user = await db.getUserById(userId, 'tenantId').catch((error) => {
+    logger.warn('[updateResourcePermissions] Failed to fetch target user tenant', error);
+    return null;
+  });
+  return user?.tenantId;
+};
+const normalizePromptGroupPrincipal = async ({ principal, reqUser, action }) => {
+  if (isAdminUser(reqUser)) {
+    return principal.type === PrincipalType.TENANT
+      ? { ...principal, accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER }
+      : principal;
+  }
+  if (principal.type !== PrincipalType.USER) {
+    throw new Error(`Only admins can ${action} prompt access for this principal type`);
+  }
+  const targetTenantId = await getUserTenantId(principal.id);
+  if ((targetTenantId || '') !== (reqUser?.tenantId || '')) {
+    throw new Error('Cannot share prompt outside your tenant');
+  }
+  return { ...principal, accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER };
+};
+const getResourceIdVariants = (resourceId) =>
+  mongoose.Types.ObjectId.isValid(resourceId)
+    ? [resourceId, mongoose.Types.ObjectId.createFromHexString(resourceId)]
+    : [resourceId];
+const getAuthorPrincipal = async ({ agent, resourceId, grantedBy }) => {
+  const authorId = agent?.author?.toString();
+  if (!authorId || !mongoose.Types.ObjectId.isValid(authorId)) return null;
+  const user =
+    typeof db.getUserById === 'function'
+      ? await db.getUserById(authorId).catch((error) => {
+          logger.warn('[getResourcePermissions] Failed to fetch agent author', error);
+          return null;
+        })
+      : null;
+  await grantPermission({
+    principalType: PrincipalType.USER,
+    principalId: authorId,
+    resourceType: ResourceType.AGENT,
+    resourceId,
+    accessRoleId: AccessRoleIds.AGENT_OWNER,
+    grantedBy,
+  });
+  return {
+    type: PrincipalType.USER,
+    id: authorId,
+    name: user?.name || user?.username,
+    email: user?.email,
+    avatar: user?.avatar,
+    source: 'local',
+    idOnTheSource: user?.idOnTheSource || authorId,
+    accessRoleId: AccessRoleIds.AGENT_OWNER,
+  };
+};
 
 /**
  * Generic controller for resource permission endpoints
@@ -44,101 +120,6 @@ const validateResourceType = (resourceType) => {
   if (!validTypes.includes(resourceType)) {
     throw new Error(`Invalid resourceType: ${resourceType}. Valid types: ${validTypes.join(', ')}`);
   }
-};
-
-const getResourceIdVariants = (resourceId) => {
-  if (!mongoose.Types.ObjectId.isValid(resourceId)) {
-    return [resourceId];
-  }
-
-  return [resourceId, mongoose.Types.ObjectId.createFromHexString(resourceId)];
-};
-
-const toIdString = (value) => {
-  if (!value) {
-    return '';
-  }
-
-  return value.toString();
-};
-
-const getPromptGroupViewerRole = () => AccessRoleIds.PROMPTGROUP_VIEWER;
-
-const isAdminUser = (user) => user?.role === SystemRoles.ADMIN;
-
-const getUserTenantId = async (userId) => {
-  if (!userId || typeof db.getUserById !== 'function') {
-    return undefined;
-  }
-
-  const user = await db.getUserById(userId, 'tenantId').catch((error) => {
-    logger.warn('[updateResourcePermissions] Failed to fetch target user tenant', error);
-    return null;
-  });
-  return user?.tenantId;
-};
-
-const sameTenant = (left, right) => (left || '') === (right || '');
-
-const normalizePromptGroupPrincipal = async ({ principal, reqUser, action }) => {
-  if (isAdminUser(reqUser)) {
-    if (principal.type === PrincipalType.TENANT) {
-      return {
-        ...principal,
-        accessRoleId: getPromptGroupViewerRole(),
-      };
-    }
-    return principal;
-  }
-
-  if (principal.type !== PrincipalType.USER) {
-    throw new Error(`Only admins can ${action} prompt access for this principal type`);
-  }
-
-  const targetTenantId = await getUserTenantId(principal.id);
-  if (!sameTenant(targetTenantId, reqUser?.tenantId)) {
-    throw new Error('Cannot share prompt outside your tenant');
-  }
-
-  return {
-    ...principal,
-    accessRoleId: getPromptGroupViewerRole(),
-  };
-};
-
-const getAuthorPrincipal = async ({ agent, resourceId, grantedBy }) => {
-  const authorId = toIdString(agent?.author);
-  if (!authorId || !mongoose.Types.ObjectId.isValid(authorId)) {
-    return null;
-  }
-
-  let user = null;
-  if (typeof db.getUserById === 'function') {
-    user = await db.getUserById(authorId).catch((error) => {
-      logger.warn('[getResourcePermissions] Failed to fetch agent author', error);
-      return null;
-    });
-  }
-
-  await grantPermission({
-    principalType: PrincipalType.USER,
-    principalId: authorId,
-    resourceType: ResourceType.AGENT,
-    resourceId,
-    accessRoleId: AccessRoleIds.AGENT_OWNER,
-    grantedBy,
-  });
-
-  return {
-    type: PrincipalType.USER,
-    id: authorId,
-    name: user?.name || user?.username,
-    email: user?.email,
-    avatar: user?.avatar,
-    source: 'local',
-    idOnTheSource: user?.idOnTheSource || authorId,
-    accessRoleId: AccessRoleIds.AGENT_OWNER,
-  };
 };
 
 /**
@@ -160,14 +141,24 @@ const updateResourcePermissions = async (req, res) => {
     /** @type {TUpdateResourcePermissionsRequest} */
     const { updated, removed, public: isPublic, publicAccessRoleId } = req.body;
     const { id: userId } = req.user;
+    const updatedList = Array.isArray(updated) ? updated : [];
+    const removedList = Array.isArray(removed) ? removed : [];
+    const insightsValidation = validateInsightsPermissionUpdates({
+      resourceType,
+      userRole: req.user.role,
+      updatedPrincipals: updatedList,
+    });
+    if (insightsValidation) {
+      return res.status(insightsValidation.status).json({ error: insightsValidation.error });
+    }
 
     // Prepare principals for the service call
     const updatedPrincipals = [];
     const revokedPrincipals = [];
 
     // Add updated principals
-    if (updated && Array.isArray(updated)) {
-      updatedPrincipals.push(...updated);
+    if (updatedList.length > 0) {
+      updatedPrincipals.push(...updatedList);
     }
 
     // Add public permission if enabled
@@ -202,20 +193,29 @@ const updateResourcePermissions = async (req, res) => {
           principalId = null; // Public principals don't need database records
         } else if (principal.type === PrincipalType.ROLE) {
           principalId = principal.id; // Role principals use role name as ID
+        } else if (principal.type === PrincipalType.TENANT) {
+          if (
+            !isAdminUser(req.user) &&
+            (req.user.role !== SystemRoles.OWNER || principal.id !== req.user.tenantId)
+          ) {
+            return res.status(403).json({
+              error: 'Forbidden',
+              details: 'Cannot grant access to another tenant',
+            });
+          }
+          principalId = principal.id;
         } else if (principal.type === PrincipalType.USER) {
           principalId = await ensurePrincipalExists(principal);
         } else if (principal.type === PrincipalType.GROUP) {
           // Pass authContext to enable member fetching for Entra ID groups when available
           principalId = await ensureGroupPrincipalExists(principal, authContext);
-        } else if (principal.type === PrincipalType.TENANT) {
-          principalId = principal.id;
         } else {
           logger.error(`Unsupported principal type: ${principal.type}`);
           continue; // Skip invalid principal types
         }
 
         // Update the principal with the validated ID for ACL operations
-        const validatedPrincipal = {
+        let validatedPrincipal = {
           ...principal,
           id: principalId,
           ...(resourceType === ResourceType.AGENT &&
@@ -223,25 +223,15 @@ const updateResourcePermissions = async (req, res) => {
               accessRoleId: AccessRoleIds.AGENT_VIEWER,
             }),
         };
-
         if (resourceType === ResourceType.PROMPTGROUP) {
-          validatedPrincipals.push(
-            await normalizePromptGroupPrincipal({
-              principal: validatedPrincipal,
-              reqUser: req.user,
-              action: 'grant',
-            }),
-          );
-        } else {
-          validatedPrincipals.push(validatedPrincipal);
-        }
-      } catch (error) {
-        if (resourceType === ResourceType.PROMPTGROUP) {
-          return res.status(403).json({
-            error: 'Forbidden',
-            details: error.message,
+          validatedPrincipal = await normalizePromptGroupPrincipal({
+            principal: validatedPrincipal,
+            reqUser: req.user,
+            action: 'grant',
           });
         }
+        validatedPrincipals.push(validatedPrincipal);
+      } catch (error) {
         logger.error('Error ensuring principal exists:', {
           principal: {
             type: principal.type,
@@ -251,19 +241,30 @@ const updateResourcePermissions = async (req, res) => {
           },
           error: error.message,
         });
-        // Continue with other principals instead of failing the entire operation
+        if (resourceType === ResourceType.PROMPTGROUP) {
+          return res.status(403).json({ error: 'Forbidden', details: error.message });
+        }
         continue;
       }
     }
 
     // Add removed principals
-    if (removed && Array.isArray(removed)) {
-      for (const principal of removed) {
+    if (removedList.length > 0) {
+      for (const principal of removedList) {
+        if (
+          principal.type === PrincipalType.TENANT &&
+          !isAdminUser(req.user) &&
+          (req.user.role !== SystemRoles.OWNER || principal.id !== req.user.tenantId)
+        ) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            details: 'Cannot revoke access from another tenant',
+          });
+        }
         if (resourceType !== ResourceType.PROMPTGROUP || principal.type === PrincipalType.PUBLIC) {
           revokedPrincipals.push(principal);
           continue;
         }
-
         try {
           revokedPrincipals.push(
             await normalizePromptGroupPrincipal({
@@ -273,33 +274,17 @@ const updateResourcePermissions = async (req, res) => {
             }),
           );
         } catch (error) {
-          return res.status(403).json({
-            error: 'Forbidden',
-            details: error.message,
-          });
+          return res.status(403).json({ error: 'Forbidden', details: error.message });
         }
       }
     }
 
-    // If public is disabled, add public to revoked list
-    if (!isPublic) {
+    // If public is explicitly disabled, add public to revoked list
+    if (isPublic === false) {
       revokedPrincipals.push({
         type: PrincipalType.PUBLIC,
         id: null,
       });
-    }
-
-    const hasTenantGrant = validatedPrincipals.some(
-      (principal) => principal.type === PrincipalType.TENANT,
-    );
-    if (resourceType === ResourceType.AGENT && hasTenantGrant) {
-      await runAsSystem(() =>
-        db.updateAgent(
-          { _id: resourceId },
-          { $unset: { tenantId: '' } },
-          { updatingUserId: userId, skipVersioning: true },
-        ),
-      );
     }
 
     const results = await bulkUpdateResourcePermissions({
@@ -310,16 +295,42 @@ const updateResourcePermissions = async (req, res) => {
       grantedBy: userId,
     });
 
-    if (results.errors.length > 0) {
-      logger.error('[updateResourcePermissions] Permission updates failed', {
-        resourceType,
-        resourceId,
-        errors: results.errors,
-      });
-      return res.status(400).json({
-        error: 'Failed to update permissions',
-        details: 'One or more permission updates failed',
-        results,
+    if (
+      resourceType === ResourceType.AGENT &&
+      results.granted?.some((principal) => principal.type === PrincipalType.TENANT)
+    ) {
+      await runAsSystem(() =>
+        db.updateAgent(
+          { _id: resourceId },
+          { $unset: { tenantId: '' } },
+          { updatingUserId: userId, skipVersioning: true },
+        ),
+      );
+    }
+
+    await auditInsightsPermissionChanges({
+      req,
+      resourceId,
+      changes: results.insightsChanges ?? [],
+      failClosed: process.env.AUDIT_LOG_FAIL_CLOSED === 'true',
+      deps: {
+        getAgent: db.getAgent,
+        recordAuditEntry: db.recordAuditEntry,
+        restoreInsightsPermissionChanges: (changes) =>
+          restoreInsightsPermissionChanges({
+            resourceType: ResourceType.AGENT,
+            resourceId,
+            changes,
+          }),
+        logger,
+      },
+    });
+
+    if (resourceType === ResourceType.CODE_ENVIRONMENT) {
+      await invalidateCodeEnvironmentConfigCache(req.user.tenantId).catch((error) => {
+        // Cached environment metadata is authorization-filtered against the live ACL on every
+        // read, so a failed revision write may delay a grant but cannot preserve a revocation.
+        logger.error('[PermissionsController] code environment cache invalidation failed:', error);
       });
     }
 
@@ -335,12 +346,25 @@ const updateResourcePermissions = async (req, res) => {
       });
     }
 
+    if (results.errors?.length > 0) {
+      return res.status(400).json({
+        error: 'Failed to update permissions',
+        details: 'One or more permission updates failed',
+        results,
+      });
+    }
+
     /** @type {TUpdateResourcePermissionsResponse} */
+    const responsePrincipals = sanitizeInsightsPermissionPrincipals({
+      resourceType,
+      userRole: req.user.role,
+      principals: results.granted,
+    });
     const response = {
       message: 'Permissions updated successfully',
       results: {
-        principals: results.granted,
-        public: isPublic || false,
+        principals: responsePrincipals,
+        ...(isPublic !== undefined ? { public: isPublic } : {}),
         publicAccessRoleId: isPublic ? publicAccessRoleId : undefined,
       },
     };
@@ -348,7 +372,7 @@ const updateResourcePermissions = async (req, res) => {
     res.status(200).json(response);
   } catch (error) {
     logger.error('Error updating resource permissions:', error);
-    res.status(400).json({
+    res.status(error.statusCode ?? 400).json({
       error: 'Failed to update permissions',
       details: error.message,
     });
@@ -364,68 +388,70 @@ const getResourcePermissions = async (req, res) => {
   try {
     const { resourceType, resourceId } = req.params;
     validateResourceType(resourceType);
+    const tenantId = getTenantId();
 
-    const resourceIds = getResourceIdVariants(resourceId);
-    const results = await runAsSystem(() =>
-      db.aggregateAclEntries([
-        // Match ACL entries for this resource
-        {
-          $match: {
-            resourceType,
-            resourceId: { $in: resourceIds },
-          },
+    const results = await db.aggregateAclEntries([
+      // Match ACL entries for this resource
+      {
+        $match: {
+          resourceType,
+          resourceId: { $in: getResourceIdVariants(resourceId) },
         },
-        // Lookup AccessRole information
-        {
-          $lookup: {
-            from: 'accessroles',
-            localField: 'roleId',
-            foreignField: '_id',
-            as: 'role',
-          },
+      },
+      // Lookup AccessRole information
+      {
+        $lookup: {
+          from: 'accessroles',
+          localField: 'roleId',
+          foreignField: '_id',
+          as: 'role',
         },
-        // Lookup User information (for user principals)
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'principalId',
-            foreignField: '_id',
-            as: 'userInfo',
-          },
+      },
+      // Lookup User information (for user principals)
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'principalId',
+          foreignField: '_id',
+          as: 'userInfo',
         },
-        // Lookup Group information (for group principals)
-        {
-          $lookup: {
-            from: 'groups',
-            localField: 'principalId',
-            foreignField: '_id',
-            as: 'groupInfo',
-          },
+      },
+      // Lookup Group information (for group principals)
+      {
+        $lookup: {
+          from: 'groups',
+          localField: 'principalId',
+          foreignField: '_id',
+          as: 'groupInfo',
         },
-        // Project final structure
-        {
-          $project: {
-            principalType: 1,
-            principalId: 1,
-            accessRoleId: { $arrayElemAt: ['$role.accessRoleId', 0] },
-            userInfo: { $arrayElemAt: ['$userInfo', 0] },
-            groupInfo: { $arrayElemAt: ['$groupInfo', 0] },
-          },
+      },
+      // Project final structure
+      {
+        $project: {
+          principalType: 1,
+          principalId: 1,
+          accessRoleId: { $arrayElemAt: ['$role.accessRoleId', 0] },
+          userInfo: { $arrayElemAt: ['$userInfo', 0] },
+          groupInfo: { $arrayElemAt: ['$groupInfo', 0] },
+          permBits: 1,
         },
-      ]),
-    );
+      },
+    ]);
 
     let principals = [];
     let publicPermission = null;
 
-    // Process aggregation results
     for (const result of results) {
       if (result.principalType === PrincipalType.PUBLIC) {
         publicPermission = {
           public: true,
           publicAccessRoleId: result.accessRoleId,
         };
-      } else if (result.principalType === PrincipalType.USER && result.userInfo) {
+      } else if (
+        result.principalType === PrincipalType.USER &&
+        result.userInfo &&
+        matchesCurrentTenant(result.userInfo, tenantId)
+      ) {
         principals.push({
           type: PrincipalType.USER,
           id: result.userInfo._id.toString(),
@@ -435,8 +461,18 @@ const getResourcePermissions = async (req, res) => {
           source: !result.userInfo._id ? 'entra' : 'local',
           idOnTheSource: result.userInfo.idOnTheSource || result.userInfo._id.toString(),
           accessRoleId: result.accessRoleId,
+          ...getInsightsPrincipalState({
+            principalType: PrincipalType.USER,
+            principalRole: result.userInfo.role,
+            requesterRole: req.user.role,
+            permBits: result.permBits,
+          }),
         });
-      } else if (result.principalType === PrincipalType.GROUP && result.groupInfo) {
+      } else if (
+        result.principalType === PrincipalType.GROUP &&
+        result.groupInfo &&
+        matchesCurrentTenant(result.groupInfo, tenantId)
+      ) {
         principals.push({
           type: PrincipalType.GROUP,
           id: result.groupInfo._id.toString(),
@@ -447,6 +483,27 @@ const getResourcePermissions = async (req, res) => {
           source: result.groupInfo.source || 'local',
           idOnTheSource: result.groupInfo.idOnTheSource || result.groupInfo._id.toString(),
           accessRoleId: result.accessRoleId,
+          ...getInsightsPrincipalState({
+            principalType: PrincipalType.GROUP,
+            requesterRole: req.user.role,
+            permBits: result.permBits,
+          }),
+        });
+      } else if (result.principalType === PrincipalType.ROLE) {
+        principals.push({
+          type: PrincipalType.ROLE,
+          /** Role name as ID */
+          id: result.principalId,
+          /** Display the role name */
+          name: result.principalId,
+          description: `System role: ${result.principalId}`,
+          accessRoleId: result.accessRoleId,
+          ...getInsightsPrincipalState({
+            principalType: PrincipalType.ROLE,
+            principalRole: result.principalId,
+            requesterRole: req.user.role,
+            permBits: result.permBits,
+          }),
         });
       } else if (result.principalType === PrincipalType.TENANT) {
         principals.push({
@@ -458,38 +515,22 @@ const getResourcePermissions = async (req, res) => {
           idOnTheSource: result.principalId,
           accessRoleId: result.accessRoleId,
         });
-      } else if (result.principalType === PrincipalType.ROLE) {
-        principals.push({
-          type: PrincipalType.ROLE,
-          /** Role name as ID */
-          id: result.principalId,
-          /** Display the role name */
-          name: result.principalId,
-          description: `System role: ${result.principalId}`,
-          accessRoleId: result.accessRoleId,
-        });
       }
     }
 
-    const hasOwner = principals.some((principal) => {
-      if (resourceType === ResourceType.AGENT) {
-        return principal.accessRoleId === AccessRoleIds.AGENT_OWNER;
-      }
-
-      return false;
-    });
-
+    const hasOwner = principals.some(
+      (principal) =>
+        resourceType === ResourceType.AGENT && principal.accessRoleId === AccessRoleIds.AGENT_OWNER,
+    );
     if (resourceType === ResourceType.AGENT && !hasOwner) {
+      const resourceIds = getResourceIdVariants(resourceId);
       const agent = await runAsSystem(() => db.getAgent({ _id: resourceIds[1] || resourceId }));
-      const authorPrincipal = await getAuthorPrincipal({
+      const author = await getAuthorPrincipal({
         agent,
         resourceId,
         grantedBy: req.user.id,
       });
-
-      if (authorPrincipal) {
-        principals.unshift(authorPrincipal);
-      }
+      if (author) principals.unshift(author);
     }
 
     if (resourceType === ResourceType.REMOTE_AGENT) {
@@ -567,11 +608,8 @@ const getUserEffectivePermissions = async (req, res) => {
     let effectiveResourceId = resourceId;
     if (resourceType === ResourceType.PROJECT) {
       const project = await findProjectForRequest({ projectId: resourceId, user: req.user });
-      if (project) {
-        effectiveResourceId = project._id.toString();
-      }
+      if (project) effectiveResourceId = project._id.toString();
     }
-
     const permissionBits = await getEffectivePermissions({
       userId,
       role: req.user.role,
@@ -580,7 +618,11 @@ const getUserEffectivePermissions = async (req, res) => {
     });
 
     res.status(200).json({
-      permissionBits,
+      permissionBits: maskAgentInsightsBit({
+        resourceType,
+        userRole: req.user.role,
+        permBits: permissionBits,
+      }),
     });
   } catch (error) {
     logger.error('Error getting user effective permissions:', error);
@@ -596,123 +638,13 @@ const getUserEffectivePermissions = async (req, res) => {
  * Supports hybrid local database + Entra ID search when configured
  * @route GET /api/permissions/search-principals
  */
-const searchPrincipals = async (req, res) => {
-  try {
-    const { q: rawQuery, limit = 20, types } = req.query;
-
-    if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
-      return res.status(400).json({
-        error: 'Query parameter "q" is required and must not be empty',
-      });
-    }
-
-    const query = rawQuery.trim();
-
-    if (query.length < 2) {
-      return res.status(400).json({
-        error: 'Query must be at least 2 characters long',
-      });
-    }
-
-    const searchLimit = Math.min(Math.max(1, parseInt(limit) || 10), 50);
-
-    let typeFilters = null;
-    if (types) {
-      const typesArray = Array.isArray(types) ? types : types.split(',');
-      const validTypes = typesArray.filter((t) =>
-        [PrincipalType.USER, PrincipalType.GROUP, PrincipalType.ROLE].includes(t),
-      );
-      typeFilters = validTypes.length > 0 ? validTypes : null;
-    }
-
-    const localResults = await db.searchPrincipals(query.trim(), searchLimit, typeFilters, {
-      tenantId: req.user?.tenantId,
-      global: isAdminUser(req.user),
-    });
-    let allPrincipals = [...localResults];
-
-    const useEntraId = entraIdPrincipalFeatureEnabled(req.user);
-
-    if (useEntraId && localResults.length < searchLimit) {
-      try {
-        let graphType = 'all';
-        if (typeFilters && typeFilters.length === 1) {
-          const graphTypeMap = {
-            [PrincipalType.USER]: 'users',
-            [PrincipalType.GROUP]: 'groups',
-          };
-          const mappedType = graphTypeMap[typeFilters[0]];
-          if (mappedType) {
-            graphType = mappedType;
-          }
-        }
-
-        const authHeader = req.headers.authorization;
-        const accessToken =
-          authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
-
-        if (accessToken) {
-          const graphResults = await searchEntraIdPrincipals(
-            accessToken,
-            req.user.openidId,
-            query,
-            graphType,
-            searchLimit - localResults.length,
-          );
-
-          const localEmails = new Set(
-            localResults.map((p) => p.email?.toLowerCase()).filter(Boolean),
-          );
-          const localGroupSourceIds = new Set(
-            localResults.map((p) => p.idOnTheSource).filter(Boolean),
-          );
-
-          for (const principal of graphResults) {
-            const isDuplicateByEmail =
-              principal.email && localEmails.has(principal.email.toLowerCase());
-            const isDuplicateBySourceId =
-              principal.idOnTheSource && localGroupSourceIds.has(principal.idOnTheSource);
-
-            if (!isDuplicateByEmail && !isDuplicateBySourceId) {
-              allPrincipals.push(principal);
-            }
-          }
-        }
-      } catch (graphError) {
-        logger.warn('Graph API search failed, falling back to local results:', graphError.message);
-      }
-    }
-    const scoredResults = allPrincipals.map((item) => ({
-      ...item,
-      _searchScore: db.calculateRelevanceScore(item, query),
-    }));
-
-    const finalResults = db
-      .sortPrincipalsByRelevance(scoredResults)
-      .slice(0, searchLimit)
-      .map((result) => {
-        const { _searchScore, ...resultWithoutScore } = result;
-        return resultWithoutScore;
-      });
-
-    res.status(200).json({
-      query,
-      limit: searchLimit,
-      types: typeFilters,
-      results: finalResults,
-      count: finalResults.length,
-      sources: {
-        local: finalResults.filter((r) => r.source === 'local').length,
-        entra: finalResults.filter((r) => r.source === 'entra').length,
-      },
-    });
-  } catch (error) {
-    logger.error('Error searching principals:', error);
-    res.status(500).json({
-      error: 'Failed to search principals',
-    });
-  }
-};
+const searchPrincipals = createPrincipalSearch({
+  searchPrincipals: db.searchPrincipals,
+  calculateRelevanceScore: db.calculateRelevanceScore,
+  sortPrincipalsByRelevance: db.sortPrincipalsByRelevance,
+  entraIdPrincipalFeatureEnabled,
+  searchEntraIdPrincipals,
+});
 
 /**
  * Get user's effective permissions for all accessible resources of a type
@@ -748,7 +680,11 @@ const getAllEffectivePermissions = async (req, res) => {
     // Convert Map to plain object for JSON response
     const result = {};
     for (const [resourceId, permBits] of permissionsMap) {
-      result[resourceId] = permBits;
+      result[resourceId] = maskAgentInsightsBit({
+        resourceType,
+        userRole: req.user.role,
+        permBits,
+      });
     }
 
     res.status(200).json(result);

@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { TProject } from 'librechat-data-provider';
 import ProjectConversationsTab from '../ProjectConversationsTab';
 
 const mockNavigate = jest.fn();
@@ -35,7 +36,7 @@ const createQueryClient = () =>
     defaultOptions: { queries: { retry: false } },
   });
 
-function renderTab(props = {}) {
+function renderTab(props: { project?: Partial<TProject> } = {}) {
   const queryClient = createQueryClient();
   const project = {
     projectId: 'p1',
@@ -65,7 +66,7 @@ describe('ProjectConversationsTab', () => {
       isLoading: true,
     });
     renderTab();
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
+    expect(document.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('renders empty state', () => {

@@ -1,4 +1,4 @@
-import type { AccessRoleIds } from 'librechat-data-provider';
+import { AccessRoleIds } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 
 /**
@@ -73,6 +73,15 @@ export const ROLE_LOCALIZATIONS = {
     name: 'com_ui_role_owner' as const,
     description: 'com_ui_skill_role_owner_desc' as const,
   } as const,
+  // Shared link roles
+  sharedLink_viewer: {
+    name: 'com_ui_role_viewer' as const,
+    description: 'com_ui_role_viewer_desc' as const,
+  } as const,
+  sharedLink_owner: {
+    name: 'com_ui_role_owner' as const,
+    description: 'com_ui_role_owner_desc' as const,
+  } as const,
 };
 
 /**
@@ -86,5 +95,16 @@ export const getRoleLocalizationKeys = (
   name: TranslationKeys;
   description: TranslationKeys;
 } => {
+  switch (roleId) {
+    case AccessRoleIds.PROJECT_VIEWER:
+    case AccessRoleIds.CODE_ENVIRONMENT_VIEWER:
+      return ROLE_LOCALIZATIONS.agent_viewer;
+    case AccessRoleIds.PROJECT_EDITOR:
+    case AccessRoleIds.CODE_ENVIRONMENT_EDITOR:
+      return ROLE_LOCALIZATIONS.agent_editor;
+    case AccessRoleIds.PROJECT_OWNER:
+    case AccessRoleIds.CODE_ENVIRONMENT_OWNER:
+      return ROLE_LOCALIZATIONS.agent_owner;
+  }
   return ROLE_LOCALIZATIONS[roleId] || { name: 'com_ui_unknown', description: 'com_ui_unknown' };
 };

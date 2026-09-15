@@ -6,18 +6,19 @@ import {
   getTagByKey,
   isAgentsEndpoint,
   SearchResultData,
+  isConfiguredSender,
   toMinimalFeedback,
   isAssistantsEndpoint,
   TUpdateFeedbackRequest,
 } from 'librechat-data-provider';
-import type { TMessageProps } from '~/common';
 import type { TMessageChatContext } from '~/common/types';
+import type { TMessageProps } from '~/common';
+import { useCopyMessageToClipboard, hasCopyableText } from './useCopyToClipboard';
 import { useAssistantsMapContext, useAgentsMapContext } from '~/Providers';
-import useCopyToClipboard from './useCopyToClipboard';
+import { useGetStartupConfig } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useGetAddedConvo } from '~/hooks/Chat';
 import { useLocalize } from '~/hooks';
-import { useGetStartupConfig } from '~/data-provider';
 import store from '~/store';
 
 export type TMessageActions = Pick<
@@ -49,6 +50,7 @@ export default function useMessageActions(props: TMessageActions) {
     latestMessageId,
     latestMessageDepth,
     handleContinue,
+    feedbackEnabled,
     // NOTE: isSubmitting is intentionally NOT destructured here.
     // chatContext.isSubmitting is a getter backed by a ref — destructuring
     // would capture a one-time snapshot. Always access via chatContext.isSubmitting.
@@ -123,7 +125,18 @@ export default function useMessageActions(props: TMessageActions) {
     regenerate(message, { addedConvo: getAddedConvo() });
   }, [chatContext, isCreatedByUser, message, regenerate, getAddedConvo]);
 
-  const copyToClipboard = useCopyToClipboard({ text, content, searchResults });
+  const copyToClipboard = useCopyMessageToClipboard({
+    text,
+    content,
+    searchResults,
+    isCreatedByUser,
+    error: message?.error,
+  });
+
+  const getCanCopy = useCallback(
+    () => hasCopyableText({ text, content, searchResults }),
+    [text, content, searchResults],
+  );
 
   const messageLabel = useMemo(() => {
     if (message?.isCreatedByUser === true) {
@@ -153,7 +166,6 @@ export default function useMessageActions(props: TMessageActions) {
     UsernameDisplay,
     user,
     localize,
-    message?.sender,
     conversation?.spec,
     startupConfig?.modelSpecs?.list,
   ]);
@@ -196,11 +208,23 @@ export default function useMessageActions(props: TMessageActions) {
     index,
     agent,
     feedback,
+    getCanCopy,
     assistant,
     enterEdit,
     conversation,
     messageLabel,
-    handleFeedback,
+    /** Whether `messageLabel` is a configured sender, so the header can withhold the
+     *  model it stands in for. */
+    hasConfiguredSender: isConfiguredSender({
+      sender: message?.sender,
+      endpoint: message?.endpoint ?? conversation?.endpoint,
+      endpointType: conversation?.endpointType,
+      model: message?.model ?? conversation?.model,
+      isCreatedByUser: message?.isCreatedByUser,
+    }),
+    /** Withholding the handler removes the controls: `HoverButtons` renders feedback
+     *  only when it has somewhere to send it. */
+    handleFeedback: feedbackEnabled ? handleFeedback : undefined,
     handleContinue,
     copyToClipboard,
     latestMessageId,

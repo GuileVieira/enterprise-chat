@@ -1,118 +1,440 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import type { IMemoryEntry } from '~/types';
+import { runAsSystem, tenantStorage } from '~/config/tenantContext';
+import { createMemoryMethods, type MemoryMethods } from './memory';
 import { createModels } from '~/models';
-import { tenantStorage } from '~/config/tenantContext';
-import { createMemoryMethods } from './memory';
 
-let server: MongoMemoryServer;
-let userId: string;
-const memory = createMemoryMethods(mongoose);
+jest.mock('~/config/winston', () => ({
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+}));
+
+let mongoServer: InstanceType<typeof MongoMemoryServer>;
+let MemoryEntry: mongoose.Model<IMemoryEntry>;
+let methods: MemoryMethods;
+
+const userId = new mongoose.Types.ObjectId();
+const otherUserId = new mongoose.Types.ObjectId();
+const agentId = 'agent_partition_a';
+const otherAgentId = 'agent_partition_b';
+
 beforeAll(async () => {
-  server = await MongoMemoryServer.create();
-  await mongoose.connect(server.getUri());
+  mongoServer = await MongoMemoryServer.create();
   createModels(mongoose);
-});
-beforeEach(async () => {
-  userId = (await mongoose.models.User.create({ email: 'memory@test.dev' })).id;
-});
-afterEach(async () => {
-  await mongoose.models.MemoryEntry.deleteMany({});
-  await mongoose.models.User.deleteMany({});
+  MemoryEntry = mongoose.models.MemoryEntry as mongoose.Model<IMemoryEntry>;
+  methods = createMemoryMethods(mongoose);
+  await mongoose.connect(mongoServer.getUri());
 });
 afterAll(async () => {
   await mongoose.disconnect();
-  await server?.stop();
-});
-const save = (key: string, tokenCount: number) =>
-  memory.setMemory({ userId, key, value: 'Memory value', tokenCount, tokenLimit: 10 });
-
-it('enforces total quota on creates and edits, permitting reductions at the limit', async () => {
-  await save('first', 6);
-  await save('second', 4);
-  await expect(save('first', 7)).rejects.toMatchObject({ code: 'MEMORY_LIMIT' });
-  await save('first', 3);
-  await save('third', 3);
-  expect(
-    (await memory.getAllUserMemories(userId)).reduce((sum, m) => sum + (m.tokenCount || 0), 0),
-  ).toBe(10);
+  await mongoServer.stop();
 });
 
-it('serializes independent concurrent writers in standalone MongoDB', async () => {
-  const otherWorker = createMemoryMethods(mongoose);
-  const results = await Promise.allSettled([
-    save('first', 6),
-    otherWorker.createMemory({
-      userId,
-      key: 'second',
-      value: 'Value',
-      tokenCount: 6,
-      tokenLimit: 10,
-    }),
+beforeEach(async () => {
+  await MemoryEntry.deleteMany({});
+  await mongoose.models.User.deleteMany({});
+  await mongoose.models.User.create([
+    { _id: userId, email: 'memory-user@example.com' },
+    { _id: otherUserId, email: 'other-memory-user@example.com' },
   ]);
-  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-  expect(
-    (await memory.getAllUserMemories(userId)).reduce((sum, m) => sum + (m.tokenCount || 0), 0),
-  ).toBe(6);
-  expect(
-    (await mongoose.models.User.findById(userId).select('+memoryWriteLock')).memoryWriteLock,
-  ).toBeUndefined();
 });
 
-it('renames the same document atomically and rejects stale versions and duplicate keys', async () => {
-  await save('first', 4);
-  await save('second', 2);
-  const original = (await memory.getAllUserMemories(userId)).find((m) => m.key === 'first')!;
-  await expect(
-    memory.updateMemory({ userId, originalKey: 'first', key: 'second', value: 'Value' }),
-  ).rejects.toMatchObject({ code: 'MEMORY_DUPLICATE' });
-  await memory.updateMemory({
-    userId,
-    originalKey: 'first',
-    key: 'renamed',
-    value: 'Value',
-    tokenCount: 4,
-    tokenLimit: 10,
-    expectedUpdatedAt: original.updated_at!.toISOString(),
-  });
-  const renamed = (await memory.getAllUserMemories(userId)).find((m) => m.key === 'renamed')!;
-  expect(renamed._id.toString()).toBe(original._id.toString());
-  expect(await memory.getAllUserMemories(userId)).toHaveLength(2);
-  await expect(
-    memory.updateMemory({
+describe('memory partitions', () => {
+  it('enforces the budget inside the durable lock and permits reductions', async () => {
+    await methods.setMemory({ userId, key: 'first', value: 'one', tokenCount: 6, tokenLimit: 10 });
+    await methods.setMemory({ userId, key: 'second', value: 'two', tokenCount: 4, tokenLimit: 10 });
+    await expect(
+      methods.setMemory({ userId, key: 'first', value: 'larger', tokenCount: 7, tokenLimit: 10 }),
+    ).rejects.toMatchObject({ code: 'MEMORY_LIMIT' });
+    await methods.setMemory({
       userId,
-      originalKey: 'renamed',
-      key: 'renamed',
-      value: 'Stale',
-      expectedUpdatedAt: original.updated_at!.toISOString(),
-    }),
-  ).rejects.toMatchObject({ code: 'MEMORY_CONFLICT' });
-  expect((await memory.getAllUserMemories(userId)).find((m) => m.key === 'renamed')?.value).toBe(
-    'Value',
-  );
-});
+      key: 'first',
+      value: 'smaller',
+      tokenCount: 3,
+      tokenLimit: 10,
+    });
+    expect(
+      (await methods.getUserMemories({ userId })).reduce(
+        (sum, memory) => sum + (memory.tokenCount || 0),
+        0,
+      ),
+    ).toBe(7);
+  });
 
-it('rejects over-budget renames without changing either key', async () => {
-  await save('first', 6);
-  await save('second', 4);
-  await expect(
-    memory.updateMemory({
+  it('keeps agent budgets independent and rejects stale atomic updates', async () => {
+    await methods.setMemory({
+      userId,
+      key: 'first',
+      value: 'personal',
+      tokenCount: 8,
+      tokenLimit: 10,
+    });
+    await methods.setMemory({
+      userId,
+      key: 'first',
+      value: 'agent',
+      tokenCount: 8,
+      tokenLimit: 10,
+      agentId,
+    });
+    const [original] = await methods.getUserMemories({ userId, agentId });
+    await methods.updateMemory({
       userId,
       originalKey: 'first',
       key: 'renamed',
-      value: 'Value',
+      value: 'updated',
       tokenCount: 8,
       tokenLimit: 10,
-    }),
-  ).rejects.toMatchObject({ code: 'MEMORY_LIMIT' });
-  expect((await memory.getAllUserMemories(userId)).map((m) => m.key).sort()).toEqual([
-    'first',
-    'second',
-  ]);
-});
-
-it('does not mutate a user outside the tenant context', async () => {
-  await tenantStorage.run({ tenantId: 'other-tenant' }, async () => {
-    await expect(save('first', 1)).rejects.toMatchObject({ code: 'MEMORY_BUSY' });
+      expectedUpdatedAt: original.updated_at?.toISOString(),
+      agentId,
+    });
+    await expect(
+      methods.updateMemory({
+        userId,
+        originalKey: 'renamed',
+        key: 'renamed',
+        value: 'stale',
+        expectedUpdatedAt: original.updated_at?.toISOString(),
+        agentId,
+      }),
+    ).rejects.toMatchObject({ code: 'MEMORY_CONFLICT' });
   });
-  expect(await memory.getAllUserMemories(userId)).toHaveLength(0);
+
+  it('serializes concurrent writers and releases the durable lock', async () => {
+    const otherWorker = createMemoryMethods(mongoose);
+    const results = await Promise.allSettled([
+      methods.setMemory({ userId, key: 'first', value: 'one', tokenCount: 6, tokenLimit: 10 }),
+      otherWorker.createMemory({
+        userId,
+        key: 'second',
+        value: 'two',
+        tokenCount: 6,
+        tokenLimit: 10,
+      }),
+    ]);
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      (await methods.getUserMemories({ userId })).reduce(
+        (sum, memory) => sum + (memory.tokenCount || 0),
+        0,
+      ),
+    ).toBe(6);
+    expect(
+      (await mongoose.models.User.findById(userId).select('+memoryWriteLock')).memoryWriteLock,
+    ).toBeUndefined();
+  });
+
+  it('rejects an over-budget rename without changing either key', async () => {
+    await methods.setMemory({ userId, key: 'first', value: 'one', tokenCount: 6, tokenLimit: 10 });
+    await methods.setMemory({ userId, key: 'second', value: 'two', tokenCount: 4, tokenLimit: 10 });
+    await expect(
+      methods.updateMemory({
+        userId,
+        originalKey: 'first',
+        key: 'renamed',
+        value: 'larger',
+        tokenCount: 8,
+        tokenLimit: 10,
+      }),
+    ).rejects.toMatchObject({ code: 'MEMORY_LIMIT' });
+    expect((await methods.getUserMemories({ userId })).map((memory) => memory.key).sort()).toEqual([
+      'first',
+      'second',
+    ]);
+  });
+
+  it('rejects a write when the user belongs to another tenant', async () => {
+    await tenantStorage.run({ tenantId: 'other-tenant' }, async () => {
+      await expect(
+        methods.setMemory({ userId, key: 'first', value: 'one', tokenLimit: 10 }),
+      ).rejects.toMatchObject({ code: 'MEMORY_BUSY' });
+    });
+    expect(await methods.getUserMemories({ userId })).toHaveLength(0);
+  });
+
+  it('writes to the shared personal pool when agentId is omitted', async () => {
+    await methods.setMemory({ userId, key: 'preference', value: 'likes tea', tokenCount: 3 });
+
+    const personal = await methods.getUserMemories({ userId });
+    expect(personal).toHaveLength(1);
+    expect(personal[0].agentId == null).toBe(true);
+
+    const agentScoped = await methods.getUserMemories({ userId, agentId });
+    expect(agentScoped).toHaveLength(0);
+  });
+
+  it('isolates the same key across partitions', async () => {
+    await methods.setMemory({ userId, key: 'context', value: 'personal', tokenCount: 1 });
+    await methods.setMemory({ userId, key: 'context', value: 'agent a', tokenCount: 2, agentId });
+    await methods.setMemory({
+      userId,
+      key: 'context',
+      value: 'agent b',
+      tokenCount: 3,
+      agentId: otherAgentId,
+    });
+
+    const personal = await methods.getUserMemories({ userId });
+    const partitionA = await methods.getUserMemories({ userId, agentId });
+    const partitionB = await methods.getUserMemories({ userId, agentId: otherAgentId });
+
+    expect(personal.map((m) => m.value)).toEqual(['personal']);
+    expect(partitionA.map((m) => m.value)).toEqual(['agent a']);
+    expect(partitionB.map((m) => m.value)).toEqual(['agent b']);
+    expect(await MemoryEntry.countDocuments({ userId })).toBe(3);
+  });
+
+  it('upserts within a partition instead of duplicating', async () => {
+    await methods.setMemory({ userId, key: 'context', value: 'first', tokenCount: 1, agentId });
+    await methods.setMemory({ userId, key: 'context', value: 'second', tokenCount: 2, agentId });
+
+    const partitionA = await methods.getUserMemories({ userId, agentId });
+    expect(partitionA).toHaveLength(1);
+    expect(partitionA[0].value).toBe('second');
+  });
+
+  it('treats legacy entries without an agentId field as the personal pool', async () => {
+    await MemoryEntry.collection.insertOne({
+      userId,
+      key: 'legacy',
+      value: 'pre-partition entry',
+      tokenCount: 4,
+      updated_at: new Date(),
+    });
+
+    const personal = await methods.getUserMemories({ userId });
+    expect(personal.map((m) => m.key)).toEqual(['legacy']);
+
+    await methods.setMemory({ userId, key: 'legacy', value: 'updated', tokenCount: 4 });
+    expect(await MemoryEntry.countDocuments({ userId })).toBe(1);
+    expect((await methods.getUserMemories({ userId }))[0].value).toBe('updated');
+  });
+
+  it('deletes only within the targeted partition', async () => {
+    await methods.setMemory({ userId, key: 'context', value: 'personal', tokenCount: 1 });
+    await methods.setMemory({ userId, key: 'context', value: 'agent a', tokenCount: 2, agentId });
+
+    const agentDelete = await methods.deleteMemory({ userId, key: 'context', agentId });
+    expect(agentDelete.ok).toBe(true);
+    expect(await methods.getUserMemories({ userId })).toHaveLength(1);
+    expect(await methods.getUserMemories({ userId, agentId })).toHaveLength(0);
+
+    const missingDelete = await methods.deleteMemory({ userId, key: 'context', agentId });
+    expect(missingDelete.ok).toBe(false);
+  });
+
+  it('updates by opaque id only for the owning user and selected partition', async () => {
+    await methods.setMemory({
+      userId,
+      key: 'private_key',
+      value: 'before',
+      tokenCount: 1,
+      agentId,
+    });
+    const [stored] = await methods.getUserMemories({ userId, agentId });
+    const id = stored._id.toString();
+
+    await expect(
+      methods.setMemoryById({
+        userId: otherUserId,
+        id,
+        value: 'wrong owner',
+        tokenCount: 2,
+        agentId,
+      }),
+    ).resolves.toEqual({ ok: false });
+    await expect(
+      methods.setMemoryById({
+        userId,
+        id,
+        value: 'wrong partition',
+        tokenCount: 2,
+        agentId: otherAgentId,
+      }),
+    ).resolves.toEqual({ ok: false });
+
+    const result = await methods.setMemoryById({
+      userId,
+      id,
+      value: 'after',
+      tokenCount: 2,
+      agentId,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      memory: { key: 'private_key', value: 'after', tokenCount: 2, agentId },
+    });
+    expect(await methods.getUserMemories({ userId, agentId })).toHaveLength(1);
+  });
+
+  it('enforces budget and version on opaque-id edits while preserving a legacy key', async () => {
+    await MemoryEntry.collection.insertOne({
+      userId,
+      key: 'Legacy Key',
+      value: 'before',
+      tokenCount: 4,
+      updated_at: new Date('2026-01-01'),
+    });
+    await methods.setMemory({
+      userId,
+      key: 'other',
+      value: 'other',
+      tokenCount: 5,
+      tokenLimit: 10,
+    });
+    const legacy = (await methods.getUserMemories({ userId })).find(
+      (memory) => memory.key === 'Legacy Key',
+    );
+    expect(legacy).toBeDefined();
+    await expect(
+      methods.setMemoryById({
+        userId,
+        id: legacy!._id.toHexString().toUpperCase(),
+        value: 'too large',
+        tokenCount: 6,
+        tokenLimit: 10,
+      }),
+    ).rejects.toMatchObject({ code: 'MEMORY_LIMIT' });
+    const updated = await methods.setMemoryById({
+      userId,
+      id: legacy!._id.toHexString().toUpperCase(),
+      value: 'after',
+      tokenCount: 4,
+      tokenLimit: 10,
+      expectedUpdatedAt: legacy!.updated_at?.toISOString(),
+    });
+    expect(updated).toMatchObject({ ok: true, memory: { key: 'Legacy Key', value: 'after' } });
+    await expect(
+      methods.setMemoryById({
+        userId,
+        id: legacy!._id.toHexString(),
+        value: 'stale',
+        tokenCount: 4,
+        tokenLimit: 10,
+        expectedUpdatedAt: legacy!.updated_at?.toISOString(),
+      }),
+    ).resolves.toEqual({ ok: false, conflict: true });
+  });
+
+  it('renames by opaque id without creating a duplicate record', async () => {
+    await methods.setMemory({ userId, key: 'first', value: 'one', agentId });
+    await methods.setMemory({ userId, key: 'second', value: 'two', agentId });
+    const first = (await methods.getUserMemories({ userId, agentId })).find(
+      (memory) => memory.key === 'first',
+    );
+    expect(first).toBeDefined();
+
+    const conflict = await methods.setMemoryById({
+      userId,
+      id: first?._id.toString() ?? '',
+      key: 'second',
+      value: 'updated',
+      agentId,
+    });
+    expect(conflict).toEqual({ ok: false, conflict: true });
+
+    const renamed = await methods.setMemoryById({
+      userId,
+      id: first?._id.toString() ?? '',
+      key: 'renamed',
+      value: 'updated',
+      agentId,
+    });
+    expect(renamed).toMatchObject({ ok: true, memory: { key: 'renamed', value: 'updated' } });
+    expect(await MemoryEntry.countDocuments({ userId, agentId })).toBe(2);
+  });
+
+  it('updates and deletes by opaque id only in the owning tenant', async () => {
+    await runAsSystem(() => mongoose.models.User.deleteOne({ _id: userId }));
+    await tenantStorage.run({ tenantId: 'tenant-a' }, () =>
+      mongoose.models.User.create({ _id: userId, email: 'memory-user@example.com' }),
+    );
+    const id = await tenantStorage.run({ tenantId: 'tenant-a' }, async () => {
+      await methods.setMemory({ userId, key: 'private_key', value: 'stored', agentId });
+      const [stored] = await methods.getUserMemories({ userId, agentId });
+      return stored._id.toString();
+    });
+
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-b' }, async () =>
+        methods.setMemoryById({ userId, id, value: 'wrong tenant', agentId }),
+      ),
+    ).resolves.toEqual({ ok: false });
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        methods.getUserMemories({ userId, agentId }),
+      ),
+    ).resolves.toEqual([expect.objectContaining({ value: 'stored' })]);
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-b' }, async () =>
+        methods.deleteMemoryById({ userId, id, agentId }),
+      ),
+    ).resolves.toEqual({ ok: false });
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        methods.deleteMemoryById({ userId: otherUserId, id, agentId }),
+      ),
+    ).resolves.toEqual({ ok: false });
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        methods.deleteMemoryById({ userId, id, agentId: otherAgentId }),
+      ),
+    ).resolves.toEqual({ ok: false });
+    await expect(
+      tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        methods.deleteMemoryById({ userId, id, agentId }),
+      ),
+    ).resolves.toEqual({ ok: true });
+  });
+
+  it('scopes createMemory duplicate detection to the partition', async () => {
+    await methods.createMemory({ userId, key: 'context', value: 'personal', tokenCount: 1 });
+
+    await expect(
+      methods.createMemory({ userId, key: 'context', value: 'dupe', tokenCount: 1 }),
+    ).rejects.toThrow('already exists');
+
+    const created = await methods.createMemory({
+      userId,
+      key: 'context',
+      value: 'agent a',
+      tokenCount: 2,
+      agentId,
+    });
+    expect(created.ok).toBe(true);
+  });
+
+  it('formats memories per partition with partition-scoped totals', async () => {
+    await methods.setMemory({ userId, key: 'one', value: 'personal one', tokenCount: 5 });
+    await methods.setMemory({ userId, key: 'two', value: 'agent two', tokenCount: 7, agentId });
+
+    const personal = await methods.getFormattedMemories({ userId });
+    expect(personal.totalTokens).toBe(5);
+    expect(personal.tokenCountsByKey).toEqual(new Map([['one', 5]]));
+    expect(personal.withoutKeys).toContain('personal one');
+    expect(personal.withoutKeys).not.toContain('agent two');
+
+    const partitionA = await methods.getFormattedMemories({ userId, agentId });
+    expect(partitionA.totalTokens).toBe(7);
+    expect(partitionA.tokenCountsByKey).toEqual(new Map([['two', 7]]));
+    expect(partitionA.withKeys).toContain('"key": "two"');
+    expect(partitionA.withKeys).not.toContain('personal one');
+  });
+
+  it('returns every partition from getAllUserMemories and wipes them all on deleteAllUserMemories', async () => {
+    await methods.setMemory({ userId, key: 'one', value: 'personal', tokenCount: 1 });
+    await methods.setMemory({ userId, key: 'two', value: 'agent a', tokenCount: 1, agentId });
+    await methods.setMemory({ userId: otherUserId, key: 'three', value: 'other', tokenCount: 1 });
+
+    const all = await methods.getAllUserMemories(userId);
+    expect(all).toHaveLength(2);
+
+    const deleted = await methods.deleteAllUserMemories(userId);
+    expect(deleted).toBe(2);
+    expect(await MemoryEntry.countDocuments({ userId: otherUserId })).toBe(1);
+  });
 });

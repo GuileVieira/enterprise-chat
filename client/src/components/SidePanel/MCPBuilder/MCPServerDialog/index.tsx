@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, ClipboardText as CopyCheck } from '@phosphor-icons/react';
 import {
+  SystemRoles,
+  Permissions,
+  ResourceType,
+  PermissionBits,
+  PermissionTypes,
+} from 'librechat-data-provider';
+import {
   Label,
   Input,
   Button,
@@ -14,13 +21,6 @@ import {
   OGDialogContent,
   OGDialogTemplate,
 } from '@librechat/client';
-import {
-  SystemRoles,
-  Permissions,
-  ResourceType,
-  PermissionBits,
-  PermissionTypes,
-} from 'librechat-data-provider';
 import { useAuthContext, useHasAccess, useResourcePermissions, MCPServerDefinition } from '~/hooks';
 import { GenericGrantAccessDialog } from '~/components/Sharing';
 import { useMCPServerForm } from './hooks/useMCPServerForm';
@@ -164,14 +164,18 @@ export default function MCPServerDialog({
                   variant="outline"
                   onClick={() => {
                     if (isCopying) return;
+                    if (!copyLink(setIsCopying)) return;
                     showToast({ message: localize('com_ui_copied_to_clipboard') });
-                    copyLink(setIsCopying);
                   }}
-                  disabled={isCopying}
+                  disabled={isCopying || !redirectUri}
                   className="p-0"
                   aria-label={localize('com_ui_copy_link')}
                 >
-                  {isCopying ? <CopyCheck className="size-4" /> : <Copy className="size-4" />}
+                  {isCopying ? (
+                    <CopyCheck className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Copy className="size-4" aria-hidden="true" />
+                  )}
                 </Button>
               </div>
             </div>

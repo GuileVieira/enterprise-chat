@@ -1,16 +1,16 @@
 import { memo, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { useRecoilValue } from 'recoil';
-import { PencilSimpleLine, SidebarSimple, SquaresFour as LayoutGrid } from '@phosphor-icons/react';
-import { QueryKeys } from 'librechat-data-provider';
+import { useLocation } from 'react-router-dom';
 import { Skeleton, Button, TooltipAnchor } from '@librechat/client';
+import { PencilSimpleLine as SquarePen, SidebarSimple as Sidebar } from '@phosphor-icons/react';
 import type { NavLink } from '~/common';
-import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
+import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcuts';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
-import { useLocalize, useNewConvo, useShowMarketplace } from '~/hooks';
-import { useProjectByIdQuery } from '~/data-provider';
-import { clearMessagesCache, cn } from '~/utils';
+import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
+import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
+import useNewChat from '~/hooks/Chat/useNewChat';
+import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 import store from '~/store';
 
 const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
@@ -21,93 +21,33 @@ const NewChatButton = memo(function NewChatButton({
   setActive: (id: string) => void;
 }) {
   const localize = useLocalize();
-  const queryClient = useQueryClient();
-  const { newConversation } = useNewConvo();
-  const conversation = useRecoilValue(store.conversationByIndex(0));
   const switchToHistory = useRecoilValue(store.newChatSwitchToHistory);
-  const selectedProjectId = useRecoilValue(store.selectedProjectId);
-  const { data: project } = useProjectByIdQuery(selectedProjectId ?? '', {
-    enabled: !!selectedProjectId,
-  });
+  const tooltipDescription = useShortcutHint('newChat', localize('com_ui_new_chat'));
+  const ariaKey = useShortcutAriaKey('newChat');
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        clearMessagesCache(queryClient, conversation?.conversationId);
-        queryClient.invalidateQueries([QueryKeys.messages]);
+  const handlePanelSwitch = useCallback(() => {
+    if (switchToHistory) {
+      setActive(DEFAULT_PANEL);
+    }
+  }, [switchToHistory, setActive]);
 
-        const template: Partial<Parameters<typeof newConversation>[0]['template']> = {};
-        if (project) {
-          template.projectId = project.projectId;
-          if (project.endpoint) {
-            template.endpoint = project.endpoint as unknown as typeof template.endpoint;
-          }
-          if (project.model) {
-            template.model = project.model;
-          }
-        }
-
-        newConversation(Object.keys(template).length > 0 ? { template } : undefined);
-        if (switchToHistory) {
-          setActive(DEFAULT_PANEL);
-        }
-      }
-    },
-    [
-      queryClient,
-      conversation?.conversationId,
-      newConversation,
-      switchToHistory,
-      setActive,
-      project,
-    ],
-  );
+  const { handleNewChatClick } = useNewChat({ onNewChat: handlePanelSwitch });
 
   return (
     <TooltipAnchor
       side="right"
-      description={localize('com_ui_new_chat')}
+      description={tooltipDescription}
       render={
         <a
           href="/c/new"
           data-testid="new-chat-button"
           aria-label={localize('com_ui_new_chat')}
-          className="group flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-text-secondary transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary active:translate-y-px"
-          onClick={handleClick}
+          aria-keyshortcuts={ariaKey}
+          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-hover"
+          onClick={handleNewChatClick}
         >
-          <PencilSimpleLine className="h-5 w-5" />
+          <SquarePen className="h-5 w-5 text-text-primary" />
         </a>
-      }
-    />
-  );
-});
-
-const AgentMarketplaceButton = memo(function AgentMarketplaceButton() {
-  const navigate = useNavigate();
-  const localize = useLocalize();
-  const showAgentMarketplace = useShowMarketplace();
-
-  const handleClick = useCallback(() => navigate('/agents'), [navigate]);
-
-  if (!showAgentMarketplace) {
-    return null;
-  }
-
-  return (
-    <TooltipAnchor
-      side="right"
-      description={localize('com_agents_marketplace')}
-      render={
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={localize('com_agents_marketplace')}
-          className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt transition-all duration-200 hover:border-border-light hover:bg-surface-hover hover:text-text-primary [&_svg]:stroke-[1.75]"
-          onClick={handleClick}
-        >
-          <LayoutGrid className="h-5 w-5" aria-hidden="true" />
-        </Button>
       }
     />
   );
@@ -120,6 +60,8 @@ const NavIconButton = memo(function NavIconButton({
   setActive,
   onExpand,
   onCollapse,
+  onNavigate,
+  onLeaveInsights,
 }: {
   link: NavLink;
   isActive: boolean;
@@ -127,6 +69,8 @@ const NavIconButton = memo(function NavIconButton({
   setActive: (id: string) => void;
   onExpand?: () => void;
   onCollapse?: () => void;
+  onNavigate?: () => void;
+  onLeaveInsights?: () => void;
 }) {
   const localize = useLocalize();
 
@@ -134,6 +78,7 @@ const NavIconButton = memo(function NavIconButton({
     (e: React.MouseEvent<HTMLButtonElement>) => {
       if (link.onClick) {
         link.onClick(e);
+        onNavigate?.();
         return;
       }
       if (isActive && expanded) {
@@ -145,9 +90,11 @@ const NavIconButton = memo(function NavIconButton({
       }
       if (!expanded) {
         onExpand?.();
+      } else {
+        onLeaveInsights?.();
       }
     },
-    [link, isActive, setActive, expanded, onExpand, onCollapse],
+    [link, isActive, setActive, expanded, onExpand, onCollapse, onNavigate, onLeaveInsights],
   );
 
   return (
@@ -160,11 +107,11 @@ const NavIconButton = memo(function NavIconButton({
           variant="ghost"
           aria-label={localize(link.title)}
           aria-pressed={isActive}
+          disabled={link.disabled}
+          data-testid={`nav-panel-${link.id}`}
           className={cn(
-            'h-9 w-9 rounded-xl border border-transparent transition-all duration-200 [&_svg]:stroke-[1.75]',
-            isActive
-              ? 'border-border-light bg-surface-active-alt text-text-primary shadow-sm shadow-black/10'
-              : 'text-text-secondary-alt hover:border-border-light hover:bg-surface-hover hover:text-text-primary',
+            'h-9 w-9 rounded-lg',
+            isActive ? 'bg-surface-active-alt text-text-primary' : 'text-text-secondary',
           )}
           onClick={handleClick}
         >
@@ -180,24 +127,32 @@ function ExpandedPanel({
   expanded = true,
   onCollapse,
   onExpand,
+  onNavigate,
+  onLeaveInsights,
 }: {
   links: NavLink[];
   expanded?: boolean;
   onCollapse?: () => void;
   onExpand?: () => void;
+  onNavigate?: () => void;
+  onLeaveInsights?: () => void;
 }) {
   const localize = useLocalize();
+  const location = useLocation();
   const { active, setActive } = useActivePanel();
   const effectiveActive = resolveActivePanel(active, links);
+  const isInsightsRoute = location.pathname.startsWith('/insights');
 
   const toggleLabel = expanded ? 'com_nav_close_sidebar' : 'com_nav_open_sidebar';
   const toggleClick = expanded ? onCollapse : onExpand;
+  const toggleSidebarHint = useShortcutHint('toggleSidebar', localize(toggleLabel));
+  const toggleSidebarAriaKey = useShortcutAriaKey('toggleSidebar');
 
   return (
     <div className="flex h-full flex-shrink-0 flex-col gap-2 border-r border-border-light bg-surface-primary-alt px-2 py-2">
       <TooltipAnchor
         side="right"
-        description={localize(toggleLabel)}
+        description={toggleSidebarHint}
         render={
           <Button
             id={expanded ? CLOSE_SIDEBAR_ID : undefined}
@@ -206,10 +161,11 @@ function ExpandedPanel({
             variant="ghost"
             aria-label={localize(toggleLabel)}
             aria-expanded={expanded}
-            className="h-9 w-9 rounded-xl border border-transparent text-text-secondary-alt hover:border-border-light hover:text-text-primary [&_svg]:stroke-[1.75]"
+            aria-keyshortcuts={toggleSidebarAriaKey}
+            className="h-9 w-9 rounded-lg"
             onClick={toggleClick}
           >
-            <SidebarSimple aria-hidden="true" className="h-5 w-5" />
+            <Sidebar aria-hidden="true" className="h-5 w-5 text-text-primary" />
           </Button>
         }
       />
@@ -221,17 +177,23 @@ function ExpandedPanel({
           <NavIconButton
             key={link.id}
             link={link}
-            isActive={link.id === effectiveActive}
+            isActive={
+              link.id === 'insights'
+                ? isInsightsRoute
+                : !isInsightsRoute && link.id === effectiveActive
+            }
             expanded={expanded ?? true}
             setActive={setActive}
             onExpand={onExpand}
             onCollapse={onCollapse}
+            onNavigate={onNavigate}
+            onLeaveInsights={isInsightsRoute ? onLeaveInsights : undefined}
           />
         ))}
       </div>
 
       <div className="mt-auto">
-        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-xl" />}>
+        <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>
       </div>

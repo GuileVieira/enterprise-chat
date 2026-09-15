@@ -1,13 +1,13 @@
-import { useMemo, memo } from 'react';
+import { useRef, useMemo, memo } from 'react';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import supersub from 'remark-supersub';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
-import { Check, PencilSimple as EditIcon, FileText } from '@phosphor-icons/react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { TextareaAutosize, Button, TooltipAnchor } from '@librechat/client';
+import { Check, PencilSimple as EditIcon, FileText } from '@phosphor-icons/react';
 import type { PluggableList } from 'unified';
 import { codeNoExecution } from '~/components/Chat/Messages/Content/MarkdownComponents';
 import VariablesDropdown from './VariablesDropdown';
@@ -24,6 +24,7 @@ type Props = {
 const PromptEditor: React.FC<Props> = ({ name, isEditing, setIsEditing }) => {
   const localize = useLocalize();
   const { control } = useFormContext();
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const EditorIcon = useMemo(() => {
     return isEditing ? Check : EditIcon;
@@ -52,7 +53,7 @@ const PromptEditor: React.FC<Props> = ({ name, isEditing, setIsEditing }) => {
           </h3>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <VariablesDropdown fieldName={name} />
+          <VariablesDropdown fieldName={name} finalFocus={textareaRef} />
           <TooltipAnchor
             description={isEditing ? localize('com_ui_save') : localize('com_ui_edit')}
             render={
@@ -92,12 +93,21 @@ const PromptEditor: React.FC<Props> = ({ name, isEditing, setIsEditing }) => {
             isEditing ? (
               <TextareaAutosize
                 {...field}
+                ref={(element: HTMLTextAreaElement | null) => {
+                  field.ref(element);
+                  textareaRef.current = element;
+                }}
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 className="w-full resize-none overflow-y-auto bg-transparent font-mono text-sm leading-relaxed text-text-primary placeholder:text-text-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary sm:text-base"
                 minRows={4}
                 maxRows={16}
-                onBlur={() => setIsEditing(false)}
+                onBlur={(event) => {
+                  if (event.relatedTarget?.closest('[role="menu"]')) {
+                    return;
+                  }
+                  setIsEditing(false);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
                     e.preventDefault();

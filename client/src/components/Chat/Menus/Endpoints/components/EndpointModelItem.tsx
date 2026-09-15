@@ -1,92 +1,45 @@
 import React from 'react';
 import { VisuallyHidden } from '@ariakit/react';
+import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import {
   CheckCircle as CheckCircle2,
   GlobeHemisphereWest as EarthIcon,
   PushPin as Pin,
   PushPinSlash as PinOff,
 } from '@phosphor-icons/react';
-import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
-import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import useActiveItem from '../useActiveItem';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface EndpointModelItemProps {
   modelId: string | null;
   endpoint: Endpoint;
+  /** Resolved by the parent from the same array it maps, so the row does not rescan it. */
+  isGlobal?: boolean;
+  isFavorite: boolean;
+  onToggleFavorite: (modelId: string) => void;
+  /**
+   * Only set when the list is virtualized. The mounted rows are then a small window over
+   * a much larger set, so the position a screen reader would infer from the DOM is wrong;
+   * these carry the real position and total. Left undefined otherwise, where the DOM holds
+   * every option and the implicit values are already correct.
+   */
+  posInSet?: number;
+  setSize?: number;
 }
 
-const AGENT_AVATAR_COLORS = [
-  'bg-emerald-700',
-  'bg-amber-600',
-  'bg-rose-700',
-  'bg-sky-700',
-  'bg-violet-700',
-  'bg-cyan-700',
-];
-
-const SPEC_COLOR_CLASSES: Record<string, string> = {
-  padrao: 'bg-emerald-700',
-  padrão: 'bg-emerald-700',
-  avancado: 'bg-amber-600',
-  avançado: 'bg-amber-600',
-  especialista: 'bg-rose-700',
-};
-
-function getInitials(name: string) {
-  const cleanName = name
-    .replace(/\([^)]*\)/g, '')
-    .replace(/^agente\s+/i, '')
-    .trim();
-  const words = cleanName.split(/\s+/).filter(Boolean);
-  if (words.length === 0) {
-    return 'AG';
-  }
-  return (words[0]?.[0] ?? 'A').toUpperCase();
-}
-
-function getSpecColorClass(name: string) {
-  const normalized = name
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/^agente\s+/, '')
-    .split(/\s|\(/)[0];
-  return SPEC_COLOR_CLASSES[normalized];
-}
-
-function getColorClass(seed: string) {
-  const specColorClass = getSpecColorClass(seed);
-  if (specColorClass) {
-    return specColorClass;
-  }
-
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return AGENT_AVATAR_COLORS[hash % AGENT_AVATAR_COLORS.length];
-}
-
-export function AgentModelAvatar({ name, className }: { name: string; className?: string }) {
-  return (
-    <div
-      className={cn(
-        'flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-lg px-1 text-[10px] font-semibold leading-none text-white shadow-sm ring-1 ring-white/10',
-        getColorClass(name),
-        className,
-      )}
-      title={name}
-    >
-      {getInitials(name)}
-    </div>
-  );
-}
-
-export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps) {
+function EndpointModelItemComponent({
+  modelId,
+  endpoint,
+  isGlobal = false,
+  isFavorite,
+  onToggleFavorite,
+  posInSet,
+  setSize,
+}: EndpointModelItemProps) {
   const localize = useLocalize();
   const { handleSelectModel, selectedValues } = useModelSelectorContext();
   const {
@@ -96,21 +49,15 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
   } = selectedValues;
   const isSelected =
     !selectedSpec && selectedEndpoint === endpoint.value && selectedModel === modelId;
-  const { isFavoriteModel, toggleFavoriteModel, isFavoriteAgent, toggleFavoriteAgent } =
-    useFavorites();
 
-  const { ref: itemRef, isActive } = useIsActiveItem<HTMLDivElement>();
+  const { ref: itemRef, isActive } = useActiveItem<HTMLDivElement>();
 
-  let isGlobal = false;
   let modelName = modelId;
   const avatarUrl = endpoint?.modelIcons?.[modelId ?? ''] || null;
 
   // Use custom names if available
   if (endpoint && modelId && isAgentsEndpoint(endpoint.value) && endpoint.agentNames?.[modelId]) {
     modelName = endpoint.agentNames[modelId];
-
-    const modelInfo = endpoint?.models?.find((m) => m.name === modelId);
-    isGlobal = modelInfo?.isGlobal ?? false;
   } else if (
     endpoint &&
     modelId &&
@@ -120,26 +67,12 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
     modelName = endpoint.assistantNames[modelId];
   }
 
-  const isAgent = isAgentsEndpoint(endpoint.value);
-  const isFavorite = isAgent
-    ? isFavoriteAgent(modelId ?? '')
-    : isFavoriteModel(modelId ?? '', endpoint.value);
-
-  const handleFavoriteToggle = () => {
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!modelId) {
       return;
     }
-
-    if (isAgent) {
-      toggleFavoriteAgent(modelId);
-    } else {
-      toggleFavoriteModel({ model: modelId, endpoint: endpoint.value });
-    }
-  };
-
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    handleFavoriteToggle();
+    onToggleFavorite(modelId);
   };
 
   const renderAvatar = () => {
@@ -150,9 +83,6 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
     const getContent = () => {
       if (avatarUrl) {
         return <img src={avatarUrl} alt={modelName ?? ''} className="h-full w-full object-cover" />;
-      }
-      if (isAgent) {
-        return <AgentModelAvatar name={modelName ?? modelId ?? 'Agent'} />;
       }
       if (showEndpointIcon) {
         return endpoint.icon;
@@ -177,6 +107,8 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
       ref={itemRef}
       onClick={() => handleSelectModel(endpoint, modelId ?? '')}
       aria-selected={isSelected || undefined}
+      aria-posinset={posInSet}
+      aria-setsize={setSize}
       className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 text-sm"
     >
       <div className="flex w-full min-w-0 items-center gap-2 px-1 py-1">
@@ -193,7 +125,12 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
           'rounded-md p-1 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring-primary',
           isFavorite
             ? 'visible'
-            : 'invisible group-focus-within:visible group-hover:visible group-data-[active-item]:visible',
+            : // Visible by default so it's tappable on touch (no hover to
+              // reveal it); only hidden-until-hover on hover-capable pointers.
+              // A hover-gated child would otherwise make the whole item
+              // hover-dependent, so the first tap only reveals it and a second
+              // tap is needed to select (the iOS double-tap).
+              'group-focus-within:visible group-hover:visible group-data-[active-item]:visible [@media(hover:hover)]:invisible',
         )}
       >
         {isFavorite ? (
@@ -212,23 +149,45 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
   );
 }
 
+export const EndpointModelItem = React.memo(EndpointModelItemComponent);
+
+/**
+ * Above this many rows the list is windowed. Below it, rendering everything keeps
+ * Ariakit's composite registry complete, so arrow-key navigation and typeahead
+ * reach every row — which is the behaviour virtualization has to work to preserve.
+ */
+export const VIRTUALIZE_THRESHOLD = 100;
+
 export function renderEndpointModels(
   endpoint: Endpoint | null,
   models: Array<{ name: string; isGlobal?: boolean }>,
   filteredModels?: string[],
   endpointIndex?: number,
+  favorites?: {
+    isFavorite: (modelId: string) => boolean;
+    onToggleFavorite: (modelId: string) => void;
+  },
 ) {
+  if (!endpoint) {
+    return null;
+  }
   const modelsToRender = filteredModels || models.map((model) => model.name);
   const indexSuffix = endpointIndex != null ? `-${endpointIndex}` : '';
+  const isFavorite = favorites?.isFavorite ?? (() => false);
+  const onToggleFavorite = favorites?.onToggleFavorite ?? (() => {});
 
-  return modelsToRender.map(
-    (modelId, modelIndex) =>
-      endpoint && (
-        <EndpointModelItem
-          key={`${endpoint.value}${indexSuffix}-${modelId}-${modelIndex}`}
-          modelId={modelId}
-          endpoint={endpoint}
-        />
-      ),
-  );
+  /** `models` carries `isGlobal`; without this map each row rescanned the whole
+   *  array to recover it, which is quadratic in the number of agents. */
+  const globalByName = new Map(models.map((model) => [model.name, model.isGlobal ?? false]));
+
+  return modelsToRender.map((modelId, modelIndex) => (
+    <EndpointModelItem
+      key={`${endpoint.value}${indexSuffix}-${modelId}-${modelIndex}`}
+      modelId={modelId}
+      endpoint={endpoint}
+      isGlobal={globalByName.get(modelId) ?? false}
+      isFavorite={isFavorite(modelId)}
+      onToggleFavorite={onToggleFavorite}
+    />
+  ));
 }

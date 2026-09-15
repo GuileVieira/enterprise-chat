@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
-import { SystemRoles } from 'librechat-data-provider';
+import { PrincipalType, SystemRoles } from 'librechat-data-provider';
+import { getTenantId, tenantStorage, SYSTEM_TENANT_ID } from '@librechat/data-schemas';
 import type { IUser, UserDeleteResult } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { ServerRequest } from '~/types/http';
@@ -52,7 +53,7 @@ function createReqRes(
 
 function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
   return {
-    findUsers: jest.fn().mockResolvedValue([]),
+    findUsers: jest.fn().mockResolvedValue([mockUser({ _id: new Types.ObjectId(validUserId) })]),
     countUsers: jest.fn().mockResolvedValue(0),
     updateUser: jest.fn().mockResolvedValue(mockUser()),
     deleteUser: jest
@@ -69,11 +70,26 @@ function createDeps(overrides: Partial<AdminUsersDeps> = {}): AdminUsersDeps {
     recordAdminAudit: jest.fn().mockResolvedValue({}),
     deleteAllUserSessions: jest.fn().mockResolvedValue({ deletedCount: 0 }),
     removeUserFromAllGroups: jest.fn().mockResolvedValue(undefined),
-    deleteAclEntries: jest.fn().mockResolvedValue({ deletedCount: 0 }),
     removeUserFromTenant: jest.fn().mockResolvedValue(mockUser({ tenantId: undefined })),
     getProjectById: jest.fn().mockResolvedValue(null),
     grantPermission: jest.fn().mockResolvedValue(null),
     revokePermission: jest.fn().mockResolvedValue({ deletedCount: 0 }),
+
+    beginAgentTriggerUserDeletion: jest.fn().mockResolvedValue('acquired'),
+    cancelAgentTriggerUserDeletion: jest.fn().mockResolvedValue(true),
+    drainAgentTriggerDeliveriesForUser: jest.fn().mockResolvedValue(undefined),
+    prepareAgentTriggerUserPurge: jest.fn().mockResolvedValue(undefined),
+    cancelAgentTriggerUserPurge: jest.fn().mockResolvedValue(true),
+    purgeAgentTriggerDeliveriesForUser: jest.fn().mockResolvedValue(undefined),
+    revokeUserCodeEnvironmentWorkers: jest.fn().mockResolvedValue(0),
+    deleteUserById: jest
+      .fn()
+      .mockResolvedValue({ deletedCount: 1, message: 'User was deleted successfully.' }),
+    deleteUserCodeEnvironments: jest.fn().mockResolvedValue(0),
+    invalidateCodeEnvironmentConfigCache: jest.fn().mockResolvedValue(undefined),
+    deleteConfig: jest.fn().mockResolvedValue(null),
+    deleteAclEntries: jest.fn().mockResolvedValue(undefined),
+
     ...overrides,
   };
 }
@@ -124,7 +140,7 @@ describe('createAdminUsersHandlers', () => {
     });
 
     it('returns empty list when no users', async () => {
-      const deps = createDeps();
+      const deps = createDeps({ findUsers: jest.fn().mockResolvedValue([]) });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes();
 
@@ -359,6 +375,19 @@ describe('createAdminUsersHandlers', () => {
 
       expect(status).toHaveBeenCalledWith(200);
       expect(json).toHaveBeenCalledWith({ message: 'User was deleted successfully.' });
+      expect(deps.beginAgentTriggerUserDeletion).toHaveBeenCalledWith(
+        validUserId,
+        expect.any(Date),
+      );
+      expect(deps.drainAgentTriggerDeliveriesForUser).toHaveBeenCalledWith(validUserId);
+      expect(deps.prepareAgentTriggerUserPurge).toHaveBeenCalledWith(
+        validUserId,
+        expect.any(Date),
+        undefined,
+      );
+      expect(deps.purgeAgentTriggerDeliveriesForUser).toHaveBeenCalledWith(validUserId);
+      expect(deps.cancelAgentTriggerUserPurge).not.toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserDeletion).not.toHaveBeenCalled();
     });
 
     it('returns fallback message when result.message is empty', async () => {
@@ -394,19 +423,24 @@ describe('createAdminUsersHandlers', () => {
 
     it('returns 400 when deleting the last admin', async () => {
       const targetId = new Types.ObjectId().toString();
+      const observedTenants: Array<string | undefined> = [];
       const deps = createDeps({
         findUsers: jest.fn().mockResolvedValue([mockUser({ role: SystemRoles.ADMIN })]),
-        countUsers: jest.fn().mockResolvedValue(1),
+        countUsers: jest.fn(async () => {
+          observedTenants.push(getTenantId());
+          return 1;
+        }),
       });
       const handlers = createAdminUsersHandlers(deps);
       const { req, res, status, json } = createReqRes({ params: { id: targetId } });
 
-      await handlers.deleteUser(req, res);
+      await tenantStorage.run({ tenantId: 'admin-tenant' }, () => handlers.deleteUser(req, res));
 
       expect(status).toHaveBeenCalledWith(400);
       expect(json).toHaveBeenCalledWith({ error: 'Cannot delete the last admin user' });
       expect(deps.deleteUser).not.toHaveBeenCalled();
       expect(deps.countUsers).toHaveBeenCalledWith({ role: SystemRoles.ADMIN });
+      expect(observedTenants).toEqual([SYSTEM_TENANT_ID]);
     });
 
     it('allows deleting an admin when other admins exist', async () => {
@@ -438,7 +472,128 @@ describe('createAdminUsersHandlers', () => {
       expect(deps.countUsers).not.toHaveBeenCalled();
     });
 
-    it('delegates the complete cascade to the injected delete service', async () => {
+    it('cascades cleanup of Config, code environments, and AclEntries', async () => {
+      const result: UserDeleteResult = {
+        deletedCount: 1,
+        message: 'User was deleted successfully.',
+      };
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(200);
+      expect(deps.deleteConfig).toHaveBeenCalledWith(PrincipalType.USER, validUserId);
+      expect(deps.deleteUserCodeEnvironments).toHaveBeenCalledWith(expect.any(Types.ObjectId));
+      expect(deps.invalidateCodeEnvironmentConfigCache).toHaveBeenCalledWith(undefined);
+      expect(deps.deleteAclEntries).toHaveBeenCalledWith({
+        principalType: PrincipalType.USER,
+        principalId: expect.any(Types.ObjectId),
+      });
+    });
+
+    it('runs post-delete cleanup in the target tenant context', async () => {
+      const observedTenants: Array<string | undefined> = [];
+      const deps = createDeps({
+        findUsers: jest.fn().mockResolvedValue([mockUser({ tenantId: 'target-tenant' })]),
+        deleteConfig: jest.fn(async () => {
+          observedTenants.push(getTenantId());
+          return null;
+        }),
+        deleteAclEntries: jest.fn(async () => {
+          observedTenants.push(getTenantId());
+          return { acknowledged: true, deletedCount: 1 };
+        }),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res } = createReqRes({
+        params: { id: validUserId },
+        user: { _id: new Types.ObjectId(), role: 'admin', tenantId: 'admin-tenant' },
+      });
+
+      await handlers.deleteUser(req, res);
+
+      expect(observedTenants).toEqual(['target-tenant', 'target-tenant']);
+    });
+
+    it('runs a cross-tenant deletion lifecycle as system while cleanup uses the target tenant', async () => {
+      const observedContexts: Array<[string, string | undefined]> = [];
+      const observe = (step: string) => observedContexts.push([step, getTenantId()]);
+      const deps = createDeps({
+        findUsers: jest.fn(async () => {
+          observe('find');
+          return [mockUser({ tenantId: 'tenant-b' })];
+        }),
+        beginAgentTriggerUserDeletion: jest.fn(async () => {
+          observe('begin');
+          return 'acquired';
+        }),
+        prepareAgentTriggerUserPurge: jest.fn(async () => {
+          observe('prepare');
+        }),
+        drainAgentTriggerDeliveriesForUser: jest.fn(async () => {
+          observe('drain');
+        }),
+        deleteUser: jest.fn(async () => {
+          observe('delete');
+          return { deletedCount: 1, message: 'deleted' };
+        }),
+        revokeUserCodeEnvironmentWorkers: jest.fn(async () => {
+          observe('revoke-workers');
+          return 0;
+        }),
+        purgeAgentTriggerDeliveriesForUser: jest.fn(async () => {
+          observe('purge');
+        }),
+        recordAdminAudit: jest.fn(async () => {
+          observe('audit');
+          return {
+            _id: new Types.ObjectId(),
+            actorId: new Types.ObjectId(),
+            targetUserId: new Types.ObjectId(validUserId),
+            action: 'user.deleted',
+            createdAt: new Date(),
+          };
+        }),
+        deleteConfig: jest.fn(async () => {
+          observe('config');
+          return null;
+        }),
+        deleteUserCodeEnvironments: jest.fn(async () => {
+          observe('code-environments');
+          return 0;
+        }),
+        deleteAclEntries: jest.fn(async () => {
+          observe('acl');
+          return { acknowledged: true, deletedCount: 0 };
+        }),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status } = createReqRes({
+        params: { id: validUserId },
+        user: { _id: new Types.ObjectId(), role: SystemRoles.ADMIN, tenantId: 'tenant-a' },
+      });
+
+      await tenantStorage.run({ tenantId: 'tenant-a' }, () => handlers.deleteUser(req, res));
+
+      expect(status).toHaveBeenCalledWith(200);
+      expect(observedContexts).toEqual([
+        ['find', SYSTEM_TENANT_ID],
+        ['begin', SYSTEM_TENANT_ID],
+        ['prepare', SYSTEM_TENANT_ID],
+        ['drain', SYSTEM_TENANT_ID],
+        ['delete', SYSTEM_TENANT_ID],
+        ['revoke-workers', SYSTEM_TENANT_ID],
+        ['purge', SYSTEM_TENANT_ID],
+        ['audit', SYSTEM_TENANT_ID],
+        ['config', 'tenant-b'],
+        ['code-environments', 'tenant-b'],
+        ['acl', 'tenant-b'],
+      ]);
+    });
+
+    it('returns success even when cascade cleanup partially fails', async () => {
       const result: UserDeleteResult = {
         deletedCount: 1,
         message: 'User was deleted successfully.',
@@ -448,11 +603,47 @@ describe('createAdminUsersHandlers', () => {
         findUsers: jest.fn().mockResolvedValue([mockUser()]),
       });
       const handlers = createAdminUsersHandlers(deps);
-      const { req, res } = createReqRes({ params: { id: validUserId } });
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(200);
+      expect(json).toHaveBeenCalledWith({ message: 'User was deleted successfully.' });
+    });
+
+    it('preserves code environment records when revocation marking fails', async () => {
+      const deps = createDeps({
+        revokeUserCodeEnvironmentWorkers: jest.fn().mockRejectedValue(new Error('mongo down')),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
 
       await handlers.deleteUser(req, res);
 
       expect(deps.deleteUser).toHaveBeenCalledWith(req, validUserId);
+      expect(deps.deleteUserCodeEnvironments).not.toHaveBeenCalled();
+      expect(status).toHaveBeenCalledWith(200);
+      expect(json).toHaveBeenCalledWith({ message: 'User was deleted successfully.' });
+    });
+
+    it('does not cascade when user is not found', async () => {
+      const result: UserDeleteResult = { deletedCount: 0, message: '' };
+      const deps = createDeps({ deleteUser: jest.fn().mockResolvedValue(result) });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(404);
+      expect(deps.deleteConfig).not.toHaveBeenCalled();
+      expect(deps.deleteUserCodeEnvironments).not.toHaveBeenCalled();
+      expect(deps.deleteAclEntries).not.toHaveBeenCalled();
+      expect(deps.purgeAgentTriggerDeliveriesForUser).not.toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserDeletion).toHaveBeenCalledWith(
+        validUserId,
+        expect.any(Date),
+      );
+      expect(deps.cancelAgentTriggerUserPurge).toHaveBeenCalledWith(validUserId, expect.any(Date));
     });
 
     it('returns 400 for invalid ObjectId', async () => {
@@ -490,6 +681,90 @@ describe('createAdminUsersHandlers', () => {
 
       expect(status).toHaveBeenCalledWith(500);
       expect(json).toHaveBeenCalledWith({ error: 'Failed to delete user' });
+      expect(deps.cancelAgentTriggerUserDeletion).toHaveBeenCalledWith(
+        validUserId,
+        expect.any(Date),
+      );
+      expect(deps.cancelAgentTriggerUserPurge).toHaveBeenCalledWith(validUserId, expect.any(Date));
+      expect(deps.purgeAgentTriggerDeliveriesForUser).not.toHaveBeenCalled();
+    });
+
+    it('does not delete while another deletion owns the trigger fence', async () => {
+      const deps = createDeps({
+        beginAgentTriggerUserDeletion: jest.fn().mockResolvedValue('in_progress'),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(409);
+      expect(json).toHaveBeenCalledWith({ error: 'User deletion is already in progress' });
+      expect(deps.drainAgentTriggerDeliveriesForUser).not.toHaveBeenCalled();
+      expect(deps.deleteUser).not.toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserDeletion).not.toHaveBeenCalled();
+    });
+
+    it('returns not found without draining when the trigger fence principal is missing', async () => {
+      const deps = createDeps({
+        beginAgentTriggerUserDeletion: jest.fn().mockResolvedValue('missing'),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(404);
+      expect(json).toHaveBeenCalledWith({ error: 'User not found' });
+      expect(deps.drainAgentTriggerDeliveriesForUser).not.toHaveBeenCalled();
+      expect(deps.deleteUser).not.toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserDeletion).not.toHaveBeenCalled();
+    });
+
+    it('drains before commit and purges only after the user is deleted', async () => {
+      const deps = createDeps();
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      const beginOrder = (deps.beginAgentTriggerUserDeletion as jest.Mock).mock
+        .invocationCallOrder[0];
+      const prepareOrder = (deps.prepareAgentTriggerUserPurge as jest.Mock).mock
+        .invocationCallOrder[0];
+      const drainOrder = (deps.drainAgentTriggerDeliveriesForUser as jest.Mock).mock
+        .invocationCallOrder[0];
+      const deleteOrder = (deps.deleteUser as jest.Mock).mock.invocationCallOrder[0];
+      const revokeCodeOrder = (deps.revokeUserCodeEnvironmentWorkers as jest.Mock).mock
+        .invocationCallOrder[0];
+      const deleteCodeOrder = (deps.deleteUserCodeEnvironments as jest.Mock).mock
+        .invocationCallOrder[0];
+      const purgeOrder = (deps.purgeAgentTriggerDeliveriesForUser as jest.Mock).mock
+        .invocationCallOrder[0];
+      expect(beginOrder).toBeLessThan(drainOrder);
+      expect(beginOrder).toBeLessThan(prepareOrder);
+      expect(prepareOrder).toBeLessThan(drainOrder);
+      expect(drainOrder).toBeLessThan(deleteOrder);
+      expect(deleteOrder).toBeLessThan(revokeCodeOrder);
+      expect(revokeCodeOrder).toBeLessThan(deleteCodeOrder);
+      expect(deleteOrder).toBeLessThan(purgeOrder);
+    });
+
+    it('leaves durable purge recovery armed when immediate post-commit cleanup fails', async () => {
+      const deps = createDeps({
+        purgeAgentTriggerDeliveriesForUser: jest.fn().mockRejectedValue(new Error('db down')),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status, json } = createReqRes({ params: { id: validUserId } });
+
+      await handlers.deleteUser(req, res);
+
+      expect(status).toHaveBeenCalledWith(500);
+      expect(json).toHaveBeenCalledWith({ error: 'Failed to delete user' });
+      expect(deps.deleteUser).toHaveBeenCalledWith(req, validUserId);
+      expect(deps.prepareAgentTriggerUserPurge).toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserPurge).not.toHaveBeenCalled();
+      expect(deps.cancelAgentTriggerUserDeletion).not.toHaveBeenCalled();
     });
   });
 
@@ -557,6 +832,32 @@ describe('createAdminUsersHandlers', () => {
       expect(status).toHaveBeenCalledWith(404);
       expect(json).toHaveBeenCalledWith({ error: 'User not found' });
     });
+
+    it('counts admins globally before demoting the last admin', async () => {
+      const observedTenants: Array<string | undefined> = [];
+      const target = mockUser({ role: SystemRoles.ADMIN });
+      const deps = createDeps({
+        findUsers: jest.fn().mockResolvedValue([target]),
+        getRoleByName: jest.fn().mockResolvedValue({ name: SystemRoles.USER }),
+        countUsers: jest.fn(async () => {
+          observedTenants.push(getTenantId());
+          return 1;
+        }),
+      });
+      const handlers = createAdminUsersHandlers(deps);
+      const { req, res, status, json } = createReqRes({
+        params: { id: validUserId },
+        body: { role: SystemRoles.USER },
+        user: { _id: new Types.ObjectId(), role: SystemRoles.ADMIN, tenantId: 'tenant-a' },
+      });
+
+      await tenantStorage.run({ tenantId: 'tenant-a' }, () => handlers.updateUser(req, res));
+
+      expect(status).toHaveBeenCalledWith(400);
+      expect(json).toHaveBeenCalledWith({ error: 'Cannot demote the last admin user' });
+      expect(observedTenants).toEqual([SYSTEM_TENANT_ID]);
+      expect(deps.updateUser).not.toHaveBeenCalled();
+    });
   });
 
   it('disables a user, revokes sessions, and records an audit', async () => {
@@ -575,7 +876,7 @@ describe('createAdminUsersHandlers', () => {
     await handlers.updateUser(req, res);
 
     expect(status).toHaveBeenCalledWith(200);
-    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith(validUserId);
+    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith({ userId: validUserId });
     expect(deps.recordAdminAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'user.updated', targetUserId: validUserId }),
     );
@@ -636,11 +937,41 @@ describe('createAdminUsersHandlers', () => {
     await handlers.removeFromTenant(req, res);
 
     expect(status).toHaveBeenCalledWith(200);
-    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith(validUserId);
+    expect(deps.deleteAllUserSessions).toHaveBeenCalledWith({ userId: validUserId });
     expect(deps.removeUserFromAllGroups).toHaveBeenCalledWith(validUserId);
     expect(deps.deleteAclEntries).toHaveBeenCalledWith(
       expect.objectContaining({ principalType: 'user' }),
     );
     expect(deps.removeUserFromTenant).toHaveBeenCalledWith(validUserId);
+  });
+
+  it('counts admins globally before removing an admin from a tenant', async () => {
+    const observedTenants: Array<string | undefined> = [];
+    const target = mockUser({
+      _id: new Types.ObjectId(validUserId),
+      tenantId: 'tenant-b',
+      role: SystemRoles.ADMIN,
+    });
+    const deps = createDeps({
+      findUsers: jest.fn().mockResolvedValue([target]),
+      countUsers: jest.fn(async () => {
+        observedTenants.push(getTenantId());
+        return 1;
+      }),
+    });
+    const handlers = createAdminUsersHandlers(deps);
+    const { req, res, status, json } = createReqRes({
+      params: { id: validUserId },
+      user: { _id: new Types.ObjectId(), role: SystemRoles.ADMIN, tenantId: 'tenant-a' },
+    });
+
+    await tenantStorage.run({ tenantId: 'tenant-a' }, () => handlers.removeFromTenant(req, res));
+
+    expect(status).toHaveBeenCalledWith(400);
+    expect(json).toHaveBeenCalledWith({
+      error: 'Cannot remove the last admin from an organization',
+    });
+    expect(observedTenants).toEqual([SYSTEM_TENANT_ID]);
+    expect(deps.removeUserFromTenant).not.toHaveBeenCalled();
   });
 });

@@ -2,9 +2,18 @@ const { getBalanceConfig } = require('@librechat/api');
 const { findBalanceByUser, upsertBalanceFields } = require('~/models');
 
 async function balanceController(req, res) {
-  let balanceData = await findBalanceByUser(req.user.id);
+  const balanceLocals = res.locals || {};
+
+  if (balanceLocals.balanceConfigEnabled === false) {
+    return res.sendStatus(204);
+  }
+
+  let balanceData = balanceLocals.balanceData ?? (await findBalanceByUser(req.user.id));
 
   if (!balanceData) {
+    if (balanceLocals.balanceConfigEnabled === true) {
+      return res.status(404).json({ error: 'Balance not found' });
+    }
     const balanceConfig = getBalanceConfig(req.config);
     if (!balanceConfig?.enabled || balanceConfig.startBalance == null) {
       return res.status(204).end();

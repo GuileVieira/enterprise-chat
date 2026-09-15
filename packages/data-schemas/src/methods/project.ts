@@ -1,13 +1,13 @@
-import type { Model, Types } from 'mongoose';
 import {
   PrincipalType,
   ResourceType,
   PermissionBits,
   createProjectSchema,
 } from 'librechat-data-provider';
-import logger from '~/config/winston';
-import { getTenantId } from '~/config/tenantContext';
+import type { Model, Types } from 'mongoose';
 import type { IProject } from '~/types';
+import { getTenantId } from '~/config/tenantContext';
+import logger from '~/config/winston';
 
 export interface ProjectDeps {
   removeAllPermissions: (params: { resourceType: string; resourceId: unknown }) => Promise<void>;
@@ -29,7 +29,42 @@ function assertEditableFields(data: object): void {
   }
 }
 
-export function createProjectMethods(mongoose: typeof import('mongoose'), deps?: ProjectDeps) {
+export function createProjectMethods(
+  mongoose: typeof import('mongoose'),
+  deps?: ProjectDeps,
+): {
+  findProjectsByObjectIds: (
+    ids: Array<string | Types.ObjectId>,
+  ) => Promise<Array<IProject & { _id: Types.ObjectId }>>;
+  getProjects: (user?: string) => Promise<Array<IProject & { _id: Types.ObjectId }>>;
+  getProjectById: (projectId: string) => Promise<(IProject & { _id: Types.ObjectId }) | null>;
+  findProjectById: (projectId: string) => Promise<IProject | null>;
+  createProject: (
+    user: string,
+    data: {
+      name: string;
+      description?: string;
+      endpoint?: string;
+      model?: string;
+      instructions?: string;
+      memories?: IProject['memories'];
+      memoryKeys?: string[];
+      promptSnippets?: IProject['promptSnippets'];
+      promptGroupIds?: string[];
+      fileIds?: string[];
+      metaAds?: IProject['metaAds'];
+      iconURL?: string;
+    },
+  ) => Promise<IProject>;
+  updateProject: (
+    projectId: string,
+    data: Partial<Omit<IProject, 'projectId' | 'user' | 'tenantId'>>,
+  ) => Promise<IProject | null>;
+  deleteProject: (projectId: string) => Promise<IProject | null>;
+  archiveProject: (projectId: string, isArchived: boolean) => Promise<IProject | null>;
+  addProjectFileId: (projectId: string, fileId: string) => Promise<IProject | null>;
+  removeProjectFileId: (projectId: string, fileId: string) => Promise<IProject | null>;
+} {
   async function findProjectsByObjectIds(
     ids: Array<string | Types.ObjectId>,
   ): Promise<Array<IProject & { _id: Types.ObjectId }>> {
@@ -65,10 +100,10 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
     }
   }
 
-  async function findProjectById(projectId: string) {
+  async function findProjectById(projectId: string): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
-      return await Project.findOne({ projectId }).lean();
+      return await Project.findOne({ projectId }).lean<IProject>();
     } catch (error) {
       logger.error('[findProjectById] Error finding project', error);
       throw new Error('Error finding project');
@@ -91,7 +126,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
       metaAds?: IProject['metaAds'];
       iconURL?: string;
     },
-  ) {
+  ): Promise<IProject> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       assertEditableFields(data);
@@ -136,7 +171,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
   async function updateProject(
     projectId: string,
     data: Partial<Omit<IProject, 'projectId' | 'user' | 'tenantId'>>,
-  ) {
+  ): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       assertEditableFields(data);
@@ -151,12 +186,14 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
     }
   }
 
-  async function deleteProject(projectId: string) {
+  async function deleteProject(projectId: string): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       const Conversation = mongoose.models.Conversation;
 
-      const deleted = await Project.findOneAndDelete({ projectId }).lean();
+      const deleted = await Project.findOneAndDelete({ projectId }).lean<
+        IProject & { _id: Types.ObjectId }
+      >();
       if (!deleted) {
         return null;
       }
@@ -177,7 +214,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
     }
   }
 
-  async function archiveProject(projectId: string, isArchived: boolean) {
+  async function archiveProject(projectId: string, isArchived: boolean): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
@@ -191,7 +228,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
     }
   }
 
-  async function addProjectFileId(projectId: string, fileId: string) {
+  async function addProjectFileId(projectId: string, fileId: string): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(
@@ -205,7 +242,7 @@ export function createProjectMethods(mongoose: typeof import('mongoose'), deps?:
     }
   }
 
-  async function removeProjectFileId(projectId: string, fileId: string) {
+  async function removeProjectFileId(projectId: string, fileId: string): Promise<IProject | null> {
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       return await Project.findOneAndUpdate(

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { FileSources } from 'librechat-data-provider';
+import { Check, DownloadSimple, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +12,6 @@ import {
   AlertDialogAction,
   Spinner,
 } from '@librechat/client';
-import { Check, DownloadSimple, FileText, Trash as Trash2, Upload } from '@phosphor-icons/react';
 import type { TFile } from 'librechat-data-provider';
 import {
   useFileDownload,
@@ -18,9 +19,9 @@ import {
   useDeleteFilesMutation,
   useUpdateProjectMutation,
 } from '~/data-provider';
-import { useLocalize } from '~/hooks';
-import { triggerDownload } from '~/utils';
 import ProjectDiaryFiles from './ProjectDiaryFiles';
+import { triggerDownload } from '~/utils';
+import { useLocalize } from '~/hooks';
 
 interface ProjectFileUploaderProps {
   projectId: string;
@@ -178,7 +179,7 @@ export default function ProjectFileUploader({
             file_id: file.file_id,
             embedded: Boolean(file.embedded),
             filepath: file.filepath ?? '',
-            source: file.source,
+            source: file.source ?? FileSources.local,
           },
         ],
       },
@@ -310,19 +311,19 @@ export default function ProjectFileUploader({
       )}
 
       <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
-        <AlertDialogContent className="flex w-[95vw] max-w-md flex-col gap-0 border-none bg-background p-6 text-foreground shadow-2xl">
+        <AlertDialogContent className="bg-background text-foreground flex w-[95vw] max-w-md flex-col gap-0 border-none p-6 shadow-2xl">
           <AlertDialogHeader className="flex flex-col gap-2 text-left">
             <AlertDialogTitle className="whitespace-normal break-words text-xl font-semibold">
               {localize('com_ui_project_file_delete_confirm')}
             </AlertDialogTitle>
-            <AlertDialogDescription className="whitespace-normal break-words text-sm text-muted-foreground">
+            <AlertDialogDescription className="text-muted-foreground whitespace-normal break-words text-sm">
               {localize('com_ui_delete_confirm_file_description', {
                 filename: fileToDelete?.filename ?? '',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex flex-row items-center justify-end gap-3">
-            <AlertDialogCancel className="m-0 bg-secondary text-foreground hover:bg-secondary/80">
+            <AlertDialogCancel className="bg-secondary text-foreground hover:bg-secondary/80 m-0">
               {localize('com_ui_cancel')}
             </AlertDialogCancel>
             <AlertDialogAction

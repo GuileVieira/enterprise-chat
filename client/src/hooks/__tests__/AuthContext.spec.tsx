@@ -2,14 +2,19 @@
  * @jest-environment @happy-dom/jest-environment
  */
 import React from 'react';
-import { render, act } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getDefaultStore } from 'jotai';
 import { MemoryRouter } from 'react-router-dom';
+import { render, act } from '@testing-library/react';
 import { SystemRoles } from 'librechat-data-provider';
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TAuthConfig } from '~/common';
-
+import {
+  chatFilterStatusAtom,
+  chatFilterTagsAtom,
+  chatSortAtom,
+  resetChatFilterSessionAtom,
+} from '~/components/Conversations/chatFilters';
 import { AuthContextProvider, useAuthContext } from '../AuthContext';
 import { SESSION_KEY } from '~/utils';
 
@@ -76,6 +81,9 @@ function TestConsumer() {
     <div
       data-testid="consumer"
       data-authenticated={ctx.isAuthenticated}
+      data-auth-ready={ctx.isAuthReady}
+      data-role-loading={ctx.isRoleLoading}
+      data-error={ctx.error ?? ''}
       data-roles={JSON.stringify(ctx.roles ?? {})}
     />
   );
@@ -117,6 +125,37 @@ function renderProviderLive() {
     </QueryClientProvider>,
   );
 }
+
+function renderOptionalProvider() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RecoilRoot>
+        <MemoryRouter>
+          <AuthContextProvider authConfig={{ loginRedirect: '/login', optional: true }}>
+            <TestConsumer />
+          </AuthContextProvider>
+        </MemoryRouter>
+      </RecoilRoot>
+    </QueryClientProvider>,
+  );
+}
+
+describe('AuthContextProvider — test mode', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('is ready without starting silent refresh', () => {
+    const { getByTestId } = renderProvider();
+
+    expect(getByTestId('consumer')).toHaveAttribute('data-auth-ready', 'true');
+    expect(mockRefreshMutate).not.toHaveBeenCalled();
+  });
+});
 
 describe('AuthContextProvider — login onError redirect handling', () => {
   beforeEach(() => {
@@ -176,6 +215,41 @@ describe('AuthContextProvider — login onError redirect handling', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 
+  it('surfaces the cross-origin rejection code instead of the HTTP status message', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = renderProvider();
+
+    act(() => {
+      mockCapturedLoginOptions.onError({
+        message: 'Request failed with status code 403',
+        response: { data: { message: 'Cross-site request rejected', code: 'auth_cross_origin' } },
+      });
+      jest.advanceTimersByTime(400);
+    });
+
+    expect(getByTestId('consumer')).toHaveAttribute('data-error', 'auth_cross_origin');
+    jest.useRealTimers();
+  });
+
+  it('keeps the HTTP status message for other rejections that carry a code', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = renderProvider();
+
+    act(() => {
+      mockCapturedLoginOptions.onError({
+        message: 'Request failed with status code 429',
+        response: { data: { message: 'Too many login attempts', code: 'something_else' } },
+      });
+      jest.advanceTimersByTime(400);
+    });
+
+    expect(getByTestId('consumer')).toHaveAttribute(
+      'data-error',
+      'Request failed with status code 429',
+    );
+    jest.useRealTimers();
+  });
+
   it('preserves redirect_to with query params and hash', () => {
     const target = '/c/abc123?model=gpt-4#section';
     window.history.replaceState({}, '', `/login?redirect_to=${encodeURIComponent(target)}`);
@@ -218,6 +292,23 @@ describe('AuthContextProvider — logout onSuccess/onError handling', () => {
 
     expect(replaceSpy).toHaveBeenCalledWith('https://idp.example.com/logout?id_token_hint=abc');
     expect(mockSetTokenHeader).toHaveBeenCalledWith(undefined);
+  });
+  it('resets account-scoped chat filters at the logout session boundary', () => {
+    const jotaiStore = getDefaultStore();
+    jotaiStore.set(chatFilterStatusAtom, 'archived');
+    jotaiStore.set(chatFilterTagsAtom, ['legacy-bookmark']);
+    jotaiStore.set(chatSortAtom, { field: 'title', direction: 'asc' });
+
+    renderProvider();
+
+    act(() => {
+      mockCapturedLogoutOptions.onSuccess({ message: 'Logout successful' });
+    });
+
+    expect(jotaiStore.get(chatFilterStatusAtom)).toBe('active');
+    expect(jotaiStore.get(chatFilterTagsAtom)).toEqual([]);
+    expect(jotaiStore.get(chatSortAtom)).toEqual({ field: 'title', direction: 'asc' });
+    jotaiStore.set(resetChatFilterSessionAtom);
   });
 
   it('does not call window.location.replace when redirect is absent', async () => {
@@ -360,6 +451,53 @@ describe('AuthContextProvider — silentRefresh post-login redirect', () => {
     expect(mockNavigate).not.toHaveBeenCalledWith('https://evil.com/steal', expect.anything());
     expect(sessionStorage.getItem(SESSION_KEY)).toBeNull();
     jest.useRealTimers();
+  });
+});
+
+describe('AuthContextProvider — optional authentication', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    window.history.replaceState({}, '', '/share/share-1');
+  });
+
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('keeps a public route visible when no refresh token exists', () => {
+    renderOptionalProvider();
+
+    const [, refreshOptions] = mockRefreshMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: (data: unknown) => void },
+    ];
+    act(() => {
+      refreshOptions.onSuccess(undefined);
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-testid="consumer"]')).toHaveAttribute(
+      'data-auth-ready',
+      'true',
+    );
+  });
+
+  it('keeps a public route visible when session refresh fails', () => {
+    renderOptionalProvider();
+
+    const [, refreshOptions] = mockRefreshMutate.mock.calls[0] as [
+      unknown,
+      { onError: (error: unknown) => void },
+    ];
+    act(() => {
+      refreshOptions.onError(new Error('No session'));
+    });
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-testid="consumer"]')).toHaveAttribute(
+      'data-auth-ready',
+      'true',
+    );
   });
 });
 
@@ -613,6 +751,44 @@ describe('AuthContextProvider — custom role detection and fetching', () => {
     expect(roles.STAFF).toEqual(staffPermissions);
 
     mockUseGetRole.mockReturnValue({ data: null });
+    jest.useRealTimers();
+  });
+
+  it('does not reuse a same-name custom role across tenant identity changes', () => {
+    jest.useFakeTimers();
+    let loadedRole: typeof staffPermissions | null = staffPermissions;
+    mockUseGetRole.mockImplementation((name: string, opts?: { enabled?: boolean }) => ({
+      data: name === 'STAFF' && opts?.enabled ? loadedRole : null,
+    }));
+
+    const { getByTestId } = renderProviderLive();
+    const [, refreshOptions] = mockRefreshMutate.mock.calls[0] as [
+      unknown,
+      { onSuccess: (data: unknown) => void },
+    ];
+
+    act(() => {
+      refreshOptions.onSuccess({
+        user: { id: 'user-1', tenantId: 'tenant-1', role: 'STAFF' },
+        token: 'tenant-1-token',
+      });
+      jest.advanceTimersByTime(100);
+    });
+    expect(JSON.parse(getByTestId('consumer').getAttribute('data-roles') ?? '{}').STAFF).toEqual(
+      staffPermissions,
+    );
+
+    loadedRole = null;
+    act(() => {
+      refreshOptions.onSuccess({
+        user: { id: 'user-2', tenantId: 'tenant-2', role: 'STAFF' },
+        token: 'tenant-2-token',
+      });
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(JSON.parse(getByTestId('consumer').getAttribute('data-roles') ?? '{}').STAFF).toBeNull();
+    expect(getByTestId('consumer')).toHaveAttribute('data-role-loading', 'true');
     jest.useRealTimers();
   });
 

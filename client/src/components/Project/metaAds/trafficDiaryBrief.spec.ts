@@ -12,6 +12,7 @@ describe('buildTrafficDiaryAnalysisBrief', () => {
         date: '2026-07-13',
         weekStart: '2026-07-06',
         status: 'draft',
+        indexStatus: 'pending',
         answers: [
           { id: 'strategy', question: 'Estratégia', answer: 'Testar novo gancho.' },
           { id: 'changes', question: 'Alterações', answer: '' },

@@ -19,7 +19,19 @@ const defaultMarketingCategories: Array<Pick<ICategory, 'label' | 'value' | 'ico
 
 export type CategoryOption = { label: string; value: string; icon?: string };
 
-export function createCategoriesMethods(_mongoose: typeof import('mongoose')) {
+export function createCategoriesMethods(_mongoose: typeof import('mongoose')): {
+  getCategories: () => Promise<CategoryOption[]>;
+  createPromptCategory: (
+    data: Pick<ICategory, 'label' | 'value' | 'icon' | 'order'>,
+  ) => Promise<ICategory>;
+  updatePromptCategory: (
+    id: string,
+    data: Partial<Pick<ICategory, 'label' | 'icon' | 'order'>>,
+  ) => Promise<ICategory | null>;
+  deletePromptCategory: (id: string) => Promise<boolean>;
+  countPromptCategoryUsage: (value: string) => Promise<number>;
+  ensureDefaultPromptCategories: () => Promise<boolean>;
+} {
   /**
    * Retrieves categories for the current tenant.
    * Falls back to seeding defaults if none exist.
@@ -48,7 +60,7 @@ export function createCategoriesMethods(_mongoose: typeof import('mongoose')) {
     data: Partial<Pick<ICategory, 'label' | 'icon' | 'order'>>,
   ): Promise<ICategory | null> {
     const Category = _mongoose.models.Category as Model<ICategory>;
-    return await Category.findByIdAndUpdate(id, { $set: data }, { new: true }).lean();
+    return await Category.findByIdAndUpdate(id, { $set: data }, { new: true }).lean<ICategory>();
   }
 
   /**

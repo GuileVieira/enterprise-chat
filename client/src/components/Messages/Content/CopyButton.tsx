@@ -1,6 +1,6 @@
 import React from 'react';
-import { Check, Copy } from '@phosphor-icons/react';
 import { TooltipAnchor } from '@librechat/client';
+import { Check, Copy } from '@phosphor-icons/react';
 import { useLocalize } from '~/hooks';
 import cn from '~/utils/cn';
 
@@ -12,10 +12,14 @@ interface CopyButtonProps {
   className?: string;
   label?: string;
   copiedLabel?: string;
+  portalElement?: HTMLElement | null;
 }
 
 const CopyButton = React.forwardRef<HTMLButtonElement, CopyButtonProps>(
-  ({ isCopied, iconOnly = false, onClick, tabIndex, className, label, copiedLabel }, ref) => {
+  (
+    { isCopied, iconOnly = false, onClick, tabIndex, className, label, copiedLabel, portalElement },
+    ref,
+  ) => {
     const localize = useLocalize();
     const defaultLabel = label ?? localize('com_ui_copy');
     const defaultCopiedLabel = copiedLabel ?? localize('com_ui_copied');
@@ -77,7 +81,9 @@ const CopyButton = React.forwardRef<HTMLButtonElement, CopyButtonProps>(
     );
 
     if (iconOnly) {
-      return <TooltipAnchor description={currentLabel} render={button} />;
+      return (
+        <TooltipAnchor description={currentLabel} portalElement={portalElement} render={button} />
+      );
     }
 
     return button;

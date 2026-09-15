@@ -1,15 +1,15 @@
 import { ArrowsIn, ArrowsOut } from '@phosphor-icons/react';
-import { workspaceTabOptions } from './constants';
-import { MetaAdsRunAnalysisButton, MetaAdsRunAnalysisStatus } from './runAnalysisFeedback';
-import { MetaAdsBadge, MetaAdsButton } from './ui';
-import type { useLocalize } from '~/hooks';
-import type { TranslationKeys } from '~/hooks';
 import type {
   SettingsDrawer,
   WorkspaceTab,
   MetaAdsDraftStatus,
   MetaAdsDraftSummaryItem,
 } from './types';
+import type { TranslationKeys } from '~/hooks';
+import type { useLocalize } from '~/hooks';
+import { MetaAdsRunAnalysisButton, MetaAdsRunAnalysisStatus } from './runAnalysisFeedback';
+import { MetaAdsBadge, MetaAdsButton } from './ui';
+import { workspaceTabOptions } from './constants';
 
 type MetaAdsWorkspaceShellProps = {
   children: React.ReactNode;
@@ -71,7 +71,7 @@ export function MetaAdsWorkspaceShell({
     settingsDraftSummary.length > 0
       ? settingsDraftSummary.map((item) => item.label).join(', ')
       : localize('com_ui_project_meta_ads_pending_changes_empty');
-  let draftButtonKey = 'com_ui_project_meta_ads_publish_draft';
+  let draftButtonKey: TranslationKeys = 'com_ui_project_meta_ads_publish_draft';
   if (draftStatus === 'publishing') {
     draftButtonKey = 'com_ui_project_meta_ads_draft_publishing';
   } else if (draftStatus === 'error') {

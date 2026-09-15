@@ -5,20 +5,19 @@ import type {
   ProjectMetaAdsRulePerformanceEntity,
   ProjectMetaAdsRulePerformanceResponse,
 } from 'librechat-data-provider';
-
-import { defaultRules, getRuleRowTypeLabelKey } from './rules';
+import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
+import type { MetaAdsPeriodControlProps } from './periodControls';
 import {
   formatMoney,
   formatMetric,
   getResultTypeLabel,
   getRuleTargetMetricValue,
 } from './formatters';
-import { MetaAdsPanel } from './ui';
-import { formatRuleAuditLine } from './ruleAudit';
+import { defaultRules, getRuleRowTypeLabelKey } from './rules';
 import { MetaAdsPeriodControls } from './periodControls';
 import { MetaAdsNameTooltip } from './overviewCells';
-import type { Localize, RuleRow, MetaAdsRuleGroup, MetaAdsRuleOverride } from './types';
-import type { MetaAdsPeriodControlProps } from './periodControls';
+import { formatRuleAuditLine } from './ruleAudit';
+import { MetaAdsPanel } from './ui';
 
 function getRulePerformanceKey(rule: RuleRow) {
   if (rule.type === 'global') {
@@ -42,9 +41,9 @@ function createRuleRowFromPerformance(rule: ProjectMetaAdsRulePerformanceItem): 
     key: rule.ruleKey,
     type: rowType,
     enabled: false,
-    name: rule.ruleName,
+    name: rule.ruleName ?? rule.ruleKey,
     scopeLabel: rule.ruleScope ?? firstEntity?.entityName ?? '-',
-    precedenceLabel: rule.ruleSourceType,
+    precedenceLabel: rule.ruleSourceType ?? 'global',
     entityLevel: firstEntity?.entityLevel === 'adset' ? 'adset' : 'campaign',
     entityIds: (rule.entities ?? []).map((entity) => entity.entityId),
     rules: {
@@ -186,7 +185,7 @@ function getMetricLabel(metric: string | null | undefined, localize: Localize) {
     return localize('com_ui_project_meta_ads_roas');
   }
   if (metric === 'cpc') {
-    return localize('com_ui_project_meta_ads_cpc');
+    return localize('com_ui_project_meta_ads_primary_metric_cpc');
   }
   if (metric === 'ctr') {
     return localize('com_ui_project_meta_ads_ctr');
@@ -663,9 +662,8 @@ function RulePerformanceDetailsModal({
     >
       {row && (
         <OGDialogContent
-          overlayStyle={{ zIndex: 10030 }}
-          style={{ zIndex: 10040 }}
-          className="flex h-[92dvh] w-[min(96vw,1540px)] max-w-none flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-0 text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]"
+          overlayClassName="!z-[10030]"
+          className="!z-[10040] flex h-[92dvh] w-[min(96vw,1540px)] max-w-none flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-0 text-slate-950 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.75)] dark:border-white/10 dark:bg-[#121a2b] dark:text-slate-50 dark:shadow-[0_28px_90px_-54px_rgba(0,0,0,0.95)]"
         >
           <OGDialogHeader className="shrink-0 border-b border-slate-200/75 bg-slate-50 px-5 py-4 text-left dark:border-white/10 dark:bg-[#172033]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">

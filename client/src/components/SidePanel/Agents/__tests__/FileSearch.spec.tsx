@@ -1,6 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
 import { useForm, FormProvider } from 'react-hook-form';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { EModelEndpoint, mergeFileConfig } from 'librechat-data-provider';
 import type { TEndpointsConfig } from 'librechat-data-provider';
 import type { AgentForm } from '~/common';
@@ -48,7 +48,6 @@ jest.mock('~/components/SharePoint', () => ({
 }));
 
 jest.mock('~/components/Chat/Input/Files/FileRow', () => () => null);
-jest.mock('../FileSearchCheckbox', () => () => null);
 
 jest.mock('@ariakit/react', () => ({
   MenuButton: ({ children, ...props }: { children: React.ReactNode }) => (
@@ -58,8 +57,12 @@ jest.mock('@ariakit/react', () => ({
 
 jest.mock('@librechat/client', () => ({
   SharePointIcon: () => <span />,
-  AttachmentIcon: () => <span />,
   DropdownPopup: () => null,
+  CircleHelpIcon: () => <span />,
+  HoverCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  HoverCardPortal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  HoverCardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  HoverCardTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 function Wrapper({
@@ -99,15 +102,15 @@ describe('FileSearch', () => {
     expect(input).not.toBeDisabled();
   });
 
-  it('explains that File Search must be enabled for a saved agent', () => {
+  it('allows a saved agent to select a file before File Search is enabled', () => {
     render(
       <Wrapper fileSearch={false}>
         <FileSearch agent_id="agent_123" />
       </Wrapper>,
     );
 
-    expect(screen.getByRole('button', { name: 'com_ui_upload_file_search' })).toBeDisabled();
-    expect(screen.getByText('com_agents_file_search_enable_upload')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_ui_upload_file_search' })).toBeEnabled();
+    expect(screen.queryByText('com_agents_file_search_enable_upload')).not.toBeInTheDocument();
   });
 
   it('keeps upload disabled until the agent is saved', () => {

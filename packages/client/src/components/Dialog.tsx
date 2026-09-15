@@ -1,13 +1,16 @@
 import * as React from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { useMediaQuery } from '~/hooks';
-import { Button } from './Button';
+import { JSX } from 'react/jsx-runtime';
 import { X } from '@phosphor-icons/react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Button, ButtonProps } from './Button';
+import { useMediaQuery } from '~/hooks';
 import { cn } from '~/utils';
 
-const Dialog = DialogPrimitive.Root;
+const Dialog: React.FC<DialogPrimitive.DialogProps> = DialogPrimitive.Root;
 
-const DialogTrigger = DialogPrimitive.Trigger;
+const DialogTrigger: React.ForwardRefExoticComponent<
+  DialogPrimitive.DialogTriggerProps & React.RefAttributes<HTMLButtonElement>
+> = DialogPrimitive.Trigger;
 
 type DialogPortalProps = DialogPrimitive.DialogPortalProps & { className?: string };
 
@@ -26,7 +29,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     className={cn(
-      'fixed inset-0 z-[999] bg-gray-600/65 transition-all duration-100 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in dark:bg-black/80',
+      'fixed inset-0 z-[999] bg-surface-overlay/65 transition-all duration-100 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=open]:fade-in',
       className ?? '',
     )}
     {...props}
@@ -40,10 +43,12 @@ type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.
   disableScroll?: boolean;
 };
 
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  DialogContentProps
->(
+const DialogContent: React.ForwardRefExoticComponent<
+  Omit<DialogPrimitive.DialogContentProps & React.RefAttributes<HTMLDivElement>, 'ref'> & {
+    showCloseButton?: boolean;
+    disableScroll?: boolean;
+  } & React.RefAttributes<HTMLDivElement>
+> = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
   (
     { className, children = true, showCloseButton = true, disableScroll = false, ...props },
     ref,
@@ -55,7 +60,9 @@ const DialogContent = React.forwardRef<
         <DialogPrimitive.Content
           ref={ref}
           className={cn(
-            'fixed z-[999] grid w-full gap-4 rounded-b-lg bg-surface-dialog pb-6 text-text-primary animate-in data-[state=open]:fade-in-90 data-[state=open]:slide-in-from-bottom-10 sm:rounded-lg',
+            /** The dialog surface is otherwise borderless: in high contrast it sits
+             *  on a canvas of its own colour, so it needs a drawn edge. */
+            'fixed z-[999] grid w-full gap-4 rounded-b-lg bg-surface-dialog pb-6 animate-in data-[state=open]:fade-in-90 data-[state=open]:slide-in-from-bottom-10 high-contrast:border high-contrast:border-solid high-contrast:border-border-medium sm:rounded-lg',
             isSmallScreen
               ? 'fixed left-1/2 top-1/2 z-[999] m-auto grid w-11/12 -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-surface-dialog pb-6'
               : '',
@@ -66,7 +73,7 @@ const DialogContent = React.forwardRef<
         >
           {children}
           {showCloseButton && (
-            <DialogPrimitive.Close className="absolute right-6 top-[1.6rem] rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-surface-hover">
+            <DialogPrimitive.Close className="absolute right-6 top-[1.6rem] rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-text-primary focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-surface-hover">
               <X className="h-5 w-5 text-text-primary" aria-hidden="true" />
               <span className="sr-only">Close</span>
             </DialogPrimitive.Close>
@@ -78,7 +85,10 @@ const DialogContent = React.forwardRef<
 );
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+const DialogHeader: {
+  ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): JSX.Element;
+  displayName: string;
+} = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): JSX.Element => (
   <div
     className={cn(
       'flex flex-col space-y-2 border-b border-border-light p-6 pb-4 text-left',
@@ -89,7 +99,10 @@ const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogHeader.displayName = 'DialogHeader';
 
-const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+const DialogFooter: {
+  ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): JSX.Element;
+  displayName: string;
+} = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): JSX.Element => (
   <div
     className={cn('flex flex-row justify-between space-x-2 px-6 py-4', className ?? '')}
     {...props}
@@ -97,7 +110,10 @@ const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
 );
 DialogFooter.displayName = 'DialogFooter';
 
-const DialogTitle = React.forwardRef<
+const DialogTitle: React.ForwardRefExoticComponent<
+  Omit<DialogPrimitive.DialogTitleProps & React.RefAttributes<HTMLHeadingElement>, 'ref'> &
+    React.RefAttributes<HTMLHeadingElement>
+> = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
@@ -109,7 +125,10 @@ const DialogTitle = React.forwardRef<
 ));
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
-const DialogDescription = React.forwardRef<
+const DialogDescription: React.ForwardRefExoticComponent<
+  Omit<DialogPrimitive.DialogDescriptionProps & React.RefAttributes<HTMLParagraphElement>, 'ref'> &
+    React.RefAttributes<HTMLParagraphElement>
+> = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
@@ -121,24 +140,30 @@ const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
-const DialogClose = React.forwardRef<
+const DialogClose: React.ForwardRefExoticComponent<
+  Omit<DialogPrimitive.DialogCloseProps & React.RefAttributes<HTMLButtonElement>, 'ref'> &
+    React.RefAttributes<HTMLButtonElement>
+> = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Close
     ref={ref}
     className={cn(
-      'mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-border-medium bg-transparent px-4 py-2 text-sm font-semibold text-text-primary ring-offset-background transition-colors hover:bg-surface-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
+      'mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-border-light bg-transparent px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
       className ?? '',
       /* Important: for accessibility */
-      'focus:ring-2 focus:ring-ring-primary focus:ring-offset-2',
+      'focus:ring-2 focus:ring-text-primary focus:ring-offset-2',
     )}
     {...props}
   />
 ));
 DialogClose.displayName = DialogPrimitive.Title.displayName;
 
-const DialogButton = React.forwardRef<
+const DialogButton: React.ForwardRefExoticComponent<
+  Omit<ButtonProps & React.RefAttributes<HTMLButtonElement>, 'ref'> &
+    React.RefAttributes<HTMLButtonElement>
+> = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentPropsWithoutRef<typeof Button>
 >(({ className, ...props }, ref) => (
@@ -146,10 +171,10 @@ const DialogButton = React.forwardRef<
     ref={ref}
     variant="outline"
     className={cn(
-      'mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-border-medium bg-transparent px-4 py-2 text-sm font-semibold text-text-primary ring-offset-background transition-colors hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
+      'mt-2 inline-flex h-10 items-center justify-center rounded-lg border border-border-light bg-transparent px-4 py-2 text-sm font-semibold text-text-primary transition-colors hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-text-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0',
       className ?? '',
       /* Important: for accessibility */
-      'focus:ring-2 focus:ring-ring-primary focus:ring-offset-2',
+      'focus:ring-2 focus:ring-text-primary focus:ring-offset-2',
     )}
     {...props}
   />

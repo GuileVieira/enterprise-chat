@@ -6,6 +6,12 @@ import type { TConversation, TEndpointsConfig } from 'librechat-data-provider';
 import useSelectMention from './useSelectMention';
 
 const mockNewConversation = jest.fn();
+const mockUseSearchParams = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useSearchParams: () => mockUseSearchParams(),
+}));
 
 jest.mock('~/hooks', () => ({
   useDefaultConvo: () =>
@@ -39,6 +45,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe('useSelectMention', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseSearchParams.mockReturnValue([new URLSearchParams('')]);
   });
 
   it('preserves conversation and project when selecting a model in an existing conversation', () => {
@@ -76,6 +83,33 @@ describe('useSelectMention', () => {
           endpoint: EModelEndpoint.openAI,
           model: 'gpt-4o',
           spec: null,
+        }),
+      }),
+    );
+  });
+
+  it('accepts the UUID project ids created by Orqest projects', () => {
+    mockUseSearchParams.mockReturnValue([
+      new URLSearchParams('projectId=550e8400-e29b-41d4-a716-446655440000'),
+    ]);
+    const { result } = renderHook(
+      () =>
+        useSelectMention({
+          modelSpecs: [],
+          returnHandlers: true,
+          endpointsConfig,
+          getConversation: () => existingConversation,
+          newConversation: mockNewConversation,
+        }),
+      { wrapper },
+    );
+
+    act(() => result.current.onSelectEndpoint?.(EModelEndpoint.openAI, { model: 'gpt-4o' }));
+
+    expect(mockNewConversation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        template: expect.objectContaining({
+          projectId: '550e8400-e29b-41d4-a716-446655440000',
         }),
       }),
     );

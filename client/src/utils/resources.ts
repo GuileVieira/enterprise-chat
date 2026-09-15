@@ -12,7 +12,7 @@ export interface ResourceConfig {
   getCopyUrlMessage: () => string;
 }
 
-export const RESOURCE_CONFIGS: Record<ResourceType, ResourceConfig> = {
+export const RESOURCE_CONFIGS: Partial<Record<ResourceType, ResourceConfig>> = {
   [ResourceType.AGENT]: {
     resourceType: ResourceType.AGENT,
     defaultViewerRoleId: AccessRoleIds.AGENT_VIEWER,
@@ -82,6 +82,16 @@ export const RESOURCE_CONFIGS: Record<ResourceType, ResourceConfig> = {
     getManageMessage: (name?: string) =>
       `Manage permissions for ${name && name !== '' ? name : 'project'}`,
     getCopyUrlMessage: () => 'Project URL copied',
+  },
+  [ResourceType.SHARED_LINK]: {
+    resourceType: ResourceType.SHARED_LINK,
+    defaultViewerRoleId: AccessRoleIds.SHARED_LINK_VIEWER,
+    defaultEditorRoleId: AccessRoleIds.SHARED_LINK_VIEWER,
+    defaultOwnerRoleId: AccessRoleIds.SHARED_LINK_OWNER,
+    getResourceName: (name?: string) => name || 'shared link',
+    getShareMessage: (name?: string) => name || 'shared link',
+    getManageMessage: (name?: string) => `Manage access for ${name || 'shared link'}`,
+    getCopyUrlMessage: () => 'Share link copied',
   },
 };
 

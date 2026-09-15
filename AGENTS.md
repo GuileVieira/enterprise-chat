@@ -193,3 +193,14 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+
+## Upstream integration contracts
+
+- The upstream snapshot uses tsdown for `packages/api`, `packages/client`, and `packages/data-schemas`; build success is not typecheck success. Run focused workspace typechecks separately.
+- Invalidate the auth user document cache whenever user documents or roles change, including bulk mutations.
+- Preserve upstream Jotai state ownership: migrate an atom with all its consumers, keep feature state within its feature, and pass app-global preferences through props or host context.
+- Reuse semantic theme tokens and shared `@librechat/client` primitives.
+- Keep exported database contracts in `packages/data-schemas`; avoid adding Mongoose types to client or provider APIs.
+- Worktrees share a stash stack. Never use a bare `git stash pop`.
+- This fork's production integration branch is `prod/sync-2026-09-14`; `chore/upstream-main-integration` remains the rollback baseline. Upstream's dev-only PR policy does not apply to this integration.

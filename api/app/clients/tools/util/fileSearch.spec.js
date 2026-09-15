@@ -52,6 +52,8 @@ describe('file_search primeFiles', () => {
         file_id: 'project-file',
         filename: 'DNA de Marca - Marmofort.docx',
         projectId: 'proj-123',
+        metadata: undefined,
+        fromAgent: true,
       },
     ]);
     expect(result.toolContext).toContain(`Use the ${Tools.file_search} tool`);
@@ -92,6 +94,8 @@ describe('file_search primeFiles', () => {
         file_id: 'legacy-project-file',
         filename: 'DNA legado.docx',
         projectId: 'proj-123',
+        metadata: undefined,
+        fromAgent: true,
       },
     ]);
   });

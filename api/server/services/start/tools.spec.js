@@ -25,6 +25,11 @@ jest.mock('@librechat/api', () => ({
   getToolkitKey: jest.fn(() => undefined),
   oaiToolkit: {},
   geminiToolkit: {},
+  createAskUserQuestionTool: () => ({
+    name: 'ask_user_question',
+    description: 'Ask a question',
+    schema: { type: 'object', properties: {} },
+  }),
 }));
 
 jest.mock('~/app/clients/tools/manifest', () => ({

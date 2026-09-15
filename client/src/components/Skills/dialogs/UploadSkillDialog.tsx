@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
-import { FolderOpen, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { FolderOpen, Upload } from 'lucide-react';
 import { OGDialog, OGDialogContent, Spinner, useToastContext } from '@librechat/client';
 import {
   megabyte,
@@ -8,10 +8,10 @@ import {
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import type { TSkill } from 'librechat-data-provider';
-import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import type { TranslationKeys } from '~/hooks';
-import { useLocalize } from '~/hooks';
+import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import { collectSkillDirectories, createSkillImportFile } from '../utils';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
@@ -51,12 +51,14 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const directoryInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const directoryInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isBatchImporting, setIsBatchImporting] = useState(false);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
-  const { data: skillFileConfig = { fileConfig: defaultFileConfig } } = useGetFileConfig({
+  const {
+    data: skillFileConfig = { configuredSizeLimitMb: undefined, fileConfig: defaultFileConfig },
+  } = useGetFileConfig({
     select: (data) => ({
       configuredSizeLimitMb: data?.skills?.fileSizeLimit,
       fileConfig: mergeFileConfig(data),
@@ -118,6 +120,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
   const handleDirectoryInput = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (isImporting) return;
       const directories = collectSkillDirectories(Array.from(event.target.files ?? []));
       event.target.value = '';
       if (directories.length === 0) {
@@ -164,7 +167,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
         message: localize('com_ui_skill_folder_result', { 0: succeeded, 1: directories.length }),
       });
     },
-    [getErrorMessage, importFile, localize, showToast],
+    [getErrorMessage, importFile, isImporting, localize, showToast],
   );
 
   const handleFileInput = useCallback(

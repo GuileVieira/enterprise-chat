@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { IProject } from '~/types';
+import type { IProject } from '~/types';
 
 const ProjectMemorySchema = new Schema(
   {
@@ -321,7 +321,7 @@ const ProjectMetaAdsSchema = new Schema(
   { _id: false },
 );
 
-const projectSchema = new Schema<IProject>(
+const projectSchema: Schema<IProject> = new Schema<IProject>(
   {
     projectId: {
       type: String,

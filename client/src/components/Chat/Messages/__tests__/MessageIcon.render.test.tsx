@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { EModelEndpoint } from 'librechat-data-provider';
 import type { Agent } from 'librechat-data-provider';
 import type { TMessageIcon } from '~/common';
@@ -12,14 +12,17 @@ jest.mock('~/data-provider', () => ({
   useGetEndpointsQuery: jest.fn(() => ({ data: {} })),
 }));
 jest.mock('~/utils', () => ({
-  getIconEndpoint: jest.fn(() => 'agents'),
+  cn: jest.requireActual('~/utils/cn').default,
+  getIconEndpoint: jest.fn(() => {
+    iconRenderCount.current += 1;
+    return 'agents';
+  }),
 }));
 
 const iconRenderCount = { current: 0 };
 
 jest.mock('~/components/Endpoints/ConvoIconURL', () => {
   const ConvoIconURL = (props: Record<string, unknown>) => {
-    iconRenderCount.current += 1;
     return <div data-testid="convo-icon-url" data-icon-url={props.iconURL as string} />;
   };
   ConvoIconURL.displayName = 'ConvoIconURL';
@@ -27,7 +30,6 @@ jest.mock('~/components/Endpoints/ConvoIconURL', () => {
 });
 jest.mock('~/components/Endpoints/Icon', () => {
   const Icon = (props: Record<string, unknown>) => {
-    iconRenderCount.current += 1;
     return <div data-testid="icon" data-icon-url={props.iconURL as string} />;
   };
   Icon.displayName = 'Icon';
@@ -62,6 +64,24 @@ describe('MessageIcon render cycles', () => {
     expect(iconRenderCount.current).toBe(1);
   });
 
+  it('renders same-origin absolute model spec icon URLs directly', () => {
+    render(
+      <MessageIcon
+        iconData={{
+          ...baseIconData,
+          endpoint: EModelEndpoint.openAI,
+          modelLabel: baseIconData.model,
+          iconURL: '/assets/clickhouse-logo.svg',
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('convo-icon-url')).toHaveAttribute(
+      'data-icon-url',
+      '/assets/clickhouse-logo.svg',
+    );
+  });
+
   it('does not re-render when parent re-renders with same field values but new object references', () => {
     const agent = makeAgent();
     const { rerender } = render(<MessageIcon iconData={baseIconData} agent={agent} />);
@@ -88,7 +108,7 @@ describe('MessageIcon render cycles', () => {
     const { rerender } = render(<MessageIcon iconData={baseIconData} agent={agent1} />);
     iconRenderCount.current = 0;
 
-    const agent2 = makeAgent({ avatar: { filepath: '/images/new-avatar.png' } });
+    const agent2 = makeAgent({ avatar: { filepath: '/images/new-avatar.png', source: 'local' } });
     rerender(<MessageIcon iconData={baseIconData} agent={agent2} />);
 
     expect(iconRenderCount.current).toBe(1);

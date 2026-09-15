@@ -11,24 +11,25 @@ import {
   Sparkle,
   TrendUp,
 } from '@phosphor-icons/react';
+import type { TranslationKeys } from '~/hooks';
 import {
   useGetStartupConfig,
   useProjectByIdQuery,
   useGetProjectFiles,
   useTitleGeneration,
 } from '~/data-provider';
-import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
+import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
-import { cn } from '~/utils';
-import ProjectPromptGroups from './ProjectPromptGroups';
-import ProjectPromptManager from './ProjectPromptManager';
+import { useAuthContext, useHasAccess, useLocalize } from '~/hooks';
 import ProjectConversationsTab from './ProjectConversationsTab';
+import ProjectPromptManager from './ProjectPromptManager';
+import ProjectPromptGroups from './ProjectPromptGroups';
 import ProjectMemoryEditor from './ProjectMemoryEditor';
 import ProjectFileUploader from './ProjectFileUploader';
-import ProjectForm from './ProjectForm';
 import ProjectMetaAdsPanel from './ProjectMetaAdsPanel';
 import ProjectMeetingsTab from './ProjectMeetingsTab';
-import ProjectPromptSnippetsManager from './ProjectPromptSnippetsManager';
+import ProjectForm from './ProjectForm';
+import { cn } from '~/utils';
 
 const tabs = [
   'conversations',
@@ -52,6 +53,16 @@ const tabIcons: Record<Tab, typeof ChatCircle> = {
   meetings: MicrophoneStage,
   metaAds: TrendUp,
   settings: GearSix,
+};
+
+const tabLabelKeys: Record<Tab, TranslationKeys> = {
+  conversations: 'com_ui_project_tab_conversations',
+  prompts: 'com_ui_project_tab_prompts',
+  memories: 'com_ui_project_tab_memories',
+  files: 'com_ui_project_tab_files',
+  meetings: 'com_ui_project_tab_meetings',
+  metaAds: 'com_ui_project_tab_metaAds',
+  settings: 'com_ui_project_tab_settings',
 };
 
 export default function ProjectDetailPage() {
@@ -93,7 +104,9 @@ export default function ProjectDetailPage() {
   const isMetaAdsVisible =
     startupConfigQuery.data?.interface?.metaAds !== false &&
     (hasSystemMetaAdsRole || canUseMetaAds);
-  const visibleTabs = isMetaAdsVisible ? tabs : tabs.filter((tab) => tab !== 'metaAds');
+  const visibleTabs: readonly Tab[] = isMetaAdsVisible
+    ? tabs
+    : tabs.filter((tab) => tab !== 'metaAds');
 
   useEffect(() => {
     if (visibleTabs.includes(activeTab)) {
@@ -239,7 +252,7 @@ export default function ProjectDetailPage() {
                 )}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
-                {localize(`com_ui_project_tab_${tab}`)}
+                {localize(tabLabelKeys[tab])}
               </button>
             );
           })}

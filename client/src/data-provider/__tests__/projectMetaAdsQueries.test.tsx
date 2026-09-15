@@ -1,7 +1,6 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useProjectMetaAdsQuery } from '../queries';
 
 const mockGetProjectMetaAdsStatus = jest.fn();
@@ -57,7 +56,7 @@ describe('useProjectMetaAdsQuery', () => {
       changes: [],
     };
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v4:p1:live:last_7d:none:none',
+      'orqest:project-meta-ads-status:v5:p1:live:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data,
@@ -86,14 +85,14 @@ describe('useProjectMetaAdsQuery', () => {
       changes: [],
     };
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v4:p1:snapshot:last_7d:none:none',
+      'orqest:project-meta-ads-status:v5:p1:snapshot:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data: snapshotData,
       }),
     );
     localStorage.setItem(
-      'orqest:project-meta-ads-status:v4:p1:live:last_7d:none:none',
+      'orqest:project-meta-ads-status:v5:p1:live:last_7d:none:none',
       JSON.stringify({
         cachedAt: Date.now() - 5 * 60 * 1000,
         data: liveData,

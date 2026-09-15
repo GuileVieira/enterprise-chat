@@ -20,6 +20,16 @@ function createTestModel(suffix: string) {
   return mongoose.model<ITestDoc>(modelName, schema);
 }
 
+function createGlobalReadableTestModel(suffix: string) {
+  const schema = new Schema<ITestDoc>({
+    name: { type: String, required: true },
+    tenantId: { type: String, index: true },
+  });
+  applyTenantIsolation(schema, { includeGlobalDocuments: true });
+  const modelName = `TestGlobalTenant_${suffix}_${Date.now()}`;
+  return mongoose.model<ITestDoc>(modelName, schema);
+}
+
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   await mongoose.connect(mongoServer.getUri());
@@ -31,6 +41,77 @@ afterAll(async () => {
 });
 
 describe('applyTenantIsolation', () => {
+  describe('global-readable models', () => {
+    let TestModel: mongoose.Model<ITestDoc>;
+
+    beforeAll(() => {
+      TestModel = createGlobalReadableTestModel('writes');
+    });
+
+    beforeEach(async () => {
+      await TestModel.deleteMany({});
+      await TestModel.create([
+        { name: 'global' },
+        { name: 'tenant-a', tenantId: 'tenant-a' },
+        { name: 'tenant-b', tenantId: 'tenant-b' },
+      ]);
+    });
+
+    it('reads own and global documents without exposing another tenant', async () => {
+      const docs = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () => await TestModel.find().sort({ name: 1 }).lean(),
+      );
+
+      expect(docs.map((doc) => doc.name)).toEqual(['global', 'tenant-a']);
+    });
+
+    it('conjoins caller $or with global visibility instead of replacing it', async () => {
+      const docs = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () =>
+          await TestModel.find({ $or: [{ name: 'global' }, { name: 'tenant-b' }] }).lean(),
+      );
+
+      expect(docs.map((doc) => doc.name)).toEqual(['global']);
+    });
+
+    it('updates only own documents even when global documents are readable', async () => {
+      const globalUpdate = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () =>
+          await TestModel.updateOne({ name: 'global' }, { $set: { name: 'changed-global' } }),
+      );
+      const foreignUpdate = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () =>
+          await TestModel.updateOne({ name: 'tenant-b' }, { $set: { name: 'changed-foreign' } }),
+      );
+      const ownUpdate = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () =>
+          await TestModel.updateOne({ name: 'tenant-a' }, { $set: { name: 'changed-own' } }),
+      );
+
+      expect(globalUpdate.modifiedCount).toBe(0);
+      expect(foreignUpdate.modifiedCount).toBe(0);
+      expect(ownUpdate.modifiedCount).toBe(1);
+    });
+
+    it('cannot save a global document through tenant context', async () => {
+      const global = await tenantStorage.run(
+        { tenantId: 'tenant-a' },
+        async () => await TestModel.findOne({ name: 'global' }),
+      );
+      expect(global).not.toBeNull();
+      global!.name = 'changed';
+
+      await expect(
+        tenantStorage.run({ tenantId: 'tenant-a' }, async () => await global!.save()),
+      ).rejects.toThrow();
+    });
+  });
+
   describe('idempotency', () => {
     it('does not add duplicate hooks when called twice on the same schema', async () => {
       const schema = new Schema<ITestDoc>({
@@ -153,6 +234,35 @@ describe('applyTenantIsolation', () => {
 
       const tenantADoc = await TestModel.findOne({ tenantId: 'tenant-a' }).lean();
       expect(tenantADoc!.name).toBe('updated');
+    });
+
+    it('injects tenantId filter into distinct', async () => {
+      const names = await tenantStorage.run({ tenantId: 'tenant-a' }, async () =>
+        TestModel.distinct('name'),
+      );
+
+      expect(names).toEqual(['tenant-a-doc']);
+    });
+
+    it('injects tenantId filter into find().distinct() (op switches to distinct)', async () => {
+      const names = await tenantStorage.run({ tenantId: 'tenant-b' }, async () =>
+        TestModel.find().distinct('name'),
+      );
+
+      expect(names).toEqual(['tenant-b-doc']);
+    });
+
+    it('does not scope distinct when context is absent (non-strict)', async () => {
+      const names = await TestModel.distinct('name');
+      expect(names.sort()).toEqual(['no-tenant-doc', 'tenant-a-doc', 'tenant-b-doc']);
+    });
+
+    it('bypasses distinct filter for SYSTEM_TENANT_ID', async () => {
+      const names = await tenantStorage.run({ tenantId: SYSTEM_TENANT_ID }, async () =>
+        TestModel.distinct('name'),
+      );
+
+      expect(names).toHaveLength(3);
     });
   });
 

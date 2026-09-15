@@ -1,18 +1,12 @@
 const mongoose = require('mongoose');
-const { isEnabled } = require('@librechat/api');
+const { AccessControlService, isEnabled, ensureDirectoryPrincipalUser } = require('@librechat/api');
 const {
-  getTransactionSupport,
   tenantStorage,
+  getTenantId,
   logger,
-  ResourceCapabilityMap,
-  MAX_PERM_BITS,
+  runAfterTransaction,
 } = require('@librechat/data-schemas');
-const {
-  ResourceType,
-  PrincipalType,
-  PrincipalModel,
-  PermissionBits,
-} = require('librechat-data-provider');
+const { ResourceType, PrincipalType } = require('librechat-data-provider');
 const {
   entraIdPrincipalFeatureEnabled,
   getUserOwnedEntraGroups,
@@ -22,9 +16,6 @@ const {
   getGroupOwners,
 } = require('~/server/services/GraphApiService');
 const db = require('~/models');
-
-/** @type {boolean|null} */
-let transactionSupportCache = null;
 
 /**
  * Validates that the resourceType is one of the supported enum values
@@ -36,6 +27,22 @@ const validateResourceType = (resourceType) => {
   if (!validTypes.includes(resourceType)) {
     throw new Error(`Invalid resourceType: ${resourceType}. Valid types: ${validTypes.join(', ')}`);
   }
+};
+
+const ensureLocalUserPrincipalExists = async (principalId) => {
+  const user = await db.findUser({ _id: principalId }, '_id');
+  if (!user) {
+    throw new Error('User principal not found');
+  }
+  return user._id.toString();
+};
+
+const ensureLocalGroupPrincipalExists = async (principalId) => {
+  const group = await db.findGroupById(principalId, { _id: 1 });
+  if (!group) {
+    throw new Error('Group principal not found');
+  }
+  return group._id.toString();
 };
 
 /**
@@ -72,10 +79,13 @@ const grantPermission = async ({
     }
 
     // Validate principalId based on type
-    if (principalId && (principalType === PrincipalType.ROLE || principalType === PrincipalType.TENANT)) {
-      // Role and tenant IDs are strings
+    if (
+      principalId &&
+      (principalType === PrincipalType.ROLE || principalType === PrincipalType.TENANT)
+    ) {
+      // Role IDs are strings (role names)
       if (typeof principalId !== 'string' || principalId.trim().length === 0) {
-        throw new Error(`Invalid ${principalType} ID: ${principalId}`);
+        throw new Error(`Invalid role ID: ${principalId}`);
       }
     } else if (
       principalType &&
@@ -115,12 +125,19 @@ const grantPermission = async ({
         session,
         role._id,
       );
-
-    if (principalType === PrincipalType.TENANT && typeof principalId === 'string') {
-      return await tenantStorage.run({ tenantId: principalId }, writeGrant);
+    const result =
+      principalType === PrincipalType.TENANT && typeof principalId === 'string'
+        ? await tenantStorage.run(
+            { ...(tenantStorage.getStore() ?? {}), tenantId: principalId },
+            writeGrant,
+          )
+        : await writeGrant();
+    if (resourceType === ResourceType.PROMPTGROUP) {
+      /** A caller-owned session may not have committed yet; invalidating early
+       * would let a concurrent read re-cache pre-commit IDs under the new generation. */
+      await runAfterTransaction(session, () => db.invalidatePromptGroupAccessContext());
     }
-
-    return await writeGrant();
+    return result;
   } catch (error) {
     logger.error(`[PermissionService.grantPermission] Error: ${error.message}`);
     throw error;
@@ -146,16 +163,9 @@ const checkPermission = async ({ userId, role, resourceType, resourceId, require
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
+
     if (principals.length === 0) {
       return false;
-    }
-
-    const cap = ResourceCapabilityMap[resourceType];
-    if (cap) {
-      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
-      if (hasCap) {
-        return true;
-      }
     }
 
     return await db.hasPermission(principals, resourceType, resourceId, requiredPermission);
@@ -182,16 +192,9 @@ const getEffectivePermissions = async ({ userId, role, resourceType, resourceId 
     validateResourceType(resourceType);
 
     const principals = await db.getUserPrincipals({ userId, role });
+
     if (principals.length === 0) {
       return 0;
-    }
-
-    const cap = ResourceCapabilityMap[resourceType];
-    if (cap) {
-      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
-      if (hasCap) {
-        return MAX_PERM_BITS;
-      }
     }
 
     return await db.getEffectivePermissions(principals, resourceType, resourceId);
@@ -226,18 +229,6 @@ const getResourcePermissionsMap = async ({ userId, role, resourceType, resourceI
     // Get user principals (user + groups + public)
     const principals = await db.getUserPrincipals({ userId, role });
 
-    const cap = ResourceCapabilityMap[resourceType];
-    if (cap) {
-      const hasCap = await db.hasCapabilityForPrincipals({ principals, capability: cap });
-      if (hasCap) {
-        const fullMap = new Map();
-        for (const id of resourceIds) {
-          fullMap.set(id.toString(), MAX_PERM_BITS);
-        }
-        return fullMap;
-      }
-    }
-
     // Use batch method from aclEntry
     const permissionsMap = await db.getEffectivePermissionsForResources(
       principals,
@@ -261,11 +252,19 @@ const getResourcePermissionsMap = async ({ userId, role, resourceType, resourceI
  * @param {Object} params - Parameters for finding accessible resources
  * @param {string|mongoose.Types.ObjectId} params.userId - The ID of the user
  * @param {string} [params.role] - Optional user role (if not provided, will query from DB)
+ * @param {string|null} [params.idOnTheSource] - Optional external member id. `null` means "known to
+ * be absent" (local user); only `undefined` makes `getUserPrincipals` read the user document.
  * @param {string} params.resourceType - Type of resource (e.g., 'agent')
  * @param {number} params.requiredPermissions - The minimum permission bits required (e.g., 1 for VIEW, 3 for VIEW+EDIT)
  * @returns {Promise<Array>} Array of resource IDs
  */
-const findAccessibleResources = async ({ userId, role, resourceType, requiredPermissions }) => {
+const findAccessibleResources = async ({
+  userId,
+  role,
+  idOnTheSource,
+  resourceType,
+  requiredPermissions,
+}) => {
   try {
     if (typeof requiredPermissions !== 'number' || requiredPermissions < 1) {
       throw new Error('requiredPermissions must be a positive number');
@@ -274,7 +273,7 @@ const findAccessibleResources = async ({ userId, role, resourceType, requiredPer
     validateResourceType(resourceType);
 
     // Get all principals for the user (user + groups + public)
-    const principalsList = await db.getUserPrincipals({ userId, role });
+    const principalsList = await db.getUserPrincipals({ userId, role, idOnTheSource });
 
     if (principalsList.length === 0) {
       return [];
@@ -344,41 +343,25 @@ const ensurePrincipalExists = async function (principal) {
     return null;
   }
 
-  if (principal.id) {
-    return principal.id;
+  if (principal.type === PrincipalType.USER && principal.id) {
+    return await ensureLocalUserPrincipalExists(principal.id);
   }
 
   if (principal.type === PrincipalType.USER && principal.source === 'entra') {
-    if (!principal.email || !principal.idOnTheSource) {
-      throw new Error('Entra ID user principals must have email and idOnTheSource');
-    }
-
-    let existingUser = await db.findUser({ idOnTheSource: principal.idOnTheSource });
-
-    if (!existingUser) {
-      existingUser = await db.findUser({ email: principal.email });
-    }
-
-    if (existingUser) {
-      if (!existingUser.idOnTheSource && principal.idOnTheSource) {
-        await db.updateUser(existingUser._id, {
-          idOnTheSource: principal.idOnTheSource,
-          provider: 'openid',
-        });
-      }
-      return existingUser._id.toString();
-    }
-
-    const userData = {
-      name: principal.name,
-      email: principal.email.toLowerCase(),
-      emailVerified: false,
-      provider: 'openid',
-      idOnTheSource: principal.idOnTheSource,
-    };
-
-    const userId = await db.createUser(userData, true, true);
-    return userId.toString();
+    return ensureDirectoryPrincipalUser(principal, {
+      findUserBySourceId: async (idOnTheSource) => {
+        const user = await db.findUser({ idOnTheSource });
+        return user ? { id: user._id.toString() } : null;
+      },
+      findUserByEmail: async (email) => {
+        const user = await db.findUser({ email });
+        return user ? { id: user._id.toString() } : null;
+      },
+      createUser: async (userData) => {
+        const userId = await db.createUser(userData, true, true);
+        return userId.toString();
+      },
+    });
   }
 
   if (principal.type === PrincipalType.GROUP) {
@@ -408,6 +391,10 @@ const ensurePrincipalExists = async function (principal) {
 const ensureGroupPrincipalExists = async function (principal, authContext = null) {
   if (principal.type !== PrincipalType.GROUP) {
     throw new Error(`Invalid principal type: ${principal.type}. Expected '${PrincipalType.GROUP}'`);
+  }
+
+  if (principal.id && principal.source !== 'entra') {
+    return await ensureLocalGroupPrincipalExists(principal.id);
   }
 
   if (principal.source === 'entra') {
@@ -525,6 +512,21 @@ const ensureGroupPrincipalExists = async function (principal, authContext = null
  * @returns {Promise<void>}
  */
 const syncUserEntraGroupMemberships = async (user, accessToken, session = null) => {
+  const tenantId = user?.tenantId ? String(user.tenantId) : undefined;
+  if (!tenantId || getTenantId() != null) {
+    return performEntraGroupMembershipSync(user, accessToken, session);
+  }
+  /**
+   * The OAuth callback runs before `tenantContextMiddleware`, so establish the
+   * user's tenant context here: group queries, created groups, and principal
+   * cache invalidation are then scoped exactly like authenticated reads.
+   */
+  return tenantStorage.run({ tenantId, userId: user._id?.toString() }, async () =>
+    performEntraGroupMembershipSync(user, accessToken, session),
+  );
+};
+
+const performEntraGroupMembershipSync = async (user, accessToken, session = null) => {
   try {
     if (!entraIdPrincipalFeatureEnabled(user) || !accessToken || !user.idOnTheSource) {
       return;
@@ -700,268 +702,12 @@ const hasPublicPermission = async ({ resourceType, resourceId, requiredPermissio
   }
 };
 
-/**
- * Bulk update permissions for a resource (grant, update, revoke)
- * Efficiently handles multiple permission changes in a single transaction
- *
- * @param {Object} params - Parameters for bulk permission update
- * @param {string} params.resourceType - Type of resource (e.g., 'agent')
- * @param {string|mongoose.Types.ObjectId} params.resourceId - The ID of the resource
- * @param {Array<TPrincipal>} params.updatedPrincipals - Array of principals to grant/update permissions for
- * @param {Array<TPrincipal>} params.revokedPrincipals - Array of principals to revoke permissions from
- * @param {string|mongoose.Types.ObjectId} params.grantedBy - User ID making the changes
- * @param {mongoose.ClientSession} [params.session] - Optional MongoDB session for transactions
- * @returns {Promise<Object>} Results object with granted, updated, revoked arrays and error details
- */
-const bulkUpdateResourcePermissions = async ({
-  resourceType,
-  resourceId,
-  updatedPrincipals = [],
-  revokedPrincipals = [],
-  grantedBy,
-  session,
-}) => {
-  const supportsTransactions = await getTransactionSupport(mongoose, transactionSupportCache);
-  transactionSupportCache = supportsTransactions;
-  let localSession = session;
-  let shouldEndSession = false;
-
-  try {
-    if (!Array.isArray(updatedPrincipals)) {
-      throw new Error('updatedPrincipals must be an array');
-    }
-
-    if (!Array.isArray(revokedPrincipals)) {
-      throw new Error('revokedPrincipals must be an array');
-    }
-
-    if (!resourceId || !mongoose.Types.ObjectId.isValid(resourceId)) {
-      throw new Error(`Invalid resource ID: ${resourceId}`);
-    }
-
-    if (!localSession && supportsTransactions) {
-      localSession = await mongoose.startSession();
-      localSession.startTransaction();
-      shouldEndSession = true;
-    }
-
-    const sessionOptions = localSession ? { session: localSession } : {};
-
-    const roles = await db.findRolesByResourceType(resourceType);
-    const rolesMap = new Map();
-    roles.forEach((role) => {
-      rolesMap.set(role.accessRoleId, role);
-    });
-
-    const results = {
-      granted: [],
-      updated: [],
-      revoked: [],
-      errors: [],
-    };
-
-    const bulkWrites = [];
-    const tenantBulkWrites = new Map();
-
-    for (const principal of updatedPrincipals) {
-      try {
-        if (!principal.accessRoleId) {
-          results.errors.push({
-            principal,
-            error: 'accessRoleId is required for updated principals',
-          });
-          continue;
-        }
-
-        const role = rolesMap.get(principal.accessRoleId);
-        if (!role) {
-          results.errors.push({
-            principal,
-            error: `Role ${principal.accessRoleId} not found`,
-          });
-          continue;
-        }
-
-        if (principal.type === PrincipalType.TENANT && role.permBits !== PermissionBits.VIEW) {
-          results.errors.push({
-            principal,
-            error: 'Tenant-wide agent grants must use viewer access',
-          });
-          continue;
-        }
-
-        const query = {
-          principalType: principal.type,
-          resourceType,
-          resourceId,
-        };
-
-        if (principal.type !== PrincipalType.PUBLIC) {
-          query.principalId =
-            principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
-              ? principal.id
-              : new mongoose.Types.ObjectId(principal.id);
-        }
-
-        const principalModelMap = {
-          [PrincipalType.USER]: PrincipalModel.USER,
-          [PrincipalType.GROUP]: PrincipalModel.GROUP,
-          [PrincipalType.ROLE]: PrincipalModel.ROLE,
-        };
-
-        const update = {
-          $set: {
-            permBits: role.permBits,
-            roleId: role._id,
-            grantedBy,
-            grantedAt: new Date(),
-          },
-          $setOnInsert: {
-            principalType: principal.type,
-            resourceType,
-            resourceId,
-            ...(principal.type !== PrincipalType.PUBLIC && {
-              principalId:
-                principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
-                  ? principal.id
-                  : new mongoose.Types.ObjectId(principal.id),
-              ...(principalModelMap[principal.type] && {
-                principalModel: principalModelMap[principal.type],
-              }),
-            }),
-          },
-        };
-
-        const bulkWrite = {
-          updateOne: {
-            filter: query,
-            update: update,
-            upsert: true,
-          },
-        };
-
-        if (principal.type === PrincipalType.TENANT) {
-          const tenantWrites = tenantBulkWrites.get(principal.id) || [];
-          tenantWrites.push(bulkWrite);
-          tenantBulkWrites.set(principal.id, tenantWrites);
-        } else {
-          bulkWrites.push(bulkWrite);
-        }
-
-        results.granted.push({
-          type: principal.type,
-          id: principal.id,
-          name: principal.name,
-          email: principal.email,
-          source: principal.source,
-          avatar: principal.avatar,
-          description: principal.description,
-          idOnTheSource: principal.idOnTheSource,
-          accessRoleId: principal.accessRoleId,
-          memberCount: principal.memberCount,
-          memberIds: principal.memberIds,
-        });
-      } catch (error) {
-        results.errors.push({
-          principal,
-          error: error.message,
-        });
-      }
-    }
-
-    const deleteQueries = [];
-    const tenantDeleteQueries = new Map();
-    for (const principal of revokedPrincipals) {
-      try {
-        const query = {
-          principalType: principal.type,
-          resourceType,
-          resourceId,
-        };
-
-        if (principal.type !== PrincipalType.PUBLIC) {
-          query.principalId =
-            principal.type === PrincipalType.ROLE || principal.type === PrincipalType.TENANT
-              ? principal.id
-              : new mongoose.Types.ObjectId(principal.id);
-        }
-
-        if (principal.type === PrincipalType.TENANT) {
-          const tenantQueries = tenantDeleteQueries.get(principal.id) || [];
-          tenantQueries.push(query);
-          tenantDeleteQueries.set(principal.id, tenantQueries);
-        } else {
-          deleteQueries.push(query);
-        }
-
-        results.revoked.push({
-          type: principal.type,
-          id: principal.id,
-          name: principal.name,
-          email: principal.email,
-          source: principal.source,
-          avatar: principal.avatar,
-          description: principal.description,
-          idOnTheSource: principal.idOnTheSource,
-          memberCount: principal.memberCount,
-        });
-      } catch (error) {
-        results.errors.push({
-          principal,
-          error: error.message,
-        });
-      }
-    }
-
-    if (bulkWrites.length > 0) {
-      await db.bulkWriteAclEntries(bulkWrites, sessionOptions);
-    }
-
-    if (deleteQueries.length > 0) {
-      await db.deleteAclEntries({ $or: deleteQueries }, sessionOptions);
-    }
-
-    const tenantIds = new Set([...tenantBulkWrites.keys(), ...tenantDeleteQueries.keys()]);
-    if (tenantIds.size > 0) {
-      for (const tenantId of tenantIds) {
-        await tenantStorage.run({ tenantId }, async () => {
-          const writes = tenantBulkWrites.get(tenantId) || [];
-          const queries = tenantDeleteQueries.get(tenantId) || [];
-          if (writes.length > 0) {
-            await db.bulkWriteAclEntries(writes, sessionOptions);
-          }
-          if (queries.length > 0) {
-            await db.deleteAclEntries({ $or: queries }, sessionOptions);
-          }
-        });
-      }
-    }
-
-    if (shouldEndSession && supportsTransactions) {
-      await localSession.commitTransaction();
-    }
-
-    return results;
-  } catch (error) {
-    if (shouldEndSession && supportsTransactions) {
-      try {
-        await localSession.abortTransaction();
-      } catch (transactionError) {
-        /** best-effort abort; may fail if commit already succeeded */
-        logger.error(
-          `[PermissionService.bulkUpdateResourcePermissions] Error aborting transaction:`,
-          transactionError,
-        );
-      }
-    }
-    logger.error(`[PermissionService.bulkUpdateResourcePermissions] Error: ${error.message}`);
-    throw error;
-  } finally {
-    if (shouldEndSession && localSession) {
-      localSession.endSession();
-    }
-  }
-};
+/** Typed implementation; this legacy module only binds the shared model methods. */
+const accessControlService = new AccessControlService(mongoose, db);
+const bulkUpdateResourcePermissions = (params) =>
+  accessControlService.bulkUpdateResourcePermissions(params);
+const restoreInsightsPermissionChanges = (params) =>
+  accessControlService.restoreInsightsPermissionChanges(params);
 
 /**
  * Remove all permissions for a resource (cleanup when resource is deleted)
@@ -983,6 +729,10 @@ const removeAllPermissions = async ({ resourceType, resourceId }) => {
       resourceId,
     });
 
+    if (resourceType === ResourceType.PROMPTGROUP) {
+      await db.invalidatePromptGroupAccessContext();
+    }
+
     return result;
   } catch (error) {
     logger.error(`[PermissionService.removeAllPermissions] Error: ${error.message}`);
@@ -1000,6 +750,7 @@ module.exports = {
   hasPublicPermission,
   getAvailableRoles,
   bulkUpdateResourcePermissions,
+  restoreInsightsPermissionChanges,
   ensurePrincipalExists,
   ensureGroupPrincipalExists,
   syncUserEntraGroupMemberships,

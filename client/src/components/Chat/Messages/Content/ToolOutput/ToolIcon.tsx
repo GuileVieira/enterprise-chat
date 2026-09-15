@@ -1,4 +1,4 @@
-import { Constants, isActionTool } from 'librechat-data-provider';
+import { Constants, isActionTool, splitToolCallName } from 'librechat-data-provider';
 import {
   ArrowsLeftRight as ArrowRightLeft,
   FileMagnifyingGlass as FileSearch,
@@ -7,7 +7,12 @@ import {
   Terminal,
   Wrench,
   Lightning as Zap,
+  FileText,
+  ChatCircle as MessageCircleQuestion,
+  Scroll,
+  Brain,
 } from '@phosphor-icons/react';
+import CustomIcon from '~/components/ui/CustomIcon';
 import { cn } from '~/utils';
 
 export type ToolIconType =
@@ -17,6 +22,11 @@ export type ToolIconType =
   | 'image_gen'
   | 'agent_handoff'
   | 'file_search'
+  | 'skill'
+  | 'read_file'
+  | 'bash_tool'
+  | 'ask_user_question'
+  | 'memory'
   | 'action'
   | 'generic';
 
@@ -27,6 +37,11 @@ const ICON_MAP: Record<ToolIconType, React.ComponentType<{ className?: string }>
   image_gen: ImageIcon,
   agent_handoff: ArrowRightLeft,
   file_search: FileSearch,
+  skill: Scroll,
+  read_file: FileText,
+  bash_tool: Terminal,
+  ask_user_question: MessageCircleQuestion,
+  memory: Brain,
   action: Zap,
   generic: Wrench,
 };
@@ -58,6 +73,21 @@ export function getToolIconType(name: string): ToolIconType {
   if (name === 'code_interpreter') {
     return 'execute_code';
   }
+  if (name === 'skill') {
+    return 'skill';
+  }
+  if (name === 'read_file') {
+    return 'read_file';
+  }
+  if (name === 'bash_tool' || name === Constants.BASH_PROGRAMMATIC_TOOL_CALLING) {
+    return 'bash_tool';
+  }
+  if (name === 'ask_user_question') {
+    return 'ask_user_question';
+  }
+  if (name === 'set_memory' || name === 'delete_memory') {
+    return 'memory';
+  }
   if (name.startsWith(Constants.LC_TRANSFER_TO_)) {
     return 'agent_handoff';
   }
@@ -68,13 +98,12 @@ export function getToolIconType(name: string): ToolIconType {
 }
 
 /** Extracts the MCP server name from a tool name with format `tool<delimiter>server`. */
-export function getMCPServerName(toolName: string): string {
-  const idx = toolName.indexOf(Constants.mcp_delimiter);
-  if (idx < 0) {
+export function getMCPServerName(toolName: string, knownServerNames?: readonly string[]): string {
+  if (!toolName.includes(Constants.mcp_delimiter)) {
     return '';
   }
-  const afterDelimiter = toolName.slice(idx + Constants.mcp_delimiter.length);
-  return afterDelimiter || '';
+  const [, serverName] = splitToolCallName(toolName, knownServerNames);
+  return serverName ?? '';
 }
 
 interface ToolIconProps {
@@ -87,15 +116,14 @@ interface ToolIconProps {
 export default function ToolIcon({ type, iconUrl, isAnimating = false, className }: ToolIconProps) {
   if (iconUrl) {
     return (
-      <img
+      <CustomIcon
         src={iconUrl}
         alt=""
         className={cn(
-          'size-4 shrink-0 rounded-full object-cover',
+          'size-4 shrink-0 rounded-full object-cover text-text-secondary',
           isAnimating && 'animate-pulse',
           className,
         )}
-        aria-hidden="true"
       />
     );
   }

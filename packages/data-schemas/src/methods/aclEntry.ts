@@ -7,10 +7,10 @@ import type {
   DeleteResult,
   Model,
 } from 'mongoose';
-import type { AclEntry, IAclEntry } from '~/types';
-import { MAX_PERM_BITS } from '~/common/permissions';
-import { normalizePrincipalId } from '~/utils/principal';
+import type { IAclEntry } from '~/types';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
+import { normalizePrincipalId } from '~/utils/principal';
+import { MAX_PERM_BITS } from '~/common/permissions';
 
 /**
  * Empty frozen array shared by every rejection path. Returning a single
@@ -31,14 +31,15 @@ const resourceIdVariants = (resourceId: string | Types.ObjectId) => {
 
 const normalizeAclFilter = (filter: Record<string, unknown>): Record<string, unknown> => {
   const normalized = { ...filter };
-  if (typeof normalized.resourceId === 'string' || normalized.resourceId instanceof Types.ObjectId) {
+  if (
+    typeof normalized.resourceId === 'string' ||
+    normalized.resourceId instanceof Types.ObjectId
+  ) {
     normalized.resourceId = { $in: resourceIdVariants(normalized.resourceId) };
   }
   if (Array.isArray(normalized.$or)) {
     normalized.$or = normalized.$or.map((item) =>
-      item && typeof item === 'object'
-        ? normalizeAclFilter(item as Record<string, unknown>)
-        : item,
+      item && typeof item === 'object' ? normalizeAclFilter(item as Record<string, unknown>) : item,
     );
   }
   return normalized;
@@ -66,8 +67,8 @@ const normalizeAclFilter = (filter: Record<string, unknown>): Record<string, unk
  * which is the right behavior for a request asking for bits the system does
  * not recognize.
  *
- * For the current 4-bit `PermissionBits` enum the worst case is `required = 0`
- * which expands to 16 values; the best case (all bits required) expands to 1.
+ * For the current 5-bit `PermissionBits` enum the worst case is `required = 0`
+ * which expands to 32 values; the best case (all bits required) expands to 1.
  * Results are memoized per `requiredBits` so the expansion runs at most once
  * per distinct mask over the process lifetime.
  */
@@ -100,7 +101,92 @@ export function permissionBitSupersets(requiredBits: number): readonly number[] 
   return frozen;
 }
 
-export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
+export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
+  findEntriesByPrincipal: (
+    principalType: string,
+    principalId: string | Types.ObjectId,
+    resourceType?: string,
+  ) => Promise<IAclEntry[]>;
+  findEntriesByResource: (
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+    session?: ClientSession,
+  ) => Promise<IAclEntry[]>;
+  findEntriesByPrincipalsAndResource: (
+    principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+  ) => Promise<IAclEntry[]>;
+  hasPermission: (
+    principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+    permissionBit: number,
+  ) => Promise<boolean>;
+  getEffectivePermissions: (
+    principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+  ) => Promise<number>;
+  getEffectivePermissionsForResources: (
+    principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
+    resourceType: string,
+    resourceIds: Array<string | Types.ObjectId>,
+  ) => Promise<Map<string, number>>;
+  grantPermission: (
+    principalType: string,
+    principalId: string | Types.ObjectId | null,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+    permBits: number,
+    grantedBy?: string | Types.ObjectId,
+    session?: ClientSession,
+    roleId?: string | Types.ObjectId,
+    expiredAt?: Date,
+  ) => Promise<IAclEntry | null>;
+  revokePermission: (
+    principalType: string,
+    principalId: string | Types.ObjectId | null,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+    session?: ClientSession,
+  ) => Promise<DeleteResult>;
+  modifyPermissionBits: (
+    principalType: string,
+    principalId: string | Types.ObjectId | null,
+    resourceType: string,
+    resourceId: string | Types.ObjectId,
+    addBits?: number | null,
+    removeBits?: number | null,
+    session?: ClientSession,
+  ) => Promise<IAclEntry | null>;
+  findAccessibleResources: (
+    principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
+    resourceType: string,
+    requiredPermBit: number,
+    resourceIds?: Types.ObjectId[],
+    readPrimary?: boolean,
+  ) => Promise<Types.ObjectId[]>;
+  deleteAclEntries: (
+    filter: Record<string, unknown>,
+    options?: { session?: ClientSession },
+  ) => Promise<DeleteResult>;
+  bulkWriteAclEntries: (
+    ops: AnyBulkWriteOperation[],
+    options?: { session?: ClientSession },
+  ) => Promise<import('mongodb').BulkWriteResult>;
+  findPublicResourceIds: (
+    resourceType: string,
+    requiredPermissions: number,
+    resourceIds?: Types.ObjectId[],
+    readPrimary?: boolean,
+  ) => Promise<Types.ObjectId[]>;
+  aggregateAclEntries: (pipeline: PipelineStage[]) => Promise<unknown[]>;
+  getSoleOwnedResourceIds: (
+    userObjectId: Types.ObjectId,
+    resourceTypes: string | string[],
+  ) => Promise<Types.ObjectId[]>;
+} {
   /**
    * Find ACL entries for a specific principal (user or group)
    * @param principalType - The type of principal ('user', 'group')
@@ -130,12 +216,17 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
   async function findEntriesByResource(
     resourceType: string,
     resourceId: string | Types.ObjectId,
+    session?: ClientSession,
   ): Promise<IAclEntry[]> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
-    return await AclEntry.find({
+    const query = AclEntry.find({
       resourceType,
       resourceId: { $in: resourceIdVariants(resourceId) },
-    }).lean();
+    });
+    if (session) {
+      query.session(session);
+    }
+    return await query.lean<IAclEntry[]>();
   }
 
   /**
@@ -162,7 +253,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
       $or: principalsQuery,
       resourceType,
       resourceId: { $in: resourceIdVariants(resourceId) },
-    }).lean();
+    }).lean<IAclEntry[]>();
   }
 
   /**
@@ -299,9 +390,10 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
     resourceType: string,
     resourceId: string | Types.ObjectId,
     permBits: number,
-    grantedBy: string | Types.ObjectId,
+    grantedBy?: string | Types.ObjectId,
     session?: ClientSession,
     roleId?: string | Types.ObjectId,
+    expiredAt?: Date,
   ): Promise<IAclEntry | null> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const query: Record<string, unknown> = {
@@ -330,9 +422,10 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
       $set: {
         permBits,
         resourceId,
-        grantedBy,
         grantedAt: new Date(),
+        ...(grantedBy && { grantedBy }),
         ...(roleId && { roleId }),
+        ...(expiredAt && { expiredAt }),
       },
     };
 
@@ -446,12 +539,20 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
    * @param principalsList - List of principals, each containing { principalType, principalId }
    * @param resourceType - The type of resource
    * @param requiredPermBit - Required permission bit (use PermissionBits enum)
+   * @param resourceIds - Optional candidate bound. When provided, only these
+   *   resources are considered, so the query cost scales with the candidate set
+   *   instead of every accessible resource of the type. An empty array matches
+   *   nothing rather than lifting the bound.
+   * @param readPrimary - Read from the primary so a lagging secondary cannot
+   *   pin pre-mutation IDs into a caller's cache.
    * @returns Array of resource IDs
    */
   async function findAccessibleResources(
     principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
     resourceType: string,
     requiredPermBit: number,
+    resourceIds?: Types.ObjectId[],
+    readPrimary = false,
   ): Promise<Types.ObjectId[]> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     const principalsQuery = principalsList.map((p) => ({
@@ -461,11 +562,17 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
       }),
     }));
 
-    return await AclEntry.find({
+    const query = AclEntry.find({
       $or: principalsQuery,
+      ...(resourceIds !== undefined && { resourceId: { $in: resourceIds } }),
       resourceType,
       permBits: { $in: permissionBitSupersets(requiredPermBit) },
-    }).distinct('resourceId');
+    });
+    if (readPrimary) {
+      /** Cache builds must not capture a lagging secondary's pre-mutation state */
+      query.read('primary');
+    }
+    return await query.distinct('resourceId');
   }
 
   /**
@@ -487,9 +594,9 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
    * @param options - Optional query options (e.g., { session })
    */
   async function bulkWriteAclEntries(
-    ops: AnyBulkWriteOperation<AclEntry>[],
+    ops: AnyBulkWriteOperation[],
     options?: { session?: ClientSession },
-  ) {
+  ): Promise<import('mongodb').BulkWriteResult> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     return tenantSafeBulkWrite(AclEntry, ops as AnyBulkWriteOperation[], options || {});
   }
@@ -499,24 +606,34 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')) {
    * See {@link permissionBitSupersets} for the Cosmos-compatible bit filter.
    * @param resourceType - The type of resource
    * @param requiredPermissions - Required permission bits
+   * @param resourceIds - Optional candidate bound; see {@link findAccessibleResources}
+   * @param readPrimary - Read from the primary; see {@link findAccessibleResources}
    */
   async function findPublicResourceIds(
     resourceType: string,
     requiredPermissions: number,
+    resourceIds?: Types.ObjectId[],
+    readPrimary = false,
   ): Promise<Types.ObjectId[]> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
-    return await AclEntry.find({
+    const query = AclEntry.find({
       principalType: PrincipalType.PUBLIC,
+      ...(resourceIds !== undefined && { resourceId: { $in: resourceIds } }),
       resourceType,
       permBits: { $in: permissionBitSupersets(requiredPermissions) },
-    }).distinct('resourceId');
+    });
+    if (readPrimary) {
+      /** Cache builds must not capture a lagging secondary's pre-mutation state */
+      query.read('primary');
+    }
+    return await query.distinct('resourceId');
   }
 
   /**
    * Runs an aggregation pipeline on the AclEntry collection.
    * @param pipeline - MongoDB aggregation pipeline stages
    */
-  async function aggregateAclEntries(pipeline: PipelineStage[]) {
+  async function aggregateAclEntries(pipeline: PipelineStage[]): Promise<unknown[]> {
     const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
     return AclEntry.aggregate(pipeline);
   }

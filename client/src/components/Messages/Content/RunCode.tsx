@@ -1,16 +1,26 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import debounce from 'lodash/debounce';
+import { useRecoilCallback } from 'recoil';
 import { Tools, AuthType } from 'librechat-data-provider';
-import { Check, TerminalWindow as TerminalSquareIcon, X } from '@phosphor-icons/react';
 import { Spinner, TooltipAnchor, useToastContext } from '@librechat/client';
+import { Check, TerminalWindow as TerminalSquareIcon, X } from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import type { CodeBarProps } from '~/common';
 import { useVerifyAgentToolAuth, useToolCallMutation } from '~/data-provider';
 import ApiKeyDialog from '~/components/SidePanel/Agents/Code/ApiKeyDialog';
 import { useLocalize, useCodeApiKeyForm } from '~/hooks';
 import { cn, normalizeLanguage } from '~/utils';
 import { useMessageContext } from '~/Providers';
+import store from '~/store';
 
 type RunState = 'idle' | 'loading' | 'success' | 'error';
+
+const stateIcons: Record<RunState, PhosphorIcon> = {
+  idle: TerminalSquareIcon,
+  loading: TerminalSquareIcon,
+  success: Check,
+  error: X,
+};
 
 const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
   ({ lang, codeRef, blockIndex, iconOnly = false }) => {
@@ -34,6 +44,13 @@ const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
     const isAuthenticated = useMemo(() => data?.authenticated ?? false, [data?.authenticated]);
     const { methods, onSubmit, isDialogOpen, setIsDialogOpen, handleRevokeApiKey } =
       useCodeApiKeyForm({});
+    // Read at click time so retention context is current without re-rendering every code block.
+    const getIsTemporary = useRecoilCallback(
+      ({ snapshot }) =>
+        () =>
+          snapshot.getPromise(store.isTemporary),
+      [],
+    );
 
     const handleExecute = useCallback(async () => {
       if (!isAuthenticated) {
@@ -57,6 +74,7 @@ const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
         conversationId: conversationId ?? '',
         lang: normalizedLang,
         code: codeString,
+        isTemporary: await getIsTemporary(),
       });
     }, [
       codeRef,
@@ -68,6 +86,7 @@ const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
       normalizedLang,
       setIsDialogOpen,
       isAuthenticated,
+      getIsTemporary,
     ]);
 
     const debouncedExecute = useMemo(
@@ -106,11 +125,8 @@ const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
     const isIdle = runState === 'idle';
     const label = localize('com_ui_run_code');
 
-    const iconClass = (active: boolean) =>
-      cn(
-        'absolute transition-all duration-300 ease-out',
-        active ? 'rotate-0 scale-100 opacity-100' : 'scale-0 opacity-0 rotate-90',
-      );
+    const stateIcon = stateIcons[runState];
+    const StateIcon = stateIcon;
 
     const button = (
       <button
@@ -125,24 +141,30 @@ const RunCode: React.FC<CodeBarProps & { iconOnly?: boolean }> = React.memo(
           'focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy',
           'disabled:pointer-events-none disabled:opacity-50',
           isError && 'text-text-destructive hover:text-text-destructive',
-          iconOnly ? 'rounded-lg p-1.5' : 'ml-auto gap-2 rounded-md px-2 py-1',
+          iconOnly
+            ? 'rounded-lg p-1.5'
+            : 'ml-auto gap-2 rounded-lg p-1.5 md:rounded-md md:px-2 md:py-1',
         )}
       >
         <span className="relative flex size-[18px] items-center justify-center" aria-hidden="true">
-          <TerminalSquareIcon size={18} className={iconClass(isIdle)} />
+          <StateIcon
+            size={18}
+            className={cn(
+              'absolute transition-opacity duration-300',
+              isLoading ? 'opacity-0' : 'opacity-100',
+            )}
+          />
           <span
             className={cn(
               'absolute transition-opacity duration-300',
               isLoading ? 'opacity-100' : 'opacity-0',
             )}
           >
-            <Spinner className="animate-spin" size={18} />
+            {isLoading && <Spinner size={18} />}
           </span>
-          <Check size={18} className={iconClass(isSuccess)} />
-          <X size={18} className={iconClass(isError)} />
         </span>
         {!iconOnly && (
-          <span className="relative overflow-hidden">
+          <span className="relative hidden overflow-hidden md:block">
             <span
               className={cn(
                 'block whitespace-nowrap transition-all duration-300 ease-out',

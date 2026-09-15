@@ -1,10 +1,16 @@
 import mongoose from 'mongoose';
-import { AccessRoleIds, ResourceType, PermissionBits } from 'librechat-data-provider';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+import {
+  AccessRoleIds,
+  ResourceType,
+  PermissionBits,
+  permissionsSchema,
+} from 'librechat-data-provider';
 import type * as t from '~/types';
-import { createAccessRoleMethods } from './accessRole';
 import { createAccessRoleModel } from '~/models/accessRole';
+import { createAccessRoleMethods } from './accessRole';
 import { tenantStorage } from '~/config/tenantContext';
+import roleSchema from '~/schema/role';
 import { RoleBits } from '~/common';
 
 let mongoServer: MongoMemoryServer;
@@ -28,6 +34,14 @@ beforeEach(async () => {
   await mongoose.connection.dropDatabase();
 });
 
+test('role persistence schema covers every provider permission field', () => {
+  for (const [permissionType, permissionSchema] of Object.entries(permissionsSchema.shape)) {
+    for (const field of Object.keys(permissionSchema.shape)) {
+      expect(roleSchema.path(`permissions.${permissionType}.${field}`)).toBeDefined();
+    }
+  }
+});
+
 describe('AccessRole Model Tests', () => {
   describe('Basic CRUD Operations', () => {
     const sampleRole: t.AccessRole = {
@@ -45,6 +59,17 @@ describe('AccessRole Model Tests', () => {
       expect(role.accessRoleId).toBe(sampleRole.accessRoleId);
       expect(role.name).toBe(sampleRole.name);
       expect(role.permBits).toBe(sampleRole.permBits);
+    });
+
+    test('should create a code environment role', async () => {
+      const role = await methods.createRole({
+        accessRoleId: AccessRoleIds.CODE_ENVIRONMENT_OWNER,
+        name: 'Code Environment Owner',
+        resourceType: ResourceType.CODE_ENVIRONMENT,
+        permBits: PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE,
+      });
+
+      expect(role.resourceType).toBe(ResourceType.CODE_ENVIRONMENT);
     });
 
     test('should find a role by its ID', async () => {
@@ -216,6 +241,9 @@ describe('AccessRole Model Tests', () => {
           AccessRoleIds.PROJECT_EDITOR,
           AccessRoleIds.PROJECT_OWNER,
           AccessRoleIds.PROJECT_VIEWER,
+          AccessRoleIds.CODE_ENVIRONMENT_EDITOR,
+          AccessRoleIds.CODE_ENVIRONMENT_OWNER,
+          AccessRoleIds.CODE_ENVIRONMENT_VIEWER,
           AccessRoleIds.PROMPTGROUP_EDITOR,
           AccessRoleIds.PROMPTGROUP_OWNER,
           AccessRoleIds.PROMPTGROUP_VIEWER,
@@ -225,6 +253,8 @@ describe('AccessRole Model Tests', () => {
           AccessRoleIds.REMOTE_AGENT_EDITOR,
           AccessRoleIds.REMOTE_AGENT_OWNER,
           AccessRoleIds.REMOTE_AGENT_VIEWER,
+          AccessRoleIds.SHARED_LINK_OWNER,
+          AccessRoleIds.SHARED_LINK_VIEWER,
           AccessRoleIds.SKILL_EDITOR,
           AccessRoleIds.SKILL_OWNER,
           AccessRoleIds.SKILL_VIEWER,

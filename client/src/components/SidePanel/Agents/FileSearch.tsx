@@ -1,28 +1,31 @@
 import { memo, useMemo, useRef, useState } from 'react';
-import { Folder } from '@phosphor-icons/react';
 import * as Ariakit from '@ariakit/react';
+import { Folder } from '@phosphor-icons/react';
 import { useFormContext } from 'react-hook-form';
-import { SharePointIcon, AttachmentIcon, DropdownPopup } from '@librechat/client';
+import { SharePointIcon, DropdownPopup } from '@librechat/client';
 import { EModelEndpoint, EToolResources, AgentCapabilities } from 'librechat-data-provider';
 import type { ExtendedFile, AgentForm } from '~/common';
 import { useSharePointFileHandlingNoChatContext } from '~/hooks/Files/useSharePointFileHandling';
+import FileRow, { FileRowWrapper } from '~/components/Chat/Input/Files/FileRow';
 import { useFileHandlingNoChatContext } from '~/hooks/Files/useFileHandling';
 import { useAgentFileConfig, useLocalize, useLazyEffect } from '~/hooks';
+import DropzoneContent, { dropzoneClassName } from './UploadDropzone';
 import { SharePointPickerDialog } from '~/components/SharePoint';
-import FileRow from '~/components/Chat/Input/Files/FileRow';
 import { useGetStartupConfig } from '~/data-provider';
-import FileSearchCheckbox from './FileSearchCheckbox';
+import SectionHeader from './SectionHeader';
 import { isEphemeralAgent } from '~/common';
 
 function FileSearch({
   agent_id,
   files: _files,
+  showHeader = true,
 }: {
   agent_id: string;
   files?: [string, ExtendedFile][];
+  showHeader?: boolean;
 }) {
   const localize = useLocalize();
-  const { watch } = useFormContext<AgentForm>();
+  const { setValue } = useFormContext<AgentForm>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<Map<string, ExtendedFile>>(new Map());
   const fileHandlingState = useMemo(() => ({ files, setFiles, conversation: null }), [files]);
@@ -65,25 +68,27 @@ function FileSearch({
     750,
   );
 
-  const fileSearchChecked = watch(AgentCapabilities.file_search);
   const isUploadDisabled = endpointFileConfig?.disabled ?? false;
-
   const sharePointEnabled = startupConfig?.sharePointFilePickerEnabled;
-  const isAgentPersisted = !isEphemeralAgent(agent_id);
-  const disabledUploadButton = !isAgentPersisted || fileSearchChecked !== true;
-  let disabledMessage:
-    | 'com_agents_file_search_disabled'
-    | 'com_agents_file_search_enable_upload'
-    | null = null;
-  if (!isAgentPersisted) {
-    disabledMessage = 'com_agents_file_search_disabled';
-  } else if (fileSearchChecked !== true) {
-    disabledMessage = 'com_agents_file_search_enable_upload';
-  }
+  const disabledUploadButton = isEphemeralAgent(agent_id);
+  const disabledMessage = disabledUploadButton ? 'com_agents_file_search_disabled' : null;
+
+  const enableFileSearch = () =>
+    setValue(AgentCapabilities.file_search, true, { shouldDirty: true });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      enableFileSearch();
+    }
+    handleFileChange(event);
+  };
 
   const handleSharePointFilesSelected = async (sharePointFiles: any[]) => {
     try {
       await handleSharePointFiles(sharePointFiles);
+      if (sharePointFiles.length > 0) {
+        enableFileSearch();
+      }
       setIsSharePointDialogOpen(false);
     } catch (error) {
       console.error('SharePoint file processing error:', error);
@@ -93,15 +98,8 @@ function FileSearch({
     return null;
   }
 
-  const handleButtonClick = () => {
-    // necessary to reset the input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    fileInputRef.current?.click();
-  };
-
   const handleLocalFileClick = () => {
+    // necessary to reset the input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -121,28 +119,23 @@ function FileSearch({
     },
   ];
 
+  const dropzoneLabel = localize('com_ui_upload_file_search');
+  const dropzoneHint = localize('com_ui_upload_files_hint');
+
   const menuTrigger = (
-    <Ariakit.MenuButton
-      disabled={disabledUploadButton}
-      className="btn btn-neutral border-token-border-light relative h-9 w-full rounded-lg text-sm font-medium"
-    >
-      <div className="flex w-full items-center justify-center gap-1">
-        <AttachmentIcon className="text-token-text-primary h-4 w-4" />
-        {localize('com_ui_upload_file_search')}
-      </div>
+    <Ariakit.MenuButton disabled={disabledUploadButton} className={dropzoneClassName}>
+      <DropzoneContent label={dropzoneLabel} hint={dropzoneHint} />
     </Ariakit.MenuButton>
   );
 
   return (
     <div className="w-full">
-      <div className="mb-1.5 flex items-center gap-2">
-        <span>
-          <label className="text-token-text-primary block text-sm font-medium">
-            {localize('com_assistants_file_search')}
-          </label>
-        </span>
-      </div>
-      <FileSearchCheckbox />
+      {showHeader && (
+        <SectionHeader
+          title={localize('com_assistants_file_search')}
+          info={localize('com_agents_file_search_info')}
+        />
+      )}
       <div className="flex flex-col gap-3">
         {/* File Search (RAG API) Files */}
         <FileRow
@@ -150,7 +143,7 @@ function FileSearch({
           setFiles={setFiles}
           agent_id={agent_id}
           tool_resource={EToolResources.file_search}
-          Wrapper={({ children }) => <div className="flex flex-wrap gap-2">{children}</div>}
+          Wrapper={FileRowWrapper}
         />
         <div>
           {sharePointEnabled ? (
@@ -167,14 +160,12 @@ function FileSearch({
           ) : (
             <button
               type="button"
+              aria-label={dropzoneLabel}
               disabled={disabledUploadButton}
-              className="btn btn-neutral border-token-border-light relative h-9 w-full rounded-lg text-sm font-medium"
-              onClick={handleButtonClick}
+              className={dropzoneClassName}
+              onClick={handleLocalFileClick}
             >
-              <div className="flex w-full items-center justify-center gap-1">
-                <AttachmentIcon className="text-token-text-primary h-4 w-4" />
-                {localize('com_ui_upload_file_search')}
-              </div>
+              <DropzoneContent label={dropzoneLabel} hint={dropzoneHint} />
             </button>
           )}
           <input
@@ -184,7 +175,7 @@ function FileSearch({
             tabIndex={-1}
             ref={fileInputRef}
             disabled={disabledUploadButton}
-            onChange={handleFileChange}
+            onChange={handleFileUpload}
           />
         </div>
         {/* Disabled Message */}

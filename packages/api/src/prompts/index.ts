@@ -3,4 +3,5 @@ export * from './format';
 export * from './improve';
 export * from './humanization';
 export * from './migration';
+export * from './protection';
 export * from './schemas';

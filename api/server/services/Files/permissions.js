@@ -5,9 +5,29 @@ const {
   hasPermissions,
   isEphemeralAgentId,
 } = require('librechat-data-provider');
+const { getRemoteAgentPermissions } = require('@librechat/api');
 const { checkPermission, getEffectivePermissions } = require('~/server/services/PermissionService');
 const { getAgent, getFiles, getUserById } = require('~/models');
 const { findProjectForRequest } = require('~/server/services/Projects/access');
+
+const checkAgentPermission = async ({
+  userId,
+  role,
+  resourceType,
+  resourceId,
+  requiredPermission,
+}) => {
+  if (resourceType !== ResourceType.REMOTE_AGENT) {
+    return checkPermission({ userId, role, resourceType, resourceId, requiredPermission });
+  }
+  const permissions = await getRemoteAgentPermissions(
+    { getEffectivePermissions },
+    userId,
+    role,
+    resourceId,
+  );
+  return hasPermissions(permissions, requiredPermission);
+};
 /**
  * @param {Object} agent - The agent document (lean)
  * @returns {Set<string>} All file IDs attached across all resource types
@@ -48,7 +68,15 @@ function getFilesById(files) {
  * @param {Array<{ file_id: string, user: string }>} [params.files] - Pre-fetched file documents
  * @returns {Promise<Map<string, boolean>>} Map of fileId to access status
  */
-const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDelete, files }) => {
+const hasAccessToFilesViaAgent = async ({
+  userId,
+  role,
+  fileIds,
+  agentId,
+  resourceType = ResourceType.AGENT,
+  isDelete,
+  files,
+}) => {
   const accessMap = new Map();
 
   fileIds.forEach((fileId) => accessMap.set(fileId, false));
@@ -75,7 +103,7 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
     const canInheritFromAgent = (fileId) =>
       attachedFileIds.has(fileId) &&
       !filesById.get(fileId)?.projectId &&
-      filesById.get(fileId)?.user?.toString() === agentAuthorId;
+      filesById.get(fileId)?.user != null;
 
     if (agentAuthorId === userId.toString()) {
       fileIds.forEach((fileId) => {
@@ -86,10 +114,10 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
       return accessMap;
     }
 
-    const hasViewPermission = await checkPermission({
+    const hasViewPermission = await checkAgentPermission({
       userId,
       role,
-      resourceType: ResourceType.AGENT,
+      resourceType,
       resourceId: agent._id,
       requiredPermission: PermissionBits.VIEW,
     });
@@ -99,10 +127,10 @@ const hasAccessToFilesViaAgent = async ({ userId, role, fileIds, agentId, isDele
     }
 
     if (isDelete) {
-      const hasEditPermission = await checkPermission({
+      const hasEditPermission = await checkAgentPermission({
         userId,
         role,
-        resourceType: ResourceType.AGENT,
+        resourceType,
         resourceId: agent._id,
         requiredPermission: PermissionBits.EDIT,
       });
@@ -141,6 +169,7 @@ const filterFilesByAgentAccess = async ({
   agentId,
   projectId,
   projectFileIds,
+  resourceType = ResourceType.AGENT,
 }) => {
   if (!userId || !agentId || !files || files.length === 0 || isEphemeralAgentId(agentId)) {
     return files;
@@ -207,6 +236,7 @@ const filterFilesByAgentAccess = async ({
     role,
     fileIds,
     agentId,
+    resourceType,
     files: filesToCheckAgent,
   });
 

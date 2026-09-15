@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ShieldStar as ShieldEllipsis } from '@phosphor-icons/react';
 import { useForm, Controller } from 'react-hook-form';
+import { ShieldStar as ShieldEllipsis } from '@phosphor-icons/react';
 import { Permissions, SystemRoles, PermissionTypes } from 'librechat-data-provider';
 import {
   Button,
@@ -147,13 +147,14 @@ const PeoplePickerAdminSettings = () => {
           {localize('com_ui_admin_settings')}
         </Button>
       </OGDialogTrigger>
-      <OGDialogContent className="w-full border-border-light bg-surface-primary text-text-primary lg:w-1/4">
+      <OGDialogContent className="w-11/12 max-w-2xl border-border-light bg-surface-primary text-text-primary">
         <OGDialogTitle>
           {localize('com_ui_admin_settings_section', { section: localize('com_ui_people_picker') })}
         </OGDialogTitle>
+        <p className="sr-only">{localize('com_ui_people_picker_admin_description')}</p>
         <div className="p-2">
           {/* Role selection dropdown */}
-          <div className="flex items-center gap-2">
+          <div className="grid gap-3 rounded-xl border border-border-light bg-surface-secondary p-4 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center">
             <span className="font-medium">{localize('com_ui_role_select')}:</span>
             <DropdownPopup
               unmountOnHide={true}
@@ -161,7 +162,10 @@ const PeoplePickerAdminSettings = () => {
               isOpen={isRoleMenuOpen}
               setIsOpen={setIsRoleMenuOpen}
               trigger={
-                <Ariakit.MenuButton className="inline-flex min-w-[6rem] items-center justify-center rounded-lg border border-border-light bg-transparent px-2 py-1 text-text-primary transition-all ease-in-out hover:bg-surface-tertiary">
+                <Ariakit.MenuButton
+                  aria-label={`${localize('com_ui_role_select')} ${selectedRole}`}
+                  className="inline-flex min-w-[6rem] items-center justify-center rounded-lg border border-border-light bg-transparent px-2 py-1 text-text-primary transition-all ease-in-out hover:bg-surface-tertiary"
+                >
                   {selectedRole}
                 </Ariakit.MenuButton>
               }
@@ -185,10 +189,9 @@ const PeoplePickerAdminSettings = () => {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end bg-transparent">
               <button
-                type="button"
-                onClick={handleSubmit(onSubmit)}
+                type="submit"
                 disabled={
                   isSubmitting ||
                   isLoading ||

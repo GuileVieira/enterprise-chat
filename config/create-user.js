@@ -112,10 +112,11 @@ or the user will need to attempt logging in to have a verification link sent to 
   }
 
   const user = { email, password, name, username, confirm_password: password, provider };
-  const additionalData = { emailVerified };
-  if (tenantId) {
-    additionalData.tenantId = tenantId;
-  }
+  const additionalData = {
+    emailVerified,
+    ...(provider !== undefined ? { provider } : {}),
+    ...(tenantId ? { tenantId } : {}),
+  };
   let result;
   try {
     result = await registerUser(user, additionalData);

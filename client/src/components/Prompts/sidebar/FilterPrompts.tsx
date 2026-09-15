@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRecoilState } from 'recoil';
-import { Funnel as ListFilter, ShareNetwork as Share2, User } from '@phosphor-icons/react';
 import { Dropdown, FilterInput } from '@librechat/client';
 import { SystemCategories } from 'librechat-data-provider';
+import { Funnel as ListFilter, ShareNetwork as Share2, User } from '@phosphor-icons/react';
 import type { Option } from '~/common';
 import { useLocalize, useCategories, useDebounce } from '~/hooks';
 import CreatePromptButton from '../buttons/CreatePromptButton';
@@ -106,7 +106,8 @@ export default function FilterPrompts({
         value={categoryFilter || SystemCategories.ALL}
         onChange={onSelect}
         options={filterOptions}
-        className={cn('shrink-0 rounded-lg bg-transparent [&>button]:size-9', dropdownClassName)}
+        className={cn('shrink-0 [&>button]:size-9', dropdownClassName)}
+        triggerClassName="rounded-lg bg-transparent"
         icon={<ListFilter className="h-4 w-4" />}
         label="Filter: "
         ariaLabel={localize('com_ui_filter_prompts')}

@@ -1,12 +1,13 @@
-import { Navigate, useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
-import { Spinner } from '@librechat/client';
+import { Spinner, useMediaQuery } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
-import { useGetSkillByIdQuery } from '~/data-provider';
-import { useHasAccess, useAuthContext, useLocalize } from '~/hooks';
+import { Navigate, useNavigate, useParams, useLocation, useSearchParams } from 'react-router-dom';
 import SkillFileViewer from '~/components/Skills/display/SkillFileViewer';
+import { CreateSkillForm, SkillForm } from '~/components/Skills/forms';
+import { useHasAccess, useAuthContext, useLocalize } from '~/hooks';
 import SkillDetail from '~/components/Skills/display/SkillDetail';
 import SkillState from '~/components/Skills/display/SkillState';
-import { CreateSkillForm, SkillForm } from '~/components/Skills/forms';
+import OpenSidebar from '~/components/Chat/Menus/OpenSidebar';
+import { useGetSkillByIdQuery } from '~/data-provider';
 
 /**
  * Skill detail / edit route content.
@@ -14,7 +15,7 @@ import { CreateSkillForm, SkillForm } from '~/components/Skills/forms';
  * Reader-first: the default `/skills/:skillId` shows the read-only
  * `SkillDetail` view (rendered markdown, metadata, source toggle).
  * Edit is reached via `/skills/:skillId/edit` or the Edit button.
- * Create is a dialog triggered from the sidebar, not a route.
+ * Create is reached through `/skills/new`, where `new` is the route's `skillId` parameter.
  */
 export default function SkillsView() {
   const { skillId } = useParams();
@@ -55,6 +56,7 @@ export default function SkillsView() {
 
     return (
       <div className="flex h-full w-full flex-col overflow-y-auto bg-presentation">
+        <MobileSidebarToggle />
         <CreateSkillForm onCancel={() => navigate('/skills', { replace: true })} />
       </div>
     );
@@ -64,6 +66,7 @@ export default function SkillsView() {
   if (!skillId) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center bg-presentation">
+        <MobileSidebarToggle />
         <SkillState
           title={localize('com_ui_skill_no_selection')}
           description={localize('com_ui_skill_no_selection_desc')}
@@ -87,6 +90,7 @@ function DetailView({ skillId }: { skillId: string }) {
   if (activeFile) {
     return (
       <div className="flex h-full w-full flex-col bg-presentation">
+        <MobileSidebarToggle />
         <SkillFileViewer skillId={skillId} relativePath={activeFile} />
       </div>
     );
@@ -103,6 +107,7 @@ function DetailView({ skillId }: { skillId: string }) {
   if (skillQuery.isError || !skillQuery.data) {
     return (
       <div className="flex h-full w-full flex-col bg-presentation">
+        <MobileSidebarToggle />
         <SkillState
           variant="error"
           title={localize('com_ui_skill_not_found')}
@@ -114,6 +119,7 @@ function DetailView({ skillId }: { skillId: string }) {
 
   return (
     <div className="flex h-full w-full flex-col bg-presentation">
+      <MobileSidebarToggle />
       <SkillDetail
         skill={skillQuery.data}
         onEdit={() => navigate(`/skills/${skillId}/edit`)}
@@ -127,7 +133,17 @@ function DetailView({ skillId }: { skillId: string }) {
 function EditView({ skillId }: { skillId: string }) {
   return (
     <div className="flex h-full w-full flex-col overflow-y-auto bg-presentation">
+      <MobileSidebarToggle />
       <SkillForm skillId={skillId} />
     </div>
   );
+}
+
+function MobileSidebarToggle() {
+  const isSmallScreen = useMediaQuery('(max-width: 768px)');
+  return isSmallScreen ? (
+    <div className="flex shrink-0 items-center px-4 pt-3">
+      <OpenSidebar />
+    </div>
+  ) : null;
 }

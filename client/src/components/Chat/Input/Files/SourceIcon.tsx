@@ -1,5 +1,5 @@
-import { Database, Terminal, TextT as Type } from '@phosphor-icons/react';
 import { EModelEndpoint, FileSources } from 'librechat-data-provider';
+import { Database, Terminal, TextT as Type } from '@phosphor-icons/react';
 import { MinimalIcon } from '~/components/Endpoints';
 import { cn } from '~/utils';
 
@@ -13,12 +13,15 @@ const sourceToClassname = {
   [FileSources.azure]: 'azure-bg-color',
   [FileSources.azure_blob]: 'azure-bg-color',
   [FileSources.execute_code]: 'bg-black text-white opacity-85',
-  [FileSources.text]: 'bg-blue-500 dark:bg-blue-900 opacity-85 text-white',
-  [FileSources.vectordb]: 'bg-yellow-700 dark:bg-yellow-900 opacity-85 text-white',
+  /** Categorical rather than status: a source is an identity, so it takes a
+   *  series slot and the label ink that pairs with one. No alpha here, which
+   *  composited the fill back into the preview the badge sits on. */
+  [FileSources.text]: 'bg-series-1 text-text-on-status',
+  [FileSources.vectordb]: 'bg-series-4 text-text-on-status',
 };
 
 const defaultClassName =
-  'absolute right-0 bottom-0 rounded-full p-[0.15rem] text-gray-600 transition-colors';
+  'absolute right-0 bottom-0 rounded-full p-[0.15rem] text-text-secondary transition-colors';
 
 export default function SourceIcon({
   source,

@@ -1,15 +1,16 @@
 import { memo, useState, useMemo, useCallback } from 'react';
-import { ScrollText, ChevronDown, ChevronRight, Folder, Pin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { FixedSizeTree } from 'react-vtree';
+import { useNavigate } from 'react-router-dom';
+import { ScrollText, ChevronDown, ChevronRight, Folder, Pin } from 'lucide-react';
 import type { FixedSizeNodeData, TreeWalkerValue, TreeWalker } from 'react-vtree';
-import type { TSkill, TSkillFile } from 'librechat-data-provider';
+import type { TSkillSummary, TSkillFile } from 'librechat-data-provider';
 import { useListSkillFilesQuery } from '~/data-provider';
+import { Collapse } from '~/components/ui';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface SkillListItemProps {
-  skill: TSkill;
+  skill: TSkillSummary;
   selected: boolean;
   isActive: boolean;
   isExpanded: boolean;
@@ -338,7 +339,7 @@ function SkillListItem({
           <span className={cn('truncate', isActive && 'font-semibold')}>{skill.name}</span>
           {skill.alwaysApply === true && (
             <Pin
-              className="size-3 shrink-0 text-cyan-500"
+              className="size-3 shrink-0 text-status-info"
               aria-label={localize('com_ui_skills_always_apply_pin_title')}
             />
           )}
@@ -363,16 +364,9 @@ function SkillListItem({
       </div>
 
       {/* Inline file tree */}
-      <div
-        className={cn(
-          'ml-5 overflow-hidden transition-all duration-200 ease-in-out',
-          expanded && hasFiles ? 'opacity-100' : 'max-h-0 opacity-0',
-        )}
-        style={expanded && hasFiles ? { maxHeight: `${MAX_HEIGHT}px` } : undefined}
-        inert={!expanded ? '' : undefined}
-      >
+      <Collapse open={expanded && hasFiles} className="ml-5">
         <InlineFileTree files={files} activeFile={activeFile} onFileClick={handleFileClick} />
-      </div>
+      </Collapse>
     </div>
   );
 }

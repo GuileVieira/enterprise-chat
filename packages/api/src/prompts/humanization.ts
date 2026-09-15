@@ -1,4 +1,4 @@
-export const HUMANIZATION_INSTRUCTIONS =
+export const HUMANIZATION_INSTRUCTIONS: string =
   'Escreva com naturalidade, clareza e concisão, seguindo o tom solicitado. ' +
   'Evite clichês, repetições e linguagem artificial. Preserve fatos, citações, código e formato exigido. ' +
   'Em JSON, extrações, transcrições e ferramentas, cumpra o contrato sem comentários adicionais.';

@@ -1,5 +1,5 @@
-import { renderHook, act } from '@testing-library/react';
 import { Constants } from 'librechat-data-provider';
+import { renderHook, act } from '@testing-library/react';
 import useChatFunctions from './useChatFunctions';
 
 const mockNavigate = jest.fn();
@@ -14,6 +14,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: jest.fn(() => ({
     getQueryData: jest.fn(() => undefined),
+    getQueryState: jest.fn(() => ({ status: 'success', dataUpdatedAt: 1 })),
   })),
 }));
 
@@ -46,7 +47,20 @@ jest.mock('~/hooks/Conversations/useGetSender', () => ({
   default: jest.fn(() => jest.fn(() => 'Assistant')),
 }));
 
+jest.mock('~/hooks/Conversations/useGetConversation', () => () => () => null);
+
+jest.mock('~/hooks/Agents/useCodeApprovalMode', () => () => ({
+  codeApprovalMode: undefined,
+  setCodeApprovalMode: jest.fn(),
+}));
+
+jest.mock('~/hooks/Agents/useCodeWorkspace', () => () => ({
+  canSubmit: true,
+  resolveSubmission: jest.fn(() => ({})),
+}));
+
 jest.mock('~/utils', () => ({
+  ...jest.requireActual('~/utils'),
   logger: {
     log: jest.fn(),
     dir: jest.fn(),
@@ -59,9 +73,13 @@ jest.mock('~/store', () => ({
   default: {
     isTemporary: 'isTemporary',
     isSubmittingFamily: (idx: number) => `isSubmittingFamily-${idx}`,
+    submissionStartFamily: (idx: number) => `submissionStartFamily-${idx}`,
     showStopButtonByIndex: (idx: number) => `showStopButtonByIndex-${idx}`,
     latestMessageFamily: (idx: number) => `latestMessageFamily-${idx}`,
     pendingManualSkillsByConvoId: (convoId: string) => `pendingManualSkillsByConvoId-${convoId}`,
+    pendingQuotesByConvoId: (convoId: string) => `pendingQuotesByConvoId-${convoId}`,
+    messagesSiblingIdxFamily: (messageId: string) => `messagesSiblingIdxFamily-${messageId}`,
+    conversationByKeySelector: (idx: number) => `conversationByKeySelector-${idx}`,
   },
   useGetEphemeralAgent: jest.fn(() => jest.fn(() => undefined)),
 }));
@@ -92,7 +110,6 @@ describe('useChatFunctions', () => {
     const setFiles = jest.fn();
     const setMessages = jest.fn();
     const setSubmission = jest.fn();
-    const setLatestMessage = jest.fn();
 
     const hook = renderHook(() =>
       useChatFunctions({
@@ -103,7 +120,6 @@ describe('useChatFunctions', () => {
         isSubmitting: false,
         latestMessage: null,
         setSubmission,
-        setLatestMessage,
         getMessages: () => [],
         conversation: {
           conversationId: 'conv-1',
@@ -113,7 +129,7 @@ describe('useChatFunctions', () => {
       }),
     );
 
-    return { ...hook, setFiles, setMessages, setSubmission, setLatestMessage };
+    return { ...hook, setFiles, setMessages, setSubmission };
   };
 
   it('does not submit empty text without files', () => {

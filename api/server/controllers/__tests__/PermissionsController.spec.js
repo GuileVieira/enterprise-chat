@@ -1,46 +1,54 @@
 const mongoose = require('mongoose');
 
 const mockLogger = { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() };
+const mockGetTenantId = jest.fn();
 
 jest.mock('@librechat/data-schemas', () => ({
   logger: mockLogger,
+  getTenantId: mockGetTenantId,
+  SYSTEM_TENANT_ID: '__SYSTEM__',
   runAsSystem: (fn) => fn(),
 }));
 
-const { ResourceType, PrincipalType, AccessRoleIds, SystemRoles } =
+const { AccessRoleIds, ResourceType, PrincipalType, SystemRoles, PermissionTypes, Permissions } =
   jest.requireActual('librechat-data-provider');
+const { createPeoplePickerAccess } = jest.requireActual('@librechat/api');
 
 jest.mock('librechat-data-provider', () => ({
   ...jest.requireActual('librechat-data-provider'),
 }));
 
-jest.mock('@librechat/api', () => ({
-  enrichRemoteAgentPrincipals: jest.fn(),
-  backfillRemoteAgentPermissions: jest.fn(),
+jest.mock('@librechat/api', () => {
+  const actual = jest.requireActual('@librechat/api');
+  return {
+    ...actual,
+    enrichRemoteAgentPrincipals: jest.fn(),
+    backfillRemoteAgentPermissions: jest.fn(),
+  };
+});
+
+const mockInvalidateCodeEnvironmentConfigCache = jest.fn().mockResolvedValue(undefined);
+jest.mock('~/server/services/Config', () => ({
+  invalidateCodeEnvironmentConfigCache: (...args) =>
+    mockInvalidateCodeEnvironmentConfigCache(...args),
 }));
 
 const mockBulkUpdateResourcePermissions = jest.fn();
-const mockGrantPermission = jest.fn();
-const mockEnsurePrincipalExists = jest.fn();
-const mockFindProjectForRequest = jest.fn();
+const mockRestoreInsightsPermissionChanges = jest.fn();
 
 jest.mock('~/server/services/PermissionService', () => ({
   bulkUpdateResourcePermissions: (...args) => mockBulkUpdateResourcePermissions(...args),
-  grantPermission: (...args) => mockGrantPermission(...args),
+  restoreInsightsPermissionChanges: (...args) => mockRestoreInsightsPermissionChanges(...args),
   ensureGroupPrincipalExists: jest.fn(),
   getEffectivePermissions: jest.fn(),
-  ensurePrincipalExists: (...args) => mockEnsurePrincipalExists(...args),
+  ensurePrincipalExists: jest.fn(),
   getAvailableRoles: jest.fn(),
   findAccessibleResources: jest.fn(),
   getResourcePermissionsMap: jest.fn(),
 }));
 
-jest.mock('~/server/services/Projects/access', () => ({
-  findProjectForRequest: (...args) => mockFindProjectForRequest(...args),
-}));
-
 const mockRemoveAgentFromUserFavorites = jest.fn();
-const mockUpdateAgent = jest.fn();
+const mockRecordAuditEntry = jest.fn();
 
 jest.mock('~/models', () => ({
   aggregateAclEntries: jest.fn(),
@@ -48,10 +56,8 @@ jest.mock('~/models', () => ({
   sortPrincipalsByRelevance: jest.fn(),
   calculateRelevanceScore: jest.fn(),
   removeAgentFromUserFavorites: (...args) => mockRemoveAgentFromUserFavorites(...args),
-  updateAgent: (...args) => mockUpdateAgent(...args),
   getAgent: jest.fn(),
-  getUserById: jest.fn(),
-  findProjectById: jest.fn(),
+  recordAuditEntry: (...args) => mockRecordAuditEntry(...args),
 }));
 
 jest.mock('~/server/services/GraphApiService', () => ({
@@ -59,14 +65,12 @@ jest.mock('~/server/services/GraphApiService', () => ({
   searchEntraIdPrincipals: jest.fn(),
 }));
 
+const db = require('~/models');
 const {
   updateResourcePermissions,
-  getResourcePermissions,
-  getUserEffectivePermissions,
   searchPrincipals,
+  getResourcePermissions,
 } = require('../PermissionsController');
-const PermissionService = require('~/server/services/PermissionService');
-const db = require('~/models');
 
 const createMockReq = (overrides = {}) => ({
   params: { resourceType: ResourceType.AGENT, resourceId: '507f1f77bcf86cd799439011' },
@@ -88,7 +92,7 @@ const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
 describe('PermissionsController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    db.getUserById.mockResolvedValue(null);
+    mockGetTenantId.mockReturnValue(undefined);
   });
 
   describe('searchPrincipals', () => {
@@ -98,133 +102,138 @@ describe('PermissionsController', () => {
       db.sortPrincipalsByRelevance.mockImplementation((results) => results);
     });
 
-    it('rejects non-string query parameters', async () => {
-      const req = createMockReq({
-        query: { q: ['alice'] },
-      });
-      const res = createMockRes();
+    it.each([{ q: 'al', type: PrincipalType.GROUP }, { q: 'al', types: 'foobar' }, { q: 'al' }])(
+      'searches only the types the people picker check resolved for %j',
+      async (query) => {
+        const checkAccess = createPeoplePickerAccess({
+          getRoleByName: async () => ({
+            permissions: {
+              [PermissionTypes.PEOPLE_PICKER]: {
+                [Permissions.VIEW_USERS]: false,
+                [Permissions.VIEW_GROUPS]: true,
+                [Permissions.VIEW_ROLES]: false,
+              },
+            },
+          }),
+        });
+        const req = createMockReq({ query });
+        const res = createMockRes();
 
-      await searchPrincipals(req, res);
+        await checkAccess(req, res, () => searchPrincipals(req, res));
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Query parameter "q" is required and must not be empty',
-      });
-      expect(db.searchPrincipals).not.toHaveBeenCalled();
-    });
-
-    it('searches with the trimmed literal query', async () => {
-      db.searchPrincipals.mockResolvedValue([
-        {
-          id: 'user-1',
-          type: PrincipalType.USER,
-          name: 'Regex [invalid User',
-          source: 'local',
-        },
-      ]);
-
-      const req = createMockReq({
-        query: { q: '  [invalid  ', limit: '5', types: PrincipalType.USER },
-      });
-      const res = createMockRes();
-
-      await searchPrincipals(req, res);
-
-      expect(db.searchPrincipals).toHaveBeenCalledWith('[invalid', 5, [PrincipalType.USER]);
-      expect(db.calculateRelevanceScore).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'Regex [invalid User' }),
-        '[invalid',
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          query: '[invalid',
-          limit: 5,
-          count: 1,
-        }),
-      );
-    });
-
-    it('does not expose internal error details on search failures', async () => {
-      db.searchPrincipals.mockRejectedValue(new Error('database failure with internal detail'));
-
-      const req = createMockReq({
-        query: { q: 'alice' },
-      });
-      const res = createMockRes();
-
-      await searchPrincipals(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Failed to search principals',
-      });
-    });
+        expect(db.searchPrincipals).toHaveBeenCalledWith('al', 20, [PrincipalType.GROUP], {
+          tenantId: undefined,
+          global: false,
+        });
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({ types: [PrincipalType.GROUP] }),
+        );
+      },
+    );
   });
 
-  describe('getResourcePermissions', () => {
-    const agentObjectId = new mongoose.Types.ObjectId();
-    const authorObjectId = new mongoose.Types.ObjectId();
+  describe('getResourcePermissions — principal details', () => {
+    const currentTenantId = 'tenant-a';
+    const otherTenantId = 'tenant-b';
+    const userId = new mongoose.Types.ObjectId();
+    const groupId = new mongoose.Types.ObjectId();
 
-    it('backfills and returns agent author as owner when ACL has no owner', async () => {
+    it('omits joined user and group details outside the current request context', async () => {
+      mockGetTenantId.mockReturnValue(currentTenantId);
       db.aggregateAclEntries.mockResolvedValue([
         {
-          principalType: PrincipalType.TENANT,
-          principalId: 'mm-marketing',
+          principalType: PrincipalType.USER,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          userInfo: {
+            _id: userId,
+            tenantId: otherTenantId,
+            name: 'Outside User',
+            email: 'outside-user@example.com',
+            avatar: 'outside-user.png',
+          },
+        },
+        {
+          principalType: PrincipalType.GROUP,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          groupInfo: {
+            _id: groupId,
+            tenantId: otherTenantId,
+            name: 'Outside Group',
+            email: 'outside-group@example.com',
+            avatar: 'outside-group.png',
+          },
+        },
+        {
+          principalType: PrincipalType.PUBLIC,
           accessRoleId: AccessRoleIds.AGENT_VIEWER,
         },
       ]);
-      db.getAgent.mockResolvedValue({
-        _id: agentObjectId,
-        id: 'agent_test',
-        author: authorObjectId,
-      });
-      mockGrantPermission.mockResolvedValue({});
 
-      const req = createMockReq({
-        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId.toString() },
-        user: { id: authorObjectId.toString(), role: 'ADMIN' },
-      });
+      const req = createMockReq();
       const res = createMockRes();
 
       await getResourcePermissions(req, res);
 
-      expect(db.aggregateAclEntries).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            $match: expect.objectContaining({
-              resourceId: {
-                $in: expect.arrayContaining([agentObjectId.toString(), agentObjectId]),
-              },
-            }),
-          }),
-        ]),
-      );
-      expect(mockGrantPermission).toHaveBeenCalledWith({
-        principalType: PrincipalType.USER,
-        principalId: authorObjectId.toString(),
-        resourceType: ResourceType.AGENT,
-        resourceId: agentObjectId.toString(),
-        accessRoleId: AccessRoleIds.AGENT_OWNER,
-        grantedBy: authorObjectId.toString(),
-      });
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(res.json).toHaveBeenCalledWith({
+        resourceType: ResourceType.AGENT,
+        resourceId: req.params.resourceId,
+        principals: [],
+        public: true,
+        publicAccessRoleId: AccessRoleIds.AGENT_VIEWER,
+      });
+      expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain('outside-user@example.com');
+      expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain('outside-group@example.com');
+    });
+
+    it('includes joined user and group details in the current request context', async () => {
+      mockGetTenantId.mockReturnValue(currentTenantId);
+      db.aggregateAclEntries.mockResolvedValue([
+        {
+          principalType: PrincipalType.USER,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          userInfo: {
+            _id: userId,
+            tenantId: currentTenantId,
+            name: 'Current User',
+            email: 'current-user@example.com',
+            avatar: 'current-user.png',
+            role: SystemRoles.ADMIN,
+          },
+        },
+        {
+          principalType: PrincipalType.GROUP,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          groupInfo: {
+            _id: groupId,
+            tenantId: currentTenantId,
+            name: 'Current Group',
+            email: 'current-group@example.com',
+            avatar: 'current-group.png',
+          },
+        },
+      ]);
+
+      const req = createMockReq();
+      const res = createMockRes();
+
+      await getResourcePermissions(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].principals).toEqual([
         expect.objectContaining({
-          principals: expect.arrayContaining([
-            expect.objectContaining({
-              type: PrincipalType.USER,
-              id: authorObjectId.toString(),
-              accessRoleId: AccessRoleIds.AGENT_OWNER,
-            }),
-            expect.objectContaining({
-              type: PrincipalType.TENANT,
-              id: 'mm-marketing',
-              accessRoleId: AccessRoleIds.AGENT_VIEWER,
-            }),
-          ]),
+          type: PrincipalType.USER,
+          id: userId.toString(),
+          email: 'current-user@example.com',
+          isAdmin: true,
         }),
-      );
+        expect.objectContaining({
+          type: PrincipalType.GROUP,
+          id: groupId.toString(),
+          email: 'current-group@example.com',
+        }),
+      ]);
     });
   });
 
@@ -233,6 +242,7 @@ describe('PermissionsController', () => {
     const revokedUserId = new mongoose.Types.ObjectId().toString();
 
     beforeEach(() => {
+      delete process.env.AUDIT_LOG_FAIL_CLOSED;
       mockBulkUpdateResourcePermissions.mockResolvedValue({
         granted: [],
         updated: [],
@@ -241,280 +251,210 @@ describe('PermissionsController', () => {
       });
 
       mockRemoveAgentFromUserFavorites.mockResolvedValue(undefined);
-      mockUpdateAgent.mockResolvedValue({});
-      mockEnsurePrincipalExists.mockImplementation((principal) => principal.id);
+      db.getAgent.mockResolvedValue({ _id: agentObjectId, id: 'agent-a', name: 'Agent A' });
+      mockRecordAuditEntry.mockResolvedValue({});
+      mockRestoreInsightsPermissionChanges.mockResolvedValue(undefined);
     });
 
-    it('passes tenant principals through to the permission service', async () => {
-      const tenantPrincipal = {
-        type: PrincipalType.TENANT,
-        id: 'tenant-2',
-        name: 'Tenant: tenant-2',
-        source: 'local',
-        idOnTheSource: 'tenant-2',
-        accessRoleId: AccessRoleIds.AGENT_VIEWER,
-      };
-
-      mockBulkUpdateResourcePermissions.mockResolvedValue({
-        granted: [tenantPrincipal],
-        updated: [],
-        revoked: [],
-        errors: [],
-      });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
-        body: {
-          updated: [tenantPrincipal],
-          removed: [],
-          public: false,
-        },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockUpdateAgent).toHaveBeenCalledWith(
-        { _id: agentObjectId },
-        { $unset: { tenantId: '' } },
-        { updatingUserId: 'user-1', skipVersioning: true },
-      );
-      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resourceType: ResourceType.AGENT,
-          resourceId: agentObjectId,
-          updatedPrincipals: [tenantPrincipal],
-        }),
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it('normalizes agent tenant principals to viewer access', async () => {
-      const requestTenantPrincipal = {
-        type: PrincipalType.TENANT,
-        id: 'tenant-2',
-        accessRoleId: AccessRoleIds.AGENT_OWNER,
-      };
-      const normalizedTenantPrincipal = {
-        ...requestTenantPrincipal,
-        accessRoleId: AccessRoleIds.AGENT_VIEWER,
-      };
-
-      mockBulkUpdateResourcePermissions.mockResolvedValue({
-        granted: [normalizedTenantPrincipal],
-        updated: [],
-        revoked: [],
-        errors: [],
-      });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
-        body: {
-          updated: [requestTenantPrincipal],
-          removed: [],
-          public: false,
-        },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updatedPrincipals: [normalizedTenantPrincipal],
-        }),
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it('allows admin to grant multiple promptGroup tenants as viewer access', async () => {
-      const requestTenantPrincipals = [
-        {
-          type: PrincipalType.TENANT,
-          id: 'tenant-a',
-          accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
-        },
-        {
-          type: PrincipalType.TENANT,
-          id: 'tenant-b',
-          accessRoleId: AccessRoleIds.PROMPTGROUP_EDITOR,
-        },
-      ];
-      const normalizedTenantPrincipals = requestTenantPrincipals.map((principal) => ({
-        ...principal,
-        accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
-      }));
-
-      mockBulkUpdateResourcePermissions.mockResolvedValue({
-        granted: normalizedTenantPrincipals,
-        updated: [],
-        revoked: [],
-        errors: [],
-      });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
-        body: {
-          updated: requestTenantPrincipals,
-          removed: [],
-          public: false,
-        },
-        user: { id: 'admin-1', role: SystemRoles.ADMIN },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
-        expect.objectContaining({
-          resourceType: ResourceType.PROMPTGROUP,
-          updatedPrincipals: normalizedTenantPrincipals,
-        }),
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it('rejects promptGroup tenant grants from non-admin users', async () => {
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
-        body: {
-          updated: [
-            {
-              type: PrincipalType.TENANT,
-              id: 'tenant-a',
-              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
-            },
-          ],
-          removed: [],
-          public: false,
-        },
-        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
-
-    it('normalizes non-admin promptGroup user shares to viewer access', async () => {
-      const targetUserId = new mongoose.Types.ObjectId().toString();
-      mockEnsurePrincipalExists.mockResolvedValue(targetUserId);
-      db.getUserById.mockResolvedValue({ _id: targetUserId, tenantId: 'tenant-a' });
-
-      mockBulkUpdateResourcePermissions.mockResolvedValue({
-        granted: [
-          {
-            type: PrincipalType.USER,
-            id: targetUserId,
-            accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
-          },
-        ],
-        updated: [],
-        revoked: [],
-        errors: [],
-      });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
-        body: {
-          updated: [
-            {
-              type: PrincipalType.USER,
-              id: targetUserId,
-              accessRoleId: AccessRoleIds.PROMPTGROUP_OWNER,
-            },
-          ],
-          removed: [],
-          public: false,
-        },
-        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updatedPrincipals: [
-            {
-              type: PrincipalType.USER,
-              id: targetUserId,
-              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
-            },
-          ],
-        }),
-      );
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it('rejects non-admin promptGroup user shares outside caller tenant', async () => {
-      const targetUserId = new mongoose.Types.ObjectId().toString();
-      mockEnsurePrincipalExists.mockResolvedValue(targetUserId);
-      db.getUserById.mockResolvedValue({ _id: targetUserId, tenantId: 'tenant-b' });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
-        body: {
-          updated: [
-            {
-              type: PrincipalType.USER,
-              id: targetUserId,
-              accessRoleId: AccessRoleIds.PROMPTGROUP_VIEWER,
-            },
-          ],
-          removed: [],
-          public: false,
-        },
-        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
-      });
-      const res = createMockRes();
-
-      await updateResourcePermissions(req, res);
-
-      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
-
-    it('returns an error when permission service reports failed grants', async () => {
-      mockBulkUpdateResourcePermissions.mockResolvedValue({
-        granted: [],
-        updated: [],
-        revoked: [],
-        errors: [
-          {
-            principal: { type: PrincipalType.USER, id: 'invalid-user-id' },
-            error: 'Invalid principal ID',
-          },
-        ],
-      });
-
+    it('rejects Insights permission changes from non-admin users', async () => {
       const req = createMockReq({
         params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
         body: {
           updated: [
             {
-              type: PrincipalType.USER,
-              id: 'invalid-user-id',
+              type: PrincipalType.ROLE,
+              id: 'USER',
               accessRoleId: AccessRoleIds.AGENT_VIEWER,
+              viewInsights: true,
             },
           ],
           removed: [],
-          public: false,
         },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
+    });
+
+    it('rejects non-boolean Insights permission values', async () => {
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.ROLE,
+              id: 'USER',
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+              viewInsights: null,
+            },
+          ],
+          removed: [],
+        },
+        user: { id: 'admin-id', role: SystemRoles.ADMIN },
       });
       const res = createMockRes();
 
       await updateResourcePermissions(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
+      expect(mockBulkUpdateResourcePermissions).not.toHaveBeenCalled();
+    });
+
+    it('audits each actual Insights access transition made by an admin', async () => {
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [
+          {
+            type: PrincipalType.ROLE,
+            id: 'USER',
+            accessRoleId: AccessRoleIds.AGENT_VIEWER,
+            viewInsights: true,
+          },
+        ],
+        updated: [],
+        revoked: [],
+        insightsChanges: [
+          { action: 'assigned', principal: { type: PrincipalType.ROLE, id: 'USER' } },
+        ],
+        errors: [],
+      });
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.ROLE,
+              id: 'USER',
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+              viewInsights: true,
+            },
+          ],
+          removed: [],
+        },
+        user: {
+          _id: new mongoose.Types.ObjectId(),
+          id: 'admin-id',
+          name: 'Admin',
+          role: SystemRoles.ADMIN,
+          tenantId: 'tenant-a',
+        },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockRecordAuditEntry).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: 'Failed to update permissions',
-          details: 'One or more permission updates failed',
+          action: 'permission.insights_assigned',
+          tenantId: 'tenant-a',
+          target: expect.objectContaining({ id: 'agent-a' }),
+          metadata: { principalType: PrincipalType.ROLE, principalId: 'USER' },
         }),
+        { failClosed: false },
       );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].results.principals[0]).toEqual(
+        expect.objectContaining({ viewInsights: true }),
+      );
+    });
+
+    it('restores unaudited Insights transitions when fail-closed auditing fails', async () => {
+      process.env.AUDIT_LOG_FAIL_CLOSED = 'true';
+      const changes = [{ action: 'assigned', principal: { type: PrincipalType.ROLE, id: 'USER' } }];
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [],
+        updated: [],
+        revoked: [],
+        insightsChanges: changes,
+        errors: [],
+      });
+      mockRecordAuditEntry.mockRejectedValue(new Error('audit unavailable'));
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.ROLE,
+              id: 'USER',
+              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+              viewInsights: true,
+            },
+          ],
+          removed: [],
+        },
+        user: { id: 'admin-id', role: SystemRoles.ADMIN, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockRestoreInsightsPermissionChanges).toHaveBeenCalledWith({
+        resourceType: ResourceType.AGENT,
+        resourceId: agentObjectId,
+        changes,
+      });
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it('keeps a successful permission response when audit target lookup fails open', async () => {
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [],
+        updated: [],
+        revoked: [],
+        insightsChanges: [
+          { action: 'assigned', principal: { type: PrincipalType.ROLE, id: 'USER' } },
+        ],
+        errors: [],
+      });
+      db.getAgent.mockRejectedValue(new Error('agent lookup unavailable'));
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        user: { id: 'admin-id', role: SystemRoles.ADMIN, tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockRestoreInsightsPermissionChanges).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('does not expose the protected bit in non-admin mutation responses', async () => {
+      mockBulkUpdateResourcePermissions.mockResolvedValue({
+        granted: [
+          {
+            type: PrincipalType.USER,
+            id: revokedUserId,
+            accessRoleId: AccessRoleIds.AGENT_EDITOR,
+            viewInsights: true,
+          },
+        ],
+        updated: [],
+        revoked: [],
+        insightsChanges: [],
+        errors: [],
+      });
+      const req = createMockReq({
+        params: { resourceType: ResourceType.AGENT, resourceId: agentObjectId },
+        body: {
+          updated: [
+            {
+              type: PrincipalType.USER,
+              id: revokedUserId,
+              accessRoleId: AccessRoleIds.AGENT_EDITOR,
+            },
+          ],
+          removed: [],
+        },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json.mock.calls[0][0].results.principals[0]).not.toHaveProperty('viewInsights');
     });
 
     it('removes agent from revoked users favorites on AGENT resource type', async () => {
@@ -560,7 +500,7 @@ describe('PermissionsController', () => {
         granted: [],
         updated: [],
         revoked: [{ type: PrincipalType.USER, id: validId }],
-        errors: [],
+        errors: [{ principal: { type: PrincipalType.USER, id: invalidId }, error: 'Invalid ID' }],
       });
 
       const req = createMockReq({
@@ -616,7 +556,6 @@ describe('PermissionsController', () => {
 
       const req = createMockReq({
         params: { resourceType: ResourceType.PROMPTGROUP, resourceId: agentObjectId },
-        user: { id: 'admin-1', role: SystemRoles.ADMIN },
         body: {
           updated: [],
           removed: [{ type: PrincipalType.USER, id: revokedUserId }],
@@ -630,6 +569,49 @@ describe('PermissionsController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       expect(mockRemoveAgentFromUserFavorites).not.toHaveBeenCalled();
+    });
+
+    it('invalidates shared environment configuration after code environment ACL changes', async () => {
+      const req = createMockReq({
+        params: { resourceType: ResourceType.CODE_ENVIRONMENT, resourceId: agentObjectId },
+        body: {
+          updated: [{ type: PrincipalType.USER, id: revokedUserId }],
+          removed: [],
+          public: false,
+        },
+        user: { id: 'user-1', role: 'USER', tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockInvalidateCodeEnvironmentConfigCache).toHaveBeenCalledWith('tenant-a');
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('keeps the committed ACL response successful when cache invalidation fails', async () => {
+      mockInvalidateCodeEnvironmentConfigCache.mockRejectedValueOnce(
+        new Error('redis unavailable'),
+      );
+      const req = createMockReq({
+        params: { resourceType: ResourceType.CODE_ENVIRONMENT, resourceId: agentObjectId },
+        body: {
+          updated: [],
+          removed: [{ type: PrincipalType.USER, id: revokedUserId }],
+          public: false,
+        },
+        user: { id: 'user-1', role: 'USER', tenantId: 'tenant-a' },
+      });
+      const res = createMockRes();
+
+      await updateResourcePermissions(req, res);
+
+      expect(mockInvalidateCodeEnvironmentConfigCache).toHaveBeenCalledWith('tenant-a');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        '[PermissionsController] code environment cache invalidation failed:',
+        expect.any(Error),
+      );
     });
 
     it('handles agent not found gracefully', async () => {
@@ -673,119 +655,6 @@ describe('PermissionsController', () => {
         '[removeRevokedAgentFromFavorites] Error cleaning up favorites',
         expect.any(Error),
       );
-    });
-  });
-
-  describe('getUserEffectivePermissions', () => {
-    const userId = 'user-1';
-    const role = 'USER';
-    const projectUuid = 'project-uuid-123';
-    const projectObjectId = new mongoose.Types.ObjectId();
-
-    beforeEach(() => {
-      PermissionService.getEffectivePermissions.mockResolvedValue(7); // VIEW | EDIT | DELETE
-      mockFindProjectForRequest.mockResolvedValue(null);
-    });
-
-    it('resolves project UUID to MongoDB _id', async () => {
-      mockFindProjectForRequest.mockResolvedValue({ _id: projectObjectId, projectId: projectUuid });
-
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
-        user: { id: userId, role },
-      });
-      const res = createMockRes();
-
-      await getUserEffectivePermissions(req, res);
-
-      expect(mockFindProjectForRequest).toHaveBeenCalledWith({
-        projectId: projectUuid,
-        user: { id: userId, role },
-      });
-      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
-        userId,
-        role,
-        resourceType: ResourceType.PROJECT,
-        resourceId: projectObjectId.toString(),
-      });
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ permissionBits: 7 });
-    });
-
-    it('uses original resourceId if project is not found', async () => {
-      const req = createMockReq({
-        params: { resourceType: ResourceType.PROJECT, resourceId: projectUuid },
-        user: { id: userId, role },
-      });
-      const res = createMockRes();
-
-      await getUserEffectivePermissions(req, res);
-
-      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
-        userId,
-        role,
-        resourceType: ResourceType.PROJECT,
-        resourceId: projectUuid,
-      });
-    });
-
-    it('uses original resourceId for non-project resource types', async () => {
-      const agentId = new mongoose.Types.ObjectId().toString();
-      const req = createMockReq({
-        params: { resourceType: ResourceType.AGENT, resourceId: agentId },
-        user: { id: userId, role },
-      });
-      const res = createMockRes();
-
-      await getUserEffectivePermissions(req, res);
-
-      expect(mockFindProjectForRequest).not.toHaveBeenCalled();
-      expect(PermissionService.getEffectivePermissions).toHaveBeenCalledWith({
-        userId,
-        role,
-        resourceType: ResourceType.AGENT,
-        resourceId: agentId,
-      });
-    });
-  });
-
-  describe('searchPrincipals', () => {
-    it('scopes non-admin local search to caller tenant', async () => {
-      db.searchPrincipals.mockResolvedValue([]);
-      db.sortPrincipalsByRelevance.mockImplementation((items) => items);
-      db.calculateRelevanceScore.mockReturnValue(1);
-      const req = createMockReq({
-        query: { q: 'jo', limit: '10', types: PrincipalType.USER },
-        user: { id: 'user-1', role: SystemRoles.USER, tenantId: 'tenant-a' },
-      });
-      const res = createMockRes();
-
-      await searchPrincipals(req, res);
-
-      expect(db.searchPrincipals).toHaveBeenCalledWith('jo', 10, [PrincipalType.USER], {
-        tenantId: 'tenant-a',
-        global: false,
-      });
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it('allows admin local search across tenants', async () => {
-      db.searchPrincipals.mockResolvedValue([]);
-      db.sortPrincipalsByRelevance.mockImplementation((items) => items);
-      db.calculateRelevanceScore.mockReturnValue(1);
-      const req = createMockReq({
-        query: { q: 'jo', limit: '10', types: PrincipalType.USER },
-        user: { id: 'admin-1', role: SystemRoles.ADMIN },
-      });
-      const res = createMockRes();
-
-      await searchPrincipals(req, res);
-
-      expect(db.searchPrincipals).toHaveBeenCalledWith('jo', 10, [PrincipalType.USER], {
-        tenantId: undefined,
-        global: true,
-      });
-      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 });

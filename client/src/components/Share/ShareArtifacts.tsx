@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import {
   useMediaQuery,
@@ -10,10 +9,11 @@ import {
 import type { TMessage } from 'librechat-data-provider';
 import type { ArtifactsContextValue } from '~/Providers';
 import { ArtifactsProvider, EditorProvider } from '~/Providers';
-import Artifacts from '~/components/Artifacts/Artifacts';
-import { isCodeOnlyArtifact } from '~/utils/artifacts';
 import { findShareArtifactId, getLatestText } from '~/utils';
+import { isCodeOnlyArtifact } from '~/utils/artifacts';
 import store from '~/store';
+
+const Artifacts = lazy(() => import('~/components/Artifacts/Artifacts'));
 
 const DEFAULT_ARTIFACT_PANEL_SIZE = 40;
 const SHARE_ARTIFACT_PANEL_STORAGE_KEY = 'share:artifacts-panel-size';
@@ -62,7 +62,6 @@ export function ShareArtifactsContainer({
   const setArtifactsVisibility = useSetRecoilState(store.artifactsVisibility);
   const isSmallScreen = useMediaQuery('(max-width: 1023px)');
   const [artifactPanelSize, setArtifactPanelSize] = useState(getInitialArtifactPanelSize);
-  const [searchParams] = useSearchParams();
 
   const artifactsContextValue = useMemo<ArtifactsContextValue | null>(() => {
     const latestMessage =
@@ -98,21 +97,18 @@ export function ShareArtifactsContainer({
       return;
     }
 
-    const artifactId = searchParams.get('artifact');
+    const searchParams = new URLSearchParams(window.location.search);
     const targetId = findShareArtifactId(
       artifacts,
-      artifactId,
+      searchParams.get('artifact'),
       searchParams.get('artifactHash'),
       searchParams.get('artifactIndex'),
     );
-
-    if (!targetId) {
-      return;
+    if (targetId) {
+      setCurrentArtifactId(targetId);
+      setArtifactsVisibility(true);
     }
-
-    setCurrentArtifactId(targetId);
-    setArtifactsVisibility(true);
-  }, [artifacts, searchParams, setArtifactsVisibility, setCurrentArtifactId]);
+  }, [artifacts, setArtifactsVisibility, setCurrentArtifactId]);
 
   const handleLayoutChanged = (layout: Record<string, number | string>) => {
     const raw = layout['share-artifacts'];
@@ -177,7 +173,9 @@ function ShareArtifactsPanel({ contextValue }: ShareArtifactsPanelProps) {
     <ArtifactsProvider value={contextValue}>
       <EditorProvider>
         <div className="flex h-full w-full border-l border-border-light bg-surface-primary shadow-2xl">
-          <Artifacts />
+          <Suspense fallback={null}>
+            <Artifacts />
+          </Suspense>
         </div>
       </EditorProvider>
     </ArtifactsProvider>

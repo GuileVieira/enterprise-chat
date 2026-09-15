@@ -29,7 +29,7 @@ const EventSchema = new Schema(
   { _id: false },
 );
 
-const trafficDiarySchema = new Schema<ITrafficDiaryEntry>(
+const trafficDiarySchema: Schema<ITrafficDiaryEntry> = new Schema<ITrafficDiaryEntry>(
   {
     projectId: { type: String, required: true, index: true },
     tenantId: { type: String, index: true },

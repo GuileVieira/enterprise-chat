@@ -62,6 +62,12 @@ describe('getToolDisplayLabel', () => {
     );
   });
 
+  it('returns the premium image translation key for OpenRouter Gemini image generation', () => {
+    expect(getToolDisplayLabel('openrouter_gemini_image_gen', identityLocalize)).toBe(
+      'com_ui_tool_name_premium_image_gen',
+    );
+  });
+
   it('returns the code translation key for bash PTC tool calls', () => {
     expect(getToolDisplayLabel(Constants.BASH_PROGRAMMATIC_TOOL_CALLING, identityLocalize)).toBe(
       TOOL_FRIENDLY_NAME_KEYS[Constants.BASH_PROGRAMMATIC_TOOL_CALLING],
@@ -72,6 +78,10 @@ describe('getToolDisplayLabel', () => {
     expect(getToolDisplayLabel('bash_tool', identityLocalize)).toBe(
       TOOL_FRIENDLY_NAME_KEYS.bash_tool,
     );
+  });
+
+  it.each(['set_memory', 'delete_memory'])('returns a friendly memory label for %s', (toolName) => {
+    expect(getToolDisplayLabel(toolName, identityLocalize)).toBe(TOOL_FRIENDLY_NAME_KEYS[toolName]);
   });
 
   it('returns the raw name for an unknown native tool', () => {

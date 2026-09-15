@@ -6,10 +6,15 @@ const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 /**
  * Checks if user has access to a file through agent permissions
- * Files inherit permissions from agents authored by the file owner
+ * Files inherit permissions from agents they are attached to.
  */
 const checkAgentBasedFileAccess = async ({ userId, role, fileId, fileOwner }) => {
   try {
+    const fileOwnerId = fileOwner?.toString();
+    if (!fileOwnerId) {
+      return false;
+    }
+
     /** Agents that have this file in their tool_resources */
     const agentsWithFile = await getAgents({
       $or: [
@@ -25,11 +30,10 @@ const checkAgentBasedFileAccess = async ({ userId, role, fileId, fileOwner }) =>
       return false;
     }
 
-    const fileOwnerId = fileOwner?.toString();
     const userIdStr = userId.toString();
     for (const agent of agentsWithFile) {
       const agentAuthorId = agent.author?.toString();
-      if (!agentAuthorId || !fileOwnerId || agentAuthorId !== fileOwnerId) {
+      if (!agentAuthorId) {
         continue;
       }
 
@@ -108,7 +112,7 @@ const checkProjectBasedFileAccess = async ({ userId, role, file, user }) => {
 
 /**
  * Middleware to check if user can access a file
- * Checks: 1) File ownership, 2) Agent-based access through a file-owner agent
+ * Checks: 1) File ownership, 2) Agent-based access through attached agents
  */
 const fileAccess = async (req, res, next) => {
   try {
@@ -142,7 +146,9 @@ const fileAccess = async (req, res, next) => {
     // Tenant-scoped files are restricted to their tenant. Legacy files without
     // tenantId remain governed by owner/agent ACLs for non-tenant migrations.
     if (fileTenantId && fileTenantId !== userTenantId) {
-      logger.warn(`[fileAccess] User ${userId} denied cross-tenant access to file ${fileId}`);
+      logger.warn(
+        `[fileAccess] User ${userId} denied cross-tenant access to file ${fileId} (route ${req.originalUrl})`,
+      );
       return denyFileAccess(res);
     }
 
@@ -164,9 +170,7 @@ const fileAccess = async (req, res, next) => {
         return next();
       }
 
-      logger.warn(
-        `[fileAccess] User ${userId} denied project file ${fileId} without PROJECT VIEW`,
-      );
+      logger.warn(`[fileAccess] User ${userId} denied project file ${fileId} without PROJECT VIEW`);
       return denyFileAccess(res);
     }
 
@@ -182,7 +186,9 @@ const fileAccess = async (req, res, next) => {
       return next();
     }
 
-    logger.warn(`[fileAccess] User ${userId} denied access to file ${fileId}`);
+    logger.warn(
+      `[fileAccess] User ${userId} denied access to file ${fileId} (route ${req.originalUrl})`,
+    );
     return denyFileAccess(res);
   } catch (error) {
     logger.error('[fileAccess] Error checking file access:', error);

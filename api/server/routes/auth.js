@@ -43,8 +43,10 @@ router.post('/logout', middleware.requireJwtAuth, logoutController);
 router.post(
   '/login',
   middleware.logHeaders,
+  middleware.requireSameOrigin,
   middleware.loginLimiter,
   middleware.checkBan,
+  middleware.validateEmailLogin,
   ldapAuth ? middleware.requireLdapAuth : middleware.requireLocalAuth,
   setBalanceConfig,
   loginController,
@@ -80,6 +82,7 @@ router.post(
 );
 router.post(
   '/resetPassword',
+  middleware.resetPasswordSubmissionLimiter,
   middleware.checkBan,
   middleware.validatePasswordReset,
   resetPasswordController,
@@ -87,7 +90,14 @@ router.post(
 
 router.post('/2fa/enable', middleware.requireJwtAuth, enable2FA);
 router.post('/2fa/verify', middleware.requireJwtAuth, verify2FA);
-router.post('/2fa/verify-temp', middleware.checkBan, verify2FAWithTempToken);
+router.post(
+  '/2fa/verify-temp',
+  middleware.requireSameOrigin,
+  middleware.setTwoFactorTempUser,
+  middleware.twoFactorTempLimiter,
+  middleware.checkBan,
+  verify2FAWithTempToken,
+);
 router.post('/2fa/confirm', middleware.requireJwtAuth, confirm2FA);
 router.post('/2fa/disable', middleware.requireJwtAuth, disable2FA);
 router.post('/2fa/backup/regenerate', middleware.requireJwtAuth, regenerateBackupCodes);

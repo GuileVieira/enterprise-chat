@@ -1,7 +1,7 @@
 import { logger, runAsSystem } from '@librechat/data-schemas';
+import type { ITenantFunction, ITenantSecret } from '@librechat/data-schemas';
 import type { IUser } from '@librechat/data-schemas';
 import type { FilterQuery } from 'mongoose';
-import type { ITenantFunction, ITenantSecret } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { ServerRequest } from '~/types/http';
 import { parsePagination } from './pagination';
@@ -20,7 +20,11 @@ export interface AdminTenantsDeps {
   countTenantSecrets?: (filter?: FilterQuery<ITenantSecret>) => Promise<number>;
 }
 
-export function createAdminTenantsHandlers(deps: AdminTenantsDeps) {
+export function createAdminTenantsHandlers(deps: AdminTenantsDeps): {
+  listTenants: (req: ServerRequest, res: Response) => Promise<Response>;
+  listTenantUsers: (req: ServerRequest, res: Response) => Promise<Response>;
+  getTenantStats: (req: ServerRequest, res: Response) => Promise<Response>;
+} {
   const { findUsers, countUsers, countTenantFunctions, countTenantSecrets } = deps;
 
   async function listTenantsHandler(_req: ServerRequest, res: Response) {

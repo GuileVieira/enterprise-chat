@@ -23,7 +23,9 @@ export interface AdminOverviewDeps {
   countTenantSecrets: (filter?: FilterQuery<ITenantSecret>) => Promise<number>;
 }
 
-export function createAdminOverviewHandlers(deps: AdminOverviewDeps) {
+export function createAdminOverviewHandlers(deps: AdminOverviewDeps): {
+  getOverview: (req: ServerRequest, res: Response) => Promise<Response>;
+} {
   const {
     findUsers,
     countUsers,

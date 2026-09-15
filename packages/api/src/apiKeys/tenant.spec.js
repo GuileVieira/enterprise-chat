@@ -2,12 +2,12 @@ import express from 'express';
 import mongoose from 'mongoose';
 import request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { createMethods, createModels, runAsSystem, tenantStorage } from '@librechat/data-schemas';
 import { PermissionBits, PrincipalType, ResourceType } from 'librechat-data-provider';
-import { createTenantApiHandlers } from './tenant';
-import { createRequireApiKeyAuth } from './middleware';
+import { createMethods, createModels, runAsSystem, tenantStorage } from '@librechat/data-schemas';
 import { preAuthTenantMiddleware } from '../middleware/preAuthTenant';
 import { loadProjectMemories } from '../utils/projectContext';
+import { createRequireApiKeyAuth } from './middleware';
+import { createTenantApiHandlers } from './tenant';
 
 const db = createMethods(mongoose);
 const handlers = createTenantApiHandlers({
@@ -32,7 +32,15 @@ app.get('/keys/catalog', handlers.manage);
 app.get('/keys', handlers.manage);
 app.post('/keys', handlers.manage);
 app.delete('/keys/:id', handlers.manage);
-app.use('/remote', preAuthTenantMiddleware, createRequireApiKeyAuth(db));
+app.use(
+  '/remote',
+  preAuthTenantMiddleware,
+  createRequireApiKeyAuth({
+    validateAgentApiKey: db.validateAgentApiKey,
+    findUser: db.findUser,
+    isPrincipalActive: db.isAgentTriggerPrincipalActive,
+  }),
+);
 app.get('/remote/catalog', handlers.remoteCatalog);
 app.get('/remote/projects', handlers.remoteCatalog);
 app.get('/remote/models', handlers.remoteCatalog);

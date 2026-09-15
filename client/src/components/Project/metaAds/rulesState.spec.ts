@@ -1,17 +1,17 @@
-import { getMetaAdsEntityRuleLabel } from './rulesState';
 import type { MetaAdsSettingsState } from './types';
+import { defaultCreativeRules, defaultRules } from './rules';
+import { getMetaAdsEntityRuleLabel } from './rulesState';
 
 describe('Meta Ads rule labels', () => {
   it('shows the active effective rule label with global fallback', () => {
     const settings: MetaAdsSettingsState = {
       enabled: true,
       adAccountId: '',
-      currency: 'BRL',
       automationMode: 'recommend',
       automationAnalysisPreset: 'last_2d',
       accountProfile: 'custom',
-      rules: {},
-      creativeRules: {},
+      rules: { ...defaultRules },
+      creativeRules: { maxFrequency: 0, ...defaultCreativeRules },
       ruleGroups: [
         {
           id: 'paused-group',

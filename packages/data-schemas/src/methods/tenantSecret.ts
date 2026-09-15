@@ -1,8 +1,23 @@
 import type { FilterQuery, Model } from 'mongoose';
-import { encryptV2, decryptV2 } from '~/crypto';
 import type { ITenantFunction, ITenantSecret } from '~/types';
+import { encryptV2, decryptV2 } from '~/crypto';
 
-export function createTenantSecretMethods(mongoose: typeof import('mongoose')) {
+export function createTenantSecretMethods(mongoose: typeof import('mongoose')): {
+  upsertTenantSecret: (
+    tenantId: string,
+    name: string,
+    value: string,
+    type: ITenantSecret['type'],
+  ) => Promise<ITenantSecret>;
+  getTenantSecret: (
+    tenantId: string,
+    name: string,
+  ) => Promise<{ name: string; value: string; type: ITenantSecret['type'] } | null>;
+  listTenantSecrets: (tenantId: string) => Promise<Array<Omit<ITenantSecret, 'value'>>>;
+  countTenantSecrets: (searchParams?: FilterQuery<ITenantSecret>) => Promise<number>;
+  deleteTenantSecret: (tenantId: string, name: string) => Promise<ITenantSecret | null>;
+  isSecretInUse: (tenantId: string, name: string) => Promise<boolean>;
+} {
   /**
    * Creates or updates a tenant secret. Value is encrypted before storage.
    */

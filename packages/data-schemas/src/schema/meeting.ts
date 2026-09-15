@@ -39,7 +39,7 @@ const SpeakerIdentificationSchema = new Schema(
   { _id: false },
 );
 
-const meetingSchema = new Schema<IMeeting>(
+const meetingSchema: Schema<IMeeting> = new Schema<IMeeting>(
   {
     projectId: { type: String, required: true, index: true },
     tenantId: { type: String, index: true },

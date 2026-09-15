@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
 import { RecoilRoot } from 'recoil';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EModelEndpoint, mergeFileConfig } from 'librechat-data-provider';
 import type { TEndpointsConfig, Agent } from 'librechat-data-provider';
@@ -29,11 +29,13 @@ let mockProjectPermissions = {
   permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
   isLoading: false,
 };
+let mockFileConfigLoaded = true;
 
 jest.mock('~/data-provider', () => ({
   useGetEndpointsQuery: () => ({ data: mockEndpointsConfig }),
   useGetFileConfig: ({ select }: { select?: (data: unknown) => unknown }) => ({
     data: select != null ? select(mockFileConfig) : mockFileConfig,
+    isSuccess: mockFileConfigLoaded,
   }),
   useGetAgentByIdQuery: () => ({ data: mockAgentQueryData }),
 }));
@@ -48,6 +50,11 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/hooks/useProjectPermissions', () => ({
   useProjectPermissions: () => mockProjectPermissions,
+}));
+/* The shared upload-target hook reads the module directly rather than the barrel, so
+ * the barrel mock alone leaves it with no agents map. */
+jest.mock('~/Providers/AgentsMapContext', () => ({
+  useAgentsMapContext: () => mockAgentsMap,
 }));
 
 /** Capture the props passed to AttachFileMenu */
@@ -96,6 +103,7 @@ describe('AttachFileChat', () => {
       permissions: { canView: true, canEdit: true, canDelete: false, canShare: false },
       isLoading: false,
     };
+    mockFileConfigLoaded = true;
   });
 
   describe('rendering decisions', () => {
@@ -122,8 +130,12 @@ describe('AttachFileChat', () => {
       });
 
       expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(true);
-      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('com_ui_upload_keep_local')).not.toBeInTheDocument();
+      expect(mockAttachFileMenuProps.isUnifiedMode).toBe(true);
+
+      fireEvent.click(screen.getByLabelText('com_ui_upload_keep_local'));
+
+      expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
+      expect(screen.getByLabelText('com_ui_upload_save_to_project')).toBeInTheDocument();
     });
 
     it('keeps uploads local when the user cannot edit the project', () => {
@@ -140,13 +152,14 @@ describe('AttachFileChat', () => {
 
       expect(mockAttachFileMenuProps.saveUploadsToProject).toBe(false);
       expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('com_ui_upload_keep_local')).not.toBeInTheDocument();
     });
 
     it('saves assistants project chat uploads to the project when the user can edit', () => {
       renderComponent({ endpoint: EModelEndpoint.assistants, projectId: 'project-1' });
 
       expect(mockAttachFileProps.saveUploadsToProject).toBe(true);
-      expect(screen.queryByLabelText('com_ui_upload_save_to_project')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('com_ui_upload_keep_local')).toBeInTheDocument();
     });
   });
 
@@ -215,7 +228,9 @@ describe('AttachFileChat', () => {
       expect(mockAttachFileMenuProps.useResponsesApi).toBe(true);
     });
 
-    it('preserves an explicit conversation useResponsesApi false override', () => {
+    it('lets the saved agent decide over the conversation', () => {
+      /* Execution reads the agent's own model parameters, so the attach menu must offer
+       * what the turn will actually do rather than what the conversation says. */
       mockAgentQueryData = {
         provider: EModelEndpoint.azureOpenAI,
         model_parameters: { useResponsesApi: true },
@@ -225,7 +240,20 @@ describe('AttachFileChat', () => {
         agent_id: 'agent-1',
         useResponsesApi: false,
       });
-      expect(mockAttachFileMenuProps.useResponsesApi).toBe(false);
+      expect(mockAttachFileMenuProps.useResponsesApi).toBe(true);
+    });
+
+    it('keeps the conversation setting when the agent states none', () => {
+      mockAgentQueryData = {
+        provider: EModelEndpoint.azureOpenAI,
+        model_parameters: {},
+      } as Partial<Agent>;
+      renderComponent({
+        endpoint: EModelEndpoint.agents,
+        agent_id: 'agent-1',
+        useResponsesApi: true,
+      });
+      expect(mockAttachFileMenuProps.useResponsesApi).toBe(true);
     });
   });
 
@@ -334,5 +362,66 @@ describe('AttachFileChat', () => {
       const config = mockAttachFileMenuProps.endpointFileConfig as { fileLimit?: number };
       expect(config?.fileLimit).toBe(20);
     });
+  });
+});
+
+describe('AttachFileChat upload config gating', () => {
+  beforeEach(() => {
+    mockFileConfig = defaultFileConfig;
+    mockAgentsMap = {};
+    mockAgentQueryData = undefined;
+    mockAttachFileMenuProps = {};
+  });
+
+  it('leaves the attach menu inert until the file config resolves', () => {
+    /* The menu is an action, not just a display: offering the chooser here submits an
+     * explicit destination a unified deployment would have inferred, and after a failed
+     * fetch it would keep offering it. */
+    mockFileConfigLoaded = false;
+
+    renderComponent({ endpoint: EModelEndpoint.agents });
+
+    expect(mockAttachFileMenuProps.disabled).toBe(true);
+  });
+
+  it('enables it once the config lands', () => {
+    mockFileConfigLoaded = true;
+
+    renderComponent({ endpoint: EModelEndpoint.agents });
+
+    expect(mockAttachFileMenuProps.disabled).toBe(false);
+  });
+
+  it('keeps it inert while a saved agent provider is still being fetched', () => {
+    /* The config can succeed before the agent does, and until then endpointFileConfig is
+     * the generic agents entry rather than the provider's. */
+    mockFileConfigLoaded = true;
+    mockAgentsMap = {};
+    mockAgentQueryData = undefined;
+
+    renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent_saved01' });
+
+    expect(mockAttachFileMenuProps.disabled).toBe(true);
+  });
+
+  it('does not wait on a provider an ephemeral agent will never have', () => {
+    /* There is no record to fetch for one, so gating on its provider never lifts and the
+     * attach control stays disabled for the whole conversation. */
+    mockFileConfigLoaded = true;
+    mockAgentsMap = {};
+    mockAgentQueryData = undefined;
+
+    renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'ephemeral-convo-1' });
+
+    expect(mockAttachFileMenuProps.disabled).toBe(false);
+  });
+
+  it('enables it once that provider resolves', () => {
+    mockFileConfigLoaded = true;
+    mockAgentQueryData = { provider: 'openAI' } as Partial<Agent>;
+
+    renderComponent({ endpoint: EModelEndpoint.agents, agent_id: 'agent_saved01' });
+
+    expect(mockAttachFileMenuProps.disabled).toBe(false);
   });
 });

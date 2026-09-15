@@ -1,7 +1,7 @@
 import { OGDialogTemplate, Input, Button, OGDialog } from '@librechat/client';
 import type { UseFormRegister, UseFormHandleSubmit } from 'react-hook-form';
-import type { ApiKeyFormData } from '~/common';
 import type { RefObject } from 'react';
+import type { ApiKeyFormData } from '~/common';
 import { useLocalize } from '~/hooks';
 
 export default function ApiKeyDialog({
@@ -54,10 +54,10 @@ export default function ApiKeyDialog({
         main={
           <>
             <div className="mb-4 text-center font-medium">
-              {localize('com_ui_librechat_code_api_title')}
+              {localize('com_ui_Orqest_code_api_title')}
             </div>
             <div className="mb-4 text-center text-sm">
-              {localize('com_ui_librechat_code_api_subtitle')}
+              {localize('com_ui_Orqest_code_api_subtitle')}
             </div>
             <div className="mb-6">
               <div className="mx-auto mb-4 flex max-w-[400px] flex-wrap justify-center gap-3">
@@ -71,14 +71,9 @@ export default function ApiKeyDialog({
                   </div>
                 ))}
               </div>
-              <a
-                href=""
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-center text-[15px] font-medium text-blue-500 underline decoration-1 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-              >
+              <p className="text-center text-[15px] font-medium text-blue-500 dark:text-blue-400">
                 {localize('com_ui_code_api_key')}
-              </a>
+              </p>
             </div>
             <form onSubmit={handleSubmit(onSubmit)}>
               <Input
@@ -94,7 +89,7 @@ export default function ApiKeyDialog({
         }
         selection={{
           selectHandler: handleSubmit(onSubmit),
-          selectClasses: 'bg-surface-submit hover:bg-surface-submit-hover text-white',
+          selectClasses: 'bg-surface-submit text-text-on-status hover:bg-surface-submit-hover',
           selectText: localize('com_ui_save'),
         }}
         buttons={
@@ -102,7 +97,7 @@ export default function ApiKeyDialog({
           isToolAuthenticated && (
             <Button
               onClick={onRevoke}
-              className="bg-destructive text-white transition-all duration-200 hover:bg-destructive/80"
+              className="bg-destructive hover:bg-destructive/80 text-white transition-all duration-200"
               aria-label={localize('com_ui_revoke')}
             >
               {localize('com_ui_revoke')}

@@ -11,7 +11,13 @@ interface RecordAdminAuditInput {
   metadata?: Record<string, unknown>;
 }
 
-export function createAdminAuditMethods(mongoose: typeof import('mongoose')) {
+export function createAdminAuditMethods(mongoose: typeof import('mongoose')): {
+  recordAdminAudit: (input: RecordAdminAuditInput) => Promise<IAdminAudit>;
+  listAdminAudits: (
+    targetUserId: string | Types.ObjectId,
+    limit?: number,
+  ) => Promise<IAdminAudit[]>;
+} {
   async function recordAdminAudit(input: RecordAdminAuditInput): Promise<IAdminAudit> {
     const AdminAudit = mongoose.models.AdminAudit as Model<IAdminAudit>;
     return (await AdminAudit.create(input)).toObject();

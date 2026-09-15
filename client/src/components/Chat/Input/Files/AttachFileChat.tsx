@@ -1,19 +1,21 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   Constants,
   supportsFiles,
   mergeFileConfig,
   isAgentsEndpoint,
-  resolveEndpointType,
+  isEphemeralAgentId,
   isAssistantsEndpoint,
   getEndpointFileConfig,
 } from 'librechat-data-provider';
 import type { TConversation } from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
-import { useGetFileConfig, useGetEndpointsQuery, useGetAgentByIdQuery } from '~/data-provider';
+import useAgentUploadTarget from '~/hooks/Agents/useAgentUploadTarget';
 import { useProjectPermissions } from '~/hooks/useProjectPermissions';
-import { useAgentsMapContext } from '~/Providers';
+import { useGetFileConfig } from '~/data-provider';
+import { isUnifiedUploadMode } from '~/utils';
 import AttachFileMenu from './AttachFileMenu';
+import { useLocalize } from '~/hooks';
 import AttachFile from './AttachFile';
 
 function AttachFileChat({
@@ -32,51 +34,20 @@ function AttachFileChat({
   const conversationId = conversation?.conversationId ?? Constants.NEW_CONVO;
   const { endpoint } = conversation ?? { endpoint: null };
   const projectId = conversation?.projectId ?? undefined;
+  const localize = useLocalize();
+  const [keepUploadsLocal, setKeepUploadsLocal] = useState(false);
   const isAgents = useMemo(() => isAgentsEndpoint(endpoint), [endpoint]);
   const isAssistants = useMemo(() => isAssistantsEndpoint(endpoint), [endpoint]);
   const { permissions: projectPermissions } = useProjectPermissions(projectId);
 
-  const agentsMap = useAgentsMapContext();
+  const { agentProvider, endpointType, useResponsesApi, isResolvingAgentProvider } =
+    useAgentUploadTarget(conversation);
 
-  const needsAgentFetch = useMemo(() => {
-    if (!isAgents || !conversation?.agent_id) {
-      return false;
-    }
-    const agent = agentsMap?.[conversation.agent_id];
-    return !agent?.model_parameters;
-  }, [isAgents, conversation?.agent_id, agentsMap]);
-
-  const { data: agentData } = useGetAgentByIdQuery(conversation?.agent_id, {
-    enabled: needsAgentFetch,
-  });
-
-  const useResponsesApi = useMemo(() => {
-    if (!isAgents || !conversation?.agent_id || conversation?.useResponsesApi !== undefined) {
-      return conversation?.useResponsesApi;
-    }
-    return (
-      agentData?.model_parameters?.useResponsesApi ??
-      agentsMap?.[conversation.agent_id]?.model_parameters?.useResponsesApi
-    );
-  }, [isAgents, conversation?.agent_id, conversation?.useResponsesApi, agentData, agentsMap]);
-
-  const { data: fileConfig = null } = useGetFileConfig({
+  /* Success, not merely settled: a failed or paused fetch leaves the built-in defaults in
+   * place, where the absent opt-out reads as unified. */
+  const { data: fileConfig = null, isSuccess: isFileConfigLoaded } = useGetFileConfig({
     select: (data) => mergeFileConfig(data),
   });
-
-  const { data: endpointsConfig } = useGetEndpointsQuery();
-
-  const agentProvider = useMemo(() => {
-    if (!isAgents || !conversation?.agent_id) {
-      return undefined;
-    }
-    return agentData?.provider ?? agentsMap?.[conversation.agent_id]?.provider;
-  }, [isAgents, conversation?.agent_id, agentData, agentsMap]);
-
-  const endpointType = useMemo(
-    () => resolveEndpointType(endpointsConfig, endpoint, agentProvider),
-    [endpointsConfig, endpoint, agentProvider],
-  );
 
   const fileConfigEndpoint = useMemo(
     () => (isAgents && agentProvider ? agentProvider : endpoint),
@@ -96,34 +67,72 @@ function AttachFileChat({
     [endpointType, endpoint],
   );
   const isUploadDisabled = useMemo(
-    () => (disableInputs || endpointFileConfig?.disabled) ?? false,
-    [disableInputs, endpointFileConfig?.disabled],
+    () =>
+      disableInputs ||
+      !isFileConfigLoaded ||
+      isResolvingAgentProvider ||
+      !!endpointFileConfig?.disabled,
+    [disableInputs, isFileConfigLoaded, isResolvingAgentProvider, endpointFileConfig?.disabled],
   );
-  const saveUploadsToProject = Boolean(projectId && projectPermissions.canEdit);
+  const isSavedAgent =
+    isAgents && conversation?.agent_id != null && !isEphemeralAgentId(conversation.agent_id);
+  const isPolicyResolved =
+    isFileConfigLoaded && !isResolvingAgentProvider && (!isSavedAgent || agentProvider != null);
+  const isUnifiedMode = useMemo(
+    () => isUnifiedUploadMode(endpointFileConfig, isPolicyResolved),
+    [endpointFileConfig, isPolicyResolved],
+  );
+  const canSaveUploadsToProject = Boolean(projectId && projectPermissions.canEdit);
+  const saveUploadsToProject = canSaveUploadsToProject && !keepUploadsLocal;
+  const isHardDisabled = disableInputs || !!endpointFileConfig?.disabled;
 
-  if (isAssistants && endpointSupportsFiles && !isUploadDisabled) {
+  useEffect(() => setKeepUploadsLocal(false), [projectId]);
+
+  const projectStorageToggle = canSaveUploadsToProject ? (
+    <button
+      type="button"
+      aria-label={
+        keepUploadsLocal
+          ? localize('com_ui_upload_save_to_project')
+          : localize('com_ui_upload_keep_local')
+      }
+      aria-pressed={keepUploadsLocal}
+      className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-tertiary"
+      onClick={() => setKeepUploadsLocal((value) => !value)}
+    >
+      {keepUploadsLocal
+        ? localize('com_ui_upload_keep_local')
+        : localize('com_ui_upload_save_to_project')}
+    </button>
+  ) : null;
+
+  if (isHardDisabled) return null;
+
+  if (isAssistants && endpointSupportsFiles) {
     return (
       <div className="flex items-center gap-0.5">
         <AttachFile
-          disabled={disableInputs}
+          disabled={isUploadDisabled}
           files={files}
           setFiles={setFiles}
           setFilesLoading={setFilesLoading}
           conversation={conversation}
           saveUploadsToProject={saveUploadsToProject}
         />
+        {projectStorageToggle}
       </div>
     );
-  } else if ((isAgents || endpointSupportsFiles) && !isUploadDisabled) {
+  } else if (isAgents || endpointSupportsFiles) {
     return (
       <div className="flex items-center gap-0.5">
         <AttachFileMenu
           endpoint={endpoint}
-          disabled={disableInputs}
+          disabled={isUploadDisabled}
           endpointType={endpointType}
           conversationId={conversationId}
           agentId={conversation?.agent_id}
           endpointFileConfig={endpointFileConfig}
+          isUnifiedMode={isUnifiedMode}
           useResponsesApi={useResponsesApi}
           files={files}
           setFiles={setFiles}
@@ -131,6 +140,7 @@ function AttachFileChat({
           conversation={conversation}
           saveUploadsToProject={saveUploadsToProject}
         />
+        {projectStorageToggle}
       </div>
     );
   }

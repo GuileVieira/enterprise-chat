@@ -1,4 +1,14 @@
 import { useMemo } from 'react';
+import { CalendarClock } from 'lucide-react';
+import { MCPIcon, OpenAIMinimalIcon } from '@librechat/client';
+import {
+  Permissions,
+  EModelEndpoint,
+  PermissionTypes,
+  isParamEndpoint,
+  isAgentsEndpoint,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import {
   BookmarkSimple,
   Brain,
@@ -10,28 +20,25 @@ import {
   SidebarSimple,
   SlidersHorizontal,
 } from '@phosphor-icons/react';
-import { MCPIcon, OpenAIMinimalIcon } from '@librechat/client';
-import {
-  Permissions,
-  EModelEndpoint,
-  PermissionTypes,
-  isParamEndpoint,
-  isAgentsEndpoint,
-  isAssistantsEndpoint,
-} from 'librechat-data-provider';
 import type { TInterfaceConfig, TEndpointsConfig } from 'librechat-data-provider';
 import type { NavLink } from '~/common';
+import {
+  useAgentCapabilities,
+  useMCPServerManager,
+  useGetAgentsConfig,
+  useHasAccess,
+} from '~/hooks';
 import MCPBuilderPanel from '~/components/SidePanel/MCPBuilder/MCPBuilderPanel';
 import AgentPanelSwitch from '~/components/SidePanel/Agents/AgentPanelSwitch';
 import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
+import ProjectsPanel from '~/components/SidePanel/Projects/ProjectsPanel';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
+import { SchedulePanel } from '~/components/SidePanel/Schedules';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
-import ProjectsPanel from '~/components/SidePanel/Projects/ProjectsPanel';
-import { useHasAccess, useMCPServerManager } from '~/hooks';
 import { PromptsAccordion } from '~/components/Prompts';
-import { SkillsAccordion } from '~/components/Skills/sidebar';
+import { SkillsAccordion } from '~/components/Skills';
 
 export default function useSideNavLinks({
   hidePanel,
@@ -54,6 +61,10 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.PROMPTS,
     permission: Permissions.USE,
   });
+  const hasAccessToSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.USE,
+  });
   const hasAccessToBookmarks = useHasAccess({
     permissionType: PermissionTypes.BOOKMARKS,
     permission: Permissions.USE,
@@ -70,9 +81,9 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.AGENTS,
     permission: Permissions.USE,
   });
-  const hasAccessToSkills = useHasAccess({
-    permissionType: PermissionTypes.SKILLS,
-    permission: Permissions.USE,
+  const hasAccessToCreateAgents = useHasAccess({
+    permissionType: PermissionTypes.AGENTS,
+    permission: Permissions.CREATE,
   });
   const hasAccessToUseMCPSettings = useHasAccess({
     permissionType: PermissionTypes.MCP_SERVERS,
@@ -86,7 +97,14 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.PROJECTS,
     permission: Permissions.USE,
   });
+  const hasAccessToSchedules = useHasAccess({
+    permissionType: PermissionTypes.SCHEDULES,
+    permission: Permissions.USE,
+  });
   const { availableMCPServers } = useMCPServerManager();
+
+  const { agentsConfig } = useGetAgentsConfig({ endpointsConfig });
+  const { skillsEnabled } = useAgentCapabilities(agentsConfig?.capabilities);
 
   const Links = useMemo(() => {
     const links: NavLink[] = [];
@@ -94,6 +112,7 @@ export default function useSideNavLinks({
     if (
       endpointsConfig?.[EModelEndpoint.agents] &&
       hasAccessToAgents &&
+      hasAccessToCreateAgents &&
       endpointsConfig[EModelEndpoint.agents].disableBuilder !== true
     ) {
       links.push({
@@ -124,6 +143,36 @@ export default function useSideNavLinks({
       });
     }
 
+    if (hasAccessToSkills && skillsEnabled) {
+      links.push({
+        title: 'com_ui_skills',
+        label: '',
+        icon: CursorClick,
+        id: 'skills',
+        Component: SkillsAccordion,
+      });
+    }
+
+    // Scheduled chats are EXPERIMENTAL and default-OFF: the server enables them only
+    // when an admin opts in explicitly, so ABSENT config means disabled here too.
+    // Mirrors getLimits exactly — absent/null/`false` are all off, `true` is on, and the
+    // object form is on unless it sets `use: false`. Any mismatch would show an entry
+    // whose create/run operations the backend rejects.
+    const schedulesConfig = interfaceConfig.schedules;
+    const schedulesEnabled =
+      schedulesConfig != null &&
+      schedulesConfig !== false &&
+      !(typeof schedulesConfig === 'object' && schedulesConfig.use === false);
+    if (hasAccessToSchedules && schedulesEnabled) {
+      links.push({
+        title: 'com_ui_schedules',
+        label: '',
+        icon: CalendarClock,
+        id: 'schedules',
+        Component: SchedulePanel,
+      });
+    }
+
     if (hasAccessToPrompts) {
       links.push({
         title: 'com_ui_prompts',
@@ -131,16 +180,6 @@ export default function useSideNavLinks({
         icon: NotePencil,
         id: 'prompts',
         Component: PromptsAccordion,
-      });
-    }
-
-    if (hasAccessToSkills) {
-      links.push({
-        title: 'com_ui_skills',
-        label: '',
-        icon: CursorClick,
-        id: 'skills',
-        Component: SkillsAccordion,
       });
     }
 
@@ -226,10 +265,14 @@ export default function useSideNavLinks({
     endpointsConfig,
     keyProvided,
     hasAccessToAgents,
+    hasAccessToCreateAgents,
     hasAccessToPrompts,
     hasAccessToSkills,
+    skillsEnabled,
     hasAccessToMemories,
     hasAccessToReadMemories,
+    hasAccessToSchedules,
+    interfaceConfig.schedules,
     interfaceConfig.parameters,
     endpointType,
     hasAccessToBookmarks,

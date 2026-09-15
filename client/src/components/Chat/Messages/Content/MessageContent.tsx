@@ -1,11 +1,16 @@
 import { memo, Suspense, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
-import { DelayedRender } from '@librechat/client';
 import { Sparkle } from '@phosphor-icons/react';
+import { Constants } from 'librechat-data-provider';
+import { Alert, DelayedRender } from '@librechat/client';
 import type { TMessage } from 'librechat-data-provider';
 import type { TMessageContentProps, TDisplayProps } from '~/common';
+import useSmoothStreaming from '~/hooks/Messages/useSmoothStreaming';
 import Error from '~/components/Messages/Content/Error';
+import ToolCallLimitNotice from './ToolCallLimitNotice';
+import CollapsibleText from './Parts/CollapsibleText';
 import { useMessageContext } from '~/Providers';
+import EmptyText from './Parts/EmptyText';
 import MarkdownLite from './MarkdownLite';
 import EditMessage from './EditMessage';
 import Thinking from './Parts/Thinking';
@@ -36,14 +41,8 @@ const parseThinkingContent = (text: string) => {
 };
 
 const LoadingFallback = () => (
-  <div className="text-message mb-[0.625rem] flex min-h-[20px] flex-col items-start gap-3 overflow-visible">
-    <div className="markdown prose dark:prose-invert light w-full break-words dark:text-gray-100">
-      <div className="absolute">
-        <p className="submitting relative">
-          <span className="result-thinking" />
-        </p>
-      </div>
-    </div>
+  <div className="mb-[0.625rem]">
+    <EmptyText underHeaderIcon />
   </div>
 );
 
@@ -58,7 +57,7 @@ const ErrorBox = ({
     role="alert"
     aria-live="assertive"
     className={cn(
-      'rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-sm text-gray-600 dark:text-gray-200',
+      'rounded-xl border border-status-error-border bg-status-error-subtle p-3 text-sm text-text-secondary',
       className,
     )}
   >
@@ -73,9 +72,16 @@ const ConnectionError = ({ message }: { message?: TMessage }) => {
     <Suspense fallback={<LoadingFallback />}>
       <DelayedRender delay={DELAYED_ERROR_TIMEOUT}>
         <Container message={message}>
-          <div className="mt-2 rounded-xl border border-red-500/20 bg-red-50/50 px-4 py-3 text-sm text-red-700 shadow-sm transition-all dark:bg-red-950/30 dark:text-red-100">
+          {/* `text-text-secondary` overrides the variant's `text-status-error`: this card sits in
+              the transcript beside `ErrorBox`, and every other failure there states itself in the
+              ordinary copy color. The red border and fill still mark it as an error. */}
+          <Alert
+            variant="error"
+            icon={false}
+            className="mt-2 text-text-secondary shadow-sm transition-all"
+          >
             {localize('com_ui_error_connection')}
-          </div>
+          </Alert>
         </Container>
       </DelayedRender>
     </Suspense>
@@ -94,7 +100,7 @@ export const ErrorMessage = ({
   return (
     <Container message={message}>
       <ErrorBox className={className}>
-        <Error text={text} />
+        <Error text={text} message={message} />
       </ErrorBox>
     </Container>
   );
@@ -103,14 +109,18 @@ export const ErrorMessage = ({
 const DisplayMessage = ({ text, isCreatedByUser, message, showCursor }: TDisplayProps) => {
   const { isSubmitting = false, isLatestMessage = false } = useMessageContext();
   const enableUserMsgMarkdown = useRecoilValue(store.enableUserMsgMarkdown);
+  const collapseLongUserMessages = useRecoilValue(store.collapseLongUserMessages);
+  const smoothStreaming = useSmoothStreaming();
   const hiddenPrompt = (message.metadata as HiddenPromptMetadata | undefined)?.hiddenPrompt;
   const hiddenPromptName = typeof hiddenPrompt?.name === 'string' ? hiddenPrompt.name : '';
   const shouldShowHiddenPrompt = isCreatedByUser && hiddenPromptName;
   const visibleText = shouldShowHiddenPrompt && text.trim() === hiddenPromptName ? '' : text;
 
+  // The word fade itself indicates streaming, so the trailing block cursor
+  // only shows when the fade is unavailable (setting off or reduced motion).
   const showCursorState = useMemo(
-    () => showCursor === true && isSubmitting,
-    [showCursor, isSubmitting],
+    () => showCursor === true && isSubmitting && !(smoothStreaming && !isCreatedByUser),
+    [showCursor, isSubmitting, smoothStreaming, isCreatedByUser],
   );
 
   const content = useMemo(() => {
@@ -125,33 +135,53 @@ const DisplayMessage = ({ text, isCreatedByUser, message, showCursor }: TDisplay
 
   return (
     <Container message={message}>
-      <div
-        className={cn(
-          'markdown prose message-content dark:prose-invert light w-full break-words',
-          isSubmitting && 'submitting',
-          showCursorState && visibleText.length > 0 && 'result-streaming',
-          isCreatedByUser && !enableUserMsgMarkdown && 'whitespace-pre-wrap',
-          isCreatedByUser ? 'dark:text-gray-20' : 'dark:text-gray-100',
-        )}
-      >
-        {shouldShowHiddenPrompt && (
-          <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border-light bg-surface-secondary px-3 py-1.5 text-sm font-medium text-text-primary">
-            <Sparkle className="h-4 w-4 flex-shrink-0 text-text-secondary" />
-            <span className="truncate">{hiddenPromptName}</span>
-          </div>
-        )}
-        {content}
-      </div>
+      <CollapsibleText enabled={isCreatedByUser && collapseLongUserMessages}>
+        <div
+          className={cn(
+            'markdown prose message-content dark:prose-invert light w-full break-words',
+            isSubmitting && 'submitting',
+            showCursorState && visibleText.length > 0 && 'result-streaming',
+            isCreatedByUser && !enableUserMsgMarkdown && 'whitespace-pre-wrap',
+            'text-text-primary',
+          )}
+        >
+          {shouldShowHiddenPrompt && (
+            <div className="mb-2 inline-flex max-w-full items-center gap-2 rounded-full border border-border-light bg-surface-secondary px-3 py-1.5 text-sm font-medium text-text-primary">
+              <Sparkle className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
+              <span className="truncate">{hiddenPromptName}</span>
+            </div>
+          )}
+          {content}
+        </div>
+      </CollapsibleText>
     </Container>
   );
 };
 
-export const UnfinishedMessage = ({ message }: { message: TMessage }) => (
-  <ErrorMessage
-    message={message}
-    text="The response is incomplete; it's either still processing, was cancelled, or censored. Refresh or try a different prompt."
-  />
-);
+export const UnfinishedMessage = ({ message }: { message: TMessage }) => {
+  const localize = useLocalize();
+
+  /** Ran out of steps, not broken: a distinct, actionable card rather than the
+   *  generic "something went wrong, try again" warning. */
+  if (message.finish_reason === Constants.TOOL_CALL_LIMIT_FINISH_REASON) {
+    return (
+      <Container message={message}>
+        <ToolCallLimitNotice message={message} />
+      </Container>
+    );
+  }
+
+  /**
+   * Copy this app authored, not a persisted failure: it goes straight into the error box. Routing
+   * it through `Error` would have the unclassified-text path treat the sentence as provider prose
+   * and headline it with "<provider> could not complete this request".
+   */
+  return (
+    <Container message={message}>
+      <ErrorBox>{localize('com_ui_response_incomplete')}</ErrorBox>
+    </Container>
+  );
+};
 
 const MessageContent = ({
   text,

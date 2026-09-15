@@ -1,8 +1,8 @@
 const axios = require('axios');
 const { logger } = require('@librechat/data-schemas');
 const { tool } = require('@librechat/agents/langchain/tools');
-const { generateShortLivedToken } = require('@librechat/api');
-const { Tools, EToolResources } = require('librechat-data-provider');
+const { selectFileCitationSources, generateShortLivedToken } = require('@librechat/api');
+const { Tools, EModelEndpoint, EToolResources } = require('librechat-data-provider');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
 const { getFiles } = require('~/models');
 
@@ -24,13 +24,14 @@ const fileSearchJsonSchema = {
  * @param {ServerRequest} options.req
  * @param {Agent['tool_resources']} options.tool_resources
  * @param {string} [options.agentId] - The agent ID for file access control
+ * @param {string} [options.agentResourceType] - Permission resource type for the authorized agent route
  * @returns {Promise<{
- *   files: Array<{ file_id: string; filename: string }>,
+ *   files: Array<{ file_id: string; filename: string; fromAgent: boolean }>,
  *   toolContext: string
  * }>}
  */
 const primeFiles = async (options) => {
-  const { tool_resources, req, agentId, projectId, projectFileIds } = options;
+  const { tool_resources, req, agentId, agentResourceType, projectId, projectFileIds } = options;
   const file_ids = tool_resources?.[EToolResources.file_search]?.file_ids ?? [];
   const agentResourceIds = new Set(file_ids);
   const projectResourceIds = new Set(projectFileIds ?? []);
@@ -49,6 +50,7 @@ const primeFiles = async (options) => {
       agentId,
       projectId,
       projectFileIds,
+      resourceType: agentResourceType,
     });
   } else {
     dbFiles = allFiles;
@@ -77,6 +79,7 @@ const primeFiles = async (options) => {
       filename: file.filename,
       projectId: file.projectId || (projectResourceIds.has(file.file_id) ? projectId : undefined),
       metadata: file.metadata,
+      fromAgent: agentResourceIds.has(file.file_id),
     });
   }
 
@@ -86,13 +89,20 @@ const primeFiles = async (options) => {
 /**
  *
  * @param {Object} options
+ * @param {AppConfig} [options.appConfig]
  * @param {string} options.userId
- * @param {Array<{ file_id: string; filename: string; projectId?: string; metadata?: Object }>} options.files
+ * @param {Array<{ file_id: string; filename: string; projectId?: string; metadata?: Object; fromAgent?: boolean }>} options.files
  * @param {string} [options.entity_id]
  * @param {boolean} [options.fileCitations=false] - Whether to include citation instructions
  * @returns
  */
-const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = false }) => {
+const createFileSearchTool = async ({
+  userId,
+  files,
+  entity_id,
+  fileCitations = false,
+  appConfig,
+}) => {
   return tool(
     async ({ query }) => {
       if (files.length === 0) {
@@ -104,8 +114,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
       }
 
       /**
-       * @param {import('librechat-data-provider').TFile} file
-       * @param {string | undefined} queryEntityId
+       * @param {import('librechat-data-provider').TFile & { fromAgent?: boolean }} file
        * @returns {{ file_id: string, query: string, k: number, entity_id?: string }}
        */
       const createQueryBody = (file, queryEntityId) => {
@@ -114,7 +123,12 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
           query,
           k: 5,
         };
-        if (!queryEntityId) {
+        if (
+          !queryEntityId ||
+          (queryEntityId === entity_id &&
+            queryEntityId !== file.projectId &&
+            file.fromAgent !== true)
+        ) {
           return body;
         }
         body.entity_id = queryEntityId;
@@ -173,7 +187,10 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
             distance,
             file_id: file?.file_id,
             file_metadata: file?.metadata,
-            page: docInfo.metadata.page || null,
+            page:
+              Number.isInteger(docInfo.metadata.page) && docInfo.metadata.page >= 0
+                ? docInfo.metadata.page + 1
+                : null,
           })),
         )
         .sort((a, b) => a.distance - b.distance)
@@ -185,15 +202,6 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
           undefined,
         ];
       }
-
-      const formattedString = formattedResults
-        .map(
-          (result, index) =>
-            `File: ${result.filename}${
-              fileCitations ? `\nAnchor: \\ue202turn0file${index} (${result.filename})` : ''
-            }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
-        )
-        .join('\n---\n');
 
       const sources = formattedResults.map((result) => ({
         type: 'file',
@@ -212,6 +220,21 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         pages: result.page ? [result.page] : [],
         pageRelevance: result.page ? { [result.page]: 1.0 - result.distance } : {},
       }));
+
+      const citationConfig = appConfig?.endpoints?.[EModelEndpoint.agents];
+      const citationSources = fileCitations
+        ? selectFileCitationSources(sources, citationConfig)
+        : [];
+      const formattedString = formattedResults
+        .map((result, index) => {
+          const citationIndex = citationSources.indexOf(sources[index]);
+          return `File: ${result.filename}${
+            citationIndex >= 0
+              ? `\nAnchor: \\ue202turn0file${citationIndex} (${result.filename})`
+              : ''
+          }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`;
+        })
+        .join('\n---\n');
 
       return [formattedString, { [Tools.file_search]: { sources, fileCitations } }];
     },

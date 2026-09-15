@@ -1,0 +1,254 @@
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+jest.mock('@librechat/data-schemas', () => {
+  const actual = jest.requireActual('@librechat/data-schemas');
+  return {
+    ...actual,
+    logger: {
+      debug: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+    },
+  };
+});
+
+jest.mock('~/models', () => {
+  const _mongoose = require('mongoose');
+  return {
+    deleteAllUserSessions: jest.fn().mockResolvedValue(undefined),
+    deleteSchedulesByUser: jest.fn().mockResolvedValue(undefined),
+    deleteAllAgentApiKeys: jest.fn().mockResolvedValue(undefined),
+    deleteConversationTags: jest.fn().mockResolvedValue(undefined),
+    deleteAllUserMemories: jest.fn().mockResolvedValue(undefined),
+    deleteTransactions: jest.fn().mockResolvedValue(undefined),
+    deleteConfig: jest.fn().mockResolvedValue(undefined),
+    deleteAclEntries: jest.fn().mockResolvedValue(undefined),
+    updateUserPlugins: jest.fn(),
+    deleteAssistants: jest.fn().mockResolvedValue(undefined),
+    deleteUserById: jest.fn().mockResolvedValue(undefined),
+    deleteUserPrompts: jest.fn().mockResolvedValue(undefined),
+    deleteUserSkills: jest.fn().mockResolvedValue(undefined),
+    deleteMessages: jest.fn().mockResolvedValue(undefined),
+    deleteBalances: jest.fn().mockResolvedValue(undefined),
+    deleteActions: jest.fn().mockResolvedValue(undefined),
+    deletePresets: jest.fn().mockResolvedValue(undefined),
+    deleteUserKey: jest.fn().mockResolvedValue(undefined),
+    deleteToolCalls: jest.fn().mockResolvedValue(undefined),
+    deleteUserAgents: jest.fn().mockResolvedValue(undefined),
+    deleteTokens: jest.fn().mockResolvedValue(undefined),
+    deleteConvos: jest.fn().mockResolvedValue(undefined),
+    deleteFiles: jest.fn().mockResolvedValue(undefined),
+    updateUser: jest.fn(),
+    getUserById: jest.fn().mockResolvedValue(null),
+    findToken: jest.fn(),
+    getFiles: jest.fn().mockResolvedValue([]),
+    removeUserFromAllGroups: jest.fn().mockImplementation(async (userId) => {
+      const Group = _mongoose.models.Group;
+      await Group.updateMany({ memberIds: userId }, { $pullAll: { memberIds: [userId] } });
+    }),
+  };
+});
+
+jest.mock('~/server/services/PluginService', () => ({
+  updateUserPluginAuth: jest.fn(),
+  deleteUserPluginAuth: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('~/server/services/AuthService', () => ({
+  verifyEmail: jest.fn(),
+  resendVerificationEmail: jest.fn(),
+}));
+
+jest.mock('sharp', () =>
+  jest.fn(() => ({
+    metadata: jest.fn().mockResolvedValue({}),
+    toFormat: jest.fn().mockReturnThis(),
+    toBuffer: jest.fn().mockResolvedValue(Buffer.alloc(0)),
+  })),
+);
+
+jest.mock('@librechat/api', () => ({
+  needsRefresh: jest.fn(),
+  getNewS3URL: jest.fn(),
+  MCPOAuthHandler: {},
+  MCPTokenStorage: {},
+  normalizeHttpError: jest.fn(),
+  extractWebSearchEnvVars: jest.fn(),
+  violationCache: jest.fn(() => ({})),
+  deleteAllSharedLinksWithCleanup: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('~/server/services/Files/process', () => ({
+  processDeleteRequest: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('~/server/services/Config/getCachedTools', () => ({
+  invalidateCachedTools: jest.fn(),
+}));
+
+jest.mock('~/server/services/Config', () => ({
+  getAppConfig: jest.fn().mockResolvedValue({}),
+  invalidateCodeEnvironmentConfigCache: jest.fn().mockResolvedValue(undefined),
+  getMCPManager: jest.fn(),
+  getFlowStateManager: jest.fn(),
+  getMCPServersRegistry: jest.fn(),
+}));
+
+jest.mock('~/server/services/Endpoints/agents/subagentThreadStore', () => ({
+  cancelAndDrainForOwner: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('~/server/services/Agents/triggers', () => ({}));
+jest.mock('~/server/services/Schedules', () => ({}));
+jest.mock('~/server/services/MCP/oauthCleanup', () => ({}));
+jest.mock('~/server/services/MCPAuthorizationFenceRetry', () => ({}));
+
+jest.mock('~/cache', () => ({
+  getLogStores: jest.fn(),
+}));
+
+let mongoServer;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  await mongoose.connect(mongoServer.getUri());
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
+
+afterEach(async () => {
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    await collections[key].deleteMany({});
+  }
+});
+
+const { deleteUserData } = require('./UserController');
+const deleteUserController = async (req, res) => {
+  try {
+    await deleteUserData(req, req.user);
+    return res.status(200).send({ message: 'User deleted' });
+  } catch {
+    return res.status(500).json({ message: 'Something went wrong.' });
+  }
+};
+const { Group } = require('~/db/models');
+const { deleteConvos } = require('~/models');
+
+describe('deleteUserController', () => {
+  const mockRes = {
+    status: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 200 on successful deletion', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const req = { user: { id: userId.toString(), _id: userId, email: 'test@test.com' } };
+
+    await deleteUserController(req, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.send).toHaveBeenCalledWith({ message: 'User deleted' });
+  });
+
+  it('should remove the user from all groups via $pullAll', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const userIdStr = userId.toString();
+    const otherUser = new mongoose.Types.ObjectId().toString();
+
+    await Group.create([
+      { name: 'Group A', memberIds: [userIdStr, otherUser], source: 'local' },
+      { name: 'Group B', memberIds: [userIdStr], source: 'local' },
+      { name: 'Group C', memberIds: [otherUser], source: 'local' },
+    ]);
+
+    const req = { user: { id: userIdStr, _id: userId, email: 'del@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    const groups = await Group.find({}).sort({ name: 1 }).lean();
+    expect(groups[0].memberIds).toEqual([otherUser]);
+    expect(groups[1].memberIds).toEqual([]);
+    expect(groups[2].memberIds).toEqual([otherUser]);
+  });
+
+  it('should handle user that exists in no groups', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    await Group.create({ name: 'Empty', memberIds: ['someone-else'], source: 'local' });
+
+    const req = { user: { id: userId.toString(), _id: userId, email: 'no-groups@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    const group = await Group.findOne({ name: 'Empty' }).lean();
+    expect(group.memberIds).toEqual(['someone-else']);
+  });
+
+  it('should remove duplicate memberIds if the user appears more than once', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const userIdStr = userId.toString();
+
+    await Group.create({
+      name: 'Dupes',
+      memberIds: [userIdStr, 'other', userIdStr],
+      source: 'local',
+    });
+
+    const req = { user: { id: userIdStr, _id: userId, email: 'dupe@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    const group = await Group.findOne({ name: 'Dupes' }).lean();
+    expect(group.memberIds).toEqual(['other']);
+  });
+
+  it('should retain the user when conversation cleanup fails', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    deleteConvos.mockRejectedValueOnce(new Error('no convos'));
+    const { deleteUserById } = require('~/models');
+
+    const req = { user: { id: userId.toString(), _id: userId, email: 'convos@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(deleteUserById).not.toHaveBeenCalled();
+  });
+
+  it('should return 500 when a critical operation fails', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const { deleteMessages } = require('~/models');
+    deleteMessages.mockRejectedValueOnce(new Error('db down'));
+
+    const req = { user: { id: userId.toString(), _id: userId, email: 'fail@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: 'Something went wrong.' });
+  });
+
+  it('should use string user.id (not ObjectId user._id) for memberIds removal', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const userIdStr = userId.toString();
+    const otherUser = 'other-user-id';
+
+    await Group.create({
+      name: 'StringCheck',
+      memberIds: [userIdStr, otherUser],
+      source: 'local',
+    });
+
+    const req = { user: { id: userIdStr, _id: userId, email: 'stringcheck@test.com' } };
+    await deleteUserController(req, mockRes);
+
+    const group = await Group.findOne({ name: 'StringCheck' }).lean();
+    expect(group.memberIds).toEqual([otherUser]);
+    expect(group.memberIds).not.toContain(userIdStr);
+  });
+});
