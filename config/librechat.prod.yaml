@@ -44,6 +44,9 @@ interface:
     create: true
     share: true
     public: false
+  remoteAgents:
+    use: true
+    create: true
   peoplePicker:
     users: true
     groups: true
@@ -68,7 +71,6 @@ endpoints:
     capabilities:
       [
         'deferred_tools',
-        'execute_code',
         'file_search',
         'web_search',
         'actions',
