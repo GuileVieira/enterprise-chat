@@ -11,6 +11,7 @@ import type { TSkill } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import { collectSkillDirectories, createSkillImportFile } from '../utils';
+import { splitSkillArchive } from '../utils/skillArchive';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -20,6 +21,7 @@ interface UploadSkillDialogProps {
 }
 
 interface BatchResult {
+  id: string;
   name: string;
   path: string;
   status: 'pending' | 'success' | 'warning' | 'error';
@@ -38,6 +40,13 @@ interface SkillImportSummary {
   errors: Array<{ path: string; error?: string }>;
 }
 
+interface BatchFile {
+  id: string;
+  name: string;
+  path: string;
+  getFiles: () => Promise<File[]>;
+}
+
 function getImportSummary(skill: TSkill): SkillImportSummary | undefined {
   return (skill as TSkill & { _importSummary?: SkillImportSummary })._importSummary;
 }
@@ -53,6 +62,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
   const { showToast } = useToastContext();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const directoryInputRef = useRef<HTMLInputElement | null>(null);
+  const importLockRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isBatchImporting, setIsBatchImporting] = useState(false);
   const [batchResults, setBatchResults] = useState<BatchResult[]>([]);
@@ -77,7 +87,11 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
   const getErrorMessage = useCallback(
     (error: unknown) => {
-      if (error instanceof Error && !('response' in error)) return error.message;
+      if (error instanceof Error && !('response' in error)) {
+        return error.message === 'com_ui_create_skill_upload_error'
+          ? localize('com_ui_create_skill_upload_error')
+          : error.message;
+      }
       const data = (error as { response?: { data?: { error?: string; message?: string } } })
         ?.response?.data;
       return data?.message ?? data?.error ?? localize('com_ui_create_skill_upload_error');
@@ -85,34 +99,124 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     [localize],
   );
 
-  const importFile = useCallback(
-    async (file: File) => {
+  const assertFileSize = useCallback(
+    (file: File) => {
       if (file.size > skillImportSizeLimit) {
         throw new Error(localize('com_ui_skill_upload_size_error', { 0: displayedSizeLimit }));
       }
+    },
+    [displayedSizeLimit, localize, skillImportSizeLimit],
+  );
+
+  const importFile = useCallback(
+    async (file: File) => {
+      assertFileSize(file);
       const formData = new FormData();
       formData.append('file', file, file.name);
       return importMutation.mutateAsync(formData);
     },
-    [displayedSizeLimit, importMutation, localize, skillImportSizeLimit],
+    [assertFileSize, importMutation],
   );
 
-  const handleFile = useCallback(
-    async (file: File) => {
-      if (isImporting) return;
+  const importBatch = useCallback(
+    async (files: BatchFile[], navigateAfterSingle = false) => {
+      if (isImporting || importLockRef.current) return;
+      importLockRef.current = true;
+      setIsBatchImporting(true);
       try {
-        const skill = await importFile(file);
-        const summary = getImportSummary(skill);
+        setBatchResults(files.map(({ id, name, path }) => ({ id, name, path, status: 'pending' })));
+        let succeeded = 0;
+        let total = files.length;
+
+        for (const item of files) {
+          try {
+            const preparedFiles = await item.getFiles();
+            const preparedItems = preparedFiles.map((file, index) => ({
+              id: `${item.id}-${index}`,
+              name: file.name,
+              path: file.name,
+              file,
+            }));
+            total += preparedItems.length - 1;
+            if (preparedItems.length > 1) {
+              setBatchResults((results) =>
+                results.flatMap((result) =>
+                  result.id === item.id
+                    ? preparedItems.map(({ id, name, path }) => ({
+                        id,
+                        name,
+                        path,
+                        status: 'pending' as const,
+                      }))
+                    : [result],
+                ),
+              );
+            }
+            for (const prepared of preparedItems) {
+              try {
+                const skill = await importFile(prepared.file);
+                const summary = getImportSummary(skill);
+                succeeded++;
+                if (navigateAfterSingle && files.length === 1 && preparedItems.length === 1) {
+                  showToast({
+                    status: summary?.filesFailed ? 'warning' : 'success',
+                    message: summary?.filesFailed
+                      ? localize('com_ui_skill_import_with_ignored', { 0: summary.filesFailed })
+                      : localize('com_ui_skill_created'),
+                  });
+                  setIsOpen(false);
+                  navigate(`/skills/${skill._id}`);
+                  return;
+                }
+                setBatchResults((results) =>
+                  results.map((result) =>
+                    result.id === (preparedItems.length > 1 ? prepared.id : item.id)
+                      ? {
+                          ...result,
+                          status: summary?.filesFailed ? 'warning' : 'success',
+                          error: summary?.errors
+                            .map(({ path, error }) => `${path}: ${error ?? 'ignored'}`)
+                            .join('; '),
+                        }
+                      : result,
+                  ),
+                );
+              } catch (error) {
+                if (navigateAfterSingle && files.length === 1 && preparedItems.length === 1) {
+                  showToast({ status: 'error', message: getErrorMessage(error) });
+                  return;
+                }
+                setBatchResults((results) =>
+                  results.map((result) =>
+                    result.id === (preparedItems.length > 1 ? prepared.id : item.id)
+                      ? { ...result, status: 'error', error: getErrorMessage(error) }
+                      : result,
+                  ),
+                );
+              }
+            }
+          } catch (error) {
+            if (navigateAfterSingle && files.length === 1) {
+              showToast({ status: 'error', message: getErrorMessage(error) });
+              return;
+            }
+            setBatchResults((results) =>
+              results.map((result) =>
+                result.id === item.id
+                  ? { ...result, status: 'error', error: getErrorMessage(error) }
+                  : result,
+              ),
+            );
+          }
+        }
+
         showToast({
-          status: summary?.filesFailed ? 'warning' : 'success',
-          message: summary?.filesFailed
-            ? localize('com_ui_skill_import_with_ignored', { 0: summary.filesFailed })
-            : localize('com_ui_skill_created'),
+          status: succeeded === total ? 'success' : 'warning',
+          message: localize('com_ui_skill_folder_result', { 0: succeeded, 1: total }),
         });
-        setIsOpen(false);
-        navigate(`/skills/${skill._id}`);
-      } catch (error) {
-        showToast({ status: 'error', message: getErrorMessage(error) });
+      } finally {
+        importLockRef.current = false;
+        setIsBatchImporting(false);
       }
     },
     [getErrorMessage, importFile, isImporting, localize, navigate, setIsOpen, showToast],
@@ -128,69 +232,61 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
         return;
       }
 
-      setIsBatchImporting(true);
-      setBatchResults(directories.map(({ name, path }) => ({ name, path, status: 'pending' })));
-      let succeeded = 0;
-
-      for (const directory of directories) {
-        try {
-          const skill = await importFile(await createSkillImportFile(directory));
-          const summary = getImportSummary(skill);
-          succeeded++;
-          setBatchResults((results) =>
-            results.map((result) =>
-              result.path === directory.path
-                ? {
-                    ...result,
-                    status: summary?.filesFailed ? 'warning' : 'success',
-                    error: summary?.errors
-                      .map(({ path, error }) => `${path}: ${error ?? 'ignored'}`)
-                      .join('; '),
-                  }
-                : result,
-            ),
-          );
-        } catch (error) {
-          setBatchResults((results) =>
-            results.map((result) =>
-              result.path === directory.path
-                ? { ...result, status: 'error', error: getErrorMessage(error) }
-                : result,
-            ),
-          );
-        }
-      }
-
-      setIsBatchImporting(false);
-      showToast({
-        status: succeeded === directories.length ? 'success' : 'warning',
-        message: localize('com_ui_skill_folder_result', { 0: succeeded, 1: directories.length }),
-      });
+      await importBatch(
+        directories.map((directory, index) => ({
+          id: `directory-${index}`,
+          name: directory.name,
+          path: directory.path,
+          getFiles: async () => [await createSkillImportFile(directory)],
+        })),
+      );
     },
-    [getErrorMessage, importFile, isImporting, localize, showToast],
+    [importBatch, isImporting, localize, showToast],
   );
 
   const handleFileInput = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        handleFile(file);
-      }
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
       event.target.value = '';
+      if (files.length > 0) {
+        await importBatch(
+          files.map((file, index) => ({
+            id: `file-${index}`,
+            name: file.name,
+            path: file.name,
+            getFiles: async () => {
+              assertFileSize(file);
+              return splitSkillArchive(file, skillImportSizeLimit);
+            },
+          })),
+          true,
+        );
+      }
     },
-    [handleFile],
+    [assertFileSize, importBatch, skillImportSizeLimit],
   );
 
   const handleDrop = useCallback(
-    (event: React.DragEvent) => {
+    async (event: React.DragEvent) => {
       event.preventDefault();
       setIsDragging(false);
-      const file = event.dataTransfer.files?.[0];
-      if (file) {
-        handleFile(file);
+      const files = Array.from(event.dataTransfer.files ?? []);
+      if (files.length > 0) {
+        await importBatch(
+          files.map((file, index) => ({
+            id: `drop-${index}`,
+            name: file.name,
+            path: file.name,
+            getFiles: async () => {
+              assertFileSize(file);
+              return splitSkillArchive(file, skillImportSizeLimit);
+            },
+          })),
+          true,
+        );
       }
     },
-    [handleFile],
+    [assertFileSize, importBatch, skillImportSizeLimit],
   );
 
   return (
@@ -241,7 +337,11 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             {batchResults.length > 0 && (
               <ul className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-border-light p-2 text-xs">
                 {batchResults.map((result) => (
-                  <li key={result.path} className="flex items-start justify-between gap-3">
+                  <li
+                    key={result.id}
+                    data-skill-import-result
+                    className="flex items-start justify-between gap-3"
+                  >
                     <span className="truncate text-text-primary">{result.name}</span>
                     <span
                       className={cn(
@@ -276,6 +376,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             ref={fileInputRef}
             type="file"
             accept=".zip,.skill,.md"
+            multiple
             className="hidden"
             onChange={handleFileInput}
           />

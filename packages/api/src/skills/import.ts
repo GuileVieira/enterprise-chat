@@ -825,6 +825,21 @@ async function handleZip(
     return res.status(400).json({ error: `Too many files in archive (max ${limits.maxEntries})` });
   }
 
+  // Each request creates one skill; the UI splits multi-skill archives before uploading.
+  const skillDocuments = entries.filter((entryPath) => {
+    const entry = zip.files[entryPath];
+    return (
+      !entry.dir &&
+      entryPath.replace(/\\/g, '/').split('/').at(-1)?.toUpperCase() === SKILL_MD.toUpperCase()
+    );
+  });
+  if (skillDocuments.length > 1) {
+    return res.status(400).json({
+      error:
+        'Archive contains multiple skills. Import it through the skill upload dialog to split them.',
+    });
+  }
+
   // Find SKILL.md — at root or one level deep
   let skillMdPath: string | null = null;
   let prefix = '';

@@ -6900,13 +6900,13 @@
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/UploadSkillDialog.tsx": {
-    "mtime": 1789431829.194637,
-    "ast_hash": "909ae466eec330c5f8c671776a8e4f7c",
+    "mtime": 1789506783.75465,
+    "ast_hash": "a950b54c6aa1d402b3684929b9b6751c",
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/__tests__/UploadSkillDialog.spec.tsx": {
-    "mtime": 1789424189.7541947,
-    "ast_hash": "62003d1a7d2d378a9e6f7e0608fa3c7b",
+    "mtime": 1789506783.7550776,
+    "ast_hash": "1588d94a11c821870c4bda0bc3b7ec95",
     "semantic_hash": ""
   },
   "client/src/components/Skills/dialogs/index.ts": {
@@ -11575,8 +11575,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/skills/__tests__/import.test.ts": {
-    "mtime": 1789420320.4162102,
-    "ast_hash": "ff1955d64c855c758636857873ec3972",
+    "mtime": 1789506569.66808,
+    "ast_hash": "50645d74ec3c3bed56082fb190593ec2",
     "semantic_hash": ""
   },
   "packages/api/src/skills/__tests__/skillStates.test.ts": {
@@ -11595,8 +11595,8 @@
     "semantic_hash": ""
   },
   "packages/api/src/skills/import.ts": {
-    "mtime": 1789431544.748232,
-    "ast_hash": "2f5fa309f477b1d3953739f366f4567c",
+    "mtime": 1789506596.8373024,
+    "ast_hash": "9d1f8ab928ce0a61e46847e981858f13",
     "semantic_hash": ""
   },
   "packages/api/src/skills/index.ts": {
@@ -28062,6 +28062,16 @@
   "packages/api/src/prompts/systemPrompt.ts": {
     "mtime": 1789504375.3753443,
     "ast_hash": "58105ba66e6d472dd1521b435a66cb98",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/utils/skillArchive.spec.ts": {
+    "mtime": 1789506717.1815999,
+    "ast_hash": "866981b20d36d70a18cc4583fbd52a80",
+    "semantic_hash": ""
+  },
+  "client/src/components/Skills/utils/skillArchive.ts": {
+    "mtime": 1789506764.7541158,
+    "ast_hash": "30c3237d20c6f6764d2bdf3b04156088",
     "semantic_hash": ""
   }
 }

@@ -79,6 +79,25 @@ function mockZipRequest(buffer: Buffer, config?: ImportRequest['config']): Impor
   } as unknown as ImportRequest;
 }
 
+it('rejects an unsplit multi-skill archive before creating or mixing any skill files', async () => {
+  const zip = new JSZip();
+  zip.file('ads/SKILL.md', '---\nname: ads\ndescription: Ads\n---\nAds');
+  zip.file('copy/SKILL.md', '---\nname: copy\ndescription: Copy\n---\nCopy');
+  zip.file('copy/references/example.md', 'Private copy reference');
+  const deps = mockImportDeps();
+  const res = mockResponse();
+
+  await createImportHandler(deps)(
+    mockZipRequest(await zip.generateAsync({ type: 'nodebuffer' })),
+    res,
+  );
+
+  expect(res.statusCode).toBe(400);
+  expect(deps.createSkill).not.toHaveBeenCalled();
+  expect(deps.upsertSkillFile).not.toHaveBeenCalled();
+  expect(deps.saveBuffer).not.toHaveBeenCalled();
+});
+
 function mockMarkdownRequest(
   content: string,
   originalname = 'bad-frontmatter.md',

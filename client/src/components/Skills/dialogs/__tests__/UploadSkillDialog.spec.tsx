@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import JSZip from 'jszip';
 import type { ReactNode } from 'react';
 import type { FileConfigInput } from 'librechat-data-provider';
 import UploadSkillDialog from '../UploadSkillDialog';
@@ -84,6 +85,18 @@ function getFileInput(container: HTMLElement): HTMLInputElement {
   return input;
 }
 
+function skillFile(name: string): File {
+  return new File(['---\nname: test\ndescription: test skill\n---'], name);
+}
+
+async function skillArchive(name: string, roots: string[]): Promise<File> {
+  const zip = new JSZip();
+  roots.forEach((root) => {
+    zip.file(`${root}/SKILL.md`, `---\nname: ${root}\ndescription: test skill\n---`);
+  });
+  return new File([await zip.generateAsync({ type: 'blob' })], name);
+}
+
 function directoryFile(path: string): File {
   const file = new File(['---\nname: test\ndescription: test skill\n---'], 'SKILL.md');
   Object.defineProperty(file, 'webkitRelativePath', { value: path });
@@ -143,9 +156,7 @@ describe('UploadSkillDialog', () => {
   it('uploads files exactly at the configured skill import limit', async () => {
     const appendSpy = jest.spyOn(FormData.prototype, 'append');
     const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
-    const file = new File([new Uint8Array(1024 * 1024)], 'exact-limit.skill', {
-      type: 'application/zip',
-    });
+    const file = new File([new Uint8Array(1024 * 1024)], 'exact-limit.md');
 
     fireEvent.change(getFileInput(container), {
       target: {
@@ -153,18 +164,15 @@ describe('UploadSkillDialog', () => {
       },
     });
 
-    expect(mockShowToast).not.toHaveBeenCalled();
-    expect(appendSpy).toHaveBeenCalledWith('file', file, file.name);
     await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledWith(expect.any(FormData)));
+    expect(appendSpy).toHaveBeenCalledWith('file', file, file.name);
     appendSpy.mockRestore();
   });
 
   it('uploads files under the configured skill import limit', async () => {
     const appendSpy = jest.spyOn(FormData.prototype, 'append');
     const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
-    const file = new File([new Uint8Array(1024)], 'small.skill', {
-      type: 'application/zip',
-    });
+    const file = new File([new Uint8Array(1024)], 'small.md');
 
     fireEvent.change(getFileInput(container), {
       target: {
@@ -172,10 +180,121 @@ describe('UploadSkillDialog', () => {
       },
     });
 
-    expect(mockShowToast).not.toHaveBeenCalled();
-    expect(appendSpy).toHaveBeenCalledWith('file', file, file.name);
     await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledWith(expect.any(FormData)));
+    expect(appendSpy).toHaveBeenCalledWith('file', file, file.name);
     appendSpy.mockRestore();
+  });
+
+  it('preserves navigation after a single file import', async () => {
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.change(getFileInput(container), {
+      target: { files: [skillFile('single.md')] },
+    });
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/skills/skill-1'));
+    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
+
+    fireEvent.change(getFileInput(container), {
+      target: { files: [skillFile('single-again.md')] },
+    });
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
+  });
+
+  it('imports 40 selected files independently, including duplicate filenames', async () => {
+    let call = 0;
+    mockMutateAsync.mockImplementation(() => {
+      call++;
+      return call === 20
+        ? Promise.reject(new Error('Duplicate skill'))
+        : Promise.resolve({ _id: call });
+    });
+    const files = Array.from({ length: 40 }, (_, index) =>
+      skillFile(index === 19 || index === 20 ? 'duplicate.md' : `skill-${index}.md`),
+    );
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.change(getFileInput(container), { target: { files } });
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(40));
+    expect(screen.getAllByText('duplicate.md')).toHaveLength(2);
+    expect(await screen.findAllByText('Imported')).toHaveLength(39);
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith({
+      status: 'warning',
+      message: '39 of 40 skills imported',
+    });
+  });
+
+  it('imports multiple dropped files', async () => {
+    render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.drop(screen.getByRole('button', { name: /drag and drop/i }), {
+      dataTransfer: { files: [skillFile('one.md'), skillFile('two.md')] },
+    });
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('splits a multi-skill archive into independent imports', async () => {
+    const archive = await skillArchive('skills.zip', ['one', 'two']);
+    const appendSpy = jest.spyOn(FormData.prototype, 'append');
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.change(getFileInput(container), { target: { files: [archive] } });
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
+    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(File), 'one.skill');
+    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(File), 'two.skill');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    appendSpy.mockRestore();
+  });
+
+  it('continues after one selected archive cannot be prepared', async () => {
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.change(getFileInput(container), {
+      target: { files: [skillFile('corrupt.zip'), skillFile('valid.md')] },
+    });
+
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Imported')).toBeInTheDocument();
+    expect(screen.getByText('Failed').closest('span')).toHaveAttribute(
+      'title',
+      'Failed to read the uploaded file',
+    );
+    expect(mockShowToast).toHaveBeenCalledWith({
+      status: 'warning',
+      message: '1 of 2 skills imported',
+    });
+  });
+
+  it('ignores another dropped batch while a batch is importing', async () => {
+    let resolveFirst: ((value: { _id: string }) => void) | undefined;
+    mockMutateAsync
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ _id: string }>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockResolvedValue({ _id: 'skill-next' });
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    fireEvent.change(getFileInput(container), {
+      target: { files: [skillFile('one.md'), skillFile('two.md')] },
+    });
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(1));
+    fireEvent.drop(screen.getByRole('button', { name: /drag and drop/i }), {
+      dataTransfer: { files: [skillFile('three.md'), skillFile('four.md')] },
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    resolveFirst?.({ _id: 'skill-first' });
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalledTimes(2));
   });
 
   it('imports every skill subfolder from a selected parent folder', async () => {
