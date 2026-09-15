@@ -163,7 +163,7 @@ html {
   --link-visited: 147 51 234;
   --accent-primary: 18 110 107;
   --accent-primary-hover: 10 79 83;
-  --ring-primary: 120 132 99;
+  --ring-primary: 71 85 105;
   --header-primary: var(--white);
   --header-hover: 239 238 233;
   --header-button-hover: 233 231 225;
@@ -183,8 +183,8 @@ html {
   --surface-tertiary-alt: 251 250 247;
   --surface-dialog: 251 250 247;
   --surface-overlay: var(--gray-500);
-  --surface-submit: 52 49 41;
-  --surface-submit-hover: 67 63 53;
+  --surface-submit: 71 85 105;
+  --surface-submit-hover: 51 65 85;
   --surface-destructive: var(--red-700);
   --surface-destructive-hover: var(--red-800);
   --surface-chat: 252 251 248;
@@ -307,8 +307,9 @@ html {
   --surface-tertiary-alt: 56 56 56;
   --surface-dialog: 32 32 32;
   --surface-overlay: 0 0 0;
-  --surface-submit: 79 90 66;
-  --surface-submit-hover: 96 110 80;
+  --ring-primary: 148 163 184;
+  --surface-submit: 100 116 139;
+  --surface-submit-hover: 71 85 105;
   --surface-destructive: var(--red-800);
   --surface-destructive-hover: var(--red-900);
   --surface-chat: 32 32 32;
@@ -2093,15 +2094,30 @@ html {
 
 .webkit-dark-styles,
 .webkit-dark-styles:focus {
-  background-clip: content-box;
-  -webkit-box-shadow: 0 0 0 50vh #fff inset;
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  background-clip: border-box;
+  caret-color: rgb(var(--text-primary));
+  -webkit-box-shadow: 0 0 0 50vh rgb(var(--surface-primary)) inset;
 }
 
-.dark .webkit-dark-styles,
-.dark .webkit-dark-styles:focus {
-  -webkit-text-fill-color: #fff;
-  background-clip: content-box;
-  -webkit-box-shadow: 0 0 0 50vh #0d0d0d inset;
+.webkit-dark-styles:-webkit-autofill,
+.webkit-dark-styles:-webkit-autofill:hover,
+.webkit-dark-styles:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  caret-color: rgb(var(--text-primary));
+  -webkit-box-shadow: 0 0 0 50vh rgb(var(--surface-primary)) inset;
+}
+
+.webkit-dark-styles::selection {
+  background-color: rgb(var(--surface-submit));
+  color: rgb(var(--text-on-status));
+  -webkit-text-fill-color: rgb(var(--text-on-status));
+}
+
+html.high-contrast .webkit-dark-styles::selection {
+  background-color: rgb(var(--text-primary));
+  color: rgb(var(--surface-primary));
+  -webkit-text-fill-color: rgb(var(--surface-primary));
 }
 
 /* Ordered Listing */

@@ -106,7 +106,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
                   : (value) => validateEmail(value, localize('com_auth_email_pattern')),
               })}
               aria-invalid={!!errors.email}
-              className="webkit-dark-styles transition-color peer w-full rounded-2xl border border-border-light bg-surface-primary px-3.5 pb-2.5 pr-12 pt-3 text-text-primary shadow-sm duration-200 hover:border-border-medium focus:border-surface-submit focus:outline-none focus:ring-2 focus:ring-ring-primary/20"
+              className="webkit-dark-styles transition-color peer h-auto w-full rounded-2xl border border-border-light bg-surface-primary px-3.5 pb-2.5 pr-12 pt-3 text-text-primary shadow-sm duration-200 hover:border-border-medium focus:border-surface-submit focus:outline-none focus:ring-2 focus:ring-ring-primary/20"
               placeholder=" "
             />
             <label

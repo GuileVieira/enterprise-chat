@@ -23,8 +23,8 @@ export const darkTheme: IThemeRGB = {
   'rgb-accent-primary': '65 167 157', // #41a79d
   'rgb-accent-primary-hover': '109 200 185', // #6dc8b9
 
-  // Ring colors (not defined in dark mode, using default)
-  'rgb-ring-primary': '145 163 122', // #595959 (gray-500)
+  // Ring colors
+  'rgb-ring-primary': '148 163 184', // #94a3b8 (slate-400)
 
   // Header colors
   'rgb-header-primary': '28 28 28', // #2f2f2f (gray-700)
@@ -48,8 +48,8 @@ export const darkTheme: IThemeRGB = {
   'rgb-surface-tertiary-alt': '56 56 56', // #2f2f2f (gray-700)
   'rgb-surface-dialog': '32 32 32', // #121212 (legacy dark dialog)
   'rgb-surface-overlay': '0 0 0', // #000 (black)
-  'rgb-surface-submit': '79 90 66', // #047857 (green-700)
-  'rgb-surface-submit-hover': '96 110 80', // #065f46 (green-800)
+  'rgb-surface-submit': '100 116 139', // #64748b (slate-500)
+  'rgb-surface-submit-hover': '71 85 105', // #475569 (slate-600)
   'rgb-surface-destructive': '153 27 27', // #991b1b (red-800)
   'rgb-surface-destructive-hover': '127 29 29', // #7f1d1d (red-900)
   'rgb-surface-chat': '32 32 32', // #2f2f2f (gray-700)

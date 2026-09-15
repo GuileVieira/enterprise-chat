@@ -24,7 +24,7 @@ export const defaultTheme: IThemeRGB = {
   'rgb-accent-primary-hover': '10 79 83', // #0a4f53
 
   // Ring colors
-  'rgb-ring-primary': '89 89 89', // #595959 (gray-500)
+  'rgb-ring-primary': '71 85 105', // #475569 (slate-600)
 
   // Header colors
   'rgb-header-primary': '255 255 255', // #fff (white)
@@ -48,8 +48,8 @@ export const defaultTheme: IThemeRGB = {
   'rgb-surface-tertiary-alt': '255 255 255', // #fff (white)
   'rgb-surface-dialog': '255 255 255', // #fff (white)
   'rgb-surface-overlay': '89 89 89', // #595959 (gray-500)
-  'rgb-surface-submit': '52 49 41', // #047857 (green-700)
-  'rgb-surface-submit-hover': '67 63 53', // #065f46 (green-800)
+  'rgb-surface-submit': '71 85 105', // #475569 (slate-600)
+  'rgb-surface-submit-hover': '51 65 85', // #334155 (slate-700)
   'rgb-surface-destructive': '185 28 28', // #b91c1c (red-700)
   'rgb-surface-destructive-hover': '153 27 27', // #991b1b (red-800)
   'rgb-surface-chat': '255 255 255', // #fff (white)
