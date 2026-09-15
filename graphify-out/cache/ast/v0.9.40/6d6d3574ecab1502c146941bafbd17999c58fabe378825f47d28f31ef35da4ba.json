@@ -1,0 +1,127 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_readme_what_s_new_in_v0_8_8_rc3",
+      "label": "\ud83d\ude80 What's New in v0.8.8-rc3",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L54"
+    },
+    {
+      "id": "$graphify-root$_readme_features",
+      "label": "\u2728 Features",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L70"
+    },
+    {
+      "id": "$graphify-root$_readme_all_in_one_ai_conversations_with_orqest",
+      "label": "\ud83e\udeb6 All-In-One AI Conversations with Orqest",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L182"
+    },
+    {
+      "id": "$graphify-root$_readme_resources",
+      "label": "\ud83c\udf10 Resources",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L192"
+    },
+    {
+      "id": "$graphify-root$_readme_changelog",
+      "label": "\ud83d\udcdd Changelog",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L205"
+    },
+    {
+      "id": "$graphify-root$_readme_contributions",
+      "label": "\u2728 Contributions",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L215"
+    },
+    {
+      "id": "$graphify-root$_readme_special_thanks",
+      "label": "\ud83c\udf89 Special Thanks",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L223"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_readme_md",
+      "target": "$graphify-root$_readme_what_s_new_in_v0_8_8_rc3",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_md",
+      "target": "$graphify-root$_readme_features",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_features",
+      "target": "$graphify-root$_readme_all_in_one_ai_conversations_with_orqest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L182",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_features",
+      "target": "$graphify-root$_readme_resources",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L192",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_features",
+      "target": "$graphify-root$_readme_changelog",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L205",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_features",
+      "target": "$graphify-root$_readme_contributions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L215",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_readme_features",
+      "target": "$graphify-root$_readme_special_thanks",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L223",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

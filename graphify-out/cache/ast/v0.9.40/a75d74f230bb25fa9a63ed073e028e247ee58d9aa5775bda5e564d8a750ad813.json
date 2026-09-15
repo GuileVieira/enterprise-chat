@@ -1,0 +1,79 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_docs_run_files_md",
+      "label": "run_files.md",
+      "file_type": "document",
+      "source_file": "docs/run_files.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_docs_run_files_run_scoped_files_for_subagents",
+      "label": "Run-scoped files for subagents",
+      "file_type": "document",
+      "source_file": "docs/run_files.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_docs_run_files_reading_and_publishing",
+      "label": "Reading and publishing",
+      "file_type": "document",
+      "source_file": "docs/run_files.md",
+      "source_location": "L31"
+    },
+    {
+      "id": "$graphify-root$_docs_run_files_execution_and_recovery",
+      "label": "Execution and recovery",
+      "file_type": "document",
+      "source_file": "docs/run_files.md",
+      "source_location": "L79"
+    },
+    {
+      "id": "$graphify-root$_docs_run_files_sdk_dependency_and_current_support",
+      "label": "SDK dependency and current support",
+      "file_type": "document",
+      "source_file": "docs/run_files.md",
+      "source_location": "L104"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_docs_run_files_md",
+      "target": "$graphify-root$_docs_run_files_run_scoped_files_for_subagents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/run_files.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_run_files_run_scoped_files_for_subagents",
+      "target": "$graphify-root$_docs_run_files_reading_and_publishing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/run_files.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_run_files_run_scoped_files_for_subagents",
+      "target": "$graphify-root$_docs_run_files_execution_and_recovery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/run_files.md",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_run_files_run_scoped_files_for_subagents",
+      "target": "$graphify-root$_docs_run_files_sdk_dependency_and_current_support",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/run_files.md",
+      "source_location": "L104",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

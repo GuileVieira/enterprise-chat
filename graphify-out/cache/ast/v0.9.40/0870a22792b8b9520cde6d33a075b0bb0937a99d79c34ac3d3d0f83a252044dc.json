@@ -1,0 +1,335 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_md",
+      "label": "documentdb-compat.md",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "label": "Amazon DocumentDB Compatibility Assessment (issue #14488)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_executive_summary",
+      "label": "Executive summary",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L18"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_incompatibilities_fixed_in_this_pr",
+      "label": "Proven incompatibilities \u2014 fixed in this PR",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L34"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_1_acceptterms_pipeline_update_now_p0_blocked_login",
+      "label": "1. `acceptTerms` pipeline update + `$$NOW` (P0 \u2014 blocked login)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L36"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_2_decrementtagcounts_pipeline_update_p1_silent_tag_count_drift",
+      "label": "2. `decrementTagCounts` pipeline update (P1 \u2014 silent tag-count drift)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L58"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_3_extendfilesttl_pipeline_update_p1_files_usage_ttl_holds_fail",
+      "label": "3. `extendFilesTTL` pipeline update (P1 \u2014 `/files/usage` TTL holds fail)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L71"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_made_loud_partial_indexes_p1_on_5_0_elastic",
+      "label": "Proven, made loud \u2014 partial indexes (P1 on < 5.0 / elastic)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L85"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_compatible_no_action_needed",
+      "label": "Proven compatible \u2014 no action needed",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L112"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_deployment_requirements_documentation_not_code",
+      "label": "Deployment requirements (documentation, not code)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L136"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_document_as_unsupported_elastic_clusters",
+      "label": "Document as unsupported \u2014 elastic clusters",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L147"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_undetermined_honest_gaps",
+      "label": "Undetermined \u2014 honest gaps",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L156"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_fixed_edge_cleanup_pipeline_update_every_version",
+      "label": "Proven, fixed \u2014 edge cleanup pipeline update (every version)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L185"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_fixed_concurrent_index_builds_every_version",
+      "label": "Proven, fixed \u2014 concurrent index builds (every version)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L199"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_regression_strategy",
+      "label": "Regression strategy",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L227"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_support_matrix_and_recommendation",
+      "label": "Support matrix and recommendation",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L241"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_live_verdicts_documentdb_5_0_0_2026_08_30",
+      "label": "Live verdicts (DocumentDB 5.0.0, 2026-08-30)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L258"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_correction_1_pipeline_updates_returned_after_this_document_was_written",
+      "label": "Correction 1 \u2014 pipeline updates returned after this document was written",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L274"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_correction_2_the_transaction_probe_reported_a_false_negative",
+      "label": "Correction 2 \u2014 the transaction probe reported a false negative",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L282"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_connection_requirements_for_the_live_suites",
+      "label": "Connection requirements for the live suites",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L292"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_method_sweep_2026_08_31",
+      "label": "Method sweep (2026-08-31)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L305"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_md",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_executive_summary",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_incompatibilities_fixed_in_this_pr",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_incompatibilities_fixed_in_this_pr",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_1_acceptterms_pipeline_update_now_p0_blocked_login",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_incompatibilities_fixed_in_this_pr",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_2_decrementtagcounts_pipeline_update_p1_silent_tag_count_drift",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_incompatibilities_fixed_in_this_pr",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_3_extendfilesttl_pipeline_update_p1_files_usage_ttl_holds_fail",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_made_loud_partial_indexes_p1_on_5_0_elastic",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_compatible_no_action_needed",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_deployment_requirements_documentation_not_code",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L136",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_document_as_unsupported_elastic_clusters",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L147",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_undetermined_honest_gaps",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L156",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_fixed_edge_cleanup_pipeline_update_every_version",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_proven_fixed_concurrent_index_builds_every_version",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_regression_strategy",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L227",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_support_matrix_and_recommendation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L241",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_live_verdicts_documentdb_5_0_0_2026_08_30",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L258",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_live_verdicts_documentdb_5_0_0_2026_08_30",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_correction_1_pipeline_updates_returned_after_this_document_was_written",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L274",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_live_verdicts_documentdb_5_0_0_2026_08_30",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_correction_2_the_transaction_probe_reported_a_false_negative",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L282",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_live_verdicts_documentdb_5_0_0_2026_08_30",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_connection_requirements_for_the_live_suites",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L292",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_amazon_documentdb_compatibility_assessment_issue_14488",
+      "target": "$graphify-root$_packages_data_schemas_misc_documentdb_documentdb_compat_method_sweep_2026_08_31",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/documentdb/documentdb-compat.md",
+      "source_location": "L305",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,0 +1,472 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "label": "logging.go",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L1"
+    },
+    {
+      "id": "langfuse_fanout_upstreamstatuserror",
+      "label": "upstreamStatusError",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L12"
+    },
+    {
+      "id": "langfuse_fanout_upstreamstatuserror_error",
+      "label": ".Error()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L16"
+    },
+    {
+      "id": "langfuse_fanout_gateway",
+      "label": "gateway",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20"
+    },
+    {
+      "id": "langfuse_fanout_gateway_writegatewayerror",
+      "label": ".writeGatewayError()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20"
+    },
+    {
+      "id": "http_responsewriter",
+      "label": "http.ResponseWriter",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "origin_file": "$graphify-root$/otel/langfuse-fanout/cmd/langfuse-fanout/logging.go"
+    },
+    {
+      "id": "http_request",
+      "label": "http.Request",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "origin_file": "$graphify-root$/otel/langfuse-fanout/cmd/langfuse-fanout/logging.go"
+    },
+    {
+      "id": "route",
+      "label": "route",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "origin_file": "$graphify-root$/otel/langfuse-fanout/cmd/langfuse-fanout/logging.go"
+    },
+    {
+      "id": "langfuse_fanout_gateway_loggatewayfailure",
+      "label": ".logGatewayFailure()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L25"
+    },
+    {
+      "id": "langfuse_fanout_gateway_loggatewaywarning",
+      "label": ".logGatewayWarning()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L38"
+    },
+    {
+      "id": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "label": "gatewayLogFields()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L44"
+    },
+    {
+      "id": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_routedestinationlabel",
+      "label": "routeDestinationLabel()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L54"
+    },
+    {
+      "id": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "label": "safeErrorMessage()",
+      "file_type": "code",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L64"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_errors",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L4",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_fmt",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L5",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_log_slog",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L6",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_net_http",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L7",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_net_url",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L8",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "go_pkg_strings",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L9",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "langfuse_fanout_upstreamstatuserror",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_upstreamstatuserror",
+      "target": "langfuse_fanout_upstreamstatuserror_error",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway",
+      "target": "langfuse_fanout_gateway_writegatewayerror",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_writegatewayerror",
+      "target": "http_responsewriter",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway_writegatewayerror",
+      "target": "http_request",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway_writegatewayerror",
+      "target": "route",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L20",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway",
+      "target": "langfuse_fanout_gateway_loggatewayfailure",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewayfailure",
+      "target": "http_request",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L25",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewayfailure",
+      "target": "route",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L25",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway",
+      "target": "langfuse_fanout_gateway_loggatewaywarning",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewaywarning",
+      "target": "http_request",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L38",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewaywarning",
+      "target": "route",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L38",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "target": "http_request",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L44",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "target": "route",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L44",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_routedestinationlabel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_routedestinationlabel",
+      "target": "route",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L54",
+      "weight": 1.0,
+      "context": "parameter_type"
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_go",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_writegatewayerror",
+      "target": "langfuse_fanout_gateway_loggatewayfailure",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewayfailure",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewayfailure",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L29",
+      "weight": 1.0
+    },
+    {
+      "source": "langfuse_fanout_gateway_loggatewaywarning",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "target": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_routedestinationlabel",
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L49",
+      "weight": 1.0
+    }
+  ],
+  "raw_calls": [
+    {
+      "caller_nid": "langfuse_fanout_upstreamstatuserror_error",
+      "callee": "Sprintf",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "fmt",
+      "import_path": "fmt",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L17"
+    },
+    {
+      "caller_nid": "langfuse_fanout_gateway_loggatewayfailure",
+      "callee": "Warn",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "slog",
+      "import_path": "log/slog",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L35"
+    },
+    {
+      "caller_nid": "langfuse_fanout_gateway_loggatewaywarning",
+      "callee": "Warn",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "slog",
+      "import_path": "log/slog",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L41"
+    },
+    {
+      "caller_nid": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_gatewaylogfields",
+      "callee": "normalizeMetricPath",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": null,
+      "import_path": null,
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L47"
+    },
+    {
+      "caller_nid": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_routedestinationlabel",
+      "callee": "HasPrefix",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "strings",
+      "import_path": "strings",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L55"
+    },
+    {
+      "caller_nid": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "callee": "As",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "errors",
+      "import_path": "errors",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L69"
+    },
+    {
+      "caller_nid": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "callee": "As",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "errors",
+      "import_path": "errors",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L73"
+    },
+    {
+      "caller_nid": "$graphify-root$_otel_langfuse_fanout_cmd_langfuse_fanout_logging_safeerrormessage",
+      "callee": "Sprintf",
+      "is_member_call": false,
+      "language": "go",
+      "receiver": "fmt",
+      "import_path": "fmt",
+      "source_file": "otel/langfuse-fanout/cmd/langfuse-fanout/logging.go",
+      "source_location": "L74"
+    }
+  ],
+  "go_imports": {
+    "errors": "errors",
+    "fmt": "fmt",
+    "slog": "log/slog",
+    "http": "net/http",
+    "url": "net/url",
+    "strings": "strings"
+  }
+}

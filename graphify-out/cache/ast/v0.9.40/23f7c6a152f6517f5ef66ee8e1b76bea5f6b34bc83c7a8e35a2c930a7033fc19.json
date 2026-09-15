@@ -1,0 +1,47 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_upgrading_md",
+      "label": "UPGRADING.md",
+      "file_type": "document",
+      "source_file": "UPGRADING.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_upgrading_upgrading_librechat",
+      "label": "Upgrading LibreChat",
+      "file_type": "document",
+      "source_file": "UPGRADING.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_upgrading_tenant_index_migration_v0_8_7_and_earlier_databases",
+      "label": "Tenant index migration (v0.8.7 and earlier databases)",
+      "file_type": "document",
+      "source_file": "UPGRADING.md",
+      "source_location": "L3"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_upgrading_md",
+      "target": "$graphify-root$_upgrading_upgrading_librechat",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "UPGRADING.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_upgrading_upgrading_librechat",
+      "target": "$graphify-root$_upgrading_tenant_index_migration_v0_8_7_and_earlier_databases",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "UPGRADING.md",
+      "source_location": "L3",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

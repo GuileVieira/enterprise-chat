@@ -1,0 +1,63 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_api_src_mcp_authority_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_mcp_authority_readme_mcp_authority_proof_rollout",
+      "label": "MCP authority proof rollout",
+      "file_type": "document",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_mcp_authority_readme_integration_fences",
+      "label": "Integration fences",
+      "file_type": "document",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L32"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_mcp_authority_readme_observability",
+      "label": "Observability",
+      "file_type": "document",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L57"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_api_src_mcp_authority_readme_md",
+      "target": "$graphify-root$_packages_api_src_mcp_authority_readme_mcp_authority_proof_rollout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_mcp_authority_readme_mcp_authority_proof_rollout",
+      "target": "$graphify-root$_packages_api_src_mcp_authority_readme_integration_fences",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_mcp_authority_readme_mcp_authority_proof_rollout",
+      "target": "$graphify-root$_packages_api_src_mcp_authority_readme_observability",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/mcp/authority/README.md",
+      "source_location": "L57",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

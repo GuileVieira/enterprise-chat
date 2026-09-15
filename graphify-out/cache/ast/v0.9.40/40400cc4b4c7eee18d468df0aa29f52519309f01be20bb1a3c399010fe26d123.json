@@ -1,0 +1,1645 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_json",
+      "label": "package.json",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_name",
+      "label": "name",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L2"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_version",
+      "label": "version",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L3"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_description",
+      "label": "description",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L4"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_type",
+      "label": "type",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_main",
+      "label": "main",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_module",
+      "label": "module",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_types",
+      "label": "types",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_sideeffects",
+      "label": "sideEffects",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_exports",
+      "label": "exports",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_exports_capabilities",
+      "label": "./capabilities",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L21"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_capabilities_import",
+      "label": "import",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L22"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_import_types",
+      "label": "types",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L23"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_import_default",
+      "label": "default",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L24"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_capabilities_require",
+      "label": "require",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L26"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_require_types",
+      "label": "types",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L27"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_require_default",
+      "label": "default",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L28"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_files",
+      "label": "files",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "ref_dist",
+      "label": "dist",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts",
+      "label": "scripts",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L35"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_clean",
+      "label": "clean",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L36"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_build",
+      "label": "build",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L37"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_build_watch",
+      "label": "build:watch",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L38"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_test",
+      "label": "test",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L39"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_test_ci",
+      "label": "test:ci",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L40"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_verify",
+      "label": "verify",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L41"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_b_clean",
+      "label": "b:clean",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L42"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_scripts_b_build",
+      "label": "b:build",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L43"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_repository",
+      "label": "repository",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L45"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_repository_type",
+      "label": "type",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L46"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_repository_url",
+      "label": "url",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L47"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_author",
+      "label": "author",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L49"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_license",
+      "label": "license",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L50"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_bugs",
+      "label": "bugs",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L51"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_bugs_url",
+      "label": "url",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L52"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_homepage",
+      "label": "homepage",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L54"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "label": "dependencies",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L55"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_directive",
+      "label": "mdast-util-directive",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L56"
+    },
+    {
+      "id": "mdast_util_directive",
+      "label": "mdast-util-directive",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L56"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_from_markdown",
+      "label": "mdast-util-from-markdown",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L57"
+    },
+    {
+      "id": "mdast_util_from_markdown",
+      "label": "mdast-util-from-markdown",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L57"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_gfm",
+      "label": "mdast-util-gfm",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L58"
+    },
+    {
+      "id": "mdast_util_gfm",
+      "label": "mdast-util-gfm",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L58"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_math",
+      "label": "mdast-util-math",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L59"
+    },
+    {
+      "id": "mdast_util_math",
+      "label": "mdast-util-math",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L59"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_directive",
+      "label": "micromark-extension-directive",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L60"
+    },
+    {
+      "id": "micromark_extension_directive",
+      "label": "micromark-extension-directive",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L60"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_gfm",
+      "label": "micromark-extension-gfm",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L61"
+    },
+    {
+      "id": "micromark_extension_gfm",
+      "label": "micromark-extension-gfm",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L61"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_llm_math",
+      "label": "micromark-extension-llm-math",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L62"
+    },
+    {
+      "id": "micromark_extension_llm_math",
+      "label": "micromark-extension-llm-math",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L62"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_util_decode_string",
+      "label": "micromark-util-decode-string",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L63"
+    },
+    {
+      "id": "micromark_util_decode_string",
+      "label": "micromark-util-decode-string",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L63"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "label": "devDependencies",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L65"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_types_express",
+      "label": "@types/express",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L66"
+    },
+    {
+      "id": "types_express",
+      "label": "@types/express",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L66"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_types_jest",
+      "label": "@types/jest",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L67"
+    },
+    {
+      "id": "types_jest",
+      "label": "@types/jest",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L67"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_types_node",
+      "label": "@types/node",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L68"
+    },
+    {
+      "id": "types_node",
+      "label": "@types/node",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L68"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_jest",
+      "label": "jest",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L69"
+    },
+    {
+      "id": "jest",
+      "label": "jest",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L69"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_jest_junit",
+      "label": "jest-junit",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L70"
+    },
+    {
+      "id": "jest_junit",
+      "label": "jest-junit",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L70"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_mongodb_memory_server",
+      "label": "mongodb-memory-server",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L71"
+    },
+    {
+      "id": "mongodb_memory_server",
+      "label": "mongodb-memory-server",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L71"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_rimraf",
+      "label": "rimraf",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L72"
+    },
+    {
+      "id": "rimraf",
+      "label": "rimraf",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L72"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_ts_node",
+      "label": "ts-node",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L73"
+    },
+    {
+      "id": "ts_node",
+      "label": "ts-node",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L73"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_tsdown",
+      "label": "tsdown",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L74"
+    },
+    {
+      "id": "tsdown",
+      "label": "tsdown",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L74"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_devdependencies_typescript",
+      "label": "typescript",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L75"
+    },
+    {
+      "id": "typescript",
+      "label": "typescript",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L75"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "label": "peerDependencies",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L77"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_jsonwebtoken",
+      "label": "jsonwebtoken",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L78"
+    },
+    {
+      "id": "jsonwebtoken",
+      "label": "jsonwebtoken",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L78"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_klona",
+      "label": "klona",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L79"
+    },
+    {
+      "id": "klona",
+      "label": "klona",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L79"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_librechat_data_provider",
+      "label": "librechat-data-provider",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L80"
+    },
+    {
+      "id": "librechat_data_provider",
+      "label": "librechat-data-provider",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L80"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_lodash",
+      "label": "lodash",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L81"
+    },
+    {
+      "id": "lodash",
+      "label": "lodash",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L81"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_meilisearch",
+      "label": "meilisearch",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L82"
+    },
+    {
+      "id": "meilisearch",
+      "label": "meilisearch",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L82"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_mongoose",
+      "label": "mongoose",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L83"
+    },
+    {
+      "id": "mongoose",
+      "label": "mongoose",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L83"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_nanoid",
+      "label": "nanoid",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L84"
+    },
+    {
+      "id": "nanoid",
+      "label": "nanoid",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L84"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston",
+      "label": "winston",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L85"
+    },
+    {
+      "id": "winston",
+      "label": "winston",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L85"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston_daily_rotate_file",
+      "label": "winston-daily-rotate-file",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L86"
+    },
+    {
+      "id": "winston_daily_rotate_file",
+      "label": "winston-daily-rotate-file",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L86"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_publishconfig",
+      "label": "publishConfig",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L88"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_publishconfig_registry",
+      "label": "registry",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L89"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_publishconfig_access",
+      "label": "access",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L90"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_package_keywords",
+      "label": "keywords",
+      "file_type": "code",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92"
+    },
+    {
+      "id": "ref_mongoose",
+      "label": "mongoose",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92"
+    },
+    {
+      "id": "ref_schema",
+      "label": "schema",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92"
+    },
+    {
+      "id": "ref_typescript",
+      "label": "typescript",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92"
+    },
+    {
+      "id": "ref_librechat",
+      "label": "librechat",
+      "file_type": "concept",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_name",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_version",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_description",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_type",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_main",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_module",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_types",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_sideeffects",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_exports",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L10",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_exports",
+      "target": "$graphify-root$_packages_data_schemas_package_exports_capabilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_exports_capabilities",
+      "target": "$graphify-root$_packages_data_schemas_package_capabilities_import",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_capabilities_import",
+      "target": "$graphify-root$_packages_data_schemas_package_import_types",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_capabilities_import",
+      "target": "$graphify-root$_packages_data_schemas_package_import_default",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_exports_capabilities",
+      "target": "$graphify-root$_packages_data_schemas_package_capabilities_require",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_capabilities_require",
+      "target": "$graphify-root$_packages_data_schemas_package_require_types",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_capabilities_require",
+      "target": "$graphify-root$_packages_data_schemas_package_require_default",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_files",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_files",
+      "target": "ref_dist",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L32",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_clean",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_build",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_build_watch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_test",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_test_ci",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_verify",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_b_clean",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L42",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_scripts",
+      "target": "$graphify-root$_packages_data_schemas_package_scripts_b_build",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_repository",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_repository",
+      "target": "$graphify-root$_packages_data_schemas_package_repository_type",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_repository",
+      "target": "$graphify-root$_packages_data_schemas_package_repository_url",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_author",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_license",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_bugs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L51",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_bugs",
+      "target": "$graphify-root$_packages_data_schemas_package_bugs_url",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L52",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_homepage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L54",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_directive",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L56",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_directive",
+      "target": "mdast_util_directive",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L56",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_from_markdown",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_from_markdown",
+      "target": "mdast_util_from_markdown",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L57",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_gfm",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_gfm",
+      "target": "mdast_util_gfm",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L58",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_math",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_mdast_util_math",
+      "target": "mdast_util_math",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L59",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_directive",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_directive",
+      "target": "micromark_extension_directive",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L60",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_gfm",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_gfm",
+      "target": "micromark_extension_gfm",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L61",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_llm_math",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_extension_llm_math",
+      "target": "micromark_extension_llm_math",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L62",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_util_decode_string",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L63",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_dependencies_micromark_util_decode_string",
+      "target": "micromark_util_decode_string",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L63",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L65",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_types_express",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_types_express",
+      "target": "types_express",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L66",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_types_jest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_types_jest",
+      "target": "types_jest",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L67",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_types_node",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_types_node",
+      "target": "types_node",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L68",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_jest",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_jest",
+      "target": "jest",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L69",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_jest_junit",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L70",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_jest_junit",
+      "target": "jest_junit",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L70",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_mongodb_memory_server",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_mongodb_memory_server",
+      "target": "mongodb_memory_server",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L71",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_rimraf",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L72",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_rimraf",
+      "target": "rimraf",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L72",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_ts_node",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L73",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_ts_node",
+      "target": "ts_node",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L73",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_tsdown",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_tsdown",
+      "target": "tsdown",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L74",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_devdependencies_typescript",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_devdependencies_typescript",
+      "target": "typescript",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L75",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L77",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_jsonwebtoken",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L78",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_jsonwebtoken",
+      "target": "jsonwebtoken",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L78",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_klona",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L79",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_klona",
+      "target": "klona",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L79",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_librechat_data_provider",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_librechat_data_provider",
+      "target": "librechat_data_provider",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L80",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_lodash",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_lodash",
+      "target": "lodash",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L81",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_meilisearch",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L82",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_meilisearch",
+      "target": "meilisearch",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L82",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_mongoose",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_mongoose",
+      "target": "mongoose",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L83",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_nanoid",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_nanoid",
+      "target": "nanoid",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L84",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston",
+      "target": "winston",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L85",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies",
+      "target": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston_daily_rotate_file",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L86",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_peerdependencies_winston_daily_rotate_file",
+      "target": "winston_daily_rotate_file",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L86",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_publishconfig",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_publishconfig",
+      "target": "$graphify-root$_packages_data_schemas_package_publishconfig_registry",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_publishconfig",
+      "target": "$graphify-root$_packages_data_schemas_package_publishconfig_access",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_json",
+      "target": "$graphify-root$_packages_data_schemas_package_keywords",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_keywords",
+      "target": "ref_mongoose",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_keywords",
+      "target": "ref_schema",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_keywords",
+      "target": "ref_typescript",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92",
+      "weight": 1.0,
+      "context": "import"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_package_keywords",
+      "target": "ref_librechat",
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/package.json",
+      "source_location": "L92",
+      "weight": 1.0,
+      "context": "import"
+    }
+  ]
+}

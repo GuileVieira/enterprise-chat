@@ -1,0 +1,475 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "label": "sync-helm-chart-tags.sh",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "file" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "label": "sync-helm-chart-tags.sh script",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "bash_entrypoint" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "label": "fail()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L15",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_auth_header",
+      "label": "git_auth_header()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L20",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "label": "git_with_auth()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L25",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "label": "dispatch_release()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L34",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_version_less_than",
+      "label": "version_less_than()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L67",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "label": "validate_chart_tag()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L87",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "label": "dispatch_existing_tag()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L99",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_chart_version_at",
+      "label": "chart_version_at()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L121",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_sync_helm_chart_tags_cleanup",
+      "label": "cleanup()",
+      "file_type": "code",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L150",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_auth_header",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L25",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_version_less_than",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L99",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_chart_version_at",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_cleanup",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L150",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L136",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_version_less_than",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L172",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L191",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L202",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L214",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L216",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L42",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L92",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L106",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L113",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L114",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "target": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L118",
+      "weight": 1.0,
+      "context": "call"
+    }
+  ],
+  "raw_calls": [
+    {
+      "language": "bash",
+      "callee": "set",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L2"
+    },
+    {
+      "language": "bash",
+      "callee": "git",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L143"
+    },
+    {
+      "language": "bash",
+      "callee": "trap",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L153"
+    },
+    {
+      "language": "bash",
+      "callee": "read",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L161"
+    },
+    {
+      "language": "bash",
+      "callee": "continue",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L165"
+    },
+    {
+      "language": "bash",
+      "callee": "grep",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L176"
+    },
+    {
+      "language": "bash",
+      "callee": "printf",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L180"
+    },
+    {
+      "language": "bash",
+      "callee": "exit",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_sh__entry",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L203"
+    },
+    {
+      "language": "bash",
+      "callee": "printf",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L16"
+    },
+    {
+      "language": "bash",
+      "callee": "exit",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_fail",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L17"
+    },
+    {
+      "language": "bash",
+      "callee": "printf",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_auth_header",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L22"
+    },
+    {
+      "language": "bash",
+      "callee": "git",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L27"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_git_with_auth",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L28"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L38"
+    },
+    {
+      "language": "bash",
+      "callee": "command",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L58"
+    },
+    {
+      "language": "bash",
+      "callee": "gh",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_release",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L61"
+    },
+    {
+      "language": "bash",
+      "callee": "read",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_version_less_than",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L71"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_version_less_than",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L76"
+    },
+    {
+      "language": "bash",
+      "callee": "git",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_validate_chart_tag",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L91"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L103"
+    },
+    {
+      "language": "bash",
+      "callee": "printf",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_dispatch_existing_tag",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L109"
+    },
+    {
+      "language": "bash",
+      "callee": "git",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_chart_version_at",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L122"
+    },
+    {
+      "language": "bash",
+      "callee": "awk",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_chart_version_at",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L122"
+    },
+    {
+      "language": "bash",
+      "callee": "rm",
+      "caller_nid": "$graphify-root$_github_scripts_sync_helm_chart_tags_cleanup",
+      "source_file": ".github/scripts/sync-helm-chart-tags.sh",
+      "source_location": "L151"
+    }
+  ],
+  "bash_sources": []
+}

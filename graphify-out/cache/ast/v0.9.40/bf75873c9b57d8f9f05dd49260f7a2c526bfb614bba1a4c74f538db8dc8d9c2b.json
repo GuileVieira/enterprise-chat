@@ -1,0 +1,911 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_tool_intent_spec_md",
+      "label": "tool-intent-spec.md",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "label": "Feature Spec: Tool Intent & Outcome Labels",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_1_intent_of_the_feature",
+      "label": "1. Intent of the feature",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L17"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_2_existing_conventions_to_mirror",
+      "label": "2. Existing conventions to mirror",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L53"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_3_naming",
+      "label": "3. Naming",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L69"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_4_wire_shape",
+      "label": "4. Wire shape",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L89"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_4_1_the_injected_schema_property",
+      "label": "4.1 The injected schema property",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L91"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_4_2_outcome_and_who_authors_it",
+      "label": "4.2 Outcome, and who authors it",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L119"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_4_3_type_additions",
+      "label": "4.3 Type additions",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L138"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "label": "5. Label propagation semantics",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L153"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_5_1_per_call_card",
+      "label": "5.1 Per-call card",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L155"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_5_2_group_header_a_three_phase_lifecycle",
+      "label": "5.2 Group header \u2014 a three-phase lifecycle",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L181"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_5_3_interaction_with_existing_homogeneous_group_labels",
+      "label": "5.3 Interaction with existing homogeneous-group labels",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L193"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_5_4_collapsed_and_historical_messages",
+      "label": "5.4 Collapsed and historical messages",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L202"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "label": "6. Verified native tool inventory",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L208"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_1_canonical_source_of_truth",
+      "label": "6.1 Canonical source of truth",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L210"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_2_injection_strategy_schemas_not_factories",
+      "label": "6.2 Injection strategy: schemas, not factories",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L224"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_3_full_opt_in_by_default_list",
+      "label": "6.3 Full opt-in-by-default list",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L241"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_4_each_tool_body_must_strip",
+      "label": "6.4 Each tool body must strip",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L283"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_6_5_the_edit_file_collision",
+      "label": "6.5 The `edit_file` collision",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L287"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "label": "7. Implementation: `@librechat/agents`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L296"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_7_1_new_module_src_tools_intentarg_ts",
+      "label": "7.1 New module `src/tools/intentArg.ts`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L298"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_7_2_wiring",
+      "label": "7.2 Wiring",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L308"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_7_3_result_threading",
+      "label": "7.3 Result threading",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L312"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_7_4_release",
+      "label": "7.4 Release",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L316"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "label": "8. Implementation: LibreChat host",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L322"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_8_1_new_module_packages_api_src_agents_intent_ts",
+      "label": "8.1 New module `packages/api/src/agents/intent.ts`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L324"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_8_2_strip_and_capture",
+      "label": "8.2 Strip and capture",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L348"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_8_3_capability_plumbing",
+      "label": "8.3 Capability plumbing",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L354"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_8_4_schema_and_config_surface",
+      "label": "8.4 Schema and config surface",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L365"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "label": "9. Implementation: UI",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L375"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_1_partial_json_intent_parser",
+      "label": "9.1 Partial-JSON intent parser",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L379"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_2_toolcallgroup_tsx",
+      "label": "9.2 `ToolCallGroup.tsx`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L399"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_3_per_card_label",
+      "label": "9.3 Per-card label",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L408"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_4_streaming_effect",
+      "label": "9.4 Streaming effect",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L412"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_5_sanitization",
+      "label": "9.5 Sanitization",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L423"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_9_6_i18n",
+      "label": "9.6 i18n",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L433"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "label": "10. Interaction with the other tool capabilities",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L439"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_1_with_defer_loading",
+      "label": "10.1 With `defer_loading`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L443"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_2_with_allowed_callers_ptc",
+      "label": "10.2 With `allowed_callers` (PTC)",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L450"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_3_with_run_in_background",
+      "label": "10.3 With `run_in_background`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L464"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_4_with_hitl_and_ask_user_question",
+      "label": "10.4 With HITL and `ask_user_question`",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L480"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_5_with_subagents",
+      "label": "10.5 With subagents",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L491"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_6_with_tool_output_references",
+      "label": "10.6 With tool output references",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L498"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_7_with_eager_event_tool_execution",
+      "label": "10.7 With eager event tool execution",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L506"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_8_with_compaction_pruning_and_tracing",
+      "label": "10.8 With compaction, pruning, and tracing",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L512"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_9_composition_test_matrix",
+      "label": "10.9 Composition test matrix",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L517"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_10_10_with_activity_groups_pr_14391",
+      "label": "10.10 With activity groups (PR #14391)",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L535"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "label": "11. Activity labels, Langfuse anchors, and session snapshots",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L547"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_11_1_current_state_precisely",
+      "label": "11.1 Current state, precisely",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L549"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_11_2_the_two_layer_anchor_model",
+      "label": "11.2 The two-layer anchor model",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L553"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_11_3_langfuse_intents_as_span_level_anchors",
+      "label": "11.3 Langfuse: intents as span-level anchors",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L559"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_11_4_anchor_ledger",
+      "label": "11.4 Anchor ledger",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L576"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_12_builder_toggles",
+      "label": "12. Builder toggles",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L603"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_13_risks_and_open_decisions",
+      "label": "13. Risks and open decisions",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L616"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_14_test_plan",
+      "label": "14. Test plan",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L630"
+    },
+    {
+      "id": "$graphify-root$_tool_intent_spec_15_slicing",
+      "label": "15. Slicing",
+      "file_type": "document",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L680"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_tool_intent_spec_md",
+      "target": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_1_intent_of_the_feature",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_2_existing_conventions_to_mirror",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L53",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_3_naming",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_4_wire_shape",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_4_wire_shape",
+      "target": "$graphify-root$_tool_intent_spec_4_1_the_injected_schema_property",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L91",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_4_wire_shape",
+      "target": "$graphify-root$_tool_intent_spec_4_2_outcome_and_who_authors_it",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_4_wire_shape",
+      "target": "$graphify-root$_tool_intent_spec_4_3_type_additions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L138",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "target": "$graphify-root$_tool_intent_spec_5_1_per_call_card",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L155",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "target": "$graphify-root$_tool_intent_spec_5_2_group_header_a_three_phase_lifecycle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "target": "$graphify-root$_tool_intent_spec_5_3_interaction_with_existing_homogeneous_group_labels",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_5_label_propagation_semantics",
+      "target": "$graphify-root$_tool_intent_spec_5_4_collapsed_and_historical_messages",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L202",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L208",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "target": "$graphify-root$_tool_intent_spec_6_1_canonical_source_of_truth",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "target": "$graphify-root$_tool_intent_spec_6_2_injection_strategy_schemas_not_factories",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L224",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "target": "$graphify-root$_tool_intent_spec_6_3_full_opt_in_by_default_list",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L241",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "target": "$graphify-root$_tool_intent_spec_6_4_each_tool_body_must_strip",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L283",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_6_verified_native_tool_inventory",
+      "target": "$graphify-root$_tool_intent_spec_6_5_the_edit_file_collision",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L287",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L296",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "target": "$graphify-root$_tool_intent_spec_7_1_new_module_src_tools_intentarg_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L298",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "target": "$graphify-root$_tool_intent_spec_7_2_wiring",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L308",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "target": "$graphify-root$_tool_intent_spec_7_3_result_threading",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L312",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_7_implementation_librechat_agents",
+      "target": "$graphify-root$_tool_intent_spec_7_4_release",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L316",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L322",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "target": "$graphify-root$_tool_intent_spec_8_1_new_module_packages_api_src_agents_intent_ts",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L324",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "target": "$graphify-root$_tool_intent_spec_8_2_strip_and_capture",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L348",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "target": "$graphify-root$_tool_intent_spec_8_3_capability_plumbing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L354",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_8_implementation_librechat_host",
+      "target": "$graphify-root$_tool_intent_spec_8_4_schema_and_config_surface",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L365",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L375",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_1_partial_json_intent_parser",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L379",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_2_toolcallgroup_tsx",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L399",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_3_per_card_label",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L408",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_4_streaming_effect",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L412",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_5_sanitization",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L423",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_9_implementation_ui",
+      "target": "$graphify-root$_tool_intent_spec_9_6_i18n",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L433",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L439",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_1_with_defer_loading",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L443",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_2_with_allowed_callers_ptc",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L450",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_3_with_run_in_background",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L464",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_4_with_hitl_and_ask_user_question",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L480",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_5_with_subagents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L491",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_6_with_tool_output_references",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L498",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_7_with_eager_event_tool_execution",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L506",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_8_with_compaction_pruning_and_tracing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L512",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_9_composition_test_matrix",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L517",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_10_interaction_with_the_other_tool_capabilities",
+      "target": "$graphify-root$_tool_intent_spec_10_10_with_activity_groups_pr_14391",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L535",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L547",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "target": "$graphify-root$_tool_intent_spec_11_1_current_state_precisely",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L549",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "target": "$graphify-root$_tool_intent_spec_11_2_the_two_layer_anchor_model",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L553",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "target": "$graphify-root$_tool_intent_spec_11_3_langfuse_intents_as_span_level_anchors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L559",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_11_activity_labels_langfuse_anchors_and_session_snapshots",
+      "target": "$graphify-root$_tool_intent_spec_11_4_anchor_ledger",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L576",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_12_builder_toggles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L603",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_13_risks_and_open_decisions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L616",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_14_test_plan",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L630",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_tool_intent_spec_feature_spec_tool_intent_outcome_labels",
+      "target": "$graphify-root$_tool_intent_spec_15_slicing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tool-intent-spec.md",
+      "source_location": "L680",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

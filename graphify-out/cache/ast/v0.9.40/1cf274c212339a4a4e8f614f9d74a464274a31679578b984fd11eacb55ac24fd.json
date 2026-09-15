@@ -1,0 +1,63 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_mobile_chat_performance_benchmark",
+      "label": "Mobile Chat Performance Benchmark",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_run",
+      "label": "Run",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L27"
+    },
+    {
+      "id": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_deterministic_regression_guards",
+      "label": "Deterministic regression guards",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L45"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_md",
+      "target": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_mobile_chat_performance_benchmark",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_mobile_chat_performance_benchmark",
+      "target": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_run",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_mobile_chat_performance_benchmark",
+      "target": "$graphify-root$_e2e_benchmarks_mobile_chat_readme_deterministic_regression_guards",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/benchmarks-mobile-chat/README.md",
+      "source_location": "L45",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_context_md",
+      "label": "CONTEXT.md",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_context_domain_language",
+      "label": "Domain language",
+      "file_type": "document",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_context_md",
+      "target": "$graphify-root$_context_domain_language",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CONTEXT.md",
+      "source_location": "L1",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

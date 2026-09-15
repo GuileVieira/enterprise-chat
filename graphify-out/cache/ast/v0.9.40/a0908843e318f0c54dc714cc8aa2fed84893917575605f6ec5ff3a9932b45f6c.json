@@ -1,0 +1,63 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_e2e_lighthouse_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_lighthouse_readme_serial_database_latency_lighthouse_ci",
+      "label": "Serial database latency Lighthouse CI",
+      "file_type": "document",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_lighthouse_readme_when_the_gate_fails",
+      "label": "When the gate fails",
+      "file_type": "document",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L39"
+    },
+    {
+      "id": "$graphify-root$_e2e_lighthouse_readme_adding_another_scenario",
+      "label": "Adding another scenario",
+      "file_type": "document",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L59"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_e2e_lighthouse_readme_md",
+      "target": "$graphify-root$_e2e_lighthouse_readme_serial_database_latency_lighthouse_ci",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_lighthouse_readme_serial_database_latency_lighthouse_ci",
+      "target": "$graphify-root$_e2e_lighthouse_readme_when_the_gate_fails",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L39",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_lighthouse_readme_serial_database_latency_lighthouse_ci",
+      "target": "$graphify-root$_e2e_lighthouse_readme_adding_another_scenario",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/lighthouse/README.md",
+      "source_location": "L59",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

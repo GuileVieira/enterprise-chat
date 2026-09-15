@@ -1,0 +1,271 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_md",
+      "label": "sync-2026-09-14.md",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "label": "Integra\u00e7\u00e3o de produ\u00e7\u00e3o \u2014 14/09/2026",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_verifica\u00e7\u00e3o_final",
+      "label": "Verifica\u00e7\u00e3o final",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L5"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_decis\u00f5es",
+      "label": "Decis\u00f5es",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L21"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_escopo_de_valida\u00e7\u00e3o_original_hist\u00f3rico",
+      "label": "Escopo de valida\u00e7\u00e3o original (hist\u00f3rico)",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L31"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_funda\u00e7\u00e3o",
+      "label": "Checkpoint de funda\u00e7\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L40"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_verifica\u00e7\u00f5es_do_coordenador",
+      "label": "Verifica\u00e7\u00f5es do coordenador",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L48"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_pend\u00eancias_concretas_de_revis\u00e3o_cruzada",
+      "label": "Pend\u00eancias concretas de revis\u00e3o cruzada",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L55"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_valida\u00e7\u00e3o_parcial_atualizada",
+      "label": "Valida\u00e7\u00e3o parcial atualizada",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L62"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_mem\u00f3rias_e_navega\u00e7\u00e3o",
+      "label": "Checkpoint de mem\u00f3rias e navega\u00e7\u00e3o",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L71"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_revis\u00e3o_cruzada_rodada_atual",
+      "label": "Checkpoint de revis\u00e3o cruzada \u2014 rodada atual",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L83"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_seguinte_revis\u00e3o_do_coordenador",
+      "label": "Checkpoint seguinte \u2014 revis\u00e3o do coordenador",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L93"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_inicializacao_e_interface",
+      "label": "Checkpoint de inicializacao e interface",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L103"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_validacao_integrada_parcial",
+      "label": "Checkpoint de validacao integrada parcial",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L110"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_sem_conflitos_no_indice",
+      "label": "Checkpoint sem conflitos no indice",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L121"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_limites_da_verifica\u00e7\u00e3o_global",
+      "label": "Limites da verifica\u00e7\u00e3o global",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L130"
+    },
+    {
+      "id": "$graphify-root$_docs_integration_sync_2026_09_14_fechamento",
+      "label": "Fechamento",
+      "file_type": "document",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L138"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_md",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_verifica\u00e7\u00e3o_final",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_decis\u00f5es",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_escopo_de_valida\u00e7\u00e3o_original_hist\u00f3rico",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_funda\u00e7\u00e3o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L40",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_verifica\u00e7\u00f5es_do_coordenador",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L48",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_pend\u00eancias_concretas_de_revis\u00e3o_cruzada",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L55",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_valida\u00e7\u00e3o_parcial_atualizada",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_mem\u00f3rias_e_navega\u00e7\u00e3o",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L71",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_revis\u00e3o_cruzada_rodada_atual",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_seguinte_revis\u00e3o_do_coordenador",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L93",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_inicializacao_e_interface",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_de_validacao_integrada_parcial",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L110",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_checkpoint_sem_conflitos_no_indice",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L121",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_limites_da_verifica\u00e7\u00e3o_global",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L130",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_docs_integration_sync_2026_09_14_integra\u00e7\u00e3o_de_produ\u00e7\u00e3o_14_09_2026",
+      "target": "$graphify-root$_docs_integration_sync_2026_09_14_fechamento",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/integration/sync-2026-09-14.md",
+      "source_location": "L138",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

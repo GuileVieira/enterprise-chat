@@ -1,0 +1,201 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_md",
+      "label": "bson-legibility.md",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "label": "Projecting FerretDB/DocumentDB BSON into readable PostgreSQL columns",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_verdict",
+      "label": "Verdict",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L22"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a1_accessor_surface_pass",
+      "label": "A1 \u2014 accessor surface (pass)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L46"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_accessor_semantics_the_quirks_that_decide_the_recipes",
+      "label": "Accessor semantics \u2014 the quirks that decide the recipes",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L64"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a2_a3_a5_projection_pass",
+      "label": "A2/A3/A5 \u2014 projection (pass)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L84"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a4_documentdb_still_works_pass_14_14",
+      "label": "A4 \u2014 DocumentDB still works (pass, 14/14)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L98"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_new_collections_event_trigger_works_exit_criterion_4",
+      "label": "New collections \u2014 event trigger works (exit criterion 4)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L107"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_write_amplification_exit_criterion_4",
+      "label": "Write amplification (exit criterion 4)",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L116"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_cdc_evidence_gathered_locally",
+      "label": "CDC evidence gathered locally",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L130"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_what_remains_for_the_replication_probe",
+      "label": "What remains for the replication probe",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L143"
+    },
+    {
+      "id": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_recommendation",
+      "label": "Recommendation",
+      "file_type": "document",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L152"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_md",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_md",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_inventory_txt",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "target_file": "$graphify-root$/packages/data-schemas/misc/ferretdb/bson-inventory.txt"
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_verdict",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a1_accessor_surface_pass",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a1_accessor_surface_pass",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_accessor_semantics_the_quirks_that_decide_the_recipes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L64",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a2_a3_a5_projection_pass",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_a4_documentdb_still_works_pass_14_14",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_new_collections_event_trigger_works_exit_criterion_4",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_write_amplification_exit_criterion_4",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L116",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_cdc_evidence_gathered_locally",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L130",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_what_remains_for_the_replication_probe",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L143",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_projecting_ferretdb_documentdb_bson_into_readable_postgresql_columns",
+      "target": "$graphify-root$_packages_data_schemas_misc_ferretdb_bson_legibility_recommendation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/data-schemas/misc/ferretdb/bson-legibility.md",
+      "source_location": "L152",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

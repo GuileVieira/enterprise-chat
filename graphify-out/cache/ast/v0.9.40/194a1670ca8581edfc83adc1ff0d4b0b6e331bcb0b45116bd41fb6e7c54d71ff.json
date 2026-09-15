@@ -1,0 +1,95 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_e2e_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_readme_librechat_e2e",
+      "label": "LibreChat e2e",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_readme_stream_stores_and_shards",
+      "label": "Stream Stores and Shards",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L5"
+    },
+    {
+      "id": "$graphify-root$_e2e_readme_property_based_browser_testing",
+      "label": "Property-based browser testing",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L28"
+    },
+    {
+      "id": "$graphify-root$_e2e_readme_recording_tests",
+      "label": "Recording Tests",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L98"
+    },
+    {
+      "id": "$graphify-root$_e2e_readme_llm_assisted_loop",
+      "label": "LLM-Assisted Loop",
+      "file_type": "document",
+      "source_file": "e2e/README.md",
+      "source_location": "L123"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_e2e_readme_md",
+      "target": "$graphify-root$_e2e_readme_librechat_e2e",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_readme_librechat_e2e",
+      "target": "$graphify-root$_e2e_readme_stream_stores_and_shards",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/README.md",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_readme_librechat_e2e",
+      "target": "$graphify-root$_e2e_readme_property_based_browser_testing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/README.md",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_readme_librechat_e2e",
+      "target": "$graphify-root$_e2e_readme_recording_tests",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/README.md",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_readme_librechat_e2e",
+      "target": "$graphify-root$_e2e_readme_llm_assisted_loop",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/README.md",
+      "source_location": "L123",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

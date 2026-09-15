@@ -1,0 +1,95 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_e2e_byom_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "label": "Native BYOM acceptance",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_byom_readme_prerequisites",
+      "label": "Prerequisites",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "$graphify-root$_e2e_byom_readme_what_must_pass",
+      "label": "What must pass",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L32"
+    },
+    {
+      "id": "$graphify-root$_e2e_byom_readme_isolation_and_evidence",
+      "label": "Isolation and evidence",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L50"
+    },
+    {
+      "id": "$graphify-root$_e2e_byom_readme_dependency",
+      "label": "Dependency",
+      "file_type": "document",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L72"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_e2e_byom_readme_md",
+      "target": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "target": "$graphify-root$_e2e_byom_readme_prerequisites",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "target": "$graphify-root$_e2e_byom_readme_what_must_pass",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L32",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "target": "$graphify-root$_e2e_byom_readme_isolation_and_evidence",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L50",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_byom_readme_native_byom_acceptance",
+      "target": "$graphify-root$_e2e_byom_readme_dependency",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/byom/README.md",
+      "source_location": "L72",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

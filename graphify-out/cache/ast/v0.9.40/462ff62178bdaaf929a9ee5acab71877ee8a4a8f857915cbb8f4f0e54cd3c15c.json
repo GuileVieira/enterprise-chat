@@ -1,0 +1,47 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_e2e_benchmarks_reasoning_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-reasoning/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_benchmarks_reasoning_readme_reasoning_stream_perf_benchmark_react_scan",
+      "label": "Reasoning-Stream Perf Benchmark (react-scan)",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-reasoning/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_e2e_benchmarks_reasoning_readme_run",
+      "label": "Run",
+      "file_type": "document",
+      "source_file": "e2e/benchmarks-reasoning/README.md",
+      "source_location": "L23"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_e2e_benchmarks_reasoning_readme_md",
+      "target": "$graphify-root$_e2e_benchmarks_reasoning_readme_reasoning_stream_perf_benchmark_react_scan",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/benchmarks-reasoning/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_e2e_benchmarks_reasoning_readme_reasoning_stream_perf_benchmark_react_scan",
+      "target": "$graphify-root$_e2e_benchmarks_reasoning_readme_run",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "e2e/benchmarks-reasoning/README.md",
+      "source_location": "L23",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

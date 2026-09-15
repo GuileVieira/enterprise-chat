@@ -1,0 +1,159 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_search_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "label": "Search stack PoC infrastructure (Track 1)",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_search_readme_start",
+      "label": "Start",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L13"
+    },
+    {
+      "id": "$graphify-root$_search_readme_what_was_actually_verified_2026_08_07_live",
+      "label": "What was actually verified (2026-08-07, live)",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L30"
+    },
+    {
+      "id": "$graphify-root$_search_readme_port_map",
+      "label": "Port map",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "$graphify-root$_search_readme_credentials",
+      "label": "Credentials",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L109"
+    },
+    {
+      "id": "$graphify-root$_search_readme_how_ferretdb_auth_works",
+      "label": "How FerretDB auth works",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L129"
+    },
+    {
+      "id": "$graphify-root$_search_readme_chat_search_db_roles_and_grants",
+      "label": "`chat_search_db` roles and grants",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L140"
+    },
+    {
+      "id": "$graphify-root$_search_readme_what_depends_on_this_stack",
+      "label": "What depends on this stack",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L181"
+    },
+    {
+      "id": "$graphify-root$_search_readme_known_follow_ups_explicitly_out_of_scope_for_this_track",
+      "label": "Known follow-ups (explicitly out of scope for this track)",
+      "file_type": "document",
+      "source_file": "search/README.md",
+      "source_location": "L210"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_search_readme_md",
+      "target": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_start",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_what_was_actually_verified_2026_08_07_live",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_port_map",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_credentials",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_how_ferretdb_auth_works",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_chat_search_db_roles_and_grants",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L140",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_what_depends_on_this_stack",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L181",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_search_readme_search_stack_poc_infrastructure_track_1",
+      "target": "$graphify-root$_search_readme_known_follow_ups_explicitly_out_of_scope_for_this_track",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "search/README.md",
+      "source_location": "L210",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

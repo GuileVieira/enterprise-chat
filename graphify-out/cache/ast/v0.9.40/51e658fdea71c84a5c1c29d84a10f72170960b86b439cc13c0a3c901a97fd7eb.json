@@ -1,0 +1,79 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_scripts_activity_labels_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_scripts_activity_labels_readme_activity_label_eval_harness",
+      "label": "Activity-label eval harness",
+      "file_type": "document",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_scripts_activity_labels_readme_why_the_tables_matter_more_than_the_aggregate",
+      "label": "Why the tables matter more than the aggregate",
+      "file_type": "document",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L22"
+    },
+    {
+      "id": "$graphify-root$_scripts_activity_labels_readme_layout",
+      "label": "Layout",
+      "file_type": "document",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L30"
+    },
+    {
+      "id": "$graphify-root$_scripts_activity_labels_readme_findings_this_produced",
+      "label": "Findings this produced",
+      "file_type": "document",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L43"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_scripts_activity_labels_readme_md",
+      "target": "$graphify-root$_scripts_activity_labels_readme_activity_label_eval_harness",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_scripts_activity_labels_readme_activity_label_eval_harness",
+      "target": "$graphify-root$_scripts_activity_labels_readme_why_the_tables_matter_more_than_the_aggregate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_scripts_activity_labels_readme_activity_label_eval_harness",
+      "target": "$graphify-root$_scripts_activity_labels_readme_layout",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_scripts_activity_labels_readme_activity_label_eval_harness",
+      "target": "$graphify-root$_scripts_activity_labels_readme_findings_this_produced",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "scripts/activity-labels/README.md",
+      "source_location": "L43",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

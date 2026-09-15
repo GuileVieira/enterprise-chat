@@ -1,0 +1,235 @@
+{
+  "nodes": [
+    {
+      "id": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "label": "github.com/danny-avila/librechat/otel/langfuse-fanout",
+      "file_type": "code",
+      "type": "package",
+      "ecosystem": "go",
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_prometheus_client_golang",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_redis_go_redis_v9",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_go_opentelemetry_io_proto_otlp",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_google_golang_org_protobuf",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_beorn7_perks",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_cespare_xxhash_v2",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_dgryski_go_rendezvous",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_grpc_ecosystem_grpc_gateway_v2",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_kr_text",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_munnerz_goautoneg",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_prometheus_client_model",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_prometheus_common",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_github_com_prometheus_procfs",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_go_yaml_in_yaml_v2",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_golang_org_x_net",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_golang_org_x_sys",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_golang_org_x_text",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_google_golang_org_genproto_googleapis_api",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_google_golang_org_genproto_googleapis_rpc",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "pkg_github_com_danny_avila_librechat_otel_langfuse_fanout",
+      "target": "pkg_google_golang_org_grpc",
+      "relation": "depends_on",
+      "context": "dependency",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "otel/langfuse-fanout/go.mod",
+      "source_location": "L1",
+      "weight": 1.0
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_agent_trigger_delivery",
+      "label": "Agent trigger delivery",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_adapter_contract",
+      "label": "Adapter contract",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L7"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_guarantees",
+      "label": "Guarantees",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L47"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_remote_event_ingress",
+      "label": "Remote event ingress",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_event_driven_child_actors",
+      "label": "Event-driven child actors",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L119"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_agents_triggers_readme_coalescing_observational_child_events",
+      "label": "Coalescing observational child events",
+      "file_type": "document",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L195"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_md",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_agent_trigger_delivery",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_agent_trigger_delivery",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_adapter_contract",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_agent_trigger_delivery",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_guarantees",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L47",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_agent_trigger_delivery",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_remote_event_ingress",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_remote_event_ingress",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_event_driven_child_actors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L119",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_api_src_agents_triggers_readme_remote_event_ingress",
+      "target": "$graphify-root$_packages_api_src_agents_triggers_readme_coalescing_observational_child_events",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/agents/triggers/README.md",
+      "source_location": "L195",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

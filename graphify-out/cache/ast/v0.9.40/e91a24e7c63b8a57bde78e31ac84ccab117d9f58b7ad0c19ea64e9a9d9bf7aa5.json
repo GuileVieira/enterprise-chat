@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_docs_skills_management_api_md",
+      "label": "skills-management-api.md",
+      "file_type": "document",
+      "source_file": "docs/skills-management-api.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_docs_skills_management_api_skills_management_api",
+      "label": "Skills management API",
+      "file_type": "document",
+      "source_file": "docs/skills-management-api.md",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_docs_skills_management_api_md",
+      "target": "$graphify-root$_docs_skills_management_api_skills_management_api",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/skills-management-api.md",
+      "source_location": "L1",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

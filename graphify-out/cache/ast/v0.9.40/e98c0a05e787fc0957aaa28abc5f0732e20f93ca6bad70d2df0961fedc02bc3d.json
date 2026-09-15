@@ -1,0 +1,31 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_api_src_schedules_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "packages/api/src/schedules/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_api_src_schedules_readme_unattended_mcp_support",
+      "label": "Unattended MCP support",
+      "file_type": "document",
+      "source_file": "packages/api/src/schedules/README.md",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_api_src_schedules_readme_md",
+      "target": "$graphify-root$_packages_api_src_schedules_readme_unattended_mcp_support",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/api/src/schedules/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

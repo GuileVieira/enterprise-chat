@@ -1,0 +1,240 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "label": "retarget-prs.sh",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "file" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "label": "retarget-prs.sh script",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "bash_entrypoint" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_keeps_release_base",
+      "label": "keeps_release_base()",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L23",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_already_explained",
+      "label": "already_explained()",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L35",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_comment_body",
+      "label": "comment_body()",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L41",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "label": "post_explanation()",
+      "file_type": "code",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L67",
+      "metadata": { "language": "bash", "kind": "bash_function" }
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "target": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "target": "$graphify-root$_github_scripts_retarget_prs_keeps_release_base",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "target": "$graphify-root$_github_scripts_retarget_prs_already_explained",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L35",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "target": "$graphify-root$_github_scripts_retarget_prs_comment_body",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh",
+      "target": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "target": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L105",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "target": "$graphify-root$_github_scripts_retarget_prs_keeps_release_base",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L121",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "target": "$graphify-root$_github_scripts_retarget_prs_already_explained",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L69",
+      "weight": 1.0,
+      "context": "call"
+    },
+    {
+      "source": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "target": "$graphify-root$_github_scripts_retarget_prs_comment_body",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L79",
+      "weight": 1.0,
+      "context": "call"
+    }
+  ],
+  "raw_calls": [
+    {
+      "language": "bash",
+      "callee": "set",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L4"
+    },
+    {
+      "language": "bash",
+      "callee": "echo",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L16"
+    },
+    {
+      "language": "bash",
+      "callee": "exit",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L17"
+    },
+    {
+      "language": "bash",
+      "callee": "continue",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L90"
+    },
+    {
+      "language": "bash",
+      "callee": "jq",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L115"
+    },
+    {
+      "language": "bash",
+      "callee": "gh",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L134"
+    },
+    {
+      "language": "bash",
+      "callee": "sleep",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_sh__entry",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L141"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_keeps_release_base",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L25"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_already_explained",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L37"
+    },
+    {
+      "language": "bash",
+      "callee": "grep",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_already_explained",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L38"
+    },
+    {
+      "language": "bash",
+      "callee": "cat",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_comment_body",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L42"
+    },
+    {
+      "language": "bash",
+      "callee": "echo",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L71"
+    },
+    {
+      "language": "bash",
+      "callee": "return",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L72"
+    },
+    {
+      "language": "bash",
+      "callee": "gh",
+      "caller_nid": "$graphify-root$_github_scripts_retarget_prs_post_explanation",
+      "source_file": ".github/scripts/retarget-prs.sh",
+      "source_location": "L79"
+    }
+  ],
+  "bash_sources": []
+}

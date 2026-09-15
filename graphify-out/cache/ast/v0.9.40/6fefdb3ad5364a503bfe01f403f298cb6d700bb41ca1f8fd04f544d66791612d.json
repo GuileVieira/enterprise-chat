@@ -1,0 +1,815 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_md",
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "label": "Dynamic Theme System for @librechat/client",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_versioned_theme_definitions",
+      "label": "Versioned theme definitions",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L3"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_table_of_contents",
+      "label": "Table of Contents",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L36"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_overview",
+      "label": "Overview",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L49"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_how_it_works",
+      "label": "How It Works",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L59"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_default_behavior_no_custom_theme",
+      "label": "Default Behavior (No Custom Theme)",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L67"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_custom_theme_behavior",
+      "label": "Custom Theme Behavior",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L74"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "label": "Basic Usage",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L81"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_1_install_the_component_library",
+      "label": "1. Install the Component Library",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L83"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_2_wrap_your_app_with_themeprovider",
+      "label": "2. Wrap Your App with ThemeProvider",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L89"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_3_set_up_your_base_css",
+      "label": "3. Set Up Your Base CSS",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L103"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_4_configure_tailwind",
+      "label": "4. Configure Tailwind",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L139"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_5_use_theme_colors_in_components",
+      "label": "5. Use Theme Colors in Components",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L172"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "label": "Available Theme Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L187"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_text_colors",
+      "label": "Text Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L189"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_surface_colors",
+      "label": "Surface Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L199"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_border_colors",
+      "label": "Border Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L210"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_status_colors",
+      "label": "Status Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L218"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_other_colors",
+      "label": "Other Colors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L233"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_creating_custom_themes",
+      "label": "Creating Custom Themes",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L239"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_1_define_your_theme",
+      "label": "1. Define Your Theme",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L241"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_2_use_your_custom_theme",
+      "label": "2. Use Your Custom Theme",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L256"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_environment_variable_themes",
+      "label": "Environment Variable Themes",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L271"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_1_create_environment_variables",
+      "label": "1. Create Environment Variables",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L275"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_2_create_a_theme_loader",
+      "label": "2. Create a Theme Loader",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L299"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_3_apply_environment_theme",
+      "label": "3. Apply Environment Theme",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L314"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_dark_light_mode",
+      "label": "Dark/Light Mode",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L322"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_using_the_theme_hook",
+      "label": "Using the Theme Hook",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L326"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_theme_options",
+      "label": "Theme Options",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L342"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_migration_guide",
+      "label": "Migration Guide",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L371"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_1_update_imports",
+      "label": "1. Update Imports",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L375"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_2_update_themeprovider_usage",
+      "label": "2. Update ThemeProvider Usage",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L389"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_3_existing_components",
+      "label": "3. Existing Components",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L402"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_implementation_details",
+      "label": "Implementation Details",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L411"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_file_structure",
+      "label": "File Structure",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L413"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_css_variable_format",
+      "label": "CSS Variable Format",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L433"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_rgb_format_requirements",
+      "label": "RGB Format Requirements",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L441"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_troubleshooting",
+      "label": "Troubleshooting",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L450"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "label": "Common Issues",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L452"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_1_colors_not_applying",
+      "label": "1. Colors Not Applying",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L454"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_2_circular_reference_errors",
+      "label": "2. Circular Reference Errors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L460"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_3_dark_mode_not_working",
+      "label": "3. Dark Mode Not Working",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L465"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_4_typescript_errors",
+      "label": "4. TypeScript Errors",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L471"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_debugging_tips",
+      "label": "Debugging Tips",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L480"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_examples",
+      "label": "Examples",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L487"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_switching",
+      "label": "Dynamic Theme Switching",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L489"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_multi_theme_selector",
+      "label": "Multi-Theme Selector",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L511"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_using_with_the_main_application",
+      "label": "Using with the Main Application",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L546"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_contributing",
+      "label": "Contributing",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L579"
+    },
+    {
+      "id": "$graphify-root$_packages_client_src_theme_readme_license",
+      "label": "License",
+      "file_type": "document",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L589"
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_md",
+      "target": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_versioned_theme_definitions",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_table_of_contents",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_overview",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L49",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_how_it_works",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L59",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_how_it_works",
+      "target": "$graphify-root$_packages_client_src_theme_readme_default_behavior_no_custom_theme",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_how_it_works",
+      "target": "$graphify-root$_packages_client_src_theme_readme_custom_theme_behavior",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L74",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L81",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "target": "$graphify-root$_packages_client_src_theme_readme_1_install_the_component_library",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L83",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "target": "$graphify-root$_packages_client_src_theme_readme_2_wrap_your_app_with_themeprovider",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L89",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "target": "$graphify-root$_packages_client_src_theme_readme_3_set_up_your_base_css",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "target": "$graphify-root$_packages_client_src_theme_readme_4_configure_tailwind",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L139",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_basic_usage",
+      "target": "$graphify-root$_packages_client_src_theme_readme_5_use_theme_colors_in_components",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L172",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L187",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "target": "$graphify-root$_packages_client_src_theme_readme_text_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L189",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "target": "$graphify-root$_packages_client_src_theme_readme_surface_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L199",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "target": "$graphify-root$_packages_client_src_theme_readme_border_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "target": "$graphify-root$_packages_client_src_theme_readme_status_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L218",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_available_theme_colors",
+      "target": "$graphify-root$_packages_client_src_theme_readme_other_colors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L233",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_creating_custom_themes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L239",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_creating_custom_themes",
+      "target": "$graphify-root$_packages_client_src_theme_readme_1_define_your_theme",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L241",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_creating_custom_themes",
+      "target": "$graphify-root$_packages_client_src_theme_readme_2_use_your_custom_theme",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L256",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_environment_variable_themes",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L271",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_environment_variable_themes",
+      "target": "$graphify-root$_packages_client_src_theme_readme_1_create_environment_variables",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L275",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_environment_variable_themes",
+      "target": "$graphify-root$_packages_client_src_theme_readme_2_create_a_theme_loader",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L299",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_environment_variable_themes",
+      "target": "$graphify-root$_packages_client_src_theme_readme_3_apply_environment_theme",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L314",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_dark_light_mode",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L322",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dark_light_mode",
+      "target": "$graphify-root$_packages_client_src_theme_readme_using_the_theme_hook",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L326",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dark_light_mode",
+      "target": "$graphify-root$_packages_client_src_theme_readme_theme_options",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L342",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_migration_guide",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L371",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_migration_guide",
+      "target": "$graphify-root$_packages_client_src_theme_readme_1_update_imports",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L375",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_migration_guide",
+      "target": "$graphify-root$_packages_client_src_theme_readme_2_update_themeprovider_usage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L389",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_migration_guide",
+      "target": "$graphify-root$_packages_client_src_theme_readme_3_existing_components",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L402",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_implementation_details",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L411",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_implementation_details",
+      "target": "$graphify-root$_packages_client_src_theme_readme_file_structure",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L413",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_implementation_details",
+      "target": "$graphify-root$_packages_client_src_theme_readme_css_variable_format",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L433",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_implementation_details",
+      "target": "$graphify-root$_packages_client_src_theme_readme_rgb_format_requirements",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L441",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_troubleshooting",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L450",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_troubleshooting",
+      "target": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L452",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "target": "$graphify-root$_packages_client_src_theme_readme_1_colors_not_applying",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L454",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "target": "$graphify-root$_packages_client_src_theme_readme_2_circular_reference_errors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L460",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "target": "$graphify-root$_packages_client_src_theme_readme_3_dark_mode_not_working",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L465",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_common_issues",
+      "target": "$graphify-root$_packages_client_src_theme_readme_4_typescript_errors",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L471",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_troubleshooting",
+      "target": "$graphify-root$_packages_client_src_theme_readme_debugging_tips",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L480",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_examples",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L487",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_examples",
+      "target": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_switching",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L489",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_examples",
+      "target": "$graphify-root$_packages_client_src_theme_readme_multi_theme_selector",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L511",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_examples",
+      "target": "$graphify-root$_packages_client_src_theme_readme_using_with_the_main_application",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L546",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_contributing",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L579",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_packages_client_src_theme_readme_dynamic_theme_system_for_librechat_client",
+      "target": "$graphify-root$_packages_client_src_theme_readme_license",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "packages/client/src/theme/README.md",
+      "source_location": "L589",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

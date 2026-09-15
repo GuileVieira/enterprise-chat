@@ -1,0 +1,103 @@
+{
+  "nodes": [
+    {
+      "id": "$graphify-root$_github_scripts_install_playwright_fonts_sh",
+      "label": "install-playwright-fonts.sh",
+      "file_type": "code",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "file" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "label": "install-playwright-fonts.sh script",
+      "file_type": "code",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L1",
+      "metadata": { "language": "bash", "kind": "bash_entrypoint" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_install_playwright_fonts_attempt_timeout_seconds",
+      "label": "ATTEMPT_TIMEOUT_SECONDS",
+      "file_type": "code",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L18",
+      "metadata": { "language": "bash", "kind": "code" }
+    },
+    {
+      "id": "$graphify-root$_github_scripts_install_playwright_fonts_max_attempts",
+      "label": "MAX_ATTEMPTS",
+      "file_type": "code",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L19",
+      "metadata": { "language": "bash", "kind": "code" }
+    }
+  ],
+  "edges": [
+    {
+      "source": "$graphify-root$_github_scripts_install_playwright_fonts_sh",
+      "target": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_install_playwright_fonts_sh",
+      "target": "$graphify-root$_github_scripts_install_playwright_fonts_attempt_timeout_seconds",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "$graphify-root$_github_scripts_install_playwright_fonts_sh",
+      "target": "$graphify-root$_github_scripts_install_playwright_fonts_max_attempts",
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L19",
+      "weight": 1.0
+    }
+  ],
+  "raw_calls": [
+    {
+      "language": "bash",
+      "callee": "set",
+      "caller_nid": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L16"
+    },
+    {
+      "language": "bash",
+      "callee": "timeout",
+      "caller_nid": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L22"
+    },
+    {
+      "language": "bash",
+      "callee": "exit",
+      "caller_nid": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L23"
+    },
+    {
+      "language": "bash",
+      "callee": "echo",
+      "caller_nid": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L25"
+    },
+    {
+      "language": "bash",
+      "callee": "sleep",
+      "caller_nid": "$graphify-root$_github_scripts_install_playwright_fonts_sh__entry",
+      "source_file": ".github/scripts/install-playwright-fonts.sh",
+      "source_location": "L26"
+    }
+  ],
+  "bash_sources": []
+}
