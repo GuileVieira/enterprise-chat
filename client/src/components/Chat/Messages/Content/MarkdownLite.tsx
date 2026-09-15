@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo, useLayoutEffect } from 'react';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -10,20 +10,38 @@ import { code, codeNoExecution, a, p, img, table } from './MarkdownComponents';
 import { CodeBlockProvider, ArtifactProvider } from '~/Providers';
 import MarkdownErrorBoundary from './MarkdownErrorBoundary';
 import { langSubset, remarkApproxTilde } from '~/utils';
+import { createFadePlugin } from './animate';
 
 const MarkdownLite = memo(
-  ({ content = '', codeExecution = true }: { content?: string; codeExecution?: boolean }) => {
-    const rehypePlugins: PluggableList = [
-      [rehypeKatex],
-      [
-        rehypeHighlight,
-        {
-          detect: true,
-          ignoreMissing: true,
-          subset: langSubset,
-        },
+  ({
+    content = '',
+    codeExecution = true,
+    animate = false,
+  }: {
+    content?: string;
+    codeExecution?: boolean;
+    animate?: boolean;
+  }) => {
+    const fade = useMemo(() => (animate ? createFadePlugin() : null), [animate]);
+    const rehypePlugins: PluggableList = useMemo(
+      () => [
+        [rehypeKatex],
+        [
+          rehypeHighlight,
+          {
+            detect: true,
+            ignoreMissing: true,
+            subset: langSubset,
+          },
+        ],
+        ...(fade == null ? [] : [fade.plugin]),
       ],
-    ];
+      [fade],
+    );
+
+    useLayoutEffect(() => {
+      fade?.commit();
+    });
 
     return (
       <MarkdownErrorBoundary content={content} codeExecution={codeExecution}>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import copy from 'copy-to-clipboard';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ReasoningCompact } from '../Reasoning';
 import { ROW_GLYPH_SLOT } from '../../rows';
 
@@ -23,9 +24,15 @@ jest.mock('../Thinking', () => ({
   useInViewport: () => ({ ref: { current: null }, inViewport: true }),
 }));
 
+jest.mock('copy-to-clipboard', () => jest.fn(() => true));
+
 jest.mock('~/components/Messages/Content/CopyButton', () => ({
   __esModule: true,
-  default: () => <button type="button">{'copy'}</button>,
+  default: ({ onClick }: { onClick: () => void }) => (
+    <button type="button" onClick={onClick}>
+      {'copy'}
+    </button>
+  ),
 }));
 
 jest.mock('lucide-react', () => ({
@@ -115,5 +122,19 @@ describe('ReasoningCompact', () => {
     );
 
     expect(screen.getByText('A long stream of reasoning')).toBeInTheDocument();
+  });
+
+  it('copies the raw Markdown source from the expanded reasoning', () => {
+    render(
+      <ReasoningCompact
+        reasoning="<think>**Analyzing request**</think>"
+        label="Thoughts"
+        showThinking={true}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'copy' }));
+
+    expect(copy).toHaveBeenCalledWith('**Analyzing request**', { format: 'text/plain' });
   });
 });

@@ -2,9 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import copy from 'copy-to-clipboard';
 import { Button } from '@librechat/client';
 import { hasToolCallErrorPrefix, stripToolCallErrorPrefix } from 'librechat-data-provider';
+import MarkdownLite from '~/components/Chat/Messages/Content/MarkdownLite';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface ContentBlock {
   type?: string;
@@ -24,10 +24,6 @@ function cleanError(text: string): string {
 
 export function isError(text: string): boolean {
   return hasToolCallErrorPrefix(text) || text.startsWith('Error processing tool');
-}
-
-function isStructuredText(text: string): boolean {
-  return text.includes('\n') || text.includes('{') || text.includes(':');
 }
 
 interface ExtractedText {
@@ -111,29 +107,32 @@ export default function OutputRenderer({ text }: OutputRendererProps) {
   const needsTruncation = lines.length > TRUNCATE_LINES;
   const visibleText =
     needsTruncation && !isExpanded ? lines.slice(0, VISIBLE_LINES).join('\n') : displayText;
-  const structured = !isJson && isStructuredText(displayText);
+  let output: React.ReactNode;
+
+  if (isJson) {
+    output = (
+      <pre className="max-h-[300px] overflow-auto rounded text-xs">
+        <code className="hljs language-json !whitespace-pre-wrap !break-words">{visibleText}</code>
+      </pre>
+    );
+  } else if (error) {
+    output = (
+      <pre className="max-h-[300px] overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-status-error">
+        {visibleText}
+      </pre>
+    );
+  } else {
+    output = (
+      <div className="markdown prose dark:prose-invert max-h-[300px] max-w-none overflow-auto text-sm text-text-primary">
+        <MarkdownLite content={visibleText} codeExecution={false} />
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="relative pr-10">
-        {isJson ? (
-          <pre className="max-h-[300px] overflow-auto rounded text-xs">
-            <code className="hljs language-json !whitespace-pre-wrap !break-words">
-              {visibleText}
-            </code>
-          </pre>
-        ) : (
-          <pre
-            className={cn(
-              'max-h-[300px] overflow-auto whitespace-pre-wrap break-words text-xs',
-              error && 'font-mono text-status-error',
-              !error && structured && 'font-mono text-text-secondary',
-              !error && !structured && 'font-sans text-sm text-text-primary',
-            )}
-          >
-            {visibleText}
-          </pre>
-        )}
+        {output}
         <div className="absolute right-0 top-1/2 -translate-y-1/2">
           <CopyButton
             isCopied={isCopied}

@@ -301,7 +301,6 @@ export const ReasoningCompact = memo(
   }: ReasoningCompactProps) => {
     const contentId = useId();
     const localize = useLocalize();
-    const fontSize = useAtomValue(fontSizeAtom);
     const [isExpanded, setIsExpanded] = useState(showThinking);
     const [isBarVisible, setIsBarVisible] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
@@ -404,10 +403,10 @@ export const ReasoningCompact = memo(
         >
           <div className="overflow-hidden" ref={expandRef}>
             {shouldRenderBody && (
-              <div className="relative my-2 rounded-2xl border border-border-light bg-surface-secondary p-4 pb-9 text-text-secondary">
-                <p className={cn('whitespace-pre-wrap leading-[26px]', fontSize)}>
+              <div className="relative my-2">
+                <ThinkingContent animate={isStreaming} className="rounded-2xl p-4 pb-9">
                   {reasoningText}
-                </p>
+                </ThinkingContent>
                 <FloatingThinkingBar
                   isVisible={isBarVisible && isExpanded && !headerInViewport}
                   isExpanded={isExpanded}

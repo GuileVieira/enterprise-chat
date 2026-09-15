@@ -16,7 +16,7 @@ import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useLocalize, useExpandCollapse } from '~/hooks';
 import { showThinkingAtom } from '~/store/showThinking';
 import { fontSizeAtom } from '~/store/fontSize';
-import { AnimatedText } from '../animate';
+import MarkdownLite from '../MarkdownLite';
 import { ROW_GLYPH_SLOT } from '../rows';
 import { cn } from '~/utils';
 
@@ -55,14 +55,24 @@ export function useInViewport(): {
 export const ThinkingContent: FC<{
   children: React.ReactNode;
   animate?: boolean;
-}> = memo(({ children, animate = false }) => {
+  className?: string;
+}> = memo(({ children, animate = false, className }) => {
   const fontSize = useAtomValue(fontSizeAtom);
-  const content =
-    animate && typeof children === 'string' ? <AnimatedText text={children} /> : children;
 
   return (
-    <div className="relative rounded-lg border border-border-light bg-surface-secondary p-3 pb-8 text-text-secondary">
-      <p className={cn('whitespace-pre-wrap leading-[26px]', fontSize)}>{content}</p>
+    <div
+      className={cn(
+        'relative rounded-lg border border-border-light bg-surface-secondary p-3 pb-8 text-text-secondary',
+        className,
+      )}
+    >
+      <div className={cn('markdown prose dark:prose-invert max-w-none leading-[26px]', fontSize)}>
+        {typeof children === 'string' ? (
+          <MarkdownLite content={children} codeExecution={false} animate={animate} />
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 });
