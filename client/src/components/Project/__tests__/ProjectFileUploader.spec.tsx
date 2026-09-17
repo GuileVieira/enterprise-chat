@@ -121,6 +121,19 @@ describe('ProjectFileUploader', () => {
     expect(screen.getByText('com_ui_project_file_not_indexed')).toBeInTheDocument();
   });
 
+  it('uses theme-safe colors in the delete confirmation', () => {
+    renderUploader([createFile()]);
+
+    fireEvent.click(screen.getByTitle('com_ui_delete'));
+
+    expect(screen.getByRole('alertdialog')).toHaveClass('bg-surface-dialog');
+    expect(screen.getByRole('button', { name: 'com_ui_cancel' })).toHaveClass('text-text-primary');
+    expect(screen.getByRole('button', { name: 'com_ui_delete' })).toHaveClass(
+      'bg-surface-destructive',
+      'text-text-on-status',
+    );
+  });
+
   it('clears pending state and shows an error when upload fails', () => {
     const { container } = renderUploader();
     const input = container.querySelector<HTMLInputElement>('input[type="file"]');
