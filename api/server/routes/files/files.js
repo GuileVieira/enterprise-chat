@@ -907,6 +907,7 @@ const handleFileUpload = async (req, res) => {
   try {
     req.file.originalname = sanitizeFilename(req.file.originalname);
     const isAssistants = isAssistantsEndpoint(metadata.endpoint);
+    let authorizedProjectUpload = false;
 
     if (metadata.projectId) {
       const { allowed } = await hasProjectAccess({
@@ -917,6 +918,7 @@ const handleFileUpload = async (req, res) => {
       if (!allowed) {
         return res.status(403).json({ message: 'Insufficient project permissions' });
       }
+      authorizedProjectUpload = true;
     }
 
     if (!isAssistants) {
@@ -959,11 +961,13 @@ const handleFileUpload = async (req, res) => {
 
     /** Check the role permission before any content inspection: a forbidden upload
      * must be rejected without reading or embedding the file. */
-    const uploadAllowed = await checkToolResourceUploadPermission({
-      req,
-      toolResource: metadata.tool_resource,
-      getRoleByName,
-    });
+    const uploadAllowed =
+      authorizedProjectUpload ||
+      (await checkToolResourceUploadPermission({
+        req,
+        toolResource: metadata.tool_resource,
+        getRoleByName,
+      }));
     if (!uploadAllowed) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }

@@ -578,6 +578,34 @@ describe('File Routes - Agent Files Endpoint', () => {
       expect(processAgentFileUpload).not.toHaveBeenCalled();
     });
 
+    it('allows a project editor to upload research files without the global file-search grant', async () => {
+      const projectId = uuidv4();
+      const project = await Project.create({
+        projectId,
+        name: 'Research Project',
+        user: authorId,
+      });
+      const { grantPermission } = require('~/server/services/PermissionService');
+      await grantPermission({
+        principalType: PrincipalType.USER,
+        principalId: otherUserId,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project._id,
+        accessRoleId: AccessRoleIds.PROJECT_EDITOR,
+        grantedBy: authorId,
+      });
+
+      const response = await request(createAppWithUser(otherUserId)).post('/files').send({
+        endpoint: 'agents',
+        projectId,
+        tool_resource: 'file_search',
+        file_id: uuidv4(),
+      });
+
+      expect(response.status).toBe(200);
+      expect(processAgentFileUpload).toHaveBeenCalled();
+    });
+
     it.each([SystemRoles.USER, SystemRoles.OWNER])(
       'should allow file upload to agent for agent author (%s)',
       async (role) => {

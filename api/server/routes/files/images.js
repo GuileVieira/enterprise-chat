@@ -23,6 +23,7 @@ const {
   resolveUploadLLMDeliveryPath,
   isResponsesApiUpload,
   isSpeechProviderConfigured,
+  PermissionBits,
 } = require('librechat-data-provider');
 const {
   processAgentFileUpload,
@@ -36,6 +37,10 @@ const {
 } = require('~/server/services/Files/routing');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
+const {
+  findProjectForRequest,
+  userCanAccessProject,
+} = require('~/server/services/Projects/access');
 const db = require('~/models');
 
 const router = express.Router();
@@ -56,6 +61,27 @@ router.post('/', async (req, res) => {
   try {
     req.file.originalname = sanitizeFilename(req.file.originalname);
     const isAssistants = isAssistantsEndpoint(metadata.endpoint);
+    let authorizedProjectUpload = false;
+
+    if (metadata.projectId) {
+      const project = await findProjectForRequest({
+        projectId: metadata.projectId,
+        user: req.user,
+      });
+      const canManageProjects = await hasCapability(req.user, SystemCapabilities.MANAGE_PROJECTS);
+      authorizedProjectUpload = Boolean(
+        project?._id &&
+          (canManageProjects ||
+            (await userCanAccessProject({
+              req,
+              project,
+              requiredPermission: PermissionBits.EDIT,
+            }))),
+      );
+      if (!authorizedProjectUpload) {
+        return res.status(403).json({ message: 'Insufficient project permissions' });
+      }
+    }
 
     /* Authorization runs before anything reads the target agent, matching the file
      * route. Validating against a record the caller cannot access answers with that
@@ -123,11 +149,13 @@ router.post('/', async (req, res) => {
     /** The Code Files UI routes image uploads here instead of `/files`, so the
      * same role gate has to run before any content inspection — otherwise an
      * image is a way around the tool-resource boundary. */
-    const uploadAllowed = await checkToolResourceUploadPermission({
-      req,
-      toolResource: metadata.tool_resource,
-      getRoleByName: db.getRoleByName,
-    });
+    const uploadAllowed =
+      authorizedProjectUpload ||
+      (await checkToolResourceUploadPermission({
+        req,
+        toolResource: metadata.tool_resource,
+        getRoleByName: db.getRoleByName,
+      }));
     if (!uploadAllowed) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }

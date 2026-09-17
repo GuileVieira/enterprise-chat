@@ -60,6 +60,7 @@ describe('POST /images - Agent Upload Permission Check (Integration)', () => {
   let agentCustomId;
   let User;
   let Agent;
+  let Project;
   let AclEntry;
   let methods;
   let modelsToCleanup = [];
@@ -77,6 +78,7 @@ describe('POST /images - Agent Upload Permission Check (Integration)', () => {
 
     User = models.User;
     Agent = models.Agent;
+    Project = models.Project;
     AclEntry = models.AclEntry;
 
     await methods.seedDefaultRoles();
@@ -98,6 +100,7 @@ describe('POST /images - Agent Upload Permission Check (Integration)', () => {
 
   beforeEach(async () => {
     await Agent.deleteMany({});
+    await Project.deleteMany({});
     await User.deleteMany({});
     await AclEntry.deleteMany({});
 
@@ -263,6 +266,34 @@ describe('POST /images - Agent Upload Permission Check (Integration)', () => {
       endpoint: 'agents',
       agent_id: agentCustomId,
       tool_resource: 'context',
+      file_id: uuidv4(),
+    });
+
+    expect(response.status).toBe(200);
+    expect(processAgentFileUpload).toHaveBeenCalled();
+  });
+
+  it('allows a project editor to upload research images without the global file-search grant', async () => {
+    const projectId = uuidv4();
+    const project = await Project.create({
+      projectId,
+      name: 'Research Project',
+      user: authorId,
+    });
+    const { grantPermission } = require('~/server/services/PermissionService');
+    await grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: otherUserId,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+      accessRoleId: AccessRoleIds.PROJECT_EDITOR,
+      grantedBy: authorId,
+    });
+
+    const response = await request(createAppWithUser(otherUserId)).post('/images').send({
+      endpoint: 'agents',
+      projectId,
+      tool_resource: 'file_search',
       file_id: uuidv4(),
     });
 
