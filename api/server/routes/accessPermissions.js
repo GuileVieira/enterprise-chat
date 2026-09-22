@@ -57,6 +57,7 @@ router.get('/:resourceType/roles', getResourceRoles);
 const checkResourcePermissionAccess = (requiredPermission) =>
   createAgentAdminPermissionAccess({
     getAgent: db.getAgent,
+    hasGlobalAgentPermission: db.hasGlobalAgentPermission,
     fallback: (req, res, next) => {
       const { resourceType } = req.params;
       let middleware;

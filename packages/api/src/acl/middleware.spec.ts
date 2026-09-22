@@ -13,16 +13,19 @@ describe('agent admin permission access', () => {
     tenantId?: string,
   ) => {
     const getAgent = jest.fn().mockResolvedValue({ _id: resourceId });
+    const hasGlobalAgentPermission = jest.fn().mockResolvedValue(false);
     const fallback = jest.fn();
     const next = jest.fn();
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
     const req = { params: { resourceType, resourceId }, user: { role, tenantId } };
     const middleware = createAgentAdminPermissionAccess({
       getAgent: getAgent as AllMethods['getAgent'],
+      hasGlobalAgentPermission,
       fallback,
     });
     return {
       getAgent,
+      hasGlobalAgentPermission,
       fallback,
       next,
       res,
@@ -76,6 +79,24 @@ describe('agent admin permission access', () => {
   it('fails closed on lookup errors', async () => {
     const test = setup();
     test.getAgent.mockRejectedValue(new Error('database unavailable'));
+    await test.run();
+    expect(test.res.status).toHaveBeenCalledWith(500);
+    expect(test.next).not.toHaveBeenCalled();
+  });
+
+  it('allows a global agent only after its explicit admin SHARE check', async () => {
+    const test = setup(SystemRoles.ADMIN, ResourceType.AGENT, 'orqest');
+    test.getAgent.mockResolvedValue(null);
+    test.hasGlobalAgentPermission.mockResolvedValue(true);
+    await test.run();
+    expect(test.hasGlobalAgentPermission).toHaveBeenCalledWith(resourceId, 8);
+    expect(test.next).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the global ACL lookup fails', async () => {
+    const test = setup(SystemRoles.ADMIN, ResourceType.AGENT, 'orqest');
+    test.getAgent.mockResolvedValue(null);
+    test.hasGlobalAgentPermission.mockRejectedValue(new Error('database unavailable'));
     await test.run();
     expect(test.res.status).toHaveBeenCalledWith(500);
     expect(test.next).not.toHaveBeenCalled();

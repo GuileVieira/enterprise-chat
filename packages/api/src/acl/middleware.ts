@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { ResourceType, SystemRoles } from 'librechat-data-provider';
+import { ResourceType, SystemRoles, PermissionBits } from 'librechat-data-provider';
 import type { AllMethods } from '@librechat/data-schemas';
 import type { NextFunction, Response } from 'express';
 import type { ServerRequest } from '~/types';
@@ -16,8 +16,11 @@ export function isAgentPermissionsAdmin(req: AgentPermissionsRequest): boolean {
 
 export function createAgentAdminPermissionAccess({
   getAgent,
+  hasGlobalAgentPermission,
   fallback,
-}: Pick<AllMethods, 'getAgent'> & { fallback: Middleware }): Middleware {
+}: Pick<AllMethods, 'getAgent' | 'hasGlobalAgentPermission'> & {
+  fallback: Middleware;
+}): Middleware {
   return async (req, res, next) => {
     if (!isAgentPermissionsAdmin(req)) {
       return fallback(req, res, next);
@@ -36,7 +39,7 @@ export function createAgentAdminPermissionAccess({
         },
         '_id',
       );
-      if (!agent) {
+      if (!agent && !(await hasGlobalAgentPermission(resourceId, PermissionBits.SHARE))) {
         return res.status(404).json({ message: 'Resource not found' });
       }
     } catch (_error) {

@@ -11,6 +11,10 @@ import {
 import type { FilterQuery, Model, ProjectionType, Types } from 'mongoose';
 import type { AgentToolResources } from 'librechat-data-provider';
 import type { IAgent, IAclEntry, ActionQuery } from '~/types';
+import type { TenantUpdate } from '~/tenant/policy';
+import { hasGlobalAgentPermission as checkGlobalAgentPermission } from './agent/global';
+import { currentTenantScope, sanitizeTenantMutation } from '~/tenant/policy';
+import { runAsSystem } from '~/config/tenantContext';
 import { withCodeEnvironmentReference } from './codeEnvironment';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
 import { filterExistingSkillIds } from './skill';
@@ -551,6 +555,7 @@ export function createAgentMethods(
   mongoose: typeof import('mongoose'),
   deps: AgentDeps,
 ): {
+  hasGlobalAgentPermission: (resourceId: string, permission: number) => Promise<boolean>;
   getAgent: (
     searchParameter: FilterQuery<IAgent>,
     projection?: ProjectionType<IAgent>,
@@ -653,11 +658,15 @@ export function createAgentMethods(
 } {
   const { removeAllPermissions, getActions, getSoleOwnedResourceIds, isExternalSkillId } = deps;
 
+  const hasGlobalAgentPermission = (resourceId: string, permission: number) =>
+    checkGlobalAgentPermission(mongoose, resourceId, permission);
+
   async function restoreAgentAfterReferenceLoss(
     Agent: Model<IAgent>,
     agentAfterWrite: IAgent | null,
     originalAgent: IAgent,
     lostEnvironmentId: string,
+    globalWrite = false,
   ): Promise<void> {
     if (agentAfterWrite == null) return;
     const { updatedAt } = agentAfterWrite as IAgent & { updatedAt: Date };
@@ -666,6 +675,7 @@ export function createAgentMethods(
         _id: agentAfterWrite._id,
         code_environment_id: lostEnvironmentId,
         updatedAt,
+        ...(globalWrite ? { tenantId: null } : {}),
       },
       originalAgent,
       { timestamps: false },
@@ -675,7 +685,11 @@ export function createAgentMethods(
        * write. Never erase that writer, but still remove the lost reference if
        * it remains active. */
       await Agent.updateOne(
-        { _id: agentAfterWrite._id, code_environment_id: lostEnvironmentId },
+        {
+          _id: agentAfterWrite._id,
+          code_environment_id: lostEnvironmentId,
+          ...(globalWrite ? { tenantId: null } : {}),
+        },
         { $unset: { code_environment_id: 1 } },
       );
     }
@@ -1067,27 +1081,48 @@ export function createAgentMethods(
     } else if (typeof setEnvironmentId === 'string') {
       nextEnvironmentId = setEnvironmentId;
     }
+    const globalWrite =
+      currentAgent != null &&
+      currentAgent.tenantId == null &&
+      (await hasGlobalAgentPermission(currentAgent._id.toString(), PermissionBits.EDIT));
+    const writeFilter =
+      currentAgent == null || nextEnvironmentId == null
+        ? searchParameter
+        : { ...searchParameter, _id: currentAgent._id, updatedAt: currentRevision };
+    if (globalWrite) {
+      // Keep the normal mutation guard when elevating only this exact document write.
+      const sanitized = sanitizeTenantMutation(
+        currentTenantScope(),
+        updateData as TenantUpdate,
+        'guard',
+      );
+      if (sanitized.emptied) return null;
+      updateData = sanitized.update as Record<string, unknown>;
+    }
+    const write = async () =>
+      await Agent.findOneAndUpdate(
+        globalWrite ? { ...writeFilter, _id: currentAgent!._id, tenantId: null } : writeFilter,
+        updateData,
+        mongoOptions,
+      ).lean<IAgent>();
     const updatedAgent = await withCodeEnvironmentReference(
       mongoose,
       nextEnvironmentId,
-      async () =>
-        (await Agent.findOneAndUpdate(
-          currentAgent == null || nextEnvironmentId == null
-            ? searchParameter
-            : { ...searchParameter, _id: currentAgent._id, updatedAt: currentRevision },
-          updateData,
-          mongoOptions,
-        ).lean()) as IAgent | null,
+      async () => (globalWrite ? await runAsSystem(write) : await write()),
       undefined,
       async (agentAfterUpdate) => {
         if (agentAfterUpdate == null || nextEnvironmentId == null) return;
         if (currentAgent == null) return;
-        await restoreAgentAfterReferenceLoss(
-          Agent,
-          agentAfterUpdate,
-          currentAgent.toObject() as IAgent,
-          nextEnvironmentId,
-        );
+        const restore = async () =>
+          await restoreAgentAfterReferenceLoss(
+            Agent,
+            agentAfterUpdate,
+            currentAgent.toObject() as IAgent,
+            nextEnvironmentId,
+            globalWrite,
+          );
+        if (globalWrite) await runAsSystem(restore);
+        else await restore();
       },
     );
 
@@ -1675,6 +1710,7 @@ export function createAgentMethods(
   }
 
   return {
+    hasGlobalAgentPermission,
     getAgent,
     getAgentVersions,
     getAgentWithVersionCount,

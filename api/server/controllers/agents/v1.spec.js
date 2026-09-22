@@ -1672,6 +1672,21 @@ describe('Agent Controllers - Mass Assignment Protection', () => {
       existingAgentId = agent.id;
     });
 
+    test('returns a conflict instead of crashing when the write no longer matches', async () => {
+      mockReq.user.id = existingAgentAuthorId.toString();
+      mockReq.params.id = existingAgentId;
+      mockReq.body = { name: 'Updated Agent' };
+      const write = jest.spyOn(db, 'updateAgent').mockResolvedValueOnce(null);
+      try {
+        await updateAgentHandler(mockReq, mockRes);
+        expect(mockRes.status).toHaveBeenCalledWith(409);
+        expect(mockRes.status).not.toHaveBeenCalledWith(500);
+        expect((await Agent.findOne({ id: existingAgentId })).name).toBe('Original Agent');
+      } finally {
+        write.mockRestore();
+      }
+    });
+
     test('should update agent with allowed fields only', async () => {
       mockReq.user.id = existingAgentAuthorId.toString(); // Set as author
       mockReq.params.id = existingAgentId;

@@ -1414,6 +1414,10 @@ const updateAgentHandler = async (req, res) => {
           })
         : existingAgent;
 
+    if (!updatedAgent) {
+      return res.status(409).json({ error: 'Agent could not be updated; reload and try again' });
+    }
+
     // Add version count to the response
     updatedAgent.version = updatedAgent.versions ? updatedAgent.versions.length : 0;
 

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import {
   AccessRoleIds,
+  SystemRoles,
   ResourceType,
   PrincipalType,
   PrincipalModel,
@@ -27,7 +28,7 @@ import {
   type AgentMethods,
 } from './agent';
 import { withCodeEnvironmentReference } from './codeEnvironment';
-import { tenantStorage } from '~/config/tenantContext';
+import { tenantStorage, runAsSystem } from '~/config/tenantContext';
 import { createAclEntryMethods } from './aclEntry';
 import { createModels } from '~/models';
 
@@ -149,6 +150,109 @@ afterAll(async () => {
 describe('Agent Methods', () => {
   beforeEach(() => {
     externalSkillIds.clear();
+  });
+
+  describe('global agent administration', () => {
+    async function setupGlobal(role = SystemRoles.ADMIN, permBits = 15) {
+      const user = await User.create({
+        email: `${uuidv4()}@example.com`,
+        role,
+        tenantId: 'orqest',
+        provider: 'local',
+      });
+      const agent = await createAgent({
+        id: `agent_${uuidv4()}`,
+        name: 'Global agent',
+        author: user._id,
+        provider: 'openai',
+        model: 'gpt-4',
+      });
+      await AclEntry.create([
+        {
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          principalType: PrincipalType.USER,
+          principalModel: PrincipalModel.USER,
+          principalId: user._id,
+          tenantId: 'orqest',
+          permBits,
+        },
+        {
+          resourceType: ResourceType.AGENT,
+          resourceId: agent._id,
+          principalType: PrincipalType.TENANT,
+          principalId: 'mm-marketing',
+          tenantId: 'mm-marketing',
+          permBits: PermissionBits.VIEW,
+        },
+      ]);
+      return { agent, context: { tenantId: 'orqest', userId: user._id.toString() } };
+    }
+
+    test('admin with direct ACL updates a global agent without changing tenant or sharing', async () => {
+      const { agent, context } = await setupGlobal();
+      const grantsBefore = await AclEntry.find({ resourceId: agent._id }).lean();
+      await tenantStorage.run(context, async () => {
+        expect(
+          await methods.hasGlobalAgentPermission(agent._id.toString(), PermissionBits.SHARE),
+        ).toBe(true);
+        const updated = await updateAgent({ id: agent.id }, { name: 'Edited global agent' });
+        expect(updated?.name).toBe('Edited global agent');
+        expect(updated?.tenantId).toBeUndefined();
+        expect(updated?.versions).toHaveLength(2);
+      });
+      await tenantStorage.run({ tenantId: 'mm-marketing' }, async () => {
+        expect((await getAgent({ id: agent.id }))?.name).toBe('Edited global agent');
+      });
+      expect(await AclEntry.find({ resourceId: agent._id }).lean()).toEqual(grantsBefore);
+    });
+
+    test.each([
+      [SystemRoles.USER, 15],
+      [SystemRoles.ADMIN, PermissionBits.VIEW],
+      [SystemRoles.ADMIN, 0],
+    ])('denies global writes for role %s with bits %s', async (role, bits) => {
+      const { agent, context } = await setupGlobal(role, bits);
+      await tenantStorage.run(context, async () => {
+        expect(
+          await methods.hasGlobalAgentPermission(agent._id.toString(), PermissionBits.SHARE),
+        ).toBe(false);
+        expect(await updateAgent({ id: agent.id }, { name: 'Denied' })).toBeNull();
+      });
+      expect((await getAgent({ id: agent.id }))?.name).toBe('Global agent');
+    });
+
+    test('cannot use an ACL from another tenant or elevate a tenant-owned agent', async () => {
+      const { agent, context } = await setupGlobal();
+      await tenantStorage.run({ ...context, tenantId: 'mm-marketing' }, async () => {
+        expect(
+          await methods.hasGlobalAgentPermission(agent._id.toString(), PermissionBits.EDIT),
+        ).toBe(false);
+        expect(await updateAgent({ id: agent.id }, { name: 'Denied' })).toBeNull();
+      });
+      await runAsSystem(
+        async () =>
+          await Agent.updateOne({ _id: agent._id }, { $set: { tenantId: 'mm-marketing' } }),
+      );
+      await tenantStorage.run(context, async () => {
+        expect(
+          await methods.hasGlobalAgentPermission(agent._id.toString(), PermissionBits.EDIT),
+        ).toBe(false);
+        expect(await updateAgent({ id: agent.id }, { name: 'Denied' })).toBeNull();
+      });
+    });
+
+    test('keeps the tenant mutation guard on the elevated write', async () => {
+      const { agent, context } = await setupGlobal();
+      await tenantStorage.run(context, async () => {
+        await expect(
+          updateAgent({ id: agent.id }, { name: 'Denied', tenantId: 'mm-marketing' }),
+        ).rejects.toThrow('Cross-tenant tenantId mutation');
+        const updated = await updateAgent({ id: agent.id }, { name: 'Edited', tenantId: 'orqest' });
+        expect(updated?.name).toBe('Edited');
+        expect(updated?.tenantId).toBeUndefined();
+      });
+    });
   });
 
   describe('Agent Resource File Operations', () => {
