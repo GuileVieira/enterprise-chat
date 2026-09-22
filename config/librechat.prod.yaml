@@ -91,10 +91,9 @@ endpoints:
           - 'openai/gpt-5.6-terra'
           - 'openai/gpt-5.6-sol'
           - 'openai/gpt-6-astra'
-          - 'anthropic/claude-fable-5.1'
           - 'anthropic/claude-sonnet-5'
           - '~anthropic/claude-sonnet-latest'
-          - '~anthropic/claude-opus-latest'
+          - 'anthropic/claude-opus-5.5'
           - 'google/gemini-3.8-flash'
         fetch: false
       titleConvo: true
@@ -146,12 +145,14 @@ modelSpecs:
         endpoint: 'OpenRouter'
         model: 'openai/gpt-6-astra'
         webSearch: true
+    # Preserve the legacy spec for existing conversations, routing them to Opus.
     - name: 'claude-fable-5'
-      label: 'Claude Fable 5.1 (10x)'
+      label: 'Claude Opus 5.5 (5x)'
+      showInMenu: false
       iconURL: 'anthropic'
       preset:
         endpoint: 'OpenRouter'
-        model: 'anthropic/claude-fable-5.1'
+        model: 'anthropic/claude-opus-5.5'
         webSearch: true
     - name: 'claude-sonnet-5'
       label: 'Claude Sonnet 5 (2x)'
@@ -168,11 +169,11 @@ modelSpecs:
         model: '~anthropic/claude-sonnet-latest'
         webSearch: true
     - name: 'claude-opus-latest'
-      label: 'Claude Opus Latest (5x)'
+      label: 'Claude Opus 5.5 (5x)'
       iconURL: 'anthropic'
       preset:
         endpoint: 'OpenRouter'
-        model: '~anthropic/claude-opus-latest'
+        model: 'anthropic/claude-opus-5.5'
         webSearch: true
     - name: 'gemini-38-flash'
       label: 'Gemini 3.8 Flash (1x)'
