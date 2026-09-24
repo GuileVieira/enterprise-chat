@@ -180,9 +180,7 @@ const pasteImage = (textarea: HTMLElement) => {
  * `document.body` — which reads to the user as "the send button is enabled but
  * Enter does nothing", since Enter-to-send is a textarea key handler.
  *
- * The dialog only exists on a `legacyFileUploadUX` endpoint. Unified upload routes
- * a pasted file straight to its destination, so these render in legacy mode and the
- * unified path is covered separately below.
+ * Check focus in legacy mode here; unified mode is covered separately below.
  */
 describe('composer focus after a pasted upload', () => {
   beforeEach(() => {
@@ -208,7 +206,7 @@ describe('composer focus after a pasted upload', () => {
     expect(textarea).toHaveFocus();
 
     pasteImage(textarea);
-    const [option] = await screen.findAllByRole('button', { name: /upload/i });
+    const option = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
     expect(textarea).not.toHaveFocus();
 
     await userEvent.click(option);
@@ -224,7 +222,7 @@ describe('composer focus after a pasted upload', () => {
     await userEvent.type(textarea, 'hi');
 
     pasteImage(textarea);
-    const [option] = await screen.findAllByRole('button', { name: /upload/i });
+    const option = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
     await userEvent.click(option);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId('send-button')).toBeEnabled());
@@ -240,8 +238,8 @@ describe('composer focus after a pasted upload', () => {
 });
 
 /**
- * Unified upload auto-routes a pasted file unless an agent can either index an image
- * or send it visually. With no such choice, the composer keeps focus and Enter sends.
+ * Unified upload asks before sending a pasted image, even when only visual delivery
+ * is available. The composer regains focus after the choice.
  */
 describe('composer focus after a pasted upload in unified mode', () => {
   beforeEach(() => {
@@ -318,7 +316,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
     expect(formData.get('tool_resource')).toBeNull();
   });
 
-  test('uploads without a destination dialog and leaves focus in the composer', async () => {
+  test('asks before uploading a pasted image when OCR is unavailable', async () => {
     renderComposer();
 
     const textarea = await screen.findByTestId('text-input');
@@ -328,9 +326,13 @@ describe('composer focus after a pasted upload in unified mode', () => {
 
     pasteImage(textarea);
 
+    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    expect(mockUpload).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /index image text|indexar texto/i })).toBeNull();
+
+    await userEvent.click(visual);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
-    expect(screen.queryAllByRole('button', { name: /upload/i })).toHaveLength(0);
-    expect(textarea).toHaveFocus();
+    await waitFor(() => expect(textarea).toHaveFocus());
   }, 20000);
 
   test('Enter still sends after a pasted upload, with no further typing', async () => {
@@ -341,6 +343,9 @@ describe('composer focus after a pasted upload in unified mode', () => {
     await userEvent.type(textarea, 'hi');
 
     pasteImage(textarea);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /visual analysis|análise visual/i }),
+    );
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId('send-button')).toBeEnabled());
 

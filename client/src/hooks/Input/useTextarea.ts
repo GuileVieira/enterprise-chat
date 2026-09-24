@@ -350,7 +350,12 @@ export default function useTextarea({
 
         if (isUnifiedMode && preferred == null) {
           const imagesOnly = clipboardFiles.every((file) => file.type.startsWith('image/'));
-          if (imagesOnly && getUploadOptions(clipboardFiles).includes(EToolResources.file_search)) {
+          if (
+            imagesOnly &&
+            getUploadOptions(clipboardFiles).some(
+              (option) => option == null || option === EToolResources.file_search,
+            )
+          ) {
             setFilesLoading(false);
             openModal(clipboardFiles, 'pasteImage');
             return false;
@@ -374,16 +379,13 @@ export default function useTextarea({
         }
 
         const usePreferred = preferred != null && options.includes(preferred);
-        if (!usePreferred && options.length > 1) {
+        const isPastedImage = clipboardFiles.every((file) => file.type.startsWith('image/'));
+        const hasImageOption = options.some(
+          (option) => option == null || option === EToolResources.file_search,
+        );
+        if (!usePreferred && (options.length > 1 || (isPastedImage && hasImageOption))) {
           setFilesLoading(false);
-          openModal(
-            clipboardFiles,
-            clipboardFiles.every((file) => file.type.startsWith('image/')) &&
-              options.includes(undefined) &&
-              options.includes(EToolResources.file_search)
-              ? 'pasteImage'
-              : undefined,
-          );
+          openModal(clipboardFiles, isPastedImage && hasImageOption ? 'pasteImage' : undefined);
           return false;
         }
 
