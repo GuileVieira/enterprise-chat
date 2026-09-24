@@ -6,6 +6,7 @@ import { useChatContext } from './ChatContext';
 interface DragDropContextValue {
   conversationId: string | null | undefined;
   agentId: string | null | undefined;
+  projectId?: string | null;
   endpoint: string | null | undefined;
   endpointType?: EModelEndpoint | string | undefined;
   useResponsesApi?: boolean;
@@ -22,6 +23,7 @@ export function DragDropProvider({ children }: { children: React.ReactNode }) {
     () => ({
       conversationId: conversation?.conversationId,
       agentId: conversation?.agent_id,
+      projectId: conversation?.projectId,
       endpoint: conversation?.endpoint,
       endpointType: endpointType,
       useResponsesApi: useResponsesApi,
@@ -29,6 +31,7 @@ export function DragDropProvider({ children }: { children: React.ReactNode }) {
     [
       conversation?.conversationId,
       conversation?.agent_id,
+      conversation?.projectId,
       conversation?.endpoint,
       useResponsesApi,
       endpointType,
@@ -41,6 +44,7 @@ export function DragDropProvider({ children }: { children: React.ReactNode }) {
 const defaultDragDropValue: DragDropContextValue = {
   conversationId: undefined,
   agentId: undefined,
+  projectId: undefined,
   endpoint: undefined,
   endpointType: undefined,
   useResponsesApi: undefined,

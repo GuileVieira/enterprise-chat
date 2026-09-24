@@ -24,7 +24,8 @@ import { isEphemeralAgent } from '~/common';
  * consistently from one source.
  */
 export default function useUploadOptions() {
-  const { conversationId, agentId, endpoint, endpointType, useResponsesApi } = useDragDropContext();
+  const { conversationId, agentId, projectId, endpoint, endpointType, useResponsesApi } =
+    useDragDropContext();
   const { agentsConfig } = useGetAgentsConfig();
   const capabilities = useAgentCapabilities(agentsConfig?.capabilities ?? defaultAgentCapabilities);
   const ephemeralAgent = useRecoilValue(
@@ -47,7 +48,8 @@ export default function useUploadOptions() {
    * one enables the ephemeral capability, matching the original drag-and-drop behavior.
    */
   const isSavedAgent = agentId != null && agentId !== '' && !isEphemeralAgent(agentId);
-  const fileSearchAllowedByAgent = !isSavedAgent || (tools?.includes(Tools.file_search) ?? false);
+  const fileSearchAllowedByAgent =
+    Boolean(projectId) || !isSavedAgent || (tools?.includes(Tools.file_search) ?? false);
   const codeAllowedByAgent = !isSavedAgent || (tools?.includes(Tools.execute_code) ?? false);
 
   /* An agent conversation carries endpoint `agents`, but its file policy belongs to the
@@ -76,10 +78,11 @@ export default function useUploadOptions() {
         endpoint,
         endpointType,
         useResponsesApi,
-        fileSearchEnabled: capabilities.fileSearchEnabled,
+        fileSearchEnabled: capabilities.fileSearchEnabled || Boolean(projectId),
         codeEnabled: capabilities.codeEnabled,
         contextEnabled: capabilities.contextEnabled,
         fileSearchAllowedByAgent,
+        imageFileSearchAllowed: isSavedAgent || Boolean(projectId),
         codeAllowedByAgent,
         fileConfig,
         endpointSupportedMimeTypes,
@@ -93,6 +96,8 @@ export default function useUploadOptions() {
       capabilities.codeEnabled,
       capabilities.contextEnabled,
       fileSearchAllowedByAgent,
+      isSavedAgent,
+      projectId,
       codeAllowedByAgent,
       fileConfig,
       endpointSupportedMimeTypes,

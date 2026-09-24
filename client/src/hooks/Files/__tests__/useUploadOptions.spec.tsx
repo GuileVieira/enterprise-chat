@@ -1,11 +1,15 @@
 import { RecoilRoot } from 'recoil';
 import { renderHook } from '@testing-library/react';
+import { EToolResources } from 'librechat-data-provider';
 import useUploadOptions from '../useUploadOptions';
 
 const mockDragDropContext = {
   conversationId: 'convo-1',
   get agentId() {
     return mockAgentId;
+  },
+  get projectId() {
+    return mockProjectId;
   },
   endpoint: 'agents',
   endpointType: 'custom',
@@ -14,6 +18,7 @@ const mockDragDropContext = {
 let mockProvider: string | undefined = 'Custom Provider';
 /* Saved agent ids carry the `agent_` prefix; anything else reads as ephemeral. */
 let mockAgentId: string | undefined = 'agent_saved01';
+let mockProjectId: string | undefined;
 
 jest.mock('~/Providers', () => ({
   useDragDropContext: () => mockDragDropContext,
@@ -44,6 +49,21 @@ jest.mock('~/data-provider', () => ({
 const render = () => renderHook(() => useUploadOptions(), { wrapper: RecoilRoot });
 
 describe('useUploadOptions endpoint resolution', () => {
+  afterEach(() => {
+    mockProjectId = undefined;
+  });
+
+  it('offers OCR indexing for a pasted project image without a saved agent', () => {
+    mockProvider = undefined;
+    mockAgentId = undefined;
+    mockProjectId = 'project-1';
+
+    const { result } = render();
+    expect(
+      result.current.getOptions([new File(['image'], 'screen.png', { type: 'image/png' })]),
+    ).toEqual([undefined, EToolResources.file_search]);
+  });
+
   it('applies the agent provider policy rather than the agents entry', () => {
     /* An agent conversation carries endpoint `agents`, but a named custom provider
      * configures its own entry. Reading the conversation endpoint missed it, so a

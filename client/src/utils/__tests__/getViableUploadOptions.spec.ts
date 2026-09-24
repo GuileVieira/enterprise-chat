@@ -86,6 +86,27 @@ describe('getViableUploadOptions', () => {
   });
 
   describe('provider-specific direct attachment', () => {
+    it('offers visual input or OCR indexing only when a saved agent can search images', () => {
+      const image = file('image/png', 'screen.png');
+      const ctx = baseCtx({
+        provider: 'OpenRouter',
+        imageFileSearchAllowed: true,
+        codeEnabled: false,
+        contextEnabled: false,
+        fileConfig: {
+          ...fileConfig,
+          ocr: { supportedMimeTypes: [/^image\//] },
+        } as FileConfig,
+      });
+      expect(getViableUploadOptions([image], ctx)).toEqual([undefined, EToolResources.file_search]);
+      expect(getViableUploadOptions([image], { ...ctx, fileSearchAllowedByAgent: false })).toEqual([
+        undefined,
+      ]);
+      expect(getViableUploadOptions([image], { ...ctx, imageFileSearchAllowed: false })).toEqual([
+        undefined,
+      ]);
+    });
+
     it('lets Google attach video directly', () => {
       const ctx = baseCtx({
         provider: 'google',

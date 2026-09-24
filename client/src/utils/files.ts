@@ -502,6 +502,7 @@ export type UploadOptionContext = {
   codeEnabled: boolean;
   contextEnabled: boolean;
   fileSearchAllowedByAgent: boolean;
+  imageFileSearchAllowed?: boolean;
   codeAllowedByAgent: boolean;
   fileConfig: FileConfig | null;
   endpointSupportedMimeTypes?: RegexLike[];
@@ -594,7 +595,13 @@ export const getViableUploadOptions = (
   if (
     ctx.fileSearchEnabled &&
     ctx.fileSearchAllowedByAgent &&
-    every((type) => !type.startsWith('image/') && checkType(type, retrievalMimeTypes))
+    every(
+      (type) =>
+        (!type.startsWith('image/') && checkType(type, retrievalMimeTypes)) ||
+        (ctx.imageFileSearchAllowed === true &&
+          type.startsWith('image/') &&
+          checkType(type, ctx.fileConfig?.ocr?.supportedMimeTypes || [])),
+    )
   ) {
     options.push(EToolResources.file_search);
   }

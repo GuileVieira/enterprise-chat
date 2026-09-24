@@ -340,19 +340,22 @@ export default function useTextarea({
           return await upload();
         }
 
-        /* Unified mode decides the destination from the file itself, matching the drop
-         * handler. A caller that already knows where the file belongs, as the long-text
-         * paste does, still passes that through. */
-        if (isUnifiedMode && preferred == null) {
-          return await upload();
-        }
-
         /* Before the config lands neither answer is safe, so the paste says so rather than
          * falling through to the chooser a unified deployment no longer shows. */
         if (preferred == null && !isUploadConfigResolved) {
           showToast({ message: localize('com_ui_attach_error_pending'), status: 'warning' });
           setFilesLoading(false);
           return false;
+        }
+
+        if (isUnifiedMode && preferred == null) {
+          const imagesOnly = clipboardFiles.every((file) => file.type.startsWith('image/'));
+          if (imagesOnly && getUploadOptions(clipboardFiles).includes(EToolResources.file_search)) {
+            setFilesLoading(false);
+            openModal(clipboardFiles, 'pasteImage');
+            return false;
+          }
+          return await upload();
         }
 
         /** Resolving options reads the file config, so until that lands the list is empty for
@@ -373,7 +376,14 @@ export default function useTextarea({
         const usePreferred = preferred != null && options.includes(preferred);
         if (!usePreferred && options.length > 1) {
           setFilesLoading(false);
-          openModal(clipboardFiles);
+          openModal(
+            clipboardFiles,
+            clipboardFiles.every((file) => file.type.startsWith('image/')) &&
+              options.includes(undefined) &&
+              options.includes(EToolResources.file_search)
+              ? 'pasteImage'
+              : undefined,
+          );
           return false;
         }
 

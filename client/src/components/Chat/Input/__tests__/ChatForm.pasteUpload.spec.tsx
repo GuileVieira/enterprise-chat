@@ -19,6 +19,20 @@ import store from '~/store';
 
 const mockUpload = jest.fn();
 const mockAsk = jest.fn();
+let mockImageIndexChoice = false;
+
+jest.mock('~/hooks/Files/useUploadOptions', () => {
+  const actual = jest.requireActual('~/hooks/Files/useUploadOptions');
+  return {
+    __esModule: true,
+    default: () => {
+      const result = actual.default();
+      return mockImageIndexChoice
+        ? { ...result, getOptions: () => [undefined, 'file_search'] }
+        : result;
+    },
+  };
+});
 
 jest.mock('librechat-data-provider', () => {
   const actual = jest.requireActual('librechat-data-provider');
@@ -178,6 +192,8 @@ describe('composer focus after a pasted upload', () => {
     (global as unknown as { Image: unknown }).Image = StubImage;
     mockUpload.mockReset();
     mockAsk.mockReset();
+    mockImageIndexChoice = false;
+    conversation.projectId = undefined;
     mockUpload.mockImplementation((body: FormData) =>
       Promise.resolve({ ...uploadResponse, temp_file_id: body.get('file_id') as string }),
     );
@@ -224,9 +240,8 @@ describe('composer focus after a pasted upload', () => {
 });
 
 /**
- * Unified upload routes a pasted file to its destination without raising the chooser,
- * so the dialog that used to steal focus never opens. The user-facing contract is the
- * same either way: the composer keeps focus and Enter still sends.
+ * Unified upload auto-routes a pasted file unless an agent can either index an image
+ * or send it visually. With no such choice, the composer keeps focus and Enter sends.
  */
 describe('composer focus after a pasted upload in unified mode', () => {
   beforeEach(() => {
@@ -236,9 +251,71 @@ describe('composer focus after a pasted upload in unified mode', () => {
     (global as unknown as { Image: unknown }).Image = StubImage;
     mockUpload.mockReset();
     mockAsk.mockReset();
+    mockImageIndexChoice = false;
+    conversation.projectId = undefined;
     mockUpload.mockImplementation((body: FormData) =>
       Promise.resolve({ ...uploadResponse, temp_file_id: body.get('file_id') as string }),
     );
+  });
+
+  test('lets a pasted image choose visual delivery or OCR indexing', async () => {
+    mockImageIndexChoice = true;
+    renderComposer();
+    const textarea = await screen.findByTestId('text-input');
+    pasteImage(textarea);
+
+    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    expect(
+      screen.getByRole('button', { name: /index image text|indexar texto/i }),
+    ).toBeInTheDocument();
+    expect(mockUpload).not.toHaveBeenCalled();
+
+    await userEvent.click(visual);
+    await waitFor(() => expect(mockUpload).toHaveBeenCalled());
+    expect((mockUpload.mock.calls[0][0] as FormData).get('tool_resource')).toBeNull();
+  });
+
+  test('indexes a pasted image only after choosing OCR', async () => {
+    mockImageIndexChoice = true;
+    renderComposer();
+    pasteImage(await screen.findByTestId('text-input'));
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /index image text|indexar texto/i }),
+    );
+    await waitFor(() => expect(mockUpload).toHaveBeenCalled());
+    expect((mockUpload.mock.calls[0][0] as FormData).get('tool_resource')).toBe('file_search');
+  });
+
+  test('saves OCR indexing to project files when the chat belongs to a project', async () => {
+    mockImageIndexChoice = true;
+    conversation.projectId = 'project-1';
+    renderComposer();
+    pasteImage(await screen.findByTestId('text-input'));
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /project files|arquivos do projeto/i }),
+    );
+    await waitFor(() => expect(mockUpload).toHaveBeenCalled());
+    const formData = mockUpload.mock.calls[0][0] as FormData;
+    expect(formData.get('tool_resource')).toBe('file_search');
+    expect(formData.get('projectId')).toBe('project-1');
+  });
+
+  test('sends the visual choice to the model even inside a project chat', async () => {
+    mockImageIndexChoice = true;
+    conversation.projectId = 'project-1';
+    renderComposer();
+    pasteImage(await screen.findByTestId('text-input'));
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /visual analysis|análise visual/i }),
+    );
+    await waitFor(() => expect(mockUpload).toHaveBeenCalled());
+    const formData = mockUpload.mock.calls[0][0] as FormData;
+    expect(formData.get('message_file')).toBe('true');
+    expect(formData.get('projectId')).toBeNull();
+    expect(formData.get('tool_resource')).toBeNull();
   });
 
   test('uploads without a destination dialog and leaves focus in the composer', async () => {

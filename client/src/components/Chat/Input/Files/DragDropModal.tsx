@@ -22,11 +22,13 @@ import {
   useAgentToolPermissions,
 } from '~/hooks';
 import { useDragDropContext, useUploadModalContext } from '~/Providers';
+import { useChatContext } from '~/Providers/ChatContext';
 import { ephemeralAgentByConvoId } from '~/store';
 
 const DragDropModal = () => {
   const localize = useLocalize();
-  const { isVisible, files, closeModal } = useUploadModalContext();
+  const { isVisible, files, source, closeModal } = useUploadModalContext();
+  const { conversation } = useChatContext();
   const { conversationId, agentId, endpoint, endpointType, useResponsesApi } = useDragDropContext();
   const ephemeralAgent = useRecoilValue(
     ephemeralAgentByConvoId(conversationId ?? Constants.NEW_CONVO),
@@ -34,6 +36,7 @@ const DragDropModal = () => {
   const { provider } = useAgentToolPermissions(agentId, ephemeralAgent);
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
+  const routePastedImage = useFileUploadRouter({ saveUploadsToProject: false });
 
   const isProviderDocSupported = useMemo(() => {
     let currentProvider = (provider || endpoint) ?? '';
@@ -82,6 +85,10 @@ const DragDropModal = () => {
   };
 
   const options = useMemo(() => getOptions(files), [getOptions, files]);
+  const visibleOptions =
+    source === 'pasteImage'
+      ? options.filter((value) => value == null || value === EToolResources.file_search)
+      : options;
 
   if (!isVisible) {
     return null;
@@ -94,19 +101,40 @@ const DragDropModal = () => {
         className="w-11/12 sm:w-[440px] md:w-[400px] lg:w-[360px]"
         main={
           <div className="flex flex-col gap-2">
-            {options.map((value) => {
+            {visibleOptions.map((value) => {
               const { label, icon } = getOptionMeta(value);
+              let pasteLabel = label;
+              if (source === 'pasteImage') {
+                if (value === EToolResources.file_search) {
+                  pasteLabel = localize(
+                    conversation?.projectId
+                      ? 'com_ui_paste_image_index_project'
+                      : 'com_ui_paste_image_index',
+                  );
+                } else {
+                  pasteLabel = localize('com_ui_paste_image_visual');
+                }
+              }
               return (
                 <button
                   key={value ?? 'provider'}
+                  type="button"
                   onClick={() => {
-                    routeFiles(files, value);
+                    if (source === 'pasteImage') {
+                      if (value === EToolResources.file_search && conversation?.projectId) {
+                        void routeFiles(files, value);
+                      } else {
+                        void routePastedImage(files, value);
+                      }
+                    } else {
+                      void routeFiles(files, value);
+                    }
                     closeModal();
                   }}
                   className="flex items-center gap-2 rounded-lg p-2 hover:bg-surface-active-alt"
                 >
                   {icon}
-                  <span>{label}</span>
+                  <span>{pasteLabel}</span>
                 </button>
               );
             })}

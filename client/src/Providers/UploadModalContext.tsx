@@ -11,13 +11,15 @@ import React, {
 interface UploadModalContextValue {
   isVisible: boolean;
   files: File[];
-  openModal: (files: File[]) => void;
+  source: 'pasteImage' | null;
+  openModal: (files: File[], source?: 'pasteImage') => void;
   closeModal: () => void;
 }
 
 const defaultValue: UploadModalContextValue = {
   isVisible: false,
   files: [],
+  source: null,
   openModal: () => undefined,
   closeModal: () => undefined,
 };
@@ -27,6 +29,7 @@ const UploadModalContext = createContext<UploadModalContextValue>(defaultValue);
 export function UploadModalProvider({ children }: { children: React.ReactNode }) {
   const [isVisible, setIsVisible] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [source, setSource] = useState<'pasteImage' | null>(null);
   /**
    * A paste or a drop opens this dialog programmatically, so there is no
    * `Dialog.Trigger` for Radix to hand focus back to — and its modal content
@@ -38,16 +41,18 @@ export function UploadModalProvider({ children }: { children: React.ReactNode })
    */
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
-  const openModal = useCallback((nextFiles: File[]) => {
+  const openModal = useCallback((nextFiles: File[], nextSource?: 'pasteImage') => {
     const active = document.activeElement;
     returnFocusRef.current = active instanceof HTMLElement ? active : null;
     setFiles(nextFiles);
+    setSource(nextSource ?? null);
     setIsVisible(true);
   }, []);
 
   const closeModal = useCallback(() => {
     setIsVisible(false);
     setFiles([]);
+    setSource(null);
   }, []);
 
   useEffect(() => {
@@ -67,8 +72,8 @@ export function UploadModalProvider({ children }: { children: React.ReactNode })
   }, [isVisible]);
 
   const value = useMemo<UploadModalContextValue>(
-    () => ({ isVisible, files, openModal, closeModal }),
-    [isVisible, files, openModal, closeModal],
+    () => ({ isVisible, files, source, openModal, closeModal }),
+    [isVisible, files, source, openModal, closeModal],
   );
 
   return <UploadModalContext.Provider value={value}>{children}</UploadModalContext.Provider>;
