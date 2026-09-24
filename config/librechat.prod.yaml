@@ -87,9 +87,8 @@ endpoints:
         x-librechat-body-parentmessageid: '{{LIBRECHAT_BODY_PARENTMESSAGEID}}'
       models:
         default:
-          - 'openai/gpt-5.6-luna'
-          - 'openai/gpt-5.6-terra'
-          - 'openai/gpt-5.6-sol'
+          - 'openai/gpt-6-luna'
+          - 'openai/gpt-6-sol'
           - 'openai/gpt-6-astra'
           - 'anthropic/claude-sonnet-5'
           - '~anthropic/claude-sonnet-latest'
@@ -117,26 +116,44 @@ modelSpecs:
         model: 'google/gemini-3.8-flash'
         webSearch: true
       default: true
-    - name: 'gpt-56-luna'
-      label: 'GPT-5.6 Luna (1x)'
+    - name: 'gpt-6-luna'
+      label: 'GPT-6 Luna (1x)'
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-5.6-luna'
+        model: 'openai/gpt-6-luna'
         webSearch: true
-    - name: 'gpt-56-terra'
-      label: 'GPT-5.6 Terra (3x)'
+    - name: 'gpt-6-sol'
+      label: 'GPT-6 Sol (2x)'
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-5.6-terra'
+        model: 'openai/gpt-6-sol'
+        webSearch: true
+    # Keep saved conversations with old spec names usable; no 5.6 model remains selectable.
+    - name: 'gpt-56-luna'
+      label: 'GPT-6 Luna (1x)'
+      showInMenu: false
+      iconURL: 'openAI'
+      preset:
+        endpoint: 'OpenRouter'
+        model: 'openai/gpt-6-luna'
         webSearch: true
     - name: 'gpt-56-sol'
-      label: 'GPT-5.6 Sol (5x)'
+      label: 'GPT-6 Sol (2x)'
+      showInMenu: false
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-5.6-sol'
+        model: 'openai/gpt-6-sol'
+        webSearch: true
+    - name: 'gpt-56-terra'
+      label: 'GPT-6 Sol (2x)'
+      showInMenu: false
+      iconURL: 'openAI'
+      preset:
+        endpoint: 'OpenRouter'
+        model: 'openai/gpt-6-sol'
         webSearch: true
     - name: 'gpt-6-astra'
       label: 'GPT-6 Astra (10x)'

@@ -485,6 +485,29 @@ describe('getMultiplier', () => {
     });
   });
 
+  it('should use OpenRouter GPT-6 Sol and Luna rates, including long context', () => {
+    for (const [model, prompt, completion, write, read] of [
+      ['gpt-6-sol', 2, 10, 2.5, 0.2],
+      ['gpt-6-luna', 0.1, 0.5, 0.125, 0.01],
+    ] as const) {
+      expect(getValueKey(`openai/${model}`)).toBe(model);
+      expect(getMultiplier({ model, tokenType: 'prompt', inputTokenCount: 272000 })).toBe(prompt);
+      expect(getMultiplier({ model, tokenType: 'prompt', inputTokenCount: 272001 })).toBe(
+        prompt * 2,
+      );
+      expect(getMultiplier({ model, tokenType: 'completion', inputTokenCount: 272001 })).toBe(
+        completion * 1.5,
+      );
+      expect(getCacheMultiplier({ model, cacheType: 'write' })).toBe(write);
+      expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(read);
+      expect(premiumCacheTokenValues[model]).toEqual({
+        threshold: 272000,
+        write: write * 2,
+        read: read * 2,
+      });
+    }
+  });
+
   it('should bill gpt-6-astra cache writes at the documented 1.25x input surcharge', () => {
     expect(cacheTokenValues['gpt-6-astra'].write).toBeCloseTo(
       tokenValues['gpt-6-astra'].prompt * 1.25,

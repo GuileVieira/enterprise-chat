@@ -66,6 +66,15 @@ describe('gpt-5.6 tiers', () => {
   });
 });
 
+describe('OpenRouter GPT-6 Sol and Luna', () => {
+  it('resolves the provider context and output limits', () => {
+    for (const model of ['openai/gpt-6-sol', 'openai/gpt-6-luna']) {
+      expect(getModelMaxTokens(model, EModelEndpoint.openAI)).toBe(1050000);
+      expect(getModelMaxOutputTokens(model, EModelEndpoint.openAI)).toBe(128000);
+    }
+  });
+});
+
 describe('Gemini 3.7 Flash', () => {
   it('resolves the 1,048,576-token context window', () => {
     expect(getModelMaxTokens('gemini-3.7-flash', EModelEndpoint.google)).toBe(1048576);
