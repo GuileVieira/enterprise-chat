@@ -12,6 +12,8 @@ interface UploadModalContextValue {
   isVisible: boolean;
   files: File[];
   source: 'pasteImage' | null;
+  saveUploadsToProject: boolean;
+  setSaveUploadsToProject: (value: boolean) => void;
   openModal: (files: File[], source?: 'pasteImage') => void;
   closeModal: () => void;
 }
@@ -20,6 +22,8 @@ const defaultValue: UploadModalContextValue = {
   isVisible: false,
   files: [],
   source: null,
+  saveUploadsToProject: true,
+  setSaveUploadsToProject: () => undefined,
   openModal: () => undefined,
   closeModal: () => undefined,
 };
@@ -30,6 +34,7 @@ export function UploadModalProvider({ children }: { children: React.ReactNode })
   const [isVisible, setIsVisible] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [source, setSource] = useState<'pasteImage' | null>(null);
+  const [saveUploadsToProject, setSaveUploadsToProject] = useState(true);
   /**
    * A paste or a drop opens this dialog programmatically, so there is no
    * `Dialog.Trigger` for Radix to hand focus back to — and its modal content
@@ -72,8 +77,16 @@ export function UploadModalProvider({ children }: { children: React.ReactNode })
   }, [isVisible]);
 
   const value = useMemo<UploadModalContextValue>(
-    () => ({ isVisible, files, source, openModal, closeModal }),
-    [isVisible, files, source, openModal, closeModal],
+    () => ({
+      isVisible,
+      files,
+      source,
+      saveUploadsToProject,
+      setSaveUploadsToProject,
+      openModal,
+      closeModal,
+    }),
+    [isVisible, files, source, saveUploadsToProject, openModal, closeModal],
   );
 
   return <UploadModalContext.Provider value={value}>{children}</UploadModalContext.Provider>;

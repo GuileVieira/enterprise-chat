@@ -3460,6 +3460,27 @@ describe('BaseClient', () => {
       expect(TestClient.addAudios).toHaveBeenCalled();
     });
 
+    test('delivers an explicitly visual image despite image OCR default', async () => {
+      routeTo('text', 'image/*');
+      const message = {};
+      const file = {
+        user: 'user1',
+        file_id: 'chosen-image',
+        filename: 'photo.png',
+        filepath: '/uploads/photo.png',
+        type: 'image/png',
+        bytes: 100,
+        source: 'local',
+        llmDeliveryPath: 'provider',
+        metadata: { destinationChosen: true },
+      };
+
+      await TestClient.processAttachments(message, [file]);
+
+      expect(TestClient.addImageURLs).toHaveBeenCalled();
+      expect(message.image_urls).toEqual(['encoded-image']);
+    });
+
     test('keeps a none PDF in returned files without adding documents', async () => {
       routeTo('none', 'application/pdf');
       const message = {};

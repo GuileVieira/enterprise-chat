@@ -461,6 +461,11 @@ export const codeTypeMapping: { [key: string]: string } = {
 
 /** Maps image extensions to MIME types for formats browsers may not recognize */
 export const imageTypeMapping: { [key: string]: string } = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
   heic: 'image/heic',
   heif: 'image/heif',
 };

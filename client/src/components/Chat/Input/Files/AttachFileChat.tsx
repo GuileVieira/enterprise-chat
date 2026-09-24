@@ -15,7 +15,8 @@ import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { useGetFileConfig } from '~/data-provider';
 import { isUnifiedUploadMode } from '~/utils';
 import AttachFileMenu from './AttachFileMenu';
-import { useLocalize } from '~/hooks';
+import { useFileUploadRouter, useLocalize } from '~/hooks';
+import { useUploadModalContext } from '~/Providers';
 import AttachFile from './AttachFile';
 
 function AttachFileChat({
@@ -36,6 +37,7 @@ function AttachFileChat({
   const projectId = conversation?.projectId ?? undefined;
   const localize = useLocalize();
   const [keepUploadsLocal, setKeepUploadsLocal] = useState(false);
+  const { setSaveUploadsToProject } = useUploadModalContext();
   const isAgents = useMemo(() => isAgentsEndpoint(endpoint), [endpoint]);
   const isAssistants = useMemo(() => isAssistantsEndpoint(endpoint), [endpoint]);
   const { permissions: projectPermissions } = useProjectPermissions(projectId);
@@ -84,6 +86,11 @@ function AttachFileChat({
   );
   const canSaveUploadsToProject = Boolean(projectId && projectPermissions.canEdit);
   const saveUploadsToProject = canSaveUploadsToProject && !keepUploadsLocal;
+  const routeImageFiles = useFileUploadRouter({ saveUploadsToProject });
+  useEffect(
+    () => setSaveUploadsToProject(saveUploadsToProject),
+    [saveUploadsToProject, setSaveUploadsToProject],
+  );
   const isHardDisabled = disableInputs || !!endpointFileConfig?.disabled;
 
   useEffect(() => setKeepUploadsLocal(false), [projectId]);
@@ -139,6 +146,7 @@ function AttachFileChat({
           setFilesLoading={setFilesLoading}
           conversation={conversation}
           saveUploadsToProject={saveUploadsToProject}
+          routeImageFiles={routeImageFiles}
         />
         {projectStorageToggle}
       </div>

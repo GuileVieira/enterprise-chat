@@ -129,6 +129,8 @@ router.post('/', async (req, res) => {
     const effectiveToolResource = await resolveEffectiveToolResource({ req, metadata });
     const fileConfig = mergeFileConfig(req.config?.fileConfig);
     const deliveryPath = resolveUploadLLMDeliveryPath({
+      toolResource: metadata.tool_resource,
+      imageDelivery: metadata.image_delivery,
       mimeType: req.file.mimetype,
       endpointConfig: getEndpointFileConfig({ fileConfig, endpoint: effectiveEndpoint }),
       fileConfig,

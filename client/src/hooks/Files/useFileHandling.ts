@@ -12,6 +12,7 @@ import {
   EToolResources,
   mergeFileConfig,
   isAssistantsEndpoint,
+  inferMimeType,
   getEndpointFileConfig,
   defaultAssistantsVersion,
 } from 'librechat-data-provider';
@@ -49,6 +50,7 @@ type UseFileHandling = {
   fileFilter?: (file: File) => boolean;
   additionalMetadata?: Record<string, string | undefined>;
   saveUploadsToProject?: boolean;
+  imageDelivery?: 'provider';
   /** Overrides `endpoint` for upload routing; also used as `endpointType` fallback when `endpointTypeOverride` is not set */
   endpointOverride?: EModelEndpoint | string;
   /** Overrides `endpointType` independently from `endpointOverride` */
@@ -413,6 +415,13 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
     }
 
     const shouldSaveUploadsToProject = params?.saveUploadsToProject ?? true;
+    if (
+      params?.imageDelivery === 'provider' &&
+      inferMimeType(filename, extendedFile.type ?? '')?.startsWith('image/') &&
+      !extendedFile.tool_resource
+    ) {
+      formData.append('image_delivery', 'provider');
+    }
     const projectId =
       metadata.projectId || (shouldSaveUploadsToProject ? (conversation?.projectId ?? '') : '');
     if (projectId && formData.get('projectId') == null) {

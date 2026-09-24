@@ -2,7 +2,7 @@ import { useRef, useMemo, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
 import { useToastContext } from '@librechat/client';
 import { NativeTypes } from 'react-dnd-html5-backend';
-import { isAssistantsEndpoint } from 'librechat-data-provider';
+import { inferMimeType, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { DropTargetMonitor } from 'react-dnd';
 import { useChatContext } from '~/Providers/ChatContext';
 import useFileUploadRouter from './useFileUploadRouter';
@@ -70,6 +70,14 @@ export default function useDragHelpers() {
        * present the chooser the attach button no longer shows. Offering it here would let
        * the same file be delivered differently depending on how it was added. */
       if (isUnifiedModeRef.current) {
+        routeFilesRef.current(item.files);
+        return;
+      }
+
+      if (
+        item.files.length > 0 &&
+        item.files.every((file) => inferMimeType(file.name, file.type)?.startsWith('image/'))
+      ) {
         routeFilesRef.current(item.files);
         return;
       }

@@ -4,8 +4,22 @@ import {
   canToolResourceConsume,
   resolveUploadDestination,
   resolveDefaultLLMDeliveryPath,
+  resolveUploadLLMDeliveryPath,
   SYSTEM_LLM_DELIVERY_DEFAULTS,
 } from './resolve-llm-delivery-path';
+
+test('explicit visual image delivery overrides OCR config only for an image message attachment', () => {
+  const fileConfig = {
+    endpoints: {},
+    defaultLLMDeliveryPath: {
+      overrides: { 'image/*': 'text' as const, 'application/pdf': 'text' as const },
+    },
+  };
+  const upload = { mimeType: 'image/png', fileConfig, imageDelivery: 'provider' };
+  expect(resolveUploadLLMDeliveryPath(upload)).toBe('provider');
+  expect(resolveUploadLLMDeliveryPath({ ...upload, toolResource: 'file_search' })).toBe('none');
+  expect(resolveUploadLLMDeliveryPath({ ...upload, mimeType: 'application/pdf' })).toBe('text');
+});
 
 describe('resolveDefaultLLMDeliveryPath', () => {
   it('should return system default for images when no config provided', () => {

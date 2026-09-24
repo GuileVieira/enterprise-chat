@@ -19,6 +19,7 @@ export interface UploadMetadata {
   endpoint?: string;
   agent_id?: string;
   tool_resource?: string | null;
+  image_delivery?: string | null;
   /** Azure carries native documents only through the Responses API. Multipart form data
    *  carries it as a string, so it arrives as "true" rather than a boolean. */
   useResponsesApi?: boolean | string;
@@ -114,6 +115,7 @@ export async function resolveEffectiveToolResource({
   const endpointConfig = getEndpointFileConfig({ fileConfig, endpoint });
   const path = resolveUploadLLMDeliveryPath({
     toolResource: metadata.tool_resource,
+    imageDelivery: metadata.image_delivery,
     mimeType: (req.file as UploadFile).mimetype,
     endpointConfig,
     fileConfig,

@@ -853,6 +853,8 @@ describe('processAgentFileUpload', () => {
         req,
         res: mockRes,
         metadata: {
+          agent_id: 'agent-abc',
+          message_file: 'true',
           tool_resource: EToolResources.file_search,
           file_id: 'project-image-id',
         },
@@ -860,6 +862,40 @@ describe('processAgentFileUpload', () => {
 
       expect(db.addProjectFileId).toHaveBeenCalledWith('project-123', 'project-image-id');
       expect(db.addProjectFileId).toHaveBeenCalledTimes(1);
+      expect(uploadVectors).toHaveBeenCalledWith(
+        expect.objectContaining({ entity_id: 'project-123' }),
+      );
+      expect(db.addAgentResourceFile).not.toHaveBeenCalled();
+    });
+
+    test('keeps message OCR off permanent agent resources', async () => {
+      mergeFileConfig.mockReturnValue(makeFileConfig({ ocrSupportedMimeTypes: ['image/png'] }));
+      const req = makeReq({
+        mimetype: 'image/png',
+        ocrConfig: { strategy: FileSources.mistral_ocr },
+      });
+
+      await processAgentFileUpload({
+        req,
+        res: mockRes,
+        metadata: {
+          agent_id: 'agent-abc',
+          message_file: 'true',
+          tool_resource: EToolResources.file_search,
+          file_id: 'message-image-id',
+        },
+      });
+
+      expect(db.createFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: FileContext.message_attachment,
+          llmDeliveryPath: 'none',
+          metadata: expect.objectContaining({ destinationChosen: true }),
+        }),
+        true,
+      );
+      expect(uploadVectors).toHaveBeenCalledWith(expect.objectContaining({ entity_id: undefined }));
+      expect(db.addAgentResourceFile).not.toHaveBeenCalled();
     });
 
     test('saves the image without RAG when OCR extraction fails', async () => {
@@ -2470,6 +2506,40 @@ describe('processImageFile', () => {
         source: FileSources.local,
         type: 'image/webp',
         llmDeliveryPath: 'none',
+      }),
+      true,
+    );
+  });
+
+  test('persists explicit visual delivery over an OCR default', async () => {
+    const handleImageUpload = jest.fn().mockResolvedValue({
+      filepath: '/images/user-123/visual.webp',
+      bytes: 256,
+      width: 100,
+      height: 80,
+    });
+    mergeFileConfig.mockReturnValue({
+      ...makeFileConfig(),
+      defaultLLMDeliveryPath: { overrides: { 'image/*': 'text' } },
+    });
+    getStrategyFunctions.mockReturnValue({ handleImageUpload });
+    const req = makeReq({ mimetype: 'image/png', ocrConfig: null });
+
+    await processImageFile({
+      req,
+      res: mockRes,
+      metadata: {
+        file_id: 'visual-image-id',
+        endpoint: EModelEndpoint.agents,
+        image_delivery: 'provider',
+        message_file: 'true',
+      },
+    });
+
+    expect(db.createFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        llmDeliveryPath: 'provider',
+        metadata: expect.objectContaining({ destinationChosen: true }),
       }),
       true,
     );

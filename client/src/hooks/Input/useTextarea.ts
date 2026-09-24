@@ -3,7 +3,12 @@ import { v4 } from 'uuid';
 import debounce from 'lodash/debounce';
 import { useToastContext } from '@librechat/client';
 import { useRecoilValue, useRecoilState } from 'recoil';
-import { Constants, EToolResources, isAssistantsEndpoint } from 'librechat-data-provider';
+import {
+  Constants,
+  EToolResources,
+  inferMimeType,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import type { TEndpointOption } from 'librechat-data-provider';
 import type { KeyboardEvent } from 'react';
 import type { UploadLifecycleCallbacks } from '~/hooks/Files/useFileHandling';
@@ -349,17 +354,6 @@ export default function useTextarea({
         }
 
         if (isUnifiedMode && preferred == null) {
-          const imagesOnly = clipboardFiles.every((file) => file.type.startsWith('image/'));
-          if (
-            imagesOnly &&
-            getUploadOptions(clipboardFiles).some(
-              (option) => option == null || option === EToolResources.file_search,
-            )
-          ) {
-            setFilesLoading(false);
-            openModal(clipboardFiles, 'pasteImage');
-            return false;
-          }
           return await upload();
         }
 
@@ -379,17 +373,17 @@ export default function useTextarea({
         }
 
         const usePreferred = preferred != null && options.includes(preferred);
-        const isPastedImage = clipboardFiles.every((file) => file.type.startsWith('image/'));
-        const hasImageOption = options.some(
-          (option) => option == null || option === EToolResources.file_search,
+        const isImage = clipboardFiles.every((file) =>
+          inferMimeType(file.name, file.type)?.startsWith('image/'),
         );
-        if (!usePreferred && (options.length > 1 || (isPastedImage && hasImageOption))) {
+        if (!usePreferred && options.length > 1 && !isImage) {
           setFilesLoading(false);
-          openModal(clipboardFiles, isPastedImage && hasImageOption ? 'pasteImage' : undefined);
+          openModal(clipboardFiles);
           return false;
         }
 
-        return await upload(usePreferred ? preferred : options[0]);
+        const destination = usePreferred ? preferred : options[0];
+        return await upload(isImage && !usePreferred ? undefined : destination);
       } catch (error) {
         console.error('clipboard file routing error', error);
         setFilesLoading(false);

@@ -1,6 +1,8 @@
 import { RecoilRoot } from 'recoil';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook } from '@testing-library/react';
-import { EToolResources } from 'librechat-data-provider';
+import { EToolResources, PermissionBits } from 'librechat-data-provider';
+import type { ReactNode } from 'react';
 import useUploadOptions from '../useUploadOptions';
 
 const mockDragDropContext = {
@@ -46,7 +48,18 @@ jest.mock('~/data-provider', () => ({
   }),
 }));
 
-const render = () => renderHook(() => useUploadOptions(), { wrapper: RecoilRoot });
+const render = (permissionBits = 0) => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (mockProjectId) {
+    queryClient.setQueryData(['projectPermissions', mockProjectId], { permissionBits });
+  }
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <RecoilRoot>{children}</RecoilRoot>
+    </QueryClientProvider>
+  );
+  return renderHook(() => useUploadOptions(), { wrapper });
+};
 
 describe('useUploadOptions endpoint resolution', () => {
   afterEach(() => {
@@ -58,10 +71,21 @@ describe('useUploadOptions endpoint resolution', () => {
     mockAgentId = undefined;
     mockProjectId = 'project-1';
 
-    const { result } = render();
+    const { result } = render(PermissionBits.VIEW | PermissionBits.EDIT);
     expect(
       result.current.getOptions([new File(['image'], 'screen.png', { type: 'image/png' })]),
     ).toEqual([undefined, EToolResources.file_search]);
+  });
+
+  it('does not offer project OCR to a viewer without edit access', () => {
+    mockProvider = undefined;
+    mockAgentId = undefined;
+    mockProjectId = 'project-1';
+
+    const { result } = render(PermissionBits.VIEW);
+    expect(
+      result.current.getOptions([new File(['image'], 'screen.png', { type: 'image/png' })]),
+    ).toEqual([undefined]);
   });
 
   it('applies the agent provider policy rather than the agents entry', () => {

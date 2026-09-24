@@ -17,6 +17,7 @@ import { useGetFileConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 import { useDragDropContext } from '~/Providers';
 import { isEphemeralAgent } from '~/common';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 
 /**
  * Resolves which upload destinations a file set can be routed to, plus whether uploads are
@@ -26,6 +27,8 @@ import { isEphemeralAgent } from '~/common';
 export default function useUploadOptions() {
   const { conversationId, agentId, projectId, endpoint, endpointType, useResponsesApi } =
     useDragDropContext();
+  const { permissions: projectPermissions } = useProjectPermissions(projectId ?? undefined);
+  const canEditProject = Boolean(projectId && projectPermissions.canEdit);
   const { agentsConfig } = useGetAgentsConfig();
   const capabilities = useAgentCapabilities(agentsConfig?.capabilities ?? defaultAgentCapabilities);
   const ephemeralAgent = useRecoilValue(
@@ -49,7 +52,7 @@ export default function useUploadOptions() {
    */
   const isSavedAgent = agentId != null && agentId !== '' && !isEphemeralAgent(agentId);
   const fileSearchAllowedByAgent =
-    Boolean(projectId) || !isSavedAgent || (tools?.includes(Tools.file_search) ?? false);
+    canEditProject || !isSavedAgent || (tools?.includes(Tools.file_search) ?? false);
   const codeAllowedByAgent = !isSavedAgent || (tools?.includes(Tools.execute_code) ?? false);
 
   /* An agent conversation carries endpoint `agents`, but its file policy belongs to the
@@ -78,11 +81,11 @@ export default function useUploadOptions() {
         endpoint,
         endpointType,
         useResponsesApi,
-        fileSearchEnabled: capabilities.fileSearchEnabled || Boolean(projectId),
+        fileSearchEnabled: capabilities.fileSearchEnabled || canEditProject,
         codeEnabled: capabilities.codeEnabled,
         contextEnabled: capabilities.contextEnabled,
         fileSearchAllowedByAgent,
-        imageFileSearchAllowed: isSavedAgent || Boolean(projectId),
+        imageFileSearchAllowed: isSavedAgent || canEditProject,
         codeAllowedByAgent,
         fileConfig,
         endpointSupportedMimeTypes,
@@ -97,7 +100,7 @@ export default function useUploadOptions() {
       capabilities.contextEnabled,
       fileSearchAllowedByAgent,
       isSavedAgent,
-      projectId,
+      canEditProject,
       codeAllowedByAgent,
       fileConfig,
       endpointSupportedMimeTypes,

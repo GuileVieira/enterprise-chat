@@ -58,6 +58,28 @@ function setup({
 }
 
 describe('createRunFileMessageEncoder', () => {
+  it('keeps explicit visual image as image_url when child policy defaults to OCR text', async () => {
+    const harness = setup({
+      fileConfig: {
+        endpoints: { openAI: { defaultLLMDeliveryPath: { overrides: { 'image/*': 'text' } } } },
+      },
+    });
+    const image: TFile = {
+      ...pdf,
+      file_id: 'visual-image',
+      filename: 'visual.png',
+      type: 'image/png',
+      llmDeliveryPath: 'provider',
+      metadata: { destinationChosen: true },
+    };
+
+    const messages = await harness.encode([image], 'child');
+
+    expect(messages[0].content).toEqual(expect.arrayContaining([nativeImage]));
+    expect(harness.encodeImages).toHaveBeenCalled();
+    expect(harness.extractText).not.toHaveBeenCalled();
+  });
+
   it('sends PDF and image provider blocks to the child without duplicating extracted text', async () => {
     const harness = setup({
       agents: {

@@ -23,12 +23,16 @@ import {
 } from '~/hooks';
 import { useDragDropContext, useUploadModalContext } from '~/Providers';
 import { useChatContext } from '~/Providers/ChatContext';
+import { useProjectPermissions } from '~/hooks/useProjectPermissions';
 import { ephemeralAgentByConvoId } from '~/store';
 
 const DragDropModal = () => {
   const localize = useLocalize();
   const { isVisible, files, source, closeModal } = useUploadModalContext();
   const { conversation } = useChatContext();
+  const { permissions: projectPermissions } = useProjectPermissions(
+    conversation?.projectId ?? undefined,
+  );
   const { conversationId, agentId, endpoint, endpointType, useResponsesApi } = useDragDropContext();
   const ephemeralAgent = useRecoilValue(
     ephemeralAgentByConvoId(conversationId ?? Constants.NEW_CONVO),
@@ -36,7 +40,11 @@ const DragDropModal = () => {
   const { provider } = useAgentToolPermissions(agentId, ephemeralAgent);
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
-  const routePastedImage = useFileUploadRouter({ saveUploadsToProject: false });
+  const routeProjectFiles = useFileUploadRouter({ saveUploadsToProject: true });
+  const routeVisualImage = useFileUploadRouter({
+    saveUploadsToProject: false,
+    imageDelivery: 'provider',
+  });
 
   const isProviderDocSupported = useMemo(() => {
     let currentProvider = (provider || endpoint) ?? '';
@@ -107,7 +115,7 @@ const DragDropModal = () => {
               if (source === 'pasteImage') {
                 if (value === EToolResources.file_search) {
                   pasteLabel = localize(
-                    conversation?.projectId
+                    conversation?.projectId && projectPermissions.canEdit
                       ? 'com_ui_paste_image_index_project'
                       : 'com_ui_paste_image_index',
                   );
@@ -121,13 +129,19 @@ const DragDropModal = () => {
                   type="button"
                   onClick={() => {
                     if (source === 'pasteImage') {
-                      if (value === EToolResources.file_search && conversation?.projectId) {
-                        void routeFiles(files, value);
+                      if (
+                        value === EToolResources.file_search &&
+                        conversation?.projectId &&
+                        projectPermissions.canEdit
+                      ) {
+                        void routeProjectFiles(files, value, undefined, true);
+                      } else if (value === EToolResources.file_search) {
+                        void routeFiles(files, value, undefined, true);
                       } else {
-                        void routePastedImage(files, value);
+                        void routeVisualImage(files, value, undefined, true);
                       }
                     } else {
-                      void routeFiles(files, value);
+                      void routeFiles(files, value, undefined, true);
                     }
                     closeModal();
                   }}

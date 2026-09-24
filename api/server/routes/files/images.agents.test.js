@@ -715,6 +715,23 @@ describe('POST /images - Agent Upload Permission Check (Integration)', () => {
     expect(processImageFile).not.toHaveBeenCalled();
   });
 
+  it('keeps an explicitly visual image out of OCR despite a text default', async () => {
+    const app = createAppWithUser(otherUserId, SystemRoles.USER, {
+      fileConfig: { defaultLLMDeliveryPath: { overrides: { 'image/*': 'text' } } },
+    });
+
+    const response = await request(app).post('/images').send({
+      endpoint: 'agents',
+      message_file: 'true',
+      image_delivery: 'provider',
+      file_id: uuidv4(),
+    });
+
+    expect(response.status).toBe(200);
+    expect(processImageFile).toHaveBeenCalled();
+    expect(processAgentFileUpload).not.toHaveBeenCalled();
+  });
+
   it('uses a normalized image error when file protection is active', async () => {
     const rawProviderDetail = 'PRIVATE-IMAGE echoed in provider failure';
     const providerError = Object.assign(new Error(rawProviderDetail), {

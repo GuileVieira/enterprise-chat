@@ -20,6 +20,7 @@ import {
   Providers,
   EToolResources,
   EModelEndpoint,
+  inferMimeType,
   getConfiguredMimeAccept,
   bedrockDocumentMimeTypes,
   defaultAgentCapabilities,
@@ -81,6 +82,7 @@ interface AttachFileMenuProps {
   isUnifiedMode: boolean;
   /** Whether this project conversation stores uploads in project storage. */
   saveUploadsToProject?: boolean;
+  routeImageFiles?: (files: File[]) => Promise<boolean>;
   useResponsesApi?: boolean;
   files: Map<string, ExtendedFile>;
   setFiles: FileSetter;
@@ -97,6 +99,7 @@ const AttachFileMenu = ({
   endpointFileConfig,
   isUnifiedMode,
   saveUploadsToProject,
+  routeImageFiles,
   useResponsesApi,
   files,
   setFiles,
@@ -120,6 +123,24 @@ const AttachFileMenu = ({
     setFilesLoading,
     conversation,
   });
+  const handleLocalFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    if (
+      toolResourceRef.current == null &&
+      selected.length > 0 &&
+      selected.every((file) => inferMimeType(file.name, file.type)?.startsWith('image/'))
+    ) {
+      event.stopPropagation();
+      if (routeImageFiles) {
+        void routeImageFiles(selected);
+      } else {
+        handleFileChange(event, toolResourceRef.current);
+      }
+      event.target.value = '';
+      return;
+    }
+    handleFileChange(event, toolResourceRef.current);
+  };
   const { handleSharePointFiles, isProcessing, downloadProgress } =
     useSharePointFileHandlingNoChatContext(
       { toolResource: toolResourceRef.current, saveUploadsToProject },
@@ -371,7 +392,7 @@ const AttachFileMenu = ({
         <FileUpload
           ref={inputRef}
           handleFileChange={(e) => {
-            handleFileChange(e, toolResourceRef.current);
+            handleLocalFileChange(e);
           }}
         >
           {sharePointEnabled === true ? (
@@ -427,7 +448,7 @@ const AttachFileMenu = ({
       <FileUpload
         ref={inputRef}
         handleFileChange={(e) => {
-          handleFileChange(e, toolResourceRef.current);
+          handleLocalFileChange(e);
           toolResourceRef.current = undefined;
         }}
       >

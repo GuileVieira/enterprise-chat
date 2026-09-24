@@ -24,6 +24,10 @@ import { resolveDefaultLLMDeliveryPath } from './resolve-llm-delivery-path';
 import { EModelEndpoint } from './schemas';
 
 describe('inferMimeType', () => {
+  it('infers common image MIME types when a browser leaves type empty', () => {
+    expect(inferMimeType('photo.png', '')).toBe('image/png');
+    expect(inferMimeType('photo.JPG', '')).toBe('image/jpeg');
+  });
   it('should normalize text/x-python-script to text/x-python', () => {
     expect(inferMimeType('test.py', 'text/x-python-script')).toBe('text/x-python');
   });

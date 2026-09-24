@@ -646,6 +646,8 @@ const processImageFile = async ({ req, res, metadata, returnFile = false, sseStr
   const configEndpoint = metadata.effectiveEndpoint ?? endpoint;
   const endpointConfig = getEndpointFileConfig({ fileConfig, endpoint: configEndpoint });
   const llmDeliveryPath = resolveUploadLLMDeliveryPath({
+    toolResource: metadata.tool_resource,
+    imageDelivery: metadata.image_delivery,
     mimeType: file.mimetype,
     endpointConfig,
     fileConfig,
@@ -683,7 +685,11 @@ const processImageFile = async ({ req, res, metadata, returnFile = false, sseStr
      * on this path too. Absent, a later turn substitutes its own endpoint's mode. */
     metadata: {
       destinationChosen:
-        endpointConfig?.legacyFileUploadUX === true || metadata.tool_resource != null,
+        endpointConfig?.legacyFileUploadUX === true ||
+        metadata.tool_resource != null ||
+        (metadata.image_delivery === 'provider' &&
+          file.mimetype.startsWith('image/') &&
+          metadata.tool_resource == null),
       ...(`image/${appConfig.imageOutputType}` !== file.mimetype
         ? { routingMimeType: file.mimetype }
         : {}),
@@ -706,6 +712,12 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
   const { file } = req;
   const appConfig = req.config;
   const { agent_id, file_id, temp_file_id = null } = metadata;
+  const messageAttachment = isMessageFileUpload(metadata.message_file);
+  const retentionExpiryPromise = getAgentFileRetentionExpiry({
+    req,
+    messageAttachment,
+    tool_resource: EToolResources.file_search,
+  });
   const source = getFileStrategy(appConfig, { isImage: true });
   const { handleImageUpload } = getStrategyFunctions(source);
   const { filepath, bytes, width, height, storageKey, storageRegion } = await handleImageUpload({
@@ -727,7 +739,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
     filepath,
     ...storageMetadata,
     filename: file.originalname,
-    context: FileContext.agents,
+    context: messageAttachment ? FileContext.message_attachment : FileContext.agents,
     source,
     type: file.mimetype,
     width,
@@ -735,7 +747,9 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
     embedded: false,
     tenantId: req.user.tenantId,
     projectId: req.body.projectId,
-    metadata: { imageRag: baseImageRag },
+    ...(await retentionExpiryPromise),
+    llmDeliveryPath: 'none',
+    metadata: { imageRag: baseImageRag, destinationChosen: true },
   });
 
   const imageFile = await db.createFile(imageFileInfo, true);
@@ -771,7 +785,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
         req,
         file: textUpload,
         file_id,
-        entity_id: agent_id || req.body.projectId,
+        entity_id: messageAttachment ? req.body.projectId : agent_id || req.body.projectId,
       });
     } finally {
       await fs.promises.unlink(textUpload.path).catch((error) => {
@@ -784,6 +798,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
     }
 
     const imageRagMetadata = {
+      destinationChosen: true,
       imageRag: {
         kind: 'ocr_text',
         status: 'ready',
@@ -804,7 +819,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
       metadata: imageRagMetadata,
     };
 
-    if (agent_id) {
+    if (agent_id && !messageAttachment) {
       await db.addAgentResourceFile({
         file_id,
         agent_id,
@@ -829,6 +844,7 @@ const processImageFileSearchUpload = async ({ req, res, metadata, sseStream }) =
       .updateFile({
         file_id,
         metadata: {
+          destinationChosen: true,
           imageRag: {
             ...baseImageRag,
             error: error.message,
@@ -1102,7 +1118,14 @@ const processAgentFileUpload = async ({ req, res, metadata, sseStream }) => {
    * and a request naming a tool resource does too. Recording the endpoint mode instead
    * would treat an explicitly sandbox-only upload in unified mode as inferred. */
   const legacyUploadUX = endpointConfig?.legacyFileUploadUX === true;
-  const uploadChoiceMetadata = { destinationChosen: legacyUploadUX || tool_resource != null };
+  const uploadChoiceMetadata = {
+    destinationChosen:
+      legacyUploadUX ||
+      tool_resource != null ||
+      (metadata.image_delivery === 'provider' &&
+        file.mimetype.startsWith('image/') &&
+        tool_resource == null),
+  };
 
   if (agent_id && !tool_resource && !messageAttachment) {
     if (legacyUploadUX) {
@@ -1112,6 +1135,7 @@ const processAgentFileUpload = async ({ req, res, metadata, sseStream }) => {
 
   const llmDeliveryPath = resolveUploadLLMDeliveryPath({
     toolResource: tool_resource,
+    imageDelivery: metadata.image_delivery,
     mimeType: file.mimetype,
     endpointConfig,
     fileConfig,

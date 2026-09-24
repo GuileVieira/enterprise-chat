@@ -232,6 +232,7 @@ export function resolveDefaultUploadLLMDeliveryPath({
 /** Delivery path for an upload, honoring an explicitly chosen tool resource. */
 export function resolveUploadLLMDeliveryPath({
   toolResource,
+  imageDelivery,
   mimeType,
   endpointConfig,
   fileConfig,
@@ -240,6 +241,7 @@ export function resolveUploadLLMDeliveryPath({
   sttConfigured,
 }: {
   toolResource?: string | null;
+  imageDelivery?: string | null;
   mimeType: string;
   endpointConfig?: EndpointFileConfig;
   fileConfig?: FileConfig;
@@ -247,6 +249,9 @@ export function resolveUploadLLMDeliveryPath({
   useResponsesApi?: boolean;
   sttConfigured?: boolean;
 }): TDefaultLLMDeliveryPath {
+  if (imageDelivery === 'provider' && mimeType.startsWith('image/') && !toolResource) {
+    return 'provider';
+  }
   if (toolResource === EToolResources.context || toolResource === EToolResources.ocr) {
     return 'text';
   }

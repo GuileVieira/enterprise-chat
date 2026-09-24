@@ -42,10 +42,12 @@ jest.mock('~/data-provider', () => ({
 
 jest.mock('~/Providers', () => ({
   useAgentsMapContext: () => mockAgentsMap,
+  useUploadModalContext: () => ({ setSaveUploadsToProject: jest.fn() }),
 }));
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
+  useFileUploadRouter: () => jest.fn(),
 }));
 
 jest.mock('~/hooks/useProjectPermissions', () => ({
