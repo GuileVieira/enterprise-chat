@@ -199,7 +199,7 @@ describe('composer focus after a pasted upload', () => {
     expect(textarea).toHaveFocus();
 
     pasteImage(textarea);
-    const option = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const option = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     expect(textarea).not.toHaveFocus();
 
     await userEvent.click(option);
@@ -215,7 +215,7 @@ describe('composer focus after a pasted upload', () => {
     await userEvent.type(textarea, 'hi');
 
     pasteImage(textarea);
-    const option = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const option = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     await userEvent.click(option);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId('send-button')).toBeEnabled());
@@ -249,15 +249,41 @@ describe('composer focus after a pasted upload in unified mode', () => {
     );
   });
 
+  test('cancels image choice without uploading and restores composer focus', async () => {
+    renderComposer();
+    const textarea = await screen.findByTestId('text-input');
+    await userEvent.click(textarea);
+    pasteImage(textarea);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: /how would you like to use this image|como deseja usar a imagem/i,
+    });
+    await userEvent.click(screen.getByRole('button', { name: /cancel|cancelar/i }));
+
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await waitFor(() => expect(textarea).toHaveFocus());
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+
   test('lets a pasted image choose visual delivery or OCR indexing', async () => {
     conversation.projectId = 'project-1';
     renderComposer();
     const textarea = await screen.findByTestId('text-input');
     pasteImage(textarea);
 
-    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const visual = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     expect(
-      screen.getByRole('button', { name: /project files|arquivos do projeto/i }),
+      screen.getByRole('dialog', {
+        name: /how would you like to use this image|como deseja usar a imagem/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /extract the text \(ocr\) and add it to the project files|extraia o texto \(ocr\) e adicione aos arquivos do projeto/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /save text to project|salvar texto no projeto/i }),
     ).toBeInTheDocument();
     expect(mockUpload).not.toHaveBeenCalled();
 
@@ -274,7 +300,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
       target: { files: [new File(['image-bytes'], 'clip.png')] },
     });
 
-    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const visual = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     expect(mockUpload).not.toHaveBeenCalled();
     await userEvent.click(visual);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
@@ -291,7 +317,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
     fireEvent.dragOver(dropArea, { dataTransfer });
     fireEvent.drop(dropArea, { dataTransfer });
 
-    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const visual = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     expect(mockUpload).not.toHaveBeenCalled();
     await userEvent.click(visual);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
@@ -304,7 +330,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
     pasteImage(await screen.findByTestId('text-input'));
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /project files|arquivos do projeto/i }),
+      await screen.findByRole('button', { name: /save text to project|salvar texto no projeto/i }),
     );
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     expect((mockUpload.mock.calls[0][0] as FormData).get('tool_resource')).toBe('file_search');
@@ -316,7 +342,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
     pasteImage(await screen.findByTestId('text-input'));
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /project files|arquivos do projeto/i }),
+      await screen.findByRole('button', { name: /save text to project|salvar texto no projeto/i }),
     );
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     const formData = mockUpload.mock.calls[0][0] as FormData;
@@ -331,7 +357,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
     pasteImage(await screen.findByTestId('text-input'));
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /visual analysis|análise visual/i }),
+      await screen.findByRole('button', { name: /analyze image|analisar imagem/i }),
     );
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     const formData = mockUpload.mock.calls[0][0] as FormData;
@@ -351,9 +377,9 @@ describe('composer focus after a pasted upload in unified mode', () => {
 
     pasteImage(textarea);
 
-    const visual = await screen.findByRole('button', { name: /visual analysis|análise visual/i });
+    const visual = await screen.findByRole('button', { name: /analyze image|analisar imagem/i });
     expect(mockUpload).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: /index image text|indexar texto/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /extract text|extrair texto/i })).toBeNull();
 
     await userEvent.click(visual);
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
@@ -369,7 +395,7 @@ describe('composer focus after a pasted upload in unified mode', () => {
 
     pasteImage(textarea);
     await userEvent.click(
-      await screen.findByRole('button', { name: /visual analysis|análise visual/i }),
+      await screen.findByRole('button', { name: /analyze image|analisar imagem/i }),
     );
     await waitFor(() => expect(mockUpload).toHaveBeenCalled());
     await waitFor(() => expect(screen.getByTestId('send-button')).toBeEnabled());

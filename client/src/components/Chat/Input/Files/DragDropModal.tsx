@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
-import { OGDialog, OGDialogTemplate } from '@librechat/client';
+import { Button, OGDialog, OGDialogTemplate } from '@librechat/client';
 import {
   Constants,
   Providers,
@@ -105,22 +105,39 @@ const DragDropModal = () => {
   return (
     <OGDialog open={isVisible} onOpenChange={(open) => !open && closeModal()}>
       <OGDialogTemplate
-        title={localize('com_ui_upload_type')}
-        className="w-11/12 sm:w-[440px] md:w-[400px] lg:w-[360px]"
+        title={localize(
+          source === 'pasteImage' ? 'com_ui_paste_image_title' : 'com_ui_upload_type',
+        )}
+        className="w-[calc(100vw-2rem)] max-w-[36rem] gap-3 p-5 sm:p-6"
+        headerClassName="text-left"
+        mainClassName="py-0"
+        footerClassName="flex-row justify-end pt-1"
+        showCancelButton={false}
+        buttons={
+          <Button type="button" variant="ghost" size="sm" onClick={closeModal}>
+            {localize('com_ui_cancel')}
+          </Button>
+        }
         main={
           <div className="flex flex-col gap-2">
             {visibleOptions.map((value) => {
               const { label, icon } = getOptionMeta(value);
-              let pasteLabel = label;
+              let optionLabel = label;
+              let optionDescription: string | undefined;
               if (source === 'pasteImage') {
                 if (value === EToolResources.file_search) {
-                  pasteLabel = localize(
-                    conversation?.projectId && projectPermissions.canEdit
-                      ? 'com_ui_paste_image_index_project'
-                      : 'com_ui_paste_image_index',
+                  const toProject = Boolean(conversation?.projectId && projectPermissions.canEdit);
+                  optionLabel = localize(
+                    toProject ? 'com_ui_paste_image_index_project' : 'com_ui_paste_image_index',
+                  );
+                  optionDescription = localize(
+                    toProject
+                      ? 'com_ui_paste_image_index_project_description'
+                      : 'com_ui_paste_image_index_description',
                   );
                 } else {
-                  pasteLabel = localize('com_ui_paste_image_visual');
+                  optionLabel = localize('com_ui_paste_image_visual');
+                  optionDescription = localize('com_ui_paste_image_visual_description');
                 }
               }
               return (
@@ -145,10 +162,24 @@ const DragDropModal = () => {
                     }
                     closeModal();
                   }}
-                  className="flex items-center gap-2 rounded-lg p-2 hover:bg-surface-active-alt"
+                  className="flex w-full items-start gap-3 rounded-xl border border-border-light bg-surface-secondary p-3 text-left transition-colors hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-dialog active:bg-surface-active-alt"
                 >
-                  {icon}
-                  <span>{pasteLabel}</span>
+                  <span
+                    className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-tertiary text-text-secondary"
+                    aria-hidden="true"
+                  >
+                    {icon}
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-sm font-semibold leading-5 text-text-primary">
+                      {optionLabel}
+                    </span>
+                    {optionDescription && (
+                      <span className="text-xs leading-4 text-text-secondary">
+                        {optionDescription}
+                      </span>
+                    )}
+                  </span>
                 </button>
               );
             })}
