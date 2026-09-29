@@ -528,6 +528,32 @@ describe('processAgentFileUpload', () => {
     inspectContent.mockReturnValue(null);
   });
 
+  test('indexes and links a project document without requiring an agent', async () => {
+    const req = makeReq({
+      mimetype: 'text/plain',
+      body: { projectId: 'project-123', endpoint: EModelEndpoint.agents },
+    });
+    req.file.originalname = 'notes.txt';
+    setupStoredFileUpload();
+
+    await processAgentFileUpload({
+      req,
+      res: mockRes,
+      metadata: {
+        endpoint: EModelEndpoint.agents,
+        tool_resource: EToolResources.file_search,
+        file_id: 'project-file-id',
+      },
+    });
+
+    expect(uploadVectors).toHaveBeenCalledWith(
+      expect.objectContaining({ entity_id: 'project-123', file_id: 'project-file-id' }),
+    );
+    expect(db.addAgentResourceFile).not.toHaveBeenCalled();
+    expect(db.addProjectFileId).toHaveBeenCalledWith('project-123', 'created-file-id');
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+  });
+
   describe('content filtering for extracted context', () => {
     const filters = { files: { pii: {} } };
     const extractedTextFinding = {

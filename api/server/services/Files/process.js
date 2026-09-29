@@ -1652,7 +1652,7 @@ const processAgentFileUpload = async ({ req, res, metadata, sseStream }) => {
     storageRegion: _storageRegion,
   });
 
-  if (!messageAttachment && effectiveToolResource) {
+  if (!messageAttachment && effectiveToolResource && agent_id) {
     await db.addAgentResourceFile({
       file_id,
       agent_id,
