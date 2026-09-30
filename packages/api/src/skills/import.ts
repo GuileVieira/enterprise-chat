@@ -830,7 +830,7 @@ async function handleZip(
     const entry = zip.files[entryPath];
     return (
       !entry.dir &&
-      entryPath.replace(/\\/g, '/').split('/').at(-1)?.toUpperCase() === SKILL_MD.toUpperCase()
+      entryPath.replace(/\\/g, '/').split('/').pop()?.toUpperCase() === SKILL_MD.toUpperCase()
     );
   });
   if (skillDocuments.length > 1) {
