@@ -112,7 +112,7 @@ export default function SharedMemoryPortability({
       },
     );
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex w-full min-w-0 flex-wrap gap-2">
       <Button
         type="button"
         size="sm"

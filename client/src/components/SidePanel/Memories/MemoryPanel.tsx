@@ -158,36 +158,39 @@ export default function MemoryPanel() {
       {/* Sticky header: filter, partition, usage + toggle */}
       <div className="shrink-0 space-y-2 px-3 pb-2">
         {/* Header: Filter + Create Button */}
-        <div className="flex items-center gap-2">
-          <FilterInput
-            inputId="memory-search"
-            label={localize('com_ui_memories_filter')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            containerClassName="flex-1"
-          />
-          {hasCreateAccess && (
-            <MemoryCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <OGDialogTrigger asChild>
-                <TooltipAnchor
-                  description={localize('com_ui_create_memory')}
-                  side="bottom"
-                  render={
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-9 shrink-0 bg-transparent"
-                      aria-label={localize('com_ui_create_memory')}
-                      onClick={() => setCreateDialogOpen(true)}
-                    >
-                      <Plus className="size-4" aria-hidden="true" />
-                    </Button>
-                  }
-                />
-              </OGDialogTrigger>
-            </MemoryCreateDialog>
-          )}
-          <SharedMemoryPortability />
+        {!showLibrary && (
+          <div className="flex items-center gap-2">
+            <FilterInput
+              inputId="memory-search"
+              label={localize('com_ui_memories_filter')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              containerClassName="min-w-0 flex-1"
+            />
+            {hasCreateAccess && (
+              <MemoryCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <OGDialogTrigger asChild>
+                  <TooltipAnchor
+                    description={localize('com_ui_create_memory')}
+                    side="bottom"
+                    render={
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-9 shrink-0 bg-transparent"
+                        aria-label={localize('com_ui_create_memory')}
+                        onClick={() => setCreateDialogOpen(true)}
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </Button>
+                    }
+                  />
+                </OGDialogTrigger>
+              </MemoryCreateDialog>
+            )}
+          </div>
+        )}
+        <div className="flex flex-col items-start gap-2">
           <Button
             type="button"
             size="sm"
@@ -197,10 +200,11 @@ export default function MemoryPanel() {
           >
             {localize('com_ui_shared_memory_library')}
           </Button>
+          {!showLibrary && <SharedMemoryPortability />}
         </div>
 
         {/* Partition filter (only when agent-scoped memories exist) */}
-        {partitionOptions && (
+        {!showLibrary && partitionOptions && (
           <Dropdown
             value={activePartition}
             onChange={setPartitionFilter}
@@ -213,7 +217,7 @@ export default function MemoryPanel() {
         )}
 
         {/* Controls: Usage Badge + Memory Toggle */}
-        {(showUsageBadge || hasOptOutAccess) && (
+        {!showLibrary && (showUsageBadge || hasOptOutAccess) && (
           <div className="flex items-center justify-between">
             {/* Usage Badge */}
             {showUsageBadge && (

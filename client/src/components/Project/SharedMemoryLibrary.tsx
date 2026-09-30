@@ -124,7 +124,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
   return (
     <section className="space-y-5" aria-label={localize('com_ui_shared_memory_library')}>
       <div className="rounded-2xl border border-border-light bg-surface-secondary p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="space-y-3">
           <h3 className="text-sm font-medium text-text-primary">
             {localize('com_ui_shared_memory_library')}
           </h3>
@@ -142,19 +142,22 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
           {localize('com_ui_shared_memory_audience')}
         </p>
         {canCreateLibrary && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
+          <div className="mt-3 grid min-w-0 gap-2">
             <Input
+              className="min-w-0"
               value={key}
               onChange={(event) => setKey(event.target.value)}
               placeholder={localize('com_ui_project_memory_key_placeholder')}
             />
             <Textarea
+              className="min-w-0"
               value={value}
               onChange={(event) => setValue(event.target.value)}
               placeholder={localize('com_ui_project_memory_value_placeholder')}
             />
             <Button
               type="button"
+              className="justify-self-start"
               onClick={publish}
               disabled={create.isLoading || !key.trim() || !value.trim()}
             >
@@ -231,7 +234,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
       ) : null}
 
       <div className="rounded-2xl border border-border-light p-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-medium">{localize('com_ui_project_shared_memories')}</h3>
           {canEdit && (
             <Button
