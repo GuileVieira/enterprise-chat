@@ -132,24 +132,17 @@ async function migrateTrafficDiaryIndexes() {
     const legacyKeys = { projectId: 1, userId: 1, date: 1 };
     const diaryKeys = { projectId: 1, userId: 1, kind: 1, date: 1 };
     const legacyIndexes = indexes.filter((index) => hasKeys(index, legacyKeys));
-    const nonUniqueDiaryIndexes = indexes.filter(
-      (index) => hasKeys(index, diaryKeys) && !index.unique,
-    );
-    const hasKindUniqueIndex = indexes.some((index) => hasKeys(index, diaryKeys) && index.unique);
+    const uniqueDiaryIndexes = indexes.filter((index) => hasKeys(index, diaryKeys) && index.unique);
+    const hasDiaryIndex = indexes.some((index) => hasKeys(index, diaryKeys) && !index.unique);
 
-    for (const index of nonUniqueDiaryIndexes) {
+    for (const index of [...uniqueDiaryIndexes, ...legacyIndexes]) {
       await collection.dropIndex(index.name);
-      logger.info(`[trafficDiaryMigration] Dropped stale diary index ${index.name}`);
+      logger.info(`[trafficDiaryMigration] Dropped unique diary index ${index.name}`);
     }
 
-    if (!hasKindUniqueIndex) {
-      await collection.createIndex(diaryKeys, { unique: true });
-      logger.info('[trafficDiaryMigration] Created project/user/kind/date unique index');
-    }
-
-    for (const index of legacyIndexes) {
-      await collection.dropIndex(index.name);
-      logger.info(`[trafficDiaryMigration] Dropped legacy diary index ${index.name}`);
+    if (!hasDiaryIndex) {
+      await collection.createIndex(diaryKeys, { unique: false });
+      logger.info('[trafficDiaryMigration] Created non-unique project/user/kind/date index');
     }
   } catch (error) {
     if (error?.codeName !== 'NamespaceNotFound') {

@@ -1666,6 +1666,7 @@ export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
   {
     projectId: string;
     date: string;
+    entryId?: string;
     answers: t.ProjectTrafficDiaryAnswer[];
     kind?: t.ProjectTrafficDiaryKind;
   },
@@ -1673,8 +1674,8 @@ export const useSaveProjectMetaAdsDiaryMutation = (): UseMutationResult<
 > => {
   const queryClient = useQueryClient();
   return useMutation(
-    ({ projectId, date, answers, kind }) =>
-      dataService.saveProjectMetaAdsDiary(projectId, date, answers, kind),
+    ({ projectId, date, answers, kind, entryId }) =>
+      dataService.saveProjectMetaAdsDiary(projectId, date, answers, kind, entryId),
     {
       onSuccess: (entry, vars) => {
         queryClient.setQueryData<t.ProjectTrafficDiaryResponse | undefined>(

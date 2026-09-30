@@ -992,7 +992,7 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
             ],
           }),
     })
-      .sort({ date: -1, weekStart: -1 })
+      .sort({ date: -1, weekStart: -1, createdAt: -1, _id: -1 })
       .limit(120)
       .lean();
     const hydratedEntries = await hydrateDiaryAuthorNames(entries);
@@ -1017,30 +1017,51 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    const existing = await TrafficDiaryEntry.findOne(
-      getDiaryProjectFilter(project, { userId: req.user.id, kind, date }),
-    ).lean();
+    const entryId = req.body.entryId;
+    if (
+      entryId != null &&
+      (typeof entryId !== 'string' || !mongoose.Types.ObjectId.isValid(entryId))
+    ) {
+      return res.status(400).json({ message: 'Invalid diary entry' });
+    }
+    const filter = getDiaryProjectFilter(project, {
+      _id: entryId || new mongoose.Types.ObjectId(),
+      userId: req.user.id,
+      kind,
+      date,
+    });
+    const existing = entryId ? await TrafficDiaryEntry.findOne(filter).lean() : null;
+    if (entryId && !existing) {
+      return res.status(404).json({ message: 'Diary entry not found' });
+    }
     const actor = getDiaryActor(req.user);
     const timeZone = getDiaryTimeZone(req.user);
     const now = new Date();
     const entry = await TrafficDiaryEntry.findOneAndUpdate(
-      getDiaryProjectFilter(project, { userId: req.user.id, kind, date }),
+      filter,
       {
         $set: { answers, lastEditedBy: actor, timeZone, weekStart: date },
         ...(existing ? { $push: { events: { type: 'updated', actor, at: now } } } : {}),
-        $setOnInsert: {
-          projectId: project.projectId,
-          ...(project.tenantId ? { tenantId: project.tenantId } : {}),
-          userId: req.user.id,
-          kind,
-          date,
-          status: 'draft',
-          createdBy: actor,
-          events: [{ type: 'created', actor, at: now }],
-        },
+        ...(!existing
+          ? {
+              $setOnInsert: {
+                projectId: project.projectId,
+                ...(project.tenantId ? { tenantId: project.tenantId } : {}),
+                userId: req.user.id,
+                kind,
+                date,
+                status: 'draft',
+                createdBy: actor,
+                events: [{ type: 'created', actor, at: now }],
+              },
+            }
+          : {}),
       },
-      { new: true, upsert: true, lean: true },
+      { new: true, upsert: !entryId, lean: true },
     );
+    if (!entry) {
+      return res.status(404).json({ message: 'Diary entry not found' });
+    }
     const indexedEntry = await syncDiaryIndex({ entry, project, req });
     return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {

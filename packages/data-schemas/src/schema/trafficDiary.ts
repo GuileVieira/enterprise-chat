@@ -57,6 +57,6 @@ const trafficDiarySchema: Schema<ITrafficDiaryEntry> = new Schema<ITrafficDiaryE
   { timestamps: true },
 );
 
-trafficDiarySchema.index({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: true });
+trafficDiarySchema.index({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: false });
 
 export default trafficDiarySchema;

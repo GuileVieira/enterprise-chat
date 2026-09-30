@@ -910,7 +910,71 @@ describe('projectMetaAds diary route', () => {
     mongoose.models.User = originalUserModel;
   });
 
-  it('saves one daily record per project, user, and date', async () => {
+  it('persists two same-day records and edits only the selected ID in MongoDB', async () => {
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const schema = require('../../../packages/data-schemas/src/schema/trafficDiary').default;
+    const server = await MongoMemoryServer.create();
+    const connection = await mongoose.createConnection(server.getUri()).asPromise();
+    const Diary = connection.model('TrafficDiaryEntry', schema);
+    mongoose.models.TrafficDiaryEntry = Diary;
+    getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
+    const answers = (text) => [{ id: 'measurement', question: 'Métricas', answer: text }];
+    try {
+      await Diary.init();
+      const first = await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ answers: answers('Primeiro registro') })
+        .expect(200);
+      const second = await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ answers: answers('Segundo registro') })
+        .expect(200);
+      expect(first.body._id).not.toBe(second.body._id);
+      expect(await Diary.countDocuments({ projectId: 'p1' })).toBe(2);
+      await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ entryId: first.body._id, answers: answers('Primeiro editado') })
+        .expect(200);
+      expect((await Diary.findById(first.body._id).lean()).answers[0].answer).toBe(
+        'Primeiro editado',
+      );
+      expect((await Diary.findById(second.body._id).lean()).answers[0].answer).toBe(
+        'Segundo registro',
+      );
+      expect(await Diary.countDocuments({ projectId: 'p1' })).toBe(2);
+      expect(createFile.mock.calls.map(([file]) => file.file_id)).toEqual([
+        `traffic-diary:manager:${first.body._id}`,
+        `traffic-diary:manager:${second.body._id}`,
+        `traffic-diary:manager:${first.body._id}`,
+      ]);
+      mockRouteUser.id = 'other-user';
+      await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ entryId: first.body._id, answers: [] })
+        .expect(404);
+      mockRouteUser.id = 'user-1';
+      getProjectById.mockResolvedValue({ projectId: 'p2', tenantId: 'tenant-x' });
+      await request(createApp())
+        .put('/projects/p2/meta-ads/diary/2026-07-14')
+        .send({ entryId: first.body._id, answers: [] })
+        .expect(404);
+      getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'other-tenant' });
+      await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ entryId: first.body._id, answers: [] })
+        .expect(404);
+      await request(createApp())
+        .put('/projects/p1/meta-ads/diary/2026-07-14')
+        .send({ entryId: 'invalid-id', answers: [] })
+        .expect(400);
+      expect(await Diary.countDocuments({})).toBe(2);
+    } finally {
+      await connection.close();
+      await server.stop();
+    }
+  });
+
+  it('creates a daily record with its own identity', async () => {
     mockRouteUser = {
       id: 'user-1',
       name: 'Guilherme',
@@ -939,15 +1003,10 @@ describe('projectMetaAds diary route', () => {
       .send({ answers: [{ id: 'measurement', question: 'Métricas', answer: 'CPA caiu.' }] })
       .expect(200);
 
-    expect(findOne).toHaveBeenCalledWith({
-      projectId: 'p1',
-      tenantId: 'tenant-x',
-      userId: 'user-1',
-      kind: 'manager',
-      date: '2026-07-14',
-    });
+    expect(findOne).not.toHaveBeenCalled();
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       {
+        _id: expect.any(mongoose.Types.ObjectId),
         projectId: 'p1',
         tenantId: 'tenant-x',
         userId: 'user-1',
@@ -1002,7 +1061,7 @@ describe('projectMetaAds diary route', () => {
     getProjectById.mockResolvedValue({ projectId: 'p1', tenantId: 'tenant-x' });
     const findOne = jest.fn().mockReturnValue({
       lean: jest.fn().mockResolvedValue({
-        _id: 'entry-1',
+        _id: '64f000000000000000000001',
         projectId: 'p1',
         userId: 'user-1',
         kind: 'manager',
@@ -1011,7 +1070,7 @@ describe('projectMetaAds diary route', () => {
       }),
     });
     const findOneAndUpdate = jest.fn().mockResolvedValue({
-      _id: 'entry-1',
+      _id: '64f000000000000000000001',
       projectId: 'p1',
       userId: 'user-1',
       kind: 'manager',
@@ -1026,9 +1085,17 @@ describe('projectMetaAds diary route', () => {
 
     await request(createApp())
       .put('/projects/p1/meta-ads/diary/2026-07-14')
-      .send({ answers: [] })
+      .send({ entryId: '64f000000000000000000001', answers: [] })
       .expect(200);
 
+    expect(findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: '64f000000000000000000001',
+        userId: 'user-1',
+        date: '2026-07-14',
+      }),
+    );
+    expect(findOneAndUpdate.mock.calls[0][2].upsert).toBe(false);
     expect(findOneAndUpdate.mock.calls[0][1]).toEqual(
       expect.objectContaining({
         $push: expect.objectContaining({
@@ -1060,9 +1127,7 @@ describe('projectMetaAds diary route', () => {
       .send({ kind: 'strategist', answers: [] })
       .expect(200);
 
-    expect(findOne).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'strategist', date: '2026-07-14' }),
-    );
+    expect(findOne).not.toHaveBeenCalled();
     expect(findOneAndUpdate.mock.calls[0][0]).toEqual(
       expect.objectContaining({ kind: 'strategist', date: '2026-07-14' }),
     );

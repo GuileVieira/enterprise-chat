@@ -65,18 +65,19 @@ describe('migrateTrafficDiaryIndexes', () => {
     expect(mockCollection.dropIndex).toHaveBeenCalledWith('legacy_diary_identity');
     expect(mockCollection.createIndex).toHaveBeenCalledWith(
       { projectId: 1, userId: 1, kind: 1, date: 1 },
-      { unique: true },
+      { unique: false },
     );
-    expect(mockCollection.createIndex.mock.invocationCallOrder[0]).toBeLessThan(
-      mockCollection.dropIndex.mock.invocationCallOrder[0],
+    expect(mockCollection.dropIndex.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCollection.createIndex.mock.invocationCallOrder[0],
     );
   });
 
-  it('replaces a non-unique diary identity index', async () => {
+  it('replaces the unique diary identity index', async () => {
     mockCollection.indexes.mockResolvedValue([
       {
         name: 'diary_identity',
         key: { projectId: 1, userId: 1, kind: 1, date: 1 },
+        unique: true,
       },
     ]);
 
@@ -85,7 +86,46 @@ describe('migrateTrafficDiaryIndexes', () => {
     expect(mockCollection.dropIndex).toHaveBeenCalledWith('diary_identity');
     expect(mockCollection.createIndex).toHaveBeenCalledWith(
       { projectId: 1, userId: 1, kind: 1, date: 1 },
-      { unique: true },
+      { unique: false },
     );
+  });
+
+  it('upgrades a real unique index without changing existing entries', async () => {
+    const mongoose = jest.requireActual('mongoose');
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const server = await MongoMemoryServer.create();
+    const connection = await mongoose.createConnection(server.getUri()).asPromise();
+    const collection = connection.db.collection('trafficdiaryentries');
+    const row = {
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      userId: 'u1',
+      kind: 'manager',
+      date: '2026-09-30',
+    };
+    try {
+      const { insertedId } = await collection.insertOne({ ...row });
+      await collection.createIndex({ projectId: 1, userId: 1, kind: 1, date: 1 }, { unique: true });
+      require('mongoose').connection.db.collection.mockReturnValueOnce(collection);
+      await migrateTrafficDiaryIndexes();
+      expect(await collection.findOne({ _id: insertedId })).toEqual({ _id: insertedId, ...row });
+      await collection.insertOne({ ...row });
+      expect(await collection.countDocuments(row)).toBe(2);
+      expect((await collection.indexes()).find((index) => index.key.kind === 1).unique).not.toBe(
+        true,
+      );
+    } finally {
+      await connection.close();
+      await server.stop();
+    }
+  });
+
+  it('keeps the non-unique diary index on later startups', async () => {
+    mockCollection.indexes.mockResolvedValue([
+      { name: 'diary_identity', key: { projectId: 1, userId: 1, kind: 1, date: 1 } },
+    ]);
+    await migrateTrafficDiaryIndexes();
+    expect(mockCollection.dropIndex).not.toHaveBeenCalled();
+    expect(mockCollection.createIndex).not.toHaveBeenCalled();
   });
 });

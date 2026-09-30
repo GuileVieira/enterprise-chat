@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle, Plus, Sparkle, Trash } from '@phosphor-icons/react';
-import {
-  useDeleteProjectMetaAdsDiaryMutation,
-  useProjectMetaAdsDiaryQuery,
-  useSaveProjectMetaAdsDiaryMutation,
-} from '~/data-provider';
-import { useLocalize } from '~/hooks';
-import type { TranslationKeys } from '~/hooks';
+import { CheckCircle, Microphone, Plus, Sparkle, Stop, Trash } from '@phosphor-icons/react';
+import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import type {
   ProjectTrafficDiaryAnswer,
   ProjectTrafficDiaryEntry,
   ProjectTrafficDiaryKind,
   TProject,
 } from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
+import {
+  useDeleteProjectMetaAdsDiaryMutation,
+  useProjectMetaAdsDiaryQuery,
+  useSaveProjectMetaAdsDiaryMutation,
+} from '~/data-provider';
+import { isSpeechFeatureDisabled } from '~/utils/speech';
+import useDictation from './useDictation';
+import { useLocalize } from '~/hooks';
 
 const managerDiarySections = [
   {
@@ -147,7 +150,7 @@ export function TrafficDiaryWorkspace({
   );
   const defaultAnswersRef = useRef(defaultAnswers);
   defaultAnswersRef.current = defaultAnswers;
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null | undefined>(undefined);
   const [answers, setAnswers] = useState<ProjectTrafficDiaryAnswer[]>(defaultAnswers);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -155,15 +158,36 @@ export function TrafficDiaryWorkspace({
   const currentEntry = entries.find(
     (item) => getEntryDate(item) === currentDate && item.userId === currentUserId,
   );
-  const entry = selectedEntryId
-    ? entries.find((item) => item._id === selectedEntryId)
-    : currentEntry;
+  const entry =
+    selectedEntryId === undefined
+      ? currentEntry
+      : entries.find((item) => item._id === selectedEntryId);
   const selectedDate = entry ? getEntryDate(entry) : currentDate;
-  const historyEntries = entries.filter((item) => item._id !== currentEntry?._id);
+  const historyEntries = entries;
   const isCompleted = entry?.status === 'completed';
   const canEditEntry = canEdit && (!entry || entry.userId === currentUserId);
   const canAddQuestion = canEditEntry;
-  const isSaving = saveDiary.isLoading || deleteDiary.isLoading;
+  const { data: speechConfig } = useGetCustomConfigSpeechQuery();
+  const dictation = useDictation(
+    `${project.projectId}:${activeKind}:${selectedEntryId ?? entry?._id ?? 'new'}`,
+    canEditEntry && !isSpeechFeatureDisabled(speechConfig, 'speechToText'),
+    (id, text) =>
+      setAnswers((current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                answer:
+                  `${item.answer}${item.answer && !/\s$/.test(item.answer) ? ' ' : ''}${text}`.slice(
+                    0,
+                    20000,
+                  ),
+              }
+            : item,
+        ),
+      ),
+  );
+  const isSaving = saveDiary.isLoading || deleteDiary.isLoading || dictation.activeId !== null;
   const hasUnsavedChanges = useMemo(() => {
     const loadedAnswers = entry?.answers.length ? entry.answers : defaultAnswers;
     return (
@@ -176,7 +200,22 @@ export function TrafficDiaryWorkspace({
     setAnswers(entry?.answers.length ? entry.answers : defaultAnswersRef.current);
     setError(null);
     setNotice(null);
-  }, [activeKind, entry?.answers, entry?.date, entry?.updatedAt, entry?.weekStart]);
+  }, [
+    activeKind,
+    selectedEntryId,
+    entry?._id,
+    entry?.answers,
+    entry?.date,
+    entry?.updatedAt,
+    entry?.weekStart,
+  ]);
+
+  const newEntry = () => {
+    setSelectedEntryId(null);
+    setAnswers(defaultAnswersRef.current);
+    setError(null);
+    setNotice(null);
+  };
 
   const updateAnswer = (id: string, answer: string) => {
     setAnswers((current) => current.map((item) => (item.id === id ? { ...item, answer } : item)));
@@ -201,9 +240,11 @@ export function TrafficDiaryWorkspace({
       const savedEntry = await saveDiary.mutateAsync({
         projectId: project.projectId,
         date: selectedDate,
+        entryId: entry?._id,
         answers: savedAnswers,
         kind: activeKind,
       });
+      setSelectedEntryId(savedEntry._id);
       if (showNotice) {
         setNotice(localize('com_ui_project_meta_ads_diary_saved'));
       }
@@ -251,7 +292,7 @@ export function TrafficDiaryWorkspace({
                 type="button"
                 onClick={() => {
                   setActiveKind(kind);
-                  setSelectedEntryId(null);
+                  setSelectedEntryId(undefined);
                 }}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                   activeKind === kind
@@ -276,7 +317,7 @@ export function TrafficDiaryWorkspace({
                       ? 'com_ui_project_meta_ads_diary_completed'
                       : 'com_ui_project_meta_ads_diary_draft',
                   )
-                : localize('com_ui_project_meta_ads_diary_new_week')}
+                : localize('com_ui_project_meta_ads_diary_new_entry')}
             </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
@@ -294,28 +335,29 @@ export function TrafficDiaryWorkspace({
             </p>
           )}
         </div>
-        {selectedEntryId && (
+        {canEdit && (
           <button
             type="button"
-            onClick={() => setSelectedEntryId(null)}
+            onClick={newEntry}
+            disabled={isSaving}
             className="self-start rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 dark:border-white/15 dark:text-slate-200"
           >
-            {localize('com_ui_project_meta_ads_diary_this_week')}
+            {localize('com_ui_project_meta_ads_diary_new_entry')}
           </button>
         )}
       </header>
 
-      {(error || notice) && (
+      {(error || dictation.error || notice) && (
         <div
           role="status"
           className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ${
-            error
+            error || dictation.error
               ? 'bg-red-500/10 text-red-700 dark:text-red-200'
               : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-100'
           }`}
         >
-          {!error && <CheckCircle className="h-4 w-4" aria-hidden="true" />}
-          {error || notice}
+          {!error && !dictation.error && <CheckCircle className="h-4 w-4" aria-hidden="true" />}
+          {error || (dictation.error && localize(dictation.error)) || notice}
         </div>
       )}
 
@@ -359,6 +401,12 @@ export function TrafficDiaryWorkspace({
           )}
         </div>
       </div>
+
+      {canEditEntry && !dictation.supported && (
+        <p role="status" className="text-sm text-text-secondary">
+          {localize('com_ui_speech_not_supported')}
+        </p>
+      )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
@@ -409,11 +457,18 @@ export function TrafficDiaryWorkspace({
                           className="mb-3 w-full border-b border-slate-300 bg-transparent pb-2 text-sm font-semibold dark:border-white/20"
                         />
                       ) : (
-                        <label className="block max-w-3xl text-sm font-semibold leading-6">
+                        <label
+                          htmlFor={`diary-${activeKind}-${item.id}`}
+                          className="block max-w-3xl text-sm font-semibold leading-6"
+                        >
                           {item.question}
                         </label>
                       )}
                       <textarea
+                        id={`diary-${activeKind}-${item.id}`}
+                        aria-label={
+                          item.question || localize('com_ui_project_meta_ads_diary_extra_question')
+                        }
                         value={item.answer}
                         maxLength={20000}
                         disabled={!canEditEntry}
@@ -421,6 +476,32 @@ export function TrafficDiaryWorkspace({
                         rows={3}
                         className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 dark:border-white/15 dark:bg-slate-900"
                       />
+                      {canEditEntry &&
+                        dictation.supported &&
+                        !isSpeechFeatureDisabled(speechConfig, 'speechToText') && (
+                          <button
+                            type="button"
+                            aria-pressed={dictation.activeId === item.id}
+                            disabled={
+                              saveDiary.isLoading ||
+                              deleteDiary.isLoading ||
+                              (dictation.activeId !== null && dictation.activeId !== item.id)
+                            }
+                            onClick={() => dictation.toggle(item.id)}
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-border-light px-3 py-2 text-sm text-text-primary disabled:opacity-50"
+                          >
+                            {dictation.activeId === item.id ? (
+                              <Stop className="h-4 w-4" aria-hidden="true" />
+                            ) : (
+                              <Microphone className="h-4 w-4" aria-hidden="true" />
+                            )}
+                            {localize(
+                              dictation.activeId === item.id
+                                ? 'com_ui_project_meta_ads_diary_stop_dictation'
+                                : 'com_ui_project_meta_ads_diary_dictate',
+                            )}
+                          </button>
+                        )}
                     </div>
                   ))}
                 </div>
@@ -437,7 +518,8 @@ export function TrafficDiaryWorkspace({
             <div className="flex gap-3 overflow-x-auto pb-1 xl:max-h-[460px] xl:flex-col xl:overflow-y-auto xl:pr-1">
               <button
                 type="button"
-                onClick={() => setSelectedEntryId(null)}
+                onClick={newEntry}
+                disabled={isSaving}
                 className={`w-56 shrink-0 rounded-xl border p-3 text-left transition xl:w-full ${
                   selectedEntryId === null
                     ? 'border-teal-400 bg-teal-50 dark:border-teal-300/50 dark:bg-teal-300/10'
@@ -446,12 +528,12 @@ export function TrafficDiaryWorkspace({
               >
                 <span className="block text-sm font-semibold">{formatDate(currentDate)}</span>
                 <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
-                  {localize('com_ui_project_meta_ads_diary_this_week')}
+                  {localize('com_ui_project_meta_ads_diary_new_entry')}
                 </span>
               </button>
               {historyEntries.map((historyEntry) => {
                 const historyDate = getEntryDate(historyEntry);
-                const isSelected = historyEntry._id === selectedEntryId;
+                const isSelected = historyEntry._id === entry?._id;
                 const author = historyEntry.createdBy.name || localize(config.actorKey);
                 return (
                   <button

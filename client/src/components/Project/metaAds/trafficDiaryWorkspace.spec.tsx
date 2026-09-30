@@ -1,10 +1,35 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { TrafficDiaryWorkspace } from './trafficDiaryWorkspace';
 
 const mockSave = jest.fn();
 const mockDelete = jest.fn();
 let mockEntries: unknown[] = [];
+let mockSpeechConfig = { speechToText: true };
+class MockRecognition {
+  static latest: MockRecognition;
+  lang = '';
+  continuous = false;
+  interimResults = true;
+  onresult:
+    | ((event: {
+        resultIndex: number;
+        results: { isFinal: boolean; 0: { transcript: string } }[];
+      }) => void)
+    | null = null;
+
+  onerror: ((event: { error: string }) => void) | null = null;
+  onend: (() => void) | null = null;
+  start = jest.fn();
+  stop = jest.fn();
+  abort = jest.fn();
+  constructor() {
+    MockRecognition.latest = this;
+  }
+}
+jest.mock('librechat-data-provider/react-query', () => ({
+  useGetCustomConfigSpeechQuery: () => ({ data: mockSpeechConfig }),
+}));
 
 jest.mock('~/data-provider', () => ({
   useProjectMetaAdsDiaryQuery: (_projectId: string, kind: string) => ({
@@ -27,6 +52,11 @@ describe('TrafficDiaryWorkspace', () => {
     jest.clearAllMocks();
     jest.spyOn(window, 'confirm').mockReturnValue(true);
     mockEntries = [];
+    mockSpeechConfig = { speechToText: true };
+    Object.defineProperty(window, 'webkitSpeechRecognition', {
+      configurable: true,
+      value: MockRecognition,
+    });
     mockSave.mockResolvedValue({
       _id: 'entry-1',
       projectId: 'project-1',
@@ -257,6 +287,7 @@ describe('TrafficDiaryWorkspace', () => {
         expect.objectContaining({
           projectId: 'project-1',
           date: '2026-07-06',
+          entryId: 'entry-1',
           answers: expect.arrayContaining([
             expect.objectContaining({
               id: 'strategy',
@@ -304,5 +335,135 @@ describe('TrafficDiaryWorkspace', () => {
         kind: 'manager',
       });
     });
+  });
+  it('creates multiple same-day entries, then updates the selected entry by ID', async () => {
+    mockSave.mockImplementation(
+      async (input: {
+        projectId: string;
+        entryId?: string;
+        kind: string;
+        date: string;
+        answers: { id: string; question: string; answer: string }[];
+      }) => {
+        const saved = {
+          _id: input.entryId || `entry-${mockEntries.length + 1}`,
+          projectId: input.projectId,
+          userId: 'user-1',
+          kind: input.kind,
+          date: input.date,
+          status: 'draft',
+          answers: input.answers,
+          createdBy: { id: 'user-1', name: 'Guilherme' },
+          events: [],
+        };
+        mockEntries = [
+          ...mockEntries.filter((entry) => (entry as { _id: string })._id !== saved._id),
+          saved,
+        ];
+        return saved;
+      },
+    );
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        currentUserId="user-1"
+        onAnalyze={jest.fn()}
+      />,
+    );
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Primeiro' } });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
+    await waitFor(() =>
+      expect(screen.queryByText('com_ui_project_meta_ads_diary_save')).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_diary_new_entry')[0]);
+    expect(screen.getAllByRole('textbox')[0]).toHaveValue('');
+    fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'Segundo' } });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
+    expect(mockSave.mock.calls[0][0].entryId).toBeUndefined();
+    expect(mockSave.mock.calls[1][0].entryId).toBeUndefined();
+    expect(mockSave.mock.calls[1][0].date).toBe(mockSave.mock.calls[0][0].date);
+    expect(screen.getAllByText('Guilherme')).toHaveLength(2);
+    fireEvent.click(screen.getAllByText('Guilherme')[0]);
+    expect(screen.getByDisplayValue('Primeiro')).toBeEnabled();
+    fireEvent.change(screen.getByDisplayValue('Primeiro'), {
+      target: { value: 'Primeiro editado' },
+    });
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_save'));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(3));
+    expect(mockSave.mock.calls[2][0].entryId).toBe('entry-1');
+    expect(mockEntries).toHaveLength(2);
+  });
+
+  it('dictates into the selected field without replacing typed text or submitting', () => {
+    const onAnalyze = jest.fn();
+    const { unmount } = render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        currentUserId="user-1"
+        onAnalyze={onAnalyze}
+      />,
+    );
+    fireEvent.change(screen.getAllByRole('textbox')[1], { target: { value: 'Texto escrito.' } });
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_diary_dictate')[1]);
+    const recognition = MockRecognition.latest;
+    expect(recognition.lang).toBe('pt-BR');
+    expect(recognition.start).toHaveBeenCalledTimes(1);
+    act(() =>
+      recognition.onresult?.({
+        resultIndex: 0,
+        results: [{ isFinal: true, 0: { transcript: 'Fala transcrita.' } }],
+      }),
+    );
+    expect(screen.getByDisplayValue('Texto escrito. Fala transcrita.')).toBeVisible();
+    expect(screen.getAllByRole('textbox')[0]).toHaveValue('');
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(onAnalyze).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_diary_stop_dictation'));
+    expect(recognition.stop).toHaveBeenCalledTimes(1);
+    unmount();
+    expect(recognition.abort).toHaveBeenCalledTimes(1);
+    expect(recognition.onresult).toBeNull();
+  });
+
+  it('stops dictation when switching diary and reports microphone denial', () => {
+    render(
+      <TrafficDiaryWorkspace
+        project={{ projectId: 'project-1', name: 'Cliente' }}
+        canEdit={true}
+        currentUserId="user-1"
+        onAnalyze={jest.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_diary_dictate')[0]);
+    const recognition = MockRecognition.latest;
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_strategy_diary_tab'));
+    expect(recognition.abort).toHaveBeenCalledTimes(1);
+    expect(recognition.onresult).toBeNull();
+    fireEvent.click(screen.getAllByText('com_ui_project_meta_ads_diary_dictate')[0]);
+    act(() => MockRecognition.latest.onerror?.({ error: 'not-allowed' }));
+    expect(screen.getByText('com_ui_microphone_unavailable')).toBeVisible();
+  });
+
+  it('hides microphones when admin disables speech or browser lacks recognition', () => {
+    mockSpeechConfig = { speechToText: false };
+    const props = {
+      project: { projectId: 'project-1', name: 'Cliente' },
+      canEdit: true,
+      currentUserId: 'user-1',
+      onAnalyze: jest.fn(),
+    };
+    const { rerender } = render(<TrafficDiaryWorkspace {...props} />);
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_dictate')).not.toBeInTheDocument();
+    mockSpeechConfig = { speechToText: true };
+    Object.defineProperty(window, 'webkitSpeechRecognition', {
+      configurable: true,
+      value: undefined,
+    });
+    rerender(<TrafficDiaryWorkspace {...props} />);
+    expect(screen.queryByText('com_ui_project_meta_ads_diary_dictate')).not.toBeInTheDocument();
+    expect(screen.getByText('com_ui_speech_not_supported')).toBeVisible();
   });
 });

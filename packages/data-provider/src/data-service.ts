@@ -1231,8 +1231,9 @@ export const saveProjectMetaAdsDiary = (
   date: string,
   answers: q.ProjectTrafficDiaryAnswer[],
   kind?: q.ProjectTrafficDiaryKind,
+  entryId?: string,
 ): Promise<q.ProjectTrafficDiaryEntry> => {
-  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers, kind });
+  return request.put(endpoints.projectMetaAdsDiaryWeek(id, date), { answers, kind, entryId });
 };
 
 export const completeProjectMetaAdsDiary = (

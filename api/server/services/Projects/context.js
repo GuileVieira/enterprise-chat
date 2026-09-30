@@ -132,11 +132,11 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
         const [managerEntries, strategistEntries] = await runAsSystem(() =>
           Promise.all([
             TrafficDiaryEntry.find({ ...diaryQuery, kind: 'manager' })
-              .sort({ date: -1, weekStart: -1 })
+              .sort({ date: -1, weekStart: -1, createdAt: -1, _id: -1 })
               .limit(7)
               .lean(),
             TrafficDiaryEntry.find({ ...diaryQuery, kind: 'strategist' })
-              .sort({ date: -1, weekStart: -1 })
+              .sort({ date: -1, weekStart: -1, createdAt: -1, _id: -1 })
               .limit(7)
               .lean(),
           ]),
