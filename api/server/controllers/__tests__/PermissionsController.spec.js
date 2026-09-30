@@ -139,6 +139,46 @@ describe('PermissionsController', () => {
     const userId = new mongoose.Types.ObjectId();
     const groupId = new mongoose.Types.ObjectId();
 
+    it('returns saved destination tenant shares and Insights state without foreign user details', async () => {
+      mockGetTenantId.mockReturnValue(currentTenantId);
+      db.aggregateAclEntries.mockResolvedValue([
+        {
+          principalType: PrincipalType.USER,
+          accessRoleId: AccessRoleIds.AGENT_OWNER,
+          userInfo: { _id: userId, tenantId: currentTenantId, name: 'Owner' },
+          permBits: 15,
+        },
+        {
+          principalType: PrincipalType.TENANT,
+          principalId: otherTenantId,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          permBits: 17,
+        },
+        {
+          principalType: PrincipalType.USER,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          userInfo: { _id: groupId, tenantId: otherTenantId, email: 'hidden@example.com' },
+          permBits: 1,
+        },
+      ]);
+      const req = createMockReq({ user: { id: userId.toString(), role: SystemRoles.ADMIN } });
+      const res = createMockRes();
+      await getResourcePermissions(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      const response = res.json.mock.calls[0][0];
+      expect(response.principals).toHaveLength(2);
+      expect(response.principals).toContainEqual(
+        expect.objectContaining({
+          type: PrincipalType.TENANT,
+          id: otherTenantId,
+          idOnTheSource: otherTenantId,
+          accessRoleId: AccessRoleIds.AGENT_VIEWER,
+          viewInsights: true,
+        }),
+      );
+      expect(JSON.stringify(response)).not.toContain('hidden@example.com');
+    });
+
     it('omits joined user and group details outside the current request context', async () => {
       mockGetTenantId.mockReturnValue(currentTenantId);
       db.aggregateAclEntries.mockResolvedValue([

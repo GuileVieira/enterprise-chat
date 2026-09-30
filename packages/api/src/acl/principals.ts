@@ -1,4 +1,36 @@
+import { getTenantId, runAsSystem, SYSTEM_TENANT_ID } from '@librechat/data-schemas';
+import { PrincipalType, ResourceType, SystemRoles } from 'librechat-data-provider';
 import type { TPrincipal } from 'librechat-data-provider';
+import type { AllMethods } from '@librechat/data-schemas';
+import type { PipelineStage } from 'mongoose';
+
+/** Route callers must authorize SHARE on the exact resource before listing its grants. */
+export async function getResourcePermissionEntries({
+  resourceType,
+  userRole,
+  pipeline,
+  aggregateAclEntries,
+}: {
+  resourceType: ResourceType;
+  userRole: string;
+  pipeline: PipelineStage[];
+  aggregateAclEntries: AllMethods['aggregateAclEntries'];
+}): Promise<Awaited<ReturnType<AllMethods['aggregateAclEntries']>>> {
+  const tenantId = getTenantId();
+  const canListSharedTenants =
+    userRole === SystemRoles.ADMIN &&
+    (resourceType === ResourceType.AGENT || resourceType === ResourceType.PROMPTGROUP);
+  if (!canListSharedTenants || !tenantId || tenantId === SYSTEM_TENANT_ID) {
+    return aggregateAclEntries(pipeline);
+  }
+  // Tenant grants live in the destination tenant; other principals stay request-scoped.
+  return runAsSystem(async () =>
+    aggregateAclEntries([
+      { $match: { $or: [{ tenantId }, { principalType: PrincipalType.TENANT }] } },
+      ...pipeline,
+    ]),
+  );
+}
 
 export interface DirectoryPrincipalUser {
   id: string;

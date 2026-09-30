@@ -14,6 +14,7 @@ const {
 const {
   enrichRemoteAgentPrincipals,
   createPrincipalSearch,
+  getResourcePermissionEntries,
   backfillRemoteAgentPermissions,
   auditInsightsPermissionChanges,
   getInsightsPrincipalState,
@@ -390,7 +391,7 @@ const getResourcePermissions = async (req, res) => {
     validateResourceType(resourceType);
     const tenantId = getTenantId();
 
-    const results = await db.aggregateAclEntries([
+    const pipeline = [
       // Match ACL entries for this resource
       {
         $match: {
@@ -436,7 +437,13 @@ const getResourcePermissions = async (req, res) => {
           permBits: 1,
         },
       },
-    ]);
+    ];
+    const results = await getResourcePermissionEntries({
+      resourceType,
+      userRole: req.user.role,
+      pipeline,
+      aggregateAclEntries: db.aggregateAclEntries,
+    });
 
     let principals = [];
     let publicPermission = null;
@@ -514,6 +521,11 @@ const getResourcePermissions = async (req, res) => {
           source: 'local',
           idOnTheSource: result.principalId,
           accessRoleId: result.accessRoleId,
+          ...getInsightsPrincipalState({
+            principalType: PrincipalType.TENANT,
+            requesterRole: req.user.role,
+            permBits: result.permBits,
+          }),
         });
       }
     }
