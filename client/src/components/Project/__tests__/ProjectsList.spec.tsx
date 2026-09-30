@@ -28,6 +28,14 @@ jest.mock('~/utils', () => ({
   cn: (...classes) => classes.filter(Boolean).join(' '),
 }));
 
+jest.mock('../ProjectDeleteDialog', () => ({
+  __esModule: true,
+  default: ({ project, onDelete }) =>
+    project ? (
+      <button data-testid="confirm-project-delete" type="button" onClick={onDelete} />
+    ) : null,
+}));
+
 import { useProjectsQuery } from '~/data-provider';
 
 const createQueryClient = () =>
@@ -135,8 +143,7 @@ describe('ProjectsList', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/projects/new');
   });
 
-  it('calls delete mutation after confirm', () => {
-    jest.spyOn(window, 'confirm').mockReturnValue(true);
+  it('calls delete mutation after dialog confirmation', () => {
     (useProjectsQuery as jest.Mock).mockReturnValue({
       data: [{ projectId: 'p1', name: 'Project Alpha' }],
       isLoading: false,
@@ -144,11 +151,11 @@ describe('ProjectsList', () => {
     renderList();
     const deleteButton = screen.getByTitle('com_ui_delete');
     fireEvent.click(deleteButton);
-    expect(mockDeleteMutate).toHaveBeenCalledWith('p1');
+    fireEvent.click(screen.getByTestId('confirm-project-delete'));
+    expect(mockDeleteMutate).toHaveBeenCalledWith('p1', expect.any(Object));
   });
 
-  it('does not delete when confirm is cancelled', () => {
-    jest.spyOn(window, 'confirm').mockReturnValue(false);
+  it('does not delete before dialog confirmation', () => {
     (useProjectsQuery as jest.Mock).mockReturnValue({
       data: [{ projectId: 'p1', name: 'Project Alpha' }],
       isLoading: false,

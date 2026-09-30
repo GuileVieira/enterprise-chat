@@ -41,6 +41,11 @@ import { createBannerModel } from './banner';
 import { createPresetModel } from './preset';
 import { createPromptModel } from './prompt';
 import { createMemoryModel } from './memory';
+import {
+  createSharedMemoryModel,
+  createSharedMemoryImportOperationModel,
+  createSharedMemoryLibraryStateModel,
+} from './sharedMemory';
 import { createConfigModel } from './config';
 import { createTokenModel } from './token';
 import { createAgentModel } from './agent';
@@ -89,6 +94,9 @@ export function createModels(mongoose: typeof import('mongoose')): {
   SharedLink: ReturnType<typeof createSharedLinkModel>;
   ToolCall: ReturnType<typeof createToolCallModel>;
   MemoryEntry: ReturnType<typeof createMemoryModel>;
+  SharedMemory: ReturnType<typeof createSharedMemoryModel>;
+  SharedMemoryImportOperation: ReturnType<typeof createSharedMemoryImportOperationModel>;
+  SharedMemoryLibraryState: ReturnType<typeof createSharedMemoryLibraryStateModel>;
   ToolFavorite: ReturnType<typeof createToolFavoriteModel>;
   AccessRole: ReturnType<typeof createAccessRoleModel>;
   AclEntry: ReturnType<typeof createAclEntryModel>;
@@ -145,6 +153,9 @@ export function createModels(mongoose: typeof import('mongoose')): {
     SharedLink: createSharedLinkModel(mongoose),
     ToolCall: createToolCallModel(mongoose),
     MemoryEntry: createMemoryModel(mongoose),
+    SharedMemory: createSharedMemoryModel(mongoose),
+    SharedMemoryImportOperation: createSharedMemoryImportOperationModel(mongoose),
+    SharedMemoryLibraryState: createSharedMemoryLibraryStateModel(mongoose),
     ToolFavorite: createToolFavoriteModel(mongoose),
     AccessRole: createAccessRoleModel(mongoose),
     AclEntry: createAclEntryModel(mongoose),

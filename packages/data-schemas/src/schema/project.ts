@@ -11,6 +11,12 @@ const ProjectMemorySchema = new Schema(
       type: String,
       required: true,
     },
+    importOperationId: String,
+    importRef: String,
+    lastImportOperationId: String,
+    lastImportRef: String,
+    version: { type: Number, default: 1, min: 1 },
+    updatedAt: { type: Date, default: Date.now },
   },
   { _id: false },
 );
@@ -357,6 +363,10 @@ const projectSchema: Schema<IProject> = new Schema<IProject>(
       default: [],
     },
     memoryKeys: {
+      type: [String],
+      default: [],
+    },
+    sharedMemoryIds: {
       type: [String],
       default: [],
     },

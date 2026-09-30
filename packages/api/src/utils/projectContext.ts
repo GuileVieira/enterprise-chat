@@ -27,24 +27,65 @@ interface UserMemoryEntry {
   value: string;
 }
 
+interface SharedMemoryEntry extends UserMemoryEntry {
+  id: string;
+  tokenCount?: number;
+}
+
 /**
  * Loads and formats project memories for injection into conversation context.
  * Combines embedded project memories with referenced user memories (by key).
  */
 export async function loadProjectMemories(
-  project: { memories?: IProjectMemory[]; memoryKeys?: string[] } | null | undefined,
+  project:
+    | { memories?: IProjectMemory[]; memoryKeys?: string[]; sharedMemoryIds?: string[] }
+    | null
+    | undefined,
   getUserMemories?: (userId: string) => Promise<UserMemoryEntry[]>,
   userId?: string,
+  getSharedMemories?: (ids: string[]) => Promise<SharedMemoryEntry[]>,
+  sharedTokenLimit?: number,
 ): Promise<string | null> {
   if (!project) {
     return null;
   }
 
   const lines: string[] = [];
+  const localKeys = new Set(project.memories?.map((memory) => memory.key) ?? []);
 
   if (project.memories && project.memories.length > 0) {
     for (const mem of project.memories) {
       lines.push(`- ${mem.key}: ${mem.value}`);
+    }
+  }
+
+  if (project.sharedMemoryIds?.length && getSharedMemories) {
+    try {
+      const uniqueIds = [...new Set(project.sharedMemoryIds)];
+      const shared = await getSharedMemories(uniqueIds);
+      const byId = new Map(shared.map((memory) => [memory.id, memory]));
+      let sharedTokens = 0;
+      let omitted = 0;
+      let unavailable = 0;
+      for (const id of uniqueIds) {
+        const memory = byId.get(id);
+        if (!memory) {
+          unavailable++;
+          continue;
+        }
+        if (localKeys.has(memory.key)) continue;
+        const next = sharedTokens + (memory.tokenCount || 0);
+        if (sharedTokenLimit && next > sharedTokenLimit) {
+          omitted++;
+          continue;
+        }
+        sharedTokens = next;
+        lines.push(`- ${memory.key}: ${memory.value}`);
+      }
+      if (omitted) lines.push(`- [${omitted} shared memories omitted by context limit]`);
+      if (unavailable) lines.push(`- [${unavailable} shared memories unavailable]`);
+    } catch {
+      // Keep legacy/local context available if tenant library is temporarily unavailable.
     }
   }
 
@@ -53,7 +94,7 @@ export async function loadProjectMemories(
       const userMemories = await getUserMemories(userId);
       const keySet = new Set(project.memoryKeys);
       for (const mem of userMemories) {
-        if (keySet.has(mem.key)) {
+        if (keySet.has(mem.key) && !localKeys.has(mem.key)) {
           lines.push(`- ${mem.key}: ${mem.value}`);
         }
       }

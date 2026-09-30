@@ -1,6 +1,12 @@
 export interface IProjectMemory {
   key: string;
   value: string;
+  importOperationId?: string;
+  importRef?: string;
+  lastImportOperationId?: string;
+  lastImportRef?: string;
+  version?: number;
+  updatedAt?: Date;
 }
 
 export interface IProjectPromptSnippet {
@@ -138,6 +144,7 @@ export interface IProject {
   instructions?: string;
   memories?: IProjectMemory[];
   memoryKeys?: string[];
+  sharedMemoryIds?: string[];
   promptSnippets?: IProjectPromptSnippet[];
   promptGroupIds?: string[];
   fileIds?: string[];

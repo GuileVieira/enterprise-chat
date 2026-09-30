@@ -21,6 +21,7 @@ const {
   FileSources,
   ResourceType,
   PrincipalType,
+  AccessRoleIds,
 } = require('librechat-data-provider');
 const { updateUserPluginAuth, deleteUserPluginAuth } = require('~/server/services/PluginService');
 const { verifyOTPOrBackupCode } = require('~/server/services/twoFactorService');
@@ -47,6 +48,59 @@ const {
   restoreUserSchedulesFromDeletion,
 } = require('~/server/services/Schedules');
 const db = require('~/models');
+
+const ensureProjectDeletionContinuity = async (req, user) => {
+  const userId = user.id ?? user._id?.toString();
+  if (!user.tenantId) {
+    if (!(await mongoose.models.Project.exists({ user: userId }))) return;
+    const error = new Error('Tenant is required to reassign owned projects safely.');
+    error.code = 'PROJECT_OWNER_REQUIRED';
+    error.status = 409;
+    throw error;
+  }
+  const projects = await mongoose.models.Project.find({
+    user: userId,
+    tenantId: user.tenantId,
+  })
+    .select('_id tenantId')
+    .lean();
+  if (!projects.length) return;
+  const requestedOwnerId = req.body?.projectOwnerId;
+  if (!requestedOwnerId) {
+    const error = new Error('Select a tenant administrator to own this user’s projects.');
+    error.code = 'PROJECT_OWNER_REQUIRED';
+    error.status = 409;
+    throw error;
+  }
+  const replacement = await mongoose.models.User.findOne({
+    _id: { $ne: userId, $eq: requestedOwnerId },
+    tenantId: user.tenantId,
+    disabled: { $ne: true },
+    role: { $in: ['ADMIN', 'OWNER'] },
+  })
+    .select('_id')
+    .lean();
+  if (!replacement) {
+    const error = new Error('Reassign owned projects before deleting this user.');
+    error.code = 'PROJECT_OWNER_REQUIRED';
+    error.status = 409;
+    throw error;
+  }
+  for (const project of projects) {
+    await db.grantPermission({
+      principalType: PrincipalType.USER,
+      principalId: replacement._id,
+      resourceType: ResourceType.PROJECT,
+      resourceId: project._id,
+      accessRoleId: AccessRoleIds.PROJECT_OWNER,
+      grantedBy: req.user?.id ?? replacement._id,
+    });
+    await mongoose.models.Project.updateOne(
+      { _id: project._id, user: userId, tenantId: project.tenantId },
+      { $set: { user: String(replacement._id) } },
+    );
+  }
+};
 
 const PUBLIC_USER_RESPONSE_FIELDS = [
   '_id',
@@ -148,6 +202,7 @@ const deleteUserData = async (req, user) => {
   const userId = user.id ?? user._id?.toString();
   if (!userId) throw new Error('User ID is required for deletion');
   const normalizedUser = { ...user, id: userId };
+  await ensureProjectDeletionContinuity(req, user);
 
   await db.deleteMessages({ user: userId });
   await db.deleteAllUserSessions({ userId });
@@ -185,6 +240,7 @@ const deleteUserDataWithLifecycle = async (req, user) => {
   let userDeleted = false;
 
   try {
+    await ensureProjectDeletionContinuity(req, user);
     await drainAgentTriggerDeliveriesForUser(userId);
     await subagentThreadTaskStore.cancelAndDrainForOwner(userId, tenantId);
     if (!(await quiesceUserSchedules(userId, scheduleSuspensionToken))) {
@@ -535,6 +591,8 @@ const deleteUserController = async (req, res) => {
       }
     }
 
+    await ensureProjectDeletionContinuity(req, existingUser ?? user);
+
     // Block new trigger admissions across replicas while preserving the user
     // principal so a transient cleanup failure remains retryable.
     triggerDeletionFence = new Date();
@@ -717,7 +775,10 @@ const deleteUserController = async (req, res) => {
       }
     }
     logger.error('[deleteUserController]', err);
-    return res.status(500).json({ message: 'Something went wrong.' });
+    return res.status(err?.status === 409 ? 409 : 500).json({
+      message: err?.status === 409 ? err.message : 'Something went wrong.',
+      ...(err?.code ? { code: err.code } : {}),
+    });
   }
 };
 
@@ -756,6 +817,7 @@ module.exports = {
   deleteUserController,
   deleteUserData,
   deleteUserDataWithLifecycle,
+  ensureProjectDeletionContinuity,
   verifyEmailController,
   updateUserPluginsController,
   resendVerificationController,

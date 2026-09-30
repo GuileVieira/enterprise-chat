@@ -10,6 +10,10 @@ export interface IMemoryEntry extends Document {
   tokenCount?: number;
   updated_at?: Date;
   tenantId?: string;
+  importOperationId?: string;
+  importRef?: string;
+  lastImportOperationId?: string;
+  lastImportRef?: string;
 }
 
 export interface IMemoryEntryLean {
@@ -21,6 +25,10 @@ export interface IMemoryEntryLean {
   tokenCount?: number;
   updated_at?: Date;
   __v?: number;
+  importOperationId?: string;
+  importRef?: string;
+  lastImportOperationId?: string;
+  lastImportRef?: string;
 }
 
 // Method parameter interfaces

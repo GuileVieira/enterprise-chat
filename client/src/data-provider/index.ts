@@ -7,6 +7,7 @@ export * from './Langfuse';
 export * from './Insights';
 /* Memories */
 export * from './Memories';
+export * from './SharedMemories';
 export * from './Messages';
 export * from './Misc';
 /* Scheduled chats */

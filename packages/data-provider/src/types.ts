@@ -31,6 +31,7 @@ import type { ProviderId } from './providers';
 
 export * from './schemas';
 export * from './types/subagents';
+export * from './types/sharedMemories';
 
 export type TMessages = TMessage[];
 
@@ -818,7 +819,7 @@ export type TRegenerateBackupCodesResponse = {
   backupCodesHash: TBackupCode[];
 };
 
-export type TDeleteUserRequest = TOTPVerificationPayload;
+export type TDeleteUserRequest = TOTPVerificationPayload & { projectOwnerId?: string };
 
 export type TRequestPasswordReset = {
   email: string;

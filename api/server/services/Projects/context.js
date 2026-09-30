@@ -1,6 +1,11 @@
 const { logger, runAsSystem } = require('@librechat/data-schemas');
-const { ResourceType, PermissionBits } = require('librechat-data-provider');
-const { loadProjectMemories } = require('@librechat/api');
+const {
+  ResourceType,
+  PermissionBits,
+  PermissionTypes,
+  Permissions,
+} = require('librechat-data-provider');
+const { loadProjectMemories, projectStoredMemories } = require('@librechat/api');
 const { checkPermission } = require('~/server/services/PermissionService');
 const db = require('~/models');
 const mongoose = require('mongoose');
@@ -83,6 +88,10 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
     }
 
     const projectInstructions = project?.instructions ?? '';
+    const role = db.getRoleByName ? await db.getRoleByName(req.user.role) : null;
+    const canReadSharedMemories =
+      role == null ||
+      role.permissions?.[PermissionTypes.SHARED_MEMORIES]?.[Permissions.READ] === true;
     let projectMemories =
       (await loadProjectMemories(
         project,
@@ -91,6 +100,26 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
           return memories.map((m) => ({ key: m.key, value: m.value }));
         },
         req.user.id,
+        async (ids) => {
+          if (!canReadSharedMemories) return [];
+          const SharedMemory = mongoose.models.SharedMemory;
+          if (!SharedMemory || !project.tenantId) return [];
+          const memories = await SharedMemory.find({
+            _id: { $in: ids },
+            tenantId: project.tenantId,
+            status: 'active',
+          }).lean();
+          return projectStoredMemories(
+            memories.map((memory) => ({
+              id: String(memory._id),
+              key: memory.key,
+              value: memory.value,
+              tokenCount: memory.tokenCount || 0,
+            })),
+            req.config?.filters,
+          ).filter((memory) => !memory.contentFilterBlocked);
+        },
+        req.config?.memory?.maxInputTokens ?? req.config?.memory?.tokenLimit,
       )) ?? '';
 
     const TrafficDiaryEntry = mongoose.models.TrafficDiaryEntry;

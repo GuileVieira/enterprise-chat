@@ -47,6 +47,22 @@ describe('loadProjectMemories', () => {
     expect(result).toBeNull();
   });
 
+  it('reports shared memories omitted by the context token limit', async () => {
+    const result = await loadProjectMemories(
+      { sharedMemoryIds: ['a', 'b'] },
+      undefined,
+      undefined,
+      async () => [
+        { id: 'a', key: 'first', value: 'one', tokenCount: 4 },
+        { id: 'b', key: 'second', value: 'two', tokenCount: 4 },
+      ],
+      5,
+    );
+    expect(result).toContain('- first: one');
+    expect(result).not.toContain('- second: two');
+    expect(result).toContain('[1 shared memories omitted by context limit]');
+  });
+
   it('should return null when project is undefined', async () => {
     const result = await loadProjectMemories(undefined);
     expect(result).toBeNull();

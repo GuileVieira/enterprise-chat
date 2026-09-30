@@ -1,14 +1,21 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, FolderPlus, PencilSimple, Trash } from '@phosphor-icons/react';
 import { useProjectsQuery, useDeleteProjectMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 import type { TProject } from 'librechat-data-provider';
+import ProjectDeleteDialog from './ProjectDeleteDialog';
 
-function ProjectCard({ project }: { project: TProject }) {
+function ProjectCard({
+  project,
+  onDelete,
+}: {
+  project: TProject;
+  onDelete: (project: TProject) => void;
+}) {
   const navigate = useNavigate();
   const localize = useLocalize();
-  const deleteMutation = useDeleteProjectMutation();
 
   const handleClick = () => {
     navigate(`/projects/${project.projectId}`);
@@ -24,9 +31,7 @@ function ProjectCard({ project }: { project: TProject }) {
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm(localize('com_ui_project_delete_confirm'))) {
-      deleteMutation.mutate(project.projectId);
-    }
+    onDelete(project);
   };
 
   return (
@@ -98,6 +103,8 @@ export default function ProjectsList() {
   const navigate = useNavigate();
   const localize = useLocalize();
   const { data: projects, isLoading } = useProjectsQuery();
+  const deleteMutation = useDeleteProjectMutation();
+  const [pendingDelete, setPendingDelete] = useState<TProject | null>(null);
 
   const activeProjects = projects?.filter((p) => !p.isArchived) ?? [];
 
@@ -126,6 +133,7 @@ export default function ProjectsList() {
 
       <div className="flex-1 overflow-auto px-5 py-6">
         <div className="mx-auto w-full max-w-6xl">
+          {/* eslint-disable-next-line no-nested-ternary */}
           {isLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
@@ -154,12 +162,27 @@ export default function ProjectsList() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {activeProjects.map((project) => (
-                <ProjectCard key={project.projectId} project={project} />
+                <ProjectCard
+                  key={project.projectId}
+                  project={project}
+                  onDelete={setPendingDelete}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
+      <ProjectDeleteDialog
+        project={pendingDelete}
+        isDeleting={deleteMutation.isLoading}
+        onClose={() => setPendingDelete(null)}
+        onDelete={() => {
+          if (!pendingDelete) return;
+          deleteMutation.mutate(pendingDelete.projectId, {
+            onSuccess: () => setPendingDelete(null),
+          });
+        }}
+      />
     </div>
   );
 }

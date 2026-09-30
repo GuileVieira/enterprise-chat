@@ -2076,6 +2076,90 @@ export const createMemory = (data: {
   return request.post(endpoints.memories(), data);
 };
 
+export const getSharedMemories = (
+  params: t.SharedMemoriesParams = {},
+): Promise<t.SharedMemoriesResponse> => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== '') query.set(key, String(value));
+  });
+  return request.get(`${endpoints.sharedMemories()}${query.size ? `?${query}` : ''}`);
+};
+
+export const createSharedMemory = (data: {
+  key: string;
+  value: string;
+}): Promise<t.TSharedMemory> => request.post(endpoints.sharedMemories(), data);
+export const updateSharedMemory = (
+  id: string,
+  data: { key: string; value: string; expectedUpdatedAt: string },
+): Promise<t.TSharedMemory> => request.patch(endpoints.sharedMemory(id), data);
+export const archiveSharedMemory = (
+  id: string,
+  expectedUpdatedAt: string,
+): Promise<t.TSharedMemory> =>
+  request.post(endpoints.sharedMemoryAction(id, 'archive'), { expectedUpdatedAt });
+export const restoreSharedMemory = (
+  id: string,
+  expectedUpdatedAt: string,
+): Promise<t.TSharedMemory> =>
+  request.post(endpoints.sharedMemoryAction(id, 'restore'), { expectedUpdatedAt });
+export const copySharedMemoryToProject = (
+  id: string,
+  data: { projectId: string; key?: string },
+): Promise<unknown> => request.post(endpoints.sharedMemoryAction(id, 'copy'), data);
+export const linkProjectSharedMemories = (
+  projectId: string,
+  memoryIds: string[],
+): Promise<{ memoryIds: string[] }> =>
+  request.post(endpoints.projectSharedMemories(projectId), { memoryIds });
+export const unlinkProjectSharedMemory = (projectId: string, memoryId: string): Promise<void> =>
+  request.delete(endpoints.projectSharedMemory(projectId, memoryId));
+export const previewSharedMemoryImport = (
+  data: t.SharedMemoryImportRequest,
+): Promise<t.SharedMemoryImportPreview> =>
+  request.post(endpoints.sharedMemoryImportPreview(), data);
+export const importSharedMemories = (
+  data: t.SharedMemoryImportRequest,
+): Promise<t.SharedMemoryImportResult> => request.post(endpoints.sharedMemoryImport(), data);
+export const exportSharedMemories = (params: t.SharedMemoryExportParams): Promise<unknown> => {
+  const query = new URLSearchParams();
+  if (params.ids?.length) query.set('ids', params.ids.join(','));
+  if (params.format) query.set('format', params.format);
+  query.set('scope', params.scope);
+  if (params.projectId) query.set('projectId', params.projectId);
+  if (params.agentId) query.set('agentId', params.agentId);
+  if (params.search) query.set('search', params.search);
+  if (params.status) query.set('status', params.status);
+  return request.get(`${endpoints.sharedMemoryExport()}?${query}`);
+};
+export const getMemoryDeletionImpact = (userId?: string): Promise<t.MemoryDeletionImpact> =>
+  request.get(endpoints.sharedMemoryDeletionImpact(userId));
+export const getProjectMemoryDeletionImpact = (
+  projectId: string,
+): Promise<t.ProjectMemoryDeletionImpact> =>
+  request.get(endpoints.projectMemoryDeletionImpact(projectId));
+export const getProjectLegacyMemoryCandidates = (
+  projectId: string,
+): Promise<{ items: t.LegacyMemoryCandidate[] }> =>
+  request.get(endpoints.projectLegacyMemoryCandidates(projectId));
+export const resolveProjectLegacyMemories = (
+  projectId: string,
+  data: t.LegacyMemoryResolutionRequest,
+): Promise<{ resolvedKeys: string[]; memoryIds: string[] }> =>
+  request.post(endpoints.projectLegacyMemoryResolutions(projectId), data);
+export const getProjectSharedMemoryContextStatus = (
+  projectId: string,
+): Promise<t.ProjectSharedMemoryContextStatus> =>
+  request.get(endpoints.projectSharedMemoryContextStatus(projectId));
+export const reassignProjectMemoryOwner = (projectId: string, userId: string): Promise<void> =>
+  request.post(endpoints.projectMemoryOwner(projectId), { userId });
+export const getSharedMemoryConsumers = (id: string): Promise<t.SharedMemoryConsumers> =>
+  request.get(endpoints.sharedMemoryConsumers(id));
+export const publishSharedMemory = (
+  data: t.PublishSharedMemoryRequest,
+): Promise<t.PublishSharedMemoryResult> => request.post(endpoints.publishSharedMemory(), data);
+
 export function searchPrincipals(
   params: q.PrincipalSearchParams,
 ): Promise<q.PrincipalSearchResponse> {

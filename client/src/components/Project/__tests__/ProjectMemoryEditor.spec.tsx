@@ -1,6 +1,6 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios, { AxiosHeaders } from 'axios';
@@ -8,6 +8,16 @@ import type { AxiosResponse } from 'axios';
 import type { TProject } from 'librechat-data-provider';
 import ProjectMemoryEditor from '../ProjectMemoryEditor';
 import i18n from '~/locales/i18n';
+
+jest.mock('~/hooks', () => ({
+  useHasAccess: () => true,
+  useLocalize: () => (key: string) => jest.requireActual('~/locales/i18n').default.t(key),
+}));
+const mockPublishMutation = { mutate: jest.fn(), isLoading: false };
+jest.mock('~/data-provider', () => ({
+  ...jest.requireActual('~/data-provider'),
+  usePublishSharedMemoryMutation: () => mockPublishMutation,
+}));
 
 const project: TProject = {
   projectId: 'project',
@@ -75,4 +85,35 @@ it('keeps edits and shows an actionable save failure', async () => {
   );
   expect(input).toHaveValue('AB');
   expect(save).toBeEnabled();
+});
+
+it('publishes local memory with replacement only after sourceReplaced', async () => {
+  const mutate = jest.fn((_payload, callbacks) => callbacks.onSuccess({ sourceReplaced: true }));
+  mockPublishMutation.mutate = mutate;
+  renderEditor();
+
+  await userEvent.click(screen.getByRole('button', { name: i18n.t('com_ui_publish_memory') }));
+  await userEvent.click(screen.getByLabelText(i18n.t('com_ui_replace_local_memory_link')));
+  fireEvent.click(
+    (await screen.findAllByRole('button', { name: i18n.t('com_ui_publish_memory') })).at(-1)!,
+  );
+
+  expect(mutate).toHaveBeenCalledWith(
+    { source: { type: 'project', projectId: 'project', key: 'tone' }, replaceWithLink: true },
+    expect.any(Object),
+  );
+  expect(screen.queryByDisplayValue('A')).not.toBeInTheDocument();
+});
+
+it('keeps local memory when publishing fails', async () => {
+  const mutate = jest.fn((_payload, callbacks) => callbacks.onError?.(new Error('offline')));
+  mockPublishMutation.mutate = mutate;
+  renderEditor();
+
+  await userEvent.click(screen.getByRole('button', { name: i18n.t('com_ui_publish_memory') }));
+  fireEvent.click(
+    (await screen.findAllByRole('button', { name: i18n.t('com_ui_publish_memory') })).at(-1)!,
+  );
+
+  expect(screen.getByDisplayValue('A')).toBeInTheDocument();
 });

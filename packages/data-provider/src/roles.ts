@@ -187,6 +187,11 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.READ]: true,
         [Permissions.OPT_OUT]: true,
       },
+      [PermissionTypes.SHARED_MEMORIES]: {
+        [Permissions.READ]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.UPDATE]: true,
+      },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
         [Permissions.CREATE]: true,
@@ -269,6 +274,7 @@ export const roleDefaults = defaultRolesSchema.parse({
       },
       [PermissionTypes.BOOKMARKS]: {},
       [PermissionTypes.MEMORIES]: {},
+      [PermissionTypes.SHARED_MEMORIES]: {},
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
         [Permissions.CREATE]: false,
@@ -339,6 +345,7 @@ export const roleDefaults = defaultRolesSchema.parse({
       },
       [PermissionTypes.BOOKMARKS]: {},
       [PermissionTypes.MEMORIES]: {},
+      [PermissionTypes.SHARED_MEMORIES]: {},
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
         [Permissions.CREATE]: false,
@@ -409,6 +416,11 @@ export const roleDefaults = defaultRolesSchema.parse({
       },
       [PermissionTypes.BOOKMARKS]: {},
       [PermissionTypes.MEMORIES]: {},
+      [PermissionTypes.SHARED_MEMORIES]: {
+        [Permissions.READ]: true,
+        [Permissions.CREATE]: true,
+        [Permissions.UPDATE]: true,
+      },
       [PermissionTypes.AGENTS]: {
         [Permissions.USE]: true,
         [Permissions.CREATE]: true,

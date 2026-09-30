@@ -17,7 +17,7 @@ import {
   Input,
 } from '@librechat/client';
 import type { TDeleteUserRequest } from 'librechat-data-provider';
-import { useDeleteUserMutation } from '~/data-provider';
+import { useDeleteUserMutation, useMemoryDeletionImpactQuery } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { LocalizeFunction } from '~/common';
 import { useLocalize } from '~/hooks';
@@ -26,28 +26,37 @@ import { cn } from '~/utils';
 const DeleteAccount = ({ disabled = false }: { title?: string; disabled?: boolean }) => {
   const localize = useLocalize();
   const { user, logout } = useAuthContext();
-  const { mutate: deleteUser, isLoading: isDeleting } = useDeleteUserMutation({
+  const { mutateAsync: deleteUser, isLoading: isDeleting } = useDeleteUserMutation({
     onSuccess: () => logout(),
   });
 
   const [isDialogOpen, setDialogOpen] = useState<boolean>(false);
+  const impact = useMemoryDeletionImpactQuery(isDialogOpen);
   const [isLocked, setIsLocked] = useState(true);
+  const [projectOwnerId, setProjectOwnerId] = useState('');
   const [otpToken, setOtpToken] = useState('');
   const [useBackup, setUseBackup] = useState(false);
 
   const needs2FA = !!user?.twoFactorEnabled;
 
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     if (isLocked) {
       return;
     }
 
-    let payload: TDeleteUserRequest | undefined;
+    if (impact.isLoading || impact.isError || !impact.data) return;
+
+    let payload: TDeleteUserRequest = {};
     if (needs2FA && otpToken.trim()) {
       payload = useBackup ? { backupCode: otpToken.trim() } : { token: otpToken.trim() };
     }
+    if (projectOwnerId) payload.projectOwnerId = projectOwnerId;
 
-    deleteUser(payload);
+    try {
+      await deleteUser(payload);
+    } catch {
+      return;
+    }
   };
 
   const handleInputChange = useCallback(
@@ -88,6 +97,34 @@ const DeleteAccount = ({ disabled = false }: { title?: string; disabled?: boolea
               <li>{localize('com_nav_delete_warning')}</li>
               <li>{localize('com_nav_delete_data_info')}</li>
             </ul>
+            {impact.data && (
+              <div className="mt-4 rounded border border-border-light p-3 text-text-secondary">
+                <p>
+                  {localize('com_ui_account_memory_deletion_impact', {
+                    personal: impact.data.personalCount,
+                    shared: impact.data.sharedAuthoredCount,
+                  })}
+                </p>
+                {impact.data.projectsNeedingOwner.map((project) => (
+                  <p key={project.projectId}>{project.name ?? project.projectId}</p>
+                ))}
+                {impact.data.projectsNeedingOwner.length > 0 && (
+                  <select
+                    value={projectOwnerId}
+                    onChange={(event) => setProjectOwnerId(event.target.value)}
+                    aria-label={localize('com_ui_memory_deletion_select_owner')}
+                    className="mt-2 w-full rounded border border-border-light bg-surface-primary p-2"
+                  >
+                    <option value="">{localize('com_ui_memory_deletion_select_owner')}</option>
+                    {impact.data.projectOwnerCandidates.map((candidate) => (
+                      <option key={candidate.userId} value={candidate.userId}>
+                        {candidate.name ?? candidate.userId}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex-col items-center justify-center">
             <div className="mb-4">
@@ -152,7 +189,17 @@ const DeleteAccount = ({ disabled = false }: { title?: string; disabled?: boolea
                 </Button>
               </div>
             )}
-            {renderDeleteButton(handleDeleteUser, isDeleting, isLocked || !otpReady, localize)}
+            {renderDeleteButton(
+              handleDeleteUser,
+              isDeleting,
+              isLocked ||
+                !otpReady ||
+                impact.isLoading ||
+                impact.isError ||
+                !impact.data ||
+                (impact.data.projectsNeedingOwner.length > 0 && !projectOwnerId),
+              localize,
+            )}
           </div>
         </OGDialogContent>
       </OGDialog>

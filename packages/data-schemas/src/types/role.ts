@@ -23,6 +23,11 @@ export interface IRole extends Document {
       [Permissions.READ]?: boolean;
       [Permissions.OPT_OUT]?: boolean;
     };
+    [PermissionTypes.SHARED_MEMORIES]?: {
+      [Permissions.READ]?: boolean;
+      [Permissions.CREATE]?: boolean;
+      [Permissions.UPDATE]?: boolean;
+    };
     [PermissionTypes.AGENTS]?: {
       [Permissions.USE]?: boolean;
       [Permissions.CREATE]?: boolean;

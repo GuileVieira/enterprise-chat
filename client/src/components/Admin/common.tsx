@@ -107,7 +107,7 @@ export const AdminTenantSelector: React.FC<AdminTenantSelectorProps> = ({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       aria-label={label}
-      className="focus:ring-ring-primary/20 h-10 w-full rounded-xl border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-primary shadow-sm shadow-black/[0.03] outline-none transition-all duration-200 hover:border-border-medium hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2 dark:shadow-black/20"
+      className="h-10 w-full rounded-xl border border-border-light bg-surface-secondary px-3 text-sm font-medium text-text-primary shadow-sm shadow-black/[0.03] outline-none transition-all duration-200 hover:border-border-medium hover:bg-surface-tertiary focus:border-border-xheavy focus:ring-2 focus:ring-ring-primary/20 dark:shadow-black/20"
     >
       <option value="">{placeholder}</option>
       {tenants.map((tenant) => (
@@ -207,7 +207,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
-            <tr className="bg-surface-primary/55 border-b border-border-light">
+            <tr className="border-b border-border-light bg-surface-primary/55">
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -222,7 +222,7 @@ export function AdminDataTable<T>({ items, columns, getRowKey }: AdminDataTableP
             {items.map((item) => (
               <tr
                 key={getRowKey(item)}
-                className="hover:bg-surface-tertiary/80 border-b border-border-light transition-colors last:border-b-0"
+                className="border-b border-border-light transition-colors last:border-b-0 hover:bg-surface-tertiary/80"
               >
                 {columns.map((column) => (
                   <td key={column.key} className={cn('px-6 py-4', column.className)}>
@@ -376,18 +376,22 @@ export const AdminSkeleton: React.FC<AdminSkeletonProps> = ({ rows = 5 }) => (
 );
 
 interface AdminConfirmDialogProps {
+  children?: React.ReactNode;
   isOpen: boolean;
   title: string;
   description: string;
   confirmLabel: string;
   cancelLabel: string;
   isLoading?: boolean;
+  confirmDisabled?: boolean;
   error?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
 
 export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
+  children,
+  confirmDisabled,
   title,
   isOpen,
   onCancel,
@@ -416,6 +420,7 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
               {title}
             </h2>
             <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>
+            {children}
             {error && (
               <p role="alert" className="mt-2 text-sm text-red-600">
                 {error}
@@ -430,7 +435,11 @@ export const AdminConfirmDialog: React.FC<AdminConfirmDialogProps> = ({
           <AdminActionButton variant="ghost" onClick={onCancel} disabled={isLoading}>
             {cancelLabel}
           </AdminActionButton>
-          <AdminActionButton variant="danger" onClick={onConfirm} disabled={isLoading}>
+          <AdminActionButton
+            variant="danger"
+            onClick={onConfirm}
+            disabled={isLoading || confirmDisabled}
+          >
             {confirmLabel}
           </AdminActionButton>
         </div>

@@ -23,6 +23,11 @@ const rolePermissionsSchema = new Schema(
       [Permissions.READ]: { type: Boolean },
       [Permissions.OPT_OUT]: { type: Boolean },
     },
+    [PermissionTypes.SHARED_MEMORIES]: {
+      [Permissions.READ]: { type: Boolean },
+      [Permissions.CREATE]: { type: Boolean },
+      [Permissions.UPDATE]: { type: Boolean },
+    },
     [PermissionTypes.AGENTS]: {
       [Permissions.USE]: { type: Boolean },
       [Permissions.CREATE]: { type: Boolean },

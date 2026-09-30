@@ -43,8 +43,16 @@ const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
     type: String,
     index: true,
   },
+  importOperationId: String,
+  importRef: String,
+  lastImportOperationId: String,
+  lastImportRef: String,
 });
 
 MemoryEntrySchema.index({ userId: 1, agentId: 1, key: 1 });
+MemoryEntrySchema.index(
+  { tenantId: 1, userId: 1, importOperationId: 1, importRef: 1 },
+  { unique: true, partialFilterExpression: { importOperationId: { $type: 'string' } } },
+);
 
 export default MemoryEntrySchema;

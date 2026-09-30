@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Trans } from 'react-i18next';
-import { PencilSimple as Pencil } from '@phosphor-icons/react';
+import { PencilSimple as Pencil, UploadSimple } from '@phosphor-icons/react';
+import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import {
   Label,
   Button,
@@ -13,10 +14,10 @@ import {
   useToastContext,
 } from '@librechat/client';
 import type { TUserMemory } from 'librechat-data-provider';
-import { useDeleteMemoryMutation } from '~/data-provider';
+import { useDeleteMemoryMutation, usePublishSharedMemoryMutation } from '~/data-provider';
 import MemoryEditDialog from './MemoryEditDialog';
 import { getMemoryAddress } from './address';
-import { useLocalize } from '~/hooks';
+import { useHasAccess, useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface MemoryCardActionsProps {
@@ -28,10 +29,16 @@ export default function MemoryCardActions({ memory }: MemoryCardActionsProps) {
   const { showToast } = useToastContext();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const memoryAddress = getMemoryAddress(memory);
 
   const { mutate: deleteMemory, isLoading: isDeleting } = useDeleteMemoryMutation();
+  const { mutate: publishMemory } = usePublishSharedMemoryMutation();
+  const canPublish = useHasAccess({
+    permissionType: PermissionTypes.SHARED_MEMORIES,
+    permission: Permissions.CREATE,
+  });
 
   const buttonBaseClass = cn(
     'flex size-7 items-center justify-center rounded-md',
@@ -55,6 +62,20 @@ export default function MemoryCardActions({ memory }: MemoryCardActionsProps) {
         onError: () => {
           showToast({ message: localize('com_ui_error'), status: 'error' });
         },
+      },
+    );
+  };
+
+  const confirmPublish = () => {
+    if (!memory._id) return;
+    publishMemory(
+      { source: { type: 'personal', memoryId: memory._id, agentId: memory.agentId } },
+      {
+        onSuccess: () => {
+          showToast({ message: localize('com_ui_saved'), status: 'success' });
+          setPublishOpen(false);
+        },
+        onError: () => showToast({ message: localize('com_ui_error'), status: 'error' }),
       },
     );
   };
@@ -91,6 +112,41 @@ export default function MemoryCardActions({ memory }: MemoryCardActionsProps) {
           />
         </OGDialogTrigger>
       </MemoryEditDialog>
+
+      {canPublish && memory._id && (
+        <OGDialog open={publishOpen} onOpenChange={setPublishOpen}>
+          <OGDialogTrigger asChild>
+            <TooltipAnchor
+              description={localize('com_ui_publish_memory')}
+              side="top"
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={buttonBaseClass}
+                  aria-label={localize('com_ui_publish_memory')}
+                  onClick={() => setPublishOpen(true)}
+                >
+                  <UploadSimple className="size-3.5" aria-hidden="true" />
+                </Button>
+              }
+            />
+          </OGDialogTrigger>
+          <OGDialogTemplate
+            title={localize('com_ui_publish_memory')}
+            main={
+              <Label className="text-left text-sm">
+                {localize('com_ui_shared_memory_audience')}
+              </Label>
+            }
+            selection={{
+              selectHandler: confirmPublish,
+              selectText: localize('com_ui_publish_memory'),
+            }}
+          />
+        </OGDialog>
+      )}
 
       {/* Delete Button */}
       <OGDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -601,6 +601,8 @@ export const adminRoles = () => `${BASE_URL}/api/admin/roles`;
 export const getRole = (roleName: string) => `${roles()}/${encodeURIComponent(roleName)}`;
 export const updatePromptPermissions = (roleName: string) => `${getRole(roleName)}/prompts`;
 export const updateMemoryPermissions = (roleName: string) => `${getRole(roleName)}/memories`;
+export const updateSharedMemoryPermissions = (roleName: string) =>
+  `${getRole(roleName)}/shared-memories`;
 export const updateAgentPermissions = (roleName: string) => `${getRole(roleName)}/agents`;
 export const updatePeoplePickerPermissions = (roleName: string) =>
   `${getRole(roleName)}/people-picker`;
@@ -692,6 +694,31 @@ export const memory = (key: string, agentId?: string) =>
 export const memoryById = (id: string, agentId?: string) =>
   `${memories()}/id/${encodeURIComponent(id)}${agentId ? `?agentId=${encodeURIComponent(agentId)}` : ''}`;
 export const memoryPreferences = () => `${memories()}/preferences`;
+export const sharedMemories = () => `${BASE_URL}/api/shared-memories`;
+export const sharedMemory = (id: string) => `${sharedMemories()}/${encodeURIComponent(id)}`;
+export const sharedMemoryAction = (id: string, action: 'archive' | 'restore' | 'copy') =>
+  `${sharedMemory(id)}/${action}`;
+export const projectSharedMemories = (projectId: string) =>
+  `${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/shared-memories`;
+export const projectSharedMemory = (projectId: string, memoryId: string) =>
+  `${projectSharedMemories(projectId)}/${encodeURIComponent(memoryId)}`;
+export const sharedMemoryImportPreview = () => `${sharedMemories()}/import/preview`;
+export const sharedMemoryImport = () => `${sharedMemories()}/import`;
+export const sharedMemoryExport = () => `${sharedMemories()}/export`;
+export const sharedMemoryDeletionImpact = (userId?: string) =>
+  `${sharedMemories()}${userId ? `/users/${encodeURIComponent(userId)}` : ''}/deletion-impact`;
+export const projectMemoryDeletionImpact = (projectId: string) =>
+  `${projectSharedMemories(projectId)}/deletion-impact`;
+export const projectLegacyMemoryCandidates = (projectId: string) =>
+  `${projectSharedMemories(projectId)}/legacy-candidates`;
+export const projectLegacyMemoryResolutions = (projectId: string) =>
+  `${projectSharedMemories(projectId)}/legacy-resolutions`;
+export const projectSharedMemoryContextStatus = (projectId: string) =>
+  `${projectSharedMemories(projectId)}/context-status`;
+export const projectMemoryOwner = (projectId: string) =>
+  `${projectSharedMemories(projectId)}/owner`;
+export const sharedMemoryConsumers = (id: string) => `${sharedMemory(id)}/consumers`;
+export const publishSharedMemory = () => `${sharedMemories()}/publish`;
 
 export const searchPrincipals = (params: q.PrincipalSearchParams) => {
   const { q: query, limit, types } = params;

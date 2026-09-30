@@ -25,6 +25,7 @@ import ProjectConversationsTab from './ProjectConversationsTab';
 import ProjectPromptManager from './ProjectPromptManager';
 import ProjectPromptGroups from './ProjectPromptGroups';
 import ProjectMemoryEditor from './ProjectMemoryEditor';
+import SharedMemoryLibrary from './SharedMemoryLibrary';
 import ProjectFileUploader from './ProjectFileUploader';
 import ProjectMetaAdsPanel from './ProjectMetaAdsPanel';
 import ProjectMeetingsTab from './ProjectMeetingsTab';
@@ -280,7 +281,10 @@ export default function ProjectDetailPage() {
           {activeTab === 'memories' && (
             <>
               {permissions.canEdit ? (
-                <ProjectMemoryEditor project={project} />
+                <div className="space-y-8">
+                  <ProjectMemoryEditor project={project} />
+                  <SharedMemoryLibrary project={project} canEdit />
+                </div>
               ) : (
                 <div className="space-y-3">
                   {project.memories && project.memories.length > 0 ? (
@@ -300,6 +304,9 @@ export default function ProjectDetailPage() {
                       {localize('com_ui_project_no_memories')}
                     </div>
                   )}
+                  <div className="mt-8">
+                    <SharedMemoryLibrary project={project} canEdit={false} />
+                  </div>
                 </div>
               )}
             </>

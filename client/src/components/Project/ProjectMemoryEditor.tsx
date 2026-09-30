@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Plus, FloppyDisk as Save, Trash as Trash2 } from '@phosphor-icons/react';
-import { useUpdateProjectMutation } from '~/data-provider';
-import { useLocalize } from '~/hooks';
+import { usePublishSharedMemoryMutation, useUpdateProjectMutation } from '~/data-provider';
+import { useHasAccess, useLocalize } from '~/hooks';
+import type { PublishSharedMemoryResult } from '~/data-provider/SharedMemories/types';
+import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import type { TProject } from 'librechat-data-provider';
+import { Checkbox, OGDialog, OGDialogTemplate } from '@librechat/client';
 
 interface ProjectMemoryEditorProps {
   project: TProject;
@@ -11,6 +14,11 @@ interface ProjectMemoryEditorProps {
 export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProps) {
   const localize = useLocalize();
   const updateMutation = useUpdateProjectMutation();
+  const publishMutation = usePublishSharedMemoryMutation();
+  const canPublish = useHasAccess({
+    permissionType: PermissionTypes.SHARED_MEMORIES,
+    permission: Permissions.CREATE,
+  });
 
   const [memories, setMemories] = useState<{ key: string; value: string }[]>(
     project.memories && project.memories.length > 0
@@ -19,6 +27,8 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
   );
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [publishKey, setPublishKey] = useState<string | null>(null);
+  const [replaceWithLink, setReplaceWithLink] = useState(false);
 
   const handleChange = useCallback((index: number, field: 'key' | 'value', value: string) => {
     setMemories((prev) => {
@@ -51,6 +61,24 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
       },
     );
   }, [memories, project.projectId, updateMutation]);
+
+  const publish = () => {
+    if (!publishKey) return;
+    publishMutation.mutate(
+      {
+        source: { type: 'project', projectId: project.projectId, key: publishKey },
+        replaceWithLink,
+      },
+      {
+        onSuccess: (result) => {
+          const published = result as PublishSharedMemoryResult;
+          if (published.sourceReplaced)
+            setMemories((items) => items.filter((item) => item.key !== publishKey));
+          setPublishKey(null);
+        },
+      },
+    );
+  };
 
   return (
     <fieldset disabled={updateMutation.isLoading} className="min-w-0 space-y-4">
@@ -89,14 +117,14 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
               value={mem.key}
               onChange={(e) => handleChange(idx, 'key', e.target.value)}
               placeholder={localize('com_ui_project_memory_key_placeholder')}
-              className="focus:ring-ring-primary/20 min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2"
+              className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2 focus:ring-ring-primary/20"
             />
             <input
               type="text"
               value={mem.value}
               onChange={(e) => handleChange(idx, 'value', e.target.value)}
               placeholder={localize('com_ui_project_memory_value_placeholder')}
-              className="focus:ring-ring-primary/20 min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2"
+              className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2 focus:ring-ring-primary/20"
             />
             <button
               type="button"
@@ -106,6 +134,19 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
+            {canPublish && mem.key.trim() && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReplaceWithLink(false);
+                  setPublishKey(mem.key);
+                }}
+                className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover"
+                aria-label={localize('com_ui_publish_memory')}
+              >
+                {localize('com_ui_publish_memory')}
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -123,6 +164,25 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
           {localize('com_ui_project_memories_save_error')}
         </p>
       )}
+      <OGDialog open={publishKey !== null} onOpenChange={(open) => !open && setPublishKey(null)}>
+        <OGDialogTemplate
+          title={localize('com_ui_publish_memory')}
+          main={
+            <div className="space-y-3 text-sm text-text-secondary">
+              <p>{localize('com_ui_shared_memory_audience')}</p>
+              <label className="flex gap-2">
+                <Checkbox
+                  checked={replaceWithLink}
+                  onCheckedChange={(value) => setReplaceWithLink(Boolean(value))}
+                  aria-label={localize('com_ui_replace_local_memory_link')}
+                />
+                {localize('com_ui_replace_local_memory_link')}
+              </label>
+            </div>
+          }
+          selection={{ selectText: localize('com_ui_publish_memory'), selectHandler: publish }}
+        />
+      </OGDialog>
     </fieldset>
   );
 }

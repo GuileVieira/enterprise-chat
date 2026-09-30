@@ -17,6 +17,10 @@ import {
   useDeleteAdminUserMutation,
 } from '~/data-provider/admin';
 import {
+  useMemoryDeletionImpactQuery,
+  useReassignProjectMemoryOwnerMutation,
+} from '~/data-provider/SharedMemories';
+import {
   AdminBadge,
   AdminPanel,
   AdminSkeleton,
@@ -45,6 +49,7 @@ const UsersPage: React.FC = () => {
   const localize = useLocalize();
   const { user: currentUser } = useAuthContext();
   const deleteUser = useDeleteAdminUserMutation();
+  const transferOwner = useReassignProjectMemoryOwnerMutation();
 
   const { data: listData, isLoading: listLoading } = useListAdminUsers(1, 50);
   const { data: searchData, isLoading: searchLoading } = useSearchAdminUsers(searchQuery, {
@@ -54,6 +59,8 @@ const UsersPage: React.FC = () => {
   const isSearching = searchQuery.length > 2;
   const users = isSearching ? (searchData?.users ?? []) : (listData?.users ?? []);
   const isLoading = isSearching ? searchLoading : listLoading;
+  const deletionImpact = useMemoryDeletionImpactQuery(Boolean(pendingDelete), pendingDelete?._id);
+  const [newOwnerId, setNewOwnerId] = useState('');
 
   const filteredUsers = isSearching
     ? users
@@ -70,6 +77,20 @@ const UsersPage: React.FC = () => {
     }
     setDeleteError('');
     try {
+      if (deletionImpact.isError || !deletionImpact.data) {
+        setDeleteError(localize('com_admin_delete_user_error'));
+        return;
+      }
+      const projects = deletionImpact.data?.projectsNeedingOwner ?? [];
+      if (projects.length && !newOwnerId) {
+        setDeleteError(localize('com_ui_memory_deletion_owner_required'));
+        return;
+      }
+      await Promise.all(
+        projects.map((project) =>
+          transferOwner.mutateAsync({ projectId: project.projectId, userId: newOwnerId }),
+        ),
+      );
       await deleteUser.mutateAsync(pendingDelete._id);
       setPendingDelete(null);
     } catch (error) {
@@ -110,7 +131,7 @@ const UsersPage: React.FC = () => {
           placeholder={localize('com_admin_search_users_placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="focus:ring-ring-primary/20 w-full rounded-lg border border-border-light bg-surface-secondary py-3 pl-10 pr-4 text-sm text-text-primary shadow-sm shadow-black/5 placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2"
+          className="w-full rounded-lg border border-border-light bg-surface-secondary py-3 pl-10 pr-4 text-sm text-text-primary shadow-sm shadow-black/5 placeholder:text-text-tertiary focus:border-border-xheavy focus:outline-none focus:ring-2 focus:ring-ring-primary/20"
         />
       </div>
 
@@ -125,7 +146,7 @@ const UsersPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
-                <tr className="bg-surface-primary/40 border-b border-border-light">
+                <tr className="border-b border-border-light bg-surface-primary/40">
                   <th className="px-6 py-3 font-medium text-text-secondary">
                     {localize('com_admin_name')}
                   </th>
@@ -193,6 +214,7 @@ const UsersPage: React.FC = () => {
                           <AdminIconButton
                             onClick={() => {
                               setDeleteError('');
+                              setNewOwnerId('');
                               setPendingDelete(user);
                             }}
                             disabled={deleteUser.isLoading}
@@ -229,19 +251,53 @@ const UsersPage: React.FC = () => {
       <AdminConfirmDialog
         isOpen={pendingDelete != null}
         title={localize('com_admin_delete_user')}
-        description={localize('com_admin_delete_user_confirm', {
-          0: pendingDelete?.name ?? pendingDelete?.email ?? '',
-        })}
+        description={
+          deletionImpact.isLoading
+            ? localize('com_ui_memory_deletion_loading')
+            : localize('com_ui_memory_deletion_user_summary', {
+                0: pendingDelete?.name ?? pendingDelete?.email ?? '',
+                1: deletionImpact.data?.personalCount ?? 0,
+                2: deletionImpact.data?.sharedAuthoredCount ?? 0,
+              })
+        }
         confirmLabel={localize('com_ui_delete')}
         cancelLabel={localize('com_ui_cancel')}
-        isLoading={deleteUser.isLoading}
+        isLoading={deleteUser.isLoading || transferOwner.isLoading || deletionImpact.isLoading}
+        confirmDisabled={deletionImpact.isError || !deletionImpact.data}
         error={deleteError}
         onCancel={() => {
           setDeleteError('');
+          setNewOwnerId('');
           setPendingDelete(null);
         }}
         onConfirm={handleDelete}
-      />
+      >
+        {(deletionImpact.data?.projectsNeedingOwner.length ?? 0) > 0 && (
+          <div className="mt-3 space-y-2 text-sm text-text-secondary">
+            <p>{localize('com_ui_memory_deletion_projects_owner')}</p>
+            <ul className="list-disc pl-5">
+              {deletionImpact.data?.projectsNeedingOwner.map((project) => (
+                <li key={project.projectId}>{project.name ?? project.projectId}</li>
+              ))}
+            </ul>
+            <select
+              value={newOwnerId}
+              onChange={(event) => setNewOwnerId(event.target.value)}
+              aria-label={localize('com_ui_memory_deletion_select_owner')}
+              className="w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm"
+            >
+              <option value="">{localize('com_ui_memory_deletion_select_owner')}</option>
+              {(listData?.users ?? [])
+                .filter((user) => user._id !== pendingDelete?._id && !user.disabled)
+                .map((user) => (
+                  <option key={user._id} value={user._id}>
+                    {user.name ?? user.email}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
+      </AdminConfirmDialog>
     </div>
   );
 };

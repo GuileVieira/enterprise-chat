@@ -20,6 +20,7 @@ const endpoints = require('./endpoints');
 const staticRoute = require('./static');
 const messages = require('./messages');
 const memories = require('./memories');
+const sharedMemories = require('./sharedMemories');
 const presets = require('./presets');
 const projects = require('./projects');
 const projectMetaAds = require('./projectMetaAds');
@@ -99,6 +100,7 @@ module.exports = {
   balance,
   messages,
   memories,
+  sharedMemories,
   endpoints,
   assistants,
   categories,

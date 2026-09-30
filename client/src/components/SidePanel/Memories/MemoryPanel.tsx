@@ -25,6 +25,8 @@ import MemoryUsageBadge from './MemoryUsageBadge';
 import AdminSettings from './AdminSettings';
 import MemoryList from './MemoryList';
 import { cn } from '~/utils';
+import SharedMemoryPortability from '~/components/Project/SharedMemoryPortability';
+import SharedMemoryLibrary from '~/components/Project/SharedMemoryLibrary';
 
 /** Partition filter sentinels; any other value is an agent id */
 const PARTITION_ALL = 'all';
@@ -40,6 +42,7 @@ export default function MemoryPanel() {
   const [partitionFilter, setPartitionFilter] = useState(PARTITION_ALL);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [referenceSavedMemories, setReferenceSavedMemories] = useState(true);
+  const [showLibrary, setShowLibrary] = useState(false);
 
   const updateMemoryPreferencesMutation = useUpdateMemoryPreferencesMutation({
     onSuccess: () => {
@@ -184,6 +187,16 @@ export default function MemoryPanel() {
               </OGDialogTrigger>
             </MemoryCreateDialog>
           )}
+          <SharedMemoryPortability />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-pressed={showLibrary}
+            onClick={() => setShowLibrary((value) => !value)}
+          >
+            {localize('com_ui_shared_memory_library')}
+          </Button>
         </div>
 
         {/* Partition filter (only when agent-scoped memories exist) */}
@@ -240,12 +253,20 @@ export default function MemoryPanel() {
       </div>
 
       {/* Only the list scrolls */}
-      <PanelContent isLoading={isLoading} skeleton={<MemoryCardSkeleton />} className="px-3 pb-3">
-        <MemoryList
-          memories={filteredMemories}
-          hasUpdateAccess={hasUpdateAccess}
-          isFiltered={searchQuery.length > 0}
-        />
+      <PanelContent
+        isLoading={!showLibrary && isLoading}
+        skeleton={<MemoryCardSkeleton />}
+        className="px-3 pb-3"
+      >
+        {showLibrary ? (
+          <SharedMemoryLibrary canEdit={false} />
+        ) : (
+          <MemoryList
+            memories={filteredMemories}
+            hasUpdateAccess={hasUpdateAccess}
+            isFiltered={searchQuery.length > 0}
+          />
+        )}
       </PanelContent>
 
       {user?.role === SystemRoles.ADMIN && (

@@ -7,6 +7,7 @@ const {
   agentPermissionsSchema,
   promptPermissionsSchema,
   memoryPermissionsSchema,
+  sharedMemoryPermissionsSchema,
   fileSearchPermissionsSchema,
   fileCitationsPermissionsSchema,
   mcpServersPermissionsSchema,
@@ -44,6 +45,11 @@ const permissionConfigs = {
     schema: memoryPermissionsSchema,
     permissionType: PermissionTypes.MEMORIES,
     errorMessage: 'Invalid memory permissions.',
+  },
+  'shared-memories': {
+    schema: sharedMemoryPermissionsSchema,
+    permissionType: PermissionTypes.SHARED_MEMORIES,
+    errorMessage: 'Invalid shared memory permissions.',
   },
   'people-picker': {
     schema: peoplePickerPermissionsSchema,
@@ -194,6 +200,11 @@ router.put('/:roleName/agents', manageRoles, createPermissionUpdateHandler('agen
  * Update memory permissions for a specific role
  */
 router.put('/:roleName/memories', manageRoles, createPermissionUpdateHandler('memories'));
+router.put(
+  '/:roleName/shared-memories',
+  manageRoles,
+  createPermissionUpdateHandler('shared-memories'),
+);
 
 /**
  * PUT /api/roles/:roleName/people-picker

@@ -75,6 +75,7 @@ jest.mock('~/models', () => {
       const Group = _mongoose.models.Group;
       await Group.updateMany({ memberIds: userId }, { $pullAll: { memberIds: [userId] } });
     }),
+    grantPermission: jest.fn().mockResolvedValue({}),
   };
 });
 
@@ -171,6 +172,7 @@ afterEach(async () => {
 
 const {
   deleteUserController,
+  ensureProjectDeletionContinuity,
   getUserController,
   acceptTermsController,
   updateUserPluginsController,
@@ -178,6 +180,7 @@ const {
   verifyEmailController,
 } = require('./UserController');
 const { Group } = require('~/db/models');
+const { Project, User } = require('~/db/models');
 const {
   deleteConvos,
   acceptTerms,
@@ -186,6 +189,7 @@ const {
   deleteMessages,
   beginAgentTriggerUserDeletion,
   cancelAgentTriggerUserDeletion,
+  grantPermission,
 } = require('~/models');
 const { verifyEmail, resendVerificationEmail } = require('~/server/services/AuthService');
 const { updateUserPluginAuth, deleteUserPluginAuth } = require('~/server/services/PluginService');
@@ -528,6 +532,45 @@ describe('deleteUserController', () => {
     expect(mockCancelAgentTriggerUserPurge).not.toHaveBeenCalled();
     // A successful deletion hard-deletes the schedules; it must never restore them.
     expect(mockRestoreUserSchedules).not.toHaveBeenCalled();
+  });
+
+  it('transfers a USER-owned project to a tenant admin before deleting the account', async () => {
+    const userId = new mongoose.Types.ObjectId();
+    const adminId = new mongoose.Types.ObjectId();
+    await User.create({
+      _id: adminId,
+      email: 'successor@example.com',
+      tenantId: 'tenant-a',
+      role: 'ADMIN',
+    });
+    const project = await Project.create({
+      projectId: 'owned-before-delete',
+      name: 'Owned',
+      user: userId.toString(),
+      tenantId: 'tenant-a',
+    });
+    require('~/models').getUserById.mockResolvedValueOnce({
+      id: userId.toString(),
+      _id: userId,
+      email: 'user@example.com',
+      tenantId: 'tenant-a',
+      role: 'USER',
+    });
+    const req = {
+      user: {
+        id: userId.toString(),
+        _id: userId,
+        email: 'user@example.com',
+        tenantId: 'tenant-a',
+        role: 'USER',
+      },
+      body: { projectOwnerId: adminId.toString() },
+    };
+
+    await deleteUserController(req, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect((await Project.findById(project._id).lean()).user).toBe(adminId.toString());
   });
 
   it('does not erase checkpoint payload when conversation deletion fails', async () => {
@@ -1015,5 +1058,38 @@ describe('deleteUserController', () => {
     const group = await Group.findOne({ name: 'StringCheck' }).lean();
     expect(group.memberIds).toEqual([otherUser]);
     expect(group.memberIds).not.toContain(userIdStr);
+  });
+});
+
+describe('project continuity on user deletion', () => {
+  it('transfers owned projects to an active tenant administrator before cleanup', async () => {
+    const ownerId = new mongoose.Types.ObjectId();
+    const replacementId = new mongoose.Types.ObjectId();
+    await User.create({
+      _id: replacementId,
+      email: 'admin@example.com',
+      tenantId: 'tenant-a',
+      role: 'ADMIN',
+    });
+    const project = await Project.create({
+      projectId: 'owned-project',
+      name: 'Owned',
+      user: ownerId.toString(),
+      tenantId: 'tenant-a',
+    });
+
+    await ensureProjectDeletionContinuity(
+      { user: { id: ownerId.toString() }, body: { projectOwnerId: replacementId.toString() } },
+      { id: ownerId.toString(), tenantId: 'tenant-a' },
+    );
+
+    expect((await Project.findById(project._id).lean()).user).toBe(replacementId.toString());
+    expect(grantPermission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        principalId: replacementId,
+        resourceId: project._id,
+        accessRoleId: 'project_owner',
+      }),
+    );
   });
 });

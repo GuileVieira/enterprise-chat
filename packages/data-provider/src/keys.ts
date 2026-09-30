@@ -127,6 +127,8 @@ export enum QueryKeys {
 
 // Dynamic query keys that require parameters
 export const DynamicQueryKeys = {
+  sharedMemories: (params: import('./types').SharedMemoriesParams = {}) =>
+    ['sharedMemories', params] as const,
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
   projectFiles: (projectId: string) => ['projectFiles', projectId] as const,
   projectMetaAds: (projectId: string) => ['projectMetaAds', projectId] as const,
