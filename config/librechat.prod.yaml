@@ -88,13 +88,14 @@ endpoints:
       models:
         default:
           - 'openai/gpt-6-luna'
-          - 'openai/gpt-6-sol'
+          - 'openai/gpt-6.1-sol'
           - 'openai/gpt-6-astra'
+          - 'anthropic/claude-sonnet-5.5'
           - 'anthropic/claude-sonnet-5'
           - '~anthropic/claude-sonnet-latest'
           - 'anthropic/claude-opus-5.5'
           - 'google/gemini-3.8-flash'
-        fetch: false
+        fetch: true
       titleConvo: true
       titleModel: 'google/gemini-3.8-flash'
       titlePrompt: 'Gere um título curto e descritivo em português do Brasil (PT-BR) para esta conversa. O título deve ter no máximo 5 palavras, sem pontuação, sem aspas e sem explicações. Responda somente com o título.\n\nConversa:\n{convo}'
@@ -123,12 +124,21 @@ modelSpecs:
         endpoint: 'OpenRouter'
         model: 'openai/gpt-6-luna'
         webSearch: true
-    - name: 'gpt-6-sol'
-      label: 'GPT-6 Sol (2x)'
+    - name: 'gpt-6.1-sol'
+      label: 'GPT-6.1 Sol (2x)'
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-6-sol'
+        model: 'openai/gpt-6.1-sol'
+        webSearch: true
+    # Preserve the old Sol spec for saved conversations, routing it to Sol 6.1.
+    - name: 'gpt-6-sol'
+      label: 'GPT-6.1 Sol (2x)'
+      showInMenu: false
+      iconURL: 'openAI'
+      preset:
+        endpoint: 'OpenRouter'
+        model: 'openai/gpt-6.1-sol'
         webSearch: true
     # Keep saved conversations with old spec names usable; no 5.6 model remains selectable.
     - name: 'gpt-56-luna'
@@ -140,20 +150,20 @@ modelSpecs:
         model: 'openai/gpt-6-luna'
         webSearch: true
     - name: 'gpt-56-sol'
-      label: 'GPT-6 Sol (2x)'
+      label: 'GPT-6.1 Sol (2x)'
       showInMenu: false
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-6-sol'
+        model: 'openai/gpt-6.1-sol'
         webSearch: true
     - name: 'gpt-56-terra'
-      label: 'GPT-6 Sol (2x)'
+      label: 'GPT-6.1 Sol (2x)'
       showInMenu: false
       iconURL: 'openAI'
       preset:
         endpoint: 'OpenRouter'
-        model: 'openai/gpt-6-sol'
+        model: 'openai/gpt-6.1-sol'
         webSearch: true
     - name: 'gpt-6-astra'
       label: 'GPT-6 Astra (10x)'
@@ -170,6 +180,13 @@ modelSpecs:
       preset:
         endpoint: 'OpenRouter'
         model: 'anthropic/claude-opus-5.5'
+        webSearch: true
+    - name: 'claude-sonnet-5.5'
+      label: 'Claude Sonnet 5.5 (2x)'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'OpenRouter'
+        model: 'anthropic/claude-sonnet-5.5'
         webSearch: true
     - name: 'claude-sonnet-5'
       label: 'Claude Sonnet 5 (2x)'

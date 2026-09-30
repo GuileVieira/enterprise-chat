@@ -65,6 +65,7 @@ const openAIModels = {
   'gpt-5.6-terra': 1050000,
   'gpt-5.6-luna': 1050000,
   'gpt-6-sol': 1050000,
+  'gpt-6.1-sol': 1050000,
   'gpt-6-luna': 1050000,
   'gpt-6-astra': 1050000, // >272K input prices at the long-context tier (2x input/cache, 1.5x output)
   'chat-latest': 400000,
@@ -181,6 +182,7 @@ const anthropicModels = {
   'claude-sonnet-4-9': 1000000,
   'claude-sonnet-4.9': 1000000,
   'claude-sonnet-5': 1000000,
+  'claude-sonnet-5.5': 1000000,
   'claude-opus-4-6': 1000000,
   'claude-opus-4-7': 1000000,
   'claude-opus-4-8': 1000000,
@@ -513,6 +515,7 @@ export const modelMaxOutputs = {
   'gpt-5.6-terra': 128000,
   'gpt-5.6-luna': 128000,
   'gpt-6-sol': 128000,
+  'gpt-6.1-sol': 128000,
   'gpt-6-luna': 128000,
   'gpt-6-astra': 128000,
   'chat-latest': 128000,
@@ -543,6 +546,7 @@ const anthropicMaxOutputs = {
   'claude-sonnet-4-9': 128000,
   'claude-sonnet-4.9': 128000,
   'claude-sonnet-5': 128000,
+  'claude-sonnet-5.5': 128000,
   'claude-opus-4': 32000,
   'claude-opus-4-5': 64000,
   'claude-opus-4-6': 128000,
@@ -573,7 +577,7 @@ export const maxOutputTokensMap: Record<string, Record<string, number>> = {
   [EModelEndpoint.anthropic]: anthropicMaxOutputs,
   [EModelEndpoint.azureOpenAI]: modelMaxOutputs,
   [EModelEndpoint.openAI]: { ...modelMaxOutputs, ...deepseekMaxOutputs },
-  [EModelEndpoint.custom]: { ...modelMaxOutputs, ...deepseekMaxOutputs },
+  [EModelEndpoint.custom]: { ...modelMaxOutputs, ...anthropicMaxOutputs, ...deepseekMaxOutputs },
 };
 
 /**
@@ -649,8 +653,8 @@ export function getModelTokenValue(
     return value;
   }
 
-  if (value?.context) {
-    return value.context;
+  if (typeof value?.[key] === 'number') {
+    return value[key];
   }
 
   const matchedPattern = findMatchingPattern(modelName, tokensMap);
@@ -775,85 +779,47 @@ export function matchModelName(
   return matchedPattern || modelName;
 }
 
-export const modelSchema: z.ZodObject<
-  {
-    id: z.ZodString;
-    pricing: z.ZodObject<
-      {
-        prompt: z.ZodString;
-        completion: z.ZodString;
-      },
-      'strip',
-      z.ZodTypeAny,
-      {
-        prompt: string;
-        completion: string;
-      },
-      {
-        prompt: string;
-        completion: string;
-      }
-    >;
-    context_length: z.ZodNumber;
-  },
-  'strip'
-> = z.object({
-  id: z.string(),
-  pricing: z.object({
-    prompt: z.string(),
-    completion: z.string(),
-  }),
-  context_length: z.number(),
+const pricingSchema = z.object({
+  prompt: z.string(),
+  completion: z.string(),
+  input_cache_read: z.string().optional(),
+  input_cache_write: z.string().optional(),
 });
 
-export const inputSchema: z.ZodObject<
-  {
-    data: z.ZodArray<
-      z.ZodObject<
-        {
-          id: z.ZodString;
-          pricing: z.ZodObject<
-            {
-              prompt: z.ZodString;
-              completion: z.ZodString;
-            },
-            'strip',
-            z.ZodTypeAny,
-            {
-              prompt: string;
-              completion: string;
-            },
-            {
-              prompt: string;
-              completion: string;
-            }
-          >;
-          context_length: z.ZodNumber;
-        },
-        'strip',
-        z.ZodTypeAny,
-        {
-          id: string;
-          pricing: {
-            prompt: string;
-            completion: string;
-          };
-          context_length: number;
-        },
-        {
-          id: string;
-          pricing: {
-            prompt: string;
-            completion: string;
-          };
-          context_length: number;
-        }
-      >,
-      'many'
-    >;
-  },
-  'strip'
-> = z.object({
+interface ModelPricing {
+  prompt: string;
+  completion: string;
+  input_cache_read?: string;
+  input_cache_write?: string;
+}
+
+interface CatalogModel {
+  id: string;
+  pricing: ModelPricing & {
+    overrides?: Array<Partial<ModelPricing> & { min_prompt_tokens?: number }>;
+  };
+  context_length: number;
+  top_provider?: { max_completion_tokens?: number | null };
+}
+
+export const modelSchema: z.ZodType<CatalogModel> = z.object({
+  id: z.string(),
+  pricing: pricingSchema.extend({
+    overrides: z
+      .array(
+        pricingSchema.partial().extend({
+          min_prompt_tokens: z.number().nonnegative().optional(),
+        }),
+      )
+      .optional(),
+  }),
+  context_length: z.number(),
+  top_provider: z
+    .object({ max_completion_tokens: z.number().nonnegative().nullable().optional() })
+    .optional(),
+});
+
+export const inputSchema: z.ZodType<{ data: CatalogModel[] }> = z.object({
   data: z.array(modelSchema),
 });
 
@@ -880,14 +846,44 @@ export function processModelData(input: z.infer<typeof inputSchema>): EndpointTo
         completion: '0.00003',
       };
     }
-    const prompt = parseFloat(model.pricing.prompt) * 1000000;
-    const completion = parseFloat(model.pricing.completion) * 1000000;
-
-    tokenConfig[modelKey] = {
+    const prompt = Number(model.pricing.prompt) * 1000000;
+    const completion = Number(model.pricing.completion) * 1000000;
+    // Routing models can report -1 instead of a price; never credit negative token charges.
+    if (!Number.isFinite(prompt) || !Number.isFinite(completion) || prompt < 0 || completion < 0) {
+      continue;
+    }
+    const config: EndpointTokenConfig[string] = {
       prompt,
       completion,
       context: model.context_length,
     };
+    if (model.top_provider?.max_completion_tokens != null) {
+      config.output = model.top_provider.max_completion_tokens;
+    }
+    const rateFields = {
+      prompt: 'prompt',
+      completion: 'completion',
+      input_cache_read: 'read',
+      input_cache_write: 'write',
+    } as const;
+    for (const [source, target] of Object.entries(rateFields)) {
+      const raw = model.pricing[source as keyof typeof rateFields];
+      const rate = raw == null ? undefined : Number(raw) * 1000000;
+      if (rate != null && Number.isFinite(rate) && rate >= 0) {
+        config[target] = rate;
+      }
+      for (const tier of model.pricing.overrides ?? []) {
+        if (tier.min_prompt_tokens == null) {
+          continue;
+        }
+        const rawTier = tier[source as keyof typeof rateFields];
+        const tierRate = rawTier == null ? undefined : Number(rawTier) * 1000000;
+        if (tierRate != null && Number.isFinite(tierRate) && tierRate >= 0) {
+          config[`${target}@${tier.min_prompt_tokens}`] = tierRate;
+        }
+      }
+    }
+    tokenConfig[modelKey] = config;
   }
 
   return tokenConfig;

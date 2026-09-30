@@ -151,6 +151,7 @@ export const tokenValues: Record<string, { prompt: number; completion: number }>
     'gpt-5.6-terra': { prompt: 2, completion: 12 },
     'gpt-5.6-luna': { prompt: 0.2, completion: 1.2 },
     'gpt-6-sol': { prompt: 2, completion: 10 },
+    'gpt-6.1-sol': { prompt: 2, completion: 10 },
     'gpt-6-luna': { prompt: 0.1, completion: 0.5 },
     'gpt-6-astra': { prompt: 10, completion: 50 },
     'chat-latest': { prompt: 5, completion: 30 },
@@ -197,6 +198,7 @@ export const tokenValues: Record<string, { prompt: number; completion: number }>
     'claude-sonnet-4-6': { prompt: 3, completion: 15 },
     // Sonnet 5 introductory pricing through 2026-08-31; revert to { prompt: 3, completion: 15 } after.
     'claude-sonnet-5': { prompt: 2, completion: 10 },
+    'claude-sonnet-5.5': { prompt: 2, completion: 10 },
     'command-r': { prompt: 0.5, completion: 1.5 },
     'command-r-plus': { prompt: 3, completion: 15 },
     'command-text': { prompt: 1.5, completion: 2.0 },
@@ -366,6 +368,7 @@ export const cacheTokenValues: Record<string, { write: number; read: number }> =
   'claude-sonnet-4-6': { write: 3.75, read: 0.3 },
   // Sonnet 5 introductory pricing through 2026-08-31; revert to { write: 3.75, read: 0.3 } after.
   'claude-sonnet-5': { write: 2.5, read: 0.2 },
+  'claude-sonnet-5.5': { write: 2.5, read: 0.2 },
   'claude-opus-4': { write: 18.75, read: 1.5 },
   'claude-opus-4-5': { write: 6.25, read: 0.5 },
   'claude-opus-4-6': { write: 6.25, read: 0.5 },
@@ -394,6 +397,7 @@ export const cacheTokenValues: Record<string, { write: number; read: number }> =
   'gpt-5.6-terra': { write: 2.5, read: 0.2 },
   'gpt-5.6-luna': { write: 0.25, read: 0.02 },
   'gpt-6-sol': { write: 2.5, read: 0.2 },
+  'gpt-6.1-sol': { write: 2.5, read: 0.1 },
   'gpt-6-luna': { write: 0.125, read: 0.01 },
   'gpt-6-astra': { write: 12.5, read: 1 },
   'chat-latest': { write: 5, read: 0.5 },
@@ -454,6 +458,7 @@ export const premiumTokenValues: Record<
   'gpt-5.6-terra': { threshold: 272000, prompt: 4, completion: 18 },
   'gpt-5.6-luna': { threshold: 272000, prompt: 0.4, completion: 1.8 },
   'gpt-6-sol': { threshold: 272000, prompt: 4, completion: 15 },
+  'gpt-6.1-sol': { threshold: 272000, prompt: 4, completion: 15 },
   'gpt-6-luna': { threshold: 272000, prompt: 0.2, completion: 0.75 },
   'gpt-6-astra': { threshold: 272000, prompt: 20, completion: 75 },
   'grok-4.5': { threshold: 200000, prompt: 4, completion: 12 },
@@ -478,6 +483,7 @@ export const premiumCacheTokenValues: Record<
   'gpt-5.6-terra': { threshold: 272000, write: 5, read: 0.4 },
   'gpt-5.6-luna': { threshold: 272000, write: 0.5, read: 0.04 },
   'gpt-6-sol': { threshold: 272000, write: 5, read: 0.4 },
+  'gpt-6.1-sol': { threshold: 272000, write: 5, read: 0.2 },
   'gpt-6-luna': { threshold: 272000, write: 0.25, read: 0.02 },
   'gpt-6-astra': { threshold: 272000, write: 25, read: 2 },
 };
@@ -605,9 +611,31 @@ export function createTxMethods(
     return premiumEntry[tokenType as 'prompt' | 'completion'] ?? null;
   }
 
-  /**
-   * Retrieves the multiplier for a given value key and token type.
-   */
+  /** Dynamic catalog tiers use `<rate>@<minimum input tokens>` in the numeric config map. */
+  function getConfiguredRate(
+    config: Record<string, number>,
+    rateType: string,
+    inputTokenCount?: number | null,
+  ): number | undefined {
+    let result = config[rateType];
+    let threshold = -1;
+    if (inputTokenCount == null) {
+      return result;
+    }
+    for (const [key, rate] of Object.entries(config)) {
+      if (!key.startsWith(`${rateType}@`)) {
+        continue;
+      }
+      const minimum = Number(key.slice(rateType.length + 1));
+      if (Number.isFinite(minimum) && minimum > threshold && inputTokenCount > minimum) {
+        threshold = minimum;
+        result = rate;
+      }
+    }
+    return result;
+  }
+
+  /** Retrieves the multiplier for a given value key and token type. */
   function getMultiplier({
     model,
     valueKey,
@@ -629,7 +657,7 @@ export function createTxMethods(
        *  through to the standard tables so billing matches the advertised
        *  token config instead of charging defaultRate */
       if (modelConfig) {
-        return modelConfig[tokenType as string] ?? defaultRate;
+        return getConfiguredRate(modelConfig, tokenType as string, inputTokenCount) ?? defaultRate;
       }
     }
 
@@ -701,7 +729,7 @@ export function createTxMethods(
       /** Models absent from a partial override fall through to standard
        *  cache rates rather than reporting no cache pricing */
       if (modelConfig) {
-        return modelConfig[cacheType as string] ?? null;
+        return getConfiguredRate(modelConfig, cacheType as string, inputTokenCount) ?? null;
       }
     }
 

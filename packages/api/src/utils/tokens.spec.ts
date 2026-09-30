@@ -1,6 +1,6 @@
 import { EModelEndpoint } from 'librechat-data-provider';
 import type { EndpointTokenConfig } from '~/types';
-import { getModelMaxTokens, getModelMaxOutputTokens } from './tokens';
+import { processModelData, getModelMaxTokens, getModelMaxOutputTokens } from './tokens';
 
 describe('getModelMaxTokens partial-override fallback', () => {
   const partialOverride: EndpointTokenConfig = {
@@ -68,11 +68,70 @@ describe('gpt-5.6 tiers', () => {
 
 describe('OpenRouter GPT-6 Sol and Luna', () => {
   it('resolves the provider context and output limits', () => {
-    for (const model of ['openai/gpt-6-sol', 'openai/gpt-6-luna']) {
+    for (const model of ['openai/gpt-6-sol', 'openai/gpt-6.1-sol', 'openai/gpt-6-luna']) {
       expect(getModelMaxTokens(model, EModelEndpoint.openAI)).toBe(1050000);
       expect(getModelMaxOutputTokens(model, EModelEndpoint.openAI)).toBe(128000);
     }
   });
+});
+
+test('OpenRouter Sonnet 5.5 uses 1M context and 128K output', () => {
+  const model = 'anthropic/claude-sonnet-5.5';
+  expect(getModelMaxTokens(model, EModelEndpoint.custom)).toBe(1000000);
+  expect(getModelMaxOutputTokens(model, EModelEndpoint.custom)).toBe(128000);
+  const catalogue: EndpointTokenConfig = {
+    [model]: { prompt: 2, completion: 10, context: 1000000, output: 128000 },
+  };
+  expect(getModelMaxTokens(model, EModelEndpoint.custom, catalogue)).toBe(1000000);
+  expect(getModelMaxOutputTokens(model, EModelEndpoint.custom, catalogue)).toBe(128000);
+});
+
+test('dynamic catalog preserves output, cache rates and multiple input pricing tiers', () => {
+  const config = processModelData({
+    data: [
+      {
+        id: 'new/model',
+        context_length: 1000000,
+        top_provider: { max_completion_tokens: 128000 },
+        pricing: {
+          prompt: '0.000002',
+          completion: '0.00001',
+          input_cache_read: '0.0000001',
+          input_cache_write: '0.0000025',
+          overrides: [
+            {
+              min_prompt_tokens: 272000,
+              prompt: '0.000004',
+              completion: '0.000015',
+              input_cache_read: '0.0000002',
+              input_cache_write: '0.000005',
+            },
+            { min_prompt_tokens: 500000, prompt: '0.000006' },
+          ],
+        },
+      },
+      {
+        id: 'router/unpriced',
+        context_length: 1000000,
+        pricing: { prompt: '-1', completion: '-1' },
+      },
+    ],
+  });
+  expect(config['new/model']).toMatchObject({
+    prompt: 2,
+    completion: 10,
+    context: 1000000,
+    output: 128000,
+    write: 2.5,
+    'prompt@272000': 4,
+    'completion@272000': 15,
+    'write@272000': 5,
+    'prompt@500000': 6,
+  });
+  expect(config['new/model'].read).toBeCloseTo(0.1);
+  expect(config['new/model']['read@272000']).toBeCloseTo(0.2);
+  expect(config['router/unpriced']).toBeUndefined();
+  expect(getModelMaxOutputTokens('new/model', EModelEndpoint.custom, config)).toBe(128000);
 });
 
 describe('Gemini 3.7 Flash', () => {

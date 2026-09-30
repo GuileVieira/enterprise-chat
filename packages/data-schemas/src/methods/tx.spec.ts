@@ -488,6 +488,7 @@ describe('getMultiplier', () => {
   it('should use OpenRouter GPT-6 Sol and Luna rates, including long context', () => {
     for (const [model, prompt, completion, write, read] of [
       ['gpt-6-sol', 2, 10, 2.5, 0.2],
+      ['gpt-6.1-sol', 2, 10, 2.5, 0.1],
       ['gpt-6-luna', 0.1, 0.5, 0.125, 0.01],
     ] as const) {
       expect(getValueKey(`openai/${model}`)).toBe(model);
@@ -506,6 +507,15 @@ describe('getMultiplier', () => {
         read: read * 2,
       });
     }
+  });
+
+  it('uses Sonnet 5.5 pricing instead of a generic Claude fallback', () => {
+    const model = 'anthropic/claude-sonnet-5.5';
+    expect(getValueKey(model)).toBe('claude-sonnet-5.5');
+    expect(getMultiplier({ model, tokenType: 'prompt' })).toBe(2);
+    expect(getMultiplier({ model, tokenType: 'completion' })).toBe(10);
+    expect(getCacheMultiplier({ model, cacheType: 'write' })).toBe(2.5);
+    expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(0.2);
   });
 
   it('should bill gpt-6-astra cache writes at the documented 1.25x input surcharge', () => {
@@ -3187,6 +3197,43 @@ describe('Grok long-context premium tier', () => {
       ).toBe(premiumTokenValues[model].completion);
     }
   });
+});
+
+test('dynamic catalog billing selects each tier after its threshold, including cache', () => {
+  const model = 'new/model';
+  const endpointTokenConfig = {
+    [model]: {
+      prompt: 2,
+      completion: 10,
+      read: 0.1,
+      write: 2.5,
+      'prompt@500000': 6,
+      'prompt@272000': 4,
+      'completion@272000': 15,
+      'read@272000': 0.2,
+      'write@272000': 5,
+    },
+  };
+  for (const [inputTokenCount, prompt, completion, read, write] of [
+    [272000, 2, 10, 0.1, 2.5],
+    [272001, 4, 15, 0.2, 5],
+    [500000, 4, 15, 0.2, 5],
+    [500001, 6, 15, 0.2, 5],
+  ]) {
+    expect(
+      getMultiplier({ model, endpointTokenConfig, tokenType: 'prompt', inputTokenCount }),
+    ).toBe(prompt);
+    expect(
+      getMultiplier({ model, endpointTokenConfig, tokenType: 'completion', inputTokenCount }),
+    ).toBe(completion);
+    expect(
+      getCacheMultiplier({ model, endpointTokenConfig, cacheType: 'read', inputTokenCount }),
+    ).toBe(read);
+    expect(
+      getCacheMultiplier({ model, endpointTokenConfig, cacheType: 'write', inputTokenCount }),
+    ).toBe(write);
+  }
+  expect(getMultiplier({ model, endpointTokenConfig, tokenType: 'prompt' })).toBe(2);
 });
 
 describe('vendor-prefixed pricing keys', () => {
