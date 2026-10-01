@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
-import { Pen, ShareNetwork as Share2, Upload } from '@phosphor-icons/react';
+import { Pen, ShareNetwork as Share2, Trash, Upload } from '@phosphor-icons/react';
 import { useGetSharedLinkQuery } from 'librechat-data-provider/react-query';
 import {
   Button,
@@ -12,6 +12,7 @@ import {
 } from '@librechat/client';
 import type { FormEvent, ReactNode } from 'react';
 import type * as t from '~/common';
+import DeleteButton from '~/components/Conversations/ConvoOptions/DeleteButton';
 import ExportModal from '~/components/Nav/ExportConversation/ExportModal';
 import { ShareButton } from '~/components/Conversations/ConvoOptions';
 import { useUpdateConversationMutation } from '~/data-provider';
@@ -40,12 +41,14 @@ export default function useExportShare({
   const [showExports, setShowExports] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const { showToast } = useToastContext();
 
   const renameInputRef = useRef<HTMLInputElement>(null);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
 
   const canCreateSharedLinks = useHasAccess({
     permissionType: PermissionTypes.SHARED_LINKS,
@@ -122,6 +125,14 @@ export default function useExportShare({
       ref: exportButtonRef,
       render: (props) => <button {...props} />,
     },
+    {
+      label: localize('com_ui_delete'),
+      onClick: () => setShowDeleteDialog(true),
+      icon: <Trash className="size-4 text-text-secondary" />,
+      hideOnClick: false,
+      ref: deleteButtonRef,
+      render: (props) => <button {...props} type="button" />,
+    },
   ];
 
   return {
@@ -130,6 +141,14 @@ export default function useExportShare({
     hasSharedLink: Boolean(share?.shareId),
     dialogs: exportable ? (
       <>
+        <DeleteButton
+          conversationId={conversation.conversationId ?? ''}
+          title={conversation.title ?? ''}
+          retainView={() => undefined}
+          showDeleteDialog={showDeleteDialog}
+          setShowDeleteDialog={setShowDeleteDialog}
+          triggerRef={deleteButtonRef}
+        />
         <ExportModal
           open={showExports}
           onOpenChange={setShowExports}

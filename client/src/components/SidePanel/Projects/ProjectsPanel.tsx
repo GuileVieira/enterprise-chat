@@ -10,9 +10,12 @@ import {
   Folder,
   FolderPlus,
   Plus,
+  Trash,
 } from '@phosphor-icons/react';
 import { QueryKeys } from 'librechat-data-provider';
+import { TooltipAnchor } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
+import DeleteButton from '~/components/Conversations/ConvoOptions/DeleteButton';
 import {
   useProjectsQuery,
   useProjectByIdQuery,
@@ -31,6 +34,8 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
   const renameInputRef = useRef<HTMLInputElement>(null);
   const [titleInput, setTitleInput] = useState('');
   const [renamingConvoId, setRenamingConvoId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<TConversation | null>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const { newConversation } = useNewConvo();
   const { navigateToConvo } = useNavigateToConvo();
@@ -197,7 +202,7 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
                   >
                     <input
                       ref={renameInputRef}
-                      className="w-full rounded bg-transparent px-1 py-0.5 text-xs outline-none ring-1 ring-border-medium focus:ring-ring"
+                      className="focus:ring-ring w-full rounded bg-transparent px-1 py-0.5 text-xs outline-none ring-1 ring-border-medium"
                       value={titleInput}
                       maxLength={100}
                       aria-label={localize('com_ui_new_conversation_title')}
@@ -226,10 +231,38 @@ function ProjectListItem({ projectId, name }: { projectId: string; name: string 
                     {convo.title || 'Untitled'}
                   </button>
                 )}
+                <TooltipAnchor
+                  description={localize('com_ui_delete_conversation_tooltip')}
+                  render={
+                    <button
+                      type="button"
+                      aria-label={localize('com_ui_delete_conversation_tooltip')}
+                      onClick={(event) => {
+                        deleteButtonRef.current = event.currentTarget;
+                        setPendingDelete(convo);
+                      }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-active hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+                    >
+                      <Trash className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  }
+                />
               </div>
             );
           })}
         </div>
+      )}
+      {pendingDelete && (
+        <DeleteButton
+          conversationId={pendingDelete.conversationId ?? ''}
+          title={pendingDelete.title ?? ''}
+          retainView={() => undefined}
+          showDeleteDialog={true}
+          setShowDeleteDialog={(open) => {
+            if (!open) setPendingDelete(null);
+          }}
+          triggerRef={deleteButtonRef}
+        />
       )}
     </div>
   );
@@ -292,7 +325,7 @@ export default function ProjectsPanel() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder={localize('com_ui_project_search_placeholder')}
-              className="w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition focus:border-ring focus:ring-1 focus:ring-ring"
+              className="focus:border-ring focus:ring-ring w-full rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition focus:ring-1"
             />
           </label>
 

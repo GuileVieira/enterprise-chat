@@ -1,15 +1,18 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RecoilRoot, useRecoilValue } from 'recoil';
 import ProjectsPanel from '../ProjectsPanel';
 import store from '~/store';
+import i18n from '~/locales/i18n';
 
 const mockNavigate = jest.fn();
 const mockNavigateToConvo = jest.fn();
 const mockNewConversation = jest.fn();
 const mockSelectedProjectObserver = jest.fn();
+const mockDeleteMutate = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -24,6 +27,7 @@ jest.mock('~/data-provider', () => ({
     mutateAsync: jest.fn(),
   }),
   useConversationsInfiniteQuery: jest.fn(),
+  useDeleteConversationMutation: () => ({ mutate: mockDeleteMutate, isLoading: false }),
 }));
 
 jest.mock('~/hooks', () => ({
@@ -61,14 +65,16 @@ function SelectedProjectObserver() {
 function renderPanel() {
   const queryClient = createQueryClient();
   return render(
-    <MemoryRouter>
-      <QueryClientProvider client={queryClient}>
-        <RecoilRoot>
-          <SelectedProjectObserver />
-          <ProjectsPanel />
-        </RecoilRoot>
-      </QueryClientProvider>
-    </MemoryRouter>,
+    <I18nextProvider i18n={i18n}>
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <RecoilRoot>
+            <SelectedProjectObserver />
+            <ProjectsPanel />
+          </RecoilRoot>
+        </QueryClientProvider>
+      </MemoryRouter>
+    </I18nextProvider>,
   );
 }
 
@@ -119,5 +125,35 @@ describe('ProjectsPanel', () => {
     expect(
       detailsButton.compareDocumentPosition(newChatButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('confirms deleting the selected project row without opening its chat', () => {
+    renderPanel();
+    fireEvent.click(screen.getByText('Project Alpha'));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_delete_conversation_tooltip' }));
+    expect(mockNavigateToConvo).not.toHaveBeenCalled();
+    expect(mockDeleteMutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveTextContent('Conversation One');
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'com_ui_delete' }),
+    );
+    expect(mockDeleteMutate).toHaveBeenCalledWith({
+      conversationId: 'c1',
+      source: 'button',
+      thread_id: undefined,
+      endpoint: undefined,
+    });
+  });
+
+  it('cancels deleting a project row and restores focus', async () => {
+    renderPanel();
+    fireEvent.click(screen.getByText('Project Alpha'));
+    const trigger = screen.getByRole('button', { name: 'com_ui_delete_conversation_tooltip' });
+    fireEvent.click(trigger);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockDeleteMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Conversation One')).toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });
