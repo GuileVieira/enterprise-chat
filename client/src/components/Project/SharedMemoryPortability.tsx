@@ -1,7 +1,14 @@
 /* eslint-disable no-nested-ternary */
 import { useId, useState } from 'react';
 import { DownloadSimple, UploadSimple } from '@phosphor-icons/react';
-import { Button, Input, OGDialog, OGDialogTemplate, useToastContext } from '@librechat/client';
+import {
+  Button,
+  Dropdown,
+  Input,
+  OGDialog,
+  OGDialogTemplate,
+  useToastContext,
+} from '@librechat/client';
 import type {
   SharedMemoryImportPreview,
   SharedMemoryImportRequest,
@@ -25,6 +32,21 @@ const importStatusKeys = {
   updated: 'com_ui_memory_import_updated',
   skipped: 'com_ui_memory_import_skipped',
   failed: 'com_ui_memory_import_failed',
+} as const;
+const exportScopeKeys = {
+  library: 'com_ui_memory_export_library',
+  project: 'com_ui_memory_export_project',
+  personal: 'com_ui_memory_export_personal',
+} as const;
+const exportSelectionHelpKeys = {
+  selected: 'com_ui_memory_export_selected_description',
+  filtered: 'com_ui_memory_export_filtered_description',
+  accessible: 'com_ui_memory_export_accessible_description',
+} as const;
+const conflictActionHelpKeys = {
+  skip: 'com_ui_memory_conflict_skip_description',
+  replace: 'com_ui_memory_conflict_replace_description',
+  copy: 'com_ui_memory_conflict_copy_description',
 } as const;
 
 function downloadMemoryFile(content: string, filename: string, type: string) {
@@ -109,6 +131,11 @@ export default function SharedMemoryPortability({
   const [exportSelection, setExportSelection] = useState<ExportSelection>(
     ids?.length ? 'selected' : search?.trim() ? 'filtered' : 'accessible',
   );
+  const effectiveExportSelection =
+    (exportSelection === 'selected' && !ids?.length) ||
+    (exportSelection === 'filtered' && !search?.trim())
+      ? 'accessible'
+      : exportSelection;
   const previewMutation = useSharedMemoryImportPreviewMutation();
   const importMutation = useSharedMemoryImportMutation();
   const exportMutation = useSharedMemoryExportMutation();
@@ -135,15 +162,17 @@ export default function SharedMemoryPortability({
         scope,
         ...(scope === 'project' && projectId ? { projectId } : {}),
         ...(scope === 'personal' && agentId ? { agentId } : {}),
-        ...(exportSelection === 'selected' && ids?.length ? { ids } : {}),
-        ...(exportSelection === 'filtered' && search?.trim() ? { search: search.trim() } : {}),
+        ...(effectiveExportSelection === 'selected' && ids?.length ? { ids } : {}),
+        ...(effectiveExportSelection === 'filtered' && search?.trim()
+          ? { search: search.trim() }
+          : {}),
       },
       {
         onSuccess: (result) => {
           const body = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
           downloadMemoryFile(
             body,
-            `orqest-memories.${nextFormat}`,
+            `orqest-memories-${scope}.${nextFormat}`,
             nextFormat === 'json' ? 'application/json' : 'text/csv;charset=utf-8',
           );
         },
@@ -151,7 +180,7 @@ export default function SharedMemoryPortability({
       },
     );
   return (
-    <div className="flex w-full min-w-0 flex-wrap gap-2">
+    <div className="w-full min-w-0 space-y-3">
       <Button
         type="button"
         size="sm"
@@ -166,45 +195,80 @@ export default function SharedMemoryPortability({
         <UploadSimple className="mr-1 size-4" />
         {localize('com_ui_import_memories')}
       </Button>
-      {(ids?.length || search?.trim() || accessibleCount != null) && (
-        <select
-          className="rounded border border-border-light bg-surface-primary px-2 text-sm"
-          aria-label={localize('com_ui_memory_export_scope')}
-          value={exportSelection}
-          onChange={(event) => setExportSelection(event.target.value as ExportSelection)}
+      <div className="space-y-2 border-t border-border-light pt-3">
+        <p className="text-sm font-medium">
+          {localize(
+            scope === 'personal' && agentId ? 'com_ui_memory_export_agent' : exportScopeKeys[scope],
+          )}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {(ids?.length || search?.trim() || accessibleCount != null) && (
+            <Dropdown
+              className="min-w-0 max-w-full"
+              triggerClassName="h-9 w-full min-w-0 bg-surface-primary text-text-primary"
+              ariaLabel={localize('com_ui_memory_export_scope')}
+              value={effectiveExportSelection}
+              onChange={(value) => setExportSelection(value as ExportSelection)}
+              options={[
+                ...(ids?.length
+                  ? [
+                      {
+                        value: 'selected',
+                        label: localize('com_ui_memory_export_selected', { count: ids.length }),
+                      },
+                    ]
+                  : []),
+                ...(search?.trim()
+                  ? [
+                      {
+                        value: 'filtered',
+                        label:
+                          filteredCount == null
+                            ? localize('com_ui_memory_export_filtered_uncounted')
+                            : localize('com_ui_memory_export_filtered', { count: filteredCount }),
+                      },
+                    ]
+                  : []),
+                {
+                  value: 'accessible',
+                  label:
+                    accessibleCount == null
+                      ? localize('com_ui_memory_export_accessible_uncounted')
+                      : localize('com_ui_memory_export_accessible', { count: accessibleCount }),
+                },
+              ]}
+            />
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => exportFile('json')}
+            disabled={exportMutation.isLoading}
+          >
+            <DownloadSimple className="mr-1 size-4" />
+            {localize('com_ui_memory_export_json')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => exportFile('csv')}
+            disabled={exportMutation.isLoading}
+          >
+            {localize('com_ui_memory_export_csv')}
+          </Button>
+        </div>
+        <p
+          id={`${destinationGroupId}-export-help`}
+          className="text-xs leading-5 text-text-secondary"
         >
-          {ids?.length ? (
-            <option value="selected">
-              {localize('com_ui_memory_export_selected', { count: ids.length })}
-            </option>
-          ) : null}
-          <option value="filtered">
-            {localize('com_ui_memory_export_filtered', { count: filteredCount ?? 0 })}
-          </option>
-          <option value="accessible">
-            {localize('com_ui_memory_export_accessible', { count: accessibleCount ?? 0 })}
-          </option>
-        </select>
-      )}
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => exportFile('json')}
-        disabled={exportMutation.isLoading}
-      >
-        <DownloadSimple className="mr-1 size-4" />
-        JSON
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={() => exportFile('csv')}
-        disabled={exportMutation.isLoading}
-      >
-        CSV
-      </Button>
+          {localize(exportSelectionHelpKeys[effectiveExportSelection])}
+        </p>
+        <p className="text-xs leading-5 text-text-secondary">
+          {localize('com_ui_memory_export_formats_description')}
+        </p>
+      </div>
       <OGDialog open={open} onOpenChange={setOpen}>
         <OGDialogTemplate
           title={localize('com_ui_import_memories')}
@@ -214,6 +278,9 @@ export default function SharedMemoryPortability({
           footerClassName="shrink-0"
           main={
             <div className="space-y-3">
+              <p className="text-sm leading-6 text-text-secondary">
+                {localize('com_ui_memory_import_steps')}
+              </p>
               <Button
                 type="button"
                 variant="outline"
@@ -228,6 +295,9 @@ export default function SharedMemoryPortability({
               >
                 {localize('com_ui_memory_csv_template')}
               </Button>
+              <p className="text-xs leading-5 text-text-secondary">
+                {localize('com_ui_memory_csv_format')}
+              </p>
               <Input
                 type="file"
                 accept=".json,.csv"
@@ -281,20 +351,51 @@ export default function SharedMemoryPortability({
                 ))}
               </fieldset>
               {preview?.items.map((item) => (
-                <div key={item.ref} className="rounded border border-border-light p-2 text-sm">
-                  <b>{item.key}</b> — {localize(importStatusKeys[item.status])}
-                  <p className="mt-1 whitespace-pre-wrap text-text-secondary">{item.value}</p>
-                  {item.existing && (
-                    <p className="mt-1 whitespace-pre-wrap text-text-secondary">
-                      {item.existing.value}
+                <article
+                  key={item.ref}
+                  className="space-y-3 break-words rounded-lg border border-border-light p-3 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h4 className="font-medium">{item.key}</h4>
+                    <span className="text-xs text-text-secondary">
+                      {localize(importStatusKeys[item.status])}
+                    </span>
+                  </div>
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    {item.existing && (
+                      <div className="rounded bg-surface-secondary p-2">
+                        <dt className="text-xs font-medium text-text-secondary">
+                          {localize('com_ui_memory_conflict_current')}
+                        </dt>
+                        <dd className="mt-1 whitespace-pre-wrap">{item.existing.value}</dd>
+                      </div>
+                    )}
+                    <div className="rounded bg-surface-secondary p-2">
+                      <dt className="text-xs font-medium text-text-secondary">
+                        {localize('com_ui_memory_conflict_file')}
+                      </dt>
+                      <dd className="mt-1 whitespace-pre-wrap">{item.value}</dd>
+                    </div>
+                  </dl>
+                  {item.error && (
+                    <p role="alert" className="text-text-secondary">
+                      {item.error}
                     </p>
                   )}
-                  {item.error && `: ${item.error}`}
                   {item.status === 'conflict' && (
-                    <>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor={`${destinationGroupId}-${item.ref}-action`}
+                        className="block font-medium"
+                      >
+                        {localize('com_ui_memory_conflict_action')}
+                      </label>
                       <select
+                        id={`${destinationGroupId}-${item.ref}-action`}
+                        className="h-10 w-full rounded-xl border border-border-light bg-surface-primary px-3 text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:[color-scheme:dark]"
                         value={decisions[item.ref]?.action ?? 'skip'}
                         aria-label={item.key}
+                        aria-describedby={`${destinationGroupId}-${item.ref}-action-help`}
                         onChange={(event) =>
                           setDecisions({
                             ...decisions,
@@ -307,10 +408,18 @@ export default function SharedMemoryPortability({
                           })
                         }
                       >
-                        <option value="skip">{localize('com_ui_skip')}</option>
-                        <option value="replace">{localize('com_ui_replace')}</option>
-                        <option value="copy">{localize('com_ui_create_independent_copy')}</option>
+                        <option value="skip">{localize('com_ui_memory_conflict_skip')}</option>
+                        <option value="replace">
+                          {localize('com_ui_memory_conflict_replace')}
+                        </option>
+                        <option value="copy">{localize('com_ui_memory_conflict_copy')}</option>
                       </select>
+                      <p
+                        id={`${destinationGroupId}-${item.ref}-action-help`}
+                        className="text-xs leading-5 text-text-secondary"
+                      >
+                        {localize(conflictActionHelpKeys[decisions[item.ref]?.action ?? 'skip'])}
+                      </p>
                       {decisions[item.ref]?.action === 'copy' && (
                         <Input
                           value={decisions[item.ref]?.copyKey ?? ''}
@@ -328,9 +437,9 @@ export default function SharedMemoryPortability({
                           }
                         />
                       )}
-                    </>
+                    </div>
                   )}
-                </div>
+                </article>
               ))}
               {result && (
                 <div className="rounded border border-border-light p-2 text-sm">

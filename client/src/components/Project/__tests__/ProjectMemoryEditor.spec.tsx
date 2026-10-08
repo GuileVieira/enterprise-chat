@@ -66,7 +66,7 @@ it('locks editing until the sent snapshot is saved', async () => {
   await userEvent.click(save);
   await waitFor(() => expect(input).toBeDisabled());
   expect(screen.getByRole('button', { name: i18n.t('com_ui_project_add_memory') })).toBeDisabled();
-  expect(screen.getByTitle(i18n.t('com_ui_delete'))).toBeDisabled();
+  expect(screen.getByRole('button', { name: i18n.t('com_ui_delete') })).toBeDisabled();
   await userEvent.type(input, 'C');
   expect(input).toHaveValue('AB');
   expect(update).toHaveBeenCalledWith(

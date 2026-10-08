@@ -37,6 +37,18 @@ jest.mock('@librechat/client', () => ({
   ),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+  TooltipAnchor: ({
+    render,
+    description,
+    children,
+    ...props
+  }: React.HTMLAttributes<HTMLButtonElement> & {
+    render: React.ReactElement;
+    description: string;
+  }) =>
+    jest
+      .requireActual<typeof import('react')>('react')
+      .cloneElement(render, { ...props, 'data-tooltip': description }, children),
   OGDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   OGDialogTemplate: ({
     main,
@@ -261,6 +273,23 @@ describe('SharedMemoryLibrary', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(
       'com_ui_shared_memory_context_unavailable',
+    );
+  });
+
+  it('distinguishes available, linked and archived memories and explains library actions', () => {
+    render(<SharedMemoryLibrary project={{ projectId: 'p1' } as never} canEdit />);
+    expect(screen.getByText('com_ui_memory_no_links')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_memory_available_entries')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_memory_archived_entries')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_memory_link_hint')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_memory_copy_hint')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_ui_edit_memory' })).toHaveAttribute(
+      'data-tooltip',
+      'com_ui_memory_edit_library_hint',
+    );
+    expect(screen.getByRole('button', { name: 'com_ui_create_independent_copy' })).toHaveAttribute(
+      'data-tooltip',
+      'com_ui_memory_copy_hint',
     );
   });
 });

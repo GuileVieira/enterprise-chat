@@ -121,7 +121,7 @@ test('resolves a local conflict by keyboard, exports and imports library memorie
   });
 
   const exportedDownload = page.waitForEvent('download');
-  await library.getByRole('button', { name: 'JSON', exact: true }).click();
+  await library.getByRole('button', { name: 'Download JSON', exact: true }).click();
   const download = await exportedDownload;
   expect(download.suggestedFilename()).toBe('orqest-memories.json');
   const downloadedPath = await download.path();
@@ -234,7 +234,7 @@ test('resolves a local conflict by keyboard, exports and imports library memorie
     .click();
   const localPublication = page.getByRole('dialog', { name: 'Publish to library', exact: true });
   await localPublication
-    .getByRole('checkbox', { name: 'Replace local memory with shared link', exact: true })
+    .getByRole('checkbox', { name: 'Use the library version in this project', exact: true })
     .check();
   await localPublication.getByRole('button', { name: 'Publish to library', exact: true }).click();
   await expect(localPublication).toBeHidden();

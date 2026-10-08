@@ -16,6 +16,25 @@ jest.mock('@librechat/client', () => ({
     <button {...props}>{children}</button>
   ),
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+  Dropdown: ({
+    value,
+    onChange,
+    options,
+    ariaLabel,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    options: Array<{ value: string; label: string }>;
+    ariaLabel: string;
+  }) => (
+    <select aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)}>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
   OGDialog: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   OGDialogTemplate: ({
     main,
@@ -224,7 +243,7 @@ describe('SharedMemoryPortability', () => {
     );
     renderPortability({ scope: 'library', ids: ['m1', 'm2'], search: '  tone  ' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_export_json' }));
 
     expect(mockExportMutate.mock.calls[0][0]).toEqual({
       format: 'json',
@@ -255,7 +274,7 @@ describe('SharedMemoryPortability', () => {
     fireEvent.change(screen.getByLabelText('com_ui_memory_export_scope'), {
       target: { value: 'filtered' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_export_json' }));
 
     expect(mockExportMutate.mock.calls[0][0]).toEqual({
       format: 'json',
@@ -269,7 +288,7 @@ describe('SharedMemoryPortability', () => {
     fireEvent.change(screen.getByLabelText('com_ui_memory_export_scope'), {
       target: { value: 'accessible' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_export_json' }));
     expect(mockExportMutate.mock.calls[0][0]).toEqual({ format: 'json', scope: 'library' });
   });
 
@@ -284,10 +303,54 @@ describe('SharedMemoryPortability', () => {
       type: 'personal',
       agentId: 'agent-1',
     });
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_export_json' }));
     expect(mockExportMutate.mock.calls[0][0]).toMatchObject({
       scope: 'personal',
       agentId: 'agent-1',
     });
+  });
+
+  it('identifies current and file contents before an overwrite and explains the selected action', async () => {
+    const { container } = renderPortability();
+    await openAndPreview(container);
+    const current = screen.getByText('com_ui_memory_conflict_current').parentElement;
+    const file = screen.getByText('com_ui_memory_conflict_file').parentElement;
+    expect(current).toHaveTextContent('old value');
+    expect(file).toHaveTextContent('new value');
+    expect(screen.getByLabelText('tone')).toHaveValue('skip');
+    expect(screen.getByLabelText('tone')).toHaveAccessibleDescription(
+      'com_ui_memory_conflict_skip_description',
+    );
+    fireEvent.change(screen.getByLabelText('tone'), { target: { value: 'replace' } });
+    expect(screen.getByLabelText('tone')).toHaveAccessibleDescription(
+      'com_ui_memory_conflict_replace_description',
+    );
+  });
+
+  it('names the export origin and avoids invented zero counts', () => {
+    renderPortability({ projectId: undefined, scope: 'personal', search: 'tone' });
+    expect(screen.getByText('com_ui_memory_export_personal')).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'com_ui_memory_export_filtered_uncounted' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('option', { name: 'com_ui_memory_export_accessible_uncounted' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'com_ui_memory_export_filtered' })).toBeNull();
+  });
+
+  it('visibly switches to all-source export when the selected items disappear', () => {
+    const { rerender } = renderPortability({ scope: 'library', ids: ['m1'], accessibleCount: 2 });
+    rerender(
+      <SharedMemoryPortability
+        projectId="project-1"
+        scope="library"
+        ids={[]}
+        accessibleCount={2}
+      />,
+    );
+    expect(screen.getByLabelText('com_ui_memory_export_scope')).toHaveValue('accessible');
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_export_json' }));
+    expect(mockExportMutate.mock.calls[0][0]).toEqual({ format: 'json', scope: 'library' });
   });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import { Archive, Copy, LinkSimple, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
@@ -9,6 +9,7 @@ import {
   OGDialog,
   OGDialogTemplate,
   Textarea,
+  TooltipAnchor,
   useToastContext,
 } from '@librechat/client';
 import type { TProject, SharedMemoryLinkOptions } from 'librechat-data-provider';
@@ -38,6 +39,7 @@ interface Props {
 export default function SharedMemoryLibrary({ project, canEdit }: Props) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
+  const formId = useId();
   const [search, setSearch] = useState('');
   const canCreateLibrary = useHasAccess({
     permissionType: PermissionTypes.SHARED_MEMORIES,
@@ -160,10 +162,9 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
   const libraryActions = (memory: TSharedMemory) =>
     canUpdateLibrary ? (
       <>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        <TooltipAnchor
+          description={localize('com_ui_memory_edit_library_hint')}
+          render={<Button type="button" variant="ghost" size="icon" />}
           aria-label={localize('com_ui_edit_memory')}
           onClick={(event) => {
             event.preventDefault();
@@ -174,11 +175,10 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
           }}
         >
           <PencilSimple className="size-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
+        </TooltipAnchor>
+        <TooltipAnchor
+          description={localize('com_ui_archive_memory_impact')}
+          render={<Button type="button" variant="ghost" size="icon" />}
           aria-label={localize('com_ui_archive_memory')}
           onClick={(event) => {
             event.preventDefault();
@@ -186,7 +186,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
           }}
         >
           <Archive className="size-4" />
-        </Button>
+        </TooltipAnchor>
       </>
     ) : null;
 
@@ -213,13 +213,24 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
         </p>
         {canCreateLibrary && (
           <div className="mt-3 grid min-w-0 gap-2">
+            <label htmlFor={`${formId}-key`} className="text-sm font-medium">
+              {localize('com_ui_project_memory_key')}
+            </label>
             <Input
+              id={`${formId}-key`}
               className="min-w-0"
               value={key}
               onChange={(event) => setKey(event.target.value)}
               placeholder={localize('com_ui_project_memory_key_placeholder')}
             />
+            <p className="text-xs leading-5 text-text-secondary">
+              {localize('com_ui_memory_key_hint')}
+            </p>
+            <label htmlFor={`${formId}-value`} className="mt-1 text-sm font-medium">
+              {localize('com_ui_project_memory_value')}
+            </label>
             <Textarea
+              id={`${formId}-value`}
               className="min-w-0"
               value={value}
               onChange={(event) => setValue(event.target.value)}
@@ -252,6 +263,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                   <div className="mt-1 flex gap-2">
                     <select
                       aria-label={item.key}
+                      className="h-10 min-w-0 rounded-xl border border-border-light bg-surface-primary px-3 text-text-primary dark:[color-scheme:dark]"
                       value={legacySelections[item.key] ?? ''}
                       onChange={(event) =>
                         setLegacySelections((current) => ({
@@ -305,7 +317,11 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
 
       <div className="rounded-2xl border border-border-light p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-medium">{localize('com_ui_project_shared_memories')}</h3>
+          <h3 className="text-sm font-medium">
+            {localize(
+              projectId ? 'com_ui_project_shared_memories' : 'com_ui_memory_library_entries',
+            )}
+          </h3>
           {canEdit && (
             <Button
               type="button"
@@ -318,6 +334,12 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
             </Button>
           )}
         </div>
+        {projectId && (
+          <div className="mt-3 space-y-1 text-sm leading-6 text-text-secondary">
+            <p>{localize('com_ui_memory_link_hint')}</p>
+            <p>{localize('com_ui_memory_copy_hint')}</p>
+          </div>
+        )}
         <Input
           className="mt-3"
           value={search}
@@ -329,6 +351,11 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
           <p className="mt-3 text-sm text-text-secondary">{localize('com_ui_loading')}</p>
         ) : (
           <div className="mt-3 space-y-2" role="list">
+            {projectId && linked.length > 0 && (
+              <h4 className="pt-1 text-xs font-medium text-text-secondary">
+                {localize('com_ui_memory_linked_entries')}
+              </h4>
+            )}
             {linked.map((memory) => (
               <div
                 key={memory.id}
@@ -346,10 +373,9 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                 </div>
                 {libraryActions(memory)}
                 {canEdit && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <TooltipAnchor
+                    description={localize('com_ui_memory_unlink_hint')}
+                    render={<Button type="button" variant="ghost" size="icon" />}
                     aria-label={localize('com_ui_remove_from_project')}
                     onClick={() =>
                       unlink.mutate(
@@ -359,37 +385,51 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                     }
                   >
                     <Trash className="size-4" />
-                  </Button>
+                  </TooltipAnchor>
                 )}
               </div>
             ))}
-            {!linked.length && (
+            {projectId && !linked.length && (
+              <p className="text-sm text-text-secondary">{localize('com_ui_memory_no_links')}</p>
+            )}
+            {available.length > 0 && projectId && (
+              <div className="space-y-1 pt-4">
+                <h4 className="text-xs font-medium text-text-secondary">
+                  {localize('com_ui_memory_available_entries')}
+                </h4>
+                <p className="text-xs leading-5 text-text-secondary">
+                  {localize('com_ui_memory_available_hint')}
+                </p>
+              </div>
+            )}
+            {!available.length && !linked.length && !projectId && (
               <p className="text-sm text-text-secondary">
-                {localize('com_ui_project_no_memories')}
+                {localize('com_ui_memory_library_empty')}
               </p>
             )}
             {available.map((memory) => (
-              <label
+              <div
                 key={memory.id}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-border-light p-3"
+                role="listitem"
+                className="flex items-start gap-3 rounded-xl border border-border-light p-3"
               >
                 <Checkbox
+                  id={`${formId}-${memory.id}`}
                   checked={selected.includes(memory.id)}
                   onCheckedChange={() => toggle(memory.id)}
                   aria-label={memory.key}
                 />
-                <span className="min-w-0 flex-1">
+                <label htmlFor={`${formId}-${memory.id}`} className="min-w-0 flex-1 cursor-pointer">
                   <span className="block text-sm font-medium">{memory.key}</span>
                   <span className="mt-1 block whitespace-pre-wrap text-sm text-text-secondary">
                     {memory.value}
                   </span>
-                </span>
+                </label>
                 {libraryActions(memory)}
                 {canEdit && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
+                  <TooltipAnchor
+                    description={localize('com_ui_memory_copy_hint')}
+                    render={<Button type="button" variant="ghost" size="icon" />}
                     aria-label={localize('com_ui_create_independent_copy')}
                     onClick={(event) => {
                       event.preventDefault();
@@ -400,10 +440,20 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                     }}
                   >
                     <Copy className="size-4" />
-                  </Button>
+                  </TooltipAnchor>
                 )}
-              </label>
+              </div>
             ))}
+            {Boolean(archivedData?.items.length) && (
+              <div className="space-y-1 pt-4">
+                <h4 className="text-xs font-medium text-text-secondary">
+                  {localize('com_ui_memory_archived_entries')}
+                </h4>
+                <p className="text-xs leading-5 text-text-secondary">
+                  {localize('com_ui_memory_archived_hint')}
+                </p>
+              </div>
+            )}
             {archivedData?.items.map((memory) => (
               <div
                 key={memory.id}
@@ -435,6 +485,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
       <OGDialog open={archiveId !== null} onOpenChange={(open) => !open && setArchiveId(null)}>
         <OGDialogTemplate
           title={localize('com_ui_archive_memory')}
+          className="max-w-lg"
           main={
             <div>
               <p className="text-sm text-text-secondary">
@@ -469,16 +520,25 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
       <OGDialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
         <OGDialogTemplate
           title={localize('com_ui_edit_memory')}
+          className="max-w-lg"
           main={
             <div className="space-y-3">
               <p className="text-sm text-text-secondary">{localize('com_ui_edit_memory_impact')}</p>
               {consumerImpact}
+              <label htmlFor={`${formId}-edit-key`} className="block text-sm font-medium">
+                {localize('com_ui_project_memory_key')}
+              </label>
               <Input
+                id={`${formId}-edit-key`}
                 aria-label={localize('com_ui_project_memory_key')}
                 value={editKey}
                 onChange={(event) => setEditKey(event.target.value)}
               />
+              <label htmlFor={`${formId}-edit-value`} className="block text-sm font-medium">
+                {localize('com_ui_project_memory_value')}
+              </label>
               <Textarea
+                id={`${formId}-edit-value`}
                 aria-label={localize('com_ui_project_memory_value')}
                 maxLength={10000}
                 value={editValue}
@@ -541,6 +601,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
       >
         <OGDialogTemplate
           title={localize('com_ui_memory_link_conflict')}
+          className="max-w-lg"
           main={
             <div className="space-y-3">
               <p>{localize('com_ui_memory_link_conflict_description')}</p>

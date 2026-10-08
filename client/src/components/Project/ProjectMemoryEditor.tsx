@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
-import { Checkbox, OGDialog, OGDialogTemplate } from '@librechat/client';
 import { Plus, FloppyDisk as Save, Trash as Trash2 } from '@phosphor-icons/react';
+import { Checkbox, Input, OGDialog, OGDialogTemplate, TooltipAnchor } from '@librechat/client';
 import type { TProject } from 'librechat-data-provider';
 import type { PublishSharedMemoryResult } from '~/data-provider/SharedMemories/types';
 import { usePublishSharedMemoryMutation, useUpdateProjectMutation } from '~/data-provider';
@@ -97,9 +97,12 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
   return (
     <fieldset disabled={updateMutation.isLoading} className="min-w-0 space-y-4">
       <div className="flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-2xl text-sm leading-6 text-text-secondary">
-          {localize('com_ui_project_memories_description')}
-        </p>
+        <div className="max-w-2xl space-y-1">
+          <h3 className="text-sm font-medium">{localize('com_ui_memory_local_entries')}</h3>
+          <p className="text-sm leading-6 text-text-secondary">
+            {localize('com_ui_project_memories_description')}
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           {hasChanges && (
             <span className="text-xs text-text-tertiary">{localize('com_ui_unsaved_changes')}</span>
@@ -126,43 +129,52 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
             key={idx}
             className="grid gap-2 rounded-xl border border-transparent bg-surface-secondary p-2 transition-colors hover:border-border-light hover:bg-surface-hover sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
           >
-            <input
-              type="text"
-              value={mem.key}
-              onChange={(e) => handleChange(idx, 'key', e.target.value)}
-              placeholder={localize('com_ui_project_memory_key_placeholder')}
-              className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2 focus:ring-ring-primary/20"
-            />
-            <input
-              type="text"
-              value={mem.value}
-              onChange={(e) => handleChange(idx, 'value', e.target.value)}
-              placeholder={localize('com_ui_project_memory_value_placeholder')}
-              className="min-w-0 rounded-lg border border-border-light bg-surface-primary px-3 py-2 text-sm text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:border-border-medium focus:border-text-primary focus:ring-2 focus:ring-ring-primary/20"
-            />
-            <button
-              type="button"
-              onClick={() => handleRemove(idx)}
-              className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
-              title={localize('com_ui_delete')}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-            {canPublish && mem.key.trim() && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPublicationMessage(null);
-                  setReplaceWithLink(false);
-                  setPublishKey(mem.key);
-                }}
-                className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover"
-                aria-label={localize('com_ui_publish_memory')}
-                disabled={hasChanges || publishMutation.isLoading}
+            <label className="min-w-0 space-y-1 text-sm">
+              <span className="block font-medium">{localize('com_ui_project_memory_key')}</span>
+              <Input
+                type="text"
+                value={mem.key}
+                onChange={(e) => handleChange(idx, 'key', e.target.value)}
+                placeholder={localize('com_ui_project_memory_key_placeholder')}
+                className="w-full min-w-0"
+              />
+            </label>
+            <label className="min-w-0 space-y-1 text-sm">
+              <span className="block font-medium">{localize('com_ui_project_memory_value')}</span>
+              <Input
+                type="text"
+                value={mem.value}
+                onChange={(e) => handleChange(idx, 'value', e.target.value)}
+                placeholder={localize('com_ui_project_memory_value_placeholder')}
+                className="w-full min-w-0"
+              />
+            </label>
+            <div className="flex flex-wrap items-end gap-1">
+              <TooltipAnchor
+                description={localize('com_ui_memory_remove_local_hint')}
+                render={<button type="button" />}
+                onClick={() => handleRemove(idx)}
+                className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-red-100 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary dark:hover:bg-red-950"
+                aria-label={localize('com_ui_delete')}
               >
-                {localize('com_ui_publish_memory')}
-              </button>
-            )}
+                <Trash2 className="h-3.5 w-3.5" />
+              </TooltipAnchor>
+              {canPublish && mem.key.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublicationMessage(null);
+                    setReplaceWithLink(false);
+                    setPublishKey(mem.key);
+                  }}
+                  className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+                  aria-label={localize('com_ui_publish_memory')}
+                  disabled={hasChanges || publishMutation.isLoading}
+                >
+                  {localize('com_ui_publish_memory')}
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -200,6 +212,7 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
       <OGDialog open={publishKey !== null} onOpenChange={(open) => !open && setPublishKey(null)}>
         <OGDialogTemplate
           title={localize('com_ui_publish_memory')}
+          className="max-w-lg"
           main={
             <div className="space-y-3 text-sm text-text-secondary">
               <p>{localize('com_ui_shared_memory_audience')}</p>
@@ -211,6 +224,7 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
                 />
                 {localize('com_ui_replace_local_memory_link')}
               </label>
+              <p>{localize('com_ui_memory_publish_link_hint')}</p>
             </div>
           }
           selection={{ selectText: localize('com_ui_publish_memory'), selectHandler: publish }}
