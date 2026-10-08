@@ -303,11 +303,12 @@ router.post(
 
 router.post(
   '/shared-memories/import',
-  requireLibraryWriteEnabled,
   (req, res, next) =>
     validateSharedMemoryImportRequest(req.body, true)
       ? next()
       : res.status(400).json({ error: 'Invalid import request.' }),
+  (req, res, next) =>
+    req.body.destination.type === 'library' ? requireLibraryWriteEnabled(req, res, next) : next(),
   validateImportAgentPartition,
   typedImportHandler,
 );
