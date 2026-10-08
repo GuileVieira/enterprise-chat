@@ -1257,6 +1257,7 @@ export const projectSchema = z.object({
   instructions: z.string().optional(),
   memories: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
   memoryKeys: z.array(z.string()).optional(),
+  sharedMemoryIds: z.array(z.string()).optional(),
   promptSnippets: z.array(z.object({ title: z.string(), content: z.string() })).optional(),
   promptGroupIds: z.array(z.string()).optional(),
   fileIds: z.array(z.string()).optional(),
@@ -1533,6 +1534,7 @@ export const projectSchema = z.object({
 });
 
 export const createProjectSchema = projectSchema.omit({
+  sharedMemoryIds: true,
   projectId: true,
   user: true,
   tenantId: true,

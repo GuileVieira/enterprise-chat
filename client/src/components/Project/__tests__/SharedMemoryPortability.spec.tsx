@@ -22,11 +22,17 @@ jest.mock('@librechat/client', () => ({
     selection,
   }: {
     main: React.ReactNode;
-    selection: { selectText: string; selectHandler: () => void };
+    selection: React.ReactElement | { selectText: string; selectHandler: () => void };
   }) => (
     <>
       <div>{main}</div>
-      <button onClick={selection.selectHandler}>{selection.selectText}</button>
+      {jest.requireActual<typeof import('react')>('react').isValidElement(selection) ? (
+        selection
+      ) : (
+        <button onClick={(selection as { selectHandler: () => void }).selectHandler}>
+          {(selection as { selectText: string }).selectText}
+        </button>
+      )}
     </>
   ),
   useToastContext: () => ({ showToast: jest.fn() }),
@@ -84,6 +90,7 @@ async function openAndPreview(container: HTMLElement) {
 describe('SharedMemoryPortability', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockExportMutate.mockReset();
     Object.defineProperty(global.crypto, 'randomUUID', {
       configurable: true,
       value: jest.fn(() => 'operation-id'),
@@ -156,7 +163,7 @@ describe('SharedMemoryPortability', () => {
     expect(screen.queryByText('new value')).not.toBeInTheDocument();
   });
 
-  it('exports requested scope, selected ids, and search without project id for library', () => {
+  it('exports selected ids independently of search without project id for library', () => {
     Object.assign(URL, { createObjectURL: jest.fn(), revokeObjectURL: jest.fn() });
     const createObjectURL = jest.spyOn(URL, 'createObjectURL').mockReturnValue('blob:memories');
     const revokeObjectURL = jest.spyOn(URL, 'revokeObjectURL').mockImplementation();
@@ -172,7 +179,6 @@ describe('SharedMemoryPortability', () => {
       format: 'json',
       scope: 'library',
       ids: ['m1', 'm2'],
-      search: 'tone',
     });
     click.mockRestore();
     createObjectURL.mockRestore();
@@ -204,6 +210,33 @@ describe('SharedMemoryPortability', () => {
       format: 'json',
       scope: 'library',
       search: 'tone',
+    });
+  });
+
+  it('exports all accessible memories independently of selection and search', () => {
+    renderPortability({ scope: 'library', ids: ['m1'], search: 'tone', accessibleCount: 120 });
+    fireEvent.change(screen.getByLabelText('com_ui_memory_export_scope'), {
+      target: { value: 'accessible' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    expect(mockExportMutate.mock.calls[0][0]).toEqual({ format: 'json', scope: 'library' });
+  });
+
+  it('preserves the chosen agent partition for personal import and export', async () => {
+    const { container } = renderPortability({
+      projectId: undefined,
+      scope: 'personal',
+      agentId: 'agent-1',
+    });
+    await openAndPreview(container);
+    expect(mockPreviewMutate.mock.calls[0][0].destination).toEqual({
+      type: 'personal',
+      agentId: 'agent-1',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
+    expect(mockExportMutate.mock.calls[0][0]).toMatchObject({
+      scope: 'personal',
+      agentId: 'agent-1',
     });
   });
 });

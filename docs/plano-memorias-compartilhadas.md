@@ -1,6 +1,7 @@
 # Plano: memórias compartilhadas e portabilidade
 
-Data: 2026-09-15. Status: proposta de implantação; funcionalidade ainda não implementada.
+Data: 2026-09-15. Status em 2026-10-07: implementação existente, auditoria e correções em execução;
+rollout e aceite no ambiente alvo ainda não comprovados.
 
 ## Objetivo
 
@@ -178,27 +179,31 @@ Exemplo mínimo de contrato proposto:
 
 ## Fases de implementação
 
+Checkboxes de implementação assinalados abaixo correspondem a código e evidência local, descritos
+no registro de execução. Tarefas de inventário real, implantação, métricas e expansão permanecem
+abertas até a prova no ambiente alvo. Implementação local não fecha implantação.
+
 ### 1. Contratos e armazenamento durável
 
-- [ ] Inventariar leitores, escritores, exclusões, cache e permissões de memória/projeto/usuário.
-- [ ] Criar schema, tipos, índices e métodos tenant-safe da biblioteca; adicionar referências ao projeto.
-- [ ] Implementar autorização, versão, arquivo/restauração e autoria opcional.
-- [ ] Atualizar permissões nos dois schemas e validar inicialização de roles.
-- [ ] Provar que exclusão de usuário não remove compartilhadas nem torna projetos irrecuperáveis.
+- [x] Inventariar leitores, escritores, exclusões, cache e permissões de memória/projeto/usuário.
+- [x] Criar schema, tipos, índices e métodos tenant-safe da biblioteca; adicionar referências ao projeto.
+- [x] Implementar autorização, versão, arquivo/restauração e autoria opcional.
+- [x] Atualizar permissões nos dois schemas e validar inicialização de roles.
+- [x] Provar que exclusão de usuário não remove compartilhadas nem torna projetos irrecuperáveis.
 
 ### 2. Vínculos, contexto e UX de compartilhamento
 
-- [ ] Implementar listar, publicar, editar, copiar, vincular, desvincular, arquivar e restaurar.
-- [ ] Integrar contexto em todos os consumidores, com deduplicação, conflitos e limites explícitos.
-- [ ] Adicionar biblioteca e ações no editor de projeto; invalidar queries após mutações.
-- [ ] Adicionar resumo de impacto na exclusão de usuário e fluxo para responsável de projetos.
+- [x] Implementar listar, publicar, editar, copiar, vincular, desvincular, arquivar e restaurar.
+- [x] Integrar contexto em todos os consumidores, com deduplicação, conflitos e limites explícitos.
+- [x] Adicionar biblioteca e ações no editor de projeto; invalidar queries após mutações.
+- [x] Adicionar resumo de impacto na exclusão de usuário e fluxo para responsável de projetos.
 
 ### 3. Portabilidade e seleção múltipla
 
-- [ ] Definir DTOs JSON/CSV, limites e validação reutilizável de importação/exportação.
-- [ ] Implementar preview, confirmação, resultados parciais, versões e idempotência de retries.
-- [ ] Implementar mapa de referências e IDs novos por tenant de destino.
-- [ ] Entregar seleção em massa, progresso, resolução de conflitos e relatório de falhas.
+- [x] Definir DTOs JSON/CSV, limites e validação reutilizável de importação/exportação.
+- [x] Implementar preview, confirmação, resultados parciais, versões e idempotência de retries.
+- [x] Implementar mapa de referências e IDs novos por tenant de destino.
+- [x] Entregar seleção em massa, progresso, resolução de conflitos e relatório de falhas.
 - [ ] Validar exportação A → importação B → nova exportação, preservando conteúdo e isolamento.
 
 ### 4. Migração e implantação gradual
@@ -283,3 +288,205 @@ MongoDB com 3. Typecheck passou em data-provider e data-schemas. O typecheck da 
 basal não alterado em `src/skills/import.ts:833` (`Array.at` exige lib ES2022). ESLint focado e
 `git diff --check` passaram. Isto não comprova backup/restauração, migração, habilitação gradual, deploy ou
 comportamento em produção.
+
+## Execução e auditoria — 2026-10-07
+
+O objetivo completo continua em execução. Esta seção substitui a descrição inicial de
+"funcionalidade ainda não implementada", mas não declara implantação concluída.
+
+Correções feitas nesta execução:
+
+- Exportação de selecionadas e todas acessíveis não reaplica busca; somente todas filtradas envia
+  `search`. A rota valida tipos/formato/estado e rejeita filtros estruturados em vez de ampliar o
+  escopo silenciosamente.
+- CSV aceita BOM UTF-8, CRLF e campos com quebras/aspas; exige exatamente `key,value` no cabeçalho.
+  Fórmulas com whitespace inicial também são neutralizadas. JSON mantém conteúdo fiel; CSV para
+  planilha pode adicionar apóstrofo e não substitui JSON como backup de restauração.
+- Importação que substitui memória da biblioteca exige `SHARED_MEMORIES.UPDATE`, além de criação.
+  Referências do pacote precisam ser strings válidas. Auditoria do lote inclui `durationMs`.
+- Vincular/copiar e consultar consumidores exige leitura da biblioteca. Contexto compartilhado
+  falha fechado quando a role não pode ser resolvida.
+- Cópia independente para projeto passa por filtro de conteúdo, lock e quota do projeto.
+- Mutações invalidam biblioteca, pessoais, projetos, candidatos legados, status de contexto e
+  impacto de exclusão. Chaves de queries ficam em `packages/data-provider/src/keys.ts`.
+- Importador da biblioteca recebe o projeto atual. Portabilidade pessoal carrega a partição de
+  agente selecionada. A UI oferece modelo CSV, totais por status e toast de aviso para lote parcial.
+- Edição/arquivamento mostra projetos consumidores autorizados e aviso genérico dos demais. API
+  informa apenas quantidade visível, sem nomes ou quantidade exata de projetos inacessíveis.
+- Inventário desliga `autoCreate` e `autoIndex`; um teste executa o CLI contra Mongo vazio e prova
+  que nenhuma coleção ou índice foi criado.
+- Conflito de vínculo oferece manter locais ou usar compartilhadas. A troca exige timestamp da
+  prévia, remove locais conflitantes e cria vínculos na mesma atualização; projeto editado após a
+  prévia retorna 409 e mantém o conteúdo concorrente. Três testes Mongo e dois de UI cobrem escolhas
+  e versão antiga. O editor local acompanha conteúdo atualizado no servidor quando não há rascunho.
+- Rotas de memórias compartilhadas recusam usuário sem tenant com 403 antes de consultar/escrever.
+  Teste de regressão comprova ausência de escrita. As suites de rota/ACL passaram com 30 testes.
+- Smoke real de navegador encontrou que `OGDialogTemplate` fecha a janela nas ações legadas: isso
+  encerrava a importação ao clicar em Prévia. Importador agora usa botão próprio, mantendo diálogo
+  aberto para prévia, confirmação, resultado e retry. Smoke passou no Chrome com backend real,
+  login real em tenant sintético, Mongo descartável, escolha de vínculo pelo teclado, arquivo JSON
+  baixado e lido, importação pela UI e atualização da biblioteca. Spec reproduzível:
+  `e2e/specs/mock/shared-memories.spec.ts`; captura em
+  `e2e/specs/.test-results/shared-memories-resolves-a-cfa7b-nd-imports-library-memories-chrome/shared-memories.png`.
+- Contador do projeto inclui vínculos compartilhados. `projectSchema` expõe `sharedMemoryIds` na
+  leitura; create/update genéricos continuam omitindo o campo para exigir a rota com ACL própria.
+  Verificação do contrato com Zod confirmou leitura e recusa de vínculos em escrita genérica.
+  Captura final foi inspecionada: contador 1, original vinculado e memória importada na biblioteca.
+
+Reprodução do smoke isolado (provedores/modelo são fixtures locais; Mongo é descartável):
+
+```bash
+E2E_CHROMIUM_CHANNEL=chrome E2E_USE_MEMORY_MONGO=true \
+E2E_PASSTHROUGH_ENV=SHARED_MEMORY_LIBRARY_TENANTS SHARED_MEMORY_LIBRARY_TENANTS='*' \
+npm exec -- playwright test --config=e2e/playwright.config.mock.ts shared-memories.spec.ts --workers=1 --reporter=line
+```
+
+O wildcard acima pertence apenas ao subprocesso do teste descartável. Não configura allowlist de
+produção. A execução final passou em 16 segundos. Typecheck do cliente e ESLint passaram; 30 testes
+de rota/ACL, 7 da biblioteca, 8 de portabilidade, 6 do editor e 21 da página de projeto passaram nas
+execuções focadas. O fixture de login fixa `lang=en`, coerente com seus seletores em inglês.
+
+### Aceite local ampliado
+
+A execução ampliada do mesmo smoke passou em 30,1 segundos e agora prova:
+
+- Publicação pela UI, vínculo por teclado, exportação JSON baixada/lida e importação com prévia,
+  resultado e atualização da biblioteca.
+- Edição do original refletida em dois projetos vinculados; cópia em outro projeto mantém o
+  conteúdo anterior e não recebe vínculo. Arquivo remove a memória do contexto; restauração
+  recupera o vínculo; desvincular preserva o original.
+- Chat real com provider/modelo de teste recebe canário do projeto vinculado. Controle negativo
+  no projeto da cópia não recebe o canário atualizado. O fixture aplica o `systemRunnable` real e
+  remove o comando de asserção do texto inspecionado, evitando falso positivo por eco da pergunta.
+- Autoexclusão sem responsável retorna 409. Com responsável válido, transfere projetos, preserva
+  biblioteca/vínculos/locais, remove pessoais e recusa o token do usuário excluído com 401.
+- OWNER sem capacidade administrativa é recusado com 403 ao excluir outro usuário. ADMIN executa
+  exclusão com transferência; consulta direta do Mongo verifica usuário removido, memória preservada
+  e ACL do responsável com `permBits=15` no tenant correto.
+- Resumo anterior à exclusão informa uma pessoal, três compartilhadas preservadas e três projetos
+  necessitando responsável no cenário sintético.
+
+Falhas reais corrigidas no ciclo ampliado:
+
+- Consulta de 2FA na autoexclusão omitia `tenantId`; agora inclui o campo. Transferência usava a
+  assinatura de `PermissionService` no método de dados; agora usa argumentos posicionais, como a
+  criação de projeto, com scope do tenant do projeto mesmo sob exclusão administrativa global.
+- Limpeza administrativa chamava `deleteConvos` sem filtro; agora usa filtro vazio e `allowEmpty`
+  para limpeza idempotente depois da fase de checkpoints.
+- Salvar memórias locais preserva metadados dos itens inalterados, incrementa versões dos editados
+  e condiciona escrita ao snapshot lido. Importação com prévia anterior a uma edição normal é recusada.
+- Conflito de vínculo também considera `memoryKeys`: escolha explícita mantém a referência legada
+  ou a substitui pelo vínculo, sem apagar memória pessoal nem repetir injeção após conversão.
+- Edição da biblioteca trata quota, chave repetida e tamanho excessivo como erro controlado. Memória
+  arquivada não consome quota ativa até restaurar; restauração já ativa não cobra quota duas vezes.
+- Prévia de importação não devolve `existing.value` bloqueado por uma política posterior. Enums
+  precisam ser strings; arrays não passam por coerção. CSV com extensão maiúscula é reconhecido.
+- Gestor da biblioteca pode editar/arquivar independentemente de `PROJECT EDIT`; leitor pode
+  selecionar itens para exportar. Cópia/vínculo/desvínculo continuam exigindo edição do projeto.
+- Falha de edição mantém diálogo/rascunho e oferece recarregar original. Conflitos 409 invalidam
+  cache para recuperar versão atual. Publicação exige salvar rascunho primeiro; troca da memória
+  local só ocorre se conteúdo ainda corresponde ao snapshot publicado, com aviso quando preservado.
+
+`node api/test/tenant-api-context.js` passou com API keys reais, dois usuários autorizados, leitor
+real de projeto, três fontes de memória (local, pessoal e compartilhada), arquivos e recusa após
+revogação de ACL. O script inicializa roles/índices e usa o verificador real de principal ativo.
+As suites de rota/ACL passaram com 40 testes; controlador/exclusão com 49; métodos de projeto e
+segurança com 14. Specs de editor, biblioteca e cache e typechecks focados também passaram.
+Estas evidências são locais; não comprovam migração ou implantação remota.
+
+Evidência de aceitação local:
+
+| Requisito                                  | Evidência atual                                                                                                                                           | Limite da prova                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Exportar A, importar B, exportar novamente | `api/server/routes/sharedMemories.test.js`: pacote exportado real, igualdade da nova exportação, IDs distintos, autoria B e retry sem duplicação          | MongoMemoryServer e HTTP de teste; autenticação injetada, não staging |
+| Todas filtradas além da página atual       | Mesmo teste: lista de 50, total 73, exportação de 73                                                                                                      | Dados sintéticos locais                                               |
+| Isolamento e ACL de projeto                | `sharedMemories.acl.test.js`: grants reais, viewer/editor e tenant estrangeiro; roles inicializadas como no startup                                       | Não comprova configuração de roles em produção                        |
+| Parser, conflitos e proteção de CSV        | `packages/api/src/memory/shared.spec.ts`                                                                                                                  | Não comprova abertura em aplicativos de planilha                      |
+| Retry e durabilidade                       | Rotas com Mongo + `packages/data-schemas/src/models/sharedMemory.spec.ts`                                                                                 | Não comprova recuperação operacional após crash do processo           |
+| Continuidade de projetos na exclusão       | Unitários e smoke com autoexclusão/ADMIN reais, consulta Mongo de ACL e memória preservada                                                                | Ambiente descartável; ainda não é aceite remoto                       |
+| Contexto e indisponibilidade               | Chat com controle negativo, API keys de dois usuários, Assistants V1/V2 com captura de instruções no provedor e resposta persistida de agente configurado | Provedores/modelos são fixtures locais; ainda falta aceite remoto     |
+| UI e cache                                 | Smoke de biblioteca, publicação pessoal/local, edição, cópia, arquivo/restauração, vínculo, portabilidade e retry parcial com quota real                  | Ambiente isolado; ainda falta aceite remoto                           |
+| Inventário sem escrita                     | Teste do CLI em banco vazio com zero coleções após execução                                                                                               | Inventário do tenant piloto ainda não executado                       |
+
+Pendências que impedem declarar o plano concluído:
+
+1. Executar aceite desses mesmos fluxos no ambiente alvo. Chat normal, API keys, dois usuários,
+   assistentes V1/V2, agente configurado, propagação entre projetos, cópia independente e
+   concorrência de importação/edição/publicação têm evidência local.
+2. Validar acessibilidade e configurações reais no piloto. Smoke de importação parcial/retry,
+   publicação pessoal/local, biblioteca, vínculo, edição, cópia, arquivo/restauração e exclusões passou.
+3. Identificar ambiente e tenant piloto; conferir configuração e permissões reais. Nesta workspace
+   não existe `.env`. Nesta auditoria foi iniciado backend com MongoMemoryServer descartável,
+   fixtures locais de provedores e login real de usuário OWNER em tenant sintético para o smoke.
+   Isso não verifica nem habilita qualquer tenant real. Chromium empacotado estava ausente;
+   o smoke usa Chrome instalado (`E2E_CHROMIUM_CHANNEL=chrome`).
+4. Inventariar tenant piloto, verificar backup/restauração, habilitar allowlist, reiniciar backend
+   compatível antes da UI e executar aceite entre tenants no ambiente alvo.
+5. Medir métricas do piloto e expandir somente após aceite. Nenhuma operação remota, migração,
+   habilitação de tenant, deploy, commit ou push foi executada nesta auditoria.
+
+Verificações realizadas nesta execução: 25 testes da rota de memórias, ACL real, continuidade de
+exclusão e contexto do servidor; 32 testes nas sete suites de UI/cache; 9 testes do parser CSV/JSON,
+suite de contexto tipado e 3 de durabilidade MongoDB. Builds focados de data-provider/API,
+typechecks de data-provider/data-schemas/API/cliente, ESLint dos arquivos alterados e
+`git diff --check` passaram. Os números de suites sobrepostas não devem ser somados como uma
+única execução. `graphify update .` foi executado; limitações de extração do grafo não substituem
+nenhuma destas verificações.
+
+Última rodada: 40 testes de rota/ACL passaram, typechecks de API/data-schemas/cliente e ESLint focado
+passaram. Smoke ampliado passou em 30,1s com publicação pela UI, resumo de impacto, pessoais
+removidas, biblioteca/locais/vínculos preservados e ACL no tenant correto após exclusões reais.
+Edição mantém rascunho em erro, recarrega original explicitamente e invalida cache em conflito 409.
+Publicação concorrente preserva edição local posterior e só troca por vínculo quando o snapshot
+ainda corresponde ao conteúdo publicado. `graphify update .` terminou após as mudanças de código.
+
+### Fechamento dos smokes locais de portabilidade e consumidores
+
+- Publicação pessoal pela UI preserva a pessoal e cria entidade da organização. Publicação local
+  com escolha de troca remove a local somente após criar o vínculo; conteúdo preservado foi lido
+  novamente via API. Resumo de exclusão do cenário passou a informar cinco compartilhadas.
+- Lote parcial esgota quota de 10.000 tokens através de escritas reais, verificando contagem
+  retornada/persistida pelo backend. Primeiro item é criado; segundo falha por quota. Após arquivar
+  memórias que ocupavam espaço, Retry envia só `p2`, mantém `operationId`, termina com dois criados
+  e zero falhas; lista final prova uma única memória de cada chave. Erro agora informa limite de
+  tokens, em vez de apenas “Write failed”.
+- Assistants V1/V2 foram criados e usados por rotas reais. Captura no provedor local de cada
+  `POST /threads/:id/runs` contém `ASSISTANT_MEMORY_CANARY` nas instruções, sem depender de eco da
+  pergunta. Agente configurado recebeu a mesma memória; mensagem final persistida contém a
+  asserção de contexto aprovada pelo modelo de teste.
+- Dois smokes de ciclo/retry passaram juntos em 25,3s; smoke de assistentes/agente passou em 18,8s.
+  O teste de assistentes consulta a mensagem persistida após admissão, pois a API de agentes retorna
+  identificador de geração iniciada, não a resposta final naquele primeiro HTTP.
+
+Faltam identificação do piloto, inventário/dados reais, backup/restauração, deploy/ativação, métricas
+e aceite no ambiente alvo. Nenhum resultado local acima habilita automaticamente tenants reais.
+
+### Inventário técnico e preflight
+
+| Caminho                                                                                                                     | Responsabilidade e limite                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `api/server/routes/memories.js`, `packages/api/src/memory/handlers.ts`, `packages/data-schemas/src/methods/memory.ts`       | Pessoais/partições, leitura protegida, escrita individual com versão/quota e exclusão por usuário             |
+| `packages/api/src/agents/memory.ts`                                                                                         | Ferramentas set/delete usam userId/agentId pessoais; não publicam na biblioteca automaticamente               |
+| `api/server/routes/projects.js`, `packages/data-schemas/src/methods/project.ts`                                             | Locais, referências legadas, ACL e atualização de array com preservação de metadados/versões                  |
+| `api/server/routes/sharedMemories.js`, `packages/api/src/memory/shared*.ts`                                                 | Biblioteca, publicação, vínculo, cópia, contexto/status, conflitos, import/export e idempotência              |
+| `api/server/services/Projects/context.js`, `packages/api/src/utils/projectContext.ts`                                       | Leitor central após PROJECT VIEW; IDs em lote por tenant, filtros, deduplicação e limite explícito            |
+| `Endpoints/agents/initialize.js`, `controllers/agents/{client,openai,responses}.js`, `controllers/assistants/chatV{1,2}.js` | Consumidores do leitor central para chats, agentes e assistentes                                              |
+| `api/server/controllers/UserController.js`, `api/server/routes/admin/users.js`                                              | Exclusão/autoexclusão, transferência de responsável/ACL antes da remoção e preservação da biblioteca          |
+| `packages/data-schemas/src/methods/user.ts`                                                                                 | Invalida cache de documento autenticado ao atualizar/excluir usuário; token antigo foi recusado no smoke      |
+| `client/src/data-provider/SharedMemories/queries.ts`, `packages/data-provider/src/keys.ts`                                  | Invalidação de biblioteca, pessoais, projetos, contexto, candidatos e impacto; conflito 409 força atualização |
+| `packages/data-provider/src/permissions.ts`, `packages/data-schemas/src/schema/role.ts`                                     | READ/CREATE/UPDATE declarados nos dois contratos; startup inicializa roles; gestão não deriva de PROJECT EDIT |
+
+Inventário CLI agora distingue partições pessoais/agente, pessoais órfãs, identidades duplicadas,
+projetos sem responsável existente, referências legadas ambíguas/ausentes e vínculos compartilhados
+ausentes/arquivados. Projeta apenas chaves das memórias locais, nunca seus valores. Teste de Mongo
+povoado verifica contagens e ausência de valores secretos; teste de banco vazio comprova zero
+coleções/índices criados. O relatório continua sendo diagnóstico, não backup nem autorização para
+resolver associações automaticamente. A execução desse preflight no piloto real ainda está aberta.
+
+Última verificação do preflight: testes com Mongo vazio/povoado passaram; rodada completa de
+rotas/ACL passou com 41 testes. ESLint, `git diff --check` e atualização AST do Graphify terminaram.
+
+Bloqueio de conclusão: ambiente alvo e tenant piloto não foram identificados após a solicitação
+inicial e os turnos de validação local. Não é possível executar inventário/backup/migração,
+habilitação, deploy, métricas ou aceite remoto de um tenant não identificado. O objetivo completo
+não foi declarado concluído; as alterações continuam sem commit/push/deploy.

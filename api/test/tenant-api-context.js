@@ -22,12 +22,22 @@ async function main() {
   try {
     await mongoose.connect(mongo.getUri());
     createModels(mongoose);
+    await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+    await db.initializeRoles();
     let secret;
+    let secondSecret;
     let projectId;
     await tenantStorage.run({ tenantId: 'context-test' }, async () => {
       const user = await mongoose.models.User.create({
         email: 'context@test.local',
         role: 'OWNER',
+      });
+      const shared = await mongoose.models.SharedMemory.create({
+        tenantId: 'context-test',
+        key: 'shared_tone',
+        value: 'shared-canary',
+        tokenCount: 1,
+        authorId: user._id,
       });
       const project = await mongoose.models.Project.create({
         projectId: 'context-project',
@@ -36,6 +46,7 @@ async function main() {
         instructions: 'instructions-canary',
         memories: [{ key: 'embedded', value: 'memory-canary' }],
         memoryKeys: ['referenced'],
+        sharedMemoryIds: [String(shared._id)],
         fileIds: ['linked-file'],
       });
       projectId = project.projectId;
@@ -74,10 +85,33 @@ async function main() {
           scope: 'tenant',
         })
       ).key;
+      const second = await mongoose.models.User.create({
+        email: 'second-context@test.local',
+        role: 'OWNER',
+      });
+      await db.grantPermission(
+        PrincipalType.USER,
+        second._id,
+        ResourceType.PROJECT,
+        project._id,
+        PermissionBits.VIEW,
+        user._id,
+      );
+      secondSecret = (
+        await db.createAgentApiKey({
+          userId: second._id,
+          name: 'Second context',
+          tenantId: 'context-test',
+          scope: 'tenant',
+        })
+      ).key;
     });
     const handlers = createTenantApiHandlers({ ...db, getEffectivePermissions });
     const app = express();
-    app.use(express.json(), createRequireApiKeyAuth(db));
+    app.use(
+      express.json(),
+      createRequireApiKeyAuth({ ...db, isPrincipalActive: db.isAgentTriggerPrincipalActive }),
+    );
     app.post('/context', handlers.requireProjectAccess, async (req, res, next) => {
       try {
         res.json(await loadProjectContext({ req, projectId: req.body.projectId }));
@@ -88,10 +122,10 @@ async function main() {
     server = app.listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     const endpoint = `http://127.0.0.1:${server.address().port}/context`;
-    const call = (id) =>
+    const call = (id, key = secret) =>
       fetch(endpoint, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: id }),
       });
     const response = await call(projectId);
@@ -100,6 +134,10 @@ async function main() {
     assert.equal(context.projectInstructions, 'instructions-canary');
     assert.match(context.projectMemories, /memory-canary/);
     assert.match(context.projectMemories, /referenced-canary/);
+    assert.match(context.projectMemories, /shared-canary/);
+    const secondResponse = await call(projectId, secondSecret);
+    assert.equal(secondResponse.status, 200);
+    assert.match((await secondResponse.json()).projectMemories, /shared-canary/);
     assert.deepEqual(context.projectFileIds.sort(), ['linked-file', 'project-file']);
     assert.equal((await call('foreign-project')).status, 404);
     await tenantStorage.run({ tenantId: 'context-test' }, async () => {
@@ -107,7 +145,7 @@ async function main() {
     });
     assert.equal((await call(projectId)).status, 403);
     console.log(
-      'Tenant key + real project loader: instructions, both memory sources, linked/project files and ACL passed.',
+      'Tenant keys + real project loader: instructions, personal/local/shared memory, two authorized users, files and ACL passed.',
     );
   } finally {
     if (server) await new Promise((resolve) => server.close(resolve));

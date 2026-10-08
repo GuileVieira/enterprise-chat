@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProjectDetailPage from '../ProjectDetailPage';
 
@@ -29,6 +29,11 @@ jest.mock('~/hooks/useProjectPermissions', () => ({
 jest.mock('../ProjectPromptGroups', () => ({
   __esModule: true,
   default: () => <div data-testid="project-prompt-groups" />,
+}));
+
+jest.mock('../SharedMemoryLibrary', () => ({
+  __esModule: true,
+  default: () => <div data-testid="shared-memory-library" />,
 }));
 
 jest.mock('../ProjectPromptSnippetsManager', () => ({

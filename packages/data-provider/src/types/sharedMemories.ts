@@ -127,7 +127,12 @@ export interface ProjectSharedMemoryContextStatus {
 export interface SharedMemoryConsumers {
   total: number;
   visible: Array<{ projectId: string; name?: string }>;
-  hiddenCount: number;
+  hasOtherConsumers: boolean;
+}
+
+export interface SharedMemoryLinkOptions {
+  conflictResolution?: 'keep-local' | 'use-shared';
+  expectedUpdatedAt?: string;
 }
 
 export type PublishSharedMemoryRequest =

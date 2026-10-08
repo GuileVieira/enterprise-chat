@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Permissions, PermissionTypes } from 'librechat-data-provider';
+import { Checkbox, OGDialog, OGDialogTemplate } from '@librechat/client';
 import { Plus, FloppyDisk as Save, Trash as Trash2 } from '@phosphor-icons/react';
+import type { TProject } from 'librechat-data-provider';
+import type { PublishSharedMemoryResult } from '~/data-provider/SharedMemories/types';
 import { usePublishSharedMemoryMutation, useUpdateProjectMutation } from '~/data-provider';
 import { useHasAccess, useLocalize } from '~/hooks';
-import type { PublishSharedMemoryResult } from '~/data-provider/SharedMemories/types';
-import { Permissions, PermissionTypes } from 'librechat-data-provider';
-import type { TProject } from 'librechat-data-provider';
-import { Checkbox, OGDialog, OGDialogTemplate } from '@librechat/client';
 
 interface ProjectMemoryEditorProps {
   project: TProject;
@@ -27,8 +27,20 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
   );
 
   const [hasChanges, setHasChanges] = useState(false);
+  const sourceMemories = useRef(project.memories);
+  useEffect(() => {
+    if (sourceMemories.current === project.memories) return;
+    sourceMemories.current = project.memories;
+    if (hasChanges) return;
+    setMemories(
+      project.memories?.length
+        ? project.memories.map(({ key, value }) => ({ key, value }))
+        : [{ key: '', value: '' }],
+    );
+  }, [project.memories, hasChanges]);
   const [publishKey, setPublishKey] = useState<string | null>(null);
   const [replaceWithLink, setReplaceWithLink] = useState(false);
+  const [publicationMessage, setPublicationMessage] = useState<'error' | 'retained' | null>(null);
 
   const handleChange = useCallback((index: number, field: 'key' | 'value', value: string) => {
     setMemories((prev) => {
@@ -74,8 +86,10 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
           const published = result as PublishSharedMemoryResult;
           if (published.sourceReplaced)
             setMemories((items) => items.filter((item) => item.key !== publishKey));
+          if (replaceWithLink && !published.sourceReplaced) setPublicationMessage('retained');
           setPublishKey(null);
         },
+        onError: () => setPublicationMessage('error'),
       },
     );
   };
@@ -138,11 +152,13 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
               <button
                 type="button"
                 onClick={() => {
+                  setPublicationMessage(null);
                   setReplaceWithLink(false);
                   setPublishKey(mem.key);
                 }}
                 className="rounded-lg p-2 text-text-secondary transition-colors hover:bg-surface-hover"
                 aria-label={localize('com_ui_publish_memory')}
+                disabled={hasChanges || publishMutation.isLoading}
               >
                 {localize('com_ui_publish_memory')}
               </button>
@@ -162,6 +178,23 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
       {updateMutation.isError && (
         <p role="alert" className="text-sm text-red-600">
           {localize('com_ui_project_memories_save_error')}
+        </p>
+      )}
+      {hasChanges && canPublish && (
+        <p className="text-sm text-text-secondary">
+          {localize('com_ui_memory_publish_save_first')}
+        </p>
+      )}
+      {publicationMessage && (
+        <p
+          role={publicationMessage === 'error' ? 'alert' : 'status'}
+          className="text-sm text-text-secondary"
+        >
+          {localize(
+            publicationMessage === 'error'
+              ? 'com_ui_memory_publish_error'
+              : 'com_ui_memory_publish_local_retained',
+          )}
         </p>
       )}
       <OGDialog open={publishKey !== null} onOpenChange={(open) => !open && setPublishKey(null)}>

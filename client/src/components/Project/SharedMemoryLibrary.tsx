@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { isAxiosError } from 'axios';
+import { Permissions, PermissionTypes } from 'librechat-data-provider';
 import { Archive, Copy, LinkSimple, PencilSimple, Plus, Trash } from '@phosphor-icons/react';
 import {
   Button,
@@ -9,8 +11,8 @@ import {
   Textarea,
   useToastContext,
 } from '@librechat/client';
-import { Permissions, PermissionTypes } from 'librechat-data-provider';
-import type { TProject } from 'librechat-data-provider';
+import type { TProject, SharedMemoryLinkOptions } from 'librechat-data-provider';
+import type { TSharedMemory } from '~/data-provider/SharedMemories/types';
 import {
   useArchiveSharedMemoryMutation,
   useCopySharedMemoryMutation,
@@ -21,12 +23,12 @@ import {
   useSharedMemoriesQuery,
   useProjectLegacyMemoryCandidatesQuery,
   useSharedMemoryContextStatusQuery,
+  useSharedMemoryConsumersQuery,
   useResolveProjectLegacyMemoriesMutation,
   useUnlinkSharedMemoryMutation,
 } from '~/data-provider';
-import { useHasAccess, useLocalize } from '~/hooks';
-import type { TSharedMemory } from '~/data-provider/SharedMemories/types';
 import SharedMemoryPortability from './SharedMemoryPortability';
+import { useHasAccess, useLocalize } from '~/hooks';
 
 interface Props {
   project?: TProject;
@@ -54,12 +56,27 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
   const resolveLegacy = useResolveProjectLegacyMemoriesMutation();
   const [legacySelections, setLegacySelections] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<string[]>([]);
+  const [linkConflict, setLinkConflict] = useState<{
+    memoryIds: string[];
+    keys: string[];
+    expectedUpdatedAt: string;
+  } | null>(null);
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
   const [archiveId, setArchiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState<TSharedMemory | null>(null);
+  const { data: consumers } = useSharedMemoryConsumersQuery(editing?.id ?? archiveId);
+  const consumerImpact = (
+    <div className="text-sm text-text-secondary">
+      {consumers?.visible.map((consumer) => (
+        <p key={consumer.projectId}>{consumer.name ?? consumer.projectId}</p>
+      ))}
+      {consumers?.hasOtherConsumers && <p>{localize('com_ui_memory_other_consumers')}</p>}
+    </div>
+  );
   const [editKey, setEditKey] = useState('');
   const [editValue, setEditValue] = useState('');
+  const [editError, setEditError] = useState(false);
   const create = useCreateSharedMemoryMutation();
   const link = useLinkSharedMemoriesMutation();
   const unlink = useUnlinkSharedMemoryMutation();
@@ -109,17 +126,69 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
       },
     );
   };
-  const addSelected = () =>
+  const addSelected = (options: SharedMemoryLinkOptions = {}) =>
     link.mutate(
-      { projectId: projectId ?? '', memoryIds: selected },
+      { projectId: projectId ?? '', memoryIds: linkConflict?.memoryIds ?? selected, ...options },
       {
         onSuccess: () => {
           setSelected([]);
+          setLinkConflict(null);
           notify('success');
         },
-        onError: () => notify('error'),
+        onError: (error) => {
+          if (
+            isAxiosError<{ conflicts?: Array<{ key: string }>; expectedUpdatedAt?: string }>(
+              error,
+            ) &&
+            error.response?.status === 409 &&
+            error.response.data.conflicts?.length &&
+            error.response.data.expectedUpdatedAt
+          ) {
+            setLinkConflict({
+              memoryIds: [...selected],
+              keys: error.response.data.conflicts.map((item) => item.key),
+              expectedUpdatedAt: error.response.data.expectedUpdatedAt,
+            });
+            return;
+          }
+          setLinkConflict(null);
+          notify('error');
+        },
       },
     );
+
+  const libraryActions = (memory: TSharedMemory) =>
+    canUpdateLibrary ? (
+      <>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={localize('com_ui_edit_memory')}
+          onClick={(event) => {
+            event.preventDefault();
+            setEditing(memory);
+            setEditError(false);
+            setEditKey(memory.key);
+            setEditValue(memory.value);
+          }}
+        >
+          <PencilSimple className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={localize('com_ui_archive_memory')}
+          onClick={(event) => {
+            event.preventDefault();
+            setArchiveId(memory.id);
+          }}
+        >
+          <Archive className="size-4" />
+        </Button>
+      </>
+    ) : null;
 
   return (
     <section className="space-y-5" aria-label={localize('com_ui_shared_memory_library')}>
@@ -129,6 +198,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
             {localize('com_ui_shared_memory_library')}
           </h3>
           <SharedMemoryPortability
+            projectId={projectId}
             ids={selected}
             scope="library"
             search={search}
@@ -240,7 +310,7 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
             <Button
               type="button"
               size="sm"
-              onClick={addSelected}
+              onClick={() => addSelected()}
               disabled={!selected.length || link.isLoading}
             >
               <LinkSimple className="mr-1 size-4" />
@@ -274,38 +344,22 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                     {memory.authorName ?? localize('com_ui_memory_author_removed')}
                   </p>
                 </div>
+                {libraryActions(memory)}
                 {canEdit && (
-                  <>
-                    {canUpdateLibrary && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={localize('com_ui_edit_memory')}
-                        onClick={() => {
-                          setEditing(memory);
-                          setEditKey(memory.key);
-                          setEditValue(memory.value);
-                        }}
-                      >
-                        <PencilSimple className="size-4" />
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={localize('com_ui_remove_from_project')}
-                      onClick={() =>
-                        unlink.mutate(
-                          { projectId: projectId ?? '', memoryId: memory.id },
-                          { onSuccess: () => notify('success'), onError: () => notify('error') },
-                        )
-                      }
-                    >
-                      <Trash className="size-4" />
-                    </Button>
-                  </>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={localize('com_ui_remove_from_project')}
+                    onClick={() =>
+                      unlink.mutate(
+                        { projectId: projectId ?? '', memoryId: memory.id },
+                        { onSuccess: () => notify('success'), onError: () => notify('error') },
+                      )
+                    }
+                  >
+                    <Trash className="size-4" />
+                  </Button>
                 )}
               </div>
             ))}
@@ -322,7 +376,6 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                 <Checkbox
                   checked={selected.includes(memory.id)}
                   onCheckedChange={() => toggle(memory.id)}
-                  disabled={!canEdit}
                   aria-label={memory.key}
                 />
                 <span className="min-w-0 flex-1">
@@ -331,38 +384,23 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
                     {memory.value}
                   </span>
                 </span>
+                {libraryActions(memory)}
                 {canEdit && (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={localize('com_ui_create_independent_copy')}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        copy.mutate(
-                          { id: memory.id, projectId: projectId ?? '' },
-                          { onSuccess: () => notify('success'), onError: () => notify('error') },
-                        );
-                      }}
-                    >
-                      <Copy className="size-4" />
-                    </Button>
-                    {canUpdateLibrary && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={localize('com_ui_archive_memory')}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          setArchiveId(memory.id);
-                        }}
-                      >
-                        <Archive className="size-4" />
-                      </Button>
-                    )}
-                  </>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={localize('com_ui_create_independent_copy')}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      copy.mutate(
+                        { id: memory.id, projectId: projectId ?? '' },
+                        { onSuccess: () => notify('success'), onError: () => notify('error') },
+                      );
+                    }}
+                  >
+                    <Copy className="size-4" />
+                  </Button>
                 )}
               </label>
             ))}
@@ -398,9 +436,12 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
         <OGDialogTemplate
           title={localize('com_ui_archive_memory')}
           main={
-            <p className="text-sm text-text-secondary">
-              {localize('com_ui_archive_memory_impact')}
-            </p>
+            <div>
+              <p className="text-sm text-text-secondary">
+                {localize('com_ui_archive_memory_impact')}
+              </p>
+              {consumerImpact}
+            </div>
           }
           selection={{
             selectText: localize('com_ui_archive_memory'),
@@ -431,30 +472,102 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
           main={
             <div className="space-y-3">
               <p className="text-sm text-text-secondary">{localize('com_ui_edit_memory_impact')}</p>
-              <Input value={editKey} onChange={(event) => setEditKey(event.target.value)} />
-              <Textarea value={editValue} onChange={(event) => setEditValue(event.target.value)} />
+              {consumerImpact}
+              <Input
+                aria-label={localize('com_ui_project_memory_key')}
+                value={editKey}
+                onChange={(event) => setEditKey(event.target.value)}
+              />
+              <Textarea
+                aria-label={localize('com_ui_project_memory_value')}
+                maxLength={10000}
+                value={editValue}
+                onChange={(event) => setEditValue(event.target.value)}
+              />
+              {editError && (
+                <div role="alert" className="space-y-2 text-sm text-text-secondary">
+                  <p>{localize('com_ui_memory_edit_error')}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const latest =
+                        accessibleData?.items.find((item) => item.id === editing?.id) ??
+                        archivedData?.items.find((item) => item.id === editing?.id);
+                      if (!latest) return;
+                      setEditing(latest);
+                      setEditKey(latest.key);
+                      setEditValue(latest.value);
+                      setEditError(false);
+                    }}
+                  >
+                    {localize('com_ui_memory_reload_original')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          }
+          selection={
+            <Button
+              type="button"
+              disabled={update.isLoading || !editKey.trim() || !editValue.trim()}
+              onClick={() => {
+                if (editing)
+                  update.mutate(
+                    {
+                      id: editing.id,
+                      key: editKey.trim(),
+                      value: editValue.trim(),
+                      expectedUpdatedAt: editing.updatedAt,
+                    },
+                    {
+                      onSuccess: () => {
+                        setEditing(null);
+                        notify('success');
+                      },
+                      onError: () => setEditError(true),
+                    },
+                  );
+              }}
+            >
+              {localize('com_ui_save')}
+            </Button>
+          }
+        />
+      </OGDialog>
+      <OGDialog
+        open={linkConflict !== null}
+        onOpenChange={(open) => !open && setLinkConflict(null)}
+      >
+        <OGDialogTemplate
+          title={localize('com_ui_memory_link_conflict')}
+          main={
+            <div className="space-y-3">
+              <p>{localize('com_ui_memory_link_conflict_description')}</p>
+              <p>{linkConflict?.keys.join(', ')}</p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={link.isLoading}
+                onClick={() =>
+                  addSelected({
+                    conflictResolution: 'keep-local',
+                    expectedUpdatedAt: linkConflict?.expectedUpdatedAt,
+                  })
+                }
+              >
+                {localize('com_ui_memory_keep_local')}
+              </Button>
             </div>
           }
           selection={{
-            selectText: localize('com_ui_save'),
-            selectHandler: () => {
-              if (editing)
-                update.mutate(
-                  {
-                    id: editing.id,
-                    key: editKey.trim(),
-                    value: editValue.trim(),
-                    expectedUpdatedAt: editing.updatedAt,
-                  },
-                  {
-                    onSuccess: () => {
-                      setEditing(null);
-                      notify('success');
-                    },
-                    onError: () => notify('error'),
-                  },
-                );
-            },
+            selectText: localize('com_ui_memory_use_shared'),
+            isLoading: link.isLoading,
+            selectHandler: () =>
+              addSelected({
+                conflictResolution: 'use-shared',
+                expectedUpdatedAt: linkConflict?.expectedUpdatedAt,
+              }),
           }}
         />
       </OGDialog>

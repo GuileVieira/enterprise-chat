@@ -26,12 +26,17 @@ export function validateSharedMemoryImportRequest(
 ): boolean {
   if (!isPlainObject(body) || (requireOperationId && !isScalarString(body.operationId, 128)))
     return false;
-  if (!['json', 'csv'].includes(String(body.format)) || typeof body.content !== 'string')
+  if (
+    typeof body.format !== 'string' ||
+    !['json', 'csv'].includes(body.format) ||
+    typeof body.content !== 'string'
+  )
     return false;
   const destination = body.destination;
   if (
     !isPlainObject(destination) ||
-    !['library', 'project', 'personal'].includes(String(destination.type))
+    typeof destination.type !== 'string' ||
+    !['library', 'project', 'personal'].includes(destination.type)
   )
     return false;
   if (destination.type === 'project' && !isScalarString(destination.projectId)) return false;
@@ -53,7 +58,8 @@ export function validateSharedMemoryImportRequest(
       if (
         !isScalarString(ref, 128) ||
         !isPlainObject(rawDecision) ||
-        !['skip', 'replace', 'copy'].includes(String(rawDecision.action))
+        typeof rawDecision.action !== 'string' ||
+        !['skip', 'replace', 'copy'].includes(rawDecision.action)
       )
         return false;
       if (rawDecision.copyKey != null && !isSharedMemoryKey(rawDecision.copyKey)) return false;
@@ -74,6 +80,7 @@ export function validateSharedMemoryImportRequest(
 }
 
 export function parseMemoryCsv(input: string): PortableMemory[] {
+  input = input.replace(/^\uFEFF/, '');
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
@@ -96,6 +103,8 @@ export function parseMemoryCsv(input: string): PortableMemory[] {
         rows.push(row);
         row = [];
       }
+    } else if (char === '\r' && !quoted && input[i + 1] === '\n') {
+      continue;
     } else if (closedQuote) {
       throw new Error('CSV contains characters after a closing quote.');
     } else if (char !== '\r' || quoted) {
@@ -106,7 +115,7 @@ export function parseMemoryCsv(input: string): PortableMemory[] {
   row.push(field);
   if (row.some(Boolean)) rows.push(row);
   const [header, ...data] = rows;
-  if (!header || header[0] !== 'key' || header[1] !== 'value') {
+  if (!header || header.length !== 2 || header[0] !== 'key' || header[1] !== 'value') {
     throw new Error('CSV header must be key,value.');
   }
   if (data.some((columns) => columns.length !== 2))
@@ -115,7 +124,11 @@ export function parseMemoryCsv(input: string): PortableMemory[] {
 }
 
 export function parseMemoryImport(body: { format?: unknown; content?: unknown }): PortableMemory[] {
-  if (!['json', 'csv'].includes(String(body.format)) || typeof body.content !== 'string') {
+  if (
+    typeof body.format !== 'string' ||
+    !['json', 'csv'].includes(body.format) ||
+    typeof body.content !== 'string'
+  ) {
     throw new Error('Invalid import request.');
   }
   let raw: unknown;
@@ -141,7 +154,8 @@ export function parseMemoryImport(body: { format?: unknown; content?: unknown })
   }
   const refs = new Set<string>();
   return items.map((item, index) => {
-    const ref = String(item?.ref || `item_${index + 1}`);
+    const ref = item?.ref ?? `item_${index + 1}`;
+    if (!isScalarString(ref, 128)) throw new Error('Invalid import ref.');
     if (refs.has(ref)) throw new Error(`Duplicate import ref: ${ref}.`);
     refs.add(ref);
     return {
@@ -180,6 +194,6 @@ export function classifyMemoryImport(
 }
 
 export function escapeMemoryCsvCell(value: string): string {
-  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
+  const safe = /^\s*[=+\-@]|^[\t\r\n]/.test(value) ? `'${value}` : value;
   return `"${safe.replace(/"/g, '""')}"`;
 }

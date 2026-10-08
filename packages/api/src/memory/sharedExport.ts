@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
-import type { Response } from 'express';
-import type { FiltersConfig } from 'librechat-data-provider';
 import type {
   IMemoryEntryLean,
   IProject,
   IProjectMemory,
   ISharedMemory,
 } from '@librechat/data-schemas';
-import type { ServerRequest } from '~/types/http';
+import type { FiltersConfig } from 'librechat-data-provider';
+import type { Response } from 'express';
 import type { ProjectedStoredMemory } from './protection';
+import type { ServerRequest } from '~/types/http';
 import { escapeMemoryCsvCell, isScalarString } from './shared';
 
 type SharedMemoryExportScope = 'library' | 'project' | 'personal';
@@ -105,6 +105,23 @@ export function createSharedMemoryExportHandler(
     const scope = req.query.scope;
     if (!isExportScope(scope)) {
       res.status(400).json({ error: 'Invalid export scope.' });
+      return;
+    }
+    if (
+      Object.keys(req.query).some(
+        (key) =>
+          !['scope', 'ids', 'projectId', 'agentId', 'search', 'status', 'format'].includes(key),
+      ) ||
+      (req.query.ids != null && typeof req.query.ids !== 'string') ||
+      (req.query.search != null &&
+        (typeof req.query.search !== 'string' || req.query.search.length > 256)) ||
+      (req.query.format != null &&
+        (typeof req.query.format !== 'string' || !['json', 'csv'].includes(req.query.format))) ||
+      (req.query.status != null &&
+        (typeof req.query.status !== 'string' ||
+          !['active', 'archived'].includes(req.query.status)))
+    ) {
+      res.status(400).json({ error: 'Invalid export filters.' });
       return;
     }
 

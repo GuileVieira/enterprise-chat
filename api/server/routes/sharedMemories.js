@@ -38,6 +38,12 @@ const { findProjectForRequest } = require('~/server/services/Projects/access');
 
 const router = express.Router();
 router.use(requireJwtAuth, express.json({ limit: '1mb' }), configMiddleware);
+router.use((req, res, next) => {
+  if (typeof req.user?.tenantId !== 'string' || !req.user.tenantId.trim()) {
+    return res.status(403).json({ error: 'Tenant context is required for shared memories.' });
+  }
+  next();
+});
 const requireLibraryWriteEnabled = (req, res, next) => {
   const allowlist = (process.env.SHARED_MEMORY_LIBRARY_TENANTS || '')
     .split(',')
@@ -127,6 +133,10 @@ const typedReadHandlers = createSharedMemoryReadHandlers({
 const typedCrudHandlers = createSharedMemoryCrudHandlers({
   projectFor,
   projectEditPermission: PermissionBits.EDIT,
+  blockFilteredMemoryContent,
+  withLibraryWrite,
+  countTokens,
+  assertProjectQuota: (...args) => importSupport.assertProjectQuota(...args),
 });
 const typedExportHandler = createSharedMemoryExportHandler({
   projectFor,
@@ -262,12 +272,18 @@ router.post(
 router.post(
   '/projects/:projectId/shared-memories',
   requireLibraryWriteEnabled,
+  checkSharedRead,
   typedCrudHandlers.link,
 );
 
 router.delete('/projects/:projectId/shared-memories/:memoryId', typedCrudHandlers.unlink);
 
-router.post('/shared-memories/:id/copy', requireLibraryWriteEnabled, typedCrudHandlers.copy);
+router.post(
+  '/shared-memories/:id/copy',
+  requireLibraryWriteEnabled,
+  checkSharedRead,
+  typedCrudHandlers.copy,
+);
 
 router.post(
   '/shared-memories/import/preview',
@@ -327,6 +343,6 @@ router.get(
 );
 
 router.post('/projects/:projectId/shared-memories/owner', typedLifecycleHandlers.reassignOwner);
-router.get('/shared-memories/:id/consumers', typedLifecycleHandlers.consumers);
+router.get('/shared-memories/:id/consumers', checkSharedRead, typedLifecycleHandlers.consumers);
 
 module.exports = router;

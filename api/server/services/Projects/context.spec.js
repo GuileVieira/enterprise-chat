@@ -100,6 +100,26 @@ describe('loadProjectContext', () => {
     expect(mockGetProjectById).toHaveBeenCalledWith('proj-123');
   });
 
+  it('does not load library memories when the role cannot be resolved', async () => {
+    mockGetProjectById.mockResolvedValue({
+      _id: 'mongo-project',
+      projectId: 'proj-123',
+      tenantId: 'tenant-1',
+      sharedMemoryIds: ['shared'],
+    });
+    mockGetFiles.mockResolvedValue([]);
+    const find = jest.fn();
+    require('mongoose').models.SharedMemory = { find };
+    try {
+      await loadProjectContext({ req, projectId: 'proj-123' });
+      const loadShared = mockLoadProjectMemories.mock.calls[0][3];
+      expect(await loadShared(['shared'])).toEqual([]);
+      expect(find).not.toHaveBeenCalled();
+    } finally {
+      delete require('mongoose').models.SharedMemory;
+    }
+  });
+
   it('adds recent manager and strategist diary entries to project context', async () => {
     mockGetProjectById.mockResolvedValue({
       _id: 'mongo-project',

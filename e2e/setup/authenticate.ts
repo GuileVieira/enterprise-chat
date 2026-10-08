@@ -66,6 +66,7 @@ async function authenticate(config: FullConfig, user: User) {
     // Set localStorage before navigating to the page
     await page.context().addInitScript(() => {
       localStorage.setItem('navVisible', 'true');
+      localStorage.setItem('lang', 'en');
     });
     console.log('🤖: ✔️  localStorage: set Nav as Visible', storageState);
 

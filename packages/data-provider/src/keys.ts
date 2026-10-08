@@ -68,6 +68,12 @@ export enum QueryKeys {
   banner = 'banner',
   /* Memories */
   memories = 'memories',
+  sharedMemories = 'sharedMemories',
+  projectLegacyMemoryCandidates = 'project-legacy-memory-candidates',
+  sharedMemoryContextStatus = 'shared-memory-context-status',
+  sharedMemoryConsumers = 'shared-memory-consumers',
+  memoryDeletionImpact = 'memory-deletion-impact',
+  projectMemoryDeletionImpact = 'project-memory-deletion-impact',
   principalSearch = 'principalSearch',
   accessRoles = 'accessRoles',
   resourcePermissions = 'resourcePermissions',
@@ -128,7 +134,7 @@ export enum QueryKeys {
 // Dynamic query keys that require parameters
 export const DynamicQueryKeys = {
   sharedMemories: (params: import('./types').SharedMemoriesParams = {}) =>
-    ['sharedMemories', params] as const,
+    [QueryKeys.sharedMemories, params] as const,
   agentFiles: (agentId: string) => ['agentFiles', agentId] as const,
   projectFiles: (projectId: string) => ['projectFiles', projectId] as const,
   projectMetaAds: (projectId: string) => ['projectMetaAds', projectId] as const,

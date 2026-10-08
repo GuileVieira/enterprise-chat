@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
-import type { Response } from 'express';
 import type { IProject, IProjectMemory } from '@librechat/data-schemas';
-
-import { SharedMemoryBusyError, SharedMemoryQuotaError } from './sharedService';
-import { isScalarString, isSharedMemoryKey } from './shared';
+import type { Response } from 'express';
 import type { AuthenticatedRequest } from './sharedRouteHandlers';
+import { isScalarString, isSharedMemoryKey, SHARED_MEMORY_MAX_VALUE_LENGTH } from './shared';
+import { SharedMemoryBusyError, SharedMemoryQuotaError } from './sharedService';
 
 interface ProjectRecord extends IProject {
   _id: mongoose.Types.ObjectId;
@@ -157,6 +156,14 @@ export function createSharedMemoryProjectHandlers(
       res.status(404).json({ error: 'Source memory not found.' });
       return;
     }
+    if (
+      !isSharedMemoryKey(sourceMemory.key) ||
+      !sourceMemory.value.trim() ||
+      sourceMemory.value.length > SHARED_MEMORY_MAX_VALUE_LENGTH
+    ) {
+      res.status(400).json({ error: 'Source key or value is not valid for the library.' });
+      return;
+    }
     if (deps.blockFilteredMemoryContent(req, res, sourceMemory)) {
       return;
     }
@@ -176,7 +183,11 @@ export function createSharedMemoryProjectHandlers(
       let sourceReplaced = false;
       if (source.type === 'project' && req.body.replaceWithLink) {
         const updated = await mongoose.models.Project.findOneAndUpdate(
-          { _id: project?._id, tenantId: req.user.tenantId, 'memories.key': source.key },
+          {
+            _id: project?._id,
+            tenantId: req.user.tenantId,
+            memories: { $elemMatch: { key: source.key, value: sourceMemory.value } },
+          },
           {
             $pull: { memories: { key: source.key } },
             $addToSet: { sharedMemoryIds: String(memory._id) },

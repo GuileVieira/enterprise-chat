@@ -158,7 +158,10 @@ export default function ProjectDetailPage() {
 
   const indexedFiles = filesQuery.data?.filter((file) => file.embedded).length ?? 0;
   const totalFiles = filesQuery.data?.length ?? 0;
-  const memoryCount = (project.memories?.length ?? 0) + (project.memoryKeys?.length ?? 0);
+  const memoryCount =
+    (project.memories?.length ?? 0) +
+    (project.memoryKeys?.length ?? 0) +
+    (project.sharedMemoryIds?.length ?? 0);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-surface-primary">

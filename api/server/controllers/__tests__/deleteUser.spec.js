@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const mockGetUserById = jest.fn();
 const mockDeleteMessages = jest.fn();
 const mockDeleteAllUserSessions = jest.fn();
@@ -38,6 +40,8 @@ const mockRevokeUserCodeEnvironmentWorkers = jest.fn();
 const mockGetAppConfig = jest.fn();
 
 jest.mock('@librechat/data-schemas', () => ({
+  tenantStorage: jest.requireActual('../../../../packages/data-schemas/src/config/tenantContext.ts')
+    .tenantStorage,
   logger: { error: jest.fn(), info: jest.fn() },
   webSearchKeys: [],
 }));
@@ -226,9 +230,24 @@ function stubDeletionMocks() {
   mockGetAppConfig.mockResolvedValue({});
 }
 
-beforeEach(() => {
+let mongo;
+beforeAll(async () => {
+  mongo = await MongoMemoryServer.create();
+  await mongoose.connect(mongo.getUri());
+  const schema = jest.requireActual(
+    '../../../../packages/data-schemas/src/schema/project.ts',
+  ).default;
+  mongoose.model('Project', schema);
+});
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongo.stop();
+});
+
+beforeEach(async () => {
   jest.clearAllMocks();
   stubDeletionMocks();
+  await mongoose.models.Project.deleteMany({});
 });
 
 describe('deleteUserData', () => {

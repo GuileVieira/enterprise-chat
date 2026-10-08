@@ -1,11 +1,11 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
+import axios, { AxiosHeaders } from 'axios';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import axios, { AxiosHeaders } from 'axios';
-import type { AxiosResponse } from 'axios';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import type { TProject } from 'librechat-data-provider';
+import type { AxiosResponse } from 'axios';
 import ProjectMemoryEditor from '../ProjectMemoryEditor';
 import i18n from '~/locales/i18n';
 
@@ -28,14 +28,28 @@ function renderEditor() {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
-  return render(
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
     <RecoilRoot>
-      <QueryClientProvider client={client}>
-        <ProjectMemoryEditor project={project} />
-      </QueryClientProvider>
-    </RecoilRoot>,
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </RecoilRoot>
   );
+  return render(<ProjectMemoryEditor project={project} />, { wrapper });
 }
+
+it('reflects a local memory removed by linking a shared memory without resurrecting it', () => {
+  const { rerender } = renderEditor();
+  expect(screen.getByDisplayValue('A')).toBeInTheDocument();
+  rerender(<ProjectMemoryEditor project={{ ...project, memories: [] }} />);
+  expect(screen.queryByDisplayValue('A')).not.toBeInTheDocument();
+});
+
+it('preserves unsaved edits when the project is refreshed', async () => {
+  const { rerender } = renderEditor();
+  await userEvent.type(screen.getByDisplayValue('A'), 'B');
+  rerender(<ProjectMemoryEditor project={{ ...project, memories: [] }} />);
+  expect(screen.getByDisplayValue('AB')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: i18n.t('com_ui_publish_memory') })).toBeDisabled();
+});
 
 it('locks editing until the sent snapshot is saved', async () => {
   let finish!: (value: AxiosResponse<TProject>) => void;
@@ -116,4 +130,5 @@ it('keeps local memory when publishing fails', async () => {
   );
 
   expect(screen.getByDisplayValue('A')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('com_ui_memory_publish_error'));
 });

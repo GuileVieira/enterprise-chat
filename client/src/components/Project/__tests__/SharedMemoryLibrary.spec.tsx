@@ -5,12 +5,17 @@ import SharedMemoryLibrary from '../SharedMemoryLibrary';
 const mockArchiveMutate = jest.fn();
 const mockRestoreMutate = jest.fn();
 const mockResolveLegacyMutate = jest.fn();
+const mockLinkMutate = jest.fn();
+const mockUpdateMutate = jest.fn();
+let mockLibraryValue = 'warm';
+let mockLibraryUpdatedAt = '2026-01-01';
 let mockLegacyItems: Array<{
   key: string;
   status: string;
   candidates: Array<{ memoryId: string; authorId: string }>;
 }> = [];
 let mockContextStatus: Record<string, number> | undefined;
+let mockCanUpdateLibrary = true;
 
 jest.mock('@phosphor-icons/react', () => ({
   Archive: () => null,
@@ -38,11 +43,17 @@ jest.mock('@librechat/client', () => ({
     selection,
   }: {
     main: React.ReactNode;
-    selection: { selectText: string; selectHandler: () => void };
+    selection: React.ReactElement | { selectText: string; selectHandler: () => void };
   }) => (
     <>
       <div>{main}</div>
-      <button onClick={selection.selectHandler}>{selection.selectText}</button>
+      {jest.requireActual<typeof import('react')>('react').isValidElement(selection) ? (
+        selection
+      ) : (
+        <button onClick={(selection as { selectHandler: () => void }).selectHandler}>
+          {(selection as { selectText: string }).selectText}
+        </button>
+      )}
     </>
   ),
   useToastContext: () => ({ showToast: jest.fn() }),
@@ -51,9 +62,9 @@ jest.mock('~/data-provider', () => ({
   useArchiveSharedMemoryMutation: () => ({ mutate: mockArchiveMutate }),
   useCopySharedMemoryMutation: () => ({ mutate: jest.fn() }),
   useCreateSharedMemoryMutation: () => ({ mutate: jest.fn(), isLoading: false }),
-  useLinkSharedMemoriesMutation: () => ({ mutate: jest.fn(), isLoading: false }),
+  useLinkSharedMemoriesMutation: () => ({ mutate: mockLinkMutate, isLoading: false }),
   useRestoreSharedMemoryMutation: () => ({ mutate: mockRestoreMutate }),
-  useUpdateSharedMemoryMutation: () => ({ mutate: jest.fn() }),
+  useUpdateSharedMemoryMutation: () => ({ mutate: mockUpdateMutate }),
   useSharedMemoriesQuery: (_projectId: string, status?: string) => ({
     data: {
       items:
@@ -63,8 +74,8 @@ jest.mock('~/data-provider', () => ({
               {
                 id: 'm1',
                 key: 'tone',
-                value: 'warm',
-                updatedAt: '2026-01-01',
+                value: mockLibraryValue,
+                updatedAt: mockLibraryUpdatedAt,
                 linkedToProject: false,
               },
             ],
@@ -80,10 +91,14 @@ jest.mock('~/data-provider', () => ({
     isLoading: false,
   }),
   useSharedMemoryContextStatusQuery: () => ({ data: mockContextStatus }),
+  useSharedMemoryConsumersQuery: () => ({
+    data: { visible: [{ projectId: 'p2', name: 'Projeto visível' }], hasOtherConsumers: true },
+  }),
   useUnlinkSharedMemoryMutation: () => ({ mutate: jest.fn() }),
 }));
 jest.mock('~/hooks', () => ({
-  useHasAccess: ({ permission }: { permission: string }) => permission === 'UPDATE',
+  useHasAccess: ({ permission }: { permission: string }) =>
+    permission === 'UPDATE' && mockCanUpdateLibrary,
   useLocalize: () => (key: string) => key,
 }));
 jest.mock('../SharedMemoryPortability', () => () => <div />);
@@ -91,8 +106,13 @@ jest.mock('../SharedMemoryPortability', () => () => <div />);
 describe('SharedMemoryLibrary', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLinkMutate.mockReset();
+    mockUpdateMutate.mockReset();
+    mockLibraryValue = 'warm';
+    mockLibraryUpdatedAt = '2026-01-01';
     mockLegacyItems = [];
     mockContextStatus = undefined;
+    mockCanUpdateLibrary = true;
   });
 
   it('gates publishing on shared-memory create permission', () => {
@@ -100,9 +120,84 @@ describe('SharedMemoryLibrary', () => {
     expect(screen.queryByRole('button', { name: 'com_ui_publish_memory' })).not.toBeInTheDocument();
   });
 
+  it('keeps an editing draft after failure and reloads the original explicitly', () => {
+    mockUpdateMutate.mockImplementationOnce((_request, callbacks) =>
+      callbacks.onError(new Error('conflict')),
+    );
+    const { rerender } = render(<SharedMemoryLibrary canEdit={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_edit_memory' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'com_ui_project_memory_value' }), {
+      target: { value: 'my draft' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_save' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('com_ui_memory_edit_error');
+    expect(screen.getByRole('textbox', { name: 'com_ui_project_memory_value' })).toHaveValue(
+      'my draft',
+    );
+    mockLibraryValue = 'concurrent original';
+    mockLibraryUpdatedAt = '2026-01-02';
+    rerender(<SharedMemoryLibrary canEdit={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_memory_reload_original' }));
+    expect(screen.getByRole('textbox', { name: 'com_ui_project_memory_value' })).toHaveValue(
+      'concurrent original',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_save' }));
+    expect(mockUpdateMutate.mock.calls[1][0].expectedUpdatedAt).toBe('2026-01-02');
+  });
+
+  it('allows library management and export selection without project edit access', () => {
+    render(<SharedMemoryLibrary canEdit={false} />);
+    expect(screen.getByRole('button', { name: 'com_ui_edit_memory' })).toBeEnabled();
+    expect(screen.getByRole('checkbox')).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_create_independent_copy' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'com_ui_add_from_library' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('does not offer original editing without library UPDATE permission', () => {
+    mockCanUpdateLibrary = false;
+    render(<SharedMemoryLibrary canEdit={false} />);
+    expect(screen.queryByRole('button', { name: 'com_ui_edit_memory' })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).toBeEnabled();
+  });
+
+  it.each([
+    ['com_ui_memory_keep_local', 'keep-local'],
+    ['com_ui_memory_use_shared', 'use-shared'],
+  ])(
+    'sends the explicit conflict choice and preview timestamp: %s',
+    (label, conflictResolution) => {
+      mockLinkMutate.mockImplementationOnce((_request, callbacks) =>
+        callbacks.onError({
+          isAxiosError: true,
+          response: {
+            status: 409,
+            data: { conflicts: [{ key: 'tone' }], expectedUpdatedAt: '2026-01-01T00:00:00.000Z' },
+          },
+        }),
+      );
+      render(<SharedMemoryLibrary project={{ projectId: 'p1' } as never} canEdit />);
+      fireEvent.click(screen.getAllByRole('checkbox')[0]);
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_add_from_library' }));
+      expect(mockLinkMutate.mock.calls[0][0]).toEqual({ projectId: 'p1', memoryIds: ['m1'] });
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      expect(mockLinkMutate.mock.calls[1][0]).toEqual({
+        projectId: 'p1',
+        memoryIds: ['m1'],
+        conflictResolution,
+        expectedUpdatedAt: '2026-01-01T00:00:00.000Z',
+      });
+    },
+  );
+
   it('sends version when archiving and restoring', () => {
     render(<SharedMemoryLibrary project={{ projectId: 'p1' } as never} canEdit />);
     fireEvent.click(screen.getAllByRole('button', { name: 'com_ui_archive_memory' })[0]);
+    expect(screen.getAllByText('Projeto visível').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('com_ui_memory_other_consumers').length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByRole('button', { name: 'com_ui_archive_memory' })[1]);
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_restore_memory' }));
 

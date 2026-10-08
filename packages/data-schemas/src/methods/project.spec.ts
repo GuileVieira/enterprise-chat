@@ -91,6 +91,41 @@ describe('ProjectMethods', () => {
     });
   });
 
+  it('increments edited memory versions and preserves unchanged import metadata', async () => {
+    await tenantStorage.run({ tenantId: tenantA }, async () => {
+      const project = await createProject(userId, {
+        name: 'Versions',
+        memories: [
+          { key: 'tone', value: 'original' },
+          { key: 'stable', value: 'stable' },
+        ],
+      });
+      await Project.updateOne(
+        { projectId: project.projectId },
+        {
+          $set: {
+            'memories.0.version': 7,
+            'memories.1.importOperationId': 'original-import',
+            'memories.1.importRef': 'ref',
+          },
+        },
+      );
+      const updated = await updateProject(project.projectId, {
+        memories: [
+          { key: 'tone', value: 'edited' },
+          { key: 'stable', value: 'stable' },
+        ],
+      });
+      expect(updated?.memories?.[0]).toMatchObject({ key: 'tone', value: 'edited', version: 8 });
+      expect(updated?.memories?.[1]).toMatchObject({
+        key: 'stable',
+        version: 1,
+        importOperationId: 'original-import',
+        importRef: 'ref',
+      });
+    });
+  });
+
   describe('getProjects', () => {
     it('returns projects for the current tenant', async () => {
       await tenantStorage.run({ tenantId: tenantA }, async () => {

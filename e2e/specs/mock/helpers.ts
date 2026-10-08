@@ -51,13 +51,25 @@ const modelSelectorTrigger = (page: Page) =>
 export const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Open the model selector, choose an endpoint, then its model (committed on the model click). */
-export async function selectMockEndpoint(page: Page, endpoint: MockEndpoint) {
+export async function selectMockEndpoint(page: Page, endpoint: MockEndpoint, useKeyboard = false) {
   const trigger = modelSelectorTrigger(page);
   await trigger.click();
-  await page.getByRole('option', { name: endpoint.label }).click();
+  const endpointOption = page.getByRole('option', { name: endpoint.label });
+  if (useKeyboard) await endpointOption.press('Enter');
+  else await endpointOption.click();
   const modelOption = page.getByRole('option', { name: endpoint.model, exact: true });
+  if (useKeyboard) {
+    await expect
+      .poll(
+        async () =>
+          (await modelOption.isVisible()) ||
+          ((await trigger.textContent()) ?? 'Select a model').trim() !== 'Select a model',
+      )
+      .toBe(true);
+  }
   if (await modelOption.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await modelOption.click();
+    if (useKeyboard) await modelOption.press('Enter');
+    else await modelOption.click();
   }
   await expect(trigger).not.toHaveText('Select a model');
 }

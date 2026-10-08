@@ -17,6 +17,8 @@ import {
   useMemoriesQuery,
   useGetUserQuery,
 } from '~/data-provider';
+import SharedMemoryPortability from '~/components/Project/SharedMemoryPortability';
+import SharedMemoryLibrary from '~/components/Project/SharedMemoryLibrary';
 import { useLocalize, useAuthContext, useHasAccess } from '~/hooks';
 import { PanelFooter, PanelContent } from '~/components/ui';
 import MemoryCardSkeleton from './MemoryCardSkeleton';
@@ -25,8 +27,6 @@ import MemoryUsageBadge from './MemoryUsageBadge';
 import AdminSettings from './AdminSettings';
 import MemoryList from './MemoryList';
 import { cn } from '~/utils';
-import SharedMemoryPortability from '~/components/Project/SharedMemoryPortability';
-import SharedMemoryLibrary from '~/components/Project/SharedMemoryLibrary';
 
 /** Partition filter sentinels; any other value is an agent id */
 const PARTITION_ALL = 'all';
@@ -200,7 +200,17 @@ export default function MemoryPanel() {
           >
             {localize('com_ui_shared_memory_library')}
           </Button>
-          {!showLibrary && <SharedMemoryPortability />}
+          {!showLibrary && (
+            <SharedMemoryPortability
+              key={activePartition}
+              agentId={
+                activePartition !== PARTITION_ALL && activePartition !== PARTITION_PERSONAL
+                  ? activePartition
+                  : undefined
+              }
+              search={searchQuery}
+            />
+          )}
         </div>
 
         {/* Partition filter (only when agent-scoped memories exist) */}

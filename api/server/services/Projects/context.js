@@ -90,8 +90,7 @@ const loadProjectContext = async ({ req, conversationId, projectId: requestProje
     const projectInstructions = project?.instructions ?? '';
     const role = db.getRoleByName ? await db.getRoleByName(req.user.role) : null;
     const canReadSharedMemories =
-      role == null ||
-      role.permissions?.[PermissionTypes.SHARED_MEMORIES]?.[Permissions.READ] === true;
+      role?.permissions?.[PermissionTypes.SHARED_MEMORIES]?.[Permissions.READ] === true;
     let projectMemories =
       (await loadProjectMemories(
         project,

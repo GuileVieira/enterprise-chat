@@ -2112,8 +2112,9 @@ export const copySharedMemoryToProject = (
 export const linkProjectSharedMemories = (
   projectId: string,
   memoryIds: string[],
+  options: t.SharedMemoryLinkOptions = {},
 ): Promise<{ memoryIds: string[] }> =>
-  request.post(endpoints.projectSharedMemories(projectId), { memoryIds });
+  request.post(endpoints.projectSharedMemories(projectId), { memoryIds, ...options });
 export const unlinkProjectSharedMemory = (projectId: string, memoryId: string): Promise<void> =>
   request.delete(endpoints.projectSharedMemory(projectId, memoryId));
 export const previewSharedMemoryImport = (

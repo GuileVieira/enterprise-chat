@@ -36,8 +36,18 @@ describe('shared memory portability', () => {
     expect(result.map((item) => item.status)).toEqual(['conflict', 'invalid']);
   });
 
+  it('accepts spreadsheet BOM and quoted CRLF rows without changing embedded newlines', () => {
+    expect(parseMemoryCsv('\uFEFF"key","value"\r\n"tone","Olá\r\ntime"\r\n')).toEqual([
+      { ref: 'row_2', key: 'tone', value: 'Olá\r\ntime' },
+    ]);
+    expect(() => parseMemoryCsv('key,value,extra\na,b')).toThrow('header');
+  });
+
   it('neutralizes spreadsheet formulas without changing JSON content', () => {
     expect(escapeMemoryCsvCell('=cmd()')).toBe('"\'=cmd()"');
+    expect(escapeMemoryCsvCell('\t=cmd()')).toBe('"\'\t=cmd()"');
+    expect(escapeMemoryCsvCell('  +cmd()')).toBe('"\'  +cmd()"');
+    expect(escapeMemoryCsvCell('Olá, time')).toBe('"Olá, time"');
   });
 
   it.each([
@@ -55,6 +65,14 @@ describe('shared memory portability', () => {
     ],
     [{ format: 'csv', content: 'key,value\na,"broken"tail' }, 'characters after'],
     [{ format: 'csv', content: 'key,value\na,b,extra' }, 'must contain'],
+    [
+      {
+        format: 'json',
+        content:
+          '{"format":"orqest-memories","version":1,"items":[{"ref":{},"key":"a","value":"b"}]}',
+      },
+      'Invalid import ref',
+    ],
   ])('handles malformed import safely', (request, error) => {
     if (error) expect(() => parseMemoryImport(request)).toThrow(error);
     else expect(parseMemoryImport(request)[0]).toEqual({ ref: 'item_1', key: '', value: '' });

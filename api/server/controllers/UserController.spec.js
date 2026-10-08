@@ -1085,11 +1085,12 @@ describe('project continuity on user deletion', () => {
 
     expect((await Project.findById(project._id).lean()).user).toBe(replacementId.toString());
     expect(grantPermission).toHaveBeenCalledWith(
-      expect.objectContaining({
-        principalId: replacementId,
-        resourceId: project._id,
-        accessRoleId: 'project_owner',
-      }),
+      'user',
+      replacementId,
+      'project',
+      project._id,
+      15,
+      ownerId.toString(),
     );
   });
 });

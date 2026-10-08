@@ -1,9 +1,8 @@
 import mongoose from 'mongoose';
-import type { Response } from 'express';
 import type { IProject } from '@librechat/data-schemas';
-
-import { isScalarString } from './shared';
+import type { Response } from 'express';
 import type { AuthenticatedRequest } from './sharedRouteHandlers';
+import { isScalarString } from './shared';
 
 type LifecycleRequest = AuthenticatedRequest & {
   user: AuthenticatedRequest['user'] & { role?: string };
@@ -229,9 +228,9 @@ export function createSharedMemoryLifecycleHandlers(
       }
     }
     res.json({
-      total: projects.length,
+      total: visible.length,
       visible,
-      hiddenCount: projects.length - visible.length,
+      hasOtherConsumers: projects.length > visible.length,
     });
   };
 

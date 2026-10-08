@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import type { Response } from 'express';
 import type { ISharedMemory } from '@librechat/data-schemas';
+import type { Response } from 'express';
 import type { AuthenticatedRequest } from './sharedRouteHandlers';
 import { SHARED_MEMORY_MAX_VALUE_LENGTH, isScalarString, isSharedMemoryKey } from './shared';
 import { SharedMemoryBusyError, SharedMemoryQuotaError } from './sharedService';
@@ -56,6 +56,15 @@ const errorCode = (error: unknown) =>
     : undefined;
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : 'Shared memory operation failed.';
+function respondLibraryError(res: Response, error: unknown): void {
+  const code = errorCode(error);
+  let status = 500;
+  if (code === 11000 || error instanceof SharedMemoryBusyError) status = 409;
+  if (error instanceof SharedMemoryQuotaError) status = 400;
+  res
+    .status(status)
+    .json({ error: code === 11000 ? 'Active key already exists.' : errorMessage(error) });
+}
 export function createSharedLibraryHandlers(
   deps: SharedLibraryDependencies,
 ): SharedLibraryHandlers {
@@ -144,17 +153,7 @@ export function createSharedLibraryHandlers(
       deps.audit(req, 'create', { memoryId: String(doc._id) });
       res.status(201).json(deps.view(doc));
     } catch (error) {
-      const code = errorCode(error);
-      res
-        .status(
-          // eslint-disable-next-line no-nested-ternary
-          code === 11000 || error instanceof SharedMemoryBusyError
-            ? 409
-            : error instanceof SharedMemoryQuotaError
-              ? 400
-              : 500,
-        )
-        .json({ error: code === 11000 ? 'Active key already exists.' : errorMessage(error) });
+      respondLibraryError(res, error);
     }
   };
   const update = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -164,6 +163,7 @@ export function createSharedLibraryHandlers(
       !isSharedMemoryKey(key) ||
       typeof value !== 'string' ||
       !value.trim() ||
+      value.length > SHARED_MEMORY_MAX_VALUE_LENGTH ||
       typeof expectedUpdatedAt !== 'string' ||
       Number.isNaN(Date.parse(expectedUpdatedAt))
     ) {
@@ -171,25 +171,35 @@ export function createSharedLibraryHandlers(
       return;
     }
     if (deps.blockFilteredMemoryContent(req, res, { key, value })) return;
-    const doc = await deps.withLibraryWrite(req, async () => {
-      const current = await mongoose.models.SharedMemory.findOne({
-        _id: req.params.id,
-        tenantId: req.user.tenantId,
-      })
-        .select('tokenCount')
-        .lean<{ tokenCount: number }>();
-      if (!current) return null;
-      await deps.assertLibraryQuota(req, deps.countTokens(value) - current.tokenCount);
-      return mongoose.models.SharedMemory.findOneAndUpdate(
-        { _id: req.params.id, tenantId: req.user.tenantId, updatedAt: new Date(expectedUpdatedAt) },
-        { $set: { key, value, tokenCount: deps.countTokens(value) }, $inc: { version: 1 } },
-        { new: true, runValidators: true },
-      ) as Promise<SharedRecord | null>;
-    });
-    if (doc) {
-      deps.audit(req, 'update', { memoryId: String(doc._id) });
-      res.json(deps.view(doc));
-    } else res.status(409).json({ error: 'Memory changed or is unavailable.' });
+    try {
+      const doc = await deps.withLibraryWrite(req, async () => {
+        const current = await mongoose.models.SharedMemory.findOne({
+          _id: req.params.id,
+          tenantId: req.user.tenantId,
+          updatedAt: new Date(expectedUpdatedAt),
+        })
+          .select('tokenCount status')
+          .lean<{ tokenCount: number; status: string }>();
+        if (!current) return null;
+        if (current.status === 'active')
+          await deps.assertLibraryQuota(req, deps.countTokens(value) - current.tokenCount);
+        return mongoose.models.SharedMemory.findOneAndUpdate(
+          {
+            _id: req.params.id,
+            tenantId: req.user.tenantId,
+            updatedAt: new Date(expectedUpdatedAt),
+          },
+          { $set: { key, value, tokenCount: deps.countTokens(value) }, $inc: { version: 1 } },
+          { new: true, runValidators: true },
+        ) as Promise<SharedRecord | null>;
+      });
+      if (doc) {
+        deps.audit(req, 'update', { memoryId: String(doc._id) });
+        res.json(deps.view(doc));
+      } else res.status(409).json({ error: 'Memory changed or is unavailable.' });
+    } catch (error) {
+      respondLibraryError(res, error);
+    }
   };
   const statusHandler =
     (status: 'active' | 'archived', action: 'restore' | 'archive') =>
@@ -208,10 +218,11 @@ export function createSharedLibraryHandlers(
           const current = await mongoose.models.SharedMemory.findOne({
             _id: req.params.id,
             tenantId: req.user.tenantId,
+            updatedAt: new Date(expected),
           })
-            .select('tokenCount')
-            .lean<{ tokenCount: number }>();
-          if (status === 'active' && current)
+            .select('tokenCount status')
+            .lean<{ tokenCount: number; status: string }>();
+          if (status === 'active' && current && current.status !== 'active')
             await deps.assertLibraryQuota(req, current.tokenCount);
           return mongoose.models.SharedMemory.findOneAndUpdate(
             { _id: req.params.id, tenantId: req.user.tenantId, updatedAt: new Date(expected) },
@@ -224,17 +235,7 @@ export function createSharedLibraryHandlers(
           res.json(deps.view(doc));
         } else res.status(409).json({ error: 'Memory changed or is unavailable.' });
       } catch (error) {
-        const code = errorCode(error);
-        res
-          .status(
-            // eslint-disable-next-line no-nested-ternary
-            code === 11000 || error instanceof SharedMemoryBusyError
-              ? 409
-              : error instanceof SharedMemoryQuotaError
-                ? 400
-                : 500,
-          )
-          .json({ error: code === 11000 ? 'Active key already exists.' : errorMessage(error) });
+        respondLibraryError(res, error);
       }
     };
   return {

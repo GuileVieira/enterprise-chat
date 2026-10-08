@@ -26,8 +26,20 @@ const importStatusKeys = {
   skipped: 'com_ui_memory_import_skipped',
   failed: 'com_ui_memory_import_failed',
 } as const;
+
+function downloadMemoryFile(content: string, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
 export default function SharedMemoryPortability({
   projectId,
+  agentId,
   scope = projectId ? 'project' : 'personal',
   ids,
   search,
@@ -37,6 +49,7 @@ export default function SharedMemoryPortability({
   accessibleCount,
 }: {
   projectId?: string;
+  agentId?: string;
   scope?: 'library' | 'project' | 'personal';
   ids?: string[];
   search?: string;
@@ -56,7 +69,7 @@ export default function SharedMemoryPortability({
       ? { type: 'library' }
       : scope === 'project' && projectId && canEditProject
         ? { type: 'project', projectId }
-        : { type: 'personal' },
+        : { type: 'personal', ...(agentId ? { agentId } : {}) },
   );
   const [decisions, setDecisions] = useState<NonNullable<SharedMemoryImportRequest['decisions']>>(
     {},
@@ -91,22 +104,18 @@ export default function SharedMemoryPortability({
         format: nextFormat,
         scope,
         ...(scope === 'project' && projectId ? { projectId } : {}),
+        ...(scope === 'personal' && agentId ? { agentId } : {}),
         ...(exportSelection === 'selected' && ids?.length ? { ids } : {}),
-        ...(search?.trim() ? { search: search.trim() } : {}),
+        ...(exportSelection === 'filtered' && search?.trim() ? { search: search.trim() } : {}),
       },
       {
         onSuccess: (result) => {
           const body = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
-          const url = URL.createObjectURL(
-            new Blob([body], {
-              type: nextFormat === 'json' ? 'application/json' : 'text/csv;charset=utf-8',
-            }),
+          downloadMemoryFile(
+            body,
+            `orqest-memories.${nextFormat}`,
+            nextFormat === 'json' ? 'application/json' : 'text/csv;charset=utf-8',
           );
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = `orqest-memories.${nextFormat}`;
-          anchor.click();
-          URL.revokeObjectURL(url);
         },
         onError: () => showToast({ message: localize('com_ui_error'), status: 'error' }),
       },
@@ -170,6 +179,20 @@ export default function SharedMemoryPortability({
           title={localize('com_ui_import_memories')}
           main={
             <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  downloadMemoryFile(
+                    'key,value\n',
+                    'orqest-memories-template.csv',
+                    'text/csv;charset=utf-8',
+                  )
+                }
+              >
+                {localize('com_ui_memory_csv_template')}
+              </Button>
               <Input
                 type="file"
                 accept=".json,.csv"
@@ -178,12 +201,13 @@ export default function SharedMemoryPortability({
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
-                  setFormat(file.name.endsWith('.csv') ? 'csv' : 'json');
-                  file.text().then((text) => {
-                    reset();
-                    setFormat(file.name.endsWith('.csv') ? 'csv' : 'json');
-                    setContent(text);
-                  });
+                  setFormat(file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'json');
+                  reset();
+                  setContent('');
+                  file
+                    .text()
+                    .then(setContent)
+                    .catch(() => showToast({ message: localize('com_ui_error'), status: 'error' }));
                 }}
               />
               <select
@@ -196,7 +220,7 @@ export default function SharedMemoryPortability({
                     event.target.value === 'project' && projectId
                       ? { type: 'project', projectId }
                       : event.target.value === 'personal'
-                        ? { type: 'personal' }
+                        ? { type: 'personal', ...(agentId ? { agentId } : {}) }
                         : { type: 'library' },
                   );
                 }}
@@ -263,6 +287,7 @@ export default function SharedMemoryPortability({
               ))}
               {result && (
                 <div className="rounded border border-border-light p-2 text-sm">
+                  <p role="status">{localize('com_ui_memory_import_totals', result.totals)}</p>
                   {result.items.map((item) => (
                     <p
                       key={item.ref}
@@ -273,14 +298,11 @@ export default function SharedMemoryPortability({
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const url = URL.createObjectURL(
-                        new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }),
+                      downloadMemoryFile(
+                        JSON.stringify(result, null, 2),
+                        `orqest-memory-import-${result.operationId}.json`,
+                        'application/json',
                       );
-                      const anchor = document.createElement('a');
-                      anchor.href = url;
-                      anchor.download = `orqest-memory-import-${result.operationId}.json`;
-                      anchor.click();
-                      URL.revokeObjectURL(url);
                     }}
                   >
                     {localize('com_ui_download')}
@@ -296,61 +318,72 @@ export default function SharedMemoryPortability({
               )}
             </div>
           }
-          selection={{
-            selectText: result?.totals.failed
-              ? localize('com_ui_retry')
-              : preview
-                ? localize('com_ui_import')
-                : localize('com_ui_preview'),
-            selectHandler: () => {
-              if (result?.totals.failed) {
-                importMutation.mutate(
-                  {
-                    ...request(),
-                    selectedRefs: result.items
-                      .filter((item) => item.status === 'failed')
-                      .map((item) => item.ref),
-                  },
-                  {
-                    onSuccess: (data) => setResult(data as SharedMemoryImportResult),
+          selection={
+            <Button
+              type="button"
+              disabled={!content || previewMutation.isLoading || importMutation.isLoading}
+              onClick={() => {
+                if (result?.totals.failed) {
+                  importMutation.mutate(
+                    {
+                      ...request(),
+                      selectedRefs: result.items
+                        .filter((item) => item.status === 'failed')
+                        .map((item) => item.ref),
+                    },
+                    {
+                      onSuccess: (data) => setResult(data as SharedMemoryImportResult),
+                      onError: () =>
+                        showToast({ message: localize('com_ui_error'), status: 'error' }),
+                    },
+                  );
+                  return;
+                }
+                if (!preview)
+                  previewMutation.mutate(request(), {
+                    onSuccess: (data) => {
+                      const next = data as SharedMemoryImportPreview;
+                      setPreview(next);
+                      setDecisions(
+                        Object.fromEntries(
+                          next.items
+                            .filter((item) => item.status === 'conflict')
+                            .map((item) => [
+                              item.ref,
+                              {
+                                action: 'skip' as const,
+                                expectedVersion: item.existing?.version,
+                                expectedUpdatedAt: item.existing?.updatedAt,
+                              },
+                            ]),
+                        ),
+                      );
+                    },
                     onError: () =>
                       showToast({ message: localize('com_ui_error'), status: 'error' }),
-                  },
-                );
-                return;
-              }
-              if (!preview)
-                previewMutation.mutate(request(), {
-                  onSuccess: (data) => {
-                    const next = data as SharedMemoryImportPreview;
-                    setPreview(next);
-                    setDecisions(
-                      Object.fromEntries(
-                        next.items
-                          .filter((item) => item.status === 'conflict')
-                          .map((item) => [
-                            item.ref,
-                            {
-                              action: 'skip' as const,
-                              expectedVersion: item.existing?.version,
-                              expectedUpdatedAt: item.existing?.updatedAt,
-                            },
-                          ]),
-                      ),
-                    );
-                  },
-                  onError: () => showToast({ message: localize('com_ui_error'), status: 'error' }),
-                });
-              else
-                importMutation.mutate(request(), {
-                  onSuccess: (data) => {
-                    setResult(data as SharedMemoryImportResult);
-                    showToast({ message: localize('com_ui_saved'), status: 'success' });
-                  },
-                  onError: () => showToast({ message: localize('com_ui_error'), status: 'error' }),
-                });
-            },
-          }}
+                  });
+                else
+                  importMutation.mutate(request(), {
+                    onSuccess: (data) => {
+                      setResult(data as SharedMemoryImportResult);
+                      const imported = data as SharedMemoryImportResult;
+                      showToast({
+                        message: localize('com_ui_memory_import_totals', imported.totals),
+                        status: imported.totals.failed ? 'warning' : 'success',
+                      });
+                    },
+                    onError: () =>
+                      showToast({ message: localize('com_ui_error'), status: 'error' }),
+                  });
+              }}
+            >
+              {result?.totals.failed
+                ? localize('com_ui_retry')
+                : preview
+                  ? localize('com_ui_import')
+                  : localize('com_ui_preview')}
+            </Button>
+          }
         />
       </OGDialog>
     </div>

@@ -4,7 +4,7 @@ import {
   PermissionBits,
   createProjectSchema,
 } from 'librechat-data-provider';
-import type { Model, Types } from 'mongoose';
+import type { Model, Types, FilterQuery } from 'mongoose';
 import type { IProject } from '~/types';
 import { getTenantId } from '~/config/tenantContext';
 import logger from '~/config/winston';
@@ -175,9 +175,42 @@ export function createProjectMethods(
     try {
       const Project = mongoose.models.Project as Model<IProject>;
       assertEditableFields(data);
+      const filter: FilterQuery<IProject> = { projectId };
+      const update = { ...data };
+      if (data.memories) {
+        const current = await Project.findOne({ projectId }).select('memories').lean<IProject>();
+        if (!current) return null;
+        const snapshot = current.memories ?? [];
+        filter.$and = [
+          { memories: { $size: snapshot.length } },
+          ...snapshot.map((memory) => ({
+            memories: {
+              $elemMatch: {
+                key: memory.key,
+                value: memory.value,
+                version: memory.version ?? { $exists: false },
+                updatedAt: memory.updatedAt ?? { $exists: false },
+              },
+            },
+          })),
+        ];
+        const previous = new Map(current.memories?.map((memory) => [memory.key, memory]));
+        const now = new Date();
+        update.memories = data.memories.map(({ key, value }) => {
+          const existing = previous.get(key);
+          if (existing?.value === value) return existing;
+          return {
+            ...existing,
+            key,
+            value,
+            version: (existing ? (existing.version ?? 1) : 0) + 1,
+            updatedAt: now,
+          };
+        });
+      }
       return await Project.findOneAndUpdate(
-        { projectId },
-        { $set: data },
+        filter,
+        { $set: update },
         { new: true, lean: true, runValidators: true },
       );
     } catch (error) {

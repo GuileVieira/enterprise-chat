@@ -27,6 +27,7 @@ beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   await mongoose.connect(mongo.getUri());
   require('@librechat/data-schemas').createModels(mongoose);
+  await require('@librechat/data-schemas').createMethods(mongoose).initializeRoles();
   const router = require('./sharedMemories');
   app = express();
   app.use('/api', router);

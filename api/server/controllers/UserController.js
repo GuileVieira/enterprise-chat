@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { logger } = require('@librechat/data-schemas');
+const { logger, tenantStorage } = require('@librechat/data-schemas');
 const {
   getNewS3URL,
   needsRefresh,
@@ -21,7 +21,7 @@ const {
   FileSources,
   ResourceType,
   PrincipalType,
-  AccessRoleIds,
+  PermissionBits,
 } = require('librechat-data-provider');
 const { updateUserPluginAuth, deleteUserPluginAuth } = require('~/server/services/PluginService');
 const { verifyOTPOrBackupCode } = require('~/server/services/twoFactorService');
@@ -87,14 +87,18 @@ const ensureProjectDeletionContinuity = async (req, user) => {
     throw error;
   }
   for (const project of projects) {
-    await db.grantPermission({
-      principalType: PrincipalType.USER,
-      principalId: replacement._id,
-      resourceType: ResourceType.PROJECT,
-      resourceId: project._id,
-      accessRoleId: AccessRoleIds.PROJECT_OWNER,
-      grantedBy: req.user?.id ?? replacement._id,
-    });
+    await tenantStorage.run(
+      { ...(tenantStorage.getStore() ?? {}), tenantId: project.tenantId },
+      () =>
+        db.grantPermission(
+          PrincipalType.USER,
+          replacement._id,
+          ResourceType.PROJECT,
+          project._id,
+          PermissionBits.VIEW | PermissionBits.EDIT | PermissionBits.DELETE | PermissionBits.SHARE,
+          req.user?.id ?? replacement._id,
+        ),
+    );
     await mongoose.models.Project.updateOne(
       { _id: project._id, user: userId, tenantId: project.tenantId },
       { $set: { user: String(replacement._id) } },
@@ -210,7 +214,7 @@ const deleteUserData = async (req, user) => {
   await db.deleteUserKey({ userId, all: true });
   await db.deleteBalances({ user: user._id });
   await db.deletePresets(userId);
-  await db.deleteConvos(userId);
+  await db.deleteConvos(userId, {}, { allowEmpty: true });
   await deleteUserPluginAuth(userId, null, true);
   await deleteAllSharedLinksWithCleanup(userId);
   await deleteUserFiles({ ...req, user: normalizedUser });
@@ -577,7 +581,7 @@ const deleteUserController = async (req, res) => {
   try {
     const existingUser = await db.getUserById(
       user.id,
-      '+totpSecret +backupCodes _id twoFactorEnabled',
+      '+totpSecret +backupCodes _id twoFactorEnabled tenantId',
     );
     if (existingUser && existingUser.twoFactorEnabled) {
       const { token, backupCode } = req.body;

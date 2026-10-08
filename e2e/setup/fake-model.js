@@ -392,7 +392,9 @@ function agentContextAssertionResponses({ messages, text }) {
     return null;
   }
 
-  const promptText = collectPromptText(messages).join('\n');
+  const promptText = collectPromptText(messages)
+    .join('\n')
+    .replace(/E2E_ASSERT_AGENT_CONTEXT:\s*\S+/g, '');
   if (promptText.includes(expected)) {
     return {
       responses: [`${AGENT_CONTEXT_ASSERTION_FINAL_TEXT}: ${expected}`],
@@ -2845,8 +2847,15 @@ function resolveResponses({ graph, messages, text, toolNames }) {
   if (text.includes(ASSERT_AGENT_CONTEXT_MARKER)) {
     return {
       responses: [MOCK_REPLY],
-      resolveOnStream: (streamMessages) =>
-        agentContextAssertionResponses({ messages: streamMessages, text }),
+      resolveOnStream: async (streamMessages, options, runManager) => {
+        const agentView = await getStreamAgentView({
+          graph,
+          messages: streamMessages,
+          options,
+          runManager,
+        });
+        return agentContextAssertionResponses({ messages: agentView.messages, text });
+      },
     };
   }
 

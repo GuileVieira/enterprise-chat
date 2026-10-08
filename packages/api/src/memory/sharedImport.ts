@@ -1,20 +1,20 @@
-import { randomUUID } from 'node:crypto';
 import mongoose from 'mongoose';
-import type { Response } from 'express';
-import type { IProjectMemory } from '@librechat/data-schemas';
+import { randomUUID } from 'node:crypto';
 import type {
   SharedMemoryImportPreview,
   SharedMemoryImportResult,
   SharedMemoryImportResultItem,
 } from 'librechat-data-provider';
+import type { IProjectMemory } from '@librechat/data-schemas';
+import type { Response } from 'express';
+import type { SharedMemoryService, SharedMemoryServiceModels } from './sharedService';
 import type { AuthenticatedRequest } from './sharedRouteHandlers';
-import { classifyMemoryImport, parseMemoryImport } from './shared';
 import {
   createSharedMemoryService,
   SharedMemoryBusyError,
   SharedMemoryQuotaError,
 } from './sharedService';
-import type { SharedMemoryService, SharedMemoryServiceModels } from './sharedService';
+import { classifyMemoryImport, parseMemoryImport } from './shared';
 
 interface ImportProject {
   _id: mongoose.Types.ObjectId;
@@ -39,6 +39,7 @@ export interface SharedImportSupport {
   preview(req: AuthenticatedRequest): Promise<SharedMemoryImportPreview>;
   service(): SharedMemoryService;
   canCreateLibrary(req: AuthenticatedRequest): Promise<boolean>;
+  canUpdateLibrary(req: AuthenticatedRequest): Promise<boolean>;
   hasMemoryPermissions(req: AuthenticatedRequest, permissions: string[]): Promise<boolean>;
   acquireLibraryLock(req: AuthenticatedRequest): Promise<string>;
   releaseLibraryLock(req: AuthenticatedRequest, token: string): Promise<unknown>;
@@ -155,7 +156,16 @@ export function createSharedImportSupport(
         ]),
       ),
     );
-    for (const item of output)
+    for (const item of output) {
+      if (
+        item.existing &&
+        deps.projectStoredMemories([item.existing], req.config?.filters)[0]?.contentFilterBlocked
+      ) {
+        item.existing = undefined;
+        item.status = 'invalid';
+        item.error = 'Existing memory is blocked by memory policy.';
+        continue;
+      }
       if (
         item.status !== 'invalid' &&
         deps.projectStoredMemories([item], req.config?.filters)[0]?.contentFilterBlocked
@@ -163,6 +173,7 @@ export function createSharedImportSupport(
         item.status = 'invalid';
         item.error = 'Content is blocked by memory policy.';
       }
+    }
     const totals = { new: 0, identical: 0, conflict: 0, invalid: 0 };
     output.forEach((item) => totals[item.status]++);
     return { items: output, totals };
@@ -220,6 +231,7 @@ export function createSharedImportSupport(
     preview,
     service,
     canCreateLibrary: (req) => permissions(req, 'SHARED_MEMORIES', ['CREATE']),
+    canUpdateLibrary: (req) => permissions(req, 'SHARED_MEMORIES', ['UPDATE']),
     hasMemoryPermissions: (req, required) => permissions(req, 'MEMORIES', required),
     acquireLibraryLock: (req) => service().acquire(req.user.tenantId),
     releaseLibraryLock: (req, token) => service().release(req.user.tenantId, token),
@@ -241,6 +253,7 @@ export interface SharedImportDependencies {
   projectFor(req: AuthenticatedRequest, permission: number): Promise<ImportProject | null>;
   projectEditPermission: number;
   canCreateLibrary(req: AuthenticatedRequest): Promise<boolean>;
+  canUpdateLibrary(req: AuthenticatedRequest): Promise<boolean>;
   hasMemoryPermissions(req: AuthenticatedRequest, permissions: string[]): Promise<boolean>;
   memoryUse: string;
   memoryCreate: string;
@@ -289,6 +302,7 @@ export function createSharedImportHandler(
     audit,
   } = deps;
   return async function importHandler(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const startedAt = Date.now();
     let libraryLock;
     let personalLock;
     try {
@@ -330,6 +344,12 @@ export function createSharedImportHandler(
       } else if (destination.type === 'library') {
         if (!(await deps.canCreateLibrary(req))) {
           res.status(403).json({ error: 'Library creation permission required.' });
+          return;
+        }
+        const decisions = (req.body.decisions || {}) as Record<string, { action?: string }>;
+        const replaces = Object.values(decisions).some((decision) => decision.action === 'replace');
+        if (replaces && !(await deps.canUpdateLibrary(req))) {
+          res.status(403).json({ error: 'Library update permission required.' });
           return;
         }
         libraryLock = await acquireLibraryLock(req);
@@ -604,6 +624,7 @@ export function createSharedImportHandler(
         } catch (error) {
           let failure = 'Write failed.';
           if (message(error) === 'VERSION_CONFLICT') failure = 'Memory changed since preview.';
+          else if (error instanceof SharedMemoryQuotaError) failure = message(error);
           else if (code(error) === 11000) failure = 'Key conflict.';
           results.push({
             ref: item.ref,
@@ -626,6 +647,7 @@ export function createSharedImportHandler(
       audit(req, 'import', {
         operationId: req.body.operationId,
         destination: destination.type,
+        durationMs: Date.now() - startedAt,
         ...totals,
       });
       if (libraryLock) await releaseLibraryLock(req, libraryLock);
