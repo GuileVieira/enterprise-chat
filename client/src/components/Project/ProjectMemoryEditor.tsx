@@ -95,7 +95,7 @@ export default function ProjectMemoryEditor({ project }: ProjectMemoryEditorProp
   };
 
   return (
-    <fieldset disabled={updateMutation.isLoading} className="min-w-0 space-y-4">
+    <fieldset disabled={updateMutation.isLoading} className="min-w-0 space-y-4 text-text-primary">
       <div className="flex flex-col gap-3 rounded-2xl border border-border-light bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-2xl space-y-1">
           <h3 className="text-sm font-medium">{localize('com_ui_memory_local_entries')}</h3>

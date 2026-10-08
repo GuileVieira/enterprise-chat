@@ -180,7 +180,7 @@ export default function SharedMemoryPortability({
       },
     );
   return (
-    <div className="w-full min-w-0 space-y-3">
+    <div className="w-full min-w-0 space-y-3 text-text-primary">
       <Button
         type="button"
         size="sm"

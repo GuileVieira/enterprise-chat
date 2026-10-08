@@ -191,7 +191,10 @@ export default function SharedMemoryLibrary({ project, canEdit }: Props) {
     ) : null;
 
   return (
-    <section className="space-y-5" aria-label={localize('com_ui_shared_memory_library')}>
+    <section
+      className="space-y-5 text-text-primary"
+      aria-label={localize('com_ui_shared_memory_library')}
+    >
       <div className="rounded-2xl border border-border-light bg-surface-secondary p-4">
         <div className="space-y-3">
           <h3 className="text-sm font-medium text-text-primary">

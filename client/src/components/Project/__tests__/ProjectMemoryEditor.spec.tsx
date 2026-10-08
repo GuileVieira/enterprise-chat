@@ -36,6 +36,28 @@ function renderEditor() {
   return render(<ProjectMemoryEditor project={project} />, { wrapper });
 }
 
+it('keeps titles and labels readable in dark mode without a themed parent', () => {
+  const style = document.createElement('style');
+  style.textContent = `
+    .dark { color: rgb(0, 0, 0); }
+    .dark .text-text-primary { color: rgb(241, 241, 241); }
+  `;
+  document.head.append(style);
+  document.documentElement.classList.add('dark');
+  try {
+    renderEditor();
+    const title = screen.getByRole('heading', { name: i18n.t('com_ui_memory_local_entries') });
+    const name = screen.getByText(i18n.t('com_ui_project_memory_key'));
+    const content = screen.getByText(i18n.t('com_ui_project_memory_value'));
+    for (const element of [title, name, content]) {
+      expect(getComputedStyle(element).color).toBe('rgb(241, 241, 241)');
+    }
+  } finally {
+    style.remove();
+    document.documentElement.classList.remove('dark');
+  }
+});
+
 it('reflects a local memory removed by linking a shared memory without resurrecting it', () => {
   const { rerender } = renderEditor();
   expect(screen.getByDisplayValue('A')).toBeInTheDocument();
