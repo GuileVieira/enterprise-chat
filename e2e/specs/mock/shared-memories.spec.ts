@@ -137,6 +137,7 @@ test('resolves a local conflict by keyboard, exports and imports library memorie
 
   await library.getByRole('button', { name: 'Import memories', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Import memories' });
+  await dialog.getByRole('radio', { name: 'Organization library', exact: true }).check();
   await dialog.locator('input[type=file]').setInputFiles({
     name: 'memories.json',
     mimeType: 'application/json',

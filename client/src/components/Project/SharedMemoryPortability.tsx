@@ -1,5 +1,5 @@
 /* eslint-disable no-nested-ternary */
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { DownloadSimple, UploadSimple } from '@phosphor-icons/react';
 import { Button, Input, OGDialog, OGDialogTemplate, useToastContext } from '@librechat/client';
 import type {
@@ -60,17 +60,47 @@ export default function SharedMemoryPortability({
 }) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
+  const destinationGroupId = useId();
+  const destinations = [
+    ...(projectId && canEditProject
+      ? [
+          {
+            destination: { type: 'project' as const, projectId },
+            label: 'com_ui_memory_destination_project' as const,
+            description: 'com_ui_memory_destination_project_description' as const,
+          },
+        ]
+      : []),
+    ...(canCreateLibrary
+      ? [
+          {
+            destination: { type: 'library' as const },
+            label: 'com_ui_shared_memory_library' as const,
+            description: 'com_ui_memory_destination_library_description' as const,
+          },
+        ]
+      : []),
+    {
+      destination: { type: 'personal' as const, ...(agentId ? { agentId } : {}) },
+      label: agentId
+        ? ('com_ui_memory_destination_agent' as const)
+        : ('com_ui_memory_destination_personal' as const),
+      description: agentId
+        ? ('com_ui_memory_destination_agent_description' as const)
+        : ('com_ui_memory_destination_personal_description' as const),
+    },
+  ];
+  const defaultDestination: Destination =
+    projectId && canEditProject
+      ? { type: 'project', projectId }
+      : scope === 'library' && canCreateLibrary
+        ? { type: 'library' }
+        : { type: 'personal', ...(agentId ? { agentId } : {}) };
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState('');
   const [format, setFormat] = useState<'json' | 'csv'>('json');
   const [preview, setPreview] = useState<SharedMemoryImportPreview | null>(null);
-  const [destination, setDestination] = useState<Destination>(
-    scope === 'library' && canCreateLibrary
-      ? { type: 'library' }
-      : scope === 'project' && projectId && canEditProject
-        ? { type: 'project', projectId }
-        : { type: 'personal', ...(agentId ? { agentId } : {}) },
-  );
+  const [destination, setDestination] = useState<Destination>(defaultDestination);
   const [decisions, setDecisions] = useState<NonNullable<SharedMemoryImportRequest['decisions']>>(
     {},
   );
@@ -128,6 +158,7 @@ export default function SharedMemoryPortability({
         variant="outline"
         onClick={() => {
           reset();
+          setDestination(defaultDestination);
           setOpen(true);
         }}
         disabled={exportMutation.isLoading}
@@ -177,6 +208,10 @@ export default function SharedMemoryPortability({
       <OGDialog open={open} onOpenChange={setOpen}>
         <OGDialogTemplate
           title={localize('com_ui_import_memories')}
+          className="flex max-h-[85dvh] max-w-xl flex-col overflow-hidden"
+          headerClassName="shrink-0"
+          mainClassName="min-h-0 overflow-y-auto"
+          footerClassName="shrink-0"
           main={
             <div className="space-y-3">
               <Button
@@ -210,29 +245,41 @@ export default function SharedMemoryPortability({
                     .catch(() => showToast({ message: localize('com_ui_error'), status: 'error' }));
                 }}
               />
-              <select
-                className="w-full rounded border border-border-light bg-surface-primary p-2"
-                value={destination.type}
-                aria-label={localize('com_ui_import_memories')}
-                onChange={(event) => {
-                  reset();
-                  setDestination(
-                    event.target.value === 'project' && projectId
-                      ? { type: 'project', projectId }
-                      : event.target.value === 'personal'
-                        ? { type: 'personal', ...(agentId ? { agentId } : {}) }
-                        : { type: 'library' },
-                  );
-                }}
-              >
-                {canCreateLibrary && (
-                  <option value="library">{localize('com_ui_shared_memory_library')}</option>
-                )}
-                {projectId && canEditProject && (
-                  <option value="project">{localize('com_ui_project_shared_memories')}</option>
-                )}
-                <option value="personal">{localize('com_ui_memories_personal')}</option>
-              </select>
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-sm font-medium">
+                  {localize('com_ui_memory_import_destination')}
+                </legend>
+                {destinations.map((option) => (
+                  <label
+                    key={option.destination.type}
+                    className="flex cursor-pointer items-start gap-3 rounded border border-border-light bg-surface-primary p-3"
+                  >
+                    <input
+                      type="radio"
+                      name={destinationGroupId}
+                      className="mt-1 shrink-0"
+                      value={option.destination.type}
+                      checked={destination.type === option.destination.type}
+                      disabled={previewMutation.isLoading || importMutation.isLoading}
+                      aria-label={localize(option.label)}
+                      aria-describedby={`${destinationGroupId}-${option.destination.type}`}
+                      onChange={() => {
+                        reset();
+                        setDestination(option.destination);
+                      }}
+                    />
+                    <span className="min-w-0 text-sm">
+                      <span className="block font-medium">{localize(option.label)}</span>
+                      <span
+                        id={`${destinationGroupId}-${option.destination.type}`}
+                        className="mt-1 block text-text-secondary"
+                      >
+                        {localize(option.description)}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
               {preview?.items.map((item) => (
                 <div key={item.ref} className="rounded border border-border-light p-2 text-sm">
                   <b>{item.key}</b> — {localize(importStatusKeys[item.status])}

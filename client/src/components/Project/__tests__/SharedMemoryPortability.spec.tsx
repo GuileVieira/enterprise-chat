@@ -156,11 +156,62 @@ describe('SharedMemoryPortability', () => {
     await openAndPreview(container);
     expect(screen.getByText('new value')).toBeInTheDocument();
 
-    fireEvent.change(container.querySelector('select') as HTMLSelectElement, {
-      target: { value: 'personal' },
-    });
+    fireEvent.click(screen.getByRole('radio', { name: 'com_ui_memory_destination_personal' }));
 
     expect(screen.queryByText('new value')).not.toBeInTheDocument();
+  });
+
+  it('imports into the current project by default even from its library section', async () => {
+    const { container } = renderPortability({ scope: 'library', canCreateLibrary: true });
+    await openAndPreview(container);
+
+    expect(screen.getByRole('radio', { name: 'com_ui_memory_destination_project' })).toBeChecked();
+    expect(mockPreviewMutate.mock.calls[0][0].destination).toEqual({
+      type: 'project',
+      projectId: 'project-1',
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_import' }));
+    expect(mockImportMutate.mock.calls[0][0].destination).toEqual({
+      type: 'project',
+      projectId: 'project-1',
+    });
+  });
+
+  it('explains each destination and allows an explicit library import', async () => {
+    const { container } = renderPortability({ scope: 'library', canCreateLibrary: true });
+    await openAndPreview(container);
+
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).toHaveAccessibleDescription();
+    }
+    fireEvent.click(screen.getByRole('radio', { name: 'com_ui_shared_memory_library' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_preview' }));
+    expect(mockPreviewMutate.mock.calls[1][0].destination).toEqual({ type: 'library' });
+  });
+
+  it('resets the destination to the current project when reopening', async () => {
+    const { container, rerender } = renderPortability({ scope: 'library', canCreateLibrary: true });
+    await openAndPreview(container);
+    fireEvent.click(screen.getByRole('radio', { name: 'com_ui_memory_destination_personal' }));
+
+    rerender(<SharedMemoryPortability projectId="project-2" scope="library" canCreateLibrary />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_import_memories' }));
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_preview' }));
+    expect(mockPreviewMutate.mock.calls[1][0].destination).toEqual({
+      type: 'project',
+      projectId: 'project-2',
+    });
+  });
+
+  it.each([
+    { projectId: undefined, canEditProject: false },
+    { projectId: 'read-only-project', canEditProject: false },
+  ])('does not offer a project destination without edit access: %s', async (props) => {
+    const { container } = renderPortability({ ...props, scope: 'library', canCreateLibrary: true });
+    await openAndPreview(container);
+    expect(screen.queryByRole('radio', { name: 'com_ui_memory_destination_project' })).toBeNull();
+    expect(screen.getByRole('radio', { name: 'com_ui_shared_memory_library' })).toBeChecked();
+    expect(mockPreviewMutate.mock.calls[0][0].destination).toEqual({ type: 'library' });
   });
 
   it('exports selected ids independently of search without project id for library', () => {
