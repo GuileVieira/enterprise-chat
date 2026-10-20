@@ -30,6 +30,8 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-1}
       NO_INDEX: ${NO_INDEX:-true}
       CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      LIBRECHAT_LOG_DIR: /app/api/logs
+      LOG_TO_FILE: ${LOG_TO_FILE:-true}
       DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
       DEBUG_CONSOLE: ${DEBUG_CONSOLE:-false}
       MONGO_URI: mongodb://mongodb:27017/Orqest
@@ -95,6 +97,8 @@ services:
       NODE_ENV: production
       CONFIG_PATH: ${CONFIG_PATH:-/app/config/librechat.prod.yaml}
       CONSOLE_JSON: ${CONSOLE_JSON:-true}
+      LIBRECHAT_LOG_DIR: /app/api/logs
+      LOG_TO_FILE: ${LOG_TO_FILE:-true}
       DEBUG_LOGGING: ${DEBUG_LOGGING:-false}
       MONGO_URI: mongodb://mongodb:27017/Orqest
       MONGO_AUTO_INDEX: ${MONGO_AUTO_INDEX:-false}
