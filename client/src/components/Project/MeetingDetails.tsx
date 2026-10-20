@@ -179,7 +179,7 @@ export default function MeetingDetails({
               disabled={!canEdit}
               maxLength={150}
               onChange={(event) => onTitleChange(event.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary"
               aria-label={localize('com_ui_meeting_title')}
             />
             {canEdit && (
@@ -200,7 +200,7 @@ export default function MeetingDetails({
                   value={speakerNames[speaker] ?? `Speaker ${speaker}`}
                   disabled={!canEdit}
                   onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-                  className="w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary"
                   aria-label={`Speaker ${speaker}`}
                 />
                 <span
