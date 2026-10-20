@@ -73,6 +73,10 @@ function requestContext(req: ProjectLogRequest) {
     userId: req.user?.id,
     projectId:
       typeof req.params.projectId === 'string' ? safeText(req.params.projectId, 100) : undefined,
+    chunkIndex:
+      typeof req.params.index === 'string' && /^\d{1,5}$/.test(req.params.index)
+        ? Number(req.params.index)
+        : undefined,
     meetingId:
       typeof req.params.meetingId === 'string' ? safeText(req.params.meetingId, 100) : undefined,
     operation: `${req.method} ${typeof req.route?.path === 'string' ? req.route.path : '/'}`,
@@ -125,10 +129,28 @@ export function projectRequestLogging(domain: ProjectDomain) {
       if (aborted) {
         outcome = 'unknown';
       }
+      let meetingStage: string | undefined;
+      if (domain === 'projectMeetings') {
+        meetingStage = 'meeting';
+        if (req.route?.path === '/:meetingId/chunks/:index') {
+          meetingStage = 'chunk_upload';
+        } else if (req.route?.path === '/:meetingId/complete') {
+          meetingStage = 'transcription_submit';
+        }
+      }
       try {
         logger[level](`[${domain}] request finished`, {
           ...requestContext(req),
           event_name: 'project.operation.finished',
+          stage: meetingStage,
+          reason:
+            typeof res.locals?.meetingReason === 'string'
+              ? safeText(res.locals?.meetingReason, 100)
+              : undefined,
+          meetingStatus:
+            typeof res.locals?.meetingStatus === 'string'
+              ? safeText(res.locals?.meetingStatus, 40)
+              : undefined,
           outcome,
           statusCode,
           durationMs: Date.now() - startedAt,

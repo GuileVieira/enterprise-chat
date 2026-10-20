@@ -23,6 +23,20 @@ describe('AssemblyAI meeting service', () => {
     }
   });
 
+  it('preserves provider HTTP status and error classification for diagnostics', async () => {
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: 'rate limited' }),
+    });
+    await expect(getTranscript('transcript-1')).rejects.toMatchObject({
+      message: 'rate limited',
+      statusCode: 429,
+      code: 'MEETING_PROVIDER_HTTP_ERROR',
+      stack: expect.stringContaining('assembly.js'),
+    });
+  });
+
   it('polls a transcript using server-side credentials', async () => {
     global.fetch.mockResolvedValue({
       ok: true,

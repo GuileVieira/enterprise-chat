@@ -35,8 +35,8 @@ const upload = multer({
   },
 });
 
-router.use(requireJwtAuth);
 router.use(projectRequestLogging('projectMeetings'));
+router.use(requireJwtAuth);
 router.use(configMiddleware);
 
 const projectAccess = (permission) =>
@@ -261,8 +261,14 @@ router.put('/:meetingId/chunks/:index', projectAccess(PermissionBits.EDIT), asyn
   }
   try {
     const meeting = await findOwnedMeeting(req);
-    if (!meeting || !['uploading', 'upload_failed'].includes(meeting.status)) {
+    if (!meeting) {
+      res.locals.meetingReason = 'upload_not_found';
       return res.status(404).json({ error: 'Active meeting upload not found' });
+    }
+    res.locals.meetingStatus = meeting.status;
+    if (!['uploading', 'upload_failed'].includes(meeting.status)) {
+      res.locals.meetingReason = 'upload_not_active';
+      return res.status(409).json({ error: 'Meeting upload is no longer active' });
     }
     const directory = getUploadDirectory(req, String(meeting._id));
     const chunkPath = path.join(directory, `${index}.chunk`);

@@ -5,6 +5,7 @@ import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
 const mockCreateProjectMeetingUpload = jest.fn();
 const mockCompleteProjectMeetingUpload = jest.fn();
+const mockDeleteProjectMeeting = jest.fn();
 const mockDeleteMeetingChunk = jest.fn();
 const mockDeleteMeetingChunks = jest.fn();
 const mockGetProjectMeeting = jest.fn();
@@ -22,7 +23,7 @@ jest.mock('librechat-data-provider', () => ({
   dataService: {
     createProjectMeetingUpload: (...args: unknown[]) => mockCreateProjectMeetingUpload(...args),
     completeProjectMeetingUpload: (...args: unknown[]) => mockCompleteProjectMeetingUpload(...args),
-    deleteProjectMeeting: jest.fn(),
+    deleteProjectMeeting: (...args: unknown[]) => mockDeleteProjectMeeting(...args),
     getProjectMeeting: (...args: unknown[]) => mockGetProjectMeeting(...args),
     getProjectMeetings: (...args: unknown[]) => mockGetProjectMeetings(...args),
     retryProjectMeetingIndex: jest.fn(),
@@ -35,6 +36,11 @@ jest.mock('librechat-data-provider', () => ({
     projectMeetings: (projectId: string) => ['projectMeetings', projectId],
     projectFiles: (projectId: string) => ['projectFiles', projectId],
   },
+}));
+
+jest.mock('~/utils/logger', () => ({
+  __esModule: true,
+  default: { info: jest.fn(), error: jest.fn() },
 }));
 
 jest.mock('~/hooks', () => ({
@@ -59,11 +65,13 @@ class FakeMediaRecorder {
   static latest: FakeMediaRecorder;
   state: RecordingState = 'inactive';
   mimeType: string;
+  audioBitsPerSecond: number;
   ondataavailable: ((event: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
 
   constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
     this.mimeType = options?.mimeType ?? 'audio/webm';
+    this.audioBitsPerSecond = options?.audioBitsPerSecond ?? 128000;
     FakeMediaRecorder.latest = this;
   }
 
@@ -133,6 +141,7 @@ describe('ProjectMeetingsTab recorder', () => {
     mockSaveMeetingChunk.mockResolvedValue(undefined);
     mockSaveMeetingRecording.mockResolvedValue(undefined);
     mockDeleteMeetingChunk.mockResolvedValue(undefined);
+    mockGetProjectMeeting.mockResolvedValue({ id: 'meeting-1', status: 'uploading' });
     mockGetProjectMeetings.mockResolvedValue([]);
     mockListMeetingChunkIndexes.mockResolvedValue([]);
     mockListMeetingRecordings.mockResolvedValue([]);
@@ -174,6 +183,7 @@ describe('ProjectMeetingsTab recorder', () => {
 
     await waitFor(() => expect(mockCompleteProjectMeetingUpload).toHaveBeenCalledTimes(1));
     expect(mockCreateProjectMeetingUpload).toHaveBeenCalledTimes(1);
+    expect(FakeMediaRecorder.latest.audioBitsPerSecond).toBe(48000);
     expect(mockSaveMeetingChunk).toHaveBeenCalledWith('recording-1', 0, expect.any(Blob));
     expect(mockUploadProjectMeetingChunk).toHaveBeenCalledWith(
       'project-1',
@@ -182,7 +192,129 @@ describe('ProjectMeetingsTab recorder', () => {
       expect.any(Blob),
     );
     expect(stopTrack).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('recording-1'));
+    await waitFor(() =>
+      expect(mockSaveMeetingRecording).toHaveBeenCalledWith(
+        expect.objectContaining({ submitted: true, uploadedIndexes: [0] }),
+      ),
+    );
+    expect(mockDeleteMeetingChunk).not.toHaveBeenCalled();
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+  });
+
+  it('preserves local audio when the upload no longer exists and sends no chunks', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'missing',
+        meetingId: 'missing',
+        projectId: 'project-1',
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 1,
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    mockGetProjectMeeting.mockRejectedValueOnce({ response: { status: 404 } });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_retry_upload' }));
+    expect(await screen.findByText('com_ui_meeting_upload_missing')).toBeInTheDocument();
+    expect(mockUploadProjectMeetingChunk).not.toHaveBeenCalled();
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+  });
+
+  it('cleans retained audio only after the server reports completed', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'completed-local',
+        meetingId: 'completed',
+        projectId: 'project-1',
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 1,
+        submitted: true,
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    mockGetProjectMeeting.mockResolvedValueOnce({
+      id: 'completed',
+      status: 'completed',
+      title: 'Completed',
+      recordedAt: new Date().toISOString(),
+      duration: 10,
+      utterances: [],
+      transcript: '',
+      participants: [],
+      insights: { summary: '', decisions: [], nextSteps: [], tasks: [] },
+      speakerNames: {},
+    });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_check_status' }));
+    await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('completed-local'));
+    expect(mockUploadProjectMeetingChunk).not.toHaveBeenCalled();
+    expect(mockCompleteProjectMeetingUpload).not.toHaveBeenCalled();
+  });
+
+  it('resumes without uploading acknowledged retained chunks again', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'retained',
+        meetingId: 'retained',
+        projectId: 'project-1',
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 2,
+        uploadedIndexes: [0],
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    mockListMeetingChunkIndexes.mockResolvedValue([0, 1]);
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_retry_upload' }));
+    await waitFor(() => expect(mockCompleteProjectMeetingUpload).toHaveBeenCalled());
+    expect(mockUploadProjectMeetingChunk).toHaveBeenCalledTimes(1);
+    expect(mockUploadProjectMeetingChunk).toHaveBeenCalledWith(
+      'project-1',
+      'retained',
+      1,
+      expect.any(Blob),
+    );
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+  });
+
+  it('discards only the local backup after transcription submission', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'backup',
+        meetingId: 'backup',
+        projectId: 'project-1',
+        submitted: true,
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 1,
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_discard_backup' }));
+    await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('backup'));
+    expect(mockDeleteProjectMeeting).not.toHaveBeenCalled();
+  });
+
+  it('allows explicit discard when the server no longer has the upload', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'orphan',
+        meetingId: 'orphan',
+        projectId: 'project-1',
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 1,
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    mockDeleteProjectMeeting.mockRejectedValueOnce({ response: { status: 404 } });
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_discard_upload' }));
+    await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('orphan'));
   });
 
   it('shows a localized error when microphone permission is denied', async () => {
@@ -279,7 +411,10 @@ describe('ProjectMeetingsTab recorder', () => {
       1,
       expect.any(Blob),
     );
-    expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('recording-pending');
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+    expect(mockSaveMeetingRecording).toHaveBeenCalledWith(
+      expect.objectContaining({ submitted: true }),
+    );
   });
 
   it('shows an accessible spinner while a transcript is processing', async () => {

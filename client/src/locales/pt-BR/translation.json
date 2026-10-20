@@ -1,4 +1,9 @@
 {
+  "com_ui_meeting_check_status": "Verificar transcrição",
+  "com_ui_meeting_discard_backup": "Apagar cópia local",
+  "com_ui_meeting_capture_call": "Incluir áudio da aba/chamada e microfone",
+  "com_ui_meeting_capture_call_error": "Selecione a aba da chamada e ative o compartilhamento de áudio. Seu navegador precisa oferecer captura de áudio da aba.",
+  "com_ui_meeting_upload_missing": "Gravação não encontrada no servidor. O áudio local foi preservado até o limite de 24 horas.",
   "chat_direction_left_to_right": "Esquerda para Direita",
   "chat_direction_right_to_left": "Da direita para a esquerda",
   "com_a11y_ai_composing": "A IA ainda está compondo.",

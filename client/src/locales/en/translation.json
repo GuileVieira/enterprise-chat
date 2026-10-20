@@ -1,4 +1,9 @@
 {
+  "com_ui_meeting_check_status": "Check transcription",
+  "com_ui_meeting_discard_backup": "Delete local backup",
+  "com_ui_meeting_capture_call": "Include tab/call audio and microphone",
+  "com_ui_meeting_capture_call_error": "Select the call tab and enable audio sharing. Your browser must support tab audio capture.",
+  "com_ui_meeting_upload_missing": "Recording not found on the server. Local audio is preserved for up to 24 hours.",
   "chat_direction_left_to_right": "Left to Right",
   "chat_direction_right_to_left": "Right to Left",
   "com_a11y_ai_composing": "The AI is still composing.",

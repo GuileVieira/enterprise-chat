@@ -29,10 +29,10 @@ type ShowToast = (toast: { message: string; status: ToastStatus }) => void;
 
 type UseMetaAdsSettingsParams = {
   project: TProject;
-  statusQuery: ReturnType<typeof useProjectMetaAdsQuery>;
-  updateSettings: ReturnType<typeof useUpdateProjectMetaAdsMutation>;
-  updateBudget: ReturnType<typeof useUpdateProjectMetaAdsBudgetMutation>;
-  updateTenantToken: ReturnType<typeof useUpdateProjectMetaAdsTenantTokenMutation>;
+  statusQuery: Pick<ReturnType<typeof useProjectMetaAdsQuery>, 'refetch'>;
+  updateSettings: Pick<ReturnType<typeof useUpdateProjectMetaAdsMutation>, 'mutate'>;
+  updateBudget: Pick<ReturnType<typeof useUpdateProjectMetaAdsBudgetMutation>, 'mutate'>;
+  updateTenantToken: Pick<ReturnType<typeof useUpdateProjectMetaAdsTenantTokenMutation>, 'mutate'>;
   onManualBudgetChange?: (change: ProjectMetaAdsBudgetChange) => void;
   localize: Localize;
   showToast: ShowToast;
@@ -308,12 +308,12 @@ export function useMetaAdsSettings({
         setHasUnsavedSettingsDraft(remainingBudgetDrafts.length > 0);
         setDraftStatus('error');
         const requestMessage = (error as RequestError)?.response?.data?.message;
-        const message =
-          typeof requestMessage === 'string'
-            ? requestMessage
-            : error instanceof Error
-              ? error.message
-              : localize('com_ui_project_meta_ads_budget_failed');
+        let message = localize('com_ui_project_meta_ads_budget_failed');
+        if (typeof requestMessage === 'string') {
+          message = requestMessage;
+        } else if (error instanceof Error) {
+          message = error.message;
+        }
         showToast({ message, status: 'error' });
       }
     };

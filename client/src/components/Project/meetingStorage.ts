@@ -13,6 +13,8 @@ export interface StoredMeetingRecording {
   duration: number;
   recordedAt: string;
   totalChunks: number;
+  uploadedIndexes?: number[];
+  submitted?: boolean;
 }
 
 const openChunkStore = () =>

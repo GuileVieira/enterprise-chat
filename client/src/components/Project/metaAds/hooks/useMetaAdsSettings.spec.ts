@@ -8,14 +8,14 @@ it('shows the settings failure reason without logging the request token', () => 
   const showToast = jest.fn();
   const mutate = jest.fn();
   const params = {
-    project: { projectId: 'p1' },
-    statusQuery: {},
+    project: { projectId: 'p1', name: 'Projeto de teste' },
+    statusQuery: { refetch: jest.fn() },
     updateSettings: { mutate },
-    updateBudget: {},
-    updateTenantToken: {},
+    updateBudget: { mutate: jest.fn() },
+    updateTenantToken: { mutate: jest.fn() },
     localize: (key: string) => key,
     showToast,
-  } as Parameters<typeof useMetaAdsSettings>[0];
+  } satisfies Parameters<typeof useMetaAdsSettings>[0];
   const { result } = renderHook(() => useMetaAdsSettings(params));
   act(() => result.current.saveSettings(result.current.settings, 'DO_NOT_EXPORT_TOKEN'));
   const error = Object.assign(new Error('Request failed with status code 400'), {

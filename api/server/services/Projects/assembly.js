@@ -19,7 +19,12 @@ async function request(url, options) {
   const response = await fetch(url, options);
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(body.error || body.message || `AssemblyAI request failed (${response.status})`);
+    const error = new Error(
+      body.error || body.message || `Provider request failed (${response.status})`,
+    );
+    error.statusCode = response.status;
+    error.code = 'MEETING_PROVIDER_HTTP_ERROR';
+    throw error;
   }
   return body;
 }
@@ -74,7 +79,12 @@ async function deleteTranscript(id) {
   });
   if (!response.ok) {
     const body = await response.json();
-    throw new Error(body.error || body.message || `AssemblyAI request failed (${response.status})`);
+    const error = new Error(
+      body.error || body.message || `Provider request failed (${response.status})`,
+    );
+    error.statusCode = response.status;
+    error.code = 'MEETING_PROVIDER_HTTP_ERROR';
+    throw error;
   }
 }
 

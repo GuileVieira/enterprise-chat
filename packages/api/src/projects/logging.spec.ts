@@ -63,6 +63,31 @@ describe('project request logging', () => {
 
   afterEach(() => jest.restoreAllMocks());
 
+  it('records handled upload rejection with bounded diagnostic context', async () => {
+    const app = express();
+    app.use(projectRequestLogging('projectMeetings'));
+    app.put('/:meetingId/chunks/:index', (_req, res) => {
+      res.locals.meetingReason = 'upload_not_found';
+      res.locals.meetingStatus = 'upload_failed';
+      res.status(404).json({ error: 'missing' });
+    });
+    await request(app).put('/meeting-1/chunks/2629').expect(404);
+    expect(warn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        event_name: 'project.operation.finished',
+        meetingId: 'meeting-1',
+        chunkIndex: 2629,
+        stage: 'chunk_upload',
+        reason: 'upload_not_found',
+        meetingStatus: 'upload_failed',
+        statusCode: 404,
+        outcome: 'failed',
+        durationMs: expect.any(Number),
+      }),
+    );
+  });
+
   it('keeps interleaved tenant request context scoped to each request', async () => {
     const app = createApp();
     const slow = request(app)
