@@ -31,8 +31,13 @@ jest.mock('mongoose', () => ({
   },
 }));
 
+jest.mock('@librechat/api', () => jest.requireActual('../../../packages/api/src/projects/logging'));
+
 jest.mock('@librechat/data-schemas', () => ({
-  logger: { error: jest.fn(), warn: jest.fn() },
+  redactMessage: jest.requireActual('../../../packages/data-schemas/src/config/parsers')
+    .redactMessage,
+  getRequestId: jest.fn(),
+  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));
 
 jest.mock('~/models', () => ({
@@ -114,6 +119,37 @@ describe('project meetings routes', () => {
 
   afterEach(async () => {
     await fs.promises.rm(uploadRoot, { recursive: true, force: true });
+  });
+
+  it('records provider transcription failure even when polling returns HTTP 200', async () => {
+    const meeting = {
+      _id: 'meeting-1',
+      projectId: 'project-1',
+      status: 'processing',
+      assemblyTranscriptId: 'transcript-1',
+      save: jest.fn().mockResolvedValue(undefined),
+      toObject() {
+        return serializeDocument(this);
+      },
+    };
+    mockFindOne.mockResolvedValue(meeting);
+    mockGetTranscript.mockResolvedValue({ status: 'error', error: 'Unable to transcribe audio' });
+    const response = await request(createApp()).get('/api/projects/project-1/meetings/meeting-1');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('failed');
+    const { logger } = require('@librechat/data-schemas');
+    expect(logger.error).toHaveBeenCalledWith(
+      '[projectMeetings] transcription failed',
+      expect.objectContaining({
+        projectId: 'project-1',
+        meetingId: 'meeting-1',
+        outcome: 'failed',
+        error: expect.objectContaining({
+          name: 'AssemblyTranscriptError',
+          code: 'transcript_error',
+        }),
+      }),
+    );
   });
 
   it('persists an upload session before receiving recorded audio', async () => {

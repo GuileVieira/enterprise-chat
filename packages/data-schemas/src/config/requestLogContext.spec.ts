@@ -90,6 +90,71 @@ describe('attachRequestContext', () => {
       expect(rendered).toContain('"verification_result":"success"');
     }));
 
+  it.each(['project.operation.finished', 'project.operation.error'])(
+    'renders safe context for %s without arbitrary payload fields',
+    (eventName) =>
+      tenantStorage.run(context, () => {
+        const result = attachRequestContext({
+          level: 'info',
+          message: 'project operation',
+          event_name: eventName,
+          operation: 'POST /:projectId/meetings',
+          projectId: 'project-123',
+          meetingId: 'meeting-123',
+          outcome: 'succeeded',
+          statusCode: 200,
+          durationMs: 42,
+          body: { secret: 'body-secret' },
+          token: 'token-secret',
+        });
+
+        const rendered = formatLogContext(result);
+        expect(rendered).toContain(`"event_name":"${eventName}"`);
+        expect(rendered).toContain('"tenantId":"tenant-123"');
+        expect(rendered).toContain('"userId":"user-123"');
+        expect(rendered).toContain('"requestId":"request-123"');
+        expect(rendered).toContain('"request_method":"POST"');
+        expect(rendered).toContain('"request_path":"/api/example"');
+        expect(rendered).toContain('"operation":"POST /:projectId/meetings"');
+        expect(rendered).toContain('"projectId":"project-123"');
+        expect(rendered).toContain('"meetingId":"meeting-123"');
+        expect(rendered).toContain('"outcome":"succeeded"');
+        expect(rendered).toContain('"statusCode":200');
+        expect(rendered).toContain('"durationMs":42');
+        expect(rendered).not.toContain('body-secret');
+        expect(rendered).not.toContain('token-secret');
+      }),
+  );
+
+  it('renders only safe nested project error diagnostics as flat fields', () =>
+    tenantStorage.run(context, () => {
+      const error = {
+        name: 'ProviderError',
+        message: 'provider unavailable',
+        stack: 'ProviderError: provider unavailable\n at request',
+        providerCode: 190,
+        config: { headers: { authorization: 'secret' } },
+        body: { token: 'body-secret' },
+      };
+      const result = attachRequestContext({
+        level: 'error',
+        message: 'project operation failed',
+        event_name: 'project.operation.error',
+        error,
+      });
+
+      const rendered = formatLogContext(result);
+      expect(rendered).toContain('"error_message":"provider unavailable"');
+      expect(rendered).toContain(
+        '"error_stack":"ProviderError: provider unavailable\\n at request"',
+      );
+      expect(rendered).not.toContain('"config"');
+      expect(rendered).not.toContain('"body"');
+      expect(rendered).not.toContain('authorization');
+      expect(rendered).not.toContain('body-secret');
+      expect(result.error).toEqual(error);
+    }));
+
   it('keeps application paths separate from the safe request route', () =>
     tenantStorage.run(context, () => {
       const result = attachRequestContext({

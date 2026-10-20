@@ -52,6 +52,12 @@ const STRUCTURED_EVENT_LOG_CONTEXT_KEYS = [
   'has_openid_reuse_user_id',
   'error_category',
   'error_signature',
+  'operation',
+  'projectId',
+  'meetingId',
+  'outcome',
+  'statusCode',
+  'durationMs',
 ] as const;
 
 type LogContextKey =
@@ -73,14 +79,16 @@ const IDENTITY_FREE_EVENT_NAMES = new Set([
 const STRUCTURED_EVENT_NAMES = new Set([
   ...IDENTITY_FREE_EVENT_NAMES,
   'librechat.langfuse.connection.changed',
+  'project.operation.finished',
+  'project.operation.error',
 ]);
 const STRUCTURED_EVENT_LOG_CONTEXT_KEY_SET = new Set<string>(STRUCTURED_EVENT_LOG_CONTEXT_KEYS);
 const MAX_LOG_CONTEXT_ARRAY_LENGTH = 10;
 
 type LogContextValue = string | number | boolean | readonly string[];
 type LogContextInfo =
-  | Partial<{ [Key in LogContextKey]: unknown }>
-  | winston.Logform.TransformableInfo;
+  | (Partial<{ [Key in LogContextKey]: unknown }> & { error?: unknown })
+  | (winston.Logform.TransformableInfo & { error?: unknown });
 
 function isIdentityFreeEvent(eventName: unknown): boolean {
   return typeof eventName === 'string' && IDENTITY_FREE_EVENT_NAMES.has(eventName);
@@ -117,7 +125,8 @@ function normalizeLogContextValue(value: unknown): LogContextValue | undefined {
 
 /** Serializes the allowlisted context rendered by non-JSON log transports. */
 export function formatLogContext(info: LogContextInfo): string {
-  const context: Partial<Record<LogContextKey, LogContextValue>> = {};
+  const context: Partial<Record<LogContextKey | 'error_message' | 'error_stack', LogContextValue>> =
+    {};
   const omitIdentity = isIdentityFreeEvent(info.event_name);
   const includeStructuredEvent = isStructuredEvent(info.event_name);
 
@@ -136,6 +145,22 @@ export function formatLogContext(info: LogContextInfo): string {
       context[key] = value;
     }
   });
+
+  if (
+    info.event_name === 'project.operation.error' &&
+    info.error &&
+    typeof info.error === 'object'
+  ) {
+    const error = info.error as { message?: unknown; stack?: unknown };
+    const message = normalizeLogContextValue(error.message);
+    const stack = normalizeLogContextValue(error.stack);
+    if (message !== undefined) {
+      context.error_message = message;
+    }
+    if (stack !== undefined) {
+      context.error_stack = stack;
+    }
+  }
 
   return Object.keys(context).length > 0 ? JSON.stringify(context) : '';
 }

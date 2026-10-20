@@ -1,6 +1,5 @@
 const express = require('express');
-const { logger } = require('@librechat/data-schemas');
-const { generateCheckAccess } = require('@librechat/api');
+const { generateCheckAccess, projectRequestLogging, logProjectFailure } = require('@librechat/api');
 const {
   PermissionBits,
   PermissionTypes,
@@ -48,6 +47,7 @@ const checkProjectCreate = generateCheckAccess({
 const router = express.Router();
 
 router.use(requireJwtAuth);
+router.use(projectRequestLogging('projects'));
 
 const validateProjectUpdate = async ({ req, res }) => {
   const { promptGroupIds, fileIds } = req.body ?? {};
@@ -144,7 +144,7 @@ router.get('/', async (req, res) => {
 
     res.status(200).json(projects);
   } catch (error) {
-    logger.error('Error getting projects:', error);
+    logProjectFailure(req, 'Error getting projects:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -167,7 +167,7 @@ router.post('/', checkProjectCreate, async (req, res) => {
     await ensureTenantUsersProjectViewAccess({ project, grantedBy: req.user.id });
     res.status(201).json(project);
   } catch (error) {
-    logger.error('Error creating project:', error);
+    logProjectFailure(req, 'Error creating project:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -192,7 +192,7 @@ router.get(
         res.status(404).json({ error: 'Project not found' });
       }
     } catch (error) {
-      logger.error('Error getting project:', error);
+      logProjectFailure(req, 'Error getting project:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -224,7 +224,7 @@ router.put(
         res.status(404).json({ error: 'Project not found' });
       }
     } catch (error) {
-      logger.error('Error updating project:', error);
+      logProjectFailure(req, 'Error updating project:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -245,14 +245,14 @@ router.delete(
         try {
           await deleteAclEntries({ resourceType: ResourceType.PROJECT, resourceId: project._id });
         } catch (aclError) {
-          logger.error('Error deleting project ACL entries:', aclError);
+          logProjectFailure(req, 'Error deleting project ACL entries:', aclError);
         }
         res.status(200).json(project);
       } else {
         res.status(404).json({ error: 'Project not found' });
       }
     } catch (error) {
-      logger.error('Error deleting project:', error);
+      logProjectFailure(req, 'Error deleting project:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -279,7 +279,7 @@ router.put(
         res.status(404).json({ error: 'Project not found' });
       }
     } catch (error) {
-      logger.error('Error archiving project:', error);
+      logProjectFailure(req, 'Error archiving project:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },

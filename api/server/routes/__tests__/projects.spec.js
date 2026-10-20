@@ -34,6 +34,7 @@ jest.mock('~/server/middleware', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
+  ...jest.requireActual('@librechat/api'),
   generateCheckAccess: () => (req, res, next) => {
     next();
   },

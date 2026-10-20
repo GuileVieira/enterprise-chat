@@ -1,9 +1,9 @@
+const { projectRequestLogging, logProjectFailure } = require('@librechat/api');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const mongoose = require('mongoose');
 const { pipeline } = require('stream/promises');
-const { logger } = require('@librechat/data-schemas');
 const { PermissionBits } = require('librechat-data-provider');
 const { createFile } = require('~/models');
 const { configMiddleware, requireJwtAuth } = require('~/server/middleware');
@@ -36,6 +36,7 @@ const upload = multer({
 });
 
 router.use(requireJwtAuth);
+router.use(projectRequestLogging('projectMeetings'));
 router.use(configMiddleware);
 
 const projectAccess = (permission) =>
@@ -192,10 +193,12 @@ async function syncMeetingIndexStatus({ meeting, project, req }) {
   } catch (error) {
     meeting.indexStatus = 'failed';
     meeting.indexError = error.message || 'Meeting indexing failed';
-    logger.warn('[projectMeetings] indexing unavailable; transcript remains accessible', {
-      error: meeting.indexError,
-      meetingId: String(meeting._id),
-    });
+    logProjectFailure(
+      req,
+      '[projectMeetings] indexing unavailable; transcript remains accessible',
+      error,
+      'warn',
+    );
   }
   await meeting.save();
 }
@@ -207,7 +210,7 @@ router.get('/', projectAccess(PermissionBits.VIEW), async (req, res) => {
       .sort({ recordedAt: -1 });
     res.json(meetings.map(serialize));
   } catch (error) {
-    logger.error('[projectMeetings] list failed', error);
+    logProjectFailure(req, '[projectMeetings] list failed', error);
     res.status(500).json({ error: 'Failed to list meetings' });
   }
 });
@@ -242,7 +245,7 @@ router.post('/uploads', projectAccess(PermissionBits.EDIT), async (req, res) => 
     await fs.promises.mkdir(getUploadDirectory(req, String(meeting._id)), { recursive: true });
     res.status(201).json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] upload initialization failed', error);
+    logProjectFailure(req, '[projectMeetings] upload initialization failed', error);
     res.status(500).json({ error: 'Failed to initialize meeting upload' });
   }
 });
@@ -278,7 +281,7 @@ router.put('/:meetingId/chunks/:index', projectAccess(PermissionBits.EDIT), asyn
     await fs.promises.rename(temporaryPath, chunkPath);
     res.status(204).end();
   } catch (error) {
-    logger.error('[projectMeetings] chunk upload failed', error);
+    logProjectFailure(req, '[projectMeetings] chunk upload failed', error);
     res.status(500).json({ error: 'Failed to store meeting chunk' });
   }
 });
@@ -319,7 +322,7 @@ router.post('/:meetingId/complete', projectAccess(PermissionBits.EDIT), async (r
     await fs.promises.rm(directory, { recursive: true, force: true });
     res.status(202).json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] upload completion failed', error);
+    logProjectFailure(req, '[projectMeetings] upload completion failed', error);
     const meeting = await findOwnedMeeting(req).catch(() => null);
     if (meeting) {
       meeting.status = 'upload_failed';
@@ -363,7 +366,7 @@ router.post('/', projectAccess(PermissionBits.EDIT), upload.single('audio'), asy
     await meeting.save();
     res.status(202).json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] create failed', error);
+    logProjectFailure(req, '[projectMeetings] create failed', error);
     if (meeting) {
       meeting.status = 'failed';
       meeting.error = error.message || 'Failed to submit meeting';
@@ -393,6 +396,11 @@ router.get('/:meetingId', projectAccess(PermissionBits.VIEW), async (req, res) =
       meeting.status = 'failed';
       meeting.error = transcript.error || 'Transcription failed';
       await meeting.save();
+      logProjectFailure(req, '[projectMeetings] transcription failed', {
+        name: 'AssemblyTranscriptError',
+        message: meeting.error,
+        code: 'transcript_error',
+      });
       return res.json(serialize(meeting));
     }
     if (transcript.status !== 'completed') {
@@ -407,10 +415,12 @@ router.get('/:meetingId', projectAccess(PermissionBits.VIEW), async (req, res) =
     try {
       meeting.insights = await generateInsights(transcript);
     } catch (error) {
-      logger.warn('[projectMeetings] insights unavailable; completing transcript without them', {
-        error: error.message,
-        meetingId: String(meeting._id),
-      });
+      logProjectFailure(
+        req,
+        '[projectMeetings] insights unavailable; completing transcript without them',
+        error,
+        'warn',
+      );
       meeting.insights = { summary: '', decisions: [], nextSteps: [], tasks: [] };
     }
     meeting.status = 'completed';
@@ -419,7 +429,7 @@ router.get('/:meetingId', projectAccess(PermissionBits.VIEW), async (req, res) =
     await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] status failed', error);
+    logProjectFailure(req, '[projectMeetings] status failed', error);
     res.status(502).json({ error: error.message || 'Failed to process meeting' });
   }
 });
@@ -445,7 +455,7 @@ router.patch('/:meetingId', projectAccess(PermissionBits.EDIT), async (req, res)
     }
     res.json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] title update failed', error);
+    logProjectFailure(req, '[projectMeetings] title update failed', error);
     res.status(500).json({ error: 'Failed to update meeting title' });
   }
 });
@@ -490,7 +500,7 @@ router.patch('/:meetingId/speakers', projectAccess(PermissionBits.EDIT), async (
     await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] speaker update failed', error);
+    logProjectFailure(req, '[projectMeetings] speaker update failed', error);
     res.status(500).json({ error: 'Failed to update speakers' });
   }
 });
@@ -518,7 +528,7 @@ router.delete('/:meetingId', projectAccess(PermissionBits.EDIT), async (req, res
     await meeting.deleteOne();
     res.status(204).end();
   } catch (error) {
-    logger.error('[projectMeetings] delete failed', error);
+    logProjectFailure(req, '[projectMeetings] delete failed', error);
     res.status(500).json({ error: 'Failed to delete meeting' });
   }
 });
@@ -541,7 +551,7 @@ router.post('/:meetingId/insights', projectAccess(PermissionBits.EDIT), async (r
     await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] insights retry failed', error);
+    logProjectFailure(req, '[projectMeetings] insights retry failed', error);
     res.status(502).json({ error: error.message || 'Failed to generate meeting insights' });
   }
 });
@@ -562,7 +572,7 @@ router.post('/:meetingId/index', projectAccess(PermissionBits.EDIT), async (req,
     await syncMeetingIndexStatus({ meeting, project, req });
     res.json(serialize(meeting));
   } catch (error) {
-    logger.error('[projectMeetings] index retry failed', error);
+    logProjectFailure(req, '[projectMeetings] index retry failed', error);
     res.status(500).json({ error: 'Failed to retry meeting indexing' });
   }
 });

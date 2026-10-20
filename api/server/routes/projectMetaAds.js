@@ -1,3 +1,4 @@
+const { projectRequestLogging, logProjectFailure } = require('@librechat/api');
 const express = require('express');
 const {
   PermissionBits,
@@ -48,6 +49,7 @@ const mongoose = require('mongoose');
 const router = express.Router({ mergeParams: true });
 
 router.use(requireJwtAuth);
+router.use(projectRequestLogging('projectMetaAds'));
 
 const SCHEDULE_INTERVALS = new Set([30, 60, 120, 180, 360, 720, 1440]);
 const META_ACCESS_TOKEN_SECRET_NAME = 'meta_graph_access_token';
@@ -175,7 +177,7 @@ async function requireMetaAdsRoleAccess(req, res, next) {
     }
     return next();
   } catch (error) {
-    logger.error('[projectMetaAds] role access check failed', error);
+    logProjectFailure(req, '[projectMetaAds] role access check failed', error);
     return res.status(500).json({ message: error.message });
   }
 }
@@ -280,7 +282,7 @@ async function syncDiaryIndex({
       { new: true, lean: true },
     );
   } catch (error) {
-    logger.error('[projectMetaAds] diary indexing failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary indexing failed', error);
     return TrafficDiaryEntry.findByIdAndUpdate(
       entry._id,
       {
@@ -753,7 +755,7 @@ async function requireMetaAdsFeature(req, res, next) {
     }
     return next();
   } catch (error) {
-    logger.error('[projectMetaAds] feature check failed', error);
+    logProjectFailure(req, '[projectMetaAds] feature check failed', error);
     return res.status(500).json({ message: error.message });
   }
 }
@@ -889,7 +891,7 @@ router.get('/', metaAdsAccess, async (req, res) => {
       }),
     );
   } catch (error) {
-    logger.error('[projectMetaAds] status failed', error);
+    logProjectFailure(req, '[projectMetaAds] status failed', error);
     return res.status(500).json({ message: error.message });
   }
 });
@@ -908,7 +910,7 @@ router.get('/rankings', metaAdsAccess, async (req, res) => {
       }),
     );
   } catch (error) {
-    logger.error('[projectMetaAds] rankings failed', error);
+    logProjectFailure(req, '[projectMetaAds] rankings failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -924,7 +926,7 @@ router.get('/performance', metaAdsAccess, async (req, res) => {
       }),
     );
   } catch (error) {
-    logger.error('[projectMetaAds] performance failed', error);
+    logProjectFailure(req, '[projectMetaAds] performance failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -940,7 +942,7 @@ router.get('/rules/performance', metaAdsAccess, async (req, res) => {
       }),
     );
   } catch (error) {
-    logger.error('[projectMetaAds] rule performance failed', error);
+    logProjectFailure(req, '[projectMetaAds] rule performance failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -950,7 +952,7 @@ router.get('/rules/history', metaAdsAccess, async (req, res) => {
     const tenantId = req.user.tenantId || getTenantId();
     return res.json(await getProjectMetaAdsRuleHistory(req.params.projectId, tenantId));
   } catch (error) {
-    logger.error('[projectMetaAds] rule history failed', error);
+    logProjectFailure(req, '[projectMetaAds] rule history failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -963,7 +965,7 @@ router.get('/runs', metaAdsAccess, async (req, res) => {
       await getProjectMetaAdsAutomationRuns(req.params.projectId, tenantId, { limit }),
     );
   } catch (error) {
-    logger.error('[projectMetaAds] automation runs failed', error);
+    logProjectFailure(req, '[projectMetaAds] automation runs failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -998,7 +1000,7 @@ router.get('/diary', metaAdsAccess, async (req, res) => {
     const hydratedEntries = await hydrateDiaryAuthorNames(entries);
     return res.json({ entries: hydratedEntries.map(normalizeDiaryEntry) });
   } catch (error) {
-    logger.error('[projectMetaAds] diary list failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary list failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1065,7 +1067,7 @@ router.put('/diary/:weekStart', metaAdsDiaryEditAccess, async (req, res) => {
     const indexedEntry = await syncDiaryIndex({ entry, project, req });
     return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
-    logger.error('[projectMetaAds] diary save failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary save failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1118,7 +1120,7 @@ router.post('/diary/:entryId/complete', metaAdsDiaryEditAccess, async (req, res)
     const indexedEntry = await syncDiaryIndex({ entry: completed, project, req });
     return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
-    logger.error('[projectMetaAds] diary completion failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary completion failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1154,7 +1156,7 @@ router.post('/diary/:entryId/reopen', metaAdsDiaryEditAccess, async (req, res) =
     const indexedEntry = await syncDiaryIndex({ entry: reopened, project, req });
     return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
-    logger.error('[projectMetaAds] diary reopen failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary reopen failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1181,7 +1183,7 @@ router.post('/diary/:entryId/reprocess', metaAdsDiaryEditAccess, async (req, res
     const indexedEntry = await syncDiaryIndex({ entry, project, req });
     return res.json(normalizeDiaryEntry(indexedEntry));
   } catch (error) {
-    logger.error('[projectMetaAds] diary reprocess failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary reprocess failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1209,7 +1211,7 @@ router.delete('/diary/:entryId', metaAdsDiaryEditAccess, async (req, res) => {
     await deleteTrafficDiaryIndex({ entry: deleted, req, deleteFiles });
     return res.status(204).send();
   } catch (error) {
-    logger.error('[projectMetaAds] diary delete failed', error);
+    logProjectFailure(req, '[projectMetaAds] diary delete failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1269,19 +1271,7 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
       details = error.details;
     }
     const statusCode = error.statusCode ?? 500;
-    try {
-      logger.error('[projectMetaAds] settings failed', {
-        projectId: req.params.projectId,
-        tenantId: req.user.tenantId,
-        actorUserId: req.user.id,
-        statusCode,
-        message: error.message,
-        stack: error.stack,
-        details,
-      });
-    } catch {
-      // Telemetry failure must not replace the settings error response.
-    }
+    logProjectFailure(req, '[projectMetaAds] settings failed', error);
     return res.status(statusCode).json({
       message: error.message,
       ...(details ? { details } : {}),
@@ -1333,7 +1323,7 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error('[projectMetaAds] tenant token failed', error);
+    logProjectFailure(req, '[projectMetaAds] tenant token failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1360,17 +1350,7 @@ router.post('/run', metaAdsClientActionAccess, async (req, res) => {
     });
     return res.json(result);
   } catch (error) {
-    const finishedAt = new Date();
-    logger.error('[projectMetaAds] run failed', {
-      projectId: req.params.projectId,
-      tenantId,
-      actorUserId: req.user.id,
-      message: error.message,
-      stack: error.stack,
-      startedAt: startedAt.toISOString(),
-      finishedAt: finishedAt.toISOString(),
-      durationMs: Date.now() - startedAtMs,
-    });
+    logProjectFailure(req, '[projectMetaAds] run failed', error);
     return res.status(error.statusCode ?? 500).json({
       message: error.message,
       ...(error.data ? { details: error.data } : {}),
@@ -1393,7 +1373,7 @@ router.post('/budget', metaAdsClientActionAccess, async (req, res) => {
     });
     return res.json(result);
   } catch (error) {
-    logger.error('[projectMetaAds] manual budget failed', error);
+    logProjectFailure(req, '[projectMetaAds] manual budget failed', error);
     return res.status(error.statusCode ?? 500).json({
       message: error.message,
       ...(error.data ? { details: error.data } : {}),
@@ -1415,7 +1395,7 @@ router.post('/duplicates', metaAdsClientActionAccess, async (req, res) => {
     });
     return res.json(result);
   } catch (error) {
-    logger.error('[projectMetaAds] duplicate failed', error);
+    logProjectFailure(req, '[projectMetaAds] duplicate failed', error);
     return res.status(error.statusCode ?? 500).json({ message: error.message });
   }
 });
@@ -1441,7 +1421,7 @@ for (const route of metaAdsStatusRoutes) {
       });
       return res.json(result);
     } catch (error) {
-      logger.error('[projectMetaAds] entity status update failed', error);
+      logProjectFailure(req, '[projectMetaAds] entity status update failed', error);
       return res.status(error.statusCode ?? 500).json({ message: error.message });
     }
   });
@@ -1461,7 +1441,7 @@ router.post(
       });
       return res.json({ recommendation });
     } catch (error) {
-      logger.error('[projectMetaAds] apply failed', error);
+      logProjectFailure(req, '[projectMetaAds] apply failed', error);
       return res.status(500).json({ message: error.message });
     }
   },

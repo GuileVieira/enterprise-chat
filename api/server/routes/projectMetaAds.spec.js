@@ -491,10 +491,14 @@ describe('projectMetaAds settings normalization', () => {
           expect.objectContaining({
             projectId: 'p1',
             tenantId: 'tenant-x',
-            actorUserId: 'user-1',
-            statusCode: 400,
-            stack: error.stack,
-            details,
+            userId: 'user-1',
+            error: expect.objectContaining({
+              stack: expect.any(String),
+              providerStatus: 400,
+              providerCode: 100,
+              providerSubcode: 33,
+              providerTrace: 'trace_fixture',
+            }),
           }),
         );
         const exported = JSON.stringify({ body: response.body, logs: errorSpy.mock.calls });
@@ -1592,11 +1596,8 @@ describe('projectMetaAds run route', () => {
         expect.objectContaining({
           projectId: 'p1',
           tenantId: 'tenant-x',
-          actorUserId: 'user-1',
-          message: 'Invalid parameter',
-          startedAt: expect.any(String),
-          finishedAt: expect.any(String),
-          durationMs: expect.any(Number),
+          userId: 'user-1',
+          error: expect.objectContaining({ message: 'Invalid parameter', providerCode: 100 }),
         }),
       );
     } finally {
