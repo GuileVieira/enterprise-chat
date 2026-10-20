@@ -1252,10 +1252,39 @@ router.put('/settings', metaAdsClientActionAccess, async (req, res) => {
     });
     return res.json(project);
   } catch (error) {
-    logger.error('[projectMetaAds] settings failed', error);
-    return res.status(error.statusCode ?? 500).json({
+    const providerDetails = {};
+    for (const key of ['code', 'error_subcode']) {
+      if (Number.isFinite(error.data?.[key])) {
+        providerDetails[key] = error.data[key];
+      }
+    }
+    if (
+      typeof error.data?.fbtrace_id === 'string' &&
+      /^[\w-]{1,200}$/.test(error.data.fbtrace_id)
+    ) {
+      providerDetails.fbtrace_id = error.data.fbtrace_id;
+    }
+    let details = Object.keys(providerDetails).length > 0 ? providerDetails : undefined;
+    if (Array.isArray(error.details)) {
+      details = error.details;
+    }
+    const statusCode = error.statusCode ?? 500;
+    try {
+      logger.error('[projectMetaAds] settings failed', {
+        projectId: req.params.projectId,
+        tenantId: req.user.tenantId,
+        actorUserId: req.user.id,
+        statusCode,
+        message: error.message,
+        stack: error.stack,
+        details,
+      });
+    } catch {
+      // Telemetry failure must not replace the settings error response.
+    }
+    return res.status(statusCode).json({
       message: error.message,
-      ...(Array.isArray(error.details) ? { details: error.details } : {}),
+      ...(details ? { details } : {}),
     });
   }
 });

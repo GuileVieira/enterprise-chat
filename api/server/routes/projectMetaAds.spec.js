@@ -457,6 +457,55 @@ describe('projectMetaAds settings normalization', () => {
     });
   });
 
+  it.each([false, true])(
+    'preserves safe provider diagnostics when the logging sink fails: %s',
+    async (sinkFails) => {
+      const error = Object.assign(new Error('Meta account access denied'), {
+        statusCode: 400,
+        data: {
+          code: 100,
+          error_subcode: 33,
+          fbtrace_id: 'trace_fixture',
+          access_token: 'DO_NOT_EXPORT_TOKEN',
+          request: { headers: { authorization: 'DO_NOT_EXPORT_AUTH' } },
+        },
+      });
+      getProjectById
+        .mockResolvedValueOnce({ projectId: 'p1', tenantId: 'tenant-x' })
+        .mockResolvedValueOnce({ projectId: 'p1', tenantId: 'tenant-x' });
+      mockValidateMetaAdsAccess.mockRejectedValueOnce(error);
+      const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {
+        if (sinkFails) {
+          throw new Error('Log sink unavailable');
+        }
+      });
+      try {
+        const response = await request(createApp())
+          .put('/projects/p1/meta-ads/settings')
+          .send({ metaAds: { adAccountId: 'act_123' }, metaAccessToken: `EAA${'x'.repeat(50)}` })
+          .expect(400);
+        const details = { code: 100, error_subcode: 33, fbtrace_id: 'trace_fixture' };
+        expect(response.body).toEqual({ message: error.message, details });
+        expect(errorSpy).toHaveBeenCalledWith(
+          '[projectMetaAds] settings failed',
+          expect.objectContaining({
+            projectId: 'p1',
+            tenantId: 'tenant-x',
+            actorUserId: 'user-1',
+            statusCode: 400,
+            stack: error.stack,
+            details,
+          }),
+        );
+        const exported = JSON.stringify({ body: response.body, logs: errorSpy.mock.calls });
+        expect(exported).not.toContain('DO_NOT_EXPORT');
+        expect(exported).not.toContain(`EAA${'x'.repeat(50)}`);
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
+
   it('normalizes creative rules and analysis presets inside rule groups and overrides', () => {
     const result = router._normalizeMetaAdsForTest({
       ruleGroups: [

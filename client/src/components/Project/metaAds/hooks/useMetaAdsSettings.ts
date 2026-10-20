@@ -11,6 +11,7 @@ import type {
   useUpdateProjectMetaAdsTenantTokenMutation,
 } from '~/data-provider';
 import { logger } from '~/utils';
+import { getRequestErrorMessage } from '../errors';
 import { normalizeSettings, sanitizeMetaAdsEditableSettings } from '../settings';
 import type {
   Localize,
@@ -212,16 +213,14 @@ export function useMetaAdsSettings({
         onError: (error) => {
           setSettings(previousSettings);
           setDraftStatus('error');
-          const details = (error as RequestError)?.response?.data?.details;
-          const detailText = Array.isArray(details) ? ` (${details.join(', ')})` : '';
-          const message =
-            error instanceof Error
-              ? `${error.message}${detailText}`
-              : localize('com_ui_error_save_admin_settings');
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_error_save_admin_settings'),
+          );
           showToast({ message, status: 'error' });
           logger.error('MetaAds', 'Failed to save project Meta Ads settings', {
             projectId: project.projectId,
-            error,
+            message,
           });
         },
       },
@@ -432,8 +431,10 @@ export function useMetaAdsSettings({
           showToast({ message: localize('com_ui_saved'), status: 'success' });
         },
         onError: (error) => {
-          const message =
-            error instanceof Error ? error.message : localize('com_ui_error_save_admin_settings');
+          const message = getRequestErrorMessage(
+            error,
+            localize('com_ui_error_save_admin_settings'),
+          );
           showToast({ message, status: 'error' });
         },
       },

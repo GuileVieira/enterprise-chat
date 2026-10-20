@@ -17,6 +17,9 @@ function getNumberField(value: unknown, field: string) {
 }
 
 function formatRequestDetails(details: unknown) {
+  if (Array.isArray(details)) {
+    return details.filter((detail): detail is string => typeof detail === 'string').join(', ');
+  }
   const errorData = !details || typeof details !== 'object' ? null : details;
   const errorMessage = getStringField(errorData, 'error_user_msg');
   const errorSubcode = getNumberField(errorData, 'error_subcode');
@@ -32,7 +35,7 @@ function formatRequestDetails(details: unknown) {
 }
 
 export function getRequestErrorMessage(error: unknown, fallback: string) {
-  const requestError = error as RequestError;
+  const requestError = (error ?? {}) as RequestError;
   if (typeof requestError.response?.data?.message === 'string') {
     const detail = formatRequestDetails(requestError.response.data.details);
     return detail
