@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProjectMeetingsTab from '../ProjectMeetingsTab';
 
@@ -15,6 +15,8 @@ const mockReadMeetingChunk = jest.fn();
 const mockSaveMeetingChunk = jest.fn();
 const mockSaveMeetingRecording = jest.fn();
 const mockUploadProjectMeetingChunk = jest.fn();
+const mockExpireMeetingRecordings = jest.fn();
+const mockLocalize = (key: string) => key;
 
 jest.mock('librechat-data-provider', () => ({
   dataService: {
@@ -37,10 +39,12 @@ jest.mock('librechat-data-provider', () => ({
 
 jest.mock('~/hooks', () => ({
   useAuthContext: () => ({ user: { id: 'user-1' } }),
-  useLocalize: () => (key: string) => key,
+  useLocalize: () => mockLocalize,
 }));
 
 jest.mock('../meetingStorage', () => ({
+  expireMeetingRecordings: (...args: unknown[]) => mockExpireMeetingRecordings(...args),
+  MEETING_RECORDING_RETENTION_MS: 24 * 60 * 60 * 1000,
   deleteMeetingChunk: (...args: unknown[]) => mockDeleteMeetingChunk(...args),
   deleteMeetingChunks: (...args: unknown[]) => mockDeleteMeetingChunks(...args),
   listMeetingChunkIndexes: (...args: unknown[]) => mockListMeetingChunkIndexes(...args),
@@ -52,21 +56,31 @@ jest.mock('../meetingStorage', () => ({
 
 class FakeMediaRecorder {
   static isTypeSupported = () => true;
+  static latest: FakeMediaRecorder;
+  state: RecordingState = 'inactive';
   mimeType: string;
   ondataavailable: ((event: { data: Blob }) => void) | null = null;
   onstop: (() => void) | null = null;
 
   constructor(_stream: MediaStream, options?: MediaRecorderOptions) {
     this.mimeType = options?.mimeType ?? 'audio/webm';
+    FakeMediaRecorder.latest = this;
   }
 
-  start() {}
+  start() {
+    this.state = 'recording';
+  }
 
-  pause() {}
+  pause() {
+    this.state = 'paused';
+  }
 
-  resume() {}
+  resume() {
+    this.state = 'recording';
+  }
 
   stop() {
+    this.state = 'inactive';
     this.ondataavailable?.({ data: new Blob(['audio'], { type: this.mimeType }) });
     this.onstop?.();
   }
@@ -122,6 +136,7 @@ describe('ProjectMeetingsTab recorder', () => {
     mockGetProjectMeetings.mockResolvedValue([]);
     mockListMeetingChunkIndexes.mockResolvedValue([]);
     mockListMeetingRecordings.mockResolvedValue([]);
+    mockExpireMeetingRecordings.mockResolvedValue(null);
     mockReadMeetingChunk.mockResolvedValue(new Blob(['audio'], { type: 'audio/webm' }));
     mockDeleteMeetingChunks.mockResolvedValue(undefined);
     mockUploadProjectMeetingChunk.mockResolvedValue(undefined);
@@ -179,6 +194,60 @@ describe('ProjectMeetingsTab recorder', () => {
     expect(await screen.findByText('com_ui_meeting_microphone_denied')).toBeInTheDocument();
   });
 
+  it('stops capture and preserves the pending recording when local storage is full', async () => {
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_start' }));
+    await screen.findByRole('button', { name: 'com_ui_meeting_pause' });
+    mockSaveMeetingChunk.mockRejectedValueOnce(new DOMException('Full', 'QuotaExceededError'));
+    mockReadMeetingChunk.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      FakeMediaRecorder.latest.ondataavailable?.({ data: new Blob(['audio']) });
+    });
+    expect(await screen.findByText('com_ui_meeting_local_full')).toBeInTheDocument();
+    expect(FakeMediaRecorder.latest.state).toBe('inactive');
+    expect(stopTrack).toHaveBeenCalledTimes(1);
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+    expect(mockCompleteProjectMeetingUpload).not.toHaveBeenCalled();
+    expect(mockSaveMeetingRecording).toHaveBeenLastCalledWith(
+      expect.objectContaining({ totalChunks: 0 }),
+    );
+  });
+
+  it('clears an expired pending upload while the page remains open', async () => {
+    jest.useFakeTimers();
+    const expiresAt = Date.now() + 60_000;
+    const pending = {
+      key: 'expiring',
+      meetingId: 'expiring',
+      projectId: 'project-1',
+      mimeType: 'audio/webm',
+      duration: 5,
+      totalChunks: 1,
+      recordedAt: new Date(expiresAt - 24 * 60 * 60 * 1000).toISOString(),
+    };
+    mockExpireMeetingRecordings.mockImplementation(async () =>
+      Date.now() < expiresAt ? expiresAt : null,
+    );
+    mockListMeetingRecordings.mockImplementation(async () =>
+      Date.now() < expiresAt ? [pending] : [],
+    );
+    const { unmount } = renderTab();
+    try {
+      await screen.findByRole('button', { name: 'com_ui_meeting_retry_upload' });
+      await act(async () => {
+        jest.advanceTimersByTime(60_000);
+      });
+      expect(
+        await screen.findByRole('button', { name: 'com_ui_meeting_start' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'com_ui_meeting_retry_upload' })).toBeNull();
+      expect(screen.getByText('com_ui_meeting_local_expired')).toBeInTheDocument();
+    } finally {
+      unmount();
+      jest.useRealTimers();
+    }
+  });
+
   it('restores and completes a pending chunked upload after reload', async () => {
     mockListMeetingRecordings.mockResolvedValue([
       {
@@ -187,7 +256,7 @@ describe('ProjectMeetingsTab recorder', () => {
         projectId: 'project-1',
         mimeType: 'audio/webm',
         duration: 1800,
-        recordedAt: '2026-08-04T15:00:00.000Z',
+        recordedAt: new Date(Date.now() - 1800 * 1000).toISOString(),
         totalChunks: 2,
       },
     ]);

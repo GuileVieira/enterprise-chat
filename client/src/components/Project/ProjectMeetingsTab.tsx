@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,6 +24,8 @@ import {
   readMeetingChunk,
   saveMeetingChunk,
   saveMeetingRecording,
+  expireMeetingRecordings,
+  MEETING_RECORDING_RETENTION_MS,
 } from './meetingStorage';
 
 interface ProjectMeetingsTabProps {
@@ -32,6 +34,11 @@ interface ProjectMeetingsTabProps {
 }
 
 type PendingRecording = StoredMeetingRecording;
+
+const uploadErrorKey = (error: unknown) =>
+  error instanceof DOMException && error.name === 'QuotaExceededError'
+    ? 'com_ui_meeting_local_full'
+    : 'com_ui_meeting_upload_error';
 
 const parseParticipantNames = (value: string) => [
   ...new Map(
@@ -236,7 +243,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     setSelected(meeting);
   };
 
-  const stopWaveform = (closeContext = false) => {
+  const stopWaveform = useCallback((closeContext = false) => {
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
@@ -251,7 +258,26 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       audioContextRef.current = null;
       analyserRef.current = null;
     }
-  };
+  }, []);
+
+  const stopStream = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+  }, []);
+
+  const stopRecorderForStorage = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      if (recorder.state !== 'inactive') {
+        recorder.stop();
+      }
+    }
+    recorderRef.current = null;
+    stopWaveform(true);
+    stopStream();
+    setRecording('idle');
+  }, [stopStream, stopWaveform]);
 
   const animateWaveform = () => {
     const analyser = analyserRef.current;
@@ -408,16 +434,51 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       stopWaveform(true);
       streamRef.current?.getTracks().forEach((track) => track.stop());
     },
-    [],
+    [stopWaveform],
   );
 
   useEffect(() => {
-    void listMeetingRecordings(projectId).then((recordings) => {
-      if (!pendingUploadRef.current && recordings[0]) {
-        rememberPendingUpload(recordings[0]);
+    let cancelled = false;
+    let timer: number | undefined;
+    const refresh = async () => {
+      try {
+        const previous = pendingUploadRef.current;
+        const expired =
+          previous &&
+          Date.parse(previous.recordedAt) + MEETING_RECORDING_RETENTION_MS <= Date.now();
+        if (expired) {
+          stopRecorderForStorage();
+          await chunkWritesRef.current.catch(() => undefined);
+        }
+        const nextExpiry = await expireMeetingRecordings();
+        const recordings = await listMeetingRecordings(projectId);
+        if (cancelled) {
+          return;
+        }
+        if (pendingUploadRef.current === previous) {
+          if (expired) {
+            setElapsed(0);
+            setError(localize('com_ui_meeting_local_expired'));
+          }
+          if (!recorderRef.current) {
+            rememberPendingUpload(recordings[0] ?? null);
+          }
+        }
+        if (nextExpiry !== null) {
+          timer = window.setTimeout(() => void refresh(), Math.max(0, nextExpiry - Date.now()));
+        }
+      } catch {
+        if (!cancelled) {
+          setError(localize('com_ui_meeting_upload_error'));
+        }
       }
-    });
-  }, [projectId]);
+    };
+    void refresh();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [projectId, pendingUpload?.key, localize, stopRecorderForStorage]);
 
   const selectedId = selected?.id;
   useEffect(() => {
@@ -450,11 +511,6 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       ).includes(query),
     );
   }, [meetingsQuery.data, search]);
-
-  const stopStream = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-  };
 
   const start = async () => {
     setError('');
@@ -503,6 +559,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       setUploadProgress({ uploaded: 0, total: 0 });
       startedAtRef.current = Date.now();
       pausedTotalRef.current = 0;
+      let storageFailed = false;
       recorder.ondataavailable = (event) => {
         if (event.data.size) {
           const index = chunkIndexRef.current++;
@@ -510,16 +567,38 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
           const write = chunkWritesRef.current
             .catch(() => undefined)
             .then(async () => {
+              if (storageFailed) {
+                return;
+              }
               try {
                 await saveMeetingChunk(key, index, event.data);
                 await saveMeetingRecording(pending);
-              } catch {
-                setError(localize('com_ui_meeting_upload_error'));
+              } catch (error) {
+                storageFailed = true;
+                uploadErrorRef.current = error;
+                const now = Date.now();
+                pending.duration = Math.floor(
+                  (now -
+                    startedAtRef.current -
+                    pausedTotalRef.current -
+                    (recorder.state === 'paused' ? now - pausedAtRef.current : 0)) /
+                    1000,
+                );
+                stopRecorderForStorage();
+                const storedChunk = await readMeetingChunk(key, index).catch(() => undefined);
+                pending.totalChunks = storedChunk ? index + 1 : index;
+                chunkIndexRef.current = pending.totalChunks;
+                await saveMeetingRecording(pending).catch(() => undefined);
+                rememberPendingUpload(pending);
+                setError(localize(uploadErrorKey(error)));
               }
             });
           chunkWritesRef.current = write;
           chunkUploadsRef.current = chunkUploadsRef.current.then(async () => {
             await write;
+            if (storageFailed) {
+              return;
+            }
             try {
               const storedChunk = await readMeetingChunk(key, index);
               if (!storedChunk) {
@@ -597,9 +676,9 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
         await completePendingUpload(pending);
         setError('');
         setRecording('idle');
-      } catch {
+      } catch (error) {
         setRecording('idle');
-        setError(localize('com_ui_meeting_upload_error'));
+        setError(localize(uploadErrorKey(error)));
       }
     };
     recorder.stop();
@@ -720,7 +799,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
       }
     >
       {fullscreen && (
-        <div className="bg-surface-primary/95 sticky top-0 z-10 border-b border-border-light px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-10 border-b border-border-light bg-surface-primary/95 px-6 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-7xl justify-end">
             <button
               type="button"
@@ -769,7 +848,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                   maxLength={500}
                   onChange={(event) => setParticipantNames(event.target.value)}
                   placeholder={localize('com_ui_meeting_known_participants_placeholder')}
-                  className="focus:ring-ring-primary/30 h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2"
+                  className="h-10 w-full rounded-lg border border-border-light bg-surface-primary px-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2 focus:ring-ring-primary/30"
                 />
                 <span className="mt-1 block text-xs text-text-tertiary">
                   {localize('com_ui_meeting_known_participants_help')}
@@ -833,6 +912,10 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
               )}
               {recording === 'idle' && pendingUpload && (
                 <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <p className="col-span-2 text-xs text-text-secondary">
+                    {new Date(pendingUpload.recordedAt).toLocaleString()} ·{' '}
+                    {localize('com_ui_meeting_local_retention')}
+                  </p>
                   <button
                     type="button"
                     onClick={retryUpload}
@@ -937,7 +1020,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={localize('com_ui_meeting_search_placeholder')}
-                className="focus:ring-ring-primary/30 h-10 w-full rounded-lg border border-border-light bg-surface-primary pl-9 pr-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2"
+                className="h-10 w-full rounded-lg border border-border-light bg-surface-primary pl-9 pr-3 text-sm text-text-primary outline-none transition placeholder:text-text-tertiary focus:border-border-medium focus:ring-2 focus:ring-ring-primary/30"
               />
             </label>
           </div>
