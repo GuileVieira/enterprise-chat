@@ -30,6 +30,7 @@ Production service URLs must stay internal:
 - `RAG_API_URL=http://rag_api:8000`
 - `CONFIG_PATH=/app/config/librechat.prod.yaml`
 - `OPENROUTER_API_KEY=<production key>` enables image uploads for RAG. Default caption/OCR model is `qwen/qwen3.7-plus`; override with `IMAGE_RAG_VISION_MODEL` only if needed.
+- `ASSEMBLYAI_API_KEY=<production key>` is required to finalize and transcribe project meeting recordings. Set it in Coolify and redeploy the `api` service so Compose passes it into the container. Without it, completion returns HTTP 502 with `ASSEMBLYAI_API_KEY is not configured`; the UI shows “Falha ao enviar a gravação. Tente novamente.” Pending audio remains available for retry.
 
 Do not copy local-only values such as `localhost`, local Meili URLs, or local API keys into production.
 
