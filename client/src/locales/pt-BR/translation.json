@@ -1,4 +1,12 @@
 {
+  "com_ui_meeting_discard_confirm_title": "Apagar o áudio salvo neste navegador?",
+  "com_ui_meeting_discard_backup_confirm": "Esta ação apaga a cópia local do áudio e não pode ser desfeita. A reunião já enviada continuará no servidor. Se a transcrição falhar, você ficará sem este backup.",
+  "com_ui_meeting_discard_recording_confirm": "Esta ação apaga o áudio salvo neste navegador e cancela o envio pendente. Se esta for a única cópia da gravação, você perderá o áudio. Não é possível desfazer.",
+  "com_ui_meeting_discard_confirm_action": "Apagar definitivamente",
+  "com_ui_meeting_participant_label": "Participante {{speaker}}",
+  "com_ui_meeting_participants_help": "Digite o nome de cada participante e salve para atualizar a transcrição.",
+
+  "com_ui_meeting_capture_call_hint": "Desmarcado: grava só o microfone. Marcado: inclui as outras pessoas da chamada na aba selecionada. Ao iniciar, escolha a aba da reunião e ative “Compartilhar áudio”. A captura depende do navegador; aplicativos separados podem não ser capturados.",
   "com_ui_meeting_check_status": "Verificar transcrição",
   "com_ui_meeting_discard_backup": "Apagar cópia local",
   "com_ui_meeting_capture_call": "Incluir áudio da aba/chamada e microfone",
@@ -2017,7 +2025,7 @@
   "com_ui_meeting_speaker_confirmed": "Nome confirmado manualmente",
   "com_ui_meeting_speaker_channel": "Nome confirmado pelo canal de áudio da integração",
   "com_ui_meeting_speaker_suggested": "Nome sugerido pela AssemblyAI — revise antes de confirmar",
-  "com_ui_meeting_speaker_unidentified": "Speaker preservado sem identificação",
+  "com_ui_meeting_speaker_unidentified": "Nome não identificado automaticamente",
   "com_ui_meeting_low_transcript_confidence": "Baixa confiança nesta fala: {{confidence}}%",
   "com_ui_meeting_summary": "Resumo",
   "com_ui_meeting_decisions": "Decisões",

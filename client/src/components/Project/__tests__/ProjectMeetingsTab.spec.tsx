@@ -20,6 +20,7 @@ const mockExpireMeetingRecordings = jest.fn();
 const mockLocalize = (key: string) => key;
 
 jest.mock('librechat-data-provider', () => ({
+  ...jest.requireActual('librechat-data-provider'),
   dataService: {
     createProjectMeetingUpload: (...args: unknown[]) => mockCreateProjectMeetingUpload(...args),
     completeProjectMeetingUpload: (...args: unknown[]) => mockCompleteProjectMeetingUpload(...args),
@@ -295,6 +296,12 @@ describe('ProjectMeetingsTab recorder', () => {
     ]);
     renderTab();
     fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_discard_backup' }));
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+    expect(mockDeleteProjectMeeting).not.toHaveBeenCalled();
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      'com_ui_meeting_discard_backup_confirm',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_meeting_discard_confirm_action' }));
     await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('backup'));
     expect(mockDeleteProjectMeeting).not.toHaveBeenCalled();
   });
@@ -314,7 +321,44 @@ describe('ProjectMeetingsTab recorder', () => {
     mockDeleteProjectMeeting.mockRejectedValueOnce({ response: { status: 404 } });
     renderTab();
     fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_discard_upload' }));
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+    expect(mockDeleteProjectMeeting).not.toHaveBeenCalled();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'com_ui_meeting_discard_confirm_action' }),
+    );
     await waitFor(() => expect(mockDeleteMeetingChunks).toHaveBeenCalledWith('orphan'));
+  });
+
+  it('explains call capture on keyboard focus without toggling recording source', async () => {
+    renderTab();
+    const hint = screen.getByRole('button', { name: 'com_ui_more_info' });
+    act(() => hint.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'com_ui_meeting_capture_call_hint',
+    );
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('keeps audio when the discard confirmation is cancelled', async () => {
+    mockListMeetingRecordings.mockResolvedValue([
+      {
+        key: 'keep',
+        meetingId: 'keep',
+        projectId: 'project-1',
+        submitted: true,
+        mimeType: 'audio/webm',
+        duration: 10,
+        totalChunks: 1,
+        recordedAt: new Date().toISOString(),
+      },
+    ]);
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'com_ui_meeting_discard_backup' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mockDeleteMeetingChunks).not.toHaveBeenCalled();
+    expect(mockDeleteProjectMeeting).not.toHaveBeenCalled();
   });
 
   it('shows a localized error when microphone permission is denied', async () => {

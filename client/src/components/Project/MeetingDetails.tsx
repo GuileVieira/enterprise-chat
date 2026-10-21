@@ -78,6 +78,12 @@ export default function MeetingDetails({
     );
   }
   const speakers = [...new Set(meeting.utterances.map((item) => item.speaker))];
+  const participantName = (speaker: string) => {
+    const name = speakerNames[speaker];
+    return name == null || name === `Speaker ${speaker}`
+      ? localize('com_ui_meeting_participant_label', { speaker })
+      : name;
+  };
   const identificationLabel = (speaker: string) => {
     const identification = meeting.speakerIdentifications?.[speaker];
     if (identification?.source === 'manual' && identification.confirmed) {
@@ -99,7 +105,7 @@ export default function MeetingDetails({
   const transcriptText = meeting.utterances
     .map(
       (utterance) =>
-        `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
+        `[${formatTime(utterance.start / 1000)}] ${participantName(utterance.speaker)}: ${utterance.text}`,
     )
     .join('\n\n');
   const fullText = [
@@ -193,15 +199,20 @@ export default function MeetingDetails({
           <h3 className="mb-3 text-sm font-medium text-text-primary">
             {localize('com_ui_meeting_participants')}
           </h3>
-          <div className="flex flex-wrap gap-2">
+          {canEdit && (
+            <p className="mb-3 text-xs text-text-secondary">
+              {localize('com_ui_meeting_participants_help')}
+            </p>
+          )}
+          <div className="flex flex-wrap items-start gap-2">
             {speakers.map((speaker) => (
               <label key={speaker} className="min-w-40 flex-1">
                 <input
-                  value={speakerNames[speaker] ?? `Speaker ${speaker}`}
+                  value={participantName(speaker)}
                   disabled={!canEdit}
                   onChange={(event) => onSpeakerChange(speaker, event.target.value)}
-                  className="w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary"
-                  aria-label={`Speaker ${speaker}`}
+                  className="h-10 w-full rounded-lg border border-border-light bg-surface-secondary px-3 py-2 text-sm text-text-primary"
+                  aria-label={localize('com_ui_meeting_participant_label', { speaker })}
                 />
                 <span
                   className={`mt-1 block text-xs ${
@@ -215,7 +226,11 @@ export default function MeetingDetails({
               </label>
             ))}
             {canEdit && (
-              <button type="button" onClick={onSave} className="btn btn-primary">
+              <button
+                type="button"
+                onClick={onSave}
+                className="btn btn-primary h-10 shrink-0 self-start"
+              >
                 {localize('com_ui_save')}
               </button>
             )}
@@ -296,8 +311,7 @@ export default function MeetingDetails({
                 className="rounded-xl bg-surface-primary p-3"
               >
                 <div className="mb-1 text-xs font-medium text-text-secondary">
-                  [{formatTime(utterance.start / 1000)}]{' '}
-                  {speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}
+                  [{formatTime(utterance.start / 1000)}] {participantName(utterance.speaker)}
                 </div>
                 <p className="text-sm leading-6 text-text-primary">{utterance.text}</p>
                 {utterance.confidence !== undefined && utterance.confidence < 0.8 && (
@@ -311,7 +325,7 @@ export default function MeetingDetails({
                   type="button"
                   onClick={() =>
                     copy(
-                      `[${formatTime(utterance.start / 1000)}] ${speakerNames[utterance.speaker] ?? `Speaker ${utterance.speaker}`}: ${utterance.text}`,
+                      `[${formatTime(utterance.start / 1000)}] ${participantName(utterance.speaker)}: ${utterance.text}`,
                     )
                   }
                   className="mt-2 inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"

@@ -1,4 +1,12 @@
 {
+  "com_ui_meeting_discard_confirm_title": "Delete the audio saved in this browser?",
+  "com_ui_meeting_discard_backup_confirm": "This permanently deletes the local audio backup. The submitted meeting remains on the server. If transcription fails, this backup will no longer be available.",
+  "com_ui_meeting_discard_recording_confirm": "This deletes the audio saved in this browser and cancels the pending upload. If this is the only copy, the audio will be lost. This cannot be undone.",
+  "com_ui_meeting_discard_confirm_action": "Permanently delete",
+  "com_ui_meeting_participant_label": "Participant {{speaker}}",
+  "com_ui_meeting_participants_help": "Enter each participant’s name and save to update the transcript.",
+
+  "com_ui_meeting_capture_call_hint": "Unchecked: records only your microphone. Checked: includes other people speaking in the selected call tab. When starting, select the meeting tab and enable “Share audio”. Capture depends on your browser; separate apps may not be captured.",
   "com_ui_meeting_check_status": "Check transcription",
   "com_ui_meeting_discard_backup": "Delete local backup",
   "com_ui_meeting_capture_call": "Include tab/call audio and microphone",
@@ -2017,7 +2025,7 @@
   "com_ui_meeting_speaker_confirmed": "Name manually confirmed",
   "com_ui_meeting_speaker_channel": "Name confirmed by the integration audio channel",
   "com_ui_meeting_speaker_suggested": "Name suggested by AssemblyAI — review before confirming",
-  "com_ui_meeting_speaker_unidentified": "Speaker kept unidentified",
+  "com_ui_meeting_speaker_unidentified": "Name not identified automatically",
   "com_ui_meeting_low_transcript_confidence": "Low confidence in this utterance: {{confidence}}%",
   "com_ui_meeting_summary": "Summary",
   "com_ui_meeting_decisions": "Decisions",

@@ -61,7 +61,9 @@ describe('MeetingDetails', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Speaker A'), { target: { value: 'Ana' } });
+    fireEvent.change(screen.getByLabelText('com_ui_meeting_participant_label'), {
+      target: { value: 'Ana' },
+    });
     expect(onSpeakerChange).toHaveBeenCalledWith('A', 'Ana');
 
     rerender(

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { OGDialog, OGDialogTemplate, TooltipAnchor } from '@librechat/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowsIn,
+  Info,
   MagnifyingGlass,
   Microphone,
   Pause,
@@ -177,6 +179,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
   const stopCaptureRef = useRef<(() => void) | null>(null);
   const finishCaptureRef = useRef<() => void>(() => undefined);
   const [captureCall, setCaptureCall] = useState(false);
+  const [discardTarget, setDiscardTarget] = useState<PendingRecording | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -849,26 +852,28 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
     }
   };
 
-  const discardUpload = async () => {
+  const discardUpload = async (pending: PendingRecording) => {
     try {
-      if (pendingUpload) {
+      if (pending) {
         try {
-          if (!pendingUpload.submitted) {
-            await dataService.deleteProjectMeeting(projectId, pendingUpload.meetingId);
+          if (!pending.submitted) {
+            await dataService.deleteProjectMeeting(projectId, pending.meetingId);
           }
         } catch (error) {
           if (httpStatus(error) !== 404) {
             throw error;
           }
         }
-        await deleteMeetingChunks(pendingUpload.key);
+        await deleteMeetingChunks(pending.key);
       }
-      rememberPendingUpload(null);
+      if (pendingUploadRef.current?.key === pending.key) {
+        rememberPendingUpload(null);
+      }
       setError('');
       setElapsed(0);
     } catch (error) {
       logMeetingOperation(
-        { projectId, meetingId: pendingUpload?.meetingId, stage: 'discard', outcome: 'failed' },
+        { projectId, meetingId: pending?.meetingId, stage: 'discard', outcome: 'failed' },
         error,
       );
       setError(localize(uploadErrorKey(error)));
@@ -1007,14 +1012,24 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
               </span>
             </div>
             {recording === 'idle' && !pendingUpload && (
-              <label className="mb-3 flex items-center gap-2 text-sm text-text-primary">
-                <input
-                  type="checkbox"
-                  checked={captureCall}
-                  onChange={(event) => setCaptureCall(event.target.checked)}
-                />
-                {localize('com_ui_meeting_capture_call')}
-              </label>
+              <div className="mb-3 flex items-center gap-2 text-sm text-text-primary">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={captureCall}
+                    onChange={(event) => setCaptureCall(event.target.checked)}
+                  />
+                  {localize('com_ui_meeting_capture_call')}
+                </label>
+                <TooltipAnchor
+                  description={localize('com_ui_meeting_capture_call_hint')}
+                  render={<button type="button" />}
+                  aria-label={localize('com_ui_more_info')}
+                  className="shrink-0 rounded p-1 text-text-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary"
+                >
+                  <Info aria-hidden="true" className="size-4" />
+                </TooltipAnchor>
+              </div>
             )}
             {recording === 'idle' && !pendingUpload && (
               <label className="mb-4 block">
@@ -1108,7 +1123,7 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
                   </button>
                   <button
                     type="button"
-                    onClick={discardUpload}
+                    onClick={() => setDiscardTarget(pendingUpload)}
                     className="min-h-11 rounded-xl border border-border-light px-3 text-sm font-medium text-text-secondary transition duration-200 hover:bg-surface-hover hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary active:scale-[0.98]"
                   >
                     {localize(
@@ -1259,6 +1274,34 @@ export default function ProjectMeetingsTab({ projectId, canEdit }: ProjectMeetin
           </div>
         </section>
       </aside>
+
+      <OGDialog
+        open={discardTarget !== null}
+        onOpenChange={(open) => !open && setDiscardTarget(null)}
+      >
+        <OGDialogTemplate
+          title={localize('com_ui_meeting_discard_confirm_title')}
+          description={localize(
+            discardTarget?.submitted
+              ? 'com_ui_meeting_discard_backup_confirm'
+              : 'com_ui_meeting_discard_recording_confirm',
+          )}
+          main={
+            <p className="text-sm text-text-secondary">
+              {discardTarget && new Date(discardTarget.recordedAt).toLocaleString()}
+            </p>
+          }
+          selection={{
+            selectText: localize('com_ui_meeting_discard_confirm_action'),
+            selectClasses: 'bg-surface-destructive text-text-on-status',
+            selectHandler: () => {
+              if (discardTarget) {
+                void discardUpload(discardTarget);
+              }
+            },
+          }}
+        />
+      </OGDialog>
 
       <main className={fullscreen ? 'mx-auto w-full max-w-7xl px-6 py-8' : 'min-w-0'}>
         <MeetingDetails
