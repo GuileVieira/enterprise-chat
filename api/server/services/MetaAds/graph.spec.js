@@ -51,6 +51,18 @@ describe('Meta Ads Graph client', () => {
     jest.useRealTimers();
   });
 
+  it('does not expose credentials when fetch rejects a header value', async () => {
+    const secret = 'PRIVATE_CREDENTIAL';
+    fetch.mockRejectedValueOnce(new TypeError(`Bearer ${secret} is not a legal HTTP header value`));
+    await expect(
+      validateMetaAdsAccess({ adAccountId: 'act_123', token: secret }),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message:
+        'Não foi possível enviar a credencial. Limpe o campo e cole somente o token Meta Ads, sem textos adicionais.',
+    });
+  });
+
   it('uses a configured global Meta Graph API version', async () => {
     process.env.META_GRAPH_API_VERSION = 'v24.0';
     fetch.mockResolvedValueOnce({

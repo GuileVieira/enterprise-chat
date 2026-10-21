@@ -5422,6 +5422,40 @@ describe('ProjectMetaAdsPanel', () => {
     expect(screen.queryByText('com_ui_show_password')).not.toBeInTheDocument();
   });
 
+  it('explains the missing account and prevents token saves before submission', () => {
+    mockUserRole = 'ADMIN';
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    fireEvent.click(within(accountDialog).getByText('com_ui_project_meta_ads_manage_tokens'));
+    const credentialsDialog = screen.getAllByRole('dialog')[1];
+    expect(within(credentialsDialog).getByRole('alert')).toHaveTextContent(
+      'com_ui_project_meta_ads_token_account_required',
+    );
+    for (const input of within(credentialsDialog).getAllByPlaceholderText(
+      'com_ui_project_meta_ads_token_placeholder',
+    )) {
+      fireEvent.change(input, { target: { value: 'EAGtest' } });
+    }
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_save_project_token'),
+    ).toBeDisabled();
+    expect(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_save_tenant_token'),
+    ).toBeDisabled();
+    fireEvent.click(
+      within(credentialsDialog).getByText('com_ui_project_meta_ads_configure_account'),
+    );
+    expect(
+      screen.queryByText('com_ui_project_meta_ads_manage_tokens_hint'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('123456789')).toBeInTheDocument();
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+    expect(mockMutateTenantToken).not.toHaveBeenCalled();
+  });
+
   it('lets admins save the tenant global Meta Ads token from the credentials modal', () => {
     mockUserRole = 'ADMIN';
     mockStatusData.credentials = {
@@ -5430,7 +5464,12 @@ describe('ProjectMetaAdsPanel', () => {
       tenantConfigured: true,
       secretName: 'meta_graph_access_token',
     };
-    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    render(
+      <ProjectMetaAdsPanel
+        project={{ ...project, metaAds: { adAccountId: 'act_123' } }}
+        canEdit={true}
+      />,
+    );
 
     fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
     const accountDialog = screen.getByRole('dialog', {

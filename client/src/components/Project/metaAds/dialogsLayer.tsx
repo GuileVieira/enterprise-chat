@@ -183,6 +183,10 @@ export function MetaAdsDialogsLayer({
       />
       <MetaAdsCredentialsDialog
         open={credentialsDialogOpen}
+        adAccountId={settingsDraft?.adAccountId ?? settings.adAccountId ?? ''}
+        onConfigureAccount={() => {
+          settingsState.openSettingsDrawer('account');
+        }}
         tenantConfigured={token.tenantConfigured}
         canManageTenantToken={token.canManageTenantToken}
         canUseMetaAdsActions={token.canUseMetaAdsActions}

@@ -9,6 +9,8 @@ type MetaAdsDialogChrome = {
 
 export function MetaAdsCredentialsDialog({
   open,
+  adAccountId,
+  onConfigureAccount,
   tenantConfigured,
   canManageTenantToken,
   canUseMetaAdsActions,
@@ -33,6 +35,8 @@ export function MetaAdsCredentialsDialog({
   buttons,
 }: {
   open: boolean;
+  adAccountId: string;
+  onConfigureAccount: () => void;
   tenantConfigured: boolean;
   canManageTenantToken: boolean;
   canUseMetaAdsActions: boolean;
@@ -59,6 +63,7 @@ export function MetaAdsCredentialsDialog({
     ghostClassName: string;
   };
 }) {
+  const accountReady = /^act_\d+$/.test(adAccountId);
   return (
     <OGDialog
       open={open}
@@ -80,7 +85,29 @@ export function MetaAdsCredentialsDialog({
           </div>
         </OGDialogHeader>
         <div className="space-y-4 p-4">
+          <div
+            role={accountReady ? 'status' : 'alert'}
+            className="rounded-xl border border-border-light p-3 text-sm text-text-primary"
+          >
+            {accountReady ? (
+              <p>
+                {localize('com_ui_project_meta_ads_account')}: {adAccountId}
+              </p>
+            ) : (
+              <>
+                <p>{localize('com_ui_project_meta_ads_token_account_required')}</p>
+                <button
+                  type="button"
+                  onClick={onConfigureAccount}
+                  className={buttons.ghostClassName}
+                >
+                  {localize('com_ui_project_meta_ads_configure_account')}
+                </button>
+              </>
+            )}
+          </div>
           <TenantTokenSection
+            accountReady={accountReady}
             tenantConfigured={tenantConfigured}
             canManageTenantToken={canManageTenantToken}
             tenantAccessToken={tenantAccessToken}
@@ -95,6 +122,7 @@ export function MetaAdsCredentialsDialog({
           />
 
           <ProjectTokenSection
+            accountReady={accountReady}
             canUseMetaAdsActions={canUseMetaAdsActions}
             hasProjectToken={hasProjectToken}
             settingsDraftToken={settingsDraftToken}
@@ -121,6 +149,7 @@ export function MetaAdsCredentialsDialog({
 }
 
 function TenantTokenSection({
+  accountReady,
   tenantConfigured,
   canManageTenantToken,
   tenantAccessToken,
@@ -133,6 +162,7 @@ function TenantTokenSection({
   tileClassName,
   primaryButtonClassName,
 }: {
+  accountReady: boolean;
   tenantConfigured: boolean;
   canManageTenantToken: boolean;
   tenantAccessToken: string;
@@ -189,7 +219,7 @@ function TenantTokenSection({
         <div className="mt-3 flex justify-end">
           <button
             type="button"
-            disabled={!tenantAccessToken.trim() || savingTenantToken}
+            disabled={!accountReady || !tenantAccessToken.trim() || savingTenantToken}
             onClick={onSaveTenantToken}
             className={primaryButtonClassName}
           >
@@ -202,6 +232,7 @@ function TenantTokenSection({
 }
 
 function ProjectTokenSection({
+  accountReady,
   canUseMetaAdsActions,
   hasProjectToken,
   settingsDraftToken,
@@ -216,6 +247,7 @@ function ProjectTokenSection({
   primaryButtonClassName,
   ghostButtonClassName,
 }: {
+  accountReady: boolean;
   canUseMetaAdsActions: boolean;
   hasProjectToken: boolean;
   settingsDraftToken: string;
@@ -284,7 +316,12 @@ function ProjectTokenSection({
         )}
         <button
           type="button"
-          disabled={!canUseMetaAdsActions || !settingsDraftToken.trim() || savingProjectToken}
+          disabled={
+            !accountReady ||
+            !canUseMetaAdsActions ||
+            !settingsDraftToken.trim() ||
+            savingProjectToken
+          }
           onClick={onSaveProjectToken}
           className={primaryButtonClassName}
         >

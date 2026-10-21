@@ -20,13 +20,13 @@
     "semantic_hash": "861e6584598281311a39505317576a9a"
   },
   "api/server/services/MetaAds/graph.js": {
-    "mtime": 1789420309.4808178,
-    "ast_hash": "1736b10bee90661d0461804f1e5d1b8e",
+    "mtime": 1792609265.3142278,
+    "ast_hash": "183eb1bb62cc1666cb6b2705d39724d2",
     "semantic_hash": ""
   },
   "api/server/services/MetaAds/graph.spec.js": {
-    "mtime": 1789420309.4810412,
-    "ast_hash": "3a4eceaea919a15589a5d34c7146c128",
+    "mtime": 1792609291.00062,
+    "ast_hash": "5c63d6467ef340e1059db182d210ea23",
     "semantic_hash": ""
   },
   "client/src/components/Project/ProjectDetailPage.tsx": {
@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/credentialsDialog.tsx": {
-    "mtime": 1789420309.5763993,
-    "ast_hash": "3d6750dd2a11e32b395071fbabfe9d29",
-    "semantic_hash": "3d6750dd2a11e32b395071fbabfe9d29"
+    "mtime": 1792609291.0313458,
+    "ast_hash": "50a3502ed31f344a17db630ce213914c",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/dialogs.tsx": {
     "mtime": 1789420309.5765202,
@@ -100,9 +100,9 @@
     "semantic_hash": "a861d5e8faebe184f02f5ae702f7fe56"
   },
   "client/src/components/Project/metaAds/dialogsLayer.tsx": {
-    "mtime": 1789420309.576922,
-    "ast_hash": "09a6ddffb918aa991bc86814a94a0caf",
-    "semantic_hash": "09a6ddffb918aa991bc86814a94a0caf"
+    "mtime": 1792609290.2046967,
+    "ast_hash": "146301aee0b7d262f79e4a62606a3285",
+    "semantic_hash": ""
   },
   "client/src/components/Project/metaAds/errors.ts": {
     "mtime": 1792518098.1037385,
@@ -5805,8 +5805,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectMetaAdsPanel.spec.tsx": {
-    "mtime": 1789431827.7129529,
-    "ast_hash": "7ffd18d52112952b9b22b33bf5441806",
+    "mtime": 1792609291.1528118,
+    "ast_hash": "9686f7237e902a007431c14051b72f65",
     "semantic_hash": ""
   },
   "client/src/components/Project/__tests__/ProjectSelector.spec.tsx": {

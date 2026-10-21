@@ -290,6 +290,14 @@ async function fetchWithTimeout(url, options = {}, resourceLabel = 'Meta API') {
       }),
       timeoutPromise,
     ]);
+  } catch (error) {
+    if (/header|ByteString/i.test(error.message ?? '')) {
+      throw createMetaGraphError(
+        'Não foi possível enviar a credencial. Limpe o campo e cole somente o token Meta Ads, sem textos adicionais.',
+        { statusCode: 400 },
+      );
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

@@ -4083,5 +4083,7 @@
   "com_ui_skills_use_all": "Usar todas as habilidades",
   "com_ui_sort_by": "Ordenar por",
   "com_ui_subagent_dialog_description": "Execução secundária com contexto isolado. Veja a atividade e o resultado final abaixo.",
-  "com_ui_subagent_scroll_to_bottom": "Rolar para o mais recente"
+  "com_ui_subagent_scroll_to_bottom": "Rolar para o mais recente",
+  "com_ui_project_meta_ads_token_account_required": "Configure a conta de anúncios antes de salvar o token. Informe o ID da conta nas configurações Meta Ads.",
+  "com_ui_project_meta_ads_configure_account": "Configurar conta de anúncios"
 }
