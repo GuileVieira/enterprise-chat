@@ -829,9 +829,6 @@ async function prepareMetaAdsSettingsUpdate({
   if (!trimmedToken) {
     return { metaAds: normalized };
   }
-  if (!looksLikeMetaAccessToken(trimmedToken)) {
-    throw Object.assign(new Error('Invalid metaAccessToken format'), { statusCode: 400 });
-  }
 
   const project = await resolveProject(projectId);
   if (!project) {
@@ -1285,9 +1282,6 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
       typeof req.body.metaAccessToken === 'string' ? req.body.metaAccessToken.trim() : '';
     if (!token) {
       return res.status(400).json({ message: 'metaAccessToken is required' });
-    }
-    if (!looksLikeMetaAccessToken(token)) {
-      return res.status(400).json({ message: 'Invalid metaAccessToken format' });
     }
     const tenantId = req.user.tenantId || getTenantId();
     const project = await resolveProjectForMetaAdsSettings(req.params.projectId);

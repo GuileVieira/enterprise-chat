@@ -790,46 +790,49 @@ describe('projectMetaAds settings normalization', () => {
     );
   });
 
-  it('saves a pasted Meta token as a generated project secret', async () => {
-    const upsertSecret = jest.fn(async () => ({}));
+  it.each(['EAA', 'EAG', 'other-prefix'])(
+    'saves a %s project token after Meta validation',
+    async (prefix) => {
+      const upsertSecret = jest.fn(async () => ({}));
 
-    const result = await router._prepareMetaAdsSettingsUpdateForTest({
-      projectId: 'p1',
-      tenantId: 'request-tenant',
-      metaAds: {
-        adAccountId: '123-456',
-        metaAccessToken: 'must-not-save',
-        accessToken: 'also-must-not-save',
-      },
-      metaAccessToken: `EAA${'a'.repeat(48)}`,
-      resolveProject: jest.fn(async () => ({
+      const result = await router._prepareMetaAdsSettingsUpdateForTest({
         projectId: 'p1',
-        tenantId: 'project-tenant',
-      })),
-      upsertSecret,
-    });
+        tenantId: 'request-tenant',
+        metaAds: {
+          adAccountId: '123-456',
+          metaAccessToken: 'must-not-save',
+          accessToken: 'also-must-not-save',
+        },
+        metaAccessToken: `${prefix}${'a'.repeat(48)}`,
+        resolveProject: jest.fn(async () => ({
+          projectId: 'p1',
+          tenantId: 'project-tenant',
+        })),
+        upsertSecret,
+      });
 
-    expect(upsertSecret).toHaveBeenCalledWith(
-      'project-tenant',
-      'meta_graph_access_token_project_p1',
-      `EAA${'a'.repeat(48)}`,
-      'meta_access_token',
-    );
-    expect(result).toEqual({
-      metaAds: expect.objectContaining({
+      expect(upsertSecret).toHaveBeenCalledWith(
+        'project-tenant',
+        'meta_graph_access_token_project_p1',
+        `${prefix}${'a'.repeat(48)}`,
+        'meta_access_token',
+      );
+      expect(result).toEqual({
+        metaAds: expect.objectContaining({
+          adAccountId: 'act_123456',
+          tokenSecretName: 'meta_graph_access_token_project_p1',
+          credentialMode: 'project_secret',
+        }),
+      });
+      expect(result.metaAds).not.toHaveProperty('metaAccessToken');
+      expect(result.metaAds).not.toHaveProperty('accessToken');
+      expect(mockValidateMetaAdsAccess).toHaveBeenCalledWith({
         adAccountId: 'act_123456',
-        tokenSecretName: 'meta_graph_access_token_project_p1',
-        credentialMode: 'project_secret',
-      }),
-    });
-    expect(result.metaAds).not.toHaveProperty('metaAccessToken');
-    expect(result.metaAds).not.toHaveProperty('accessToken');
-    expect(mockValidateMetaAdsAccess).toHaveBeenCalledWith({
-      adAccountId: 'act_123456',
-      token: `EAA${'a'.repeat(48)}`,
-      graphVersion: undefined,
-    });
-  });
+        token: `${prefix}${'a'.repeat(48)}`,
+        graphVersion: undefined,
+      });
+    },
+  );
 
   it('rejects a project token without campaign write permission before storing it', async () => {
     const upsertSecret = jest.fn();
@@ -875,8 +878,10 @@ describe('projectMetaAds settings normalization', () => {
     });
   });
 
-  it('rejects invalid project Meta token formats before storing a secret', async () => {
+  it('propagates Meta rejection before storing a project token', async () => {
     const upsertSecret = jest.fn();
+    const error = Object.assign(new Error('Invalid OAuth access token.'), { statusCode: 400 });
+    const validateToken = jest.fn().mockRejectedValue(error);
 
     await expect(
       router._prepareMetaAdsSettingsUpdateForTest({
@@ -884,10 +889,16 @@ describe('projectMetaAds settings normalization', () => {
         tenantId: 'tenant-x',
         metaAds: { adAccountId: 'act_123' },
         metaAccessToken: 'not-a-meta-token',
-        resolveProject: jest.fn(),
+        resolveProject: jest.fn(async () => ({ projectId: 'p1', tenantId: 'tenant-x' })),
+        validateToken,
         upsertSecret,
       }),
-    ).rejects.toMatchObject({ statusCode: 400 });
+    ).rejects.toBe(error);
+    expect(validateToken).toHaveBeenCalledWith({
+      adAccountId: 'act_123',
+      token: 'not-a-meta-token',
+      graphVersion: undefined,
+    });
     expect(upsertSecret).not.toHaveBeenCalled();
   });
 });
@@ -1419,33 +1430,36 @@ describe('projectMetaAds tenant token route', () => {
     upsertTenantSecret.mockResolvedValue({});
   });
 
-  it('saves the tenant global Meta token using the canonical secret name', async () => {
-    const token = `EAA${'g'.repeat(48)}`;
-    getProjectById.mockResolvedValueOnce({
-      projectId: 'p1',
-      tenantId: 'tenant-x',
-      metaAds: { adAccountId: 'act_123' },
-    });
+  it.each(['EAA', 'EAG', 'other-prefix'])(
+    'saves a %s tenant token after Meta validation',
+    async (prefix) => {
+      const token = `${prefix}${'g'.repeat(48)}`;
+      getProjectById.mockResolvedValueOnce({
+        projectId: 'p1',
+        tenantId: 'tenant-x',
+        metaAds: { adAccountId: 'act_123' },
+      });
 
-    const response = await request(createApp())
-      .put('/projects/p1/meta-ads/tenant-token')
-      .send({ metaAccessToken: token })
-      .expect(200);
+      const response = await request(createApp())
+        .put('/projects/p1/meta-ads/tenant-token')
+        .send({ metaAccessToken: token })
+        .expect(200);
 
-    expect(upsertTenantSecret).toHaveBeenCalledWith(
-      'tenant-x',
-      'meta_graph_access_token',
-      token,
-      'meta_access_token',
-    );
-    expect(response.body).toEqual({
-      credentials: {
-        tenantConfigured: true,
-        secretName: 'meta_graph_access_token',
-      },
-    });
-    expect(JSON.stringify(response.body)).not.toContain(token);
-  });
+      expect(upsertTenantSecret).toHaveBeenCalledWith(
+        'tenant-x',
+        'meta_graph_access_token',
+        token,
+        'meta_access_token',
+      );
+      expect(response.body).toEqual({
+        credentials: {
+          tenantConfigured: true,
+          secretName: 'meta_graph_access_token',
+        },
+      });
+      expect(JSON.stringify(response.body)).not.toContain(token);
+    },
+  );
 
   it('rejects a tenant token without campaign write permission', async () => {
     getProjectById.mockResolvedValueOnce({
@@ -1478,11 +1492,19 @@ describe('projectMetaAds tenant token route', () => {
     expect(upsertTenantSecret).not.toHaveBeenCalled();
   });
 
-  it('rejects invalid tenant global Meta token formats', async () => {
+  it('returns Meta rejection without storing the tenant token', async () => {
+    getProjectById.mockResolvedValueOnce({
+      projectId: 'p1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123' },
+    });
+    mockValidateMetaAdsAccess.mockRejectedValueOnce(
+      Object.assign(new Error('Invalid OAuth access token.'), { statusCode: 400 }),
+    );
     await request(createApp())
       .put('/projects/p1/meta-ads/tenant-token')
       .send({ metaAccessToken: 'not-a-meta-token' })
-      .expect(400);
+      .expect(400, { message: 'Invalid OAuth access token.' });
 
     expect(upsertTenantSecret).not.toHaveBeenCalled();
   });
