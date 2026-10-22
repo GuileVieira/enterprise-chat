@@ -839,6 +839,7 @@ async function prepareMetaAdsSettingsUpdate({
     adAccountId: normalized.adAccountId,
     token: trimmedToken,
     graphVersion: normalized.graphVersion,
+    requireManagement: true,
   });
   if (!validation.canRead || !validation.canManage) {
     throw Object.assign(
@@ -1293,6 +1294,7 @@ router.put('/tenant-token', requireManageConfigs, async (req, res) => {
       adAccountId: metaAds.adAccountId,
       token,
       graphVersion: metaAds.graphVersion,
+      requireManagement: true,
     });
     if (!validation.canRead || !validation.canManage) {
       return res.status(400).json({

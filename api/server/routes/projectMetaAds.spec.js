@@ -830,6 +830,7 @@ describe('projectMetaAds settings normalization', () => {
         adAccountId: 'act_123456',
         token: `${prefix}${'a'.repeat(48)}`,
         graphVersion: undefined,
+        requireManagement: true,
       });
     },
   );
@@ -898,6 +899,7 @@ describe('projectMetaAds settings normalization', () => {
       adAccountId: 'act_123',
       token: 'not-a-meta-token',
       graphVersion: undefined,
+      requireManagement: true,
     });
     expect(upsertSecret).not.toHaveBeenCalled();
   });

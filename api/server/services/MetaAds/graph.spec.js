@@ -882,6 +882,36 @@ describe('Meta Ads Graph client', () => {
     );
   });
 
+  it('preserves API access blocks instead of reporting missing permissions', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({ error: { code: 200, message: 'API access blocked.' } }),
+    });
+
+    await expect(metaGet({ path: 'act_123/campaigns', token: 'token' })).rejects.toMatchObject({
+      statusCode: 400,
+      message: 'API access blocked.',
+    });
+  });
+
+  it('requires ads_management when validating a token for settings', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      text: async () =>
+        JSON.stringify({ error: { code: 200, message: '(#200) Permissions error' } }),
+    });
+
+    await expect(
+      validateMetaAdsAccess({ adAccountId: 'act_123', token: 'token', requireManagement: true }),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      message:
+        'Token Meta Ads sem permissão para act_123. Conceda ads_management ao app/token e confirme acesso à conta de anúncio.',
+    });
+  });
+
   it('requires ads_management in write permission errors', async () => {
     fetch.mockResolvedValueOnce({
       ok: false,

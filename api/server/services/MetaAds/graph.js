@@ -519,7 +519,7 @@ function getAdAccountIdFromPath(path) {
 function getMetaErrorMessage({ payload, path, bodySnippet, status, write = false }) {
   const metaError = payload?.error;
   const message = metaError?.message;
-  if (metaError?.code === 200 || /ads_management|ads_read|permission/i.test(message ?? '')) {
+  if (/ads_management|ads_read|permission/i.test(message ?? '')) {
     return formatMetaPermissionError({ adAccountId: getAdAccountIdFromPath(path), write });
   }
   return (
@@ -590,7 +590,14 @@ async function readMetaResponse({
   return payload;
 }
 
-async function metaGet({ path, token, params = {}, graphVersion, resourceLabel = 'Meta API' }) {
+async function metaGet({
+  path,
+  token,
+  params = {},
+  graphVersion,
+  resourceLabel = 'Meta API',
+  write = false,
+}) {
   const resolvedGraphVersion = getMetaGraphVersion(graphVersion);
   const url = new URL(`${META_GRAPH_HOST}/${resolvedGraphVersion}/${path}`);
   for (const [key, value] of Object.entries(params)) {
@@ -626,6 +633,7 @@ async function metaGet({ path, token, params = {}, graphVersion, resourceLabel =
     graphVersion: resolvedGraphVersion,
     params: paramKeys,
     resourceLabel,
+    write,
   });
 }
 
@@ -865,7 +873,12 @@ async function getAdAccountCurrency({ adAccountId, token, graphVersion }) {
     : undefined;
 }
 
-async function validateMetaAdsAccess({ adAccountId, token, graphVersion }) {
+async function validateMetaAdsAccess({
+  adAccountId,
+  token,
+  graphVersion,
+  requireManagement = false,
+}) {
   if (!/^act_\d+$/.test(adAccountId ?? '')) {
     throw createMetaGraphError('A valid Meta ad account is required to validate the token.', {
       statusCode: 400,
@@ -877,6 +890,7 @@ async function validateMetaAdsAccess({ adAccountId, token, graphVersion }) {
     params: { fields: 'id' },
     graphVersion,
     resourceLabel: 'ad account access validation',
+    write: requireManagement,
   });
   const payload = await metaGet({
     path: 'me/permissions',
@@ -884,6 +898,7 @@ async function validateMetaAdsAccess({ adAccountId, token, graphVersion }) {
     params: { fields: 'permission,status' },
     graphVersion,
     resourceLabel: 'Meta token permission validation',
+    write: requireManagement,
   });
   const granted = new Set(
     (Array.isArray(payload?.data) ? payload.data : [])
