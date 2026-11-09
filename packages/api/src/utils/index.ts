@@ -37,3 +37,5 @@ export * from './message';
 export * from './quotes';
 export * from './tracing';
 export * from './projectContext';
+
+export { getAvailableMetaGraphVersions } from './meta';

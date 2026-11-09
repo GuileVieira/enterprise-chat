@@ -25,19 +25,22 @@ export function toAdAccountId(value: string) {
   return digits ? `act_${digits}` : '';
 }
 
-export function isSupportedGraphVersion(value?: string) {
+export function isSupportedGraphVersion(value?: string): value is string {
   const match = value?.trim().match(/^v(\d+)\.0$/);
   return match ? Number(match[1]) >= 24 : false;
 }
 
-export function getGraphVersionOptions(effectiveVersion?: string) {
+export function getGraphVersionOptions(effectiveVersion?: string, available: string[] = []) {
   return Array.from(
     new Set([
       'v24.0',
       'v25.0',
+      'v26.0',
+      'v27.0',
+      ...available.filter(isSupportedGraphVersion),
       ...(isSupportedGraphVersion(effectiveVersion) ? [effectiveVersion] : []),
     ]),
-  );
+  ).sort((a, b) => Number(a.slice(1, -2)) - Number(b.slice(1, -2)));
 }
 
 function toMonthlyBudgetValues(values?: MonthlyBudgetValues): Required<MonthlyBudgetValues> {

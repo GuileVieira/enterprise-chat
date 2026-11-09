@@ -1,5 +1,5 @@
 import type { TProject } from 'librechat-data-provider';
-import { normalizeSettings } from './settings';
+import { getGraphVersionOptions, normalizeSettings } from './settings';
 
 describe('Meta Ads settings normalization', () => {
   it('strips legacy cooldown fields from editable settings', () => {
@@ -57,5 +57,18 @@ describe('Meta Ads settings normalization', () => {
     expect(settings.ruleOverrides?.[0].creativeRules?.pauseHighCost).not.toHaveProperty(
       'cooldownHours',
     );
+  });
+});
+
+describe('Meta Graph version options', () => {
+  it('includes discovered and configured versions without duplicates or invalid values', () => {
+    expect(getGraphVersionOptions('v29.0', ['v28.0', 'v27.0', 'v23.0', 'invalid'])).toEqual([
+      'v24.0',
+      'v25.0',
+      'v26.0',
+      'v27.0',
+      'v28.0',
+      'v29.0',
+    ]);
   });
 });

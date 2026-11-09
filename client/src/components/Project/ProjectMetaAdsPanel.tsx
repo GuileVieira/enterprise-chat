@@ -270,6 +270,7 @@ export default function ProjectMetaAdsPanel({
   const scheduleIntervalMinutes = settings.scheduleIntervalMinutes ?? 180;
   const graphVersionOptions = getGraphVersionOptions(
     statusQuery.data?.graphVersion?.effective,
+    statusQuery.data?.graphVersion?.available,
   ).filter((version): version is string => typeof version === 'string');
   const trend = biStatusQuery.data?.trend ?? statusQuery.data?.trend;
   const { canOpenTrafficAgentChat, onOpenTrafficAgentChat, onOpenTrafficDiaryAnalysis } =

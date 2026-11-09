@@ -43,6 +43,11 @@ jest.mock('~/server/services/Config/app', () => ({
   getAppConfig: jest.fn(async () => ({ interfaceConfig: { metaAds: true } })),
 }));
 
+jest.mock('@librechat/api', () => ({
+  ...jest.requireActual('@librechat/api'),
+  getAvailableMetaGraphVersions: jest.fn(async () => ['v24.0', 'v25.0', 'v26.0', 'v27.0']),
+}));
+
 jest.mock('~/server/services/MetaAds/graph', () => ({
   isSupportedMetaGraphVersion: (value) => /^v(?:2[4-9]|[3-9]\d)\.0$/.test(value),
   validateMetaAdsAccess: (...args) => mockValidateMetaAdsAccess(...args),
@@ -1749,6 +1754,19 @@ describe('projectMetaAds role access', () => {
       datePreset: undefined,
       since: undefined,
       until: undefined,
+    });
+  });
+
+  it('returns available versions without changing the configured project version', async () => {
+    getProjectMetaAdsStatus.mockResolvedValueOnce({
+      graphVersion: { effective: 'v24.0', configured: 'v24.0', source: 'project' },
+    });
+    const response = await request(createApp()).get('/projects/p1/meta-ads').expect(200);
+    expect(response.body.graphVersion).toEqual({
+      effective: 'v24.0',
+      configured: 'v24.0',
+      source: 'project',
+      available: ['v24.0', 'v25.0', 'v26.0', 'v27.0'],
     });
   });
 

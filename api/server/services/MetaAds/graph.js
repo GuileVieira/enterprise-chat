@@ -332,7 +332,7 @@ function getBodySnippet(text) {
 
 function formatMetaPermissionError({ adAccountId, write = false }) {
   const permission = write ? 'ads_management' : 'ads_read ou ads_management';
-  return `Token Meta Ads sem permissão para ${adAccountId}. Conceda ${permission} ao app/token e confirme acesso à conta de anúncio.`;
+  return `Meta negou acesso a ${adAccountId}. O token pode ter ${permission} e ainda não estar autorizado para essa conta. Peça ao proprietário para conferir o acesso do usuário/usuário de sistema à conta e a autorização do app no portfólio empresarial da Meta. Depois, gere um token com esse acesso e tente novamente.`;
 }
 
 function createMetaGraphError(message, details = {}) {

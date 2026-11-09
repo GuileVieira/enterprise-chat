@@ -878,7 +878,7 @@ describe('Meta Ads Graph client', () => {
     await expect(
       listAdSets({ adAccountId: 'act_123', token: 'token', graphVersion: 'v24.0' }),
     ).rejects.toThrow(
-      'Token Meta Ads sem permissão para act_123. Conceda ads_read ou ads_management ao app/token e confirme acesso à conta de anúncio.',
+      'Meta negou acesso a act_123. O token pode ter ads_read ou ads_management e ainda não estar autorizado para essa conta. Peça ao proprietário para conferir o acesso do usuário/usuário de sistema à conta e a autorização do app no portfólio empresarial da Meta. Depois, gere um token com esse acesso e tente novamente.',
     );
   });
 
@@ -908,7 +908,7 @@ describe('Meta Ads Graph client', () => {
     ).rejects.toMatchObject({
       statusCode: 403,
       message:
-        'Token Meta Ads sem permissão para act_123. Conceda ads_management ao app/token e confirme acesso à conta de anúncio.',
+        'Meta negou acesso a act_123. O token pode ter ads_management e ainda não estar autorizado para essa conta. Peça ao proprietário para conferir o acesso do usuário/usuário de sistema à conta e a autorização do app no portfólio empresarial da Meta. Depois, gere um token com esse acesso e tente novamente.',
     });
   });
 
@@ -928,7 +928,7 @@ describe('Meta Ads Graph client', () => {
         resourceLabel: 'campaign update',
       }),
     ).rejects.toThrow(
-      'Token Meta Ads sem permissão para campaign-1. Conceda ads_management ao app/token e confirme acesso à conta de anúncio.',
+      'Meta negou acesso a campaign-1. O token pode ter ads_management e ainda não estar autorizado para essa conta. Peça ao proprietário para conferir o acesso do usuário/usuário de sistema à conta e a autorização do app no portfólio empresarial da Meta. Depois, gere um token com esse acesso e tente novamente.',
     );
   });
 

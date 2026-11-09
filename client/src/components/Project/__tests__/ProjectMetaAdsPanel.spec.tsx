@@ -865,6 +865,25 @@ describe('ProjectMetaAdsPanel', () => {
     );
   });
 
+  it('offers discovered Graph API versions without selecting them automatically', () => {
+    mockStatusData.graphVersion = {
+      effective: 'v25.0',
+      source: 'global',
+      available: ['v27.0', 'v28.0'],
+    };
+    render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
+    fireEvent.click(screen.getByText('com_ui_project_meta_ads_account_credentials'));
+    const accountDialog = screen.getByRole('dialog', {
+      name: 'com_ui_project_meta_ads_account_credentials',
+    });
+    expect(within(accountDialog).getByRole('option', { name: 'v27.0' })).toBeInTheDocument();
+    expect(within(accountDialog).getByRole('option', { name: 'v28.0' })).toBeInTheDocument();
+    expect(
+      within(accountDialog).getByDisplayValue('com_ui_project_meta_ads_graph_version_global'),
+    ).toHaveValue('');
+    expect(mockMutateSettings).not.toHaveBeenCalled();
+  });
+
   it('saves a supported project Meta Graph API version override', () => {
     render(<ProjectMetaAdsPanel project={project} canEdit={true} />);
 

@@ -1,4 +1,8 @@
-const { projectRequestLogging, logProjectFailure } = require('@librechat/api');
+const {
+  projectRequestLogging,
+  logProjectFailure,
+  getAvailableMetaGraphVersions,
+} = require('@librechat/api');
 const express = require('express');
 const {
   PermissionBits,
@@ -880,14 +884,16 @@ router.get('/', metaAdsAccess, async (req, res) => {
       projectId: req.params.projectId,
       scope,
     });
-    return res.json(
-      await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
-        scope,
-        datePreset: req.query.datePreset,
-        since: req.query.since,
-        until: req.query.until,
-      }),
-    );
+    const status = await getProjectMetaAdsStatus(req.params.projectId, tenantId, {
+      scope,
+      datePreset: req.query.datePreset,
+      since: req.query.since,
+      until: req.query.until,
+    });
+    if (status.graphVersion) {
+      status.graphVersion.available = await getAvailableMetaGraphVersions();
+    }
+    return res.json(status);
   } catch (error) {
     logProjectFailure(req, '[projectMetaAds] status failed', error);
     return res.status(500).json({ message: error.message });

@@ -577,6 +577,7 @@ export type ProjectMetaAdsStatus = {
     error?: string;
   };
   graphVersion?: {
+    available?: string[];
     effective: string;
     configured?: string;
     source: 'project' | 'global';
