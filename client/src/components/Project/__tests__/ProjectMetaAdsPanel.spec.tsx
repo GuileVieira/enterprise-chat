@@ -2984,6 +2984,8 @@ describe('ProjectMetaAdsPanel', () => {
       expect(mockShowToast).toHaveBeenCalledWith({
         message: 'Save failed',
         status: 'error',
+        duration: 40000,
+        showClose: true,
       }),
     );
     expect(screen.queryByText('com_ui_project_meta_ads_publish_draft')).toBeNull();
@@ -4053,6 +4055,8 @@ describe('ProjectMetaAdsPanel', () => {
       expect(mockShowToast).toHaveBeenCalledWith({
         message: 'Manual Meta Ads budget is outside the effective rule limits.',
         status: 'error',
+        duration: 40000,
+        showClose: true,
       }),
     );
     expect(screen.getByText('com_ui_project_meta_ads_pending_budget')).toBeInTheDocument();

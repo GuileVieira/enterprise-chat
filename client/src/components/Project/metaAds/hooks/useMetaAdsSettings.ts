@@ -25,7 +25,12 @@ import type {
 
 type ToastStatus = 'success' | 'error' | 'warning' | 'info';
 
-type ShowToast = (toast: { message: string; status: ToastStatus }) => void;
+type ShowToast = (toast: {
+  message: string;
+  status: ToastStatus;
+  duration?: number;
+  showClose?: boolean;
+}) => void;
 
 type UseMetaAdsSettingsParams = {
   project: TProject;
@@ -217,7 +222,7 @@ export function useMetaAdsSettings({
             error,
             localize('com_ui_error_save_admin_settings'),
           );
-          showToast({ message, status: 'error' });
+          showToast({ message, status: 'error', duration: 40000, showClose: true });
           logger.error('MetaAds', 'Failed to save project Meta Ads settings', {
             projectId: project.projectId,
             message,
@@ -314,7 +319,7 @@ export function useMetaAdsSettings({
         } else if (error instanceof Error) {
           message = error.message;
         }
-        showToast({ message, status: 'error' });
+        showToast({ message, status: 'error', duration: 40000, showClose: true });
       }
     };
 
@@ -435,7 +440,7 @@ export function useMetaAdsSettings({
             error,
             localize('com_ui_error_save_admin_settings'),
           );
-          showToast({ message, status: 'error' });
+          showToast({ message, status: 'error', duration: 40000, showClose: true });
         },
       },
     );

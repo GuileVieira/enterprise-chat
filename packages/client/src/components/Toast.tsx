@@ -56,7 +56,7 @@ export function Toast(): JSX.Element {
           <RadixToast.Description className="flex-1 justify-center gap-2">
             <div className="whitespace-pre-wrap text-left">{toast.message}</div>
           </RadixToast.Description>
-          {persistent && (
+          {(persistent || toast.showClose) && (
             <RadixToast.Close
               aria-label={localize('com_ui_close')}
               className="ml-2 inline-flex flex-shrink-0 flex-grow-0 items-center justify-center self-center rounded-sm opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"

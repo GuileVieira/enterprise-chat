@@ -13,6 +13,7 @@ export type ToastState = {
   message: string;
   severity: NotificationSeverity;
   showIcon: boolean;
+  showClose?: boolean;
   /** Milliseconds until the toast closes itself, or `Infinity` to require a dismissal. */
   duration: number;
   /** Increments per shown toast, so each one gets its own close deadline. */

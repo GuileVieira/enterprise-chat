@@ -31,6 +31,8 @@ it('shows the settings failure reason without logging the request token', () => 
   expect(showToast).toHaveBeenCalledWith({
     message: 'Invalid Meta Ads creative rules. (pauseHighCost.minCreativesInScope)',
     status: 'error',
+    duration: 40000,
+    showClose: true,
   });
   expect(logger.error).toHaveBeenCalledWith('MetaAds', 'Failed to save project Meta Ads settings', {
     projectId: 'p1',

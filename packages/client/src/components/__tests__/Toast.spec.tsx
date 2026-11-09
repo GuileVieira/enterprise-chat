@@ -9,12 +9,12 @@ import { Toast } from '../Toast';
 const MESSAGE = 'The file is too large.';
 const REPLACEMENT = 'The upload finished.';
 
-function ShowOnMount({ duration }: { duration?: number }): null {
+function ShowOnMount({ duration, showClose }: { duration?: number; showClose?: boolean }): null {
   const { showToast } = useToast(0);
 
   /** One toast per mount — re-running on a changed identity would reset the timers under test. */
   useEffect(() => {
-    showToast({ message: MESSAGE, duration });
+    showToast({ message: MESSAGE, duration, showClose });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -125,6 +125,29 @@ describe('Toast duration', () => {
     advance(0);
 
     expect(document.querySelector('[aria-label="com_ui_close"]')).toBeNull();
+  });
+
+  test('closes after 40 seconds when a close control is enabled', () => {
+    renderToast(<ShowOnMount duration={40000} showClose />);
+    advance(0);
+    expect(document.querySelector('[aria-label="com_ui_close"]')).not.toBeNull();
+    advance(39900);
+    expect(state()).toBe('open');
+    advance(200);
+    expect(state()).not.toBe('open');
+  });
+
+  test('allows closing a 40-second toast early', () => {
+    renderToast(<ShowOnMount duration={40000} showClose />);
+    advance(0);
+    advance(3000);
+    const close = document.querySelector('[aria-label="com_ui_close"]');
+    expect(close).not.toBeNull();
+    if (!close) {
+      throw new Error('Close control is missing');
+    }
+    fireEvent.click(close);
+    expect(state()).not.toBe('open');
   });
 
   test('restarts the deadline when a toast replaces one that is still open', () => {

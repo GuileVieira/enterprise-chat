@@ -24,6 +24,7 @@ export default function useToast(showDelay = 100): {
     message,
     severity = NotificationSeverity.SUCCESS,
     showIcon = true,
+    showClose = false,
     duration = 3000, // default duration for the toast to be visible
     status,
   }: TShowToast): void => {
@@ -43,6 +44,7 @@ export default function useToast(showDelay = 100): {
         message,
         severity: (status as NotificationSeverity) ?? severity,
         showIcon,
+        showClose,
         duration: closeAfter,
         id: prevToast.id + 1,
       }));

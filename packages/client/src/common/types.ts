@@ -4,6 +4,7 @@ export type TShowToast = {
   message: string;
   severity?: NotificationSeverity;
   showIcon?: boolean;
+  showClose?: boolean;
   duration?: number;
   status?: 'error' | 'success' | 'warning' | 'info';
 };
