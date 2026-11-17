@@ -31,6 +31,7 @@ const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
 const { createIntegrationToolService } = require('~/server/services/ToolService');
 const db = require('~/models');
+const integrationOpenAPI = require('../openapi/integrations.json');
 
 const router = express.Router();
 router.use(
@@ -159,6 +160,7 @@ const handlers = {
   ...content.handlers,
   ...history.handlers,
 };
+router.get('/openapi.json', (_req, res) => res.json(integrationOpenAPI));
 router.get('/identity', handlers.identity);
 router.get('/agents', handlers.agents);
 router.get('/agents/:id', handlers.agent);

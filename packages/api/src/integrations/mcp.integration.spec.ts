@@ -8,6 +8,7 @@ import { Constants } from 'librechat-data-provider';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { IAgent, IUser } from '@librechat/data-schemas';
+import type { Schema } from '@cfworker/json-schema';
 import type { IntegrationRequest } from './contracts';
 import type { IntegrationMCPDependencies } from './mcp';
 import type { MCPManager } from '~/mcp/MCPManager';
@@ -143,6 +144,7 @@ beforeAll(async () => {
           type: 'object',
           properties: { value: { type: 'string' } },
           required: ['value'],
+          additionalProperties: false,
         },
       },
     ],
@@ -194,6 +196,44 @@ it('catalog remains cache-only; real manager calls HTTP once after barrier with 
   expect(barrier).toBe(1);
   expect(calls).toBe(1);
   expect(JSON.stringify(result)).toContain('hello');
+});
+it('advertises and executes valid composed MCP arguments without closing sibling branches', async () => {
+  const tools = await discover(
+    {
+      ...deps,
+      getCached: async (...args) => {
+        const cached = await deps.getCached(...args);
+        if (!cached) return null;
+        const composed = structuredClone(cached);
+        for (const entry of Object.values(composed)) {
+          const parameters = {
+            type: 'object',
+            allOf: [
+              { type: 'object', properties: { value: { type: 'string' } }, required: ['value'] },
+              { type: 'object', properties: { label: { type: 'string' } }, required: ['label'] },
+            ],
+          } satisfies Schema;
+          entry.function.parameters = parameters;
+        }
+        return composed;
+      },
+    },
+    request,
+    agent,
+  );
+  expect(tools[0].callable).toBe(true);
+  const args = tools[0].validate!({ value: 'composed', label: 'valid' });
+  expect(() => tools[0].validate!({ value: 'missing label' })).toThrow();
+  const result = await tools[0].execute!(args, {
+    signal: new AbortController().signal,
+    beforeDispatch: async () => {
+      barrier++;
+    },
+  });
+  expect(result.status).toBe('completed');
+  expect(JSON.stringify(result)).toContain('composed');
+  expect(calls).toBe(1);
+  expect(barrier).toBe(1);
 });
 it('wildcard expands cached identity; upstream error never reports completed or retries', async () => {
   failProvider = true;

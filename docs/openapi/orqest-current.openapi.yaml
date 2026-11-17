@@ -15,6 +15,40 @@ x-orqest-status: implemented-source-only
 x-orqest-base-commit: 3896374d1
 x-orqest-worktree-changes: true
 paths:
+  /api/integrations/v1/openapi.json:
+    get:
+      operationId: externalOpenApi
+      tags:
+        - documentation
+      summary: Recuperar contrato OpenAPI da API REST
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/integrations.js
+        routerFile: api/server/routes/integrations.js
+        route: /openapi.json
+      responses:
+        '200':
+          description: Documento OpenAPI 3.0.3 das integrações REST
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [openapi, info, paths]
+                properties:
+                  openapi:
+                    type: string
+                    enum: [3.0.3]
+                  info:
+                    type: object
+                  paths:
+                    type: object
+        '401':
+          description: Credencial inválida
+        '403':
+          description: Política ou tenant negado
   /api/agents/v1/agents:
     get:
       operationId: listManagedAgents

@@ -11,7 +11,13 @@ fornecem instruções/contexto e executam ferramentas compatíveis sem iniciar a
 | [orqest-integration.proposed.openapi.yaml](orqest-integration.proposed.openapi.yaml) | Contrato canônico das 20 integrações implementadas. O nome histórico `.proposed` foi preservado para manter links; `x-orqest-status: implemented-source-only` identifica o estado atual. |
 | [implementation.md](implementation.md)                                               | Plano refinado, decisões de segurança, fases e evidências de implementação.                                                                                                              |
 
-Os YAMLs são importáveis. Não existe rota HTTP de publicação destes documentos nem Swagger UI.
+O contrato também está disponível por **GET `/api/integrations/v1/openapi.json`**, com a mesma
+credencial Bearer das integrações. São 20 operações de negócio mais essa rota de documentação.
+Consumo externo é REST/HTTP; não foi criado servidor MCP. Adapters MCP servem somente para tools
+internas já configuradas. Os YAMLs continuam importáveis; não foi adicionada Swagger UI.
+
+O JSON servido acompanha a imagem Docker, sem depender de `docs/`. Após editar o contrato canônico,
+regenere o asset com `node config/generate-integration-openapi.js`; os testes conferem equivalência.
 Salvar ou importar o contrato não publica endpoints. O inventário legado mantém as políticas de
 cada rota; a autenticação combinada abaixo vale somente para `/api/integrations/v1`.
 

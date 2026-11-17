@@ -231,10 +231,10 @@ describe('Orqest OpenAPI source review', () => {
     ]);
   });
 
-  it('documents the 20 implemented integrations and safe context/completeness without claiming deploy', () => {
+  it('documents 20 business integrations plus their OpenAPI endpoint without claiming deploy', () => {
     expect(proposed['x-orqest-status']).toBe('implemented-source-only');
     expect(proposed['x-orqest-worktree-changes']).toBe(true);
-    expect(operations(proposed)).toHaveLength(20);
+    expect(operations(proposed)).toHaveLength(21);
     for (const { route } of operations(proposed)) {
       expect(route.startsWith('/api/integrations/v1/')).toBe(true);
       expect(current.paths[route]).toBeDefined();
@@ -269,6 +269,15 @@ describe('Orqest OpenAPI source review', () => {
     ).toBeUndefined();
     expect(current.paths['/api/integrations/v1/agents/{id}/context'].get['x-orqest-status']).toBe(
       'implemented',
+    );
+  });
+
+  it('ships the canonical OpenAPI HTTP asset without depending on the Docker-excluded docs directory', () => {
+    const asset = JSON.parse(read('api/server/openapi/integrations.json'));
+    expect(asset).toEqual(proposed);
+    expect(proposed.paths['/api/integrations/v1/openapi.json'].get).toBeDefined();
+    expect(read('api/server/routes/integrations.js')).toContain(
+      "require('../openapi/integrations.json')",
     );
   });
 

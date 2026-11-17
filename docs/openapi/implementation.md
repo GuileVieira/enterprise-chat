@@ -279,11 +279,12 @@ as correções, verificadas por validação OpenAPI e testes de equivalência:
 - Corrigir descrições de security schemes: união nova só em integrations; gestão antiga continua
   M2M exclusiva. Atual só recebe rotas realmente implementadas, nunca promessa de deploy.
 
-Publicação OpenAPI por HTTP fica fora desta implementação; YAML importável e README são a entrega
-do contrato. Se solicitada posteriormente,
-empacotar asset no backend; `.dockerignore` exclui `docs`, que contém arquivos privados/áudios.
-Nunca desexcluir a pasta inteira. Uma fonte canônica + transformação determinística/teste de
-equivalência; escolher inclusão no build antes de criar gerador. Verificar dist/imagem efetiva.
+Publicação OpenAPI por HTTP foi solicitada após a entrega inicial: `GET
+/api/integrations/v1/openapi.json`, protegida pela autenticação das integrações. O contrato canônico
+continua no YAML; `config/generate-integration-openapi.js` gera o JSON em
+`api/server/openapi/integrations.json`, incluído no backend sem depender de `docs/`. Teste de
+igualdade impede divergência entre documento servido e contrato. `.dockerignore` continua
+excluindo a pasta privada `docs/`. São 20 operações de negócio mais a rota do documento.
 Sem dependência de Swagger UI, Dockerfile novo ou servidor separado.
 
 ## 8. Fases, testes e gates
@@ -339,3 +340,15 @@ insuficiente ou lifecycle incompatível bloqueiam a capacidade correspondente ex
 Não foram executados E2E, build de frontend, smoke de produção, chamadas a provedores reais,
 provisionamento remoto de índices, commit, push, deploy ou migração de produção. WIP anterior de
 testes, graphify e arquivos privados permanece preservado.
+
+## 10. Revisão de schemas e documento HTTP
+
+A normalização preserva a semântica declarada de `additionalProperties`, inclusive em `allOf`
+e referências aninhadas. Não injeta fechamento independente em ramos compostos. Restrições
+explícitas, validação de referências e limites de travessia permanecem aplicados.
+
+O consumo externo é REST/HTTP; não foi criado servidor MCP. As tools MCP existentes continuam
+como adapters internos. O documento OpenAPI está em `/api/integrations/v1/openapi.json`, com
+Bearer tenant ou OIDC M2M. O inventário atual passa a 51 operações e o contrato de integrações a
+21, contando a publicação do próprio documento. Aceites da seção anterior registram a entrega
+inicial; esta revisão possui seus próprios testes focados.

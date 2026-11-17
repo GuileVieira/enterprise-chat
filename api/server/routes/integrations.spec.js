@@ -226,6 +226,10 @@ beforeEach(async () => {
 });
 
 it('actual router authenticates key, exports context independently, searches only remote-authorized files and executes real tenant function', async () => {
+  await request(app).get('/api/integrations/v1/openapi.json').expect(401);
+  const contract = await get('/openapi.json').expect(200).expect('Content-Type', /json/);
+  expect(contract.body).toEqual(require('../openapi/integrations.json'));
+  expect(contract.body.paths['/api/integrations/v1/tools/{toolName}/call']).toBeDefined();
   const identity = await get('/identity').expect(200);
   expect(identity.body).toMatchObject({
     tenantId: tenant,

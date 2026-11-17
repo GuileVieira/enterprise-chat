@@ -54,9 +54,6 @@ export function integrationInputSchema(input: object): Schema {
       visit(target as Schema, depth + 1, new Set([...refs, value.$ref]));
     }
     const next: { [key: string]: unknown } = { ...value };
-    if (value.type === 'object' && value.properties && value.additionalProperties === undefined) {
-      next.additionalProperties = false;
-    }
     for (const [key, child] of Object.entries(value)) {
       if (schemaMaps.has(key) && child && typeof child === 'object' && !Array.isArray(child)) {
         next[key] = Object.fromEntries(
