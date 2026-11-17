@@ -156,7 +156,6 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     await feature(req, execution ? PermissionTypes.REMOTE_AGENTS : PermissionTypes.AGENTS);
     const row = await mongoose.models.Agent.findOne({
       id,
-      tenantId: req.user.tenantId,
     }).lean<IAgent>();
     if (!row) throw notFound();
     if (execution) {
@@ -169,7 +168,10 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       if (!hasPermissions(bits, PermissionBits.VIEW)) throw notFound();
     } else {
       const cap = ResourceCapabilityMap[ResourceType.AGENT];
-      const manages = cap && (await deps.hasCapability(req.user, cap).catch(() => false));
+      const manages =
+        row.tenantId === req.user.tenantId &&
+        cap &&
+        (await deps.hasCapability(req.user, cap).catch(() => false));
       if (
         !manages &&
         !(await allowed(req, ResourceType.AGENT, row._id as Types.ObjectId, PermissionBits.EDIT))
@@ -348,20 +350,17 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       await feature(req, PermissionTypes.AGENTS);
       const cap = ResourceCapabilityMap[ResourceType.AGENT];
       const manages = cap && (await deps.hasCapability(req.user, cap).catch(() => false));
-      const ids = manages
-        ? null
-        : await deps.findAccessibleResources({
-            userId: req.user.id,
-            role: req.user.role,
-            resourceType: ResourceType.AGENT,
-            requiredPermissions: PermissionBits.EDIT,
-          });
+      const ids = await deps.findAccessibleResources({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType: ResourceType.AGENT,
+        requiredPermissions: PermissionBits.EDIT,
+      });
       const accessible = await mongoose.models.Agent.find({
-        tenantId: req.user.tenantId,
+        $or: [...(manages ? [{ tenantId: req.user.tenantId }] : []), { _id: { $in: ids } }],
         ...(keyResourceIds(req, 'agentIds')
           ? { id: { $in: keyResourceIds(req, 'agentIds') } }
           : {}),
-        ...(ids ? { _id: { $in: ids } } : {}),
       })
         .limit(2001)
         .lean<IAgent[]>();

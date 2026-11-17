@@ -95,32 +95,38 @@ beforeEach(async () => {
       );
   });
 });
-it('serves the exact avatar of a global agent shared with the viewer tenant; denies outsiders and revoked access', async () => {
-  await runAsSystem(() =>
-    db.grantPermission(
-      PrincipalType.TENANT,
-      'shared-tenant',
-      ResourceType.AGENT,
-      agentId,
-      PermissionBits.VIEW,
-      owner._id,
-    ),
-  );
-  const response = await request(app)
-    .get(avatar)
-    .set('Cookie', `refreshToken=${token}`)
-    .expect(200)
-    .expect('Content-Type', /image\/png/);
-  expect(response.status).toBe(200);
-  await request(app).get(avatar).set('Cookie', `refreshToken=${outsiderToken}`).expect(403);
-  await request(app).get(avatar).expect(401);
-  await request(app)
-    .get(avatar.replace('12345', '99999'))
-    .set('Cookie', `refreshToken=${token}`)
-    .expect(403);
-  await runAsSystem(() => mongoose.models.AclEntry.deleteMany({ resourceId: agentId }));
-  await request(app).get(avatar).set('Cookie', `refreshToken=${token}`).expect(403);
-});
+it.each(['__SYSTEM__', 'orqest'])(
+  'serves a tenant-shared avatar created by an admin in %s; denies outsiders and revoked access',
+  async (ownerTenant) => {
+    await runAsSystem(() =>
+      mongoose.models.User.updateOne({ _id: owner._id }, { $set: { tenantId: ownerTenant } }),
+    );
+    await tenantStorage.run({ tenantId: 'shared-tenant' }, () =>
+      db.grantPermission(
+        PrincipalType.TENANT,
+        'shared-tenant',
+        ResourceType.AGENT,
+        agentId,
+        PermissionBits.VIEW,
+        owner._id,
+      ),
+    );
+    const response = await request(app)
+      .get(avatar)
+      .set('Cookie', `refreshToken=${token}`)
+      .expect(200)
+      .expect('Content-Type', /image\/png/);
+    expect(response.status).toBe(200);
+    await request(app).get(avatar).set('Cookie', `refreshToken=${outsiderToken}`).expect(403);
+    await request(app).get(avatar).expect(401);
+    await request(app)
+      .get(avatar.replace('12345', '99999'))
+      .set('Cookie', `refreshToken=${token}`)
+      .expect(403);
+    await runAsSystem(() => mongoose.models.AclEntry.deleteMany({ resourceId: agentId }));
+    await request(app).get(avatar).set('Cookie', `refreshToken=${token}`).expect(403);
+  },
+);
 it('never imports role/group or management permissions from the viewer tenant', async () => {
   await runAsSystem(() =>
     db.grantPermission(

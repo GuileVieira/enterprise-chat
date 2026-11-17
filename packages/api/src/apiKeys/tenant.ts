@@ -67,13 +67,10 @@ export function createTenantApiHandlers(deps: Dependencies): {
     includeShared = false,
   ): Promise<TTenantApiCatalog> {
     const userId = String(user._id);
-    const [agents, projects] = await Promise.all([
-      deps.getAgents({ tenantId }),
-      deps.getProjects(),
-    ]);
+    const [agents, projects] = await Promise.all([deps.getAgents({}), deps.getProjects()]);
     const result: TTenantApiCatalog = { tenantId, ownerId: userId, agents: [], projects: [] };
     for (const agent of agents) {
-      if (agent.tenantId !== tenantId) continue;
+      if (agent.tenantId != null && agent.tenantId !== tenantId) continue;
       const permissions = await getRemoteAgentPermissions(deps, userId, user.role, agent._id);
       const apiAvailable = Boolean(permissions & PermissionBits.VIEW);
       if (!apiAvailable) {
