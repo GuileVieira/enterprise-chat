@@ -1145,6 +1145,7 @@ describe('Meta Ads budget service persistence safety', () => {
     }));
 
     const metaPost = jest.fn(async () => ({ success: true }));
+    const metaDelete = jest.fn(async () => ({ success: true }));
     const metaGet = jest.fn(async ({ path }) => ({
       id: path,
       account_id: '123',
@@ -1194,6 +1195,7 @@ describe('Meta Ads budget service persistence safety', () => {
       listAdSetInsights,
       metaGet,
       metaPost,
+      metaDelete,
       copyMetaEntity,
       updateMetaEntityName,
       updateMetaEntityStatus,
@@ -1223,6 +1225,7 @@ describe('Meta Ads budget service persistence safety', () => {
       makeFindChain,
       metaGet,
       metaPost,
+      metaDelete,
       copyMetaEntity,
       updateMetaEntityName,
       updateMetaEntityStatus,
@@ -1241,6 +1244,95 @@ describe('Meta Ads budget service persistence safety', () => {
     jest.dontMock('@librechat/data-schemas');
     jest.dontMock('~/server/services/Config/app');
     jest.dontMock('~/server/services/MetaAds/graph');
+  });
+
+  it('creates through the built package using only the project account and credentials', async () => {
+    const { budget, metaPost, metaGet } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+    });
+    metaPost.mockResolvedValueOnce({ id: '900' });
+    metaGet.mockResolvedValueOnce({
+      id: '900',
+      name: 'New',
+      account_id: '123',
+      configured_status: 'PAUSED',
+    });
+    const result = await budget.mutateProjectMetaAdsEntity({
+      projectId: 'p1',
+      tenantId: 'tenant-a',
+      action: 'create_campaign',
+      fields: { name: 'New', objective: 'OUTCOME_SALES', special_ad_categories: [] },
+      actor: 'tool',
+      actorUserId: 'u1',
+    });
+    expect(result.entityId).toBe('900');
+    expect(metaPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'act_123/campaigns',
+        token: 'meta-token',
+        body: {
+          name: 'New',
+          objective: 'OUTCOME_SALES',
+          special_ad_categories: [],
+          status: 'PAUSED',
+        },
+      }),
+    );
+  });
+
+  it('deletes an audience only after confirming account ownership', async () => {
+    const { budget, metaDelete, metaGet } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+    });
+    metaGet
+      .mockResolvedValueOnce({ id: '33', account_id: '123' })
+      .mockResolvedValueOnce({ id: '33', subtype: 'WEBSITE' });
+    await expect(
+      budget.mutateProjectMetaAdsEntity({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        action: 'delete_custom_audience',
+        entityId: '33',
+      }),
+    ).resolves.toEqual({ entityLevel: 'custom_audience', entityId: '33', deleted: true });
+    expect(metaDelete).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '33', token: 'meta-token' }),
+    );
+  });
+
+  it('blocks creation when the tenant differs or Meta Ads is disabled', async () => {
+    const { budget, metaPost } = loadBudgetWithMocks({
+      project: {
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        metaAds: { adAccountId: 'act_123' },
+      },
+    });
+    await expect(
+      budget.mutateProjectMetaAdsEntity({
+        projectId: 'p1',
+        tenantId: 'tenant-b',
+        action: 'create_campaign',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    const { getAppConfig } = require('~/server/services/Config/app');
+    getAppConfig.mockResolvedValue({ interfaceConfig: { metaAds: false } });
+    await expect(
+      budget.mutateProjectMetaAdsEntity({
+        projectId: 'p1',
+        tenantId: 'tenant-a',
+        action: 'create_campaign',
+      }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(metaPost).not.toHaveBeenCalled();
   });
 
   it('records rule change details per rule and actor user snapshot', async () => {

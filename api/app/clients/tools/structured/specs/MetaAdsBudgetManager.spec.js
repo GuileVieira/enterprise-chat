@@ -1,6 +1,7 @@
 const MetaAdsBudgetManager = require('../MetaAdsBudgetManager');
 const {
   applyManualBudgetChange,
+  mutateProjectMetaAdsEntity,
   duplicateProjectMetaAdsEntity,
   updateProjectMetaAdsEntityFields,
   updateProjectMetaAdsEntityStatus,
@@ -18,6 +19,7 @@ jest.mock('~/server/services/Projects/access', () => ({
 }));
 jest.mock('~/server/services/MetaAds/budget', () => ({
   analyzeProject: jest.fn(),
+  mutateProjectMetaAdsEntity: jest.fn(),
   applyManualBudgetChange: jest.fn(),
   applyRecommendation: jest.fn(),
   duplicateProjectMetaAdsEntity: jest.fn(),
@@ -267,5 +269,60 @@ describe('MetaAdsBudgetManager write actions', () => {
     expect(duplicateProjectMetaAdsEntity).toHaveBeenCalledWith(
       expect.objectContaining({ entityLevel: 'campaign', entityId: 'campaign-1' }),
     );
+  });
+});
+
+describe('MetaAdsBudgetManager creation and deletion permissions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    findProjectForRequest.mockResolvedValue({ projectId: 'project-1', tenantId: 'tenant-1' });
+    userCanAccessProject.mockResolvedValue(true);
+    mutateProjectMetaAdsEntity.mockResolvedValue({ entityId: '900' });
+  });
+  it.each([
+    'create_campaign',
+    'create_adset',
+    'create_ad',
+    'create_creative',
+    'update_ad_creative',
+    'delete_custom_audience',
+  ])('%s requires EDIT and forwards tenant context', async (action) => {
+    const { PermissionBits } = require('librechat-data-provider');
+    const args = { action, project_id: 'project-1', entity_id: '55', fields: { name: 'New' } };
+    const output = JSON.parse(await createTool()._call(args));
+    expect(output.confirmation).toEqual({ confirmed: true, entityId: '900' });
+    expect(userCanAccessProject).toHaveBeenCalledWith(
+      expect.objectContaining({ requiredPermission: PermissionBits.EDIT }),
+    );
+    expect(mutateProjectMetaAdsEntity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action,
+        projectId: 'project-1',
+        tenantId: 'tenant-1',
+        entityId: '55',
+        fields: args.fields,
+        actorUserId: 'user-1',
+      }),
+    );
+    userCanAccessProject.mockResolvedValue(false);
+    mutateProjectMetaAdsEntity.mockClear();
+    expect(JSON.parse(await createTool()._call(args)).ok).toBe(false);
+    expect(mutateProjectMetaAdsEntity).not.toHaveBeenCalled();
+  });
+  it('keeps the runtime schema aligned with the tool registry', () => {
+    const { metaAdsBudgetManagerSchema } = require('@librechat/api');
+    expect(MetaAdsBudgetManager.jsonSchema).toEqual(metaAdsBudgetManagerSchema);
+  });
+
+  it('creates without an existing entity id', async () => {
+    const output = JSON.parse(
+      await createTool()._call({
+        action: 'create_campaign',
+        project_id: 'project-1',
+        fields: { name: 'New' },
+      }),
+    );
+    expect(output.ok).toBe(true);
+    expect(mutateProjectMetaAdsEntity).toHaveBeenCalled();
   });
 });

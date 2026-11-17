@@ -15,6 +15,7 @@ const {
   listAdSetInsights,
   listAdSets,
   metaGet,
+  metaDelete,
   metaPost,
   updateMetaEntityName,
   updateMetaEntityStatus,
@@ -5987,6 +5988,64 @@ function metaFieldMatches(expected, actual) {
   return String(actual) === String(expected);
 }
 
+async function mutateProjectMetaAdsEntity({
+  projectId,
+  tenantId,
+  action,
+  entityId,
+  fields,
+  actor,
+  actorUserId,
+}) {
+  const project = await runAsSystem(
+    async () => (await getProjectById(projectId)) || (await findProjectById(projectId)),
+  );
+  if (!project) {
+    throw Object.assign(new Error('Project not found.'), { statusCode: 404 });
+  }
+  const projectTenantId = getProjectTenantId(project, tenantId);
+  if (!tenantId || projectTenantId !== tenantId) {
+    throw Object.assign(new Error('Project does not belong to this tenant.'), { statusCode: 403 });
+  }
+  if (!(await isMetaAdsFeatureEnabled(projectTenantId))) {
+    throw Object.assign(new Error('Meta Ads is disabled.'), { statusCode: 403 });
+  }
+  const metaAds = withImplicitProjectTokenSecret(
+    project.projectId || projectId,
+    project.metaAds ?? {},
+  );
+  const token = await getAccessToken(projectTenantId, metaAds);
+  const graphVersion = getMetaGraphVersion(metaAds.graphVersion);
+  const { executeMetaAdsMutation } = require('@librechat/api');
+  const result = await executeMetaAdsMutation(
+    { action, entityId, fields },
+    {
+      adAccountId: normalizeAdAccountId(metaAds.adAccountId),
+      read: (id, readFields) =>
+        metaGet({ path: id, token, graphVersion, params: { fields: readFields } }),
+      write: (path, body) => metaPost({ path, token, graphVersion, body }),
+      remove: (id) => metaDelete({ path: id, token, graphVersion }),
+      assertOwnership: async (id) => {
+        await assertMetaEntityBelongsToAdAccount({
+          entityId: id,
+          adAccountId: metaAds.adAccountId,
+          token,
+          graphVersion,
+        });
+      },
+    },
+  );
+  logger.info('[MetaAdsBudget] entity mutation confirmed', {
+    projectId,
+    tenantId: projectTenantId,
+    action,
+    entityId: result.entityId,
+    actor,
+    actorUserId,
+  });
+  return result;
+}
+
 async function updateProjectMetaAdsEntityFields({
   projectId,
   tenantId,
@@ -6336,6 +6395,7 @@ async function runCron(options = {}) {
 }
 
 module.exports = {
+  mutateProjectMetaAdsEntity,
   DEFAULT_RULES,
   _buildCreativePauseRecommendationsForTest: buildCreativePauseRecommendations,
   _buildGoalProgressForTest: buildGoalProgress,

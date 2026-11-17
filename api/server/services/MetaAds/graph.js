@@ -730,14 +730,21 @@ async function metaGetPaged({ path, token, params = {}, graphVersion, resourceLa
   }
 }
 
-async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 'Meta API' }) {
+async function metaWrite({
+  path,
+  token,
+  body = {},
+  graphVersion,
+  resourceLabel = 'Meta API',
+  method,
+}) {
   const resolvedGraphVersion = getMetaGraphVersion(graphVersion);
   let response;
   try {
     response = await fetchWithTimeout(
       `${META_GRAPH_HOST}/${resolvedGraphVersion}/${path}`,
       {
-        method: 'POST',
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -764,6 +771,14 @@ async function metaPost({ path, token, body = {}, graphVersion, resourceLabel = 
     resourceLabel,
     write: true,
   });
+}
+
+function metaPost(options) {
+  return metaWrite({ ...options, method: 'POST' });
+}
+
+function metaDelete(options) {
+  return metaWrite({ ...options, method: 'DELETE' });
 }
 
 function centsToDailyBudget(value) {
@@ -1317,6 +1332,7 @@ async function listAdSetInsights({
 }
 
 module.exports = {
+  metaDelete,
   DEFAULT_META_GRAPH_VERSION,
   MIN_META_GRAPH_VERSION,
   getAdSetDailyBudget,

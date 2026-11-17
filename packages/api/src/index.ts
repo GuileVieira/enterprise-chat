@@ -125,3 +125,5 @@ export * from './rum/proxy';
 export type * from './mcp/types';
 export type * from './flow/types';
 export type * from './types';
+/* Meta Ads */
+export { executeMetaAdsMutation } from './metaAds/mutations';

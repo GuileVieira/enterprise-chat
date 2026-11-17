@@ -29,6 +29,7 @@ const {
   listAdSetInsights,
   metaGet,
   metaPost,
+  metaDelete,
   copyMetaEntity,
   updateMetaEntityName,
   updateMetaAdStatus,
@@ -1028,6 +1029,22 @@ describe('Meta Ads Graph client', () => {
     expect(fetch.mock.calls[0][1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ status: 'PAUSED' }),
+    });
+  });
+
+  it('deletes a custom audience with authenticated DELETE and provider confirmation', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true }),
+    });
+    await expect(
+      metaDelete({ path: '33', token: 'token', graphVersion: 'v25.0' }),
+    ).resolves.toEqual({ success: true });
+    expect(fetch.mock.calls[0][0]).toBe('https://graph.facebook.com/v25.0/33');
+    expect(fetch.mock.calls[0][1]).toMatchObject({
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer token' },
     });
   });
 

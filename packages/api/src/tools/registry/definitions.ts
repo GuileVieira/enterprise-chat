@@ -471,6 +471,12 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
         'update_entity',
         'set_status',
         'duplicate_entity',
+        'create_campaign',
+        'create_adset',
+        'create_ad',
+        'create_creative',
+        'update_ad_creative',
+        'delete_custom_audience',
       ],
       description:
         'Action to run. Use approve_change only after showing the recommendation to the user.',
@@ -485,7 +491,8 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
     },
     entity_id: {
       type: 'string',
-      description: 'Meta campaign or ad set id, depending on the action.',
+      description:
+        'Meta entity id. update_ad_creative: ad id; delete_custom_audience: audience id. Not required for create_* actions.',
     },
     entity_name: {
       type: 'string',
@@ -517,7 +524,7 @@ export const metaAdsBudgetManagerSchema: ExtendedJsonSchema = {
     fields: {
       type: 'object',
       description:
-        'Whitelisted fields for update_entity. Campaign: name, bid_strategy, spend_cap, special_ad_categories. Ad set: name, bid_amount, billing_event, optimization_goal, targeting, start_time, end_time, promoted_object. Ad: name, creative, conversion_domain, ad schedule. Creative: name, adlabels, status. Custom audience: metadata and rules; customer data upload is not supported.',
+        'Creation fields use Meta API names; budgets in minor currency units (BRL cents), unlike update_budget. create_campaign requires name, objective, special_ad_categories ([] if none). create_adset requires name, campaign_id, billing_event, optimization_goal, targeting. create_ad requires name, adset_id, creative: {creative_id}. create_creative/update_ad_creative require name and full creative content: object_story_spec (page_id and link_data.link or video_data.call_to_action.value.link), object_story_id, object_url or asset_feed_spec. Creation status defaults to PAUSED; ACTIVE must be explicit. update_ad_creative takes entity_id of the ad, creates a replacement creative and links it; existing creative destination is immutable. delete_custom_audience takes entity_id of the audience; use only when the user requests deletion. Whitelisted fields for update_entity. Campaign: name, bid_strategy, spend_cap, special_ad_categories. Ad set: name, bid_amount, billing_event, optimization_goal, targeting, start_time, end_time, promoted_object. Ad: name, creative, conversion_domain, ad schedule. Creative: name, adlabels, status. Custom audience: metadata and rules; customer data upload is not supported.',
       additionalProperties: true,
     },
   },
@@ -627,7 +634,7 @@ export const toolDefinitions: Record<string, ToolRegistryDefinition> = {
   meta_ads_budget_manager: {
     name: 'meta_ads_budget_manager',
     description:
-      'Read and change Meta Ads for a project-linked ad account. Can update campaigns, ad sets, ads, creative metadata, custom audience metadata, budgets, statuses, targeting, schedules, bidding, and duplicate campaigns or ad sets. Write actions call the Meta Graph API and require project EDIT permission.',
+      'Read and change Meta Ads for a project-linked ad account. Can create campaigns, ad sets, ads and creatives with destinations; replace an ad creative to change destination; delete custom audiences; update entity metadata, budgets, statuses, targeting, schedules, bidding, and duplicate campaigns or ad sets. Write actions call the Meta Graph API and require project EDIT permission.',
     schema: metaAdsBudgetManagerSchema,
     toolType: 'builtin',
   },
