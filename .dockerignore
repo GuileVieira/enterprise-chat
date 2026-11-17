@@ -17,3 +17,7 @@ sites
 
 # Ignore all hidden files
 .*
+
+# Coolify/Nixpacks generates build dependencies here.
+!.nixpacks
+!.nixpacks/**
