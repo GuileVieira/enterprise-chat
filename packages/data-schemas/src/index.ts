@@ -105,3 +105,5 @@ export {
   dropSupersededPromptGroupIndexes,
   backfillMCPServerNormalizedNames,
 } from './migrations';
+
+export { createIntegrationCallMethods } from './methods/integrationCall';

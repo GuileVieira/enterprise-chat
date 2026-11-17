@@ -261,7 +261,7 @@ describe('MetaAdsGetInsights', () => {
 
     expect(Object.keys(result.actionDefinitions)).toHaveLength(50);
     expect(result.unresolvedActionDefinitions).toEqual(['offsite_conversion.custom.51']);
-    expect(result.actionDefinitionsError).toContain('Token Meta Ads sem permissão');
+    expect(result.actionDefinitionsError).toContain('Meta negou acesso a');
   });
 
   it('reports malformed, unnamed, and per-id failed custom conversions', async () => {

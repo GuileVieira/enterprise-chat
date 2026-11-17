@@ -11,6 +11,7 @@
  */
 
 jest.mock('@librechat/data-schemas', () => ({
+  runAsSystem: jest.requireActual('@librechat/data-schemas').runAsSystem,
   logger: { warn: jest.fn(), debug: jest.fn(), error: jest.fn(), info: jest.fn() },
   SystemCapabilities: {},
 }));

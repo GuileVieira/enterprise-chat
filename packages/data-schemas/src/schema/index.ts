@@ -45,3 +45,5 @@ export { default as queuedTurnSchema } from './queuedTurn';
 export { default as queuedTurnSequenceSchema } from './queuedTurnSequence';
 export { default as scheduleSchema } from './schedule';
 export { default as scheduleRunSchema } from './scheduleRun';
+
+export { default as integrationCallSchema } from './integrationCall';

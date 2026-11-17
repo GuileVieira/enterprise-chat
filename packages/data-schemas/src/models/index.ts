@@ -1,3 +1,4 @@
+import { createIntegrationCallModel } from './integrationCall';
 import { createAgentQueuedTurnModel, createAgentQueuedTurnSequenceModel } from './queuedTurn';
 import { createAgentTriggerLaneSequenceModel } from './triggerLaneSequence';
 import { createScheduleModel, createScheduleRunModel } from './schedule';
@@ -92,6 +93,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
   SkillSyncStatus: ReturnType<typeof createSkillSyncStatusModel>;
   ConversationTag: ReturnType<typeof createConversationTagModel>;
   SharedLink: ReturnType<typeof createSharedLinkModel>;
+  IntegrationCall: ReturnType<typeof createIntegrationCallModel>;
   ToolCall: ReturnType<typeof createToolCallModel>;
   MemoryEntry: ReturnType<typeof createMemoryModel>;
   SharedMemory: ReturnType<typeof createSharedMemoryModel>;
@@ -151,6 +153,7 @@ export function createModels(mongoose: typeof import('mongoose')): {
     SkillSyncStatus: createSkillSyncStatusModel(mongoose),
     ConversationTag: createConversationTagModel(mongoose),
     SharedLink: createSharedLinkModel(mongoose),
+    IntegrationCall: createIntegrationCallModel(mongoose),
     ToolCall: createToolCallModel(mongoose),
     MemoryEntry: createMemoryModel(mongoose),
     SharedMemory: createSharedMemoryModel(mongoose),

@@ -3,16 +3,17 @@ info:
   title: Orqest terminal — rotas existentes
   version: 0.1.0
   description: >-
-    Inventário OpenAPI verificado no código do commit indicado. Não publica rotas nem comprova
+    Inventário legado baseado no commit indicado, mais 20 integrações implementadas no worktree atual. Não publica rotas nem comprova
     deploy. Separa sessão JWT, OIDC de gestão e chave de execução tenant. Escopo: leitura de
     agentes/instruções/skills, projetos, prompts, arquivos, tools e dados próprios. Não é uma
-    especificação de toda a API Orqest. Rotas futuras estão apenas em
-    orqest-integration.proposed.openapi.yaml.
+    especificação de toda a API Orqest. As 20 integrações novas estão implementadas no worktree e detalhadas também em
+    orqest-integration.proposed.openapi.yaml; não comprova publicação.
 servers:
   - url: /
     description: Origem da instalação Orqest; configurar URL HTTPS real no cliente.
 x-orqest-status: implemented-source-only
-x-orqest-reviewed-commit: 3896374d1
+x-orqest-base-commit: 3896374d1
+x-orqest-worktree-changes: true
 paths:
   /api/agents/v1/agents:
     get:
@@ -1932,6 +1933,2310 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/integrations/v1/identity:
+    get:
+      operationId: externalIdentity
+      tags:
+        - reads
+      summary: Identificar tenant e principal autenticados
+      description: 'Identificar tenant e principal autenticados. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /identity
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationIdentity'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/agents:
+    get:
+      operationId: externalListAgents
+      tags:
+        - reads
+      summary: Listar agentes exportáveis por AGENT EDIT ou gestão
+      description: >-
+        Listar agentes exportáveis por AGENT EDIT ou gestão. Exportação exige AGENTS USE e AGENT
+        EDIT/capacidade de gestão, separadamente da permissão remota.
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /agents
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationAgent'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/agents/{id}:
+    get:
+      operationId: externalGetAgent
+      tags:
+        - reads
+      summary: Exportar instruções base autorizadas do agente
+      description: >-
+        Exportar instruções base autorizadas do agente. Exportação exige AGENTS USE e AGENT
+        EDIT/capacidade de gestão, separadamente da permissão remota.
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /agents/:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationAgent'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/agents/{id}/context:
+    get:
+      operationId: externalAgentContext
+      tags:
+        - context
+      summary: Compor contexto autorizado sem LLM
+      description: 'Compor contexto autorizado sem LLM. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/context.ts
+        routerFile: api/server/routes/integrations.js
+        route: /agents/:id/context
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            example: instructions,skills,project,prompts,memories,files
+          description: >-
+            Seções separadas por vírgula; padrão todas. tools não é seção: consultar rota de
+            catálogo.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationContext'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/agents/{id}/tools:
+    get:
+      operationId: externalAgentTools
+      tags:
+        - tools
+      summary: Catálogo efetivo sem iniciar transporte ou OAuth
+      description: 'Catálogo efetivo sem iniciar transporte ou OAuth. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/tools.ts
+        routerFile: api/server/routes/integrations.js
+        route: /agents/:id/tools
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tools:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationTool'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                    enum:
+                      - null
+                required:
+                  - tools
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/tools/{toolName}/call:
+    post:
+      operationId: externalToolCall
+      tags:
+        - tools
+      summary: Executar ferramenta compatível sob gates atuais
+      description: 'Executar ferramenta compatível sob gates atuais. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/tools.ts
+        routerFile: api/server/routes/integrations.js
+        route: /tools/:toolName/call
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+          description: >-
+            Obrigatória para efeitos write. Mesmo payload reproduz estado; payload diferente retorna
+            409. Não trocar chave para repetir efeito ambíguo.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationToolResult'
+              examples:
+                fileSearch:
+                  value:
+                    status: completed
+                    effect: not_dispatched
+                    data:
+                      status: success
+                      indexStatus: index_status_unknown
+                      sources:
+                        - type: file
+                          fileId: file-1
+                          fileName: contrato.pdf
+                          content: Cancelamentos devem ser solicitados com 30 dias de antecedência.
+                          relevance: 0.87
+                          pages:
+                            - 3
+                          pageRelevance:
+                            '3': 0.87
+                      failures: []
+                      limits:
+                        files: 50
+                        concurrency: 5
+                        deadlineMs: 30000
+                        bytes: 1048576
+                    artifact:
+                      file_search:
+                        sources:
+                          - type: file
+                            fileId: file-1
+                            fileName: contrato.pdf
+                            content: Cancelamentos devem ser solicitados com 30 dias de antecedência.
+                            relevance: 0.87
+                            pages:
+                              - 3
+                            pageRelevance:
+                              '3': 0.87
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationToolCall'
+      x-orqest-file-search:
+        currentLimits:
+          perFileK: 5
+          globalSources: 10
+        limits:
+          queryChars: 4000
+          files: 50
+          concurrentQueries: 5
+          deadlineMs: 30000
+          maxResponseBytes: 1048576
+        argumentSchema:
+          $ref: '#/components/schemas/IntegrationFileSearchInput'
+  /api/integrations/v1/projects:
+    get:
+      operationId: externalListProjects
+      tags:
+        - reads
+      summary: Listar projetos com PROJECT VIEW
+      description: 'Listar projetos com PROJECT VIEW. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /projects
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationProject'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/projects/{projectId}:
+    get:
+      operationId: externalGetProject
+      tags:
+        - reads
+      summary: Ler projeção do projeto autorizado
+      description: 'Ler projeção do projeto autorizado. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /projects/:projectId
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationProject'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/projects/{projectId}/files:
+    get:
+      operationId: externalProjectFiles
+      tags:
+        - reads
+      summary: Inventário do projeto incluindo vínculos legados
+      description: 'Inventário do projeto incluindo vínculos legados. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /projects/:projectId/files
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationFile'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/agents/{id}/files:
+    get:
+      operationId: externalAgentFiles
+      tags:
+        - reads
+      summary: Inventário de arquivos autorizados do agente
+      description: >-
+        Inventário de arquivos autorizados do agente. Exportação exige AGENTS USE e AGENT
+        EDIT/capacidade de gestão, separadamente da permissão remota.
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/reads.ts
+        routerFile: api/server/routes/integrations.js
+        route: /agents/:id/files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationFile'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/skills:
+    get:
+      operationId: externalListSkills
+      tags:
+        - skills
+      summary: Listar resumos autorizados de skills
+      description: 'Listar resumos autorizados de skills. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/skills.ts
+        routerFile: api/server/routes/integrations.js
+        route: /skills
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationSkillSummary'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/skills/{id}:
+    get:
+      operationId: externalGetSkill
+      tags:
+        - skills
+      summary: Ler corpo, frontmatter aprovado e completude de referências
+      description: 'Ler corpo, frontmatter aprovado e completude de referências. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/skills.ts
+        routerFile: api/server/routes/integrations.js
+        route: /skills/:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationSkillDetail'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/skills/{id}/files:
+    get:
+      operationId: externalSkillFiles
+      tags:
+        - skills
+      summary: Inventário paginado de arquivos da skill
+      description: 'Inventário paginado de arquivos da skill. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/skills.ts
+        routerFile: api/server/routes/integrations.js
+        route: /skills/:id/files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationSkillReference'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                  complete:
+                    type: boolean
+                  missingCount:
+                    type: integer
+                    minimum: 0
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/skills/{id}/files/{relativePath}:
+    get:
+      operationId: externalSkillFile
+      tags:
+        - skills
+      summary: Ler texto autorizado de arquivo da skill
+      description: 'Ler texto autorizado de arquivo da skill. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/skills.ts
+        routerFile: api/server/routes/integrations.js
+        route: /skills/:id/files/*relativePath
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: relativePath
+          in: path
+          required: true
+          description: >-
+            Caminho relativo validado, inclusive diretórios; sem traversal, URL, absoluto ou modo
+            raw.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationSkillFileContent'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/projects/{projectId}/prompts:
+    get:
+      operationId: externalProjectPrompts
+      tags:
+        - content
+      summary: Resolver snippets e versões de produção autorizadas
+      description: 'Resolver snippets e versões de produção autorizadas. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/content.ts
+        routerFile: api/server/routes/integrations.js
+        route: /projects/:projectId/prompts
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationPrompt'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/prompts/{id}:
+    get:
+      operationId: externalGetPrompt
+      tags:
+        - content
+      summary: Resolver grupo/produção ou versão com ACL direta ou herdada
+      description: 'Resolver grupo/produção ou versão com ACL direta ou herdada. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/content.ts
+        routerFile: api/server/routes/integrations.js
+        route: /prompts/:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationPrompt'
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/projects/{projectId}/memories:
+    get:
+      operationId: externalProjectMemories
+      tags:
+        - content
+      summary: Memórias inline e vínculos autorizados do projeto
+      description: 'Memórias inline e vínculos autorizados do projeto. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/content.ts
+        routerFile: api/server/routes/integrations.js
+        route: /projects/:projectId/memories
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+        - name: agentId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationMemory'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/memories:
+    get:
+      operationId: externalPersonalMemories
+      tags:
+        - content
+      summary: Memórias do principal na partição autorizada
+      description: 'Memórias do principal na partição autorizada. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/content.ts
+        routerFile: api/server/routes/integrations.js
+        route: /memories
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+        - name: agentId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationMemory'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/conversations:
+    get:
+      operationId: externalConversations
+      tags:
+        - history
+      summary: Histórico próprio com paginação Mongo por cursor
+      description: 'Histórico próprio com paginação Mongo por cursor. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/history.ts
+        routerFile: api/server/routes/integrations.js
+        route: /conversations
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: agentId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationConversation'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+  /api/integrations/v1/conversations/{id}/messages:
+    get:
+      operationId: externalMessages
+      tags:
+        - history
+      summary: Texto de mensagens próprias sem artifacts ou mapas livres
+      description: 'Texto de mensagens próprias sem artifacts ou mapas livres. '
+      security:
+        - TenantExecutionKey: []
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/integrations/history.ts
+        routerFile: api/server/routes/integrations.js
+        route: /conversations/:id/messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 2048
+          description: >-
+            Cursor opaco vinculado a tenant, principal, rota, recurso e seleção. Próximo cursor em
+            nextCursor.
+      responses:
+        '200':
+          description: Projeção ou estado explícito da operação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/IntegrationMessage'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - items
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Entrada inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '403':
+          description: Política ou tenant negado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '404':
+          description: Recurso ausente ou inacessível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '409':
+          description: Lifecycle incompatível ou conflito de idempotência
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '413':
+          description: Escopo/contexto excede limite explícito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '429':
+          description: Limite de requests, catálogo ou fan-out
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '502':
+          description: Falha do provedor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '503':
+          description: Dependência ou armazenamento durável indisponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+        '504':
+          description: Prazo excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationError'
+
 components:
   securitySchemes:
     BrowserJwt:
@@ -3091,4 +5396,1045 @@ components:
         - last_id
         - has_more
         - after
+      additionalProperties: false
+    IntegrationError:
+      type: object
+      properties:
+        error:
+          oneOf:
+            - type: string
+            - type: object
+              properties:
+                code:
+                  type: string
+                message:
+                  type: string
+                type:
+                  type: string
+              additionalProperties: false
+        code:
+          type: string
+      required:
+        - error
+      additionalProperties: false
+      description: >-
+        Erros de integração usam error.code/message. Helpers de autenticação existentes também podem
+        devolver error textual ou code externo; nunca tokens ou payloads privados.
+    IntegrationIdentity:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        principalId:
+          type: string
+        method:
+          type: string
+          enum:
+            - tenant_api_key
+            - oidc_m2m
+        keyId:
+          type: string
+      required:
+        - tenantId
+        - principalId
+        - method
+      additionalProperties: false
+    IntegrationAgent:
+      type: object
+      description: >-
+        Projeção autorizada para exportação. Omite parâmetros, tool_options, credenciais, subagentes
+        e referências não revalidadas. Não é prompt final de um turno.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        provider:
+          type: string
+        model:
+          type: string
+        memoryScope:
+          type: string
+          enum:
+            - user
+            - agent
+        skillsEnabled:
+          type: boolean
+        skillsScope:
+          type: string
+          enum:
+            - all
+            - selected
+            - none
+        version:
+          type: integer
+          minimum: 0
+      required:
+        - id
+        - instructions
+        - provider
+        - model
+        - memoryScope
+        - skillsEnabled
+        - version
+      additionalProperties: false
+    IntegrationProject:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        isArchived:
+          type: boolean
+      required:
+        - id
+        - instructions
+        - isArchived
+      additionalProperties: false
+    IntegrationFile:
+      type: object
+      description: >-
+        Inventário sem bytes, URLs ou storage paths. embedded não comprova disponibilidade de
+        índice.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+        embedded:
+          type: boolean
+        indexStatus:
+          type: string
+          enum:
+            - unknown
+        contentFilterBlocked:
+          type: boolean
+      required:
+        - id
+        - name
+        - embedded
+        - indexStatus
+      additionalProperties: false
+    IntegrationSkillSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        version:
+          type: integer
+          minimum: 0
+        frontmatterProjection:
+          type: string
+          enum:
+            - approved_instruction_fields
+        source:
+          type: string
+        fileCount:
+          type: integer
+          minimum: 0
+        alwaysApply:
+          type: boolean
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - version
+        - source
+        - fileCount
+        - alwaysApply
+        - disableModelInvocation
+        - userInvocable
+        - allowedTools
+        - frontmatterProjection
+      additionalProperties: false
+    IntegrationSkill:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+        version:
+          type: integer
+          minimum: 0
+        frontmatter:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            argument-hint:
+              type: string
+            when-to-use:
+              type: string
+            license:
+              type: string
+            compatibility:
+              type: string
+            disableModelInvocation:
+              type: boolean
+            userInvocable:
+              type: boolean
+            alwaysApply:
+              type: boolean
+            allowedTools:
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+        frontmatterProjection:
+          type: string
+          enum:
+            - approved_instruction_fields
+        source:
+          type: string
+        fileCount:
+          type: integer
+          minimum: 0
+        alwaysApply:
+          type: boolean
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - body
+        - version
+        - frontmatter
+        - frontmatterProjection
+        - source
+        - fileCount
+        - alwaysApply
+        - disableModelInvocation
+        - userInvocable
+        - allowedTools
+      additionalProperties: false
+    IntegrationSkillReference:
+      type: object
+      properties:
+        relativePath:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+      required:
+        - relativePath
+        - filename
+        - mimeType
+        - bytes
+      additionalProperties: false
+    IntegrationSkillDetail:
+      type: object
+      description: >-
+        complete descreve corpo, inventário esperado e referências textuais reconhecidas. Não afirma
+        que todos os arquivos foram recuperados. Frontmatter contém somente campos de instrução
+        aprovados; metadata/hooks/ambientes ficam fora.
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        body:
+          type: string
+        version:
+          type: integer
+          minimum: 0
+        frontmatter:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            argument-hint:
+              type: string
+            when-to-use:
+              type: string
+            license:
+              type: string
+            compatibility:
+              type: string
+            disableModelInvocation:
+              type: boolean
+            userInvocable:
+              type: boolean
+            alwaysApply:
+              type: boolean
+            allowedTools:
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+        frontmatterProjection:
+          type: string
+          enum:
+            - approved_instruction_fields
+        source:
+          type: string
+        fileCount:
+          type: integer
+          minimum: 0
+        alwaysApply:
+          type: boolean
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+          format: date-time
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationSkillReference'
+        declaredReferences:
+          type: array
+          items:
+            type: string
+        missingReferences:
+          type: array
+          items:
+            type: string
+        referenceCoverage:
+          type: string
+          enum:
+            - markdown_file_links_and_safe_frontmatter_paths
+        completeProjection:
+          type: string
+          enum:
+            - body_inventory_and_file_references
+        complete:
+          type: boolean
+        completeness:
+          type: object
+          properties:
+            body:
+              type: boolean
+            inventory:
+              type: boolean
+            textFiles:
+              type: string
+              enum:
+                - retrieve_separately
+            missingCount:
+              type: integer
+              minimum: 0
+            missingReferences:
+              type: array
+              items:
+                type: string
+          required:
+            - body
+            - inventory
+            - textFiles
+            - missingCount
+            - missingReferences
+          additionalProperties: false
+      required:
+        - id
+        - body
+        - frontmatter
+        - references
+        - declaredReferences
+        - missingReferences
+        - referenceCoverage
+        - completeProjection
+        - complete
+        - completeness
+      additionalProperties: false
+    IntegrationSkillFileContent:
+      type: object
+      description: >-
+        Texto máximo 512 KiB. Binário, texto grande ou storage sem leitor produz complete=false e
+        motivo. Erro real de leitura falha, não vira sucesso vazio. SKILL.md representa body_only
+        com frontmatter aprovado separado; nunca arquivo original integral.
+      properties:
+        relativePath:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+        content:
+          type: string
+        isBinary:
+          type: boolean
+        complete:
+          type: boolean
+        unavailableReason:
+          type: string
+          enum:
+            - binary
+            - text_too_large
+            - storage_unavailable
+        representation:
+          type: string
+          enum:
+            - body_only
+        frontmatter:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            argument-hint:
+              type: string
+            when-to-use:
+              type: string
+            license:
+              type: string
+            compatibility:
+              type: string
+            disableModelInvocation:
+              type: boolean
+            userInvocable:
+              type: boolean
+            alwaysApply:
+              type: boolean
+            allowedTools:
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+      required:
+        - relativePath
+        - filename
+        - mimeType
+        - bytes
+        - complete
+      additionalProperties: false
+    IntegrationPrompt:
+      type: object
+      properties:
+        id:
+          type: string
+        groupId:
+          type: string
+        name:
+          type: string
+        prompt:
+          type: string
+        type:
+          type: string
+        production:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum:
+            - prompt_group
+            - project_snippet
+        projectId:
+          type: string
+        contentFilterBlocked:
+          type: boolean
+      required:
+        - id
+        - prompt
+        - source
+      additionalProperties: false
+    IntegrationMemory:
+      type: object
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+        agentId:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          minimum: 0
+        source:
+          type: string
+          enum:
+            - personal
+            - project
+            - shared
+        contentFilterBlocked:
+          type: boolean
+      required:
+        - id
+        - key
+        - value
+        - source
+      additionalProperties: false
+    IntegrationTool:
+      type: object
+      description: >-
+        Exportação exige AGENT EDIT; execução exige autorização REMOTE_AGENT separada. Catálogo
+        cache-only para MCP não abre transporte ou OAuth. Efeito desconhecido, credencial ausente e
+        lifecycle interativo tornam callable=false antes de efeitos.
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        family:
+          type: string
+          enum:
+            - builtin
+            - tenant_function
+            - action
+            - mcp
+        inputSchema:
+          type: object
+          additionalProperties: true
+          description: >-
+            JSON Schema efetivo; ausente quando descoberta indisponível, nunca schema vazio
+            inventado.
+        callable:
+          type: boolean
+        reason:
+          type: string
+        effect:
+          type: string
+          enum:
+            - read
+            - write
+        operationEffects:
+          type: object
+          additionalProperties:
+            type: string
+            enum:
+              - read
+              - write
+        bindProject:
+          type: boolean
+      required:
+        - name
+        - description
+        - family
+        - callable
+      additionalProperties: false
+    IntegrationToolCall:
+      type: object
+      description: >-
+        Envelope estrito. conversationId, file_ids, entity_id, URLs de RAG e campos de escopo não
+        são aceitos. projectId é validado pelo servidor. IDs externos da ferramenta seguem regras de
+        domínio do adapter.
+      properties:
+        agentId:
+          type: string
+        projectId:
+          type: string
+        arguments:
+          type: object
+          additionalProperties: true
+      required:
+        - agentId
+        - arguments
+      additionalProperties: false
+    IntegrationToolResult:
+      type: object
+      description: >-
+        Escritas exigem Idempotency-Key e reserva Mongo durável; retries revalidam auth/ACL e
+        reproduzem estado. in_progress/partial/ambiguous não autorizam novo dispatch. Tombstone da
+        chave não é removido após expiração do resultado; retenção do replay 7 dias. Sem promessa
+        exactly-once externa.
+      properties:
+        status:
+          type: string
+          enum:
+            - in_progress
+            - completed
+            - failed
+            - partial
+            - ambiguous
+        effect:
+          type: string
+          enum:
+            - not_dispatched
+            - dispatched
+            - completed
+            - unknown
+        callId:
+          type: string
+        replayed:
+          type: boolean
+        resultExpired:
+          type: boolean
+        data:
+          description: >-
+            Resultado de domínio projetado e inspecionado do adapter; pode ser texto, objeto ou
+            array.
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+        knownIds:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        artifact:
+          type: object
+          properties:
+            file_search:
+              $ref: '#/components/schemas/IntegrationFileSearchSources'
+          additionalProperties: false
+      required:
+        - status
+        - effect
+      additionalProperties: false
+    IntegrationConversation:
+      type: object
+      description: >-
+        Somente histórico do principal. Referências a projeto/agente são omitidas quando
+        inacessíveis.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        projectId:
+          type: string
+        agentId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+      additionalProperties: false
+    IntegrationMessage:
+      type: object
+      description: >-
+        Somente texto explícito. Artifacts, tool calls/outputs, arquivos e mapas livres não são
+        exportados. parentMessageId precisa pertencer à mesma conversa e principal.
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        parentMessageId:
+          type: string
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+        text:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum:
+                  - text
+              text:
+                type: string
+            required:
+              - type
+              - text
+            additionalProperties: false
+        createdAt:
+          type: string
+          format: date-time
+        omittedParts:
+          type: integer
+          minimum: 0
+        contentFilterBlocked:
+          type: boolean
+      required:
+        - id
+        - conversationId
+        - role
+        - text
+        - content
+        - omittedParts
+      additionalProperties: false
+    IntegrationFileSearchInput:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Consulta semântica em linguagem natural.
+      required:
+        - query
+      additionalProperties: false
+    IntegrationFileSearchSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - file
+        fileId:
+          type: string
+        fileName:
+          type: string
+        content:
+          type: string
+        relevance:
+          type: number
+          description: 1 - distância; não probabilidade.
+        pages:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        pageRelevance:
+          type: object
+          additionalProperties:
+            type: number
+        metadata:
+          type: object
+          properties:
+            imageRag:
+              type: object
+              properties:
+                kind:
+                  type: string
+                status:
+                  type: string
+                sourceImageFileName:
+                  type: string
+              additionalProperties: false
+          additionalProperties: false
+      required:
+        - type
+        - fileId
+        - fileName
+        - content
+        - relevance
+        - pages
+        - pageRelevance
+      additionalProperties: false
+    IntegrationFileSearchSources:
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationFileSearchSource'
+          maxItems: 10
+      required:
+        - sources
+      additionalProperties: false
+    IntegrationFileSearchResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - success
+            - empty
+            - no_files
+            - partial
+            - failed
+        indexStatus:
+          type: string
+          enum:
+            - index_status_unknown
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationFileSearchSource'
+          maxItems: 10
+        failures:
+          type: array
+          items:
+            type: object
+            properties:
+              fileId:
+                type: string
+              code:
+                type: string
+                enum:
+                  - rag_auth
+                  - unavailable
+                  - timeout
+                  - cancelled
+                  - invalid_response
+                  - response_limit
+            required:
+              - fileId
+              - code
+            additionalProperties: false
+        limits:
+          type: object
+          properties:
+            files:
+              type: integer
+              minimum: 0
+            concurrency:
+              type: integer
+              minimum: 0
+            deadlineMs:
+              type: integer
+              minimum: 0
+            bytes:
+              type: integer
+              minimum: 0
+          required:
+            - files
+            - concurrency
+            - deadlineMs
+            - bytes
+          additionalProperties: false
+      required:
+        - status
+        - indexStatus
+        - sources
+        - failures
+        - limits
+      additionalProperties: false
+    IntegrationContext:
+      type: object
+      description: >-
+        Projeção segura e seleção, sem LLM. Fingerprint não é snapshot transacional, autorização ou
+        prompt final. Projeto explicitamente pedido e negado falha. Seção opcional negada gera
+        warning genérico sem IDs privados. Texto dos arquivos de skills e catálogo de tools são
+        buscados nas rotas próprias. Máximo 1 MiB; exceder falha explicitamente, sem truncamento
+        silencioso.
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+            - 1
+        selection:
+          type: object
+          properties:
+            agentId:
+              type: string
+            projectId:
+              type: string
+            include:
+              type: array
+              items:
+                type: string
+                enum:
+                  - instructions
+                  - skills
+                  - project
+                  - prompts
+                  - memories
+                  - files
+          required:
+            - agentId
+            - include
+          additionalProperties: false
+        agent:
+          $ref: '#/components/schemas/IntegrationAgent'
+        project:
+          $ref: '#/components/schemas/IntegrationProject'
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+              body:
+                type: string
+              version:
+                type: integer
+                minimum: 0
+              frontmatter:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  argument-hint:
+                    type: string
+                  when-to-use:
+                    type: string
+                  license:
+                    type: string
+                  compatibility:
+                    type: string
+                  disableModelInvocation:
+                    type: boolean
+                  userInvocable:
+                    type: boolean
+                  alwaysApply:
+                    type: boolean
+                  allowedTools:
+                    type: array
+                    items:
+                      type: string
+                additionalProperties: false
+              frontmatterProjection:
+                type: string
+                enum:
+                  - approved_instruction_fields
+              source:
+                type: string
+              fileCount:
+                type: integer
+                minimum: 0
+              alwaysApply:
+                type: boolean
+              disableModelInvocation:
+                type: boolean
+              userInvocable:
+                type: boolean
+              allowedTools:
+                type: array
+                items:
+                  type: string
+              updatedAt:
+                type: string
+                format: date-time
+              complete:
+                type: boolean
+              missingCount:
+                type: integer
+                minimum: 0
+              references:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    relativePath:
+                      type: string
+                  required:
+                    - relativePath
+                  additionalProperties: false
+              missingReferences:
+                type: array
+                items:
+                  type: string
+            additionalProperties: false
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationPrompt'
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationMemory'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationFile'
+        warnings:
+          type: array
+          items:
+            type: string
+        complete:
+          type: boolean
+        contextFingerprint:
+          type: string
+        fingerprintSemantics:
+          type: string
+        limits:
+          type: object
+          properties:
+            maxBytes:
+              type: integer
+              minimum: 0
+            skillFiles:
+              type: string
+            tools:
+              type: string
+            truncated:
+              type: boolean
+          required:
+            - maxBytes
+            - skillFiles
+            - tools
+            - truncated
+          additionalProperties: false
+      required:
+        - schemaVersion
+        - selection
+        - agent
+        - warnings
+        - complete
+        - contextFingerprint
+        - fingerprintSemantics
+        - limits
       additionalProperties: false

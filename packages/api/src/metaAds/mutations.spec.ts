@@ -129,7 +129,10 @@ describe('Meta Ads creation and audience deletion', () => {
         { action: 'update_ad_creative', entityId: '55', fields: creative },
         ctx,
       ),
-    ).rejects.toThrow('Meta entity 900 was created.');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('Meta entity 900 was created.'),
+      data: { entityId: '900', adId: '55' },
+    });
   });
 
   it.each([true, { success: true }])(
@@ -213,6 +216,9 @@ describe('Meta Ads creation and audience deletion', () => {
     ctx.read.mockResolvedValue(readback);
     await expect(
       executeMetaAdsMutation({ action: 'create_creative', fields: creative }, ctx),
-    ).rejects.toThrow('Meta entity 900 was created.');
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('Meta entity 900 was created.'),
+      data: { entityId: '900' },
+    });
   });
 });

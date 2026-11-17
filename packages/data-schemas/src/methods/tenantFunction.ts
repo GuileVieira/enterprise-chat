@@ -71,8 +71,20 @@ export function createTenantFunctionMethods(mongoose: typeof import('mongoose'))
     updates: Partial<ITenantFunction>,
   ): Promise<ITenantFunction | null> {
     const TenantFunction = mongoose.models.TenantFunction as Model<ITenantFunction>;
-    return (await TenantFunction.findOneAndUpdate({ tenantId, id }, updates, {
+    if (Object.keys(updates).some((key) => key.startsWith('$') || key.includes('.'))) {
+      throw new Error('Invalid tenant function update field');
+    }
+    const reassessed = Object.prototype.hasOwnProperty.call(updates, 'integrationEffect');
+    const changed = ['config', 'inputSchema', 'postProcess'].some((key) =>
+      Object.prototype.hasOwnProperty.call(updates, key),
+    );
+    const mutation =
+      changed && !reassessed
+        ? { $set: updates, $unset: { integrationEffect: 1 } }
+        : { $set: updates };
+    return (await TenantFunction.findOneAndUpdate({ tenantId, id }, mutation, {
       new: true,
+      runValidators: true,
     }).lean()) as ITenantFunction | null;
   }
 

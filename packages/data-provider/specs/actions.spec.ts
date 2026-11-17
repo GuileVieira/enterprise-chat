@@ -490,6 +490,33 @@ describe('ActionRequest', () => {
       );
     });
 
+    it('passes cancellation, total timeout and response caps to the HTTP executor', async () => {
+      const signal = new AbortController().signal;
+      const executor = new ActionRequest(
+        'https://example.com',
+        '/bounded',
+        'GET',
+        'bounded',
+        false,
+        'application/json',
+      ).createExecutor();
+      await executor.execute({
+        signal,
+        timeout: 30000,
+        maxContentLength: 1048576,
+        maxBodyLength: 1048576,
+      });
+      expect(mockedAxios.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          signal,
+          timeout: 30000,
+          maxContentLength: 1048576,
+          maxBodyLength: 1048576,
+          maxRedirects: 0,
+        }),
+      );
+    });
+
     it('should not include agent keys when no options are provided', async () => {
       const actionRequest = new ActionRequest(
         'https://example.com',

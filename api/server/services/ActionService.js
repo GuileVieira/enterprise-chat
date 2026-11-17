@@ -5,6 +5,7 @@ const { tool } = require('@librechat/agents/langchain/tools');
 const { logger, decryptV2 } = require('@librechat/data-schemas');
 const {
   sendEvent,
+  discoverIntegrationActionAdapters,
   isAbortError,
   logAxiosError,
   detachOnAbort,
@@ -519,7 +520,27 @@ const deleteAssistantActions = async ({ req, assistant_id }) => {
   }
 };
 
+async function discoverIntegrationActions({ req, agent, prepareActionSnapshotForTools }) {
+  return discoverIntegrationActionAdapters({
+    req,
+    agent,
+    prepareActionSnapshotForTools,
+    domainParser,
+    legacyDomainEncode,
+    loadOAuthToken: async (userId, actionId) => {
+      const record = await findToken({
+        userId,
+        type: 'oauth',
+        identifier: `${userId}:${actionId}`,
+      });
+      if (!record?.expiresAt || new Date(record.expiresAt).getTime() <= Date.now()) return null;
+      return { token: await decryptV2(record.token), expiresAt: new Date(record.expiresAt) };
+    },
+  });
+}
+
 module.exports = {
+  discoverIntegrationActions,
   deleteAssistantActions,
   validateAndUpdateTool,
   legacyDomainEncode,

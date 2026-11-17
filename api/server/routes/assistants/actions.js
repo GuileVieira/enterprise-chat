@@ -3,6 +3,8 @@ const { nanoid } = require('nanoid');
 const { logger } = require('@librechat/data-schemas');
 const {
   isActionDomainAllowed,
+  IntegrationError,
+  resolveActionIntegrationEffects,
   blockFilteredActionProjection,
   validateActionOAuthMetadata,
 } = require('@librechat/api');
@@ -34,6 +36,7 @@ router.post('/:assistant_id', async (req, res) => {
 
     /** @type {{ functions: FunctionTool[], action_id: string, metadata: ActionMetadata }} */
     const { functions, action_id: _action_id, metadata: _metadata } = req.body;
+    resolveActionIntegrationEffects({ role: req.user.role, incoming: _metadata ?? {} });
     if (!functions.length) {
       return res.status(400).json({ message: 'No functions provided' });
     }
@@ -84,6 +87,14 @@ router.post('/:assistant_id', async (req, res) => {
       }
       metadata = { ...action.metadata, ...metadata };
     }
+
+    const integrationEffects = resolveActionIntegrationEffects({
+      role: req.user.role,
+      incoming: _metadata,
+      stored: actions_result?.[0]?.metadata,
+    });
+    if (integrationEffects === undefined) delete metadata.integrationEffects;
+    else metadata.integrationEffects = integrationEffects;
 
     try {
       await validateActionOAuthMetadata(metadata.auth, appConfig?.actions?.allowedAddresses);
@@ -181,6 +192,8 @@ router.post('/:assistant_id', async (req, res) => {
 
     res.json([assistantDocument, updatedAssistant, updatedAction]);
   } catch (error) {
+    if (error instanceof IntegrationError)
+      return res.status(error.status).json({ error: { code: error.code, message: error.message } });
     const message = 'Trouble updating the Assistant Action';
     logger.error(message, error);
     res.status(500).json({ message });

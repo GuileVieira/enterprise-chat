@@ -1108,8 +1108,14 @@ Please follow these instructions when using tools from the respective MCP server
     oboIdentityContext,
     onOAuthCredentialsChanged,
     onOAuthCredentialsChanging,
+    headless = false,
+    beforeDispatch,
+    onHeadlessResult,
   }: {
     user?: IUser;
+    headless?: boolean;
+    beforeDispatch?: () => Promise<void>;
+    onHeadlessResult?: (isError: boolean) => void;
     serverName: string;
     /** Pre-resolved config from tool creation context — avoids readThrough TTL and cross-tenant issues */
     serverConfig?: t.ParsedServerConfig;
@@ -1133,6 +1139,15 @@ Please follow these instructions when using tools from the respective MCP server
     onOAuthCredentialsChanged?: t.UserConnectionContext['onOAuthCredentialsChanged'];
     onOAuthCredentialsChanging?: t.UserConnectionContext['onOAuthCredentialsChanging'];
   }): Promise<t.FormattedToolResponse> {
+    if (
+      headless &&
+      (!providedConfig ||
+        requiresOAuthMachinery(providedConfig) ||
+        requiresEphemeralUserConnection(providedConfig) ||
+        usesDirectOpenIDBearerRecovery(providedConfig))
+    ) {
+      throw new Error('MCP headless authentication lifecycle unavailable');
+    }
     const userId = user?.id;
     const logPrefix = userId ? `[MCP][User: ${userId}][${serverName}]` : `[MCP][${serverName}]`;
     this.bindRequestScopedConnectionStore(requestScopedConnections);
@@ -1424,6 +1439,10 @@ Please follow these instructions when using tools from the respective MCP server
           );
         }
 
+        if (headless && !connectionIsActive) {
+          throw new Error('MCP connection unavailable');
+        }
+
         if (
           !connectionIsActive &&
           directBearerRecovery &&
@@ -1519,8 +1538,15 @@ Please follow these instructions when using tools from the respective MCP server
 
         let result: Awaited<ReturnType<typeof requestTool>>;
         try {
+          options?.signal?.throwIfAborted();
+          await beforeDispatch?.();
+          options?.signal?.throwIfAborted();
           result = await requestTool();
         } catch (error) {
+          // Headless dispatch is never retried, including transport auth failures.
+          if (headless) {
+            throw error;
+          }
           if (directBearerRecovery && user && isMCPTransportAuthenticationError(error)) {
             if (directBearerRecoveryState.attempted) {
               throw new MCPAuthenticationRejectedError(serverName, false, error);
@@ -1610,6 +1636,9 @@ Please follow these instructions when using tools from the respective MCP server
           await this.updateUserLastActivity(userId);
         }
         this.checkIdleConnections();
+        if (headless) {
+          onHeadlessResult?.(result.isError === true);
+        }
         return formatToolContent(result as t.MCPToolCallResponse, provider);
       } catch (error) {
         if (error instanceof OAuthRecoveryTakeoverRequired) {

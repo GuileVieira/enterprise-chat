@@ -18,6 +18,7 @@ export interface ITenantFunction {
   };
   inputSchema: Record<string, unknown>;
   postProcess?: string;
+  integrationEffect?: 'read' | 'write';
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

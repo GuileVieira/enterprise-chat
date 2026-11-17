@@ -26,6 +26,20 @@ router.get('/', async (req, res) => {
 router.post('/', requireManageFunctions, async (req, res) => {
   try {
     const payload = req.body;
+    if (
+      !payload ||
+      Array.isArray(payload) ||
+      typeof payload !== 'object' ||
+      Object.keys(payload).some((key) => key.startsWith('$') || key.includes('.'))
+    ) {
+      return res.status(400).json({ message: 'Invalid function fields' });
+    }
+    if (
+      payload.integrationEffect !== undefined &&
+      !['read', 'write'].includes(payload.integrationEffect)
+    ) {
+      return res.status(400).json({ message: 'Invalid integrationEffect' });
+    }
     if (!payload.tenantId || !payload.id) {
       return res.status(400).json({ message: 'tenantId and id are required' });
     }
@@ -61,6 +75,20 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id', requireManageFunctions, async (req, res) => {
   try {
+    if (
+      !req.body ||
+      Array.isArray(req.body) ||
+      typeof req.body !== 'object' ||
+      Object.keys(req.body).some((key) => key.startsWith('$') || key.includes('.'))
+    ) {
+      return res.status(400).json({ message: 'Invalid function fields' });
+    }
+    if (
+      req.body.integrationEffect !== undefined &&
+      !['read', 'write'].includes(req.body.integrationEffect)
+    ) {
+      return res.status(400).json({ message: 'Invalid integrationEffect' });
+    }
     const { tenantId } = req.query;
     const { id } = req.params;
     if (!tenantId) {

@@ -283,7 +283,14 @@ class RequestExecutor {
     return this;
   }
 
-  async execute(options?: { httpAgent?: unknown; httpsAgent?: unknown }) {
+  async execute(options?: {
+    httpAgent?: unknown;
+    httpsAgent?: unknown;
+    signal?: AbortSignal;
+    timeout?: number;
+    maxContentLength?: number;
+    maxBodyLength?: number;
+  }) {
     const url = createURL(this.config.domain, this.path);
     const headers: Record<string, string> = {
       ...this.authHeaders,
@@ -306,6 +313,12 @@ class RequestExecutor {
      */
     const axios = _axios.create({
       maxRedirects: 0,
+      ...(options?.signal ? { signal: options.signal } : {}),
+      ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
+      ...(options?.maxContentLength !== undefined
+        ? { maxContentLength: options.maxContentLength }
+        : {}),
+      ...(options?.maxBodyLength !== undefined ? { maxBodyLength: options.maxBodyLength } : {}),
       validateStatus: (status) => status >= 200 && status < 400,
       ...(options?.httpAgent != null ? { httpAgent: options.httpAgent } : {}),
       ...(options?.httpsAgent != null ? { httpsAgent: options.httpsAgent } : {}),

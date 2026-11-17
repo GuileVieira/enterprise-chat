@@ -11,13 +11,13 @@ export interface TenantFunctionExecutorDeps {
   getTenantSecret: TenantSecretMethods['getTenantSecret'];
 }
 
-interface TenantFunctionSuccessResponse {
+export interface TenantFunctionSuccessResponse {
   ok: true;
   status: number;
   data: unknown;
 }
 
-interface TenantFunctionErrorResponse {
+export interface TenantFunctionErrorResponse {
   ok: false;
   status?: number;
   error: {
@@ -26,7 +26,7 @@ interface TenantFunctionErrorResponse {
   };
 }
 
-type TenantFunctionResponse = TenantFunctionSuccessResponse | TenantFunctionErrorResponse;
+export type TenantFunctionResponse = TenantFunctionSuccessResponse | TenantFunctionErrorResponse;
 
 /**
  * Extracts path parameters from a URL template.
@@ -127,16 +127,32 @@ function stringifyResponse(response: TenantFunctionResponse): string {
 /**
  * Executes a tenant function.
  */
-export async function executeTenantFunction(
+export async function executeTenantFunctionResult(
   fn: TenantFunctionInput,
   args: Record<string, unknown>,
   deps: TenantFunctionExecutorDeps,
-): Promise<string> {
+  options: { signal?: AbortSignal; beforeDispatch?: () => Promise<void>; maxBytes?: number } = {},
+): Promise<TenantFunctionExecution> {
+  let dispatched = false;
+  let upstreamCompleted = false;
+  const stringifyResponse = (response: TenantFunctionResponse): TenantFunctionExecution => {
+    let effect: TenantFunctionExecution['effect'] = 'not_dispatched';
+    if (upstreamCompleted) {
+      effect = 'completed';
+    } else if (dispatched) {
+      effect = 'unknown';
+    }
+    return { response, effect };
+  };
   try {
     const url = buildUrl(fn.config.baseUrl, fn.config.path, args);
     const requestParams = buildRequestParams(fn.config.path, args);
     const headers = await buildHeaders(fn.config, deps, fn.tenantId);
 
+    options.signal?.throwIfAborted();
+    await options.beforeDispatch?.();
+    options.signal?.throwIfAborted();
+    dispatched = true;
     const response = await axios({
       method: fn.config.method,
       url,
@@ -145,6 +161,10 @@ export async function executeTenantFunction(
       data: isBodyMethod(fn.config.method) ? requestParams : undefined,
       timeout: 30000,
       maxRedirects: 0,
+      signal: options.signal,
+      ...(options.maxBytes
+        ? { maxContentLength: options.maxBytes, maxBodyLength: options.maxBytes }
+        : {}),
       validateStatus: () => true,
     });
 
@@ -159,6 +179,7 @@ export async function executeTenantFunction(
       });
     }
 
+    upstreamCompleted = true;
     let result: unknown = response.data;
 
     if (fn.postProcess) {
@@ -182,11 +203,12 @@ export async function executeTenantFunction(
       data: result,
     });
   } catch (error) {
-    const message = axios.isAxiosError(error)
-      ? (error.message ?? 'HTTP request failed')
-      : error instanceof Error
-        ? error.message
-        : 'HTTP request failed';
+    let message = 'HTTP request failed';
+    if (axios.isAxiosError(error)) {
+      message = error.message ?? message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
 
     return stringifyResponse({
       ok: false,
@@ -195,4 +217,18 @@ export async function executeTenantFunction(
       },
     });
   }
+}
+
+export interface TenantFunctionExecution {
+  response: TenantFunctionResponse;
+  effect: 'not_dispatched' | 'completed' | 'unknown';
+}
+
+/** Chat compatibility keeps its existing JSON string response. */
+export async function executeTenantFunction(
+  fn: TenantFunctionInput,
+  args: Record<string, unknown>,
+  deps: TenantFunctionExecutorDeps,
+): Promise<string> {
+  return stringifyResponse((await executeTenantFunctionResult(fn, args, deps)).response);
 }

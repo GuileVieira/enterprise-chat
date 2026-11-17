@@ -39,10 +39,12 @@ const tenantFunctionSchema: Schema<ITenantFunction> = new Schema<ITenantFunction
       path: { type: String, required: true },
       headers: { type: Schema.Types.Mixed, default: undefined },
       auth: {
-        type: { type: String, enum: ['bearer', 'basic', 'api_key', 'custom'], required: true },
-        secretName: { type: String, required: true },
-        headerName: { type: String },
-        _id: false,
+        type: new Schema({
+          type: { type: String, enum: ['bearer', 'basic', 'api_key', 'custom'], required: true },
+          secretName: { type: String, required: true },
+          headerName: { type: String },
+        }, { _id: false }),
+        default: undefined,
       },
       _id: false,
     },
@@ -53,6 +55,7 @@ const tenantFunctionSchema: Schema<ITenantFunction> = new Schema<ITenantFunction
     postProcess: {
       type: String,
     },
+    integrationEffect: { type: String, enum: ['read', 'write'] },
     isActive: {
       type: Boolean,
       default: true,

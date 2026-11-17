@@ -9,6 +9,7 @@ export interface IAction extends Document {
   agent_id?: string;
   assistant_id?: string;
   metadata: {
+    integrationEffects?: { [operationId: string]: 'read' | 'write' };
     api_key?: string;
     auth: {
       authorization_type?: string;

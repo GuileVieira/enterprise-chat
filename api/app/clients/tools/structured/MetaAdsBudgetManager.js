@@ -406,8 +406,16 @@ class MetaAdsBudgetManager extends Tool {
       const statusCode = Number(error?.statusCode);
       const code = Number(error?.data?.code);
       const subcode = Number(error?.data?.error_subcode);
+      const effectIds = {};
+      for (const key of ['entityId', 'adId', 'duplicatedEntityId', 'sourceEntityId']) {
+        const id = error?.data?.[key];
+        if (typeof id === 'string' && /^[a-zA-Z0-9_-]{1,200}$/.test(id)) {
+          effectIds[key] = id;
+        }
+      }
       return JSON.stringify({
         ok: false,
+        ...(Object.keys(effectIds).length ? { effectIds } : {}),
         error: {
           message: error instanceof Error ? error.message : 'Meta Ads budget manager failed.',
           ...(Number.isFinite(statusCode) ? { statusCode } : {}),

@@ -60,3 +60,5 @@ export * from './tenantFunction';
 export * from './tenantSecret';
 export * from './trafficDiary';
 export * from './mcpAuthority';
+
+export * from './integrationCall';

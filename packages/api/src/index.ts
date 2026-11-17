@@ -127,3 +127,18 @@ export type * from './flow/types';
 export type * from './types';
 /* Meta Ads */
 export { executeMetaAdsMutation } from './metaAds/mutations';
+
+/* External integrations */
+export * from './integrations/auth';
+export * from './integrations/contracts';
+export * from './integrations/reads';
+export * from './integrations/skills';
+export * from './integrations/content';
+export * from './integrations/history';
+export * from './integrations/context';
+export * from './integrations/tools';
+export * from './integrations/calls';
+export * from './integrations/actions';
+export * from './integrations/mcp';
+export * from './integrations/policy';
+export * from './integrations/builtin';

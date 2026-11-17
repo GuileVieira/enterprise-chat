@@ -99,6 +99,7 @@ function overlaySource(
  * servers from being cached in the config tier).
  */
 const ADMIN_CONFIGURABLE_FIELDS = [
+  'integrationEffects',
   'type',
   'command',
   'args',

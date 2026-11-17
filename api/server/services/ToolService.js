@@ -24,6 +24,12 @@ const {
   buildWebSearchDynamicContext,
   getCodeApiAuthHeaders,
   getTenantFunctionDefinitions,
+  buildTenantFunctionZodSchema,
+  discoverIntegrationMCPTools,
+  assertIntegrationToolPolicy,
+  integrationCalculator,
+  discoverIntegrationBuiltins,
+  IntegrationError,
   executeTenantFunction,
   getReplayablePendingMCPOAuthStart,
   getMCPServerNamesFromTools,
@@ -96,6 +102,7 @@ const {
   decryptMetadata,
   loadActionSets,
   domainParser,
+  discoverIntegrationActions,
 } = require('./ActionService');
 const {
   getAppConfig,
@@ -114,19 +121,19 @@ const {
   resolveMcpServerContext,
   getAccessibleMcpServerNames,
   resolveCollisionAuditNames,
+  resolveAllMcpConfigs,
 } = require('~/server/services/MCP');
 const { createOpenIDSessionTokenProvider } = require('~/server/services/OpenIDSessionRefresh');
 const { getMCPRequestContext } = require('~/server/services/MCPRequestContext');
 const { recordUsage } = require('~/server/services/Threads');
-const { loadTools } = require('~/app/clients/tools/util');
+const { loadTools, validateTools } = require('~/app/clients/tools/util');
 const {
   findPluginAuthsByKeys,
   getTenantFunctions,
   getTenantSecret,
   getRoleByName,
 } = require('~/models');
-const { z } = require('zod');
-const { getFlowStateManager, getMCPServersRegistry } = require('~/config');
+const { getFlowStateManager, getMCPServersRegistry, getMCPManager } = require('~/config');
 const { getLogStores } = require('~/cache');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
@@ -283,54 +290,6 @@ const normalizeLocalWebTools = (tools = []) => {
  * @param {Object} simpleSchema
  * @returns {import('zod').ZodObject}
  */
-const buildTenantFunctionZodSchema = (simpleSchema) => {
-  const buildValidator = (def) => {
-    let validator = z.any();
-    switch (def.type) {
-      case 'string':
-        validator = z.string();
-        break;
-      case 'number':
-      case 'float':
-        validator = z.number();
-        break;
-      case 'integer':
-        validator = z.number().int();
-        break;
-      case 'boolean':
-        validator = z.boolean();
-        break;
-      case 'array':
-        validator = z.array(def.items ? buildValidator(def.items) : z.any());
-        break;
-      case 'object':
-        validator = def.properties
-          ? buildTenantFunctionZodSchema(def.properties)
-          : z.record(z.any());
-        break;
-      default:
-        validator = z.string();
-    }
-    if (Array.isArray(def.enum) && def.enum.length > 0) {
-      validator = validator.refine((value) => def.enum.includes(value), {
-        message: `Must be one of: ${def.enum.join(', ')}`,
-      });
-    }
-    if (def.description) {
-      validator = validator.describe(def.description);
-    }
-    if (def.required !== true) {
-      validator = validator.optional();
-    }
-    return validator;
-  };
-
-  const shape = {};
-  for (const [key, def] of Object.entries(simpleSchema)) {
-    shape[key] = buildValidator(def);
-  }
-  return z.object(shape);
-};
 
 /**
  * Populate a `toolToAction` map with one slot per fully-qualified tool
@@ -2750,7 +2709,126 @@ async function loadActionToolsForExecution({
   return loadedActionTools;
 }
 
+/** Thin host adapter: TS handlers own validation, execution and durable write orchestration. */
+function createIntegrationToolService() {
+  const authorizeTool = async (req, agent, name, aliases) => {
+    const capabilities = await resolveAgentCapabilities(req, req.config, agent.id);
+    const permissionName = [Tools.fetch_url, Tools.tavily_search_results_json].includes(name)
+      ? Tools.web_search
+      : name;
+    const gate =
+      toolCapabilityGates[permissionName] ??
+      (isActionTool(name) ? AgentCapabilities.actions : AgentCapabilities.tools);
+    const canUseTool = await resolveAgentToolPermissions(req, [permissionName], capabilities);
+    if (!capabilities.has(gate) || !canUseTool(permissionName)) {
+      throw new IntegrationError(403, 'tool_permission_denied', 'Tool access denied');
+    }
+    if (name.startsWith('meta_ads_')) {
+      if (req.config?.interfaceConfig?.metaAds === false) {
+        throw new IntegrationError(403, 'meta_ads_disabled', 'Meta Ads disabled');
+      }
+      if (
+        !['ADMIN', 'OWNER'].includes(req.user.role) &&
+        !(await checkToolRolePermission({
+          req,
+          user: req.user,
+          permissionType: PermissionTypes.META_ADS,
+          getRoleByName,
+        }))
+      ) {
+        throw new IntegrationError(403, 'tool_permission_denied', 'Meta Ads access denied');
+      }
+    }
+    assertIntegrationToolPolicy(req, agent, name, aliases);
+  };
+  const inspect = async (req, name, phase, value) => {
+    const input = phase === 'arguments' ? { name, arguments: value } : { name, output: value };
+    const { finding, traversalError } = getRequiredActionContentInspection({ req }, input);
+    if (traversalError) {
+      throw traversalError;
+    }
+    if (finding) {
+      throw new ContentFilterError(finding);
+    }
+  };
+  const discoverTools = async (req, agent, projectId) => {
+    const tools = await discoverIntegrationBuiltins(
+      {
+        authenticated: (request, names) => validateTools(request.user.id, names),
+        execute: async (request, currentAgent, name, args, signal, currentProjectId) => {
+          const { loadedTools } = await loadTools({
+            user: request.user.id,
+            agent: currentAgent,
+            tools: [name],
+            functions: true,
+            signal,
+            options: { req: request, returnMetadata: true, projectId: currentProjectId },
+            webSearch: request.config?.webSearch,
+            fileStrategy: request.config?.fileStrategy,
+          });
+          const loaded = loadedTools?.find((tool) => tool.name === name);
+          if (!loaded) {
+            throw new IntegrationError(409, 'tool_unavailable', 'Builtin unavailable');
+          }
+          return loaded.invoke(args, { signal });
+        },
+      },
+      req,
+      agent,
+      projectId,
+    );
+    if (agent.tools?.includes('calculator')) {
+      tools.push(integrationCalculator());
+    }
+    for (const name of agent.tools ?? []) {
+      if (
+        name !== 'calculator' &&
+        name !== Tools.file_search &&
+        !tools.some((tool) => tool.name === name) &&
+        isBuiltInTool(name)
+      ) {
+        tools.push({
+          name,
+          family: 'builtin',
+          description: '',
+          callable: false,
+          reason: 'runtime_lifecycle_required',
+        });
+      }
+    }
+    if (agent.tools?.some(isActionTool)) {
+      tools.push(
+        ...(await discoverIntegrationActions({
+          req,
+          agent,
+          projectId,
+          prepareActionSnapshotForTools,
+          registerActionTools,
+        })),
+      );
+    }
+    tools.push(
+      ...(await discoverIntegrationMCPTools(
+        {
+          resolveConfigs: (request) => resolveAllMcpConfigs(request.user.id, request.user),
+          getCached: getMCPServerTools,
+          getAuth: (request, servers) =>
+            getUserMCPAuthMap({ userId: request.user.id, servers, findPluginAuthsByKeys }),
+          canUse: (request) => createMCPPermissionContext(request).canUseServers(request.user),
+          manager: () => getMCPManager(),
+          flowManager: () => getFlowStateManager(getLogStores(CacheKeys.FLOWS)),
+        },
+        req,
+        agent,
+      )),
+    );
+    return tools;
+  };
+  return { authorizeTool, inspect, discoverTools };
+}
+
 module.exports = {
+  createIntegrationToolService,
   loadTools,
   isBuiltInTool,
   getToolkitKey,

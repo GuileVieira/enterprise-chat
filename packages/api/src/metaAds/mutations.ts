@@ -286,6 +286,7 @@ export async function executeMetaAdsMutation(
       ),
       {
         statusCode: 502,
+        data: { entityId, ...(adId ? { adId } : {}) },
       },
     );
   }

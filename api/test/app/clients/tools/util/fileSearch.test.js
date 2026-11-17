@@ -3,11 +3,12 @@ const { ResourceType } = require('librechat-data-provider');
 
 jest.mock('axios');
 jest.mock('@librechat/api', () => {
-  const { selectFileCitationSources } = jest.requireActual('@librechat/api');
+  const { selectFileCitationSources, searchFiles } = jest.requireActual('@librechat/api');
   return {
     generateShortLivedToken: jest.fn(),
     logAxiosError: jest.fn(),
     selectFileCitationSources,
+    searchFiles,
   };
 });
 

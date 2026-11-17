@@ -732,6 +732,7 @@ export type Action = {
 } & ({ assistant_id: string; agent_id?: never } | { assistant_id?: never; agent_id: string });
 
 export type ActionMetadata = {
+  integrationEffects?: { [operationId: string]: 'read' | 'write' };
   api_key?: string;
   auth?: ActionAuth;
   domain?: string;

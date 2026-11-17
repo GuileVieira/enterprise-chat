@@ -31,5 +31,6 @@ export interface TenantFunctionInput {
   config: TenantFunctionConfig;
   inputSchema: Record<string, unknown>;
   postProcess?: string;
+  integrationEffect?: 'read' | 'write';
   isActive: boolean;
 }

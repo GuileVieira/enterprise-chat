@@ -36,6 +36,11 @@ const Action: mongoose.Schema<IAction> = new Schema<IAction>({
   agent_id: String,
   assistant_id: String,
   metadata: {
+    integrationEffects: {
+      type: Map,
+      of: { type: String, enum: ['read', 'write'] },
+      default: undefined,
+    },
     api_key: String,
     auth: AuthSchema,
     domain: {

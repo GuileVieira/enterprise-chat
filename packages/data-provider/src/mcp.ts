@@ -169,6 +169,8 @@ export const MCP_SERVER_TITLE_ERROR =
   'Title must start with a letter or number and can include spaces, hyphens, and apostrophes';
 
 const BaseOptionsSchema = z.object({
+  /** Operator-assessed side effects by raw upstream operation name. */
+  integrationEffects: z.record(z.string().min(1).max(200), z.enum(['read', 'write'])).optional(),
   /** Display name for the MCP server */
   title: z.string().regex(MCP_SERVER_TITLE_PATTERN, MCP_SERVER_TITLE_ERROR).optional(),
   /** Description of the MCP server */
@@ -438,6 +440,7 @@ const omitServerManagedFields = <T extends z.ZodObject<z.ZodRawShape>>(schema: T
     serverInstructions: true,
     requiresOAuth: true,
     customUserVars: true,
+    integrationEffects: true,
     oauth_headers: true,
   });
 

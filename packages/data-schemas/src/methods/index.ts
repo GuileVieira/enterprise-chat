@@ -1,3 +1,5 @@
+import { createIntegrationCallMethods, type IntegrationCallMethods } from './integrationCall';
+export { createIntegrationCallMethods, type IntegrationCallMethods } from './integrationCall';
 import type { RoleMethods, RoleDeps } from './role';
 import {
   createOpenIDRefreshFlightMethods,
@@ -247,6 +249,7 @@ export type AllMethods = UserMethods &
   ActionMethods &
   AssistantMethods &
   BannerMethods &
+  IntegrationCallMethods &
   ToolCallMethods &
   CategoriesMethods &
   PresetMethods &
@@ -475,6 +478,7 @@ export function createMethods(
     ...actionMethods,
     ...createAssistantMethods(mongoose),
     ...createBannerMethods(mongoose),
+    ...createIntegrationCallMethods(mongoose),
     ...createToolCallMethods(mongoose),
     ...createCategoriesMethods(mongoose),
     ...createPresetMethods(mongoose),

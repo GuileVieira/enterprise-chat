@@ -5,6 +5,8 @@ const {
   generateCheckAccess,
   planAgentActionUpdate,
   isActionDomainAllowed,
+  IntegrationError,
+  resolveActionIntegrationEffects,
   legacyActionDomainEncode,
   validateActionOAuthMetadata,
   ACTION_CREDENTIAL_REFRESH_MESSAGE,
@@ -104,6 +106,7 @@ router.post(
 
       /** @type {{ functions: FunctionTool[], action_id: string, metadata: ActionMetadata }} */
       const { functions, action_id: _action_id, metadata: _metadata } = req.body;
+      resolveActionIntegrationEffects({ role: req.user.role, incoming: _metadata ?? {} });
       if (!functions.length) {
         return res.status(400).json({ message: 'No functions provided' });
       }
@@ -199,6 +202,14 @@ router.post(
         storedAction,
       });
 
+      const integrationEffects = resolveActionIntegrationEffects({
+        role: req.user.role,
+        incoming: _metadata,
+        stored: storedAction?.metadata,
+      });
+      if (integrationEffects === undefined) delete plannedUpdate.metadata.integrationEffects;
+      else plannedUpdate.metadata.integrationEffects = integrationEffects;
+
       if (
         blockFilteredActionProjection(req.config?.filters, res, {
           functions: plannedUpdate.tools.map((name) => ({ function: { name } })),
@@ -265,6 +276,10 @@ router.post(
 
       res.json([updatedAgent, updatedAction]);
     } catch (error) {
+      if (error instanceof IntegrationError)
+        return res
+          .status(error.status)
+          .json({ error: { code: error.code, message: error.message } });
       const message = 'Trouble updating the Agent Action';
       logger.error(message, error);
       res.status(500).json({ message });

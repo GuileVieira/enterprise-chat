@@ -1,139 +1,114 @@
 # Orqest para consumo por terminal
 
-Revisão do código no commit `3896374d1`. O objetivo é permitir que um cliente de terminal
-recupere instruções, prompts, skills, projetos e chunks relevantes de documentos, e use ferramentas
-sem precisar delegar o raciocínio à LLM configurada no Orqest.
+As **20 operações de `/api/integrations/v1` estão implementadas no worktree**. Os testes locais
+usam MongoDB e HTTP de teste; isso **não comprova deploy**, configuração OIDC da instalação,
+índices RAG de produção ou efeitos externos reais. O terminal conduz o raciocínio; estas rotas
+fornecem instruções/contexto e executam ferramentas compatíveis sem iniciar a LLM do agente.
 
-| Artefato                                                                             | Estado                                                                                          |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| [orqest-current.openapi.yaml](orqest-current.openapi.yaml)                           | Rotas existentes no código, com seus três tipos de autenticação. Não comprova deploy.           |
-| [orqest-integration.proposed.openapi.yaml](orqest-integration.proposed.openapi.yaml) | Contrato proposto para acesso externo uniforme. Nenhum endpoint deste arquivo foi implementado. |
+| Arquivo                                                                              | Conteúdo                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [orqest-current.openapi.yaml](orqest-current.openapi.yaml)                           | Inventário legado mais as 20 integrações implementadas no código local. Componentes novos têm prefixo `Integration`; schemas legados permanecem separados.                               |
+| [orqest-integration.proposed.openapi.yaml](orqest-integration.proposed.openapi.yaml) | Contrato canônico das 20 integrações implementadas. O nome histórico `.proposed` foi preservado para manter links; `x-orqest-status: implemented-source-only` identifica o estado atual. |
+| [implementation.md](implementation.md)                                               | Plano refinado, decisões de segurança, fases e evidências de implementação.                                                                                                              |
 
-OpenAPI descreve contratos. Salvar/importar os arquivos no Swagger não publica endpoints,
-não transforma uma sessão em credencial de máquina e não dá permissão sobre recursos.
-Não há Swagger UI ou rota para servir estes contratos no servidor atual.
+Os YAMLs são importáveis. Não existe rota HTTP de publicação destes documentos nem Swagger UI.
+Salvar ou importar o contrato não publica endpoints. O inventário legado mantém as políticas de
+cada rota; a autenticação combinada abaixo vale somente para `/api/integrations/v1`.
 
-## Escopo corrigido: busca de chunks
+## Autenticação e principal
 
-O cliente de terminal precisa consultar a tool **`file_search`**, não baixar documentos completos.
-O fluxo desejado é: recuperar instruções/prompts/skills e schemas do agente, escolher o projeto,
-consultar documentos por linguagem natural e receber os chunks relevantes com suas fontes.
-Corpo/frontmatter das skills continuam sendo instruções exportáveis; isso é separado dos documentos
-indexados para busca. Downloads completos e binários saíram da proposta. As rotas legadas de download
-permanecem no inventário atual apenas para descrever o que o servidor já possui.
+Aceita uma das credenciais existentes no header `Authorization: Bearer …`:
 
-## O que já existe
+- **Chave tenant:** pertence a OWNER ativo, no mesmo tenant e com papel OWNER. Chave individual,
+  revogada, expirada ou de usuário desativado não autentica esta superfície. A configuração efetiva
+  precisa permitir API keys e o papel precisa ter `REMOTE_AGENTS USE`.
+- **OIDC M2M de gestão:** configuração existente `endpoints.agents.managementApi.auth`, com
+  issuer/audience, client binding e subject esperados. Usa o principal configurado naquele tenant.
+  Não corresponde ao OIDC remoto de usuário nem a sessão do navegador.
 
-| Necessidade                              | Rota atual                                                                                                    | Autenticação e limite relevante                                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Instruções e configuração do agente      | `GET /api/agents/v1/agents/{id}`                                                                              | OIDC de gestão; AGENTS USE e AGENT EDIT ou capacidade administrativa. Retorna `instructions`, referências de tools e skills.   |
-| Descobrir agentes administráveis         | `GET /api/agents/v1/agents`                                                                                   | Mesmo OIDC/ACL; paginação `limit`/`cursor`, próximo cursor em `after`.                                                         |
-| Resumo de projetos e agentes executáveis | `GET /api/agents/v1/catalog`, `GET /api/agents/v1/projects`                                                   | Chave de execução **tenant**. Não retorna contexto completo.                                                                   |
-| Corpo e frontmatter de uma skill         | `GET /api/agents/v1/skills/{id}`                                                                              | OIDC de gestão, SKILLS USE e SKILL VIEW. A lista `/skills` retorna resumo, sem corpo.                                          |
-| Arquivos da skill                        | `GET /api/agents/v1/skills/{id}/files`, `GET .../files/{relativePath}`                                        | Mesmo OIDC; leitura textual em JSON. Binários/arquivos grandes podem não ter `content`. Sem modo raw.                          |
-| Arquivos do agente                       | `GET /api/agents/v1/agents/{id}/files`                                                                        | OIDC de gestão; metadados e `purposes`. Não há download de bytes nesta superfície.                                             |
-| Instruções e referências do projeto      | `GET /api/projects/{projectId}`                                                                               | Sessão JWT e PROJECT VIEW; retorna documento atual, não uma projeção externa dedicada.                                         |
-| Prompts reutilizáveis                    | `GET /api/prompts/groups`, `/groups/{groupId}`, `GET /api/prompts?groupId=...`, `GET /api/prompts/{promptId}` | Sessão JWT, permissões do recurso/herança do projeto e filtros de conteúdo.                                                    |
-| Arquivos do projeto                      | `GET /api/files?projectId=...`                                                                                | Sessão JWT e acesso ao projeto. Lista por `file.projectId` e `project.fileIds`.                                                |
-| Original do arquivo                      | `GET /api/files/download/{userId}/{file_id}`                                                                  | Sessão JWT e `fileAccess`; pode fazer streaming. Storage sem suporte retorna 501.                                              |
-| Texto extraído do arquivo                | `GET /api/files/{file_id}/preview`                                                                            | Sessão JWT e `fileAccess`; estado pending/ready/failed, texto quando disponível. Não é o original.                             |
-| URL temporária do arquivo                | `GET /api/files/download-url/{userId}/{file_id}`                                                              | Sessão JWT e `fileAccess`; depende do storage. Não substituir autenticação por URL permanente.                                 |
-| Tools internas                           | `GET /api/agents/tools`                                                                                       | Sessão JWT; metadados do manifest. **Não** é `/api/agents/v1/tools`.                                                           |
-| Funções do tenant                        | `GET /api/agents/tools/tenant-functions`                                                                      | Sessão JWT; inclui `inputSchema`, omite configuração de credenciais.                                                           |
-| Tools MCP externas                       | `GET /api/mcp/tools`                                                                                          | Sessão JWT/MCP USE; metadados de servidores e ferramentas. Orqest atua como cliente MCP.                                       |
-| Chamada direta de tool                   | `POST /api/agents/tools/{toolId}/call`                                                                        | Sessão JWT; hoje só `execute_code`, com `messageId` válido e permissão RUN_CODE. Não executa Meta Ads ou toda tool arbitrária. |
-| Memórias pessoais                        | `GET /api/memories`                                                                                           | Sessão JWT, READ e regras de partição de agente.                                                                               |
-| Biblioteca compartilhada                 | `GET /api/shared-memories`                                                                                    | Sessão JWT e SHARED_MEMORIES READ. `projectId` marca vínculos; não restringe a resposta às memórias vinculadas.                |
-| Conversas/mensagens próprias             | `GET /api/convos`, `/api/convos/{id}`, `/api/messages/{conversationId}`                                       | Sessão JWT e propriedade da conversa. PROJECT VIEW não dá acesso a conversas de terceiros.                                     |
+O mecanismo é escolhido uma vez; negativa de política não tenta outra credencial. Conflitos de tenant
+em header, query ou body são rejeitados. `GET /identity` devolve `tenantId`, `principalId`, `method`
+e `keyId` quando aplicável; nunca o token. Não foram criados scopes finos por chave.
 
-### As credenciais não são intercambiáveis
+Exportar instruções/catálogo exige `AGENTS USE` e `AGENT EDIT` ou capacidade administrativa existente.
+Executar tools exige a autorização remota do agente e os grants/capabilities da ferramenta.
+EDIT não concede execução remota; permissão remota não concede exportação. Um catálogo exportável
+pode indicar `callable=false, reason=remote_access_denied`.
 
-1. **Gestão externa:** `endpoints.agents.managementApi.auth`, OIDC issuer/audience e vínculo
-   `clientId → userId/tenantId`. Não aceita sessão do navegador nem chave de execução como fallback.
-2. **Execução de agentes:** `requireRemoteAgentAuth`, chave de execução ou OIDC conforme configuração.
-   O catálogo `/catalog` e `/projects` exige especificamente `req.tenantApiKey` no handler atual.
-3. **Interface:** `requireJwtAuth`, sessão autenticada e contexto do usuário/tenant. Não presumir que
-   a chave de execução funcione em `/api/projects`, `/api/prompts`, `/api/files` ou `/api/memories`.
+As rotas antigas de gestão `/api/agents/v1/agents` e `/api/agents/v1/skills` continuam M2M exclusivas.
+Rotas de navegador `/api/projects`, `/api/prompts`, `/api/files`, `/api/memories` etc. mantêm JWT de sessão.
 
-A presença de um agente no catálogo de execução não autoriza exportar seu prompt: a API de
-configuração exige EDIT/capacidade administrativa. A proposta preserva essa restrição.
+## As 20 operações
 
-### Tenant, ID da chave e token
+Base comum: `/api/integrations/v1`.
 
-Cada tenant tem `tenantId`; pode ter várias chaves, com `id`, `keyPrefix` e token secreto `key`.
-O ID serve para identificar/revogar a chave; não autentica sozinho. O token completo é devolvido
-na criação, enquanto a listagem `GET /api/tenant-api-keys` devolve apenas metadados.
+| Operação                                                          | Resultado                                                                      |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `GET /identity`                                                   | Identidade/principal sem token.                                                |
+| `GET /agents`, `GET /agents/{id}`                                 | Projeção exportável com instruções base, modelo e versão.                      |
+| `GET /agents/{id}/context`                                        | Composição segura por seleção, origem, completude e fingerprint.               |
+| `GET /agents/{id}/tools`                                          | Catálogo efetivo: schema quando conhecido, família, efeito, callable e motivo. |
+| `POST /tools/{toolName}/call`                                     | Execução direta por adapter; RAG retorna chunks/fontes.                        |
+| `GET /projects`, `GET /projects/{projectId}`                      | Projeções com `PROJECT VIEW`.                                                  |
+| `GET /projects/{projectId}/files`, `GET /agents/{id}/files`       | Inventário autorizado; inclui vínculos legados do projeto.                     |
+| `GET /skills`, `GET /skills/{id}`                                 | Resumos; depois corpo, frontmatter aprovado e referências verificadas.         |
+| `GET /skills/{id}/files`, `GET /skills/{id}/files/{relativePath}` | Inventário e texto limitado de arquivos da skill.                              |
+| `GET /projects/{projectId}/prompts`, `GET /prompts/{id}`          | Snippets e texto da versão de produção ou versão autorizada.                   |
+| `GET /projects/{projectId}/memories`, `GET /memories`             | Memórias próprias/partições e vínculos autorizados.                            |
+| `GET /conversations`, `GET /conversations/{id}/messages`          | Histórico do principal; projeto compartilhado não compartilha conversas.       |
 
-A chave tenant atual é criada para um usuário OWNER daquele tenant; validação exige que esse
-principal continue ativo, no mesmo tenant e com papel OWNER. Não há scopes finos por ferramenta,
-projeto ou operação em cada chave tenant neste modelo. A ACL ainda é calculada para o principal,
-mas isso representa o poder do OWNER vinculado. Para restringir integração por usuário, o vínculo
-OIDC de gestão permite escolher um principal apropriado; scopes por chave seriam trabalho adicional.
+Listagens usam `limit` de 1 a 100, padrão 20, e `cursor`; a resposta contém `items` e `nextCursor`.
+O cursor é vinculado a tenant, principal, rota, recurso e seleção; ACL é revalidada em cada request.
+Histórico/mensagens e memórias pessoais usam seek no Mongo. Agentes/projetos filtram IDs autorizados
+antes do limite de escopo de 2.000 registros; excesso retorna erro explícito. Catálogo de tools é
+inteiro, limitado a 200 entradas, com `{tools, nextCursor:null}`. Requests têm limite de 120/min por
+principal/tenant, usando o store de limites já configurado.
 
-Na proposta, `/identity` mostra `tenantId`, `principalId`, `keyId` e método de autenticação.
-`tenantId` é derivado no servidor; o cliente não pode mudar de tenant enviando outro ID no payload.
+As projeções omitem Mongo bruto, parâmetros livres de modelo, `tool_options`, identidade Git,
+ambientes, storage paths e credenciais. Filtros de conteúdo atuais são reaplicados. Texto escrito
+manualmente em instruções ou respostas externas pode conter segredos que nenhum filtro detecta.
+Mensagens exportam somente texto explícito; partes omitidas são contabilizadas em `omittedParts`.
+Artifacts, tool calls e conteúdo multimodal livre não são repassados pelo histórico.
 
-## Prompts e skills do agente
+## Contexto, prompts, skills e memórias
 
-Há conteúdos diferentes que o cliente precisa distinguir:
+`GET /agents/{id}/context?projectId=…&include=instructions,skills,project,prompts,memories,files`
+usa os mesmos resolvedores das rotas individuais. `include` é opcional; padrão todas essas seções.
+O catálogo de tools e os textos dos arquivos das skills são recuperados nas rotas próprias.
 
-- `agent.instructions`: instruções base do agente, exportáveis hoje pela API de gestão autorizada.
-- `project.instructions`: instruções do projeto; `promptSnippets` contém trechos inline.
-- `project.promptGroupIds`: referências a grupos reutilizáveis. Ler o grupo, seu `productionPrompt` populado e/ou versões autorizadas para obter o texto;
-  `productionId` sozinho é apenas referência à versão de produção.
-- `agent.skills`: IDs selecionados; buscar a skill para obter `body`, `frontmatter` e seus arquivos.
-- `skills_enabled`, `skills_scope`, skills alwaysApply/deployment e ativação no turno afetam o
-  contexto efetivo. Não tratar a lista de IDs como a composição completa das skills do runtime.
-- Instruções MCP, memórias e contexto de arquivos são resolvidos durante execução. O prompt final
-  varia com o turno. Não há endpoint atual de exportação desse contexto composto.
+`agent.instructions` é texto base. Texto copiado de um prompt não preserva vínculo implícito com
+grupo/versão. Prompts do projeto resolvem snippets e produção autorizada; versões também podem ser
+pedidas por ID. Referências inacessíveis não são divulgadas em warnings.
 
-Não há `promptGroupIds` no contrato de configuração do agente revisado. Um texto copiado de um
-prompt para `instructions` não preserva automaticamente referência, grupo e versão de origem.
-Prompts de edges/subagentes também são configuração do agente, não uma biblioteca implícita.
+`contextFingerprint` identifica a projeção segura, versões presentes e seleção; não representa um
+snapshot transacional global, autorização futura ou prompt final de um turno. Projeto/agente
+explicitamente pedido e negado falha. Seção opcional negada pode gerar warning genérico e
+`complete=false`; falha real de consulta/storage não vira contexto vazio bem-sucedido. O contexto
+é limitado a 1 MiB e falha explicitamente ao exceder, sem truncamento silencioso.
 
-O contrato proposto oferece `GET /api/integrations/v1/agents/{id}/context?projectId=...` para
-retornar essas origens separadas, incluindo skills completas, schemas de tools e inventário dos arquivos pesquisáveis.
-`instructionSections` identifica a origem de cada trecho; não promete reproduzir todo o
-estado dinâmico e histórico de uma conversa sem uma sessão de execução.
+Skills respeitam `SKILLS USE`, VIEW/deployment/capacidade de gestão existente. A seleção de contexto
+respeita capability de skills, `skills_enabled`, all/selected/none, ativação do usuário,
+`alwaysApply`, `disableModelInvocation` e `userInvocable`. `allowedTools` não concede grants; apenas
+skills alwaysApply efetivamente ativas podem acrescentar nomes ao catálogo, sempre sob autorização
+normal da tool. A API não executa scripts durante leitura.
 
-## Recuperação de chunks com a tool existente
+`frontmatterProjection=approved_instruction_fields` deixa explícito que metadata, hooks e ambientes
+não são exportados. `SKILL.md` retorna `representation=body_only`, com frontmatter aprovado separado;
+não promete o arquivo original integral. O detalhe verifica inventário esperado e links Markdown/
+paths seguros de frontmatter, informa `missingReferences`, `missingCount`, `referenceCoverage` e
+`completeProjection=body_inventory_and_file_references`. Isso não afirma que todos os conteúdos
+referenciados foram carregados. Binários, texto acima de 512 KiB e storage sem leitor têm
+`complete=false` e motivo. Erros de leitura falham; nenhuma indisponibilidade vira texto completo.
 
-A implementação `api/app/clients/tools/util/fileSearch.js` já fornece:
+Memórias pessoais pertencem ao principal autenticado e à partição autorizada. Memórias do projeto
+incluem somente inline, keys próprias daquela partição e IDs ativos explicitamente vinculados da
+biblioteca do mesmo tenant, sob READ. Não incluem diários de tráfego incidentalmente. Memória
+precisa estar habilitada; contexto pessoal acima de 1.000 registros falha explicitamente.
 
-1. `primeFiles`: prepara documentos do agente/projeto e aplica o filtro de acesso.
-2. `createFileSearchTool`: aceita `{ "query": "pergunta em linguagem natural" }`.
-3. Consulta o RAG interno em `/query`, com JWT curto gerado no servidor para o usuário.
-4. Solicita `k=5` por arquivo, ordena por distância e mantém até 10 fontes globais.
-5. Retorna conteúdo formatado e `artifact.file_search.sources` estruturado.
+## Busca de chunks com `file_search`
 
-Cada fonte contém `fileId`, `fileName`, `content` (o chunk), `relevance`, `pages` e
-`pageRelevance`. Páginas são 1-based quando disponíveis; podem estar ausentes/representadas por
-array vazio. A relevância atual é `1 - distância`, não probabilidade. Não há `chunkId` estável ou
-API de recuperar um chunk por ID nesse contrato; não inventar esses campos.
-
-A tool já tenta o contexto do projeto, depois agente/ownership conforme a origem do arquivo.
-`primeFiles` marca arquivos legados do projeto com o ID do projeto ativo quando o servidor fornece
-`projectFileIds` autorizados. Esse caminho é diferente do middleware de download de bytes.
-A lacuna de download legado descoberta antes não prova falha da recuperação por chunks e não é
-pré-requisito para este escopo.
-
-O gateway externo deve resolver o projeto e seus arquivos **no servidor**, após ACL e tenant.
-`filterFilesByAgentAccess` confia nos IDs de projeto previamente autorizados pelo chamador interno;
-não aceitar `projectFileIds`, `file_ids` ou `entity_id` arbitrários do terminal. Exigir FILE_SEARCH USE,
-acesso ao agente e PROJECT VIEW quando o projeto participar da busca. FILE_CITATIONS controla
-as instruções/âncoras visuais; as fontes estruturadas precisam manter referências autorizadas.
-
-Arquivo listado ou `embedded=true` não garante índice disponível no RAG. Distinguir consulta sem
-resultados, arquivo não indexado, RAG indisponível e falha parcial. A tool atual devolve mensagens
-textuais em alguns desses casos; o adaptador externo deve dar estado explícito sem inferir sucesso
-só porque recebeu texto. Não iniciar uma conversa com a LLM do agente para obter chunks; a consulta
-continua dependendo do serviço de RAG/embeddings.
-
-### Chamada de terminal proposta
-
-A chamada usa o gateway de tools já descrito no contrato; não precisa de outro endpoint de download.
-A rota abaixo **ainda não foi implementada**. `ORQEST_CURL_CONFIG` deve ser um arquivo local restrito
-com o header Bearer da chave tenant ou da identidade OIDC autorizada.
+`ORQEST_CURL_CONFIG` deve apontar para arquivo local restrito contendo o header Bearer autorizado.
+O exemplo pressupõe que o código tenha sido publicado e configurado naquela instalação.
 
 ```bash
 curl --fail --config "$ORQEST_CURL_CONFIG" \
@@ -146,156 +121,66 @@ curl --fail --config "$ORQEST_CURL_CONFIG" \
   }'
 ```
 
-Trecho da resposta proposta, preservando o artifact da tool:
+O servidor resolve agente/projeto/arquivos e ACL, incluindo `file.projectId` e `project.fileIds`
+legados. Arquivo legado comprovadamente vinculado recebe o contexto do projeto no servidor.
+A busca não amplia o escopo para todos os arquivos do tenant. Recusa `file_ids`, `entity_id`, `k`,
+URLs de RAG, recursos internos e outros campos extras enviados pelo cliente. O RAG recebe JWT curto
+do servidor, nunca a chave tenant/OIDC original.
 
-```json
-{
-  "artifact": {
-    "file_search": {
-      "sources": [
-        {
-          "type": "file",
-          "fileId": "file-1",
-          "fileName": "contrato.pdf",
-          "content": "Cancelamentos devem ser solicitados com 30 dias de antecedência.",
-          "relevance": 0.87,
-          "pages": [3],
-          "pageRelevance": { "3": 0.87 }
-        }
-      ],
-      "fileCitations": true
-    }
-  }
-}
-```
+Limites: query de 4.000 caracteres, 50 arquivos, 5 consultas concorrentes, prazo total de 30 s e
+1 MiB de resposta. Mantém `k=5` por arquivo e top-10 global. Retorna `data.status` como success,
+empty, no_files, partial ou failed, além de `artifact.file_search.sources`. Cada fonte contém
+`fileId`, `fileName`, `content`, `relevance`, `pages` e `pageRelevance`; páginas são 1-based quando
+presentes. Relevância é `1 - distância`, não probabilidade. Não existe chunkId/offset inventado.
+Metadata de imagem é limitada e referências são revalidadas.
 
-O OpenAPI inclui esse exemplo, o schema público de `query` e o formato do artifact. A chamada REST
-atual `POST /api/agents/tools/{toolId}/call` continua aceitando apenas `execute_code`; não permite
-chamar `file_search` externamente hoje. `RAG_API_URL/query` é serviço interno, não endpoint público
-para receber a chave do tenant.
+`embedded` e resposta vazia não comprovam índice disponível/ausente. `index_status_unknown` é
+explícito. Auth RAG inválida não vira 401 do cliente; falhas do provedor/prazo têm códigos próprios.
+Não há download integral RAG, SQL/Mongo arbitrário ou conversa fictícia criada para esta execução.
 
-## Camada externa proposta
+## Adapters e efeitos duráveis
 
-Base: `/api/integrations/v1`. A proposta aceita a chave de API tenant já existente e, como alternativa,
-a identidade OIDC de máquina vinculada a um principal do tenant. Não adiciona um quarto mecanismo
-de credenciais nem afrouxa ACLs de recursos. Essa aceitação unificada é nova e não muda a política
-OIDC exclusiva das rotas atuais de gestão. A configuração efetiva ainda precisa ser validada na instalação.
+- **Tenant HTTP functions:** ativas, mesmo tenant, atribuídas ao agente, schema validado e executor/
+  segredos existentes. Precisam de `integrationEffect=read|write` avaliado no caminho administrativo;
+  mudança de configuração executável invalida avaliação omitida. Método GET/POST não classifica efeito.
+- **Builtins:** allowlist de implementações verificadas, incluindo calculator, consultas compatíveis
+  e operações conhecidas de Meta Ads. Operações que vinculam projeto validam envelope e VIEW/EDIT
+  conforme efeito. Tools dependentes de sessão, aprovação, código, subagente ou background ficam
+  não chamáveis até existir suporte real.
+- **Actions:** operação/schema/domínio/ACL atuais, SSRF, redirects bloqueados, prazo/signal e limites
+  de resposta. `metadata.integrationEffects[operationId]` exige avaliação por ADMIN/OWNER; alteração
+  de spec/domínio/auth invalida avaliação omitida. Aceita credencial existente; OAuth exige token
+  já disponível e não expirado, sem iniciar login/refresh na descoberta. `x-openai-isConsequential`
+  exige lifecycle de aprovação e fica não chamável nesta superfície. Verbos suportados: GET, POST, PUT, PATCH e DELETE. Parâmetros no PathItem, body em GET, bodies escalares/arrays, composição complexa misturada com parâmetros externos ao body e nomes sobrepostos no mapa plano ficam não chamáveis. Headers declarados que poderiam substituir autenticação do servidor são bloqueados, inclusive variantes de caixa e headers customizados.
+- **MCP:** descoberta usa schemas efetivos em cache e permissões/aliases atuais. Não inicia OAuth,
+  SSE ou transporte para descobrir. Execução exige servidor, credencial e lifecycle headless
+  compatíveis e `integrationEffects` administrativo por operação. Configuração do usuário não pode
+  autorizar efeitos. Token Orqest nunca vira credencial upstream.
 
-| Superfície proposta                                                                  | Responsabilidade                                                                  |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `/identity`                                                                          | Confirmar tenant/principal e ID da chave, sem devolver o token.                   |
-| `/agents`, `/agents/{id}`, `/agents/{id}/context`                                    | Instruções, prompts autorizados, skills e contexto para o cliente externo.        |
-| `/agents/{id}/tools`                                                                 | Schemas das ferramentas autorizadas, incluindo `file_search`.                     |
-| `POST /tools/{toolName}/call`                                                        | Executar tools sem iniciar LLM do agente; `file_search` recupera chunks e fontes. |
-| `/projects`, `/projects/{projectId}`                                                 | Instruções e referências do projeto.                                              |
-| `/projects/{projectId}/files`, `/agents/{id}/files`                                  | Descobrir documentos e escopo de busca; sem conteúdo integral ou URL.             |
-| `/skills`, `/skills/{id}`, `/skills/{id}/files`, `/skills/{id}/files/{relativePath}` | Body, frontmatter e referências textuais das skills.                              |
-| `/projects/{projectId}/prompts`, `/prompts/{id}`                                     | Snippets e grupos/versões autorizados.                                            |
-| `/projects/{projectId}/memories`, `/memories`                                        | Memórias resolvidas, respeitando partições/consumidores.                          |
-| `/conversations`, `/conversations/{id}/messages`                                     | Histórico do próprio principal, sem compartilhamento implícito por projeto.       |
+Cada chamada revalida configuração, ACL, schema, grants e política de aprovação; catálogo anterior
+não concede acesso. Schemas indisponíveis não viram `{}` inventado. `conversationId` é rejeitado.
 
-O backend deve reutilizar `Projects/access`, `Projects/context`, `agents/reads`, `agents/files`,
-`skills/management`, os projetores/inspeções de conteúdo e a tool `file_search` existente. A camada nova
-não deve devolver documentos MongoDB brutos ou executar consultas/paths arbitrários enviados pelo cliente.
+Escritas exigem `Idempotency-Key` e coleção tenant-safe `IntegrationCall`, índice único pronto e
+reserva/dispatch com write concern durável. Mesma chave/tenant/principal e mesmo digest reproduzem
+estado após nova autorização; payload diferente retorna 409. Concorrentes não disparam duas vezes.
+Estados: in_progress, completed, failed, partial, ambiguous, com efeito e IDs conhecidos quando
+existentes. Crash, timeout, desconexão ou falha após dispatch não comprovam cancelamento. Não trocar
+chave para repetir resultado ambíguo. Replay seguro é retido por 7 dias; tombstone da chave permanece
+para impedir redespacho após expiração. Não há promessa de exactly-once externo.
 
-A API atual de gestão inclui `model_parameters` (mapa livre) e outras configurações do agente.
-A projeção proposta para consumo externo omite `model_parameters`, `tool_options`, identidade Git
-e configuração de ambientes. Não presumir que um mapa arbitrário de configuração está livre de
-segredos só porque o agente é legível. Instruções, tools/skills selecionadas e referências de
-arquivos são retornadas com projeção explícita e políticas de conteúdo existentes.
+Índice/armazenamento indisponível bloqueia escrita antes do efeito. Build/teste local não provisiona
+índice em produção. Provisionamento, escrita real externa, publicação e smoke de produção precisam
+de evidências e autorização próprias.
 
-O catálogo de tools deve resolver builtins, MCP, actions e tenant functions no principal atual;
-`tools: ["nome"]` e o manifest visual não bastam para obter schemas efetivos. O gateway deve
-validar argumentos, role grants, vínculos de agente/projeto e limites na mesma execução. Um
-`project_id` dentro dos argumentos não pode trocar o projeto autorizado no envelope externo.
-
-Tools de aprovação, perguntas ao usuário, subagentes, sessões de código e background têm lifecycle.
-A primeira implementação deve devolver `callable=false`/`runtime_required` para capacidades ainda
-não suportadas, em vez de chamar `_call()` indiscriminadamente ou contornar aprovações. Escritas
-precisam de idempotência e informação de falha parcial; uma repetição após timeout não pode recriar
-campanhas silenciosamente. Credenciais das tools permanecem no servidor.
-
-## Entrega de implementação e aceitação
-
-1. Publicar contrato e endpoint de documentação com URLs/configuração reais da instalação.
-2. Expor leituras com credencial de máquina vinculada ao tenant: agentes/instruções, skills/corpo/arquivos, projetos, prompts e memórias.
-3. Expor `file_search`: preparar documentos autorizados, consultar RAG e preservar chunks/fontes no artifact.
-4. Montar exportação de contexto com fontes/versionamento, sem executar LLM.
-5. Habilitar outras tools por capacidades efetivamente suportadas, preservando aprovação, sessões e limites.
-6. Acrescentar adaptador MCP usando os mesmos serviços, se desejado; não é requisito para `curl`.
-
-Critérios mínimos para declarar o fluxo de terminal pronto:
-
-- Credencial inválida, principal desativado, tenant diferente e ACL revogada são negados também na
-  leitura/busca/chamada posterior à descoberta; não basta filtrar apenas a listagem.
-- VIEW para executar agente não expõe instructions que atualmente exigem EDIT.
-- Exportar um agente/projeto recupera instruções, snippets/prompts autorizados, skills e seus
-  arquivos sem perder a origem. Skills desligadas/fora do escopo não são injetadas por acidente.
-- Busca de documentos próprios, do agente e do projeto, inclusive vínculos legados autorizados,
-  retorna somente chunks dentro do escopo, nunca documentos/IDs de outro tenant ou projeto.
-- Resposta preserva texto do chunk, arquivo, página quando houver e relevância real. Ausência de
-  página não vira página inventada; não adicionar IDs/offsets que a tool atual não produz.
-- Busca vazia, ausência de arquivos, falta de índice, falha de autenticação do RAG, timeout e falha
-  parcial têm respostas distinguíveis. Credencial tenant não é repassada ao serviço RAG.
-- Fan-out de arquivos e duração são limitados; argumentos não podem alterar o projeto autorizado,
-  forçar entity_id nem aumentar k. Busca não inicia chat com a LLM configurada no agente.
-- Histórico permanece restrito ao principal; biblioteca compartilhada é filtrada por vínculo e
-  permissão quando consumida como memória de projeto.
-- Tools com escrita, contexto de projeto divergente, argumentos inválidos, efeito parcial,
-  credencial ausente, timeout e aprovação têm cenários reais de aceite.
-
-## Evidências e verificação
-
-Fontes principais:
-
-- `api/server/routes/agents/index.js`, `agents/management.js`, `agents/skills.js`, `agents/tools.js`.
-- `packages/api/src/middleware/management.ts`, `middleware/remoteAgentAuth.ts`, `apiKeys/tenant.ts`.
-- `packages/api/src/agents/{management,reads,files,skills}.ts`, `skills/management.ts`.
-- `api/server/routes/{projects,prompts,memories,sharedMemories}.js`.
-- `api/server/routes/files/{index,files}.js`, `middleware/accessResources/fileAccess.js`.
-- `api/server/services/Projects/{access,context}.js`, `api/server/controllers/{tools,mcp,PluginController}.js`.
-
-Schemas de agente/skill foram extraídos dos Zod exportados do pacote compilado; os demais schemas
-atuais descrevem campos observados e permitem campos adicionais quando a rota devolve documentos
-persistidos. A proposta usa projeções novas e não deve ser confundida com esses documentos atuais.
-
-Validação dos contratos:
+## Verificação local
 
 ```sh
-npx --yes --package @apidevtools/swagger-cli swagger-cli validate docs/openapi/orqest-current.openapi.yaml
-npx --yes --package @apidevtools/swagger-cli swagger-cli validate docs/openapi/orqest-integration.proposed.openapi.yaml
-npm exec --workspace=api -- jest test/openapi.spec.js --runInBand --coverage=false
+npm exec --workspace=@librechat/api -- jest src/integrations --runInBand --coverage=false
+npm exec --workspace=api -- jest server/routes/integrations.spec.js test/openapi.spec.js --runInBand --coverage=false
 ```
 
-O teste verifica referências, rotas/montagens reais, separação de autenticação e compatibilidade
-com schemas Zod atuais. Não substitui teste HTTP autenticado, execução de tools ou recuperação
-real de storage. Nenhum deploy, migração ou alteração de dados foi feito nesta revisão.
-
-### Resultado da revisão inicial
-
-- Dois contratos passaram no validador OpenAPI 3.0.3: 30 caminhos existentes; a proposta foi posteriormente ajustada para 20 caminhos com foco em chunks.
-- Total: 198 testes focados passaram nas três execuções abaixo, sem contar a reprodução temporária.
-- 91 testes de contrato, acesso a arquivos, download e preview passaram no workspace `api`.
-- 96 testes de leitura/arquivos de agentes, skills e autenticação de gestão passaram em `packages/api`.
-- 11 testes de chaves tenant e autenticação por chave passaram em `packages/api`.
-- ESLint e Prettier passaram nos arquivos alterados/verificados; `git diff --check` limpo.
-- O mock de `preview.spec.js` foi atualizado para fornecer a função real `runAsSystem`, cuja
-  ausência fazia os testes retornarem 500 antes do caminho de preview. Os 15 cenários da suíte
-  passaram após esse ajuste de uma linha; não houve alteração de comportamento em produção.
-- A lacuna de vínculo legado foi reproduzida com MongoDB de teste, sem alterar dados reais.
-- Graphify atualizou o índice AST; reportou 7 fontes com extração parcial e 86 arquivos sem nós.
-  O índice não substitui a validação direta das rotas/schemas feita nesta revisão.
-
-Esses resultados provam consistência do contrato com o código e comportamento dos cenários locais
-citados. Não provam configuração OIDC da instalação, disponibilidade do storage real, deploy ou
-existência das rotas propostas.
-
-### Correção de escopo para chunks
-
-A proposta removeu download/preview integral e download binário de skills. O fluxo de documentos
-agora usa `file_search` e seu artifact estruturado. O inventário das 30 rotas atuais foi preservado;
-isso não habilita a nova chamada externa. Verificações desta correção são executadas sobre o contrato
-e as suítes existentes de `fileSearch`, sem chamadas ao RAG de produção.
-
-Nesta correção, 38 testes de contrato e `fileSearch` passaram; o OpenAPI proposto foi validado
-novamente. A busca real depende de índices e credenciais do RAG; não foi testada em produção.
+As suítes novas usam Mongo/ACL reais e HTTP de teste para auth, isolamento, exportação versus execução,
+referências legadas, cursor, conteúdo, RAG, functions, Actions, builtins, idempotência e ambiguidade.
+O teste OpenAPI confere rotas/montagens, 20 operações, referências, separação de auth e projeções.
+Typechecks e builds focados dos packages alterados são verificações separadas. Nenhum E2E,
+frontend, Docker, deploy, migração ou escrita de produção é comprovado por estas instruções.
