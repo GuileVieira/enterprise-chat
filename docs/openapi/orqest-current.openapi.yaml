@@ -1,0 +1,3094 @@
+openapi: 3.0.3
+info:
+  title: Orqest terminal — rotas existentes
+  version: 0.1.0
+  description: >-
+    Inventário OpenAPI verificado no código do commit indicado. Não publica rotas nem comprova
+    deploy. Separa sessão JWT, OIDC de gestão e chave de execução tenant. Escopo: leitura de
+    agentes/instruções/skills, projetos, prompts, arquivos, tools e dados próprios. Não é uma
+    especificação de toda a API Orqest. Rotas futuras estão apenas em
+    orqest-integration.proposed.openapi.yaml.
+servers:
+  - url: /
+    description: Origem da instalação Orqest; configurar URL HTTPS real no cliente.
+x-orqest-status: implemented-source-only
+x-orqest-reviewed-commit: 3896374d1
+paths:
+  /api/agents/v1/agents:
+    get:
+      operationId: listManagedAgents
+      tags:
+        - Agentes e instruções
+      summary: Listar agentes cuja configuração o principal pode administrar.
+      description: >-
+        Listar agentes cuja configuração o principal pode administrar.
+
+        Exige AGENTS USE e AGENT EDIT, ou capacidade administrativa; não equivale a poder executar o
+        agente. after é o próximo cursor, enviado como cursor na chamada seguinte.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/agents/reads.ts
+        routerFile: api/server/routes/agents/management.js
+        route: /
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentPage'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/agents/{id}:
+    get:
+      operationId: getManagedAgent
+      tags:
+        - Agentes e instruções
+      summary: Ler configuração do agente, incluindo instructions, tools, skills e tool_resources.
+      description: >-
+        Ler configuração do agente, incluindo instructions, tools, skills e tool_resources.
+
+        AGENTS USE e AGENT EDIT ou capacidade administrativa. Configuração bruta: não inclui
+        automaticamente projeto, memórias resolvidas, catálogo MCP e skills ativadas no turno.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/agents/reads.ts
+        routerFile: api/server/routes/agents/management.js
+        route: /:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/agents/{id}/files:
+    get:
+      operationId: listManagedAgentFiles
+      tags:
+        - Arquivos
+      summary: Listar arquivos vinculados aos recursos do agente.
+      description: >-
+        Listar arquivos vinculados aos recursos do agente.
+
+        Retorna só metadados/purposes; não retorna filepath, URL, conteúdo ou endpoint de download
+        OIDC. Exige acesso de gestão/EDIT ao agente.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/agents/files.ts
+        routerFile: api/server/routes/agents/management.js
+        route: /:id/files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum:
+                      - list
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentFile'
+                required:
+                  - object
+                  - data
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/skills:
+    get:
+      operationId: listManagedSkills
+      tags:
+        - Skills
+      summary: Listar skills acessíveis com paginação.
+      description: >-
+        Listar skills acessíveis com paginação.
+
+        Resumo sem body/frontmatter; skills selecionadas em agent.skills são IDs, não conteúdo.
+        Filtros de acesso e capacidades continuam aplicáveis.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/skills/management.ts
+        routerFile: api/server/routes/agents/skills.js
+        route: /
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillPage'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/skills/{id}:
+    get:
+      operationId: getManagedSkill
+      tags:
+        - Skills
+      summary: Ler body, frontmatter e metadados de uma skill.
+      description: >-
+        Ler body, frontmatter e metadados de uma skill.
+
+        Exige VIEW da skill e permissões de uso. Mesmo credencial do agente não garante acesso a
+        todas as skills.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/skills/management.ts
+        routerFile: api/server/routes/agents/skills.js
+        route: /:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/skills/{id}/files:
+    get:
+      operationId: listManagedSkillFiles
+      tags:
+        - Skills
+      summary: Listar arquivos de uma skill por relativePath.
+      description: Listar arquivos de uma skill por relativePath.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/skills/management.ts
+        routerFile: api/server/routes/agents/skills.js
+        route: /:id/files
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum:
+                      - list
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillFile'
+                required:
+                  - object
+                  - data
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/skills/{id}/files/{relativePath}:
+    get:
+      operationId: readManagedSkillTextFile
+      tags:
+        - Skills
+      summary: Ler arquivo textual da skill como JSON.
+      description: >-
+        Ler arquivo textual da skill como JSON.
+
+        relativePath representa o wildcard Express e pode conter subdiretórios, como
+        references/guide.md; preservar barras de separação e escapar cada segmento no cliente. Não
+        usar caminho absoluto nem traversal. Parâmetros query são rejeitados; não há raw=1.
+        Binários/oversized podem omitir content.
+      security:
+        - ManagementOidc: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/skills/management.ts
+        routerFile: api/server/routes/agents/skills.js
+        route: /:id/files/*relativePath
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: relativePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Caminho relativo com possíveis subdiretórios. Não é uma URL ou caminho local.
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFileContent'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/catalog:
+    get:
+      operationId: getTenantExecutionCatalog
+      tags:
+        - Catálogo externo
+      summary: Listar agentes e projetos acessíveis pela chave de execução tenant.
+      description: >-
+        Listar agentes e projetos acessíveis pela chave de execução tenant.
+
+        OIDC de gestão e chaves individuais não satisfazem req.tenantApiKey neste handler; catálogo
+        não inclui prompt completo nem conteúdo de arquivos.
+      security:
+        - TenantExecutionKey: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/apiKeys/tenant.ts
+        routerFile: api/server/routes/agents/openai.js
+        route: /catalog
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenantId:
+                    type: string
+                  ownerId:
+                    type: string
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogAgent'
+                  projects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogProject'
+                required:
+                  - tenantId
+                  - ownerId
+                  - agents
+                  - projects
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/v1/projects:
+    get:
+      operationId: listTenantExecutionProjects
+      tags:
+        - Catálogo externo
+      summary: Listar resumos de projetos acessíveis à chave de execução tenant; sem instruções/arquivos.
+      description: Listar resumos de projetos acessíveis à chave de execução tenant; sem instruções/arquivos.
+      security:
+        - TenantExecutionKey: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/apiKeys/tenant.ts
+        routerFile: api/server/routes/agents/openai.js
+        route: /projects
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogProject'
+                required:
+                  - data
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/user:
+    get:
+      operationId: getCurrentBrowserUser
+      tags:
+        - Identidade
+      summary: Ler identidade da sessão para uso nas rotas legadas que incluem userId no caminho.
+      description: Ler identidade da sessão para uso nas rotas legadas que incluem userId no caminho.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/controllers/UserController.js
+        routerFile: api/server/routes/user.js
+        route: /
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserIdentity'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/projects:
+    get:
+      operationId: listBrowserProjects
+      tags:
+        - Projetos
+      summary: Listar projetos próprios/compartilhados acessíveis à sessão.
+      description: >-
+        Listar projetos próprios/compartilhados acessíveis à sessão.
+
+        Sem paginação externa estável; o array contém documentos do modelo atual, não somente
+        resumos.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/projects.js
+        routerFile: api/server/routes/projects.js
+        route: /
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/projects/{projectId}:
+    get:
+      operationId: getBrowserProject
+      tags:
+        - Projetos
+      summary: Ler documento do projeto com PROJECT VIEW.
+      description: >-
+        Ler documento do projeto com PROJECT VIEW.
+
+        Inclui instructions, promptSnippets, promptGroupIds, fileIds,
+        memories/memoryKeys/sharedMemoryIds quando presentes. IDs de memórias/arquivos não
+        significam conteúdo já resolvido.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/projects.js
+        routerFile: api/server/routes/projects.js
+        route: /:projectId
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/files:
+    get:
+      operationId: listBrowserProjectFiles
+      tags:
+        - Arquivos
+      summary: Listar arquivos da sessão ou do projeto autorizado.
+      description: >-
+        Listar arquivos da sessão ou do projeto autorizado.
+
+        Com projectId, verifica PROJECT VIEW/capacidade e consulta file.projectId OU project.fileIds
+        no tenant. Sem projectId, lista arquivos do próprio usuário. Pode listar vínculo legado que
+        não passa depois pelo download; consultar revisão.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/files/files.js
+        routerFile: api/server/routes/files/files.js
+        route: /
+      parameters:
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/File'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/files/{file_id}/preview:
+    get:
+      operationId: getBrowserFilePreview
+      tags:
+        - Arquivos
+      summary: Ler estado de extração e texto disponível.
+      description: >-
+        Ler estado de extração e texto disponível.
+
+        Não equivale a baixar original. Herda fileAccess; arquivo pending pode ser marcado failed
+        pelo lazy sweep de registros órfãos.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/files/files.js
+        routerFile: api/server/routes/files/files.js
+        route: /:file_id/preview
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preview'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/files/download/{userId}/{file_id}:
+    get:
+      operationId: downloadBrowserFile
+      tags:
+        - Arquivos
+      summary: Baixar conteúdo original, ou texto persistido para source=text.
+      description: >-
+        Baixar conteúdo original, ou texto persistido para source=text.
+
+        fileAccess valida tenant, dono, projeto ou agente; userId da URL não concede acesso.
+        direct=true pode redirecionar para URL assinada. Provedor sem suporte retorna 501; arquivo
+        expirado/removido ou credencial indisponível pode impedir recuperação.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/files/files.js
+        routerFile: api/server/routes/files/files.js
+        route: /download/:userId/:file_id
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direct
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - 'true'
+              - 'false'
+            default: 'false'
+      responses:
+        '200':
+          description: Bytes do arquivo; source=text devolve texto UTF-8.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            X-File-Metadata:
+              description: JSON de metadados codificado com encodeURIComponent.
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            text/plain:
+              schema:
+                type: string
+        '302':
+          description: Redirecionamento opcional para URL assinada.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+        '400':
+          description: Arquivo do provedor sem modelo disponível
+        '401':
+          description: Sessão ausente/inválida
+        '403':
+          description: Arquivo inacessível ou de outro tenant
+        '404':
+          description: Arquivo/conteúdo não encontrado
+        '500':
+          description: Falha no storage/download
+        '501':
+          description: Storage sem método de download
+  /api/files/download-url/{userId}/{file_id}:
+    get:
+      operationId: getBrowserSignedDownloadUrl
+      tags:
+        - Arquivos
+      summary: Obter URL assinada quando o storage oferece suporte.
+      description: >-
+        Obter URL assinada quando o storage oferece suporte.
+
+        URL é temporária e deve ser tratada como segredo; Cache-Control no-store. Não existe
+        expiresIn padronizado na resposta atual. Fonte sem suporte retorna 501; usar download
+        streaming como alternativa.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/files/files.js
+        routerFile: api/server/routes/files/files.js
+        route: /download-url/:userId/:file_id
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: file_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                  filename:
+                    type: string
+                  type:
+                    type: string
+                  metadata:
+                    type: object
+                    additionalProperties: true
+                required:
+                  - url
+                  - filename
+                  - type
+                  - metadata
+                additionalProperties: false
+        '400':
+          description: Arquivo do provedor sem modelo disponível
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Storage não fornece URL assinada; usar download streaming quando suportado
+          content:
+            text/plain:
+              schema:
+                type: string
+  /api/prompts/groups:
+    get:
+      operationId: listBrowserPromptGroups
+      tags:
+        - Prompts
+      summary: Listar grupos de prompts acessíveis com filtros e paginação.
+      description: >-
+        Listar grupos de prompts acessíveis com filtros e paginação.
+
+        O envelope é o retornado por formatPromptGroupsResponse; não confundir com a paginação OIDC
+        de agentes.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/prompts.js
+        routerFile: api/server/routes/prompts.js
+        route: /groups
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/prompts/groups/{groupId}:
+    get:
+      operationId: getBrowserPromptGroup
+      tags:
+        - Prompts
+      summary: >-
+        Ler grupo de prompts com VIEW direto ou acesso herdado do projeto, conforme middleware.
+        productionId identifica versão de produção; productionPrompt pode conter a versão de
+        produção populada; usar prompt/versões autorizadas quando necessário.
+      description: >-
+        Ler grupo de prompts com VIEW direto ou acesso herdado do projeto, conforme middleware.
+        productionId identifica versão de produção; productionPrompt pode conter a versão de
+        produção populada; usar prompt/versões autorizadas quando necessário.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/prompts.js
+        routerFile: api/server/routes/prompts.js
+        route: /groups/:groupId
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptGroup'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/prompts:
+    get:
+      operationId: listBrowserPromptVersions
+      tags:
+        - Prompts
+      summary: Ler versões/textos de prompts de um grupo acessível.
+      description: >-
+        Ler versões/textos de prompts de um grupo acessível.
+
+        Passar groupId de project.promptGroupIds; sem groupId a rota segue filtros próprios/de
+        capacidade. Respeita inspeção/projeção de conteúdo.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/prompts.js
+        routerFile: api/server/routes/prompts.js
+        route: /
+      parameters:
+        - name: groupId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Prompt'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/prompts/{promptId}:
+    get:
+      operationId: getBrowserPrompt
+      tags:
+        - Prompts
+      summary: Ler uma versão de prompt via permissão do grupo.
+      description: >-
+        Ler uma versão de prompt via permissão do grupo.
+
+        Preservar a política canAccessPromptViaGroup e inspeção de conteúdo. A resposta é o
+        documento atual; versão inexistente pode resultar null.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/prompts.js
+        routerFile: api/server/routes/prompts.js
+        route: /:promptId
+      parameters:
+        - name: promptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Prompt'
+                nullable: true
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/tools:
+    get:
+      operationId: listBrowserBuiltinToolMetadata
+      tags:
+        - Tools
+      summary: Listar metadados de tools disponíveis na configuração.
+      description: >-
+        Listar metadados de tools disponíveis na configuração.
+
+        Caminho real não contém /v1. Resposta deriva de manifest/plugin metadata: não é catálogo
+        unificado de JSON Schemas efetivos e não autoriza executar todas as tools.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/controllers/PluginController.js
+        routerFile: api/server/routes/agents/tools.js
+        route: /
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ToolMetadata'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/tools/tenant-functions:
+    get:
+      operationId: listBrowserTenantFunctionMetadata
+      tags:
+        - Tools
+      summary: Ler funções ativas do tenant e inputSchema.
+      description: |-
+        Ler funções ativas do tenant e inputSchema.
+        Não inclui config de autenticação/segredos nem garante execução direta.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/agents/tools.js
+        routerFile: api/server/routes/agents/tools.js
+        route: /tenant-functions
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  functions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TenantFunction'
+                required:
+                  - functions
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/mcp/tools:
+    get:
+      operationId: listBrowserMcpToolMetadata
+      tags:
+        - Tools
+      summary: Listar servidores MCP externos e metadados de suas tools.
+      description: >-
+        Listar servidores MCP externos e metadados de suas tools.
+
+        Orqest atua como cliente MCP; esta rota REST não é um servidor MCP. Resposta não é schema de
+        execução unificado.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/controllers/mcp.js
+        routerFile: api/server/routes/mcp.js
+        route: /tools
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  servers:
+                    type: object
+                    additionalProperties: true
+                required:
+                  - servers
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/agents/tools/{toolId}/call:
+    post:
+      operationId: callBrowserCodeTool
+      tags:
+        - Tools
+      summary: Executar execute_code no contexto de mensagem existente.
+      description: >-
+        Executar execute_code no contexto de mensagem existente.
+
+        Única tool diretamente chamável neste handler: execute_code; outros IDs retornam 404. Exige
+        messageId válido do próprio usuário, papel RUN_CODE USE, limites e filtros. Não é gateway
+        genérico para Meta Ads/MCP/actions.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/controllers/tools.js
+        routerFile: api/server/routes/agents/tools.js
+        route: /:toolId/call
+      parameters:
+        - name: toolId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - execute_code
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: messageId/argumentos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Limite de chamadas excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageId:
+                  type: string
+              required:
+                - messageId
+              additionalProperties: true
+  /api/memories:
+    get:
+      operationId: listBrowserPersonalMemories
+      tags:
+        - Dados internos
+      summary: Ler memórias pessoais e partições de agente permitidas, com uso de tokens.
+      description: >-
+        Ler memórias pessoais e partições de agente permitidas, com uso de tokens.
+
+        Não representa biblioteca completa de memórias de projeto/tenant; respeita READ e projeções
+        atuais.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/memories.js
+        routerFile: api/server/routes/memories.js
+        route: /
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memories:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  totalTokens:
+                    type: number
+                  tokenLimit:
+                    type: number
+                    nullable: true
+                  charLimit:
+                    type: number
+                  usagePercentage:
+                    type: number
+                    nullable: true
+                required:
+                  - memories
+                  - totalTokens
+                  - tokenLimit
+                  - charLimit
+                  - usagePercentage
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/convos/{conversationId}:
+    get:
+      operationId: getBrowserOwnConversation
+      tags:
+        - Dados internos
+      summary: Ler conversa do próprio usuário.
+      description: >-
+        Ler conversa do próprio usuário.
+
+        PROJECT VIEW não compartilha conversas de outros usuários; subagentThread não é retornada
+        por esta rota.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/convos.js
+        routerFile: api/server/routes/convos.js
+        route: /:conversationId
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/messages/{conversationId}:
+    get:
+      operationId: getBrowserOwnConversationMessages
+      tags:
+        - Dados internos
+      summary: Ler mensagens da conversa autorizada do próprio usuário.
+      description: |-
+        Ler mensagens da conversa autorizada do próprio usuário.
+        Não concede leitura geral de mensagens do projeto/tenant.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/messages.js
+        routerFile: api/server/routes/messages.js
+        route: /:conversationId
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/convos:
+    get:
+      operationId: listBrowserOwnConversations
+      tags:
+        - Dados internos
+      summary: Listar conversas do próprio usuário com cursor e filtro projectId.
+      description: |-
+        Listar conversas do próprio usuário com cursor e filtro projectId.
+        Não lista conversas de terceiros mesmo com PROJECT VIEW.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/convos.js
+        routerFile: api/server/routes/convos.js
+        route: /
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/shared-memories:
+    get:
+      operationId: listBrowserSharedMemoryLibrary
+      tags:
+        - Dados internos
+      summary: Ler biblioteca de memórias compartilhadas permitida no tenant.
+      description: >-
+        Ler biblioteca de memórias compartilhadas permitida no tenant.
+
+        Exige SHARED_MEMORIES READ. projectId verifica PROJECT VIEW e marca linkedToProject; não
+        filtra automaticamente a lista para só as memórias vinculadas ao projeto.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/memory/sharedLibrary.ts
+        routerFile: api/server/routes/sharedMemories.js
+        route: /shared-memories
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - archived
+            default: active
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  total:
+                    type: number
+                  page:
+                    type: number
+                  limit:
+                    type: number
+                required:
+                  - items
+                  - total
+                  - page
+                  - limit
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/tenant-api-keys:
+    get:
+      operationId: listBrowserTenantApiKeyMetadata
+      tags:
+        - Identidade
+      summary: Listar IDs e prefixos das chaves de um tenant autorizado.
+      description: >-
+        Listar IDs e prefixos das chaves de um tenant autorizado.
+
+        OWNER do próprio tenant ou ADMIN no tenant solicitado. Cada chave tem id e pode ser revogada
+        separadamente. Não retorna key nem keyHash. Chaves tenant executam como OWNER vinculado, não
+        possuem scopes finos por recurso implementados aqui.
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/apiKeys/tenant.ts
+        routerFile: api/server/routes/tenantApiKeys.js
+        route: /
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        keyPrefix:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                        expiresAt:
+                          type: string
+                          format: date-time
+                        lastUsedAt:
+                          type: string
+                          format: date-time
+                      required:
+                        - id
+                        - name
+                        - keyPrefix
+                        - createdAt
+                      additionalProperties: false
+                required:
+                  - keys
+                additionalProperties: false
+        '401':
+          description: Credencial ausente/inválida ou configuração de autenticação desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ou rota não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    BrowserJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Token de sessão autenticada por requireJwtAuth. Não é uma chave de execução de agente nem
+        token Meta. A integração de terminal durável está no contrato proposto.
+    ManagementOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Access token OIDC de máquina, validado por issuer/audience e vínculo clientId →
+        userId/tenantId em endpoints.agents.managementApi.auth. Sem fallback para sessão do
+        navegador ou chave de execução.
+    TenantExecutionKey:
+      type: http
+      scheme: bearer
+      description: >-
+        Chave de execução com scope tenant; requireRemoteAgentAuth e feature REMOTE_AGENTS. /catalog
+        e /projects ainda exigem req.tenantApiKey, portanto token OIDC de gestão não basta.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: {}
+        message:
+          type: string
+        code:
+          type: string
+      additionalProperties: true
+    AgentFile:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum:
+            - agent.file
+        filename:
+          type: string
+        bytes:
+          type: number
+        mime_type:
+          type: string
+        purposes:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          nullable: true
+      required:
+        - id
+        - object
+        - filename
+        - bytes
+        - mime_type
+        - purposes
+        - created_at
+      additionalProperties: false
+    SkillFile:
+      type: object
+      properties:
+        relativePath:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+      required:
+        - relativePath
+        - filename
+        - mimeType
+        - bytes
+      additionalProperties: true
+    SkillFileContent:
+      allOf:
+        - $ref: '#/components/schemas/SkillFile'
+        - type: object
+          properties:
+            content:
+              type: string
+            isBinary:
+              type: boolean
+          required:
+            - isBinary
+          additionalProperties: true
+      description: >-
+        JSON de arquivo textual. content pode estar ausente para binários/arquivos grandes;
+        isBinary=false não garante content presente. Não há download binário nesta superfície.
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        memories:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+            required:
+              - key
+              - value
+            additionalProperties: true
+        memoryKeys:
+          type: array
+          items:
+            type: string
+        sharedMemoryIds:
+          type: array
+          items:
+            type: string
+        promptSnippets:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+            required:
+              - title
+              - content
+            additionalProperties: false
+        promptGroupIds:
+          type: array
+          items:
+            type: string
+        fileIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+      description: >-
+        Campos relevantes do documento atual; a rota retorna também outros campos persistidos. Não é
+        uma projeção pública saneada nem uma garantia de contexto efetivo do runtime.
+    Prompt:
+      type: object
+      properties:
+        _id:
+          type: string
+        groupId:
+          type: string
+        prompt:
+          type: string
+        type:
+          type: string
+          enum:
+            - text
+            - chat
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    PromptGroup:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        oneliner:
+          type: string
+        category:
+          type: string
+        productionId:
+          type: string
+        productionPrompt:
+          $ref: '#/components/schemas/Prompt'
+        command:
+          type: string
+      additionalProperties: true
+    File:
+      type: object
+      properties:
+        file_id:
+          type: string
+        user:
+          type: string
+        projectId:
+          type: string
+        filename:
+          type: string
+        bytes:
+          type: number
+        type:
+          type: string
+        source:
+          type: string
+        status:
+          type: string
+        textFormat:
+          type: string
+          nullable: true
+      additionalProperties: true
+    Preview:
+      type: object
+      properties:
+        file_id:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - ready
+            - failed
+        text:
+          type: string
+        textFormat:
+          type: string
+          nullable: true
+        previewError:
+          type: string
+      required:
+        - file_id
+        - status
+      additionalProperties: false
+    ToolMetadata:
+      type: object
+      properties:
+        pluginKey:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        authenticated:
+          type: boolean
+        agentsOnly:
+          type: boolean
+      additionalProperties: true
+    TenantFunction:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        details:
+          type: string
+        inputSchema:
+          type: object
+          additionalProperties: true
+        isActive:
+          type: boolean
+      additionalProperties: true
+    CatalogAgent:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        provider:
+          type: string
+      required:
+        - id
+        - name
+      additionalProperties: false
+    CatalogProject:
+      type: object
+      properties:
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - projectId
+        - name
+      additionalProperties: false
+    UserIdentity:
+      type: object
+      properties:
+        _id:
+          type: string
+        id:
+          type: string
+        role:
+          type: string
+        tenantId:
+          type: string
+      additionalProperties: true
+    Conversation:
+      type: object
+      properties:
+        conversationId:
+          type: string
+        projectId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    Message:
+      type: object
+      properties:
+        messageId:
+          type: string
+        conversationId:
+          type: string
+        text:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+    Agent:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        instructions:
+          type: string
+          nullable: true
+        avatar:
+          anyOf:
+            - type: object
+              properties:
+                filepath:
+                  type: string
+                source:
+                  type: string
+              required:
+                - filepath
+                - source
+              additionalProperties: false
+            - enum:
+                - 'null'
+              nullable: true
+        model_parameters:
+          type: object
+          additionalProperties: {}
+        tools:
+          type: array
+          items:
+            type: string
+        skills:
+          type: array
+          items:
+            type: string
+        skills_enabled:
+          type: boolean
+        skill_authoring_enabled:
+          type: boolean
+        skills_scope:
+          type: string
+          enum:
+            - all
+            - selected
+            - none
+        memory_scope:
+          type: string
+          enum:
+            - user
+            - agent
+        agent_ids:
+          type: array
+          items:
+            type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                anyOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+              to:
+                anyOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+              description:
+                type: string
+              edgeType:
+                type: string
+                enum:
+                  - handoff
+                  - direct
+              prompt:
+                anyOf:
+                  - type: string
+              excludeResults:
+                type: boolean
+              promptKey:
+                type: string
+            required:
+              - from
+              - to
+            additionalProperties: false
+        end_after_tools:
+          type: boolean
+        hide_sequential_outputs:
+          type: boolean
+        stateful_code_sessions:
+          type: boolean
+        stateful_code_environment:
+          type: string
+          enum:
+            - user
+            - agent-user
+            - conversation
+        code_environment_id:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+          nullable: true
+        code_workspace_id:
+          anyOf:
+            - type: string
+              enum:
+                - ''
+            - type: string
+              pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+        git_identity:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+              maxLength: 128
+            email:
+              type: string
+              format: email
+              maxLength: 254
+          required:
+            - name
+            - email
+          additionalProperties: false
+          nullable: true
+        artifacts:
+          type: string
+        recursion_limit:
+          type: number
+        conversation_starters:
+          type: array
+          items:
+            type: string
+        tool_resources:
+          type: object
+          properties:
+            image_edit:
+              type: object
+              properties:
+                file_ids:
+                  type: array
+                  items:
+                    type: string
+              additionalProperties: false
+            execute_code:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+            file_search:
+              type: object
+              properties:
+                file_ids:
+                  $ref: >-
+                    #/components/schemas/Agent/properties/tool_resources/properties/image_edit/properties/file_ids
+                vector_store_ids:
+                  type: array
+                  items:
+                    type: string
+              additionalProperties: false
+            context:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+            ocr:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+          additionalProperties: false
+        tool_options:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              defer_loading:
+                type: boolean
+              allowed_callers:
+                type: array
+                items:
+                  type: string
+                  enum:
+                    - direct
+                    - code_execution
+              run_in_background:
+                type: boolean
+              describe_intent:
+                type: boolean
+            additionalProperties: false
+        subagents:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            allowSelf:
+              type: boolean
+            agent_ids:
+              type: array
+              items:
+                type: string
+            graphs:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  agent_ids:
+                    type: array
+                    items:
+                      type: string
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        from:
+                          anyOf:
+                            - type: string
+                            - type: array
+                              items:
+                                type: string
+                        to:
+                          anyOf:
+                            - type: string
+                            - type: array
+                              items:
+                                type: string
+                        description:
+                          type: string
+                        edgeType:
+                          type: string
+                          enum:
+                            - direct
+                        prompt:
+                          type: string
+                        excludeResults:
+                          type: boolean
+                      required:
+                        - from
+                        - to
+                        - edgeType
+                      additionalProperties: false
+                  entry_agent_id:
+                    type: string
+                  result_agent_id:
+                    type: string
+                required:
+                  - type
+                  - name
+                  - description
+                  - agent_ids
+                  - edges
+                  - entry_agent_id
+                  - result_agent_id
+                additionalProperties: false
+          additionalProperties: false
+        support_contact:
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              anyOf:
+                - type: string
+                  enum:
+                    - ''
+                - type: string
+                  format: email
+          additionalProperties: false
+        category:
+          type: string
+        provider:
+          type: string
+        model:
+          type: string
+          nullable: true
+        id:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          $ref: '#/components/schemas/Agent/properties/createdAt'
+      required:
+        - provider
+        - model
+        - id
+        - version
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    AgentPage:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+            - list
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                nullable: true
+              description:
+                type: string
+                nullable: true
+              instructions:
+                type: string
+                nullable: true
+              avatar:
+                anyOf:
+                  - type: object
+                    properties:
+                      filepath:
+                        type: string
+                      source:
+                        type: string
+                    required:
+                      - filepath
+                      - source
+                    additionalProperties: false
+                  - enum:
+                      - 'null'
+                    nullable: true
+              model_parameters:
+                type: object
+                additionalProperties: {}
+              tools:
+                type: array
+                items:
+                  type: string
+              skills:
+                type: array
+                items:
+                  type: string
+              skills_enabled:
+                type: boolean
+              skill_authoring_enabled:
+                type: boolean
+              skills_scope:
+                type: string
+                enum:
+                  - all
+                  - selected
+                  - none
+              memory_scope:
+                type: string
+                enum:
+                  - user
+                  - agent
+              agent_ids:
+                type: array
+                items:
+                  type: string
+              edges:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    from:
+                      anyOf:
+                        - type: string
+                        - type: array
+                          items:
+                            type: string
+                    to:
+                      anyOf:
+                        - type: string
+                        - type: array
+                          items:
+                            type: string
+                    description:
+                      type: string
+                    edgeType:
+                      type: string
+                      enum:
+                        - handoff
+                        - direct
+                    prompt:
+                      anyOf:
+                        - type: string
+                    excludeResults:
+                      type: boolean
+                    promptKey:
+                      type: string
+                  required:
+                    - from
+                    - to
+                  additionalProperties: false
+              end_after_tools:
+                type: boolean
+              hide_sequential_outputs:
+                type: boolean
+              stateful_code_sessions:
+                type: boolean
+              stateful_code_environment:
+                type: string
+                enum:
+                  - user
+                  - agent-user
+                  - conversation
+              code_environment_id:
+                type: string
+                pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+                nullable: true
+              code_workspace_id:
+                anyOf:
+                  - type: string
+                    enum:
+                      - ''
+                  - type: string
+                    pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$
+              git_identity:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 254
+                required:
+                  - name
+                  - email
+                additionalProperties: false
+                nullable: true
+              artifacts:
+                type: string
+              recursion_limit:
+                type: number
+              conversation_starters:
+                type: array
+                items:
+                  type: string
+              tool_resources:
+                type: object
+                properties:
+                  image_edit:
+                    type: object
+                    properties:
+                      file_ids:
+                        type: array
+                        items:
+                          type: string
+                    additionalProperties: false
+                  execute_code:
+                    $ref: >-
+                      #/components/schemas/AgentPage/properties/data/items/properties/tool_resources/properties/image_edit
+                  file_search:
+                    type: object
+                    properties:
+                      file_ids:
+                        $ref: >-
+                          #/components/schemas/AgentPage/properties/data/items/properties/tool_resources/properties/image_edit/properties/file_ids
+                      vector_store_ids:
+                        type: array
+                        items:
+                          type: string
+                    additionalProperties: false
+                  context:
+                    $ref: >-
+                      #/components/schemas/AgentPage/properties/data/items/properties/tool_resources/properties/image_edit
+                  ocr:
+                    $ref: >-
+                      #/components/schemas/AgentPage/properties/data/items/properties/tool_resources/properties/image_edit
+                additionalProperties: false
+              tool_options:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    defer_loading:
+                      type: boolean
+                    allowed_callers:
+                      type: array
+                      items:
+                        type: string
+                        enum:
+                          - direct
+                          - code_execution
+                    run_in_background:
+                      type: boolean
+                    describe_intent:
+                      type: boolean
+                  additionalProperties: false
+              subagents:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  allowSelf:
+                    type: boolean
+                  agent_ids:
+                    type: array
+                    items:
+                      type: string
+                  graphs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        agent_ids:
+                          type: array
+                          items:
+                            type: string
+                        edges:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              from:
+                                anyOf:
+                                  - type: string
+                                  - type: array
+                                    items:
+                                      type: string
+                              to:
+                                anyOf:
+                                  - type: string
+                                  - type: array
+                                    items:
+                                      type: string
+                              description:
+                                type: string
+                              edgeType:
+                                type: string
+                                enum:
+                                  - direct
+                              prompt:
+                                type: string
+                              excludeResults:
+                                type: boolean
+                            required:
+                              - from
+                              - to
+                              - edgeType
+                            additionalProperties: false
+                        entry_agent_id:
+                          type: string
+                        result_agent_id:
+                          type: string
+                      required:
+                        - type
+                        - name
+                        - description
+                        - agent_ids
+                        - edges
+                        - entry_agent_id
+                        - result_agent_id
+                      additionalProperties: false
+                additionalProperties: false
+              support_contact:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  email:
+                    anyOf:
+                      - type: string
+                        enum:
+                          - ''
+                      - type: string
+                        format: email
+                additionalProperties: false
+              category:
+                type: string
+              provider:
+                type: string
+              model:
+                type: string
+                nullable: true
+              id:
+                type: string
+                minLength: 1
+              version:
+                type: integer
+                minimum: 0
+              createdAt:
+                type: string
+                format: date-time
+              updatedAt:
+                $ref: '#/components/schemas/AgentPage/properties/data/items/properties/createdAt'
+            required:
+              - provider
+              - model
+              - id
+              - version
+              - createdAt
+              - updatedAt
+            additionalProperties: false
+        first_id:
+          type: string
+          nullable: true
+        last_id:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+        after:
+          type: string
+          minLength: 1
+          maxLength: 512
+          nullable: true
+      required:
+        - object
+        - data
+        - first_id
+        - last_id
+        - has_more
+        - after
+      additionalProperties: false
+    ManagementError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - invalid_request
+                - not_found
+                - permission_denied
+                - internal_error
+                - conflict
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: string
+                        - type: number
+                  message:
+                    type: string
+                required:
+                  - path
+                  - message
+                additionalProperties: false
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - error
+      additionalProperties: false
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        displayTitle:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        alwaysApply:
+          type: boolean
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+        version:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        fileCount:
+          type: integer
+          minimum: 0
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        body:
+          type: string
+        frontmatter:
+          type: object
+          additionalProperties:
+            anyOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - enum:
+                  - 'null'
+                nullable: true
+              - type: array
+                items:
+                  $ref: '#/components/schemas/Skill/properties/frontmatter/additionalProperties'
+              - type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/Skill/properties/frontmatter/additionalProperties'
+      required:
+        - name
+        - description
+        - id
+        - version
+        - fileCount
+        - createdAt
+        - updatedAt
+        - body
+      additionalProperties: false
+    SkillSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        displayTitle:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        alwaysApply:
+          type: boolean
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+        version:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        fileCount:
+          type: integer
+          minimum: 0
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - description
+        - id
+        - version
+        - fileCount
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+      description: Lista retorna resumo. Para body/frontmatter usar GET /api/agents/v1/skills/{id}.
+    SkillPage:
+      type: object
+      properties:
+        object:
+          type: string
+          enum:
+            - list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillSummary'
+        first_id:
+          type: string
+          nullable: true
+        last_id:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+        after:
+          type: string
+          nullable: true
+      required:
+        - object
+        - data
+        - first_id
+        - last_id
+        - has_more
+        - after
+      additionalProperties: false

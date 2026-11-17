@@ -1,0 +1,2599 @@
+openapi: 3.0.3
+info:
+  title: Orqest terminal — contrato proposto
+  version: 0.1.0
+  description: >-
+    PROPOSTA: nenhuma rota deste arquivo está implementada. API de terminal para obter
+    instruções/prompts/skills e recuperar chunks de documentos pela tool file_search no escopo
+    autorizado do agente/projeto. O cliente externo conduz o raciocínio; a busca não inicia conversa
+    com a LLM do agente. Download completo de documentos e binários não faz parte deste escopo.
+    Rotas atuais estão em orqest-current.openapi.yaml.
+servers:
+  - url: /
+    description: Origem da instalação Orqest; configurar URL HTTPS real no cliente.
+x-orqest-status: proposed-not-implemented
+x-orqest-reviewed-commit: 3896374d1
+paths:
+  /api/integrations/v1/agents:
+    get:
+      operationId: externalListAgents
+      tags:
+        - agents
+      summary: Listar configurações de agentes exportáveis.
+      description: >-
+        Listar configurações de agentes exportáveis.
+
+        Não ampliar a política existente de AGENT EDIT/capacidade administrativa para exportar
+        instructions.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENTS USE
+        - AGENT EDIT ou capacidade de gestão
+      x-orqest-reuses:
+        - packages/api/src/agents/reads.ts
+        - packages/api/src/agents/management.ts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/agents/{id}:
+    get:
+      operationId: externalGetAgent
+      tags:
+        - agents
+      summary: Ler instruções e referências de skills/tools do agente autorizado.
+      description: Ler instruções e referências de skills/tools do agente autorizado.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENTS USE
+        - AGENT EDIT ou capacidade de gestão
+      x-orqest-reuses:
+        - packages/api/src/agents/reads.ts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/agents/{id}/context:
+    get:
+      operationId: externalGetAgentContext
+      tags:
+        - agents
+      summary: Exportar contexto estruturado de agente/projeto sem executar LLM.
+      description: >-
+        Exportar contexto estruturado de agente/projeto sem executar LLM.
+
+        Resolver ACL antes de carregar dados. Incluir instructions, snippets/grupos autorizados,
+        skills com body/frontmatter, schemas de tools e metadados de arquivos elegíveis para busca
+        por chunks. skills_enabled, skills_scope, alwaysApply e partições de memória continuam
+        aplicáveis; retornar warnings para indisponibilidades permitidas, não conteúdo de recurso
+        negado. instructionSections é composição identificada, não promessa de reproduzir todo
+        prompt dinâmico de uma conversa. fingerprint muda com versões dos recursos, não revela
+        segredos.
+
+        Contexto deve fornecer schema de file_search e inventário autorizado. Não incluir todos os
+        documentos na íntegra: cliente consulta chunks por demanda.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENT EDIT/exportação
+        - PROJECT VIEW se projectId
+        - SKILL VIEW/USE
+        - PROMPTGROUP VIEW/herdado
+        - MEMORY READ por partição
+      x-orqest-reuses:
+        - api/server/services/Projects/context.js
+        - packages/api/src/agents/context.ts
+        - packages/api/src/agents/skills.ts
+        - packages/api/src/skills/management.ts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Context'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/agents/{id}/tools:
+    get:
+      operationId: externalListAgentTools
+      tags:
+        - agents
+      summary: Obter schemas efetivos das tools autorizadas do agente.
+      description: >-
+        Obter schemas efetivos das tools autorizadas do agente.
+
+        Resolver builtins, MCP, actions e tenant functions no principal atual. Listar não concede
+        execução; marcar callable=false e motivo para tools que dependam de turno/approval/runtime
+        não suportado. Nunca retornar credenciais ou config.auth.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENT EDIT/exportação
+        - permissões de cada tool
+      x-orqest-reuses:
+        - api/app/clients/tools/util/handleTools.js
+        - packages/api/src/tools/registry/definitions.ts
+        - api/server/services/Tools/credentials.js
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tool'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/tools/{toolName}/call:
+    post:
+      operationId: externalCallAgentTool
+      tags:
+        - tools
+      summary: Executar tool permitida sem inferência do Orqest.
+      description: >-
+        Executar tool permitida sem inferência do Orqest.
+
+        Reusar loader e validação existentes, nunca instanciar tool arbitrária só pelo nome.
+        Vincular principal/agentId/projectId; rejeitar IDs de escopo divergentes em arguments.
+        Preservar controles de escrita, quotas, políticas e lifecycle de aprovação. Tools sem
+        suporte direto retornam 409/runtime_required antes de efeitos. Respostas de falha parcial
+        informam efeitos/IDs para evitar repetição automática.
+
+        Prioridade: file_search com arguments={query}. Preparar o recurso com primeFiles e contexto
+        ACL validado no servidor, chamar createFileSearchTool e serializar conteúdo+artifact. Não
+        permitir que argumentos forneçam entity_id, projectFileIds ou file_ids que ampliem escopo.
+        RAG_API_URL e JWT interno permanecem no servidor. Não iniciar chat/completions para executar
+        a busca; embeddings/RAG continuam sendo usados pela tool.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENT autorização
+        - PROJECT VIEW/EDIT conforme ação
+        - permissões específicas da tool
+      x-orqest-reuses:
+        - api/app/clients/tools/util/handleTools.js
+        - api/server/controllers/tools.js
+        - api/app/clients/tools/structured/MetaAdsBudgetManager.js
+        - api/app/clients/tools/util/fileSearch.js
+        - api/server/services/Files/permissions.js
+        - api/server/services/Projects/context.js
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: >-
+            Para escritas: vincular ao principal/agentId/projectId/tool e hash dos argumentos;
+            conflito de reutilização deve retornar 409. Persistir resultado/estado, não executar de
+            novo após timeout incerto.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResult'
+              examples:
+                fileSearch:
+                  summary: Conteúdo e fontes de chunks retornados pela tool
+                  value:
+                    callId: call-1
+                    status: completed
+                    content:
+                      - type: text
+                        text: |
+                          File: contrato.pdf
+                          Anchor: \ue202turn0file0 (contrato.pdf)
+                          Relevance: 0.8700
+                          Content: Cancelamentos devem ser solicitados com 30 dias de antecedência.
+                    artifacts: []
+                    artifact:
+                      file_search:
+                        sources:
+                          - type: file
+                            fileId: file-1
+                            fileName: contrato.pdf
+                            content: Cancelamentos devem ser solicitados com 30 dias de antecedência.
+                            relevance: 0.87
+                            pages:
+                              - 3
+                            pageRelevance:
+                              '3': 0.87
+                        fileCitations: true
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolCall'
+            examples:
+              fileSearch:
+                summary: Buscar chunks sem recuperar arquivo completo
+                value:
+                  agentId: agent-1
+                  projectId: project-1
+                  arguments:
+                    query: Qual a política de cancelamento prevista no contrato?
+      x-orqest-release-blockers:
+        - >-
+          Definir allowlist por capability; aprovação/interactive/background não podem ser
+          ignorados.
+        - Validar ownership e escopo tanto no gateway quanto na tool.
+        - Idempotência de escritas e tratamento explícito de falhas parciais.
+        - >-
+          Distinguir busca vazia de RAG indisponível, não indexado ou falha parcial; a tool atual
+          usa mensagens textuais em alguns erros.
+        - >-
+          Limitar fan-out por arquivo e duração da busca; o cliente não pode elevar k ou escopo com
+          argumentos extras.
+      x-orqest-file-search:
+        state: proposed
+        toolName: file_search
+        input:
+          $ref: '#/components/schemas/FileSearchInput'
+        artifact:
+          $ref: '#/components/schemas/FileSearchArtifact'
+        currentImplementation: api/app/clients/tools/util/fileSearch.js
+        currentLimits:
+          perFileK: 5
+          globalSources: 10
+        prerequisites:
+          - principal/tenant válidos
+          - agente autorizado e file_search habilitada
+          - FILE_SEARCH USE
+          - PROJECT VIEW quando a busca incluir o projeto
+          - arquivos elegíveis e índice RAG disponível
+  /api/integrations/v1/projects:
+    get:
+      operationId: externalListProjects
+      tags:
+        - projects
+      summary: Listar projetos visíveis no tenant do principal, com paginação estável.
+      description: Listar projetos visíveis no tenant do principal, com paginação estável.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROJECT VIEW
+      x-orqest-reuses:
+        - api/server/services/Projects/access.js
+        - api/server/routes/projects.js
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Project'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/projects/{projectId}:
+    get:
+      operationId: externalGetProject
+      tags:
+        - projects
+      summary: >-
+        Ler projeção segura do projeto: instruções, snippets e referências, sem configuração de
+        credenciais.
+      description: >-
+        Ler projeção segura do projeto: instruções, snippets e referências, sem configuração de
+        credenciais.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROJECT VIEW
+      x-orqest-reuses:
+        - api/server/services/Projects/access.js
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/projects/{projectId}/files:
+    get:
+      operationId: externalListProjectFiles
+      tags:
+        - projects
+      summary: Listar arquivos declarados e vinculados por projectId com projeção segura.
+      description: >-
+        Listar metadados dos arquivos elegíveis para file_search, sem conteúdo integral/URLs.
+        Resolver no servidor vínculos e ACL de agente/projeto e incluir apenas o escopo autorizado.
+        Para recuperar informação, chamar tools/file_search/call com query. Distinguir arquivo
+        descoberto de arquivo indexado/disponível no RAG.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROJECT VIEW
+        - FILE acesso efetivo
+      x-orqest-reuses:
+        - api/server/routes/files/files.js
+        - api/server/middleware/accessResources/fileAccess.js
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/agents/{id}/files:
+    get:
+      operationId: externalListAgentFiles
+      tags:
+        - agents
+      summary: Listar arquivos do agente com caminhos autenticados de recuperação.
+      description: >-
+        Listar metadados dos arquivos elegíveis para file_search, sem conteúdo integral/URLs.
+        Resolver no servidor vínculos e ACL de agente/projeto e incluir apenas o escopo autorizado.
+        Para recuperar informação, chamar tools/file_search/call com query. Distinguir arquivo
+        descoberto de arquivo indexado/disponível no RAG.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - AGENT EDIT/exportação
+        - FILE acesso efetivo
+        - PROJECT VIEW para arquivos de projeto
+      x-orqest-reuses:
+        - packages/api/src/agents/files.ts
+        - api/server/middleware/accessResources/fileAccess.js
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/File'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/skills:
+    get:
+      operationId: externalListSkills
+      tags:
+        - skills
+      summary: >-
+        Listar skills acessíveis e resumos. Skills selecionadas, globais e alwaysApply são
+        resolvidas no endpoint context conforme configuração.
+      description: >-
+        Listar skills acessíveis e resumos. Skills selecionadas, globais e alwaysApply são
+        resolvidas no endpoint context conforme configuração.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - SKILLS USE
+        - SKILL VIEW
+      x-orqest-reuses:
+        - packages/api/src/skills/management.ts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillSummary'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/skills/{id}:
+    get:
+      operationId: externalGetSkill
+      tags:
+        - skills
+      summary: Ler corpo, frontmatter e metadados da skill.
+      description: Ler corpo, frontmatter e metadados da skill.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - SKILLS USE
+        - SKILL VIEW
+      x-orqest-reuses:
+        - packages/api/src/skills/management.ts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Skill'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/skills/{id}/files:
+    get:
+      operationId: externalListSkillFiles
+      tags:
+        - skills
+      summary: Listar referências e scripts da skill.
+      description: Listar referências e scripts da skill.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - SKILLS USE
+        - SKILL VIEW
+      x-orqest-reuses:
+        - packages/api/src/skills/management.ts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SkillFile'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/skills/{id}/files/{relativePath}:
+    get:
+      operationId: externalReadSkillTextFile
+      tags:
+        - skills
+      summary: Ler arquivo textual de skill como JSON, preservando limites atuais e rejeição de traversal.
+      description: >-
+        Ler arquivo textual de skill como JSON, preservando limites atuais e rejeição de traversal.
+        Scripts/referências textuais da skill são separados dos documentos consultados via
+        file_search. Download binário está fora do escopo.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - SKILLS USE
+        - SKILL VIEW
+      x-orqest-reuses:
+        - packages/api/src/skills/management.ts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: relativePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillFileContent'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/projects/{projectId}/prompts:
+    get:
+      operationId: externalListProjectPrompts
+      tags:
+        - projects
+      summary: Ler snippets e textos de grupos/versões autorizados vinculados ao projeto.
+      description: >-
+        Ler snippets e textos de grupos/versões autorizados vinculados ao projeto.
+
+        Distinguir agent.instructions, project.instructions, promptSnippets e promptGroupIds; não
+        inventar vínculo de grupo no agente onde só existe texto copiado.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROJECT VIEW
+        - PROMPTGROUP VIEW/herdado
+        - filtros de conteúdo
+      x-orqest-reuses:
+        - api/server/routes/prompts.js
+        - packages/data-schemas/src/schema/project.ts
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snippets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        content:
+                          type: string
+                      required:
+                        - title
+                        - content
+                      additionalProperties: false
+                  groups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PromptGroup'
+                  prompts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prompt'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - snippets
+                  - groups
+                  - prompts
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/prompts/{id}:
+    get:
+      operationId: externalGetPrompt
+      tags:
+        - prompts
+      summary: Ler texto de uma versão de prompt autorizada.
+      description: Ler texto de uma versão de prompt autorizada.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROMPTGROUP VIEW/herdado
+        - filtros de conteúdo
+      x-orqest-reuses:
+        - api/server/routes/prompts.js
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prompt'
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/projects/{projectId}/memories:
+    get:
+      operationId: externalListProjectMemories
+      tags:
+        - projects
+      summary: Ler memórias resolvidas do projeto e biblioteca compartilhada permitida.
+      description: >-
+        Ler memórias resolvidas do projeto e biblioteca compartilhada permitida.
+
+        Não incluir automaticamente conversas de terceiros, credenciais, registros de suporte ou
+        coleções arbitrárias. Preservar memória pessoal, partições de agente, READ e restrições de
+        consumo da biblioteca.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - PROJECT VIEW
+        - MEMORY READ
+        - SHARED_MEMORIES READ quando aplicável
+      x-orqest-reuses:
+        - api/server/services/Projects/context.js
+        - api/server/routes/sharedMemories.js
+        - api/server/routes/memories.js
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Memory'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/memories:
+    get:
+      operationId: externalListPersonalMemories
+      tags:
+        - memories
+      summary: >-
+        Ler memórias pessoais/partição de agente autorizada. Não exportar memórias de outros
+        usuários.
+      description: >-
+        Ler memórias pessoais/partição de agente autorizada. Não exportar memórias de outros
+        usuários.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - MEMORY READ
+        - AGENT acesso quando particionada
+      x-orqest-reuses:
+        - api/server/routes/memories.js
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+        - name: agentId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Memory'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/conversations:
+    get:
+      operationId: externalListOwnConversations
+      tags:
+        - conversations
+      summary: >-
+        Listar conversas do próprio principal; projectId é filtro, não compartilhamento de
+        histórico.
+      description: >-
+        Listar conversas do próprio principal; projectId é filtro, não compartilhamento de
+        histórico.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - conversa pertence ao principal
+      x-orqest-reuses:
+        - api/server/routes/convos.js
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+        - name: projectId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/conversations/{id}/messages:
+    get:
+      operationId: externalListOwnConversationMessages
+      tags:
+        - conversations
+      summary: >-
+        Ler mensagens de conversa do próprio principal. PROJECT VIEW não concede histórico de
+        terceiros.
+      description: >-
+        Ler mensagens de conversa do próprio principal. PROJECT VIEW não concede histórico de
+        terceiros.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - conversa pertence ao principal
+      x-orqest-reuses:
+        - api/server/routes/messages.js
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Cursor opaco retornado em after. Não construir manualmente.
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  nextCursor:
+                    type: string
+                    nullable: true
+                required:
+                  - data
+                  - nextCursor
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/integrations/v1/identity:
+    get:
+      operationId: externalGetIdentity
+      tags:
+        - identity
+      summary: Confirmar tenant/principal da credencial sem revelar o token.
+      description: >-
+        Confirmar tenant/principal da credencial sem revelar o token.
+
+        TenantExecutionKey e ManagementOidc são alternativas de autenticação previstas somente nesta
+        superfície nova. Resolver tenant do token/principal, nunca aceitar tenantId para trocar
+        contexto via body/query. A chave tenant existente representa o OWNER vinculado; não inventar
+        scopes finos que o modelo atual não possui.
+      x-orqest-status: proposed
+      x-orqest-permissions:
+        - principal ativo e tenant vinculado
+      x-orqest-reuses:
+        - packages/api/src/apiKeys/middleware.ts
+        - packages/api/src/middleware/management.ts
+      responses:
+        '200':
+          description: Contrato proposto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenantId:
+                    type: string
+                  principalId:
+                    type: string
+                  keyId:
+                    type: string
+                    nullable: true
+                  authMethod:
+                    type: string
+                    enum:
+                      - tenant_api_key
+                      - management_oidc
+                required:
+                  - tenantId
+                  - principalId
+                  - keyId
+                  - authMethod
+                additionalProperties: false
+        '400':
+          description: Argumentos inválidos/conflito de escopo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credencial inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Permissão/exportação negada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recurso ausente/inacessível no tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ferramenta exige runtime, sessão ou aprovação não suportada pelo gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Falha interna
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    TenantExecutionKey:
+      type: http
+      scheme: bearer
+      description: >-
+        Chave de execução com scope tenant; requireRemoteAgentAuth e feature REMOTE_AGENTS. /catalog
+        e /projects ainda exigem req.tenantApiKey, portanto token OIDC de gestão não basta.
+    ManagementOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Access token OIDC de máquina, validado por issuer/audience e vínculo clientId →
+        userId/tenantId em endpoints.agents.managementApi.auth. Sem fallback para sessão do
+        navegador ou chave de execução.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required:
+            - code
+            - message
+          additionalProperties: false
+      required:
+        - error
+      additionalProperties: false
+    Agent:
+      type: object
+      description: >-
+        Projeção proposta para contexto externo. Omite model_parameters, tool_options, git_identity
+        e configurações de ambientes; não repassar mapas livres de configuração/credenciais.
+      properties:
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        instructions:
+          type: string
+          nullable: true
+        tools:
+          type: array
+          items:
+            type: string
+        skills:
+          type: array
+          items:
+            type: string
+        skills_enabled:
+          type: boolean
+        skills_scope:
+          type: string
+          enum:
+            - all
+            - selected
+            - none
+        memory_scope:
+          type: string
+          enum:
+            - user
+            - agent
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                anyOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+              to:
+                anyOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+              description:
+                type: string
+              edgeType:
+                type: string
+                enum:
+                  - handoff
+                  - direct
+              prompt:
+                anyOf:
+                  - type: string
+              excludeResults:
+                type: boolean
+              promptKey:
+                type: string
+            required:
+              - from
+              - to
+            additionalProperties: false
+        tool_resources:
+          type: object
+          properties:
+            image_edit:
+              type: object
+              properties:
+                file_ids:
+                  type: array
+                  items:
+                    type: string
+              additionalProperties: false
+            execute_code:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+            file_search:
+              type: object
+              properties:
+                file_ids:
+                  $ref: >-
+                    #/components/schemas/Agent/properties/tool_resources/properties/image_edit/properties/file_ids
+                vector_store_ids:
+                  type: array
+                  items:
+                    type: string
+              additionalProperties: false
+            context:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+            ocr:
+              $ref: '#/components/schemas/Agent/properties/tool_resources/properties/image_edit'
+          additionalProperties: false
+        subagents:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            allowSelf:
+              type: boolean
+            agent_ids:
+              type: array
+              items:
+                type: string
+            graphs:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  agent_ids:
+                    type: array
+                    items:
+                      type: string
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        from:
+                          anyOf:
+                            - type: string
+                            - type: array
+                              items:
+                                type: string
+                        to:
+                          anyOf:
+                            - type: string
+                            - type: array
+                              items:
+                                type: string
+                        description:
+                          type: string
+                        edgeType:
+                          type: string
+                          enum:
+                            - direct
+                        prompt:
+                          type: string
+                        excludeResults:
+                          type: boolean
+                      required:
+                        - from
+                        - to
+                        - edgeType
+                      additionalProperties: false
+                  entry_agent_id:
+                    type: string
+                  result_agent_id:
+                    type: string
+                required:
+                  - type
+                  - name
+                  - description
+                  - agent_ids
+                  - edges
+                  - entry_agent_id
+                  - result_agent_id
+                additionalProperties: false
+          additionalProperties: false
+        provider:
+          type: string
+        model:
+          type: string
+          nullable: true
+        id:
+          type: string
+          minLength: 1
+        version:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          $ref: '#/components/schemas/Agent/properties/createdAt'
+      required:
+        - provider
+        - model
+        - id
+        - version
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+    Skill:
+      type: object
+      properties:
+        name:
+          type: string
+        displayTitle:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        alwaysApply:
+          type: boolean
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+        version:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        fileCount:
+          type: integer
+          minimum: 0
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        body:
+          type: string
+        frontmatter:
+          type: object
+          additionalProperties:
+            anyOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - enum:
+                  - 'null'
+                nullable: true
+              - type: array
+                items:
+                  $ref: '#/components/schemas/Skill/properties/frontmatter/additionalProperties'
+              - type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/Skill/properties/frontmatter/additionalProperties'
+      required:
+        - name
+        - description
+        - id
+        - version
+        - fileCount
+        - createdAt
+        - updatedAt
+        - body
+      additionalProperties: false
+    SkillFile:
+      type: object
+      properties:
+        relativePath:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+      required:
+        - relativePath
+        - filename
+        - mimeType
+        - bytes
+      additionalProperties: true
+    SkillFileContent:
+      allOf:
+        - $ref: '#/components/schemas/SkillFile'
+        - type: object
+          properties:
+            content:
+              type: string
+            isBinary:
+              type: boolean
+          required:
+            - isBinary
+          additionalProperties: true
+      description: >-
+        JSON de arquivo textual. content pode estar ausente para binários/arquivos grandes;
+        isBinary=false não garante content presente. Não há download binário nesta superfície.
+    SkillSummary:
+      type: object
+      properties:
+        name:
+          type: string
+        displayTitle:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        alwaysApply:
+          type: boolean
+        id:
+          type: string
+          pattern: ^[a-f\d]{24}$
+        version:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        fileCount:
+          type: integer
+          minimum: 0
+        disableModelInvocation:
+          type: boolean
+        userInvocable:
+          type: boolean
+        allowedTools:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - description
+        - id
+        - version
+        - fileCount
+        - createdAt
+        - updatedAt
+      additionalProperties: false
+      description: Lista retorna resumo. Para body/frontmatter usar GET /api/agents/v1/skills/{id}.
+    File:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        mimeType:
+          type: string
+        bytes:
+          type: integer
+          minimum: 0
+        embedded:
+          type: boolean
+          nullable: true
+      required:
+        - id
+        - filename
+        - mimeType
+        - bytes
+      additionalProperties: false
+      description: >-
+        Metadados de documento para descoberta/escopo de busca. Não retorna bytes, texto integral,
+        URL de download ou caminho de storage. embedded não garante disponibilidade do índice RAG no
+        momento da consulta.
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        instructions:
+          type: string
+        promptSnippets:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              content:
+                type: string
+            required:
+              - title
+              - content
+            additionalProperties: false
+        promptGroupIds:
+          type: array
+          items:
+            type: string
+        fileIds:
+          type: array
+          items:
+            type: string
+        sharedMemoryIds:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - name
+      additionalProperties: false
+    Prompt:
+      type: object
+      properties:
+        id:
+          type: string
+        groupId:
+          type: string
+        content:
+          type: string
+        type:
+          type: string
+          enum:
+            - text
+            - chat
+        versionId:
+          type: string
+      required:
+        - id
+        - groupId
+        - content
+        - type
+      additionalProperties: false
+    PromptGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        productionId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - productionId
+      additionalProperties: false
+    Memory:
+      type: object
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+        source:
+          type: string
+          enum:
+            - personal
+            - agent
+            - project
+            - shared
+        agentId:
+          type: string
+          nullable: true
+        projectId:
+          type: string
+          nullable: true
+      required:
+        - id
+        - key
+        - value
+        - source
+      additionalProperties: false
+    Tool:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        kind:
+          type: string
+          enum:
+            - builtin
+            - mcp
+            - action
+            - tenant_function
+        inputSchema:
+          type: object
+          additionalProperties: true
+        callable:
+          type: boolean
+        unavailableReason:
+          type: string
+          nullable: true
+        requiresProject:
+          type: boolean
+        requiresConversation:
+          type: boolean
+      required:
+        - name
+        - description
+        - kind
+        - inputSchema
+        - callable
+        - unavailableReason
+        - requiresProject
+        - requiresConversation
+      additionalProperties: false
+    ToolCall:
+      type: object
+      properties:
+        agentId:
+          type: string
+        projectId:
+          type: string
+        conversationId:
+          type: string
+        arguments:
+          type: object
+          additionalProperties: true
+      required:
+        - agentId
+        - arguments
+      additionalProperties: false
+    ToolResult:
+      type: object
+      properties:
+        callId:
+          type: string
+        status:
+          type: string
+          enum:
+            - completed
+            - failed
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+        error:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/Error'
+          nullable: true
+        artifact:
+          type: object
+          properties:
+            file_search:
+              $ref: '#/components/schemas/FileSearchSources'
+          additionalProperties: true
+          description: >-
+            Preservar artifact estruturado da tool. Para file_search, usar
+            artifact.file_search.sources; não reduzir a resposta a texto formatado ou arquivo para
+            download.
+      required:
+        - callId
+        - status
+        - content
+        - artifacts
+      additionalProperties: false
+    Context:
+      type: object
+      properties:
+        agent:
+          $ref: '#/components/schemas/Agent'
+        project:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/Project'
+          nullable: true
+        promptGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptGroup'
+        prompts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Prompt'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/File'
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Memory'
+        instructionSections:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+                enum:
+                  - agent
+                  - project
+                  - prompt
+                  - skill
+                  - mcp
+                  - memory
+              sourceId:
+                type: string
+                nullable: true
+              text:
+                type: string
+            required:
+              - source
+              - sourceId
+              - text
+            additionalProperties: false
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              resourceId:
+                type: string
+                nullable: true
+              message:
+                type: string
+            required:
+              - code
+              - message
+            additionalProperties: false
+        contextFingerprint:
+          type: string
+      required:
+        - agent
+        - project
+        - promptGroups
+        - prompts
+        - skills
+        - tools
+        - files
+        - memories
+        - instructionSections
+        - warnings
+        - contextFingerprint
+      additionalProperties: false
+    Conversation:
+      type: object
+      properties:
+        conversationId:
+          type: string
+        projectId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    Message:
+      type: object
+      properties:
+        messageId:
+          type: string
+        conversationId:
+          type: string
+        text:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+    FileSearchInput:
+      type: object
+      properties:
+        query:
+          type: string
+          description: >-
+            A natural language query to search for relevant information in the files. Be specific
+            and use keywords related to the information you're looking for. The query will be used
+            for semantic similarity matching against the file contents.
+      required:
+        - query
+      additionalProperties: false
+    FileSearchSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - file
+        fileId:
+          type: string
+        fileName:
+          type: string
+        content:
+          type: string
+        relevance:
+          type: number
+          description: >-
+            Valor atual da tool: 1 - distância vetorial. Não é probabilidade e não possui garantia
+            universal de intervalo 0..1.
+        pages:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        pageRelevance:
+          type: object
+          additionalProperties:
+            type: number
+        metadata:
+          type: object
+          properties:
+            imageRag:
+              type: object
+              properties:
+                sourceImageFileId:
+                  type: string
+                sourceImageFileName:
+                  type: string
+                derivedTextFileId:
+                  type: string
+              additionalProperties: false
+          additionalProperties: false
+      required:
+        - type
+        - fileId
+        - fileName
+        - content
+        - relevance
+        - pages
+        - pageRelevance
+      additionalProperties: false
+      description: >-
+        Um chunk retornado pela tool atual. pages pode estar vazio; não inventar página, chunkId
+        estável, offsets ou score de probabilidade. Metadados opcionais de imagem devem passar por
+        projeção segura.
+    FileSearchSources:
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileSearchSource'
+          maxItems: 10
+        fileCitations:
+          type: boolean
+      required:
+        - sources
+        - fileCitations
+      additionalProperties: false
+      description: >-
+        Forma do artifact.file_search atual: até 10 fontes globais, ordenadas por distância. Busca
+        atual pede k=5 por arquivo; os argumentos públicos da tool contêm apenas query.
+    FileSearchArtifact:
+      type: object
+      properties:
+        file_search:
+          $ref: '#/components/schemas/FileSearchSources'
+      required:
+        - file_search
+      additionalProperties: false
+security:
+  - TenantExecutionKey: []
+  - ManagementOidc: []
