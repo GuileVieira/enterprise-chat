@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from 'librechat-data-provider';
 import { z } from 'zod';
 import { createHash } from 'crypto';
 import { isContentFilterError } from '../middleware/contentFilter';
@@ -10,11 +11,13 @@ export interface IntegrationIdentity {
   principalId: string;
   tenantId: string;
   keyId?: string;
+  resourceAccess?: TApiKeyResources;
 }
 export type IntegrationRequest = Request &
   Pick<ServerRequest, 'config'> & {
     user: IUser;
     integrationAuth?: IntegrationIdentity;
+    resourceAccess?: TApiKeyResources;
   };
 export class IntegrationError extends Error {
   constructor(

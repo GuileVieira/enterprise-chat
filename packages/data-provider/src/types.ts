@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from './apiKeyResources';
 import type { InfiniteData } from '@tanstack/react-query';
 import type {
   TConversationTag,
@@ -401,11 +402,13 @@ export type TUpdateUserKeyRequest = {
 };
 
 export type TAgentApiKeyCreateRequest = {
+  resourceAccess?: TApiKeyResources;
   name: string;
   expiresAt?: string | null;
 };
 
 export type TAgentApiKeyCreateResponse = {
+  resourceAccess?: TApiKeyResources;
   id: string;
   name: string;
   key: string;
@@ -415,6 +418,7 @@ export type TAgentApiKeyCreateResponse = {
 };
 
 export type TAgentApiKeyListItem = {
+  resourceAccess?: TApiKeyResources;
   id: string;
   name: string;
   keyPrefix: string;

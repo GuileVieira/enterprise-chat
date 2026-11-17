@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from 'librechat-data-provider';
 import { Document, Types } from 'mongoose';
 
 export interface IAgentApiKey extends Document {
@@ -11,10 +12,12 @@ export interface IAgentApiKey extends Document {
   updatedAt: Date;
   tenantId?: string;
   scope?: 'tenant';
+  resourceAccess?: TApiKeyResources;
 }
 
 export interface AgentApiKeyCreateData {
   scope?: 'tenant';
+  resourceAccess?: TApiKeyResources;
   tenantId?: string;
   userId: Types.ObjectId | string;
   name: string;
@@ -22,6 +25,7 @@ export interface AgentApiKeyCreateData {
 }
 
 export interface AgentApiKeyCreateResult {
+  resourceAccess?: TApiKeyResources;
   id: string;
   name: string;
   keyPrefix: string;
@@ -31,6 +35,7 @@ export interface AgentApiKeyCreateResult {
 }
 
 export interface AgentApiKeyListItem {
+  resourceAccess?: TApiKeyResources;
   id: string;
   name: string;
   keyPrefix: string;

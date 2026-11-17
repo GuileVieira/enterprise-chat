@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from 'librechat-data-provider';
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export interface IAgentApiKey extends Document {
@@ -11,6 +12,7 @@ export interface IAgentApiKey extends Document {
   updatedAt: Date;
   tenantId?: string;
   scope?: 'tenant';
+  resourceAccess?: TApiKeyResources;
 }
 
 const agentApiKeySchema: Schema<IAgentApiKey> = new Schema(
@@ -45,6 +47,16 @@ const agentApiKeySchema: Schema<IAgentApiKey> = new Schema(
       type: Date,
     },
     scope: { type: String, enum: ['tenant'] },
+    resourceAccess: {
+      type: new Schema(
+        {
+          agentIds: { type: [String], default: undefined },
+          projectIds: { type: [String], default: undefined },
+        },
+        { _id: false },
+      ),
+      default: undefined,
+    },
     tenantId: {
       type: String,
       index: true,

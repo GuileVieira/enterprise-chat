@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from './apiKeyResources';
 import type { AxiosResponse } from 'axios';
 import type {
   TTracePage,
@@ -2231,3 +2232,12 @@ export const createTenantApiKey = (
   request.post(endpoints.tenantApiKeys(tenantId), payload);
 export const deleteTenantApiKey = (tenantId: string, id: string): Promise<void> =>
   request.delete(endpoints.tenantApiKeys(tenantId, `/${encodeURIComponent(id)}`));
+
+export const updateTenantApiKeyResources = (
+  tenantId: string,
+  id: string,
+  resourceAccess: TApiKeyResources | null,
+): Promise<void> =>
+  request.patch(endpoints.tenantApiKeys(tenantId, `/${encodeURIComponent(id)}`), {
+    resourceAccess,
+  });

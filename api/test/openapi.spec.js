@@ -300,4 +300,17 @@ describe('Orqest OpenAPI source review', () => {
     expect(proposed.components.schemas.SkillSummary.properties.body).toBeUndefined();
     expect(read('docs/openapi/README.md')).toContain('não comprova deploy');
   });
+
+  it('documents per-key resource restrictions and JWT-only management', () => {
+    expect(proposed.components.schemas.Identity.properties.resourceAccess.$ref).toBe(
+      '#/components/schemas/KeyResources',
+    );
+    const schema = proposed.components.schemas.KeyResources;
+    expect(schema.required).toBeUndefined();
+    expect(schema.properties.agentIds.type).toBe('array');
+    expect(schema.properties.projectIds.type).toBe('array');
+    expect(schema.properties.agentIds.minItems).toBeUndefined();
+    expect(current.paths['/api/tenant-api-keys'].post.security).toEqual([{ BrowserJwt: [] }]);
+    expect(current.paths['/api/tenant-api-keys/{id}'].patch.security).toEqual([{ BrowserJwt: [] }]);
+  });
 });

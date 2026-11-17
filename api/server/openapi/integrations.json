@@ -3719,6 +3719,9 @@
           },
           "keyId": {
             "type": "string"
+          },
+          "resourceAccess": {
+            "$ref": "#/components/schemas/KeyResources"
           }
         },
         "required": ["tenantId", "principalId", "method"],
@@ -4908,6 +4911,31 @@
           "fingerprintSemantics",
           "limits"
         ],
+        "additionalProperties": false
+      },
+      "KeyResources": {
+        "type": "object",
+        "description": "Categoria omitida permite todos os recursos autorizados; array vazio não permite nenhum. Chaves restritas usam integrations/v1.",
+        "properties": {
+          "agentIds": {
+            "type": "array",
+            "maxItems": 2000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          },
+          "projectIds": {
+            "type": "array",
+            "maxItems": 2000,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
         "additionalProperties": false
       }
     }

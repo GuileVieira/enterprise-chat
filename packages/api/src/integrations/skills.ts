@@ -1,3 +1,4 @@
+import { keyResourceIds } from './resources';
 import { Types } from 'mongoose';
 import {
   PermissionBits,
@@ -112,6 +113,21 @@ export function createIntegrationSkills(
       !(await readers.allowed(req, ResourceType.SKILL, row._id, PermissionBits.VIEW))
     )
       throw notFound();
+    if (keyResourceIds(req, 'agentIds')) {
+      const agents = await readers.scopedAgents(req);
+      const assigned = agents.some((agent) => {
+        const scope = resolveAgentSkillsScope(
+          agent.skills,
+          agent.skills_enabled,
+          agent.skills_scope,
+        );
+        return (
+          scope === SkillsScope.all ||
+          (scope === SkillsScope.selected && agent.skills?.includes(id))
+        );
+      });
+      if (!assigned) throw notFound();
+    }
     const inspection = inspectContentWithTraversal(() => extractSkillContent(row), {
       filters: req.config?.filters,
     });
@@ -145,7 +161,13 @@ export function createIntegrationSkills(
         cursor,
       });
       for (const summary of result.skills) {
-        const row = await skill(req, String(summary._id));
+        let row: Awaited<ReturnType<typeof skill>>;
+        try {
+          row = await skill(req, String(summary._id));
+        } catch (error) {
+          if (error instanceof IntegrationError && error.status === 404) continue;
+          throw error;
+        }
         const active = resolveSkillActive({
           skill: { ...row, deployment: !!getDeploymentSkillById(String(row._id)) },
           userId: req.user.id,

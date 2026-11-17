@@ -276,7 +276,11 @@ describe('createImageAuthorizationMiddleware', () => {
     expect(deps.getUserPrincipals).not.toHaveBeenCalled();
     expect(deps.hasCapabilityForPrincipals).not.toHaveBeenCalled();
     expect(deps.hasPermission).toHaveBeenCalledWith(
-      [{ principalType: 'public' }],
+      [
+        { principalType: 'user', principalId: VIEWER_ID },
+        { principalType: 'tenant', principalId: 'tenant-b' },
+        { principalType: 'public' },
+      ],
       'agent',
       AGENT_DB_ID,
       1,

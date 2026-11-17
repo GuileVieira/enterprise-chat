@@ -11,4 +11,5 @@ router.get('/catalog', handlers.manage);
 router.get('/', handlers.manage);
 router.post('/', handlers.manage);
 router.delete('/:id', handlers.manage);
+router.patch('/:id', handlers.manage);
 module.exports = router;

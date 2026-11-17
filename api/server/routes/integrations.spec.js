@@ -225,6 +225,155 @@ beforeEach(async () => {
   await inTenant(() => mongoose.models.IntegrationCall.createIndexes());
 });
 
+it('enforces saved key resource restrictions on lists, direct reads and tool calls', async () => {
+  await get('/agents/export-only').expect(200);
+  await call(
+    'fn-write',
+    { agentId: 'remote-only', arguments: { count: 1 } },
+    'scoped-replay',
+  ).expect(200);
+  await inTenant(() =>
+    mongoose.models.AgentApiKey.updateOne(
+      { scope: 'tenant' },
+      {
+        $set: { resourceAccess: { agentIds: [], projectIds: [] } },
+      },
+    ),
+  );
+  await get('/identity').expect(200);
+  const agents = await get('/agents').expect(200);
+  expect(agents.body.items).toEqual([]);
+  await get('/agents/export-only').expect(404);
+  const before = calls.length;
+  await request(app)
+    .post('/api/integrations/v1/tools/fn-read/call')
+    .set('Authorization', `Bearer ${key}`)
+    .send({ agentId: 'remote-only', arguments: { count: 1 } })
+    .expect(404);
+  expect(calls).toHaveLength(before);
+  await call(
+    'fn-write',
+    { agentId: 'remote-only', arguments: { count: 1 } },
+    'scoped-replay',
+  ).expect(404);
+  expect(calls).toHaveLength(before);
+});
+
+it('restricts linked files, prompts, skills and history without weakening the OWNER ACL', async () => {
+  const projects = [];
+  const prompts = [];
+  const skills = [];
+  for (const name of ['allowed', 'denied']) {
+    const group = await inTenant(() =>
+      mongoose.models.PromptGroup.create({
+        name,
+        tenantId: tenant,
+        author: owner._id,
+        authorName: 'Owner',
+        productionId: new mongoose.Types.ObjectId(),
+      }),
+    );
+    const prompt = await inTenant(() =>
+      mongoose.models.Prompt.create({
+        groupId: group._id,
+        tenantId: tenant,
+        author: owner._id,
+        prompt: name,
+        type: 'text',
+      }),
+    );
+    await inTenant(() =>
+      mongoose.models.PromptGroup.updateOne({ _id: group._id }, { productionId: prompt._id }),
+    );
+    const project = await inTenant(() =>
+      mongoose.models.Project.create({
+        projectId: name,
+        name,
+        tenantId: tenant,
+        user: String(owner._id),
+        promptGroupIds: [String(group._id)],
+      }),
+    );
+    const skill = await inTenant(() =>
+      mongoose.models.Skill.create({
+        name,
+        description: name,
+        body: name,
+        tenantId: tenant,
+        author: owner._id,
+        authorName: 'Owner',
+        productionId: new mongoose.Types.ObjectId(),
+        source: 'inline',
+      }),
+    );
+    await grant(ResourceType.PROJECT, project._id);
+    await grant(ResourceType.PROMPTGROUP, group._id);
+    await grant(ResourceType.SKILL, skill._id);
+    await inTenant(() =>
+      mongoose.models.Conversation.create({
+        conversationId: `${name}-chat`,
+        endpoint: 'agents',
+        title: name,
+        tenantId: tenant,
+        user: String(owner._id),
+        agent_id: 'export-only',
+        projectId: name,
+      }),
+    );
+    projects.push(project);
+    prompts.push(prompt);
+    skills.push(skill);
+  }
+  await inTenant(() =>
+    mongoose.models.File.create({
+      file_id: 'denied-file',
+      filename: 'private.txt',
+      filepath: '/private',
+      type: 'text/plain',
+      bytes: 1,
+      user: owner._id,
+      tenantId: tenant,
+      projectId: 'denied',
+    }),
+  );
+  await inTenant(() =>
+    mongoose.models.Agent.updateOne(
+      { _id: exportAgent._id },
+      {
+        skills_enabled: true,
+        skills_scope: 'selected',
+        skills: [String(skills[0]._id)],
+        tool_resources: { file_search: { file_ids: ['denied-file'] } },
+      },
+    ),
+  );
+  await inTenant(() =>
+    mongoose.models.AgentApiKey.updateOne(
+      { scope: 'tenant' },
+      { resourceAccess: { agentIds: ['export-only'], projectIds: ['allowed'] } },
+    ),
+  );
+  expect((await get('/projects').expect(200)).body.items.map((item) => item.id)).toEqual([
+    'allowed',
+  ]);
+  await get('/projects/denied').expect(404);
+  await get(`/projects/${projects[1]._id}`).expect(404);
+  expect((await get('/agents/export-only/files').expect(200)).body.items).toEqual([]);
+  await get(`/prompts/${prompts[0]._id}`).expect(200);
+  await get(`/prompts/${prompts[1]._id}`).expect(404);
+  await get(`/skills/${skills[0]._id}`).expect(200);
+  await get(`/skills/${skills[1]._id}`).expect(404);
+  expect((await get('/skills').expect(200)).body.items.map((item) => item.id)).toEqual([
+    String(skills[0]._id),
+  ]);
+  expect((await get('/conversations').expect(200)).body.items.map((item) => item.id)).toEqual([
+    'allowed-chat',
+  ]);
+  await get('/conversations/denied-chat/messages').expect(404);
+  await get('/memories').expect(403);
+  await get('/memories?agentId=remote-only').expect(404);
+});
+
 it('actual router authenticates key, exports context independently, searches only remote-authorized files and executes real tenant function', async () => {
   await request(app).get('/api/integrations/v1/openapi.json').expect(401);
   const contract = await get('/openapi.json').expect(200).expect('Content-Type', /json/);

@@ -3,11 +3,12 @@ info:
   title: Orqest terminal — rotas existentes
   version: 0.1.0
   description: >-
-    Inventário legado baseado no commit indicado, mais 20 integrações implementadas no worktree atual. Não publica rotas nem comprova
-    deploy. Separa sessão JWT, OIDC de gestão e chave de execução tenant. Escopo: leitura de
-    agentes/instruções/skills, projetos, prompts, arquivos, tools e dados próprios. Não é uma
-    especificação de toda a API Orqest. As 20 integrações novas estão implementadas no worktree e detalhadas também em
-    orqest-integration.proposed.openapi.yaml; não comprova publicação.
+    Inventário legado baseado no commit indicado, mais 20 integrações implementadas no worktree
+    atual. Não publica rotas nem comprova deploy. Separa sessão JWT, OIDC de gestão e chave de
+    execução tenant. Escopo: leitura de agentes/instruções/skills, projetos, prompts, arquivos,
+    tools e dados próprios. Não é uma especificação de toda a API Orqest. As 20 integrações novas
+    estão implementadas no worktree e detalhadas também em orqest-integration.proposed.openapi.yaml;
+    não comprova publicação.
 servers:
   - url: /
     description: Origem da instalação Orqest; configurar URL HTTPS real no cliente.
@@ -36,11 +37,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [openapi, info, paths]
+                required:
+                  - openapi
+                  - info
+                  - paths
                 properties:
                   openapi:
                     type: string
-                    enum: [3.0.3]
+                    enum:
+                      - 3.0.3
                   info:
                     type: object
                   paths:
@@ -1888,11 +1893,8 @@ paths:
         - Identidade
       summary: Listar IDs e prefixos das chaves de um tenant autorizado.
       description: >-
-        Listar IDs e prefixos das chaves de um tenant autorizado.
-
-        OWNER do próprio tenant ou ADMIN no tenant solicitado. Cada chave tem id e pode ser revogada
-        separadamente. Não retorna key nem keyHash. Chaves tenant executam como OWNER vinculado, não
-        possuem scopes finos por recurso implementados aqui.
+        OWNER do próprio tenant ou ADMIN no tenant solicitado. Lista metadados e seleção por chave;
+        nunca key nem keyHash. Permissões do OWNER continuam obrigatórias.
       security:
         - BrowserJwt: []
       x-orqest-status: implemented
@@ -1934,6 +1936,8 @@ paths:
                         lastUsedAt:
                           type: string
                           format: date-time
+                        resourceAccess:
+                          $ref: '#/components/schemas/IntegrationKeyResources'
                       required:
                         - id
                         - name
@@ -1967,6 +1971,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    post:
+      operationId: createBrowserTenantApiKey
+      tags:
+        - Identidade
+      summary: Criar chave tenant com seleção de recursos
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/apiKeys/tenant.ts
+        routerFile: api/server/routes/tenantApiKeys.js
+        route: /
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Chave criada; segredo disponível apenas nesta resposta.
+        '400':
+          description: Seleção inválida ou recursos inacessíveis
+        '401':
+          description: Sessão inválida
+        '403':
+          description: Gestão não autorizada neste tenant
+        '404':
+          description: Chave não encontrada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                resourceAccess:
+                  $ref: '#/components/schemas/IntegrationKeyResources'
   /api/integrations/v1/identity:
     get:
       operationId: externalIdentity
@@ -4270,7 +4318,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IntegrationError'
-
+  /api/tenant-api-keys/{id}:
+    patch:
+      operationId: updateBrowserTenantApiKeyResources
+      tags:
+        - Identidade
+      summary: Atualizar acesso de uma chave tenant
+      security:
+        - BrowserJwt: []
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: packages/api/src/apiKeys/tenant.ts
+        routerFile: api/server/routes/tenantApiKeys.js
+        route: /:id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Seleção salva.
+        '400':
+          description: Seleção inválida ou recursos inacessíveis
+        '401':
+          description: Sessão inválida
+        '403':
+          description: Gestão não autorizada neste tenant
+        '404':
+          description: Chave não encontrada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resourceAccess
+              properties:
+                resourceAccess:
+                  type: object
+                  description: >-
+                    Categoria omitida permite todos os recursos autorizados; array vazio não permite
+                    nenhum. Chaves restritas usam integrations/v1.
+                  properties:
+                    agentIds:
+                      type: array
+                      maxItems: 2000
+                      items:
+                        type: string
+                        minLength: 1
+                        maxLength: 512
+                    projectIds:
+                      type: array
+                      maxItems: 2000
+                      items:
+                        type: string
+                        minLength: 1
+                        maxLength: 512
+                  additionalProperties: false
+                  nullable: true
+              additionalProperties: false
 components:
   securitySchemes:
     BrowserJwt:
@@ -5468,6 +5582,8 @@ components:
             - oidc_m2m
         keyId:
           type: string
+        resourceAccess:
+          $ref: '#/components/schemas/IntegrationKeyResources'
       required:
         - tenantId
         - principalId
@@ -6471,4 +6587,25 @@ components:
         - contextFingerprint
         - fingerprintSemantics
         - limits
+      additionalProperties: false
+    IntegrationKeyResources:
+      type: object
+      description: >-
+        Categoria omitida permite todos os recursos autorizados; array vazio não permite nenhum.
+        Chaves restritas usam integrations/v1.
+      properties:
+        agentIds:
+          type: array
+          maxItems: 2000
+          items:
+            type: string
+            minLength: 1
+            maxLength: 512
+        projectIds:
+          type: array
+          maxItems: 2000
+          items:
+            type: string
+            minLength: 1
+            maxLength: 512
       additionalProperties: false

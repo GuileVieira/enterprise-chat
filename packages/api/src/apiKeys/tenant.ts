@@ -1,3 +1,5 @@
+import { apiKeyResourcesSchema } from 'librechat-data-provider';
+import type { TApiKeyResources } from 'librechat-data-provider';
 import { Types } from 'mongoose';
 import { tenantStorage, SYSTEM_TENANT_ID, logger } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits, SystemRoles } from 'librechat-data-provider';
@@ -16,10 +18,15 @@ type Dependencies = Pick<
   | 'createAgentApiKey'
   | 'listTenantApiKeys'
   | 'deleteTenantApiKey'
+  | 'updateTenantApiKeyResources'
 > &
   GetRemoteAgentPermissionsDeps;
 
-type TenantRequest = Request<{ id?: string }, object, { name?: string; projectId?: string }> & {
+type TenantRequest = Request<
+  { id?: string },
+  object,
+  { name?: string; projectId?: string; resourceAccess?: TApiKeyResources | null }
+> & {
   user?: IUser;
   tenantApiKey?: boolean;
 };
@@ -124,6 +131,53 @@ export function createTenantApiHandlers(deps: Dependencies): {
         const principal = await owner(tenantId);
         if (!principal) return res.status(409).json({ error: 'tenant_api_owner_required' });
         if (req.method === 'GET') return res.json(await catalog(principal, tenantId, true));
+        if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body))
+          return res.status(400).json({ error: 'invalid_request' });
+        const parsed = apiKeyResourcesSchema.nullish().safeParse(req.body.resourceAccess);
+        if (!parsed.success) return res.status(400).json({ error: 'invalid_resource_access' });
+        const resourceAccess = parsed.data
+          ? {
+              ...(parsed.data.agentIds ? { agentIds: [...new Set(parsed.data.agentIds)] } : {}),
+              ...(parsed.data.projectIds
+                ? { projectIds: [...new Set(parsed.data.projectIds)] }
+                : {}),
+            }
+          : undefined;
+        if (resourceAccess) {
+          const available = await catalog(principal, tenantId, true);
+          if (
+            resourceAccess.agentIds?.some(
+              (id) => !available.agents.some((agent) => agent.id === id),
+            ) ||
+            resourceAccess.projectIds?.some(
+              (id) => !available.projects.some((project) => project.projectId === id),
+            )
+          ) {
+            return res.status(400).json({ error: 'inaccessible_resource_selection' });
+          }
+        }
+        if (req.method === 'PATCH') {
+          if (
+            !req.params.id ||
+            !Types.ObjectId.isValid(req.params.id) ||
+            !Object.prototype.hasOwnProperty.call(req.body, 'resourceAccess') ||
+            Object.keys(req.body).some((key) => key !== 'resourceAccess')
+          ) {
+            return res.status(400).json({ error: 'invalid_resource_access' });
+          }
+          const updated = await deps.updateTenantApiKeyResources(
+            tenantId,
+            req.params.id,
+            resourceAccess,
+          );
+          return res
+            .status(updated ? 200 : 404)
+            .json(
+              updated
+                ? { id: req.params.id, resourceAccess: resourceAccess ?? null }
+                : { error: 'key_not_found' },
+            );
+        }
         const name = req.body.name;
         if (typeof name !== 'string' || !name.trim() || name.trim().length > 100) {
           return res.status(400).json({ error: 'invalid_key_name' });
@@ -132,6 +186,7 @@ export function createTenantApiHandlers(deps: Dependencies): {
           userId: principal._id,
           tenantId,
           scope: 'tenant',
+          resourceAccess,
           name: name.trim(),
         });
         return res.status(201).json(key);

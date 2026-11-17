@@ -156,6 +156,7 @@ export enum MutationKeys {
   createAgentApiKey = 'createAgentApiKey',
   deleteAgentApiKey = 'deleteAgentApiKey',
   createTenantApiKey = 'createTenantApiKey',
+  updateTenantApiKeyResources = 'updateTenantApiKeyResources',
   deleteTenantApiKey = 'deleteTenantApiKey',
   improvePrompt = 'improvePrompt',
   fileUpload = 'fileUpload',

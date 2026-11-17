@@ -34,7 +34,20 @@ Aceita uma das credenciais existentes no header `Authorization: Bearer …`:
 
 O mecanismo é escolhido uma vez; negativa de política não tenta outra credencial. Conflitos de tenant
 em header, query ou body são rejeitados. `GET /identity` devolve `tenantId`, `principalId`, `method`
-e `keyId` quando aplicável; nunca o token. Não foram criados scopes finos por chave.
+e `keyId` quando aplicável; nunca o token. A seleção de recursos é persistida em `resourceAccess` por chave: `agentIds` e `projectIds`.
+Categoria omitida permite todos os recursos autorizados, inclusive novos; `[]` não permite nenhum.
+As escolhas nunca ampliam ACL/capabilities do OWNER e são revalidadas em cada request.
+
+Em **Configurações → Dados e Privacidade → API do tenant**, “Nova chave” inicia com todos
+selecionados. “Editar acesso” altera uma chave existente sem trocar seu segredo. Gestão usa sessão
+JWT (`POST /api/tenant-api-keys` e `PATCH /api/tenant-api-keys/{id}`), exclusivamente OWNER do tenant
+ou ADMIN. A seleção recusa IDs de outro tenant ou inacessíveis ao OWNER principal.
+
+Chaves com seleção personalizada funcionam em `/api/integrations/v1`; os endpoints antigos de
+execução não aceitam essas chaves, para impedir contorno das restrições. Contexto e dados derivados
+seguem os agentes/projetos selecionados; histórico precisa ter vínculo autorizado. Memórias pessoais
+sem agente explícito ficam indisponíveis para chaves restritas. Chaves antigas sem seleção mantêm
+seu comportamento anterior. `GET /identity` informa o acesso persistido.
 
 Exportar instruções/catálogo exige `AGENTS USE` e `AGENT EDIT` ou capacidade administrativa existente.
 Executar tools exige a autorização remota do agente e os grants/capabilities da ferramenta.

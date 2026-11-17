@@ -3,10 +3,11 @@ info:
   title: Orqest terminal — integrações implementadas no código
   version: 1.0.0
   description: >-
-    20 operações de negócio e uma rota de documentação implementadas no worktree. Não comprova deploy/configuração da instalação. Terminal
-    conduz raciocínio; Orqest fornece instruções/contexto e executa adapters compatíveis, sem LLM de
-    agente. Filename .proposed preservado por compatibilidade dos links. Sem download integral RAG
-    nem transporte interativo fictício.
+    20 operações de negócio e uma rota de documentação implementadas no worktree. Não comprova
+    deploy/configuração da instalação. Terminal conduz raciocínio; Orqest fornece
+    instruções/contexto e executa adapters compatíveis, sem LLM de agente. Filename .proposed
+    preservado por compatibilidade dos links. Sem download integral RAG nem transporte interativo
+    fictício.
 servers:
   - url: /
     description: Origem da instalação; configure URL HTTPS real.
@@ -35,11 +36,15 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [openapi, info, paths]
+                required:
+                  - openapi
+                  - info
+                  - paths
                 properties:
                   openapi:
                     type: string
-                    enum: [3.0.3]
+                    enum:
+                      - 3.0.3
                   info:
                     type: object
                   paths:
@@ -2405,6 +2410,8 @@ components:
             - oidc_m2m
         keyId:
           type: string
+        resourceAccess:
+          $ref: '#/components/schemas/KeyResources'
       required:
         - tenantId
         - principalId
@@ -3408,6 +3415,27 @@ components:
         - contextFingerprint
         - fingerprintSemantics
         - limits
+      additionalProperties: false
+    KeyResources:
+      type: object
+      description: >-
+        Categoria omitida permite todos os recursos autorizados; array vazio não permite nenhum.
+        Chaves restritas usam integrations/v1.
+      properties:
+        agentIds:
+          type: array
+          maxItems: 2000
+          items:
+            type: string
+            minLength: 1
+            maxLength: 512
+        projectIds:
+          type: array
+          maxItems: 2000
+          items:
+            type: string
+            minLength: 1
+            maxLength: 512
       additionalProperties: false
 security:
   - TenantExecutionKey: []

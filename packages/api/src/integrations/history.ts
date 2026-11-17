@@ -1,3 +1,4 @@
+import { keyHistoryFilter } from './resources';
 import mongoose from 'mongoose';
 import type { RequestHandler } from 'express';
 import type { IntegrationReaders } from './reads';
@@ -62,6 +63,7 @@ export function createIntegrationHistory(readers: IntegrationReaders): {
     const rows = await mongoose.models.Conversation.find({
       user: req.user.id,
       tenantId: req.user.tenantId,
+      ...keyHistoryFilter(req),
       ...(projectId ? { projectId } : {}),
       ...(agentId ? { agent_id: agentId } : {}),
       ...historyBoundary(req, 'conversationId', { projectId, agentId }),
@@ -112,6 +114,7 @@ export function createIntegrationHistory(readers: IntegrationReaders): {
       conversationId: req.params.id,
       user: req.user.id,
       tenantId: req.user.tenantId,
+      ...keyHistoryFilter(req),
     });
     if (!convo) throw notFound();
     const rows = await mongoose.models.Message.find({

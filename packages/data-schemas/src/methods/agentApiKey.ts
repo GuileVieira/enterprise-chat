@@ -1,3 +1,4 @@
+import type { TApiKeyResources } from 'librechat-data-provider';
 import type { Types } from 'mongoose';
 import type {
   AgentApiKeyCreateResult,
@@ -14,9 +15,13 @@ const API_KEY_LENGTH = 32;
 
 export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
   createAgentApiKey: (data: AgentApiKeyCreateData) => Promise<AgentApiKeyCreateResult>;
-  validateAgentApiKey: (
-    apiKey: string,
-  ) => Promise<{ userId: Types.ObjectId; keyId: Types.ObjectId } | null>;
+  validateAgentApiKey: (apiKey: string) => Promise<{
+    userId: Types.ObjectId;
+    keyId: Types.ObjectId;
+    tenantId?: string;
+    scope?: 'tenant';
+    resourceAccess?: TApiKeyResources;
+  } | null>;
   listAgentApiKeys: (userId: string | Types.ObjectId) => Promise<AgentApiKeyListItem[]>;
   deleteAgentApiKey: (
     keyId: string | Types.ObjectId,
@@ -29,6 +34,11 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
   ) => Promise<AgentApiKeyListItem | null>;
   listTenantApiKeys: (tenantId: string) => Promise<AgentApiKeyListItem[]>;
   deleteTenantApiKey: (tenantId: string, id: string) => Promise<boolean>;
+  updateTenantApiKeyResources: (
+    tenantId: string,
+    id: string,
+    access?: TApiKeyResources,
+  ) => Promise<boolean>;
 } {
   async function generateApiKey(): Promise<{ key: string; keyHash: string; keyPrefix: string }> {
     const randomPart = await getRandomValues(API_KEY_LENGTH);
@@ -46,6 +56,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
       const apiKeyDoc = await AgentApiKey.create({
         userId: data.userId,
         scope: data.scope,
+        resourceAccess: data.scope === 'tenant' ? data.resourceAccess : undefined,
         tenantId: data.tenantId,
         name: data.name,
         keyHash,
@@ -60,6 +71,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
         key,
         createdAt: apiKeyDoc.createdAt,
         expiresAt: apiKeyDoc.expiresAt,
+        resourceAccess: apiKeyDoc.resourceAccess,
       };
     } catch (error) {
       logger.error('[createAgentApiKey] Error creating API key:', error);
@@ -72,6 +84,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
     keyId: Types.ObjectId;
     tenantId?: string;
     scope?: 'tenant';
+    resourceAccess?: TApiKeyResources;
   } | null> {
     try {
       return await runAsSystem(async () => {
@@ -106,6 +119,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
           keyId: keyDoc._id as Types.ObjectId,
           tenantId: keyDoc.tenantId,
           scope: keyDoc.scope,
+          resourceAccess: keyDoc.resourceAccess,
         };
       });
     } catch (error) {
@@ -126,6 +140,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
         name: key.name,
         keyPrefix: key.keyPrefix,
         lastUsedAt: key.lastUsedAt,
+        resourceAccess: key.resourceAccess,
         expiresAt: key.expiresAt,
         createdAt: key.createdAt,
       }));
@@ -201,6 +216,7 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
       createdAt: key.createdAt,
       expiresAt: key.expiresAt,
       lastUsedAt: key.lastUsedAt,
+      resourceAccess: key.resourceAccess,
     }));
   }
 
@@ -213,7 +229,21 @@ export function createAgentApiKeyMethods(mongoose: typeof import('mongoose')): {
     return result.deletedCount > 0;
   }
 
+  async function updateTenantApiKeyResources(
+    tenantId: string,
+    id: string,
+    access?: TApiKeyResources,
+  ): Promise<boolean> {
+    const result = await mongoose.models.AgentApiKey.updateOne(
+      { _id: id, tenantId, scope: 'tenant' },
+      access ? { $set: { resourceAccess: access } } : { $unset: { resourceAccess: 1 } },
+      { runValidators: true },
+    );
+    return result.matchedCount === 1;
+  }
+
   return {
+    updateTenantApiKeyResources,
     listTenantApiKeys,
     deleteTenantApiKey,
     createAgentApiKey,

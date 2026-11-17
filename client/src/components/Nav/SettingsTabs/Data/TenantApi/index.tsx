@@ -5,6 +5,7 @@ import {
   OGDialog,
   OGDialogContent,
   OGDialogTitle,
+  OGDialogDescription,
   OGDialogTrigger,
 } from '@librechat/client';
 import { useAuthContext, useLocalize } from '~/hooks';
@@ -29,11 +30,19 @@ export default function TenantApi({ tenantId: targetTenant }: { tenantId?: strin
             {localize('com_ui_manage')}
           </Button>
         </OGDialogTrigger>
-        <OGDialogContent className="max-h-[85vh] w-11/12 max-w-3xl overflow-y-auto bg-background text-text-primary">
-          <OGDialogTitle>{localize('com_ui_tenant_api_title')}</OGDialogTitle>
-          <p className="break-all text-sm text-text-secondary">{tenantId}</p>
+        <OGDialogContent className="flex max-h-[90dvh] w-11/12 max-w-4xl flex-col gap-0 overflow-hidden bg-surface-dialog p-0 text-text-primary">
+          <header className="shrink-0 space-y-1 border-b border-border-light px-6 py-5 pr-12">
+            <OGDialogTitle>{localize('com_ui_tenant_api_title')}</OGDialogTitle>
+            <OGDialogDescription className="text-sm text-text-secondary">
+              {localize('com_ui_tenant_api_intro')}
+            </OGDialogDescription>
+            <p className="break-all text-xs text-text-secondary">{tenantId}</p>
+          </header>
           {open && (
-            <div key={tenantId} className="space-y-5">
+            <div
+              key={tenantId}
+              className="min-h-0 space-y-6 overflow-y-auto overscroll-contain p-6"
+            >
               <Keys tenantId={tenantId} />
               <Catalog tenantId={tenantId} />
             </div>

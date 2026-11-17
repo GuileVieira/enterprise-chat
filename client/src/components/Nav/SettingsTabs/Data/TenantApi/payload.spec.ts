@@ -1,5 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { tenantApiCommand, tenantApiPayload, tenantProjectsCsv } from './payload';
+import {
+  tenantApiCommand,
+  tenantApiPayload,
+  tenantApiReadCommand,
+  tenantProjectsCsv,
+} from './payload';
 
 it('copies agent + project context with no credential in the payload or example', () => {
   const payload = tenantApiPayload('agent-1', 'project-1', 'Use project context');
@@ -50,4 +55,12 @@ it('exports every project with CSV escaping and neutralizes spreadsheet formulas
     ]),
   ).toBe('projectId,name\r\n"one","A, ""B""\nC"\r\n"two","\'=1+1"');
   expect(tenantProjectsCsv([])).toBe('projectId,name');
+});
+
+it('copies a read-only REST request with an environment token placeholder', () => {
+  const command = tenantApiReadCommand('https://orqest.test/api/integrations/v1/openapi.json');
+  expect(command).toContain('Authorization: Bearer $TENANT_API_KEY');
+  expect(command).toContain('/api/integrations/v1/openapi.json');
+  expect(command).not.toContain('--data');
+  expect(command).not.toContain('chat/completions');
 });

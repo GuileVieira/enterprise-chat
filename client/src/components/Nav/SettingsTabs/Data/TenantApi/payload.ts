@@ -26,3 +26,9 @@ export function tenantProjectsCsv(projects: { projectId: string; name: string }[
     ),
   ].join('\r\n');
 }
+
+/** A read-only REST example; no agent/model runtime or credential is embedded. */
+export function tenantApiReadCommand(endpoint: string): string {
+  const quote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`;
+  return `curl --fail-with-body ${quote(endpoint)} \\\n  -H "Authorization: Bearer $TENANT_API_KEY"`;
+}

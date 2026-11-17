@@ -1,3 +1,4 @@
+import { keyResourceIds, restrictedKey } from './resources';
 import mongoose, { Types } from 'mongoose';
 import { isMemoryEnabled } from '@librechat/data-schemas';
 import {
@@ -115,6 +116,9 @@ export function createIntegrationContent(readers: IntegrationReaders): Integrati
       const projects = await mongoose.models.Project.find({
         tenantId: req.user.tenantId,
         promptGroupIds: String(group._id),
+        ...(keyResourceIds(req, 'projectIds')
+          ? { projectId: { $in: keyResourceIds(req, 'projectIds') } }
+          : {}),
       }).lean<IntegrationProject[]>();
       for (const project of projects) {
         if (await readers.allowed(req, ResourceType.PROJECT, project._id, PermissionBits.VIEW)) {
@@ -123,6 +127,7 @@ export function createIntegrationContent(readers: IntegrationReaders): Integrati
         }
       }
     }
+    if (!inherited && keyResourceIds(req, 'projectIds')) throw notFound();
     if (!inherited) {
       await readers.feature(req, PermissionTypes.PROMPTS);
       if (!(await readers.allowed(req, ResourceType.PROMPTGROUP, group._id, PermissionBits.VIEW)))
@@ -279,6 +284,8 @@ export function createIntegrationContent(readers: IntegrationReaders): Integrati
       memories: integrationHandler(async (req) => {
         assertQuery(req, ['agentId']);
         const agentId = scalar(req.query.agentId);
+        if (!agentId && restrictedKey(req))
+          throw new IntegrationError(403, 'resource_scope_required', 'Select an authorized agent');
         return paginate(req, await personalMemories(req, agentId, true), (row) => row.id, {
           agentId,
         });

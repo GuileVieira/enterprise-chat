@@ -1,3 +1,4 @@
+import { assertKeyResource, keyResourceIds } from './resources';
 import mongoose, { Types } from 'mongoose';
 import { ResourceCapabilityMap } from '@librechat/data-schemas';
 import {
@@ -93,6 +94,7 @@ export interface IntegrationReaders {
   ): Promise<boolean>;
   agent(req: IntegrationRequest, id: string, execution?: boolean): Promise<IAgent>;
   memoryAgent(req: IntegrationRequest, id: string): Promise<void>;
+  scopedAgents(req: IntegrationRequest): Promise<IAgent[]>;
   project(req: IntegrationRequest, id: string, bits?: PermissionBits): Promise<IntegrationProject>;
   files(
     req: IntegrationRequest,
@@ -150,6 +152,7 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     });
   }
   async function agent(req: IntegrationRequest, id: string, execution = false): Promise<IAgent> {
+    assertKeyResource(req, 'agentIds', id);
     await feature(req, execution ? PermissionTypes.REMOTE_AGENTS : PermissionTypes.AGENTS);
     const row = await mongoose.models.Agent.findOne({
       id,
@@ -176,6 +179,7 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     return row;
   }
   async function memoryAgent(req: IntegrationRequest, id: string) {
+    assertKeyResource(req, 'agentIds', id);
     const access = await getAgentMemoryPartitionAccess({
       req,
       user: req.user,
@@ -203,6 +207,7 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       ],
     }).lean<IntegrationProject>();
     if (!row || !(await allowed(req, ResourceType.PROJECT, row._id, bits))) throw notFound();
+    assertKeyResource(req, 'projectIds', row.projectId);
     return row;
   }
   function agentView(req: IntegrationRequest, row: IAgent) {
@@ -291,7 +296,12 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       execution,
     );
     const authorized = rows.filter(
-      (file) => projectFiles.has(file.file_id) || access.has(file.file_id),
+      (file) =>
+        (projectFiles.has(file.file_id) || access.has(file.file_id)) &&
+        (!file.projectId ||
+          !keyResourceIds(req, 'projectIds') ||
+          keyResourceIds(req, 'projectIds')!.includes(file.projectId) ||
+          projectFiles.has(file.file_id)),
     );
     const authorizedIds = new Set(authorized.map((file) => file.file_id));
     return authorized.map((file) => {
@@ -330,10 +340,11 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       indexStatus: 'unknown',
     };
   };
-  const handlers = {
-    identity: integrationHandler(async (req) => ({ ...req.integrationAuth })),
-    agents: integrationHandler(async (req) => {
-      assertQuery(req);
+  const agentCache = new WeakMap<IntegrationRequest, Promise<IAgent[]>>();
+  function scopedAgents(req: IntegrationRequest): Promise<IAgent[]> {
+    const cached = agentCache.get(req);
+    if (cached) return cached;
+    const pending = (async () => {
       await feature(req, PermissionTypes.AGENTS);
       const cap = ResourceCapabilityMap[ResourceType.AGENT];
       const manages = cap && (await deps.hasCapability(req.user, cap).catch(() => false));
@@ -347,6 +358,9 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
           });
       const accessible = await mongoose.models.Agent.find({
         tenantId: req.user.tenantId,
+        ...(keyResourceIds(req, 'agentIds')
+          ? { id: { $in: keyResourceIds(req, 'agentIds') } }
+          : {}),
         ...(ids ? { _id: { $in: ids } } : {}),
       })
         .limit(2001)
@@ -357,9 +371,18 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
           'scope_too_large',
           'Accessible resource scope exceeds 2000 records',
         );
+      return accessible;
+    })();
+    agentCache.set(req, pending);
+    return pending;
+  }
+  const handlers = {
+    identity: integrationHandler(async (req) => ({ ...req.integrationAuth })),
+    agents: integrationHandler(async (req) => {
+      assertQuery(req);
       return paginate(
         req,
-        accessible.map((row) => agentView(req, row)),
+        (await scopedAgents(req)).map((row) => agentView(req, row)),
         (row) => row.id,
       );
     }),
@@ -374,6 +397,9 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       });
       const accessible = await mongoose.models.Project.find({
         tenantId: req.user.tenantId,
+        ...(keyResourceIds(req, 'projectIds')
+          ? { projectId: { $in: keyResourceIds(req, 'projectIds') } }
+          : {}),
         _id: { $in: ids },
       })
         .limit(2001)
@@ -416,6 +442,7 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     allowed,
     agent,
     memoryAgent,
+    scopedAgents,
     project,
     files,
     fileView,

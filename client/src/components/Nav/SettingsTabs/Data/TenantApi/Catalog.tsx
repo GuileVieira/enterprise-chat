@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, useToastContext } from '@librechat/client';
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+  useToastContext,
+} from '@librechat/client';
 import { apiBaseUrl, dataService, QueryKeys } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
-import { tenantApiCommand, tenantApiPayload, tenantProjectsCsv } from './payload';
+import { tenantApiReadCommand, tenantProjectsCsv } from './payload';
 
 export default function Catalog({ tenantId }: { tenantId: string }) {
   const localize = useLocalize();
+  const id = useId();
   const { showToast } = useToastContext();
   const [agentId, setAgentId] = useState('');
   const [projectId, setProjectId] = useState('');
@@ -15,20 +25,15 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
     queryFn: () => dataService.getTenantApiCatalog(tenantId),
     retry: false,
   });
-  const selectedAgent =
-    data?.agents.find((agent) => agent.id === agentId)?.id ?? data?.agents[0]?.id ?? '';
-  const apiAvailable =
-    data?.agents.find((agent) => agent.id === selectedAgent)?.apiAvailable !== false;
+  const selectedAgent = data?.agents.find((agent) => agent.id === agentId)?.id ?? '';
   const selectedProject = data?.projects.some((project) => project.projectId === projectId)
     ? projectId
     : '';
-  const payload = tenantApiPayload(
-    selectedAgent,
-    selectedProject,
-    localize('com_ui_tenant_api_prompt'),
-  );
-  const endpoint = `${window.location.origin}${apiBaseUrl()}/api/agents/v1/chat/completions`;
-
+  const origin = `${window.location.origin}${apiBaseUrl()}/api/integrations/v1`;
+  const endpoint = selectedAgent
+    ? `${origin}/agents/${encodeURIComponent(selectedAgent)}/context${selectedProject ? `?projectId=${encodeURIComponent(selectedProject)}` : ''}`
+    : `${origin}/openapi.json`;
+  const command = tenantApiReadCommand(endpoint);
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -37,122 +42,114 @@ export default function Catalog({ tenantId }: { tenantId: string }) {
       showToast({ message: localize('com_ui_tenant_api_copy_error'), status: 'error' });
     }
   }
-
-  if (isLoading) return <p role="status">{localize('com_ui_loading')}</p>;
-  if (isError) return <p role="alert">{localize('com_ui_tenant_api_catalog_error')}</p>;
-
   return (
-    <section className="space-y-3 border-t border-border-light pt-4">
-      <h3 className="font-semibold">{localize('com_ui_tenant_api_catalog')}</h3>
-      <p className="text-sm text-text-secondary">{localize('com_ui_tenant_api_context')}</p>
-      <label className="block space-y-1">
-        <span>{localize('com_ui_tenant_api_agent')}</span>
-        <select
-          className="w-full rounded-lg border border-border-medium bg-background p-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
-          value={selectedAgent}
-          onChange={(event) => setAgentId(event.target.value)}
-        >
-          {!data?.agents.length && (
-            <option value="">{localize('com_ui_tenant_api_no_agents')}</option>
-          )}
-          {data?.agents.map((agent) => (
-            <option key={agent.id} value={agent.id}>
-              {agent.name} — {agent.id}
-              {agent.apiAvailable === false
-                ? ` — ${localize('com_ui_tenant_api_shared_only')}`
-                : ''}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex flex-wrap items-center gap-2">
-        <code className="break-all text-xs">{selectedAgent}</code>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={!selectedAgent}
-          onClick={() => copy(selectedAgent)}
-        >
-          {localize('com_ui_tenant_api_copy_agent')}
-        </Button>
+    <section className="space-y-4 border-t border-border-light pt-5">
+      <div className="space-y-1">
+        <h3 className="font-semibold">{localize('com_ui_tenant_api_how_to')}</h3>
+        <p className="text-sm text-text-secondary">{localize('com_ui_tenant_api_rest_hint')}</p>
       </div>
-      <label className="block space-y-1">
-        <span>{localize('com_ui_tenant_api_project')}</span>
-        <select
-          className="w-full rounded-lg border border-border-medium bg-background p-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
-          value={selectedProject}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          <option value="">{localize('com_ui_tenant_api_no_project')}</option>
-          {data?.projects.map((project) => (
-            <option key={project.projectId} value={project.projectId}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={!data?.projects.length}
-        onClick={() => copy(tenantProjectsCsv(data?.projects ?? []))}
-      >
-        {localize('com_ui_tenant_api_copy_projects_csv')}
-      </Button>
-      <ul className="max-h-48 space-y-2 overflow-y-auto">
-        {data?.projects.map((project) => (
-          <li
-            key={project.projectId}
-            className="flex items-center justify-between gap-2 rounded-lg border border-border-light p-2"
-          >
-            <div className="min-w-0">
-              <p className="break-words">{project.name}</p>
-              <code className="break-all text-xs text-text-secondary">{project.projectId}</code>
+      <details className="rounded-xl border border-border-light bg-surface-primary p-3">
+        <summary className="cursor-pointer text-sm font-medium">
+          {localize('com_ui_tenant_api_context_example')}
+        </summary>
+        <p className="my-3 text-sm text-text-secondary">
+          {localize('com_ui_tenant_api_example_hint')}
+        </p>
+        {isLoading && <p role="status">{localize('com_ui_loading')}</p>}
+        {isError && <p role="alert">{localize('com_ui_tenant_api_catalog_error')}</p>}
+        {data && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0 space-y-1">
+              <label className="text-sm" htmlFor={`${id}-agent`}>
+                {localize('com_ui_tenant_api_agent')}
+              </label>
+              <Select
+                value={selectedAgent || '__document__'}
+                onValueChange={(value) => setAgentId(value === '__document__' ? '' : value)}
+              >
+                <SelectTrigger
+                  id={`${id}-agent`}
+                  className="bg-surface-secondary text-text-primary"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__document__">
+                    {localize('com_ui_tenant_api_openapi')}
+                  </SelectItem>
+                  {data.agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => copy(project.projectId)}
-              aria-label={`${localize('com_ui_tenant_api_copy_id')}: ${project.name}`}
-            >
-              {localize('com_ui_tenant_api_copy_id')}
+            <div className="min-w-0 space-y-1">
+              <label className="text-sm" htmlFor={`${id}-project`}>
+                {localize('com_ui_tenant_api_project')}
+              </label>
+              <Select
+                value={selectedProject || '__none__'}
+                onValueChange={(value) => setProjectId(value === '__none__' ? '' : value)}
+                disabled={!selectedAgent}
+              >
+                <SelectTrigger
+                  id={`${id}-project`}
+                  className="bg-surface-secondary text-text-primary"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">
+                    {localize('com_ui_tenant_api_no_project')}
+                  </SelectItem>
+                  {data.projects.map((project) => (
+                    <SelectItem key={project.projectId} value={project.projectId}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+        {selectedAgent && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+            <code className="break-all">{selectedAgent}</code>
+            <Button type="button" size="sm" variant="outline" onClick={() => copy(selectedAgent)}>
+              {localize('com_ui_tenant_api_copy_agent')}
             </Button>
-          </li>
-        ))}
-      </ul>
-      {!data?.projects.length && <p>{localize('com_ui_tenant_api_no_projects')}</p>}
-      <label className="block space-y-1">
-        <span>{localize('com_ui_tenant_api_payload')}</span>
-        <textarea
+          </div>
+        )}
+        {data?.projects.length ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            onClick={() => copy(tenantProjectsCsv(data.projects))}
+          >
+            {localize('com_ui_tenant_api_copy_projects_csv')}
+          </Button>
+        ) : null}
+      </details>
+      <label className="block space-y-2 text-sm">
+        <span>{localize('com_ui_tenant_api_request_example')}</span>
+        <Textarea
           readOnly
-          value={payload}
-          rows={10}
-          className="w-full rounded-lg border border-border-medium bg-background p-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring-primary focus:ring-offset-2"
+          value={command}
+          rows={5}
+          spellCheck={false}
+          className="min-h-28 resize-y bg-surface-secondary font-mono text-sm leading-6 text-text-primary"
         />
       </label>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!selectedAgent || !apiAvailable}
-          onClick={() => copy(payload)}
-        >
-          {localize('com_ui_tenant_api_copy_payload')}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={!selectedAgent || !apiAvailable}
-          onClick={() => copy(tenantApiCommand(endpoint, payload))}
-        >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-text-secondary">{localize('com_ui_tenant_api_token_hint')}</p>
+        <Button type="button" variant="outline" onClick={() => copy(command)}>
           {localize('com_ui_tenant_api_copy_curl')}
         </Button>
       </div>
-      <p className="text-xs text-text-secondary">{localize('com_ui_tenant_api_token_hint')}</p>
-      <code className="block break-all text-xs">{`GET ${apiBaseUrl()}/api/agents/v1/catalog`}</code>
     </section>
   );
 }

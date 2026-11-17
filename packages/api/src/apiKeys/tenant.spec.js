@@ -31,6 +31,7 @@ app.use('/keys', async (req, res, next) => {
 app.get('/keys/catalog', handlers.manage);
 app.get('/keys', handlers.manage);
 app.post('/keys', handlers.manage);
+app.patch('/keys/:id', handlers.manage);
 app.delete('/keys/:id', handlers.manage);
 app.use(
   '/remote',
@@ -131,6 +132,45 @@ it('allows only OWNER of the target tenant or ADMIN to manage tenant keys', asyn
   const key = await db.validateAgentApiKey(result.body.key);
   const principal = await runAsSystem(() => db.findUser({ _id: key.userId }));
   expect(principal).toMatchObject({ role: 'OWNER', tenantId: 'tenant-b' });
+});
+
+it('persists resource choices, updates existing keys and rejects foreign resource IDs or cross-tenant edits', async () => {
+  const created = await request(app)
+    .post('/keys?tenantId=tenant-a')
+    .set('X-Test-User', 'owner-a@test.local')
+    .send({ name: 'Scoped', resourceAccess: { agentIds: ['agent-tenant-a'], projectIds: [] } })
+    .expect(201);
+  expect((await db.validateAgentApiKey(created.body.key)).resourceAccess).toEqual({
+    agentIds: ['agent-tenant-a'],
+    projectIds: [],
+  });
+  await request(app)
+    .get('/remote/catalog')
+    .set('Authorization', `Bearer ${created.body.key}`)
+    .expect(403);
+  const patch = (tenantId, actor, resourceAccess) =>
+    request(app)
+      .patch(`/keys/${created.body.id}?tenantId=${tenantId}`)
+      .set('X-Test-User', actor)
+      .send({ resourceAccess });
+  await patch('tenant-a', 'member@test.local', {}).expect(403);
+  await patch('tenant-b', 'owner-b@test.local', {}).expect(404);
+  await patch('tenant-a', 'owner-a@test.local', { projectIds: ['project-tenant-b'] }).expect(400);
+  await patch('tenant-a', 'owner-a@test.local', {
+    agentIds: [],
+    projectIds: ['project-tenant-a'],
+  }).expect(200);
+  const listed = await request(app)
+    .get('/keys?tenantId=tenant-a')
+    .set('X-Test-User', 'owner-a@test.local')
+    .expect(200);
+  expect(listed.body.keys[0].resourceAccess).toEqual({
+    agentIds: [],
+    projectIds: ['project-tenant-a'],
+  });
+  expect(listed.body.keys[0]).not.toHaveProperty('keyHash');
+  await patch('tenant-a', 'owner-a@test.local', null).expect(200);
+  expect((await db.validateAgentApiKey(created.body.key)).resourceAccess).toBeUndefined();
 });
 
 it('stores only a hash, exposes no secret in catalogs/listing and revokes within the target tenant', async () => {

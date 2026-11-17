@@ -1,5 +1,11 @@
+import type { TApiKeyResources } from 'librechat-data-provider';
 import { logger, runAsSystem } from '@librechat/data-schemas';
-import { ResourceType, PermissionBits, hasPermissions } from 'librechat-data-provider';
+import {
+  ResourceType,
+  PermissionBits,
+  hasPermissions,
+  apiKeyResourcesSchema,
+} from 'librechat-data-provider';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import type { IUser } from '@librechat/data-schemas';
 import type { Types } from 'mongoose';
@@ -7,11 +13,13 @@ import { tenantContextMiddleware } from '../middleware/tenant';
 import { getRemoteAgentPermissions } from './service';
 
 export interface ApiKeyAuthDependencies {
+  allowRestrictedKeys?: boolean;
   validateAgentApiKey: (apiKey: string) => Promise<{
     userId: Types.ObjectId;
     keyId: Types.ObjectId;
     tenantId?: string;
     scope?: 'tenant';
+    resourceAccess?: TApiKeyResources;
   } | null>;
   findUser: (query: { _id: string | Types.ObjectId }) => Promise<IUser | null>;
   isPrincipalActive: (userId: string) => Promise<boolean>;
@@ -34,6 +42,7 @@ export interface ApiKeyAuthRequest extends Request {
   apiKeyId?: Types.ObjectId;
   tenantId?: string;
   tenantApiKey?: boolean;
+  resourceAccess?: TApiKeyResources;
 }
 
 export interface RemoteAgentAccessRequest extends ApiKeyAuthRequest {
@@ -86,6 +95,18 @@ export function createRequireApiKeyAuth(deps: ApiKeyAuthDependencies) {
         });
       }
 
+      if (keyValidation.resourceAccess !== undefined) {
+        const access = apiKeyResourcesSchema.safeParse(keyValidation.resourceAccess);
+        if (!access.success) return res.status(401).json({ error: { code: 'invalid_api_key' } });
+        const restricted =
+          access.data.agentIds !== undefined || access.data.projectIds !== undefined;
+        if (restricted && !deps.allowRestrictedKeys) {
+          return res
+            .status(403)
+            .json({ error: { code: 'restricted_key_requires_integrations_api' } });
+        }
+        req.resourceAccess = access.data;
+      }
       const userId = keyValidation.userId.toString();
       const [user, principalActive] = await runAsSystem(() =>
         Promise.all([deps.findUser({ _id: keyValidation.userId }), deps.isPrincipalActive(userId)]),

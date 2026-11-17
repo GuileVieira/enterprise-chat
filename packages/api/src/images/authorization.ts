@@ -305,8 +305,20 @@ async function canViewAgentAvatar(
   }
 
   const viewer = await runAsSystem(() => deps.getUserById(viewerId, 'role tenantId idOnTheSource'));
-  if (!viewer || viewer.tenantId !== owner.tenantId) {
+  if (!viewer) {
     return deps.hasPermission(publicPrincipal, ResourceType.AGENT, agent._id, PermissionBits.VIEW);
+  }
+
+  if (viewer.tenantId !== owner.tenantId) {
+    // Cross-tenant shares use explicit identities; roles/groups remain local to their tenant.
+    const sharedPrincipals: Principal[] = [
+      { principalType: PrincipalType.USER, principalId: viewerId },
+      ...(viewer.tenantId
+        ? [{ principalType: PrincipalType.TENANT, principalId: viewer.tenantId }]
+        : []),
+      ...publicPrincipal,
+    ];
+    return deps.hasPermission(sharedPrincipals, ResourceType.AGENT, agent._id, PermissionBits.VIEW);
   }
 
   const principals = await loadPrincipals(viewerId, viewer, deps);

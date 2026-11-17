@@ -14,7 +14,7 @@ export type IntegrationAuthDeps = AgentManagementAuthDeps &
     getRoleByName: AgentManagementReadDeps['getRoleByName'];
   };
 export function createIntegrationAuth(deps: IntegrationAuthDeps): RequestHandler {
-  const apiKey = createRequireApiKeyAuth(deps);
+  const apiKey = createRequireApiKeyAuth({ ...deps, allowRestrictedKeys: true });
   const management = createAgentManagementAuth(deps);
   return async (base, res, next) => {
     const req = base as IntegrationRequest & ApiKeyAuthRequest;
@@ -73,6 +73,7 @@ export function createIntegrationAuth(deps: IntegrationAuthDeps): RequestHandler
         req.integrationAuth = {
           method: keyMethod ? 'tenant_api_key' : 'oidc_m2m',
           principalId: req.user.id,
+          ...(req.resourceAccess ? { resourceAccess: req.resourceAccess } : {}),
           tenantId: req.user.tenantId,
           ...(keyMethod ? { keyId: req.apiKeyId?.toString() } : {}),
         };
