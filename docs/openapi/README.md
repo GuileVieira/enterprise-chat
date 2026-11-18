@@ -27,7 +27,8 @@ Aceita uma das credenciais existentes no header `Authorization: Bearer …`:
 
 - **Chave tenant:** pertence a OWNER ativo, no mesmo tenant e com papel OWNER. Chave individual,
   revogada, expirada ou de usuário desativado não autentica esta superfície. A configuração efetiva
-  precisa permitir API keys e o papel precisa ter `REMOTE_AGENTS USE`.
+  precisa permitir API keys. `/identity` e `/openapi.json` não exigem execução remota; leituras
+  seguem as permissões e ACLs de cada recurso. Executar tools exige `REMOTE_AGENTS USE`.
 - **OIDC M2M de gestão:** configuração existente `endpoints.agents.managementApi.auth`, com
   issuer/audience, client binding e subject esperados. Usa o principal configurado naquele tenant.
   Não corresponde ao OIDC remoto de usuário nem a sessão do navegador.

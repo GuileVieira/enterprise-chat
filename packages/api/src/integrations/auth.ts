@@ -1,18 +1,12 @@
-import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { RequestHandler } from 'express';
 import type { AgentManagementAuthDeps } from '../middleware/management';
 import type { ApiKeyAuthDependencies, ApiKeyAuthRequest } from '../apiKeys/middleware';
-import type { AgentManagementReadDeps } from '../agents/reads';
 import type { IntegrationRequest } from './contracts';
 import { createAgentManagementAuth } from '../middleware/management';
 import { createRequireApiKeyAuth } from '../apiKeys/middleware';
-import { checkAccessWithRequestCache } from '../middleware/access';
 import { extractBearerToken } from '../auth/oidc';
 
-export type IntegrationAuthDeps = AgentManagementAuthDeps &
-  ApiKeyAuthDependencies & {
-    getRoleByName: AgentManagementReadDeps['getRoleByName'];
-  };
+export type IntegrationAuthDeps = AgentManagementAuthDeps & ApiKeyAuthDependencies;
 export function createIntegrationAuth(deps: IntegrationAuthDeps): RequestHandler {
   const apiKey = createRequireApiKeyAuth({ ...deps, allowRestrictedKeys: true });
   const management = createAgentManagementAuth(deps);
@@ -56,17 +50,6 @@ export function createIntegrationAuth(deps: IntegrationAuthDeps): RequestHandler
           res
             .status(403)
             .json({ error: { code: 'api_keys_disabled', message: 'API keys disabled' } });
-          return;
-        }
-        const allowed = await checkAccessWithRequestCache({
-          req,
-          user: req.user,
-          permissionType: PermissionTypes.REMOTE_AGENTS,
-          permissions: [Permissions.USE],
-          getRoleByName: deps.getRoleByName,
-        });
-        if (!allowed) {
-          res.status(403).json({ error: { code: 'permission_denied', message: 'Access denied' } });
           return;
         }
         req.config = config;

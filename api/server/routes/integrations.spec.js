@@ -470,7 +470,8 @@ it('actual router revalidates remote grants and role on every call; conflicts an
     ),
   );
   await getLogStores(CacheKeys.ROLES).clear();
-  await get('/identity').expect(403);
+  await get('/identity').expect(200);
+  await call('fn-read', { agentId: 'remote-only', arguments: { count: 1 } }).expect(403);
   expect(calls).toHaveLength(0);
 });
 
@@ -625,3 +626,23 @@ it.each([undefined, 'orqest'])(
     expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-hidden');
   },
 );
+
+it('allows authenticated discovery and authorized reads with remote execution disabled; tool calls remain denied', async () => {
+  await runAsSystem(async () => {
+    await mongoose.models.Role.updateOne(
+      { name: 'OWNER' },
+      { $set: { 'permissions.REMOTE_AGENTS.USE': false } },
+    );
+  });
+  await getLogStores(CacheKeys.ROLES).clear();
+  await get('/identity').expect(200);
+  await get('/openapi.json').expect(200);
+  await get('/agents/export-only').expect(200);
+  await get('/projects').expect(200);
+  await call('fn-read', { agentId: 'remote-only', arguments: { count: 1 } }).expect(403);
+  expect(calls).toHaveLength(0);
+  await request(app)
+    .get('/api/integrations/v1/identity')
+    .set('Authorization', 'Bearer sk-invalid')
+    .expect(401);
+});

@@ -3661,7 +3661,7 @@
       "TenantExecutionKey": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Somente chave tenant existente: OWNER ativo, mesmo tenant/papel, configuração efetiva apiKey e REMOTE_AGENTS USE. Chave individual/sessão do browser não aceita. Sem scopes finos novos."
+        "description": "Somente chave tenant existente: OWNER ativo, mesmo tenant/papel, configuração efetiva apiKey habilitada. Descoberta e leituras seguem autorização de cada recurso; somente execução de tools exige REMOTE_AGENTS USE. Chave individual/sessão do browser não aceita."
       },
       "ManagementOidc": {
         "type": "http",
