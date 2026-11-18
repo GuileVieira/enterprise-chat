@@ -1,7 +1,13 @@
 import path from 'path';
 import JSZip from 'jszip';
 import crypto from 'crypto';
-import { logger } from '@librechat/data-schemas';
+import {
+  logger,
+  validateSkillName,
+  validateSkillDescription,
+  validateSkillBody,
+  validateSkillFrontmatter,
+} from '@librechat/data-schemas';
 import {
   ResourceType,
   AccessRoleIds,
@@ -321,7 +327,7 @@ function blockUninspectableImportFile(req: ServerRequest, res: Response): boolea
  * Creates the skill, then processes additional files individually.
  * Grants SKILL_OWNER to the uploader.
  */
-export function createImportHandler(deps: ImportSkillDeps) {
+export function createImportHandler(deps: ImportSkillDeps, options?: { previewOnly?: boolean }) {
   return async function importSkillHandler(req: ServerRequest, res: Response): Promise<Response> {
     const { file } = req;
     if (!file) {
@@ -332,10 +338,13 @@ export function createImportHandler(deps: ImportSkillDeps) {
 
     try {
       if (ext === '.md') {
+        if (options?.previewOnly) {
+          return res.status(400).json({ error: 'Archive required' });
+        }
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
-        return await handleZip(req, res, deps, file);
+        return await handleZip(req, res, deps, file, options?.previewOnly);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
@@ -489,6 +498,7 @@ async function handleMarkdown(
     name: inferredName,
     description: description || inferredName,
     body: content,
+    frontmatter,
     author: authorId,
     authorName,
     alwaysApply,
@@ -801,6 +811,7 @@ async function handleZip(
   res: Response,
   deps: ImportSkillDeps,
   file: Express.Multer.File,
+  previewOnly = false,
 ) {
   const userId = req.user.id;
   const limits = getImportLimits(resolveImportLimits(deps.limits, req));
@@ -993,11 +1004,30 @@ async function handleZip(
     }
   }
 
+  if (previewOnly) {
+    const issues = [
+      ...validateSkillName(inferredName),
+      ...validateSkillDescription(description || inferredName),
+      ...validateSkillBody(skillMdContent),
+      ...validateSkillFrontmatter(frontmatter),
+    ].filter((issue) => issue.severity !== 'warning');
+    if (issues.length > 0) {
+      return res.status(400).json({ error: 'Validation failed', issues });
+    }
+    const scan = await scanArchiveFiles(zip, prefix, limits, {}, skillMdBytes);
+    const errors = scan.results.filter((item) => item.status === 'error');
+    if (errors.length > 0) {
+      return res.status(400).json({ error: 'Invalid skill files', errors });
+    }
+    return res.status(200).json({ name: inferredName });
+  }
+
   const { authorId, authorName, tenantId } = getAuthorInfo(req);
   const result = await deps.createSkill({
     name: inferredName,
     description: description || inferredName,
     body: skillMdContent,
+    frontmatter,
     author: authorId,
     authorName,
     alwaysApply,

@@ -4,7 +4,24 @@ import { Types } from 'mongoose';
 import type { Response } from 'express';
 import type { ISkill, ISkillFile } from '@librechat/data-schemas';
 import type { ServerRequest } from '~/types';
-import { createExportSkillsHandler } from './export';
+import { buildSkillMarkdown, createExportSkillsHandler } from './export';
+import { parseSkillMarkdown } from './parse';
+
+it('keeps exported frontmatter canonical and stable across export/import cycles', () => {
+  const skill = makeSkill(new Types.ObjectId(), 'portable');
+  skill.body =
+    '---\nName: portable\nDescription: Stable skill\nUser-Invocable: false\n---\n\nKeep body whitespace.\n';
+  skill.description = 'Stable skill';
+  skill.frontmatter = { 'user-invocable': false };
+  const first = buildSkillMarkdown(skill);
+  expect(parseSkillMarkdown(first)).toMatchObject({
+    name: 'portable',
+    frontmatter: { 'user-invocable': false },
+  });
+  expect(parseSkillMarkdown(first).parseError).toBeUndefined();
+  expect(buildSkillMarkdown({ ...skill, body: first })).toBe(first);
+  expect(first).toContain('\n\nKeep body whitespace.\n');
+});
 
 function createResponse() {
   const response = {

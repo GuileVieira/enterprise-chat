@@ -4106,5 +4106,16 @@
   "com_ui_tenant_api_context_example": "Exemplo com agente e projeto",
   "com_ui_tenant_api_example_hint": "Esta escolha altera só o exemplo de leitura. O acesso da chave é definido em “Editar acesso”.",
   "com_ui_tenant_api_openapi": "Documento OpenAPI",
-  "com_ui_tenant_api_request_example": "Chamada de exemplo"
+  "com_ui_tenant_api_request_example": "Chamada de exemplo",
+  "com_agent_import_zip": "Importar agente",
+  "com_agent_export_zip": "Exportar agente",
+  "com_agent_import_file": "Escolher arquivo ZIP",
+  "com_agent_import_notice": "Credenciais não são transferidas. Revise o arquivo antes de compartilhar: instruções e anexos podem conter dados sensíveis.",
+  "com_agent_import_skills": "Skills",
+  "com_agent_import_tools": "Ferramentas",
+  "com_agent_import_warnings": "Avisos",
+  "com_agent_import_success": "Agente importado com sucesso",
+  "com_agent_import_warning_reconnect": "Reconecte a ferramenta no destino: {{name}}",
+  "com_agent_import_warning_reuse": "Skill existente será reutilizada sem alterações: {{name}}",
+  "com_agent_import_warning_all_skills": "O escopo de todas as skills usa o catálogo do destino."
 }

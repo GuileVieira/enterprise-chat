@@ -7,6 +7,9 @@ const { getRoleByName } = require('~/models');
 const { getTenantFunctions } = require('~/models');
 const actions = require('./actions');
 const tools = require('./tools');
+const archive = require('./archive');
+const { restoreTenantContextFromReq } = require('@librechat/api');
+const { createFileLimiters } = require('~/server/middleware');
 
 const router = express.Router();
 const avatar = express.Router();
@@ -21,6 +24,37 @@ const checkAgentCreate = generateCheckAccess({
   permissions: [Permissions.USE, Permissions.CREATE],
   getRoleByName,
 });
+
+const { fileUploadIpLimiter, fileUploadUserLimiter } = createFileLimiters();
+router.get(
+  '/:id/export',
+  checkAgentAccess,
+  configMiddleware,
+  archive.handlers.export,
+  archive.handleError,
+);
+router.post(
+  '/import/preview',
+  checkAgentCreate,
+  configMiddleware,
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  archive.upload,
+  restoreTenantContextFromReq,
+  archive.handlers.preview,
+  archive.handleError,
+);
+router.post(
+  '/import',
+  checkAgentCreate,
+  configMiddleware,
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  archive.upload,
+  restoreTenantContextFromReq,
+  archive.handlers.import,
+  archive.handleError,
+);
 
 /**
  * Get active tenant functions for the current user's tenant.

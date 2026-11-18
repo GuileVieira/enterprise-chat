@@ -79,6 +79,88 @@ function mockZipRequest(buffer: Buffer, config?: ImportRequest['config']): Impor
   } as unknown as ImportRequest;
 }
 
+it('preflights a skill without writes and rejects blocked code', async () => {
+  const zip = new JSZip();
+  zip.file('SKILL.md', '---\nname: safe-skill\ndescription: A safe skill\n---\nInstructions');
+  zip.file('references/guide.md', 'Reference');
+  const deps = mockImportDeps();
+  const preview = createImportHandler(deps, { previewOnly: true });
+  const valid = mockResponse();
+  await preview(mockZipRequest(await zip.generateAsync({ type: 'nodebuffer' })), valid);
+  expect(valid.statusCode).toBe(200);
+  expect(deps.createSkill).not.toHaveBeenCalled();
+  expect(deps.saveBuffer).not.toHaveBeenCalled();
+
+  zip.file('scripts/run.py', 'print(1)');
+  const invalid = mockResponse();
+  await preview(mockZipRequest(await zip.generateAsync({ type: 'nodebuffer' })), invalid);
+  expect(invalid.statusCode).toBe(400);
+  expect(deps.createSkill).not.toHaveBeenCalled();
+});
+
+it('blocks filtered skill content during preview without writes', async () => {
+  const zip = new JSZip();
+  zip.file(
+    'SKILL.md',
+    '---\nname: filtered-skill\ndescription: A skill used by tests\n---\nPRIVATE-1234',
+  );
+  const deps = mockImportDeps();
+  const res = mockResponse();
+  const config = mockAppConfig({
+    skills: {
+      pii: {
+        fields: ['instructions'],
+        starterPatterns: [],
+        customPatterns: [{ id: 'private_token', label: 'private token', regex: 'PRIVATE-\\d+' }],
+      },
+    },
+  });
+  await createImportHandler(deps, { previewOnly: true })(
+    mockZipRequest(await zip.generateAsync({ type: 'nodebuffer' }), config),
+    res,
+  );
+  expect(res.statusCode).toBe(400);
+  expect(res.body).toEqual(expect.objectContaining({ error: 'content_filter_block' }));
+  expect(deps.createSkill).not.toHaveBeenCalled();
+  expect(deps.saveBuffer).not.toHaveBeenCalled();
+});
+
+it('previews and persists structured frontmatter flags', async () => {
+  const zip = new JSZip();
+  zip.file(
+    'SKILL.md',
+    '---\nname: portable-skill\ndescription: A portable skill for testing\ndisable-model-invocation: true\nuser-invocable: false\n---\nInstructions',
+  );
+  const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+  const deps = mockImportDeps();
+  const preview = mockResponse();
+  await createImportHandler(deps, { previewOnly: true })(mockZipRequest(buffer), preview);
+  expect(preview.statusCode).toBe(200);
+  const imported = mockResponse();
+  await createImportHandler(deps)(mockZipRequest(buffer), imported);
+  expect(imported.statusCode).toBe(201);
+  expect(deps.createSkill).toHaveBeenCalledWith(
+    expect.objectContaining({
+      frontmatter: expect.objectContaining({
+        'disable-model-invocation': true,
+        'user-invocable': false,
+      }),
+    }),
+  );
+
+  const invalid = new JSZip();
+  invalid.file(
+    'SKILL.md',
+    '---\nname: portable-skill\ndescription: A portable skill for testing\nuser-invocable: invalid\n---\nInstructions',
+  );
+  const rejected = mockResponse();
+  await createImportHandler(deps, { previewOnly: true })(
+    mockZipRequest(await invalid.generateAsync({ type: 'nodebuffer' })),
+    rejected,
+  );
+  expect(rejected.statusCode).toBe(400);
+});
+
 it('rejects an unsplit multi-skill archive before creating or mixing any skill files', async () => {
   const zip = new JSZip();
   zip.file('ads/SKILL.md', '---\nname: ads\ndescription: Ads\n---\nAds');

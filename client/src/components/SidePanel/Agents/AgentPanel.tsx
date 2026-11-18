@@ -45,6 +45,7 @@ import AdvancedPanel from './Advanced/AdvancedPanel';
 import { Panel, isEphemeralAgent } from '~/common';
 import AgentConfig from './AgentConfig';
 import AgentSelect from './AgentSelect';
+import AgentPortability from './AgentPortability';
 import AgentFooter from './AgentFooter';
 import ModelPanel from './ModelPanel';
 
@@ -732,6 +733,19 @@ export default function AgentPanel() {
                 defaultStatefulCodeEnvironment={defaultStatefulCodeEnvironment}
               />
             </div>
+            {user?.tenantId && (
+              <AgentPortability
+                agentId={
+                  current_agent_id && !isEphemeralAgent(current_agent_id)
+                    ? current_agent_id
+                    : undefined
+                }
+                agentName={agentQuery.data?.name}
+                canCreate={canCreate}
+                canExport={Boolean(agentQuery.data?.id) && canEditAgent && !permissionsLoading}
+                onImported={setCurrentAgentId}
+              />
+            )}
             {agent_id && (
               <div className="flex w-full gap-2">
                 <Button

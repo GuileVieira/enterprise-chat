@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import yaml from 'js-yaml';
-import { logger } from '@librechat/data-schemas';
+import { logger, normalizeSkillFrontmatterKeys } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits } from 'librechat-data-provider';
 import type { ISkill, ISkillFile } from '@librechat/data-schemas';
 import type { Response } from 'express';
@@ -29,7 +29,7 @@ export interface ExportSkillsDeps {
   isValidObjectIdString: (value: unknown) => boolean;
 }
 
-function buildSkillMarkdown(skill: ISkill): string {
+export function buildSkillMarkdown(skill: ISkill): string {
   const raw = skill.body.replace(/^\uFEFF/, '');
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n)?/);
   let existing: Record<string, unknown> = {};
@@ -44,9 +44,14 @@ function buildSkillMarkdown(skill: ISkill): string {
     }
   }
 
+  const normalized = normalizeSkillFrontmatterKeys(existing);
+  const persisted = normalizeSkillFrontmatterKeys(skill.frontmatter ?? {});
+  if ('error' in normalized || 'error' in persisted) {
+    throw new Error('Invalid skill frontmatter');
+  }
   const frontmatter: Record<string, unknown> = {
-    ...existing,
-    ...(skill.frontmatter ?? {}),
+    ...normalized.frontmatter,
+    ...persisted.frontmatter,
     name: skill.name,
     description: skill.description,
   };
@@ -55,10 +60,10 @@ function buildSkillMarkdown(skill: ISkill): string {
   }
 
   const body = match ? raw.slice(match[0].length) : raw;
-  return `---\n${yaml.dump(frontmatter, { lineWidth: -1, noRefs: true }).trimEnd()}\n---\n\n${body}`;
+  return `---\n${yaml.dump(frontmatter, { lineWidth: -1, noRefs: true }).trimEnd()}\n---${match ? '\n' : '\n\n'}${body}`;
 }
 
-async function readFile(
+export async function readSkillExportFile(
   req: ServerRequest,
   file: ISkillFile,
   getStrategyFunctions: ExportSkillsDeps['getStrategyFunctions'],
@@ -163,7 +168,7 @@ export function createExportSkillsHandler(
 
         const files = await deps.listSkillFiles(skill._id);
         for (const file of files) {
-          const buffer = await readFile(
+          const buffer = await readSkillExportFile(
             req,
             file,
             deps.getStrategyFunctions,

@@ -23,6 +23,23 @@ regenere o asset com `node config/generate-integration-openapi.js`; os testes co
 Salvar ou importar o contrato não publica endpoints. O inventário legado mantém as políticas de
 cada rota; a autenticação combinada abaixo vale somente para `/api/integrations/v1`.
 
+## Exportar e importar agente em ZIP
+
+No editor do agente, **Exportar ZIP** baixa a pasta nomeada com configuração portátil,
+instruções, skills selecionadas autorizadas e referências de ferramentas. **Importar ZIP** mostra
+uma prévia antes de criar outro agente. Credenciais, projetos, arquivos RAG e conexões de tools não
+são transferidos. Skills idênticas já pertencentes ao autor/tenant de destino podem ser reutilizadas;
+conflitos de conteúdo são recusados.
+
+As rotas de sessão são `GET /api/agents/:id/export`, `POST /api/agents/import/preview` e
+`POST /api/agents/import`, com campo multipart `file`. A API de gerenciamento oferece as mesmas
+operações sob `/api/agents/v1/agents`, com sua autenticação **ManagementOidc**, descritas em
+`orqest-current.openapi.yaml`. A chave de execução de tenant não substitui essa credencial OIDC.
+Essas três rotas não pertencem ao contrato servido por `/api/integrations/v1/openapi.json`.
+
+Regras, limites e compensação: [plano de portabilidade](../plans/agent-portability.md).
+ACL para agentes compartilhados com mm-marketing: [procedimento Mongo](../operations/mm-marketing-agent-access.md).
+
 ## Autenticação e principal
 
 Aceita uma das credenciais existentes no header `Authorization: Bearer …`:

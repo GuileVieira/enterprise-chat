@@ -4092,5 +4092,16 @@
   "com_ui_tenant_api_context_example": "Agent and project example",
   "com_ui_tenant_api_example_hint": "This selection only changes the read example. Key access is configured under “Edit access”.",
   "com_ui_tenant_api_openapi": "OpenAPI document",
-  "com_ui_tenant_api_request_example": "Example request"
+  "com_ui_tenant_api_request_example": "Example request",
+  "com_agent_import_zip": "Import agent",
+  "com_agent_export_zip": "Export agent",
+  "com_agent_import_file": "Choose ZIP file",
+  "com_agent_import_notice": "Credentials are not transferred. Review the archive before sharing; instructions and attachments may contain sensitive data.",
+  "com_agent_import_skills": "Skills",
+  "com_agent_import_tools": "Tools",
+  "com_agent_import_warnings": "Warnings",
+  "com_agent_import_success": "Agent imported successfully",
+  "com_agent_import_warning_reconnect": "Reconnect tool in destination: {{name}}",
+  "com_agent_import_warning_reuse": "Reuse unchanged skill in destination: {{name}}",
+  "com_agent_import_warning_all_skills": "All skills scope uses the destination catalog."
 }

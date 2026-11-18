@@ -707,6 +707,30 @@ export const deleteAction = async ({
  * Agents
  */
 
+export interface AgentImportPreview {
+  name: string;
+  skills: string[];
+  tools: string[];
+  warnings: string[];
+}
+
+export const exportAgent = (id: string): Promise<Blob> =>
+  request.get(endpoints.agents({ path: `${encodeURIComponent(id)}/export` }), {
+    responseType: 'blob',
+  });
+
+export const previewAgentImport = (file: File): Promise<AgentImportPreview> => {
+  const form = new FormData();
+  form.append('file', file);
+  return request.postMultiPart(endpoints.agents({ path: 'import/preview' }), form);
+};
+
+export const importAgent = (file: File): Promise<a.Agent> => {
+  const form = new FormData();
+  form.append('file', file);
+  return request.postMultiPart(endpoints.agents({ path: 'import' }), form);
+};
+
 export const createAgent = ({ ...data }: a.AgentCreateParams): Promise<a.Agent> => {
   return request.post(endpoints.agents({}), data);
 };

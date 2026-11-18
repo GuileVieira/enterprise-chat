@@ -30,6 +30,7 @@ const { checkCapability, getEndpointsConfig } = require('~/server/services/Confi
 const v1 = require('~/server/controllers/agents/v1');
 const db = require('~/models');
 const { requireAgentManagementAuth } = require('./middleware');
+const archive = require('./archive');
 
 const router = express.Router();
 const readHandlers = createAgentManagementReadHandlers({
@@ -149,6 +150,28 @@ const handleUploadError = (error, _req, res, _next) => {
 
 router.use(requireAgentManagementAuth);
 router.use(checkBan);
+
+router.get('/:id/export', configMiddleware, archive.handlers.export, archive.handleError);
+router.post(
+  '/import/preview',
+  configMiddleware,
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  archive.upload,
+  restoreTenantContextFromReq,
+  archive.handlers.preview,
+  archive.handleError,
+);
+router.post(
+  '/import',
+  configMiddleware,
+  fileUploadIpLimiter,
+  fileUploadUserLimiter,
+  archive.upload,
+  restoreTenantContextFromReq,
+  archive.handlers.importManagement,
+  archive.handleError,
+);
 
 router.post('/', configMiddleware, createHandler);
 router.get('/', readHandlers.list);

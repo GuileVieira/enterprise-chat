@@ -175,6 +175,110 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/agents/v1/agents/{id}/export:
+    get:
+      operationId: exportManagedAgentArchive
+      tags: [Agentes e instruções]
+      summary: Exportar agente e skills selecionadas em ZIP
+      description: Exige AGENTS USE e AGENT EDIT ou capacidade administrativa no mesmo tenant, além de VIEW em cada skill selecionada. ZIP v1, até 20 MiB comprimidos, 50 MiB descompactados, 10 MiB por arquivo e 500 entradas. Não inclui ACLs, credenciais, projetos, arquivos RAG ou IDs de outros recursos. Tools personalizadas viram referências sem conexão, para reconexão manual.
+      security:
+        - ManagementOidc: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Arquivo ZIP do agente
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Permissão insuficiente
+        '404':
+          description: Agente não encontrado
+        '409':
+          description: Configuração incompleta ou skills selecionadas com nomes duplicados
+  /api/agents/v1/agents/import/preview:
+    post:
+      operationId: previewManagedAgentArchive
+      tags: [Agentes e instruções]
+      summary: Validar ZIP e pré-visualizar agente sem gravar dados
+      security:
+        - ManagementOidc: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Conteúdo e dependências do arquivo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [name, skills, tools, warnings]
+                properties:
+                  name:
+                    type: string
+                  skills:
+                    type: array
+                    items: { type: string }
+                  tools:
+                    type: array
+                    items: { type: string }
+                  warnings:
+                    type: array
+                    items: { type: string }
+        '400':
+          description: Arquivo inválido ou conteúdo rejeitado
+        '403':
+          description: Permissão insuficiente
+        '409':
+          description: Skill com mesmo nome e conteúdo diferente
+  /api/agents/v1/agents/import:
+    post:
+      operationId: importManagedAgentArchive
+      tags: [Agentes e instruções]
+      summary: Importar ZIP de agente
+      description: Revalida o arquivo enviado; exige AGENTS USE e CREATE e, para skills, SKILLS USE e CREATE. Cria um agente novo no tenant atual. Skills já pertencentes ao mesmo autor/tenant só são reutilizadas quando o frontmatter, corpo e todos os anexos são equivalentes. Reconecta apenas file_search, web_search e execute_code disponíveis e permitidos; demais tools permanecem desativadas. Modelo/provedor precisam estar disponíveis no destino para executar o agente.
+      security:
+        - ManagementOidc: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Agente criado; skills idênticas do mesmo autor e tenant podem ser reutilizadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          description: Arquivo inválido ou conteúdo rejeitado
+        '403':
+          description: Permissão insuficiente
+        '409':
+          description: Conflito de nome de skill
   /api/agents/v1/agents/{id}/files:
     get:
       operationId: listManagedAgentFiles
