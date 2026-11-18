@@ -653,3 +653,39 @@ it('allows authenticated discovery and authorized reads with remote execution di
     .set('Authorization', 'Bearer sk-invalid')
     .expect(401);
 });
+
+it.each([false, true])(
+  'searches with no agent-level file resources (project=%s) instead of crashing before RAG',
+  async (withProject) => {
+    await inTenant(async () => {
+      await mongoose.models.Agent.updateOne(
+        { _id: remoteAgent._id },
+        { $set: { tool_resources: {} } },
+      );
+      if (withProject) {
+        const project = await mongoose.models.Project.create({
+          user: String(owner._id),
+          projectId: 'project-empty-agent',
+          name: 'Project files',
+          fileIds: ['agent-file'],
+        });
+        await db.grantPermission(
+          PrincipalType.USER,
+          owner._id,
+          ResourceType.PROJECT,
+          project._id,
+          PermissionBits.VIEW,
+          owner._id,
+        );
+      }
+    });
+    const response = await call('file_search', {
+      agentId: 'remote-only',
+      ...(withProject ? { projectId: 'project-empty-agent' } : {}),
+      arguments: { query: 'q' },
+    });
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe(withProject ? 'success' : 'no_files');
+    expect(calls.filter((entry) => entry.url === '/query')).toHaveLength(withProject ? 1 : 0);
+  },
+);

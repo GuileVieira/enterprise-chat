@@ -343,7 +343,7 @@ export function createIntegrationToolHandlers(deps: IntegrationToolDependencies)
         await deps.inspect(req, adapter.name, 'arguments', args);
         const scopedAgent = {
           ...agent,
-          tool_resources: { file_search: agent.tool_resources?.file_search },
+          tool_resources: { file_search: agent.tool_resources?.file_search ?? { file_ids: [] } },
         };
         const files = await deps.resolveFiles(req, scopedAgent, envelope.projectId);
         const agentFiles = new Set(agent.tool_resources?.file_search?.file_ids ?? []);
