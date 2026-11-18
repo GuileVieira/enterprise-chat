@@ -303,7 +303,7 @@ describe('PermissionsController', () => {
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
-    it('normalizes agent tenant principals to editor access without owner privileges', async () => {
+    it('normalizes admin tenant shares to viewer access without edit or owner privileges', async () => {
       const requestTenantPrincipal = {
         type: PrincipalType.TENANT,
         id: 'tenant-2',
@@ -311,7 +311,7 @@ describe('PermissionsController', () => {
       };
       const normalizedTenantPrincipal = {
         ...requestTenantPrincipal,
-        accessRoleId: AccessRoleIds.AGENT_EDITOR,
+        accessRoleId: AccessRoleIds.AGENT_VIEWER,
       };
 
       mockBulkUpdateResourcePermissions.mockResolvedValue({

@@ -178,6 +178,11 @@ paths:
   /api/agents/v1/agents/{id}/export:
     get:
       operationId: exportManagedAgentArchive
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/agents/archive.js
+        routerFile: api/server/routes/agents/management.js
+        route: /:id/export
       tags: [Agentes e instruções]
       summary: Exportar agente e skills selecionadas em ZIP
       description: Exige AGENTS USE e AGENT EDIT ou capacidade administrativa no mesmo tenant, além de VIEW em cada skill selecionada. ZIP v1, até 20 MiB comprimidos, 50 MiB descompactados, 10 MiB por arquivo e 500 entradas. Não inclui ACLs, credenciais, projetos, arquivos RAG ou IDs de outros recursos. Tools personalizadas viram referências sem conexão, para reconexão manual.
@@ -206,6 +211,11 @@ paths:
   /api/agents/v1/agents/import/preview:
     post:
       operationId: previewManagedAgentArchive
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/agents/archive.js
+        routerFile: api/server/routes/agents/management.js
+        route: /import/preview
       tags: [Agentes e instruções]
       summary: Validar ZIP e pré-visualizar agente sem gravar dados
       security:
@@ -250,6 +260,11 @@ paths:
   /api/agents/v1/agents/import:
     post:
       operationId: importManagedAgentArchive
+      x-orqest-status: implemented
+      x-orqest-source:
+        file: api/server/routes/agents/archive.js
+        routerFile: api/server/routes/agents/management.js
+        route: /import
       tags: [Agentes e instruções]
       summary: Importar ZIP de agente
       description: Revalida o arquivo enviado; exige AGENTS USE e CREATE e, para skills, SKILLS USE e CREATE. Cria um agente novo no tenant atual. Skills já pertencentes ao mesmo autor/tenant só são reutilizadas quando o frontmatter, corpo e todos os anexos são equivalentes. Reconecta apenas file_search, web_search e execute_code disponíveis e permitidos; demais tools permanecem desativadas. Modelo/provedor precisam estar disponíveis no destino para executar o agente.
@@ -2538,7 +2553,7 @@ paths:
       tags:
         - tools
       summary: Catálogo efetivo sem iniciar transporte ou OAuth
-      description: 'Catálogo efetivo sem iniciar transporte ou OAuth. '
+      description: Catálogo efetivo sem iniciar transporte ou OAuth. Aceita autorização de exportação ou REMOTE_AGENTS USE com REMOTE_AGENT VIEW, respeitando a seleção da chave. Não exige EDIT para consumidores com acesso remoto e não retorna instruções ou skills do agente. Exportar instruções/contexto/ZIP continua exigindo EDIT. Callable depende das permissões remotas e da ferramenta.
       security:
         - TenantExecutionKey: []
         - ManagementOidc: []

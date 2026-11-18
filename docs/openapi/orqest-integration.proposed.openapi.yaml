@@ -472,7 +472,7 @@ paths:
       tags:
         - tools
       summary: Catálogo efetivo sem iniciar transporte ou OAuth
-      description: 'Catálogo efetivo sem iniciar transporte ou OAuth. '
+      description: Catálogo efetivo sem iniciar transporte ou OAuth. Aceita autorização de exportação ou REMOTE_AGENTS USE com REMOTE_AGENT VIEW, respeitando a seleção da chave. Não exige EDIT para consumidores com acesso remoto e não retorna instruções ou skills do agente. Exportar instruções/contexto/ZIP continua exigindo EDIT. Callable depende das permissões remotas e da ferramenta.
       security:
         - TenantExecutionKey: []
         - ManagementOidc: []

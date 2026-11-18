@@ -281,7 +281,13 @@ export function createIntegrationToolHandlers(deps: IntegrationToolDependencies)
       if (Object.keys(req.query).length) {
         throw invalid();
       }
-      const agent = await deps.resolveExportAgent(req, req.params.id);
+      let agent: IAgent;
+      try {
+        agent = await deps.resolveExportAgent(req, req.params.id);
+      } catch (error) {
+        if (!(error instanceof IntegrationError) || ![403, 404].includes(error.status)) throw error;
+        agent = await deps.resolveAgent(req, req.params.id);
+      }
       const definitions = await adapters(req, agent);
       try {
         await deps.resolveAgent(req, req.params.id);

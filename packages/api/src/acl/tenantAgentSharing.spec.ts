@@ -58,7 +58,7 @@ describe('automatic API access for explicit tenant agent shares', () => {
     await mongo.stop();
   });
 
-  it('grants EDIT and only remote VIEW to the destination, idempotently; removes automatic access on revoke', async () => {
+  it('grants only VIEW for agent and API, idempotently; removes automatic access on revoke', async () => {
     expect((await share()).errors).toEqual([]);
     expect((await share()).errors).toEqual([]);
     expect(await entries(ResourceType.AGENT)).toEqual([
@@ -66,7 +66,7 @@ describe('automatic API access for explicit tenant agent shares', () => {
         principalType: PrincipalType.TENANT,
         principalId: tenantId,
         tenantId,
-        permBits: 3,
+        permBits: 1,
       }),
     ]);
     expect(await entries(ResourceType.REMOTE_AGENT)).toEqual([
@@ -108,6 +108,52 @@ describe('automatic API access for explicit tenant agent shares', () => {
     ]);
   });
 
+  it('removes legacy tenant editing on reshare and denies EDIT/DELETE/SHARE while retaining use', async () => {
+    await within(tenantId, () =>
+      mongoose.models.AclEntry.create({
+        principalType: PrincipalType.TENANT,
+        principalId: tenantId,
+        tenantId,
+        resourceType: ResourceType.AGENT,
+        resourceId,
+        permBits: 15,
+      }),
+    );
+    await share();
+    const principals = [{ principalType: PrincipalType.TENANT, principalId: tenantId }];
+    for (const bits of [2, 4, 8]) {
+      expect(
+        await within(tenantId, () =>
+          methods.hasPermission(principals, ResourceType.AGENT, resourceId, bits),
+        ),
+      ).toBe(false);
+    }
+    expect(
+      await within(tenantId, () =>
+        methods.hasPermission(principals, ResourceType.AGENT, resourceId, 1),
+      ),
+    ).toBe(true);
+    expect(
+      await within(tenantId, () =>
+        methods.hasPermission(principals, ResourceType.REMOTE_AGENT, resourceId, 1),
+      ),
+    ).toBe(true);
+  });
+
+  it('preserves an existing automatic API grant on failed Insights edits', async () => {
+    await share();
+    const change = await share(true);
+    await within('source', () =>
+      service.restoreInsightsPermissionChanges({
+        resourceType: ResourceType.AGENT,
+        resourceId,
+        changes: change.insightsChanges,
+      }),
+    );
+    expect((await entries(ResourceType.AGENT))[0].permBits).toBe(1);
+    expect((await entries(ResourceType.REMOTE_AGENT))[0].permBits).toBe(1);
+  });
+
   it('keeps ordinary tenant viewer grants unchanged without the trusted admin policy', async () => {
     await within('source', () =>
       service.bulkUpdateResourcePermissions({
@@ -123,7 +169,7 @@ describe('automatic API access for explicit tenant agent shares', () => {
     expect(await entries(ResourceType.REMOTE_AGENT)).toEqual([]);
   });
 
-  it('does not write the editor grant if the remote viewer role is missing', async () => {
+  it('does not write the agent grant if the remote viewer role is missing', async () => {
     await runAsSystem(() =>
       mongoose.models.AccessRole.deleteMany({ accessRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER }),
     );

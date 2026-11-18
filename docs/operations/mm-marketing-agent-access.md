@@ -1,4 +1,4 @@
-# Liberar exportação e execução dos agentes compartilhados
+# Liberar uso e execução dos agentes compartilhados sem edição
 
 O script `mm-marketing-agent-access.mongosh.js` usa o banco selecionado na conexão. Selecione o banco de produção correto; neste projeto o nome padrão é `Orqest`.
 
@@ -14,9 +14,9 @@ Confira a lista de agentes e tenants de origem. Para aplicar o mesmo procediment
 APPLY=true mongosh "$MONGO_URI" --file docs/operations/mm-marketing-agent-access.mongosh.js
 ```
 
-O script considera somente ACLs de tenant existentes e não expiradas que concedam `AGENT VIEW` a `mm-marketing`. Para esses agentes, acrescenta `AGENT VIEW+EDIT` e `REMOTE_AGENT VIEW` ao tenant. Não transforma grants públicos, de usuários ou grupos em grants de tenant. Preserva permissões mais fortes e não estende a validade dos grants existentes. Grants remotos novos herdam a expiração do compartilhamento de origem. Não altera papéis.
+O script considera somente ACLs de tenant existentes e não expiradas que concedam `AGENT VIEW` a `mm-marketing`. Para esses agentes, mantém `AGENT VIEW`, remove EDIT/DELETE/SHARE do tenant e garante `REMOTE_AGENT VIEW`. Não transforma grants públicos, de usuários ou grupos em grants de tenant e não altera permissões individuais dos autores. Preserva o bit separado de Insights e não estende a validade dos grants existentes. Grants remotos novos herdam a expiração do compartilhamento de origem. Não altera papéis.
 
-**`AGENT EDIT` permite que membros do tenant editem o agente original compartilhado. Não é uma permissão exclusiva de download.** Não concede DELETE nem SHARE. O script não modifica credenciais, projetos, skills ou conta Meta Ads. As permissões próprias de cada skill continuam necessárias para exportar seu conteúdo.
+**A versão anterior deste script concedia EDIT. Execute esta versão para retirar essa permissão dos compartilhamentos existentes.** O deploy sozinho não modifica as ACLs já gravadas. O script não modifica credenciais, projetos, skills ou conta Meta Ads. A exportação de instruções exige EDIT na implementação atual e fica bloqueada para esses consumidores; o uso do agente e sua API continua autorizado por VIEW, sujeito aos demais gates.
 
 Restrições `agentIds` da chave, configuração efetiva `apiKey` e o gate `REMOTE_AGENTS USE` continuam valendo. O OWNER que representa a chave precisa continuar ativo no tenant. O script não executa agentes nem altera anúncios.
 

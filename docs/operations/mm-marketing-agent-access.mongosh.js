@@ -1,5 +1,5 @@
 // Run in mongosh connected to Orqest. Review the dry run before setting APPLY=true.
-// AGENT EDIT permits editing the original agent, not only exporting it.
+// Tenant consumers receive VIEW only; remove previously added EDIT/DELETE/SHARE.
 (() => {
   const tenantId = 'mm-marketing';
   const apply = typeof process !== 'undefined' && process.env.APPLY === 'true';
@@ -25,11 +25,11 @@
       resourceType: type,
       tenantId: null,
     });
-  const editor = roles('agent_editor', 'agent');
+  const viewer = roles('agent_viewer', 'agent');
   const remoteViewer = roles('remoteAgent_viewer', 'remoteAgent');
-  if (!editor || (editor.permBits & 3) !== 3 || !remoteViewer || remoteViewer.permBits !== 1) {
+  if (!viewer || viewer.permBits !== 1 || !remoteViewer || remoteViewer.permBits !== 1) {
     throw new Error(
-      'Expected agent_editor and remoteAgent_viewer roles were not found; no writes.',
+      'Expected agent_viewer and remoteAgent_viewer roles were not found; no writes.',
     );
   }
   const agents = grants.map((grant) => {
@@ -47,7 +47,10 @@
       name: agent.name,
       sourceTenant: agent.tenantId,
     })),
-    grants: ['AGENT VIEW+EDIT for tenant', 'REMOTE_AGENT VIEW for tenant'],
+    grants: [
+      'AGENT VIEW only for tenant; remove EDIT/DELETE/SHARE',
+      'REMOTE_AGENT VIEW for tenant',
+    ],
   });
   if (!apply) return;
   for (const { grant, agent } of agents) {
@@ -62,9 +65,9 @@
         permBits: grant.permBits,
       },
       {
-        $bit: { permBits: { or: 3 } },
+        $bit: { permBits: { and: 17 } },
         $set: {
-          ...((grant.permBits & ~3) === 0 ? { roleId: editor._id } : {}),
+          roleId: viewer._id,
           updatedAt: currentTime,
         },
       },

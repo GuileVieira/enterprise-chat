@@ -398,7 +398,11 @@ it('actual router authenticates key, exports context independently, searches onl
       }),
     ]),
   );
-  await get('/agents/remote-only/tools').expect(404);
+  const remoteCatalog = await get('/agents/remote-only/tools').expect(200);
+  expect(remoteCatalog.body.tools).toEqual(
+    expect.arrayContaining([expect.objectContaining({ name: 'file_search', callable: true })]),
+  );
+  expect(JSON.stringify(remoteCatalog.body)).not.toContain('Private agent instructions');
   const result = await call('file_search', {
     agentId: 'remote-only',
     arguments: { query: 'revenue' },
@@ -412,7 +416,7 @@ it('actual router authenticates key, exports context independently, searches onl
   const rag = calls.filter((item) => item.url === '/query');
   expect(rag).toHaveLength(1);
   expect(rag[0].authorization).not.toBe(`Bearer ${key}`);
-  await get('/agents/remote-only/tools').expect(404);
+  await get('/agents/remote-only/tools').expect(200);
   await get('/agents/remote-only/context').expect(404);
   expect(rag[0].body).toMatchObject({ file_id: 'agent-file', entity_id: 'remote-only', k: 5 });
   const fn = await call('fn-read', { agentId: 'remote-only', arguments: { count: 2 } }).expect(200);

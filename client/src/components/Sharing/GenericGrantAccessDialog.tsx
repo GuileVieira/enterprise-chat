@@ -168,7 +168,7 @@ export default function GenericGrantAccessDialog({
         description: localize('com_ui_tenant_wide_access'),
         accessRoleId:
           resourceType === ResourceType.AGENT
-            ? AccessRoleIds.AGENT_EDITOR
+            ? AccessRoleIds.AGENT_VIEWER
             : config?.defaultViewerRoleId,
         isExisting: false,
       },

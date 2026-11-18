@@ -98,7 +98,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
   });
 
   it.each([true, false])(
-    'previews and submits editor access for a tenant agent share (people picker=%s)',
+    'previews and submits viewer access for a tenant agent share (people picker=%s)',
     async (hasPeoplePickerAccess) => {
       mockUsePeoplePickerPermissions.mockReturnValue({
         hasPeoplePickerAccess,
@@ -139,7 +139,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
                 expect.objectContaining({
                   type: PrincipalType.TENANT,
                   id: 'mm-marketing',
-                  accessRoleId: AccessRoleIds.AGENT_EDITOR,
+                  accessRoleId: AccessRoleIds.AGENT_VIEWER,
                 }),
               ],
             }),

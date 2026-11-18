@@ -28,6 +28,7 @@ export type InsightsPermissionChange = {
   previousEntry: IAclEntry | null;
   writtenEntry: InsightsWrittenEntry | null;
   principal: InsightsPermissionPrincipal;
+  automaticRemoteGrantAt?: Date;
 };
 
 type ValidationResult = { status: 400 | 403; error: string } | null;

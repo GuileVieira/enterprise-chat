@@ -538,8 +538,8 @@ export class AccessControlService {
             resourceType === ResourceType.AGENT &&
             principal.type === PrincipalType.TENANT;
           const roleId =
-            tenantAgent && principal.accessRoleId === AccessRoleIds.AGENT_VIEWER
-              ? AccessRoleIds.AGENT_EDITOR
+            tenantAgent && principal.accessRoleId === AccessRoleIds.AGENT_EDITOR
+              ? AccessRoleIds.AGENT_VIEWER
               : principal.accessRoleId;
           const role = rolesMap.get(roleId);
           if (!role) {
@@ -549,15 +549,11 @@ export class AccessControlService {
             });
             continue;
           }
-          const requiredTenantBits = tenantAgent
-            ? PermissionBits.VIEW | PermissionBits.EDIT
-            : PermissionBits.VIEW;
+          const requiredTenantBits = PermissionBits.VIEW;
           if (principal.type === PrincipalType.TENANT && role.permBits !== requiredTenantBits) {
             results.errors.push({
               principal,
-              error: tenantAgent
-                ? 'Tenant agent shares require editor access'
-                : 'Tenant grants must use viewer access',
+              error: 'Tenant grants must use viewer access',
             });
             continue;
           }
@@ -571,6 +567,7 @@ export class AccessControlService {
             query.principalId = queryPrincipalId(principal);
           }
           let remoteWrite: Parameters<AllMethods['bulkWriteAclEntries']>[0][number] | undefined;
+          let automaticRemoteGrantAt: Date | undefined;
           if (tenantAgent) {
             if (!remoteViewer || remoteViewer.permBits !== PermissionBits.VIEW) {
               throw new Error('Remote agent viewer role not found');
@@ -609,6 +606,14 @@ export class AccessControlService {
               currentEntriesByPrincipal.set(`${principal.type}:${principal.id}`, source);
             }
             if (!manualRemote) {
+              const remoteGrantedAt = new Date();
+              const alreadyInherited = remoteEntries.some(
+                (entry) =>
+                  entry.principalType === PrincipalType.TENANT &&
+                  String(entry.principalId) === targetTenant &&
+                  entry.inheritedFrom?.toString() === resourceId.toString(),
+              );
+              if (!alreadyInherited) automaticRemoteGrantAt = remoteGrantedAt;
               remoteWrite = {
                 updateMany: {
                   filter: {
@@ -623,7 +628,7 @@ export class AccessControlService {
                       permBits: PermissionBits.VIEW,
                       roleId: remoteViewer._id,
                       grantedBy,
-                      grantedAt: new Date(),
+                      grantedAt: remoteGrantedAt,
                       expiredAt: source?.expiredAt ?? null,
                     },
                     $setOnInsert: {
@@ -737,6 +742,7 @@ export class AccessControlService {
               previousEntry: existingEntry ?? null,
               writtenEntry,
               principal: { type: principal.type, id: principal.id, name: principal.name },
+              ...(automaticRemoteGrantAt && { automaticRemoteGrantAt }),
             };
             results.insightsChanges.push(change);
             insightsChangesByBulkWriteIndex.set(bulkWriteIndex, change);
@@ -1013,8 +1019,7 @@ export class AccessControlService {
           (entry) =>
             entry.principalType === PrincipalType.TENANT &&
             String(entry.principalId) === change.principal.id?.toString() &&
-            (entry.permBits & (PermissionBits.VIEW | PermissionBits.EDIT)) ===
-              (PermissionBits.VIEW | PermissionBits.EDIT),
+            (entry.permBits & PermissionBits.VIEW) === PermissionBits.VIEW,
         );
         if (!stillShared) {
           await this._dbMethods.deleteAclEntries({
@@ -1023,6 +1028,15 @@ export class AccessControlService {
             resourceType: ResourceType.REMOTE_AGENT,
             resourceId,
             inheritedFrom: new Types.ObjectId(resourceId),
+          });
+        } else if (change.automaticRemoteGrantAt) {
+          await this._dbMethods.deleteAclEntries({
+            principalType: PrincipalType.TENANT,
+            principalId: change.principal.id,
+            resourceType: ResourceType.REMOTE_AGENT,
+            resourceId,
+            inheritedFrom: new Types.ObjectId(resourceId),
+            grantedAt: change.automaticRemoteGrantAt,
           });
         }
       }

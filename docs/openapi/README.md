@@ -41,7 +41,7 @@ Regras, limites e compensação: [plano de portabilidade](../plans/agent-portabi
 ACL para agentes compartilhados com mm-marketing: [procedimento Mongo](../operations/mm-marketing-agent-access.md).
 
 No compartilhamento de um agente com tenant feito por superadministrador, salvar concede
-`AGENT VIEW+EDIT` e `REMOTE_AGENT VIEW` automaticamente. O acesso remoto automático é identificado
+`AGENT VIEW` e `REMOTE_AGENT VIEW` automaticamente, sem edição ou exportação das instruções. O acesso remoto automático é identificado
 como herdado e removido ao desfazer esse compartilhamento. Concessões manuais independentes à API
 são preservadas. Isso não muda papéis globais, restrições da chave ou permissões de skills; também
 não amplia os compartilhamentos públicos, por usuário ou criados automaticamente por OWNER.
@@ -84,6 +84,8 @@ suas instruções. Compartilhamento VIEW permite a seleção sem conceder export
 Executar tools exige a autorização remota do agente e os grants/capabilities da ferramenta.
 EDIT não concede execução remota; permissão remota não concede exportação. Um catálogo exportável
 pode indicar `callable=false, reason=remote_access_denied`.
+O catálogo de tools também aceita acesso remoto autorizado, sem EDIT, para descobrir schemas e
+chamar ferramentas sem exportar instruções, skills ou configuração do agente.
 
 As rotas antigas de gestão `/api/agents/v1/agents` e `/api/agents/v1/skills` continuam M2M exclusivas.
 Rotas de navegador `/api/projects`, `/api/prompts`, `/api/files`, `/api/memories` etc. mantêm JWT de sessão.

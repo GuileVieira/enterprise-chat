@@ -15,7 +15,6 @@ const {
   createIntegrationContext,
   createIntegrationToolHandlers,
   IntegrationError,
-  integrationHandler,
   limiterCache,
   resolveDownloadPath,
 } = require('@librechat/api');
@@ -166,20 +165,7 @@ router.get('/agents', handlers.agents);
 router.get('/agents/:id', handlers.agent);
 router.get('/agents/:id/context', createIntegrationContext(readers, skills, content));
 router.get('/agents/:id/files', handlers.agentFiles);
-router.get(
-  '/agents/:id/tools',
-  async (req, res, next) => {
-    try {
-      await readers.agent(req, req.params.id);
-      next();
-    } catch (error) {
-      return integrationHandler(async () => {
-        throw error;
-      })(req, res, next);
-    }
-  },
-  tools.catalog,
-);
+router.get('/agents/:id/tools', tools.catalog);
 router.post('/tools/:toolName/call', tools.call);
 router.get('/projects', handlers.projects);
 router.get('/projects/:projectId', handlers.project);
