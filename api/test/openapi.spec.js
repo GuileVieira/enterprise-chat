@@ -8,6 +8,7 @@ const {
   agentManagementErrorSchema,
   skillManagementResponseSchema,
   validateRequest,
+  FILE_SEARCH_LIMITS,
 } = require('@librechat/api');
 
 const root = path.resolve(__dirname, '../..');
@@ -192,6 +193,8 @@ describe('Orqest OpenAPI source review', () => {
     expect(call['x-orqest-file-search'].currentLimits).toEqual({ perFileK: 5, globalSources: 10 });
     expect(proposed.components.schemas.FileSearchSources.properties.sources.maxItems).toBe(10);
     const sample = call.responses['200'].content['application/json'].examples.fileSearch.value;
+    expect(sample.data.limits).toEqual(FILE_SEARCH_LIMITS);
+    expect(call['x-orqest-file-search'].limits.files).toBe(FILE_SEARCH_LIMITS.files);
     expect(sample.artifact.file_search.sources[0]).toMatchObject({
       fileId: 'file-1',
       fileName: 'contrato.pdf',

@@ -19,7 +19,7 @@ export const FILE_SEARCH_LIMITS: {
   concurrency: number;
   deadlineMs: number;
   bytes: number;
-} = { files: 50, concurrency: 5, deadlineMs: 30000, bytes: 1048576 };
+} = { files: 200, concurrency: 5, deadlineMs: 30000, bytes: 1048576 };
 const chunkSchema = z.tuple([
   z.object({
     page_content: z.string(),
@@ -73,7 +73,7 @@ export async function searchFiles(options: {
     : fileSearchArguments.parse({ query: options.query }).query;
   const files = [...new Map(options.files.map((file) => [file.file_id, file])).values()];
   if (!options.legacyChat && files.length > FILE_SEARCH_LIMITS.files) {
-    throw new FileSearchLimitError('File search scope exceeds 50 files');
+    throw new FileSearchLimitError(`File search scope exceeds ${FILE_SEARCH_LIMITS.files} files`);
   }
   const result: FileSearchResult = {
     status: files.length ? 'empty' : 'no_files',

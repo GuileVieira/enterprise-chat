@@ -52,10 +52,10 @@ it('bounded scope rejects before network and strict arguments reject extras', as
     searchFiles({
       userId: 'u',
       token: 't',
-      files: Array.from({ length: 51 }, (_, i) => ({ ...file, file_id: `${i}` })),
+      files: Array.from({ length: 201 }, (_, i) => ({ ...file, file_id: `${i}` })),
       query: 'query',
     }),
-  ).rejects.toThrow('50 files');
+  ).rejects.toThrow('200 files');
   expect(post).not.toHaveBeenCalled();
 });
 it('top ten globally and max five concurrent file queries', async () => {
@@ -71,7 +71,7 @@ it('top ten globally and max five concurrent file queries', async () => {
   const result = await searchFiles({
     userId: 'u',
     token: 't',
-    files: Array.from({ length: 8 }, (_, i) => ({ ...file, file_id: `${i}` })),
+    files: Array.from({ length: 60 }, (_, i) => ({ ...file, file_id: `${i}` })),
     query: 'query',
   });
   expect(peak).toBe(FILE_SEARCH_LIMITS.concurrency);
@@ -186,9 +186,9 @@ it('legacy chat preserves accepted large scope/query while shared transport limi
     userId: 'u',
     token: 't',
     legacyChat: true,
-    files: Array.from({ length: 51 }, (_, i) => ({ ...file, file_id: `legacy-${i}` })),
+    files: Array.from({ length: 201 }, (_, i) => ({ ...file, file_id: `legacy-${i}` })),
     query: 'x'.repeat(4001),
   });
   expect(result.status).toBe('empty');
-  expect(post).toHaveBeenCalledTimes(51);
+  expect(post).toHaveBeenCalledTimes(201);
 });

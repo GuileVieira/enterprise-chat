@@ -154,7 +154,7 @@ A busca não amplia o escopo para todos os arquivos do tenant. Recusa `file_ids`
 URLs de RAG, recursos internos e outros campos extras enviados pelo cliente. O RAG recebe JWT curto
 do servidor, nunca a chave tenant/OIDC original.
 
-Limites: query de 4.000 caracteres, 50 arquivos, 5 consultas concorrentes, prazo total de 30 s e
+Limites: query de 4.000 caracteres, 200 arquivos, 5 consultas concorrentes, prazo total de 30 s e
 1 MiB de resposta. Mantém `k=5` por arquivo e top-10 global. Retorna `data.status` como success,
 empty, no_files, partial ou failed, além de `artifact.file_search.sources`. Cada fonte contém
 `fileId`, `fileName`, `content`, `relevance`, `pages` e `pageRelevance`; páginas são 1-based quando

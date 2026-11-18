@@ -689,3 +689,60 @@ it.each([false, true])(
     expect(calls.filter((entry) => entry.url === '/query')).toHaveLength(withProject ? 1 : 0);
   },
 );
+
+it('searches all 60 authorized project files without invoking an agent LLM or accepting file overrides', async () => {
+  const ids = Array.from({ length: 60 }, (_, i) => `large-project-file-${i}`);
+  await inTenant(async () => {
+    await mongoose.models.Agent.updateOne(
+      { _id: remoteAgent._id },
+      { $set: { tool_resources: {} } },
+    );
+    await mongoose.models.File.insertMany(
+      ids.map((id) => ({
+        file_id: id,
+        filename: `${id}.txt`,
+        user: owner._id,
+        filepath: '/private/project-files',
+        type: 'text/plain',
+        bytes: 10,
+      })),
+    );
+    const project = await mongoose.models.Project.create({
+      user: String(owner._id),
+      projectId: 'project-60',
+      name: '60 files',
+      fileIds: ids,
+    });
+    await db.grantPermission(
+      PrincipalType.USER,
+      owner._id,
+      ResourceType.PROJECT,
+      project._id,
+      PermissionBits.VIEW,
+      owner._id,
+    );
+  });
+  const response = await call('file_search', {
+    agentId: 'remote-only',
+    projectId: 'project-60',
+    arguments: { query: 'Find the meeting' },
+  }).expect(200);
+  expect(response.body.data.status).toBe('success');
+  expect(response.body.data.sources).toHaveLength(10);
+  expect(response.body.data.limits.files).toBe(200);
+  expect(calls).toHaveLength(60);
+  expect(
+    calls.every(
+      (entry) =>
+        entry.url === '/query' &&
+        ids.includes(entry.body.file_id) &&
+        entry.body.entity_id === 'project-60',
+    ),
+  ).toBe(true);
+  await call('file_search', {
+    agentId: 'remote-only',
+    projectId: 'project-60',
+    arguments: { query: 'q', file_ids: ['foreign-file'] },
+  }).expect(400);
+  expect(calls).toHaveLength(60);
+});

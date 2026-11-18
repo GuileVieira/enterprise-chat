@@ -2594,7 +2594,7 @@ paths:
                             '3': 0.87
                       failures: []
                       limits:
-                        files: 50
+                        files: 200
                         concurrency: 5
                         deadlineMs: 30000
                         bytes: 1048576
@@ -2688,7 +2688,7 @@ paths:
           globalSources: 10
         limits:
           queryChars: 4000
-          files: 50
+          files: 200
           concurrentQueries: 5
           deadlineMs: 30000
           maxResponseBytes: 1048576
