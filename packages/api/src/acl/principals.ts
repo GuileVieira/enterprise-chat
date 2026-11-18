@@ -19,7 +19,9 @@ export async function getResourcePermissionEntries({
   const tenantId = getTenantId();
   const canListSharedTenants =
     userRole === SystemRoles.ADMIN &&
-    (resourceType === ResourceType.AGENT || resourceType === ResourceType.PROMPTGROUP);
+    (resourceType === ResourceType.AGENT ||
+      resourceType === ResourceType.PROMPTGROUP ||
+      resourceType === ResourceType.REMOTE_AGENT);
   if (!canListSharedTenants || !tenantId || tenantId === SYSTEM_TENANT_ID) {
     return aggregateAclEntries(pipeline);
   }

@@ -212,6 +212,14 @@ O teste OpenAPI confere rotas/montagens, 20 operações, referências, separaç�
 Typechecks e builds focados dos packages alterados são verificações separadas. Nenhum E2E,
 frontend, Docker, deploy, migração ou escrita de produção é comprovado por estas instruções.
 
+## Compartilhar acesso remoto com um tenant
+
+No editor do agente, abra **Acesso remoto** (globo), desative **Compartilhar com todos** e,
+como superadmin, selecione o tenant, clique em **Adicionar** e depois **Salvar**. Isso concede
+REMOTE_AGENT VIEW ao tenant escolhido, inclusive ao OWNER usado pela chave. Os demais tenants
+não recebem o grant. O destinatário ainda precisa de `REMOTE_AGENTS USE`; compartilhar a API
+não concede AGENT EDIT nem exportação de instruções.
+
 ## Executar um agente com um pedido
 
 A rota já existe; não é necessário gerar o texto com um modelo externo ao Orqest:

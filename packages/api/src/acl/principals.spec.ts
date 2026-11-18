@@ -6,9 +6,17 @@ import {
   runAsSystem,
   tenantStorage,
 } from '@librechat/data-schemas';
-import { PrincipalModel, PrincipalType, ResourceType, SystemRoles } from 'librechat-data-provider';
+import {
+  PrincipalModel,
+  PrincipalType,
+  ResourceType,
+  SystemRoles,
+  AccessRoleIds,
+  PermissionBits,
+} from 'librechat-data-provider';
 import type { PipelineStage } from 'mongoose';
 import { ensureDirectoryPrincipalUser, getResourcePermissionEntries } from './principals';
+import { AccessControlService } from './accessControlService';
 
 const createMethods = () => ({
   findUserBySourceId: jest.fn().mockResolvedValue(null),
@@ -36,7 +44,104 @@ describe('getResourcePermissionEntries across shared tenants', () => {
     await runAsSystem(async () => mongoose.models.AclEntry.deleteMany({}));
   });
 
-  it.each([ResourceType.AGENT, ResourceType.PROMPTGROUP])(
+  it('persists, reloads and revokes tenant remote VIEW without granting EDIT or public access', async () => {
+    await runAsSystem(async () => methods.seedDefaultRoles());
+    const service = new AccessControlService(mongoose, methods);
+    const resourceId = new mongoose.Types.ObjectId();
+    const grantedBy = new mongoose.Types.ObjectId();
+    await tenantStorage.run({ tenantId: 'tenant-a' }, async () => {
+      const result = await service.bulkUpdateResourcePermissions({
+        resourceType: ResourceType.REMOTE_AGENT,
+        resourceId,
+        grantedBy,
+        updatedPrincipals: [
+          {
+            type: PrincipalType.TENANT,
+            id: 'tenant-b',
+            accessRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER,
+          },
+        ],
+        revokedPrincipals: [],
+      });
+      expect(result.errors).toEqual([]);
+      const entries = await getResourcePermissionEntries({
+        resourceType: ResourceType.REMOTE_AGENT,
+        userRole: SystemRoles.ADMIN,
+        pipeline: [{ $match: { resourceType: ResourceType.REMOTE_AGENT, resourceId } }],
+        aggregateAclEntries: methods.aggregateAclEntries,
+      });
+      expect(entries).toEqual([
+        expect.objectContaining({
+          tenantId: 'tenant-b',
+          principalType: PrincipalType.TENANT,
+          principalId: 'tenant-b',
+          permBits: PermissionBits.VIEW,
+        }),
+      ]);
+      const escalation = await service.bulkUpdateResourcePermissions({
+        resourceType: ResourceType.REMOTE_AGENT,
+        resourceId,
+        grantedBy,
+        updatedPrincipals: [
+          {
+            type: PrincipalType.TENANT,
+            id: 'tenant-b',
+            accessRoleId: AccessRoleIds.REMOTE_AGENT_EDITOR,
+          },
+        ],
+        revokedPrincipals: [],
+      });
+      expect(escalation.errors).toHaveLength(1);
+    });
+    await tenantStorage.run({ tenantId: 'tenant-b' }, async () => {
+      const principals = [{ principalType: PrincipalType.TENANT, principalId: 'tenant-b' }];
+      expect(
+        await methods.hasPermission(
+          principals,
+          ResourceType.REMOTE_AGENT,
+          resourceId,
+          PermissionBits.VIEW,
+        ),
+      ).toBe(true);
+      expect(
+        await methods.hasPermission(
+          principals,
+          ResourceType.REMOTE_AGENT,
+          resourceId,
+          PermissionBits.EDIT,
+        ),
+      ).toBe(false);
+    });
+    await tenantStorage.run({ tenantId: 'tenant-c' }, async () => {
+      expect(
+        await methods.hasPermission(
+          [{ principalType: PrincipalType.TENANT, principalId: 'tenant-c' }],
+          ResourceType.REMOTE_AGENT,
+          resourceId,
+          PermissionBits.VIEW,
+        ),
+      ).toBe(false);
+    });
+    await tenantStorage.run({ tenantId: 'tenant-a' }, async () => {
+      await service.bulkUpdateResourcePermissions({
+        resourceType: ResourceType.REMOTE_AGENT,
+        resourceId,
+        grantedBy,
+        updatedPrincipals: [],
+        revokedPrincipals: [{ type: PrincipalType.TENANT, id: 'tenant-b' }],
+      });
+      expect(
+        await getResourcePermissionEntries({
+          resourceType: ResourceType.REMOTE_AGENT,
+          userRole: SystemRoles.ADMIN,
+          pipeline: [{ $match: { resourceType: ResourceType.REMOTE_AGENT, resourceId } }],
+          aggregateAclEntries: methods.aggregateAclEntries,
+        }),
+      ).toEqual([]);
+    });
+  });
+
+  it.each([ResourceType.AGENT, ResourceType.PROMPTGROUP, ResourceType.REMOTE_AGENT])(
     'reloads all destination tenants for an admin sharing %s, keeping other principals scoped',
     async (resourceType) => {
       const resourceId = new mongoose.Types.ObjectId();

@@ -71,8 +71,13 @@ export default function GenericGrantAccessDialog({
   const canSharePublic = useCanSharePublic(resourceType);
   const canEditAgentInsights =
     resourceType === ResourceType.AGENT && user?.role === SystemRoles.ADMIN;
+  const canSelectTenants =
+    user?.role === SystemRoles.ADMIN &&
+    (resourceType === ResourceType.AGENT ||
+      resourceType === ResourceType.PROMPTGROUP ||
+      resourceType === ResourceType.REMOTE_AGENT);
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
-  const canManagePrincipals = hasPeoplePickerAccess || canEditAgentInsights;
+  const canManagePrincipals = hasPeoplePickerAccess || canEditAgentInsights || canSelectTenants;
 
   /** User can use the dialog if they can manage principals or share publicly. */
   const canUseShareDialog = canManagePrincipals || canSharePublic;
@@ -101,9 +106,6 @@ export default function GenericGrantAccessDialog({
     config?.defaultViewerRoleId,
   );
   const [selectedTenantId, setSelectedTenantId] = useState('');
-  const canSelectTenants =
-    user?.role === SystemRoles.ADMIN &&
-    (resourceType === ResourceType.AGENT || resourceType === ResourceType.PROMPTGROUP);
   const { data: tenantsData } = useListAdminTenants({ enabled: canSelectTenants && isModalOpen });
 
   // Sync all shares with current shares when modal opens, marking existing vs new

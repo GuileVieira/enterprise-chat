@@ -1,6 +1,6 @@
 import React from 'react';
-import { ResourceType } from 'librechat-data-provider';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { ResourceType, AccessRoleIds, PrincipalType } from 'librechat-data-provider';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import GenericGrantAccessDialog from '../GenericGrantAccessDialog';
 
@@ -12,6 +12,7 @@ const mockUsePeoplePickerPermissions = jest.fn(() => ({
   peoplePickerTypeFilter: '' as string | null,
 }));
 const mockUseCanSharePublic = jest.fn(() => true);
+const mockUseListAdminTenants = jest.fn(() => ({ data: { tenants: [] as { id: string }[] } }));
 
 const config = {
   defaultViewerRoleId: 'viewer',
@@ -70,16 +71,16 @@ jest.mock('../PeoplePicker', () => ({
   SelectedPrincipalsList: () => <div data-testid="principals-list" />,
 }));
 jest.mock('~/data-provider/admin', () => ({
-  useListAdminTenants: () => ({ data: { tenants: [] } }),
+  useListAdminTenants: () => mockUseListAdminTenants(),
 }));
 
-const renderDialog = () =>
+const renderDialog = (resourceType = ResourceType.AGENT) =>
   render(
     <GenericGrantAccessDialog
       resourceDbId="agent-db-1"
       resourceId="agent-1"
       resourceName="Test Agent"
-      resourceType={ResourceType.AGENT}
+      resourceType={resourceType}
     />,
   );
 
@@ -93,6 +94,74 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
       peoplePickerTypeFilter: '',
     });
     mockUseCanSharePublic.mockReturnValue(true);
+    mockUseListAdminTenants.mockReturnValue({ data: { tenants: [] } });
+  });
+
+  it.each([true, false])(
+    'lets ADMIN grant remote API access to a tenant without public sharing (people picker=%s)',
+    async (hasPeoplePickerAccess) => {
+      mockUsePeoplePickerPermissions.mockReturnValue({
+        hasPeoplePickerAccess,
+        peoplePickerTypeFilter: '',
+      });
+      mockUseCanSharePublic.mockReturnValue(false);
+      const mutateAsync = jest.fn().mockResolvedValue({});
+      const owner = {
+        type: PrincipalType.USER,
+        id: 'owner-id',
+        name: 'Owner',
+        source: 'local',
+        accessRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
+      };
+      mockUseResourcePermissionState.mockReturnValue(
+        baseState({
+          config: {
+            ...config,
+            defaultViewerRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER,
+            defaultOwnerRoleId: AccessRoleIds.REMOTE_AGENT_OWNER,
+          },
+          permissionsData: { principals: [owner], public: false },
+          currentShares: [owner],
+          updatePermissionsMutation: { isLoading: false, mutateAsync },
+        }),
+      );
+      mockUseListAdminTenants.mockReturnValue({ data: { tenants: [{ id: 'mm-marketing' }] } });
+      renderDialog(ResourceType.REMOTE_AGENT);
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+      fireEvent.change(screen.getByRole('combobox', { name: 'com_ui_select_tenant' }), {
+        target: { value: 'mm-marketing' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_add' }));
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_save' }));
+      await waitFor(() =>
+        expect(mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            resourceType: ResourceType.REMOTE_AGENT,
+            data: {
+              updated: [
+                expect.objectContaining({
+                  type: PrincipalType.TENANT,
+                  id: 'mm-marketing',
+                  accessRoleId: AccessRoleIds.REMOTE_AGENT_VIEWER,
+                }),
+              ],
+              removed: [],
+            },
+          }),
+        ),
+      );
+    },
+  );
+
+  it.each(['OWNER', 'USER'])('does not show cross-tenant API sharing to %s', (role) => {
+    mockUseAuthContext.mockReturnValue({ user: { role } });
+    mockUseResourcePermissionState.mockReturnValue(baseState());
+    mockUseListAdminTenants.mockReturnValue({ data: { tenants: [{ id: 'mm-marketing' }] } });
+    renderDialog(ResourceType.REMOTE_AGENT);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+    expect(
+      screen.queryByRole('combobox', { name: 'com_ui_select_tenant' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders a compact alert button (not the share trigger, not raw text) when permissions fail to load', () => {
