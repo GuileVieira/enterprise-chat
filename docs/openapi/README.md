@@ -40,6 +40,12 @@ Essas três rotas não pertencem ao contrato servido por `/api/integrations/v1/o
 Regras, limites e compensação: [plano de portabilidade](../plans/agent-portability.md).
 ACL para agentes compartilhados com mm-marketing: [procedimento Mongo](../operations/mm-marketing-agent-access.md).
 
+No compartilhamento de um agente com tenant feito por superadministrador, salvar concede
+`AGENT VIEW+EDIT` e `REMOTE_AGENT VIEW` automaticamente. O acesso remoto automático é identificado
+como herdado e removido ao desfazer esse compartilhamento. Concessões manuais independentes à API
+são preservadas. Isso não muda papéis globais, restrições da chave ou permissões de skills; também
+não amplia os compartilhamentos públicos, por usuário ou criados automaticamente por OWNER.
+
 ## Autenticação e principal
 
 Aceita uma das credenciais existentes no header `Authorization: Bearer …`:

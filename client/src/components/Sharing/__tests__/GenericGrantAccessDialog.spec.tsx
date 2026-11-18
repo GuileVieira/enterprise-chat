@@ -98,6 +98,58 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
   });
 
   it.each([true, false])(
+    'previews and submits editor access for a tenant agent share (people picker=%s)',
+    async (hasPeoplePickerAccess) => {
+      mockUsePeoplePickerPermissions.mockReturnValue({
+        hasPeoplePickerAccess,
+        peoplePickerTypeFilter: '',
+      });
+      mockUseCanSharePublic.mockReturnValue(false);
+      const mutateAsync = jest.fn().mockResolvedValue({});
+      const owner = {
+        type: PrincipalType.USER,
+        id: 'owner-id',
+        name: 'Owner',
+        source: 'local',
+        accessRoleId: AccessRoleIds.AGENT_OWNER,
+      };
+      mockUseResourcePermissionState.mockReturnValue(
+        baseState({
+          config: { ...config, defaultOwnerRoleId: AccessRoleIds.AGENT_OWNER },
+          permissionsData: { principals: [owner], public: false },
+          currentShares: [owner],
+          updatePermissionsMutation: { isLoading: false, mutateAsync },
+        }),
+      );
+      mockUseListAdminTenants.mockReturnValue({ data: { tenants: [{ id: 'mm-marketing' }] } });
+      renderDialog();
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+      expect(screen.getByText('com_ui_tenant_agent_api_access')).toBeInTheDocument();
+      fireEvent.change(screen.getByRole('combobox', { name: 'com_ui_select_tenant' }), {
+        target: { value: 'mm-marketing' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_add' }));
+      fireEvent.click(screen.getByRole('button', { name: 'com_ui_save' }));
+      await waitFor(() =>
+        expect(mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            resourceType: ResourceType.AGENT,
+            data: expect.objectContaining({
+              updated: [
+                expect.objectContaining({
+                  type: PrincipalType.TENANT,
+                  id: 'mm-marketing',
+                  accessRoleId: AccessRoleIds.AGENT_EDITOR,
+                }),
+              ],
+            }),
+          }),
+        ),
+      );
+    },
+  );
+
+  it.each([true, false])(
     'lets ADMIN grant remote API access to a tenant without public sharing (people picker=%s)',
     async (hasPeoplePickerAccess) => {
       mockUsePeoplePickerPermissions.mockReturnValue({

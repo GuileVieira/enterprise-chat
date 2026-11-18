@@ -4117,5 +4117,6 @@
   "com_agent_import_success": "Agente importado com sucesso",
   "com_agent_import_warning_reconnect": "Reconecte a ferramenta no destino: {{name}}",
   "com_agent_import_warning_reuse": "Skill existente será reutilizada sem alterações: {{name}}",
-  "com_agent_import_warning_all_skills": "O escopo de todas as skills usa o catálogo do destino."
+  "com_agent_import_warning_all_skills": "O escopo de todas as skills usa o catálogo do destino.",
+  "com_ui_tenant_agent_api_access": "Compartilhar com um tenant permite que seus membros editem e exportem o agente e acessem sua API. Remover o compartilhamento também remove o acesso à API concedido automaticamente."
 }

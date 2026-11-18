@@ -412,6 +412,7 @@ export class AccessControlService {
     revokedPrincipals = [],
     grantedBy,
     session,
+    tenantAgentApiAccess = false,
   }: {
     resourceType: ResourceType;
     resourceId: string | Types.ObjectId;
@@ -419,6 +420,7 @@ export class AccessControlService {
     revokedPrincipals?: BulkPrincipal[];
     grantedBy: string | Types.ObjectId;
     session?: ClientSession;
+    tenantAgentApiAccess?: boolean;
   }): Promise<BulkPermissionUpdateResult> {
     const supportsTransactions = await getTransactionSupport(
       this._mongoose,
@@ -452,6 +454,16 @@ export class AccessControlService {
           : Promise.resolve([]),
       ]);
       const rolesMap = new Map(roles.map((role) => [role.accessRoleId, role]));
+      const hasTenantAgentUpdates =
+        tenantAgentApiAccess &&
+        resourceType === ResourceType.AGENT &&
+        updatedPrincipals.some((principal) => principal.type === PrincipalType.TENANT);
+      const remoteRoles = hasTenantAgentUpdates
+        ? await this._dbMethods.findRolesByResourceType(ResourceType.REMOTE_AGENT)
+        : [];
+      const remoteViewer = remoteRoles.find(
+        (role) => role.accessRoleId === AccessRoleIds.REMOTE_AGENT_VIEWER,
+      );
       const results: BulkPermissionUpdateResult = {
         granted: [],
         updated: [],
@@ -521,7 +533,15 @@ export class AccessControlService {
             });
             continue;
           }
-          const role = rolesMap.get(principal.accessRoleId);
+          const tenantAgent =
+            tenantAgentApiAccess &&
+            resourceType === ResourceType.AGENT &&
+            principal.type === PrincipalType.TENANT;
+          const roleId =
+            tenantAgent && principal.accessRoleId === AccessRoleIds.AGENT_VIEWER
+              ? AccessRoleIds.AGENT_EDITOR
+              : principal.accessRoleId;
+          const role = rolesMap.get(roleId);
           if (!role) {
             results.errors.push({
               principal,
@@ -529,10 +549,15 @@ export class AccessControlService {
             });
             continue;
           }
-          if (principal.type === PrincipalType.TENANT && role.permBits !== PermissionBits.VIEW) {
+          const requiredTenantBits = tenantAgent
+            ? PermissionBits.VIEW | PermissionBits.EDIT
+            : PermissionBits.VIEW;
+          if (principal.type === PrincipalType.TENANT && role.permBits !== requiredTenantBits) {
             results.errors.push({
               principal,
-              error: 'Tenant-wide agent grants must use viewer access',
+              error: tenantAgent
+                ? 'Tenant agent shares require editor access'
+                : 'Tenant grants must use viewer access',
             });
             continue;
           }
@@ -544,6 +569,76 @@ export class AccessControlService {
           };
           if (principal.type !== PrincipalType.PUBLIC) {
             query.principalId = queryPrincipalId(principal);
+          }
+          let remoteWrite: Parameters<AllMethods['bulkWriteAclEntries']>[0][number] | undefined;
+          if (tenantAgent) {
+            if (!remoteViewer || remoteViewer.permBits !== PermissionBits.VIEW) {
+              throw new Error('Remote agent viewer role not found');
+            }
+            const targetTenant = String(principal.id);
+            const [remoteEntries, agentEntries] = await tenantStorage.run(
+              { ...(tenantStorage.getStore() ?? {}), tenantId: targetTenant },
+              () =>
+                Promise.all([
+                  this._dbMethods.findEntriesByResource(
+                    ResourceType.REMOTE_AGENT,
+                    resourceId,
+                    localSession,
+                  ),
+                  this._dbMethods.findEntriesByResource(
+                    ResourceType.AGENT,
+                    resourceId,
+                    localSession,
+                  ),
+                ]),
+            );
+            const manualRemote = remoteEntries.some(
+              (entry) =>
+                entry.principalType === PrincipalType.TENANT &&
+                String(entry.principalId) === targetTenant &&
+                entry.inheritedFrom == null &&
+                (entry.permBits & PermissionBits.VIEW) !== 0 &&
+                (entry.expiredAt == null || entry.expiredAt > new Date()),
+            );
+            const source = agentEntries.find(
+              (entry) =>
+                entry.principalType === PrincipalType.TENANT &&
+                String(entry.principalId) === targetTenant,
+            );
+            if (source) {
+              currentEntriesByPrincipal.set(`${principal.type}:${principal.id}`, source);
+            }
+            if (!manualRemote) {
+              remoteWrite = {
+                updateMany: {
+                  filter: {
+                    principalType: PrincipalType.TENANT,
+                    principalId: targetTenant,
+                    resourceType: ResourceType.REMOTE_AGENT,
+                    resourceId,
+                    inheritedFrom: new Types.ObjectId(resourceId),
+                  },
+                  update: {
+                    $set: {
+                      permBits: PermissionBits.VIEW,
+                      roleId: remoteViewer._id,
+                      grantedBy,
+                      grantedAt: new Date(),
+                      expiredAt: source?.expiredAt ?? null,
+                    },
+                    $setOnInsert: {
+                      principalType: PrincipalType.TENANT,
+                      principalId: targetTenant,
+                      resourceType: ResourceType.REMOTE_AGENT,
+                      resourceId,
+                      inheritedFrom: new Types.ObjectId(resourceId),
+                      tenantId: targetTenant,
+                    },
+                  },
+                  upsert: true,
+                },
+              };
+            }
           }
 
           const existingEntry = currentEntriesByPrincipal.get(
@@ -600,6 +695,10 @@ export class AccessControlService {
                 principalModel: principalModelMap[principal.type],
               }),
             },
+            ...(resourceType === ResourceType.REMOTE_AGENT &&
+              principal.type === PrincipalType.TENANT && {
+                $unset: { inheritedFrom: '' },
+              }),
           };
           const bulkWriteIndex = bulkWrites.length;
           bulkWrites.push({
@@ -608,6 +707,10 @@ export class AccessControlService {
           bulkWriteTenantIds.push(
             principal.type === PrincipalType.TENANT ? principal.id?.toString() : undefined,
           );
+          if (remoteWrite) {
+            bulkWrites.push(remoteWrite);
+            bulkWriteTenantIds.push(principal.id?.toString());
+          }
           results.granted.push({
             type: principal.type,
             id: principal.id,
@@ -617,7 +720,7 @@ export class AccessControlService {
             avatar: principal.avatar,
             description: principal.description,
             idOnTheSource: principal.idOnTheSource,
-            accessRoleId: principal.accessRoleId,
+            accessRoleId: role.accessRoleId as AccessRoleIds,
             memberCount: principal.memberCount,
             memberIds: principal.memberIds,
             ...(resourceType === ResourceType.AGENT ? { viewInsights: wantsInsights } : {}),
@@ -704,7 +807,19 @@ export class AccessControlService {
           if (principal.type !== PrincipalType.PUBLIC) {
             query.principalId = queryPrincipalId(principal);
           }
-          const deleteEntry = () => this._dbMethods.deleteAclEntries(query, sessionOptions);
+          const deleteEntry = async () => {
+            if (resourceType === ResourceType.AGENT && principal.type === PrincipalType.TENANT) {
+              await this._dbMethods.deleteAclEntries(
+                {
+                  ...query,
+                  resourceType: ResourceType.REMOTE_AGENT,
+                  inheritedFrom: new Types.ObjectId(resourceId),
+                },
+                sessionOptions,
+              );
+            }
+            return await this._dbMethods.deleteAclEntries(query, sessionOptions);
+          };
           const deleteResult =
             principal.type === PrincipalType.TENANT && principal.id != null
               ? await tenantStorage.run(
@@ -787,6 +902,32 @@ export class AccessControlService {
     resourceId: string | Types.ObjectId;
     changes?: InsightsPermissionChange[];
   }): Promise<void> {
+    const currentTenantId = tenantStorage.getStore()?.tenantId;
+    const foreignTenants = new Set(
+      changes
+        .filter(
+          (change) =>
+            change.principal.type === PrincipalType.TENANT &&
+            change.principal.id != null &&
+            change.principal.id.toString() !== currentTenantId,
+        )
+        .map((change) => change.principal.id!.toString()),
+    );
+    for (const tenantId of foreignTenants) {
+      const scopedChanges = changes.filter(
+        (change) =>
+          change.principal.type === PrincipalType.TENANT &&
+          change.principal.id?.toString() === tenantId,
+      );
+      await tenantStorage.run({ ...(tenantStorage.getStore() ?? {}), tenantId }, () =>
+        this.restoreInsightsPermissionChanges({ resourceType, resourceId, changes: scopedChanges }),
+      );
+    }
+    changes = changes.filter(
+      (change) =>
+        change.principal.type !== PrincipalType.TENANT ||
+        change.principal.id?.toString() === currentTenantId,
+    );
     const operations: Parameters<AllMethods['bulkWriteAclEntries']>[0] = changes.flatMap(
       (change): Parameters<AllMethods['bulkWriteAclEntries']>[0] => {
         const filter: Record<string, unknown> = {
@@ -795,7 +936,10 @@ export class AccessControlService {
           resourceId,
         };
         if (change.principal.type !== PrincipalType.PUBLIC) {
-          if (change.principal.type === PrincipalType.ROLE) {
+          if (
+            change.principal.type === PrincipalType.ROLE ||
+            change.principal.type === PrincipalType.TENANT
+          ) {
             filter.principalId = change.principal.id;
           } else {
             const id = change.principal.id?.toString();
@@ -857,6 +1001,31 @@ export class AccessControlService {
     );
     if (operations.length > 0) {
       await this._dbMethods.bulkWriteAclEntries(operations);
+    }
+    if (
+      resourceType === ResourceType.AGENT &&
+      changes.some((change) => change.principal.type === PrincipalType.TENANT)
+    ) {
+      const entries = await this._dbMethods.findEntriesByResource(resourceType, resourceId);
+      for (const change of changes) {
+        if (change.principal.type !== PrincipalType.TENANT) continue;
+        const stillShared = entries.some(
+          (entry) =>
+            entry.principalType === PrincipalType.TENANT &&
+            String(entry.principalId) === change.principal.id?.toString() &&
+            (entry.permBits & (PermissionBits.VIEW | PermissionBits.EDIT)) ===
+              (PermissionBits.VIEW | PermissionBits.EDIT),
+        );
+        if (!stillShared) {
+          await this._dbMethods.deleteAclEntries({
+            principalType: PrincipalType.TENANT,
+            principalId: change.principal.id,
+            resourceType: ResourceType.REMOTE_AGENT,
+            resourceId,
+            inheritedFrom: new Types.ObjectId(resourceId),
+          });
+        }
+      }
     }
   }
 

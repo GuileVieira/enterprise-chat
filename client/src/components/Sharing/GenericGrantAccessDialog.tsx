@@ -166,7 +166,10 @@ export default function GenericGrantAccessDialog({
         name: `Tenant: ${selectedTenantId}`,
         source: 'local',
         description: localize('com_ui_tenant_wide_access'),
-        accessRoleId: config?.defaultViewerRoleId,
+        accessRoleId:
+          resourceType === ResourceType.AGENT
+            ? AccessRoleIds.AGENT_EDITOR
+            : config?.defaultViewerRoleId,
         isExisting: false,
       },
     ]);
@@ -430,6 +433,12 @@ export default function GenericGrantAccessDialog({
                           {localize('com_ui_add')}
                         </Button>
                       </div>
+                    )}
+
+                    {canSelectTenants && resourceType === ResourceType.AGENT && (
+                      <p className="text-sm text-text-secondary">
+                        {localize('com_ui_tenant_agent_api_access')}
+                      </p>
                     )}
 
                     {!hasAtLeastOneOwner && hasChanges && (

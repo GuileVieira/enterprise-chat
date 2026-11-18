@@ -279,6 +279,7 @@ describe('PermissionsController', () => {
           updated: [tenantPrincipal],
           removed: [],
           public: false,
+          tenantAgentApiAccess: true,
         },
         user: { id: 'user-1', role: SystemRoles.OWNER, tenantId: 'tenant-2' },
       });
@@ -296,12 +297,13 @@ describe('PermissionsController', () => {
           resourceType: ResourceType.AGENT,
           resourceId: agentObjectId,
           updatedPrincipals: [tenantPrincipal],
+          tenantAgentApiAccess: false,
         }),
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
-    it('normalizes agent tenant principals to viewer access', async () => {
+    it('normalizes agent tenant principals to editor access without owner privileges', async () => {
       const requestTenantPrincipal = {
         type: PrincipalType.TENANT,
         id: 'tenant-2',
@@ -309,7 +311,7 @@ describe('PermissionsController', () => {
       };
       const normalizedTenantPrincipal = {
         ...requestTenantPrincipal,
-        accessRoleId: AccessRoleIds.AGENT_VIEWER,
+        accessRoleId: AccessRoleIds.AGENT_EDITOR,
       };
 
       mockBulkUpdateResourcePermissions.mockResolvedValue({
@@ -326,7 +328,7 @@ describe('PermissionsController', () => {
           removed: [],
           public: false,
         },
-        user: { id: 'user-1', role: SystemRoles.OWNER, tenantId: 'tenant-2' },
+        user: { id: 'user-1', role: SystemRoles.ADMIN, tenantId: 'tenant-2' },
       });
       const res = createMockRes();
 
@@ -335,6 +337,7 @@ describe('PermissionsController', () => {
       expect(mockBulkUpdateResourcePermissions).toHaveBeenCalledWith(
         expect.objectContaining({
           updatedPrincipals: [normalizedTenantPrincipal],
+          tenantAgentApiAccess: true,
         }),
       );
       expect(res.status).toHaveBeenCalledWith(200);

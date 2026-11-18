@@ -4103,5 +4103,6 @@
   "com_agent_import_success": "Agent imported successfully",
   "com_agent_import_warning_reconnect": "Reconnect tool in destination: {{name}}",
   "com_agent_import_warning_reuse": "Reuse unchanged skill in destination: {{name}}",
-  "com_agent_import_warning_all_skills": "All skills scope uses the destination catalog."
+  "com_agent_import_warning_all_skills": "All skills scope uses the destination catalog.",
+  "com_ui_tenant_agent_api_access": "Sharing with a tenant lets its members edit and export the agent and access its API. Removing the share also removes automatically granted API access."
 }

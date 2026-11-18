@@ -221,7 +221,9 @@ const updateResourcePermissions = async (req, res) => {
           id: principalId,
           ...(resourceType === ResourceType.AGENT &&
             principal.type === PrincipalType.TENANT && {
-              accessRoleId: AccessRoleIds.AGENT_VIEWER,
+              accessRoleId: isAdminUser(req.user)
+                ? AccessRoleIds.AGENT_EDITOR
+                : AccessRoleIds.AGENT_VIEWER,
             }),
         };
         if (resourceType === ResourceType.PROMPTGROUP) {
@@ -294,6 +296,7 @@ const updateResourcePermissions = async (req, res) => {
       updatedPrincipals: validatedPrincipals,
       revokedPrincipals,
       grantedBy: userId,
+      tenantAgentApiAccess: resourceType === ResourceType.AGENT && isAdminUser(req.user),
     });
 
     if (
