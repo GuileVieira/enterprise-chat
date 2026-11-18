@@ -1,4 +1,5 @@
 export * from './access';
+export * from './roles';
 export * from './admin';
 export * from './error';
 export * from './email';

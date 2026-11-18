@@ -1,4 +1,5 @@
 const express = require('express');
+const { scopeRoleMutation } = require('@librechat/api');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   SystemRoles,
@@ -106,7 +107,7 @@ const permissionConfigs = {
 const createPermissionUpdateHandler = (permissionKey) => {
   const config = permissionConfigs[permissionKey];
 
-  return async (req, res) => {
+  return scopeRoleMutation(async (req, res) => {
     const { roleName } = req.params;
     const updates = req.body;
 
@@ -136,7 +137,7 @@ const createPermissionUpdateHandler = (permissionKey) => {
     } catch (error) {
       return res.status(400).send({ message: config.errorMessage, error: error.errors });
     }
-  };
+  });
 };
 
 /**
