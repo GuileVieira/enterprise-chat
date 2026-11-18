@@ -1,6 +1,6 @@
 import { assertKeyResource, keyResourceIds } from './resources';
 import mongoose, { Types } from 'mongoose';
-import { ResourceCapabilityMap } from '@librechat/data-schemas';
+import { ResourceCapabilityMap, runAsSystem } from '@librechat/data-schemas';
 import {
   PermissionBits,
   Permissions,
@@ -154,9 +154,15 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
   async function agent(req: IntegrationRequest, id: string, execution = false): Promise<IAgent> {
     assertKeyResource(req, 'agentIds', id);
     await feature(req, execution ? PermissionTypes.REMOTE_AGENTS : PermissionTypes.AGENTS);
-    const row = await mongoose.models.Agent.findOne({
+    let row = await mongoose.models.Agent.findOne({
       id,
     }).lean<IAgent>();
+    if (!row) {
+      const ids = await accessibleAgentIds(req, execution);
+      row = await runAsSystem(async () =>
+        mongoose.models.Agent.findOne({ id, _id: { $in: ids } }).lean<IAgent>(),
+      );
+    }
     if (!row) throw notFound();
     if (execution) {
       const bits = await getRemoteAgentPermissions(
@@ -343,6 +349,22 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     };
   };
   const agentCache = new WeakMap<IntegrationRequest, Promise<IAgent[]>>();
+  async function accessibleAgentIds(req: IntegrationRequest, execution = false) {
+    const lookup = (resourceType: ResourceType, requiredPermissions: PermissionBits) =>
+      deps.findAccessibleResources({
+        userId: req.user.id,
+        role: req.user.role,
+        resourceType,
+        requiredPermissions,
+      });
+    if (!execution) return lookup(ResourceType.AGENT, PermissionBits.EDIT);
+    return (
+      await Promise.all([
+        lookup(ResourceType.AGENT, PermissionBits.SHARE),
+        lookup(ResourceType.REMOTE_AGENT, PermissionBits.VIEW),
+      ])
+    ).flat();
+  }
   function scopedAgents(req: IntegrationRequest): Promise<IAgent[]> {
     const cached = agentCache.get(req);
     if (cached) return cached;
@@ -350,20 +372,17 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       await feature(req, PermissionTypes.AGENTS);
       const cap = ResourceCapabilityMap[ResourceType.AGENT];
       const manages = cap && (await deps.hasCapability(req.user, cap).catch(() => false));
-      const ids = await deps.findAccessibleResources({
-        userId: req.user.id,
-        role: req.user.role,
-        resourceType: ResourceType.AGENT,
-        requiredPermissions: PermissionBits.EDIT,
-      });
-      const accessible = await mongoose.models.Agent.find({
-        $or: [...(manages ? [{ tenantId: req.user.tenantId }] : []), { _id: { $in: ids } }],
-        ...(keyResourceIds(req, 'agentIds')
-          ? { id: { $in: keyResourceIds(req, 'agentIds') } }
-          : {}),
-      })
-        .limit(2001)
-        .lean<IAgent[]>();
+      const ids = await accessibleAgentIds(req);
+      const accessible = await runAsSystem(async () =>
+        mongoose.models.Agent.find({
+          $or: [...(manages ? [{ tenantId: req.user.tenantId }] : []), { _id: { $in: ids } }],
+          ...(keyResourceIds(req, 'agentIds')
+            ? { id: { $in: keyResourceIds(req, 'agentIds') } }
+            : {}),
+        })
+          .limit(2001)
+          .lean<IAgent[]>(),
+      );
       if (accessible.length > 2000)
         throw new IntegrationError(
           413,

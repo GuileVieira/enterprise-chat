@@ -41,8 +41,8 @@ As escolhas nunca ampliam ACL/capabilities do OWNER e são revalidadas em cada r
 Em **Configurações → Dados e Privacidade → API do tenant**, “Nova chave” inicia com todos
 selecionados. “Editar acesso” altera uma chave existente sem trocar seu segredo. Gestão usa sessão
 JWT (`POST /api/tenant-api-keys` e `PATCH /api/tenant-api-keys/{id}`), exclusivamente OWNER do tenant
-ou ADMIN. A seleção inclui agentes globais compartilhados com o tenant e recusa recursos de
-outro tenant ou inacessíveis ao OWNER principal.
+ou ADMIN. A seleção inclui agentes compartilhados explicitamente com o tenant, mesmo quando pertencem
+ao tenant do superadmin. Recursos de outro tenant sem ACL permanecem inacessíveis.
 
 Chaves com seleção personalizada funcionam em `/api/integrations/v1`; os endpoints antigos de
 execução não aceitam essas chaves, para impedir contorno das restrições. Contexto e dados derivados
@@ -51,7 +51,8 @@ sem agente explícito ficam indisponíveis para chaves restritas. Chaves antigas
 seu comportamento anterior. `GET /identity` informa o acesso persistido.
 
 Exportar instruções/catálogo exige `AGENTS USE` e `AGENT EDIT` ou capacidade administrativa existente.
-Para agentes globais, exige EDIT explícito: administrar o tenant não libera suas instruções.
+Para agentes globais ou de outro tenant, exige EDIT explícito: administrar o tenant não libera
+suas instruções. Compartilhamento VIEW permite a seleção sem conceder exportação ou execução remota.
 Executar tools exige a autorização remota do agente e os grants/capabilities da ferramenta.
 EDIT não concede execução remota; permissão remota não concede exportação. Um catálogo exportável
 pode indicar `callable=false, reason=remote_access_denied`.

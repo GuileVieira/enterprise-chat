@@ -318,7 +318,12 @@ async function canViewAgentAvatar(
         : []),
       ...publicPrincipal,
     ];
-    return deps.hasPermission(sharedPrincipals, ResourceType.AGENT, agent._id, PermissionBits.VIEW);
+    const checkSharedAccess = async () =>
+      deps.hasPermission(sharedPrincipals, ResourceType.AGENT, agent._id, PermissionBits.VIEW);
+    // A tenant share is stored in the destination tenant, not the image owner's tenant.
+    return viewer.tenantId
+      ? tenantStorage.run({ tenantId: viewer.tenantId, userId: viewerId }, checkSharedAccess)
+      : checkSharedAccess();
   }
 
   const principals = await loadPrincipals(viewerId, viewer, deps);

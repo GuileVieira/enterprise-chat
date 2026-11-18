@@ -144,3 +144,28 @@ it('never imports role/group or management permissions from the viewer tenant', 
     .expect(403);
   expect(response.status).toBe(403);
 });
+
+it('serves the exact avatar from a source-tenant agent using the destination tenant grant', async () => {
+  await runAsSystem(async () => {
+    await mongoose.models.User.updateOne({ _id: owner._id }, { $set: { tenantId: 'orqest' } });
+    await mongoose.models.Agent.updateOne({ _id: agentId }, { $set: { tenantId: 'orqest' } });
+  });
+  await tenantStorage.run({ tenantId: 'shared-tenant' }, async () => {
+    await db.grantPermission(
+      PrincipalType.TENANT,
+      'shared-tenant',
+      ResourceType.AGENT,
+      agentId,
+      PermissionBits.VIEW,
+      owner._id,
+    );
+  });
+  expect(
+    await runAsSystem(async () => db.getUserById(String(owner._id), 'tenantId')),
+  ).toMatchObject({ tenantId: 'orqest' });
+  const response = await request(app)
+    .get(`${avatar}?manual=false`)
+    .set('Cookie', `refreshToken=${token}`);
+  expect(response.status).toBe(200);
+  await request(app).get(avatar).set('Cookie', `refreshToken=${outsiderToken}`).expect(403);
+});

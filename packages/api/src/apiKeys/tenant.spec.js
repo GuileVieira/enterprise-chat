@@ -329,39 +329,43 @@ it('shows shared agent IDs in management without granting remote access or expos
   expect(remote.body.agents.map((agent) => agent.id)).toEqual(['agent-tenant-a']);
 });
 
-it('includes explicitly shared global agents in the key catalog and accepts their selection', async () => {
-  await runAsSystem(async () => {
-    for (const id of ['agent-global-shared', 'agent-global-private']) {
-      const agent = await mongoose.models.Agent.create({
-        id,
-        name: id,
-        author: ownerA._id,
-        provider: 'openai',
-        model: 'test',
-      });
-      if (id === 'agent-global-shared') {
-        await tenantStorage.run({ tenantId: 'tenant-a' }, () =>
-          db.grantPermission(
-            PrincipalType.TENANT,
-            'tenant-a',
-            ResourceType.AGENT,
-            agent._id,
-            PermissionBits.VIEW,
-            ownerA._id,
-          ),
-        );
+it.each([undefined, 'orqest'])(
+  'includes shared agents from %s in the key catalog and accepts their selection',
+  async (sourceTenant) => {
+    await runAsSystem(async () => {
+      for (const id of ['agent-global-shared', 'agent-global-private']) {
+        const agent = await mongoose.models.Agent.create({
+          id,
+          tenantId: sourceTenant,
+          name: id,
+          author: ownerA._id,
+          provider: 'openai',
+          model: 'test',
+        });
+        if (id === 'agent-global-shared') {
+          await tenantStorage.run({ tenantId: 'tenant-a' }, () =>
+            db.grantPermission(
+              PrincipalType.TENANT,
+              'tenant-a',
+              ResourceType.AGENT,
+              agent._id,
+              PermissionBits.VIEW,
+              ownerA._id,
+            ),
+          );
+        }
       }
-    }
-  });
-  const catalog = await request(app)
-    .get('/keys/catalog?tenantId=tenant-a')
-    .set('X-Test-User', 'owner-a@test.local')
-    .expect(200);
-  expect(catalog.body.agents.map((agent) => agent.id)).toContain('agent-global-shared');
-  expect(catalog.body.agents.map((agent) => agent.id)).not.toContain('agent-global-private');
-  await request(app)
-    .post('/keys?tenantId=tenant-a')
-    .set('X-Test-User', 'owner-a@test.local')
-    .send({ name: 'Shared', resourceAccess: { agentIds: ['agent-global-shared'] } })
-    .expect(201);
-});
+    });
+    const catalog = await request(app)
+      .get('/keys/catalog?tenantId=tenant-a')
+      .set('X-Test-User', 'owner-a@test.local')
+      .expect(200);
+    expect(catalog.body.agents.map((agent) => agent.id)).toContain('agent-global-shared');
+    expect(catalog.body.agents.map((agent) => agent.id)).not.toContain('agent-global-private');
+    await request(app)
+      .post('/keys?tenantId=tenant-a')
+      .set('X-Test-User', 'owner-a@test.local')
+      .send({ name: 'Shared', resourceAccess: { agentIds: ['agent-global-shared'] } })
+      .expect(201);
+  },
+);

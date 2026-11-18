@@ -1,7 +1,7 @@
 import { apiKeyResourcesSchema } from 'librechat-data-provider';
 import type { TApiKeyResources } from 'librechat-data-provider';
 import { Types } from 'mongoose';
-import { tenantStorage, SYSTEM_TENANT_ID, logger } from '@librechat/data-schemas';
+import { tenantStorage, SYSTEM_TENANT_ID, logger, runAsSystem } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits, SystemRoles } from 'librechat-data-provider';
 import type { AllMethods, IUser } from '@librechat/data-schemas';
 import type { TTenantApiCatalog } from 'librechat-data-provider';
@@ -15,6 +15,8 @@ type Dependencies = Pick<
   | 'getProjects'
   | 'getProjectById'
   | 'getAgents'
+  | 'getUserPrincipals'
+  | 'findAccessibleResources'
   | 'createAgentApiKey'
   | 'listTenantApiKeys'
   | 'deleteTenantApiKey'
@@ -67,10 +69,20 @@ export function createTenantApiHandlers(deps: Dependencies): {
     includeShared = false,
   ): Promise<TTenantApiCatalog> {
     const userId = String(user._id);
-    const [agents, projects] = await Promise.all([deps.getAgents({}), deps.getProjects()]);
+    const principals = await deps.getUserPrincipals({ userId, role: user.role });
+    const sharedIds = (
+      await Promise.all(
+        [ResourceType.AGENT, ResourceType.REMOTE_AGENT].map((type) =>
+          deps.findAccessibleResources(principals, type, PermissionBits.VIEW),
+        ),
+      )
+    ).flat();
+    const [agents, projects] = await Promise.all([
+      runAsSystem(async () => deps.getAgents({ $or: [{ tenantId }, { _id: { $in: sharedIds } }] })),
+      deps.getProjects(),
+    ]);
     const result: TTenantApiCatalog = { tenantId, ownerId: userId, agents: [], projects: [] };
     for (const agent of agents) {
-      if (agent.tenantId != null && agent.tenantId !== tenantId) continue;
       const permissions = await getRemoteAgentPermissions(deps, userId, user.role, agent._id);
       const apiAvailable = Boolean(permissions & PermissionBits.VIEW);
       if (!apiAvailable) {

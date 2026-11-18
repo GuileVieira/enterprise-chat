@@ -585,39 +585,43 @@ it('searches authorized legacy linked files under selected project entity withou
   expect(JSON.stringify(result.body)).not.toMatch(/foreign-file|private\/legacy/);
 });
 
-it('exports global agents only with explicit EDIT access, preserving tenant and key restrictions', async () => {
-  await runAsSystem(async () => {
-    for (const [id, bits] of [
-      ['agent-global-editor', PermissionBits.EDIT],
-      ['agent-global-viewer', PermissionBits.VIEW],
-      ['agent-global-hidden', 0],
-    ]) {
-      const agent = await mongoose.models.Agent.create({
-        id,
-        name: id,
-        author: owner._id,
-        provider: 'openai',
-        model: 'test',
-        instructions: 'shared instruction',
-      });
-      if (bits)
-        await inTenant(() =>
-          db.grantPermission(
-            PrincipalType.TENANT,
-            tenant,
-            ResourceType.AGENT,
-            agent._id,
-            bits,
-            owner._id,
-          ),
-        );
-    }
-  });
-  await get('/agents/agent-global-editor').expect(200);
-  await get('/agents/agent-global-viewer').expect(404);
-  await get('/agents/agent-global-hidden').expect(404);
-  const result = await get('/agents').expect(200);
-  expect(result.body.items.map((agent) => agent.id)).toContain('agent-global-editor');
-  expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-viewer');
-  expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-hidden');
-});
+it.each([undefined, 'orqest'])(
+  'exports shared agents from %s only with explicit EDIT access',
+  async (sourceTenant) => {
+    await runAsSystem(async () => {
+      for (const [id, bits] of [
+        ['agent-global-editor', PermissionBits.EDIT],
+        ['agent-global-viewer', PermissionBits.VIEW],
+        ['agent-global-hidden', 0],
+      ]) {
+        const agent = await mongoose.models.Agent.create({
+          id,
+          tenantId: sourceTenant,
+          name: id,
+          author: owner._id,
+          provider: 'openai',
+          model: 'test',
+          instructions: 'shared instruction',
+        });
+        if (bits)
+          await inTenant(() =>
+            db.grantPermission(
+              PrincipalType.TENANT,
+              tenant,
+              ResourceType.AGENT,
+              agent._id,
+              bits,
+              owner._id,
+            ),
+          );
+      }
+    });
+    await get('/agents/agent-global-editor').expect(200);
+    await get('/agents/agent-global-viewer').expect(404);
+    await get('/agents/agent-global-hidden').expect(404);
+    const result = await get('/agents').expect(200);
+    expect(result.body.items.map((agent) => agent.id)).toContain('agent-global-editor');
+    expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-viewer');
+    expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-hidden');
+  },
+);
