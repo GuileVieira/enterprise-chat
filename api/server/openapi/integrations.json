@@ -3,7 +3,7 @@
   "info": {
     "title": "Orqest terminal — integrações implementadas no código",
     "version": "1.0.0",
-    "description": "20 operações de negócio e uma rota de documentação implementadas no worktree. Não comprova deploy/configuração da instalação. Terminal conduz raciocínio; Orqest fornece instruções/contexto e executa adapters compatíveis, sem LLM de agente. Filename .proposed preservado por compatibilidade dos links. Sem download integral RAG nem transporte interativo fictício."
+    "description": "20 operações de integração, documentação e execução de agente implementadas no código. Não comprova deploy/configuração da instalação. Terminal conduz raciocínio; Orqest fornece instruções/contexto e executa adapters; /api/agents/v1/chat/completions executa a LLM do agente. Filename .proposed preservado por compatibilidade dos links. Sem download integral RAG nem transporte interativo fictício."
   },
   "servers": [
     {
@@ -215,8 +215,8 @@
       "get": {
         "operationId": "externalListAgents",
         "tags": ["reads"],
-        "summary": "Listar agentes exportáveis por AGENT EDIT ou gestão",
-        "description": "Listar agentes exportáveis por AGENT EDIT ou gestão. Exportação exige AGENTS USE e AGENT EDIT/capacidade de gestão, separadamente da permissão remota.",
+        "summary": "Listar agentes acessíveis, incluindo compartilhamentos VIEW",
+        "description": "Exige AGENTS USE e AGENT VIEW ou gestão no próprio tenant. Inclui agentes compartilhados por outro tenant. exportable=false indica somente metadados; exportar instruções/contexto continua exigindo AGENT EDIT. A seleção da chave e a paginação permanecem aplicáveis.",
         "security": [
           {
             "TenantExecutionKey": []
@@ -265,7 +265,7 @@
                     "items": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Agent"
+                        "$ref": "#/components/schemas/AgentListEntry"
                       }
                     },
                     "nextCursor": {
@@ -3654,6 +3654,80 @@
           }
         }
       }
+    },
+    "/api/agents/v1/chat/completions": {
+      "post": {
+        "operationId": "executeAgentChatCompletion",
+        "tags": ["execution"],
+        "summary": "Executar agente e gerar resposta com a LLM configurada no Orqest",
+        "description": "Rota existente fora de integrations/v1. Usa instruções, skills e tools configuradas no agente e contexto do projeto autorizado. Consome tokens e pode executar tools com efeitos externos. Exige REMOTE_AGENTS USE, autorização REMOTE_AGENT VIEW ou propriedade do agente, API key habilitada e PROJECT VIEW quando projectId for enviado. Chaves com agentIds/projectIds restritos são recusadas pelo runtime completo; use chave tenant sem seleção personalizada. Para manter contexto, envie o histórico em messages a cada chamada. Não aceita o OIDC M2M de gestão como alternativa automática.",
+        "security": [
+          {
+            "TenantExecutionKey": []
+          }
+        ],
+        "x-orqest-status": "implemented",
+        "x-orqest-source": {
+          "file": "api/server/controllers/agents/openai.js",
+          "routerFile": "api/server/routes/agents/openai.js",
+          "route": "/chat/completions"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionRequest"
+              },
+              "example": {
+                "model": "agent_qPUED49hR-2e9CLncyY8A",
+                "messages": [
+                  {
+                    "role": "user",
+                    "content": "Analise as campanhas e sugira os próximos passos."
+                  }
+                ],
+                "stream": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta gerada; com stream=true, eventos SSE chat.completion.chunk e marcador [DONE].",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletion"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pedido inválido ou bloqueado por filtro de conteúdo."
+          },
+          "401": {
+            "description": "Credencial inválida."
+          },
+          "403": {
+            "description": "Execução remota desabilitada, ACL negada, chave restrita ou projeto sem acesso."
+          },
+          "404": {
+            "description": "Agente ou projeto não acessível."
+          },
+          "429": {
+            "description": "Limite atingido."
+          },
+          "500": {
+            "description": "Falha no runtime ou provedor do modelo."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3763,6 +3837,10 @@
           "version": {
             "type": "integer",
             "minimum": 0
+          },
+          "exportable": {
+            "type": "boolean",
+            "enum": [true]
           }
         },
         "required": [
@@ -4937,6 +5015,160 @@
           }
         },
         "additionalProperties": false
+      },
+      "AgentSummary": {
+        "type": "object",
+        "description": "Agente com VIEW sem EDIT: metadados visíveis; instruções e contexto não exportáveis.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "exportable": {
+            "type": "boolean",
+            "enum": [false]
+          }
+        },
+        "required": ["id", "provider", "model", "exportable"],
+        "additionalProperties": false
+      },
+      "AgentListEntry": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Agent"
+          },
+          {
+            "$ref": "#/components/schemas/AgentSummary"
+          }
+        ]
+      },
+      "ChatCompletionRequest": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "ID do agente, não o nome do modelo do provedor."
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": ["system", "user", "assistant", "tool"]
+                },
+                "content": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    }
+                  ]
+                },
+                "tool_call_id": {
+                  "type": "string"
+                },
+                "tool_calls": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "required": ["role"],
+              "additionalProperties": true
+            }
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "parent_message_id": {
+            "type": "string"
+          }
+        },
+        "required": ["model", "messages"],
+        "additionalProperties": true
+      },
+      "ChatCompletion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": ["chat.completion"]
+          },
+          "created": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "message": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": ["index", "message"],
+              "additionalProperties": true
+            }
+          },
+          "usage": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": ["id", "object", "created", "model", "choices"],
+        "additionalProperties": true
       }
     }
   },

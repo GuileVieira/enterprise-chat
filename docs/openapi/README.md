@@ -4,6 +4,8 @@ As **20 operações de `/api/integrations/v1` estão implementadas no worktree**
 usam MongoDB e HTTP de teste; isso **não comprova deploy**, configuração OIDC da instalação,
 índices RAG de produção ou efeitos externos reais. O terminal conduz o raciocínio; estas rotas
 fornecem instruções/contexto e executam ferramentas compatíveis sem iniciar a LLM do agente.
+O mesmo YAML também documenta a rota existente `POST /api/agents/v1/chat/completions`, que executa
+o agente com a LLM configurada no Orqest e consome tokens.
 
 | Arquivo                                                                              | Conteúdo                                                                                                                                                                                 |
 | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -12,7 +14,7 @@ fornecem instruções/contexto e executam ferramentas compatíveis sem iniciar a
 | [implementation.md](implementation.md)                                               | Plano refinado, decisões de segurança, fases e evidências de implementação.                                                                                                              |
 
 O contrato também está disponível por **GET `/api/integrations/v1/openapi.json`**, com a mesma
-credencial Bearer das integrações. São 20 operações de negócio mais essa rota de documentação.
+credencial Bearer das integrações. São 20 operações de integração, a rota de documentação e a execução de agente já existente.
 Consumo externo é REST/HTTP; não foi criado servidor MCP. Adapters MCP servem somente para tools
 internas já configuradas. Os YAMLs continuam importáveis; não foi adicionada Swagger UI.
 
@@ -51,7 +53,9 @@ seguem os agentes/projetos selecionados; histórico precisa ter vínculo autoriz
 sem agente explícito ficam indisponíveis para chaves restritas. Chaves antigas sem seleção mantêm
 seu comportamento anterior. `GET /identity` informa o acesso persistido.
 
-Exportar instruções/catálogo exige `AGENTS USE` e `AGENT EDIT` ou capacidade administrativa existente.
+Listar agentes exige `AGENTS USE` e `AGENT VIEW` ou gestão no próprio tenant. Compartilhados
+com VIEW aparecem com `exportable=false` e sem instruções. Exportar instruções/contexto continua
+exigindo `AGENT EDIT` ou gestão no próprio tenant.
 Para agentes globais ou de outro tenant, exige EDIT explícito: administrar o tenant não libera
 suas instruções. Compartilhamento VIEW permite a seleção sem conceder exportação ou execução remota.
 Executar tools exige a autorização remota do agente e os grants/capabilities da ferramenta.
@@ -207,3 +211,21 @@ referências legadas, cursor, conteúdo, RAG, functions, Actions, builtins, idem
 O teste OpenAPI confere rotas/montagens, 20 operações, referências, separação de auth e projeções.
 Typechecks e builds focados dos packages alterados são verificações separadas. Nenhum E2E,
 frontend, Docker, deploy, migração ou escrita de produção é comprovado por estas instruções.
+
+## Executar um agente com um pedido
+
+A rota já existe; não é necessário gerar o texto com um modelo externo ao Orqest:
+
+```bash
+curl -X POST 'https://orqest.redbytesolutions.com.br/api/agents/v1/chat/completions' \
+  -H "Authorization: Bearer $TENANT_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"agent_qPUED49hR-2e9CLncyY8A","messages":[{"role":"user","content":"Analise as campanhas e sugira os próximos passos."}],"stream":false}'
+```
+
+A resposta fica em `choices[0].message.content`. Para contexto de projeto, acrescente `projectId`;
+o runtime exige PROJECT VIEW. Envie o histórico em `messages` para os próximos pedidos.
+Execução exige `REMOTE_AGENTS USE` e autorização `REMOTE_AGENT VIEW` ou propriedade do agente.
+Compartilhamento AGENT VIEW sozinho não concede exportação nem execução remota. Chaves com
+seleção personalizada de agentes/projetos continuam recusadas pelo runtime completo; as restrições
+não são ignoradas. O runtime pode executar as tools configuradas, inclusive com efeitos externos.

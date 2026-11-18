@@ -587,7 +587,7 @@ it('searches authorized legacy linked files under selected project entity withou
 });
 
 it.each([undefined, 'orqest'])(
-  'exports shared agents from %s only with explicit EDIT access',
+  'lists VIEW shares from %s without exporting instructions; EDIT enables export',
   async (sourceTenant) => {
     await runAsSystem(async () => {
       for (const [id, bits] of [
@@ -622,7 +622,14 @@ it.each([undefined, 'orqest'])(
     await get('/agents/agent-global-hidden').expect(404);
     const result = await get('/agents').expect(200);
     expect(result.body.items.map((agent) => agent.id)).toContain('agent-global-editor');
-    expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-viewer');
+    expect(result.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'agent-global-viewer', exportable: false }),
+      ]),
+    );
+    expect(
+      result.body.items.find((agent) => agent.id === 'agent-global-viewer').instructions,
+    ).toBeUndefined();
     expect(result.body.items.map((agent) => agent.id)).not.toContain('agent-global-hidden');
   },
 );

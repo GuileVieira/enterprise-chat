@@ -56,6 +56,7 @@ export interface IntegrationReadDeps
 }
 export interface IntegrationAgentView {
   id: string;
+  exportable: boolean;
   name?: string;
   description?: string;
   instructions: string;
@@ -94,7 +95,7 @@ export interface IntegrationReaders {
   ): Promise<boolean>;
   agent(req: IntegrationRequest, id: string, execution?: boolean): Promise<IAgent>;
   memoryAgent(req: IntegrationRequest, id: string): Promise<void>;
-  scopedAgents(req: IntegrationRequest): Promise<IAgent[]>;
+  scopedAgents(req: IntegrationRequest, permission?: PermissionBits): Promise<IAgent[]>;
   project(req: IntegrationRequest, id: string, bits?: PermissionBits): Promise<IntegrationProject>;
   files(
     req: IntegrationRequest,
@@ -231,6 +232,7 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
     if (inspection.finding || inspection.traversalError) throw forbidden();
     return {
       id: row.id,
+      exportable: true,
       name: row.name,
       description: row.description,
       instructions: row.instructions ?? '',
@@ -348,8 +350,12 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       indexStatus: 'unknown',
     };
   };
-  const agentCache = new WeakMap<IntegrationRequest, Promise<IAgent[]>>();
-  async function accessibleAgentIds(req: IntegrationRequest, execution = false) {
+  const agentCache = new WeakMap<IntegrationRequest, Map<PermissionBits, Promise<IAgent[]>>>();
+  async function accessibleAgentIds(
+    req: IntegrationRequest,
+    execution = false,
+    permission = PermissionBits.EDIT,
+  ) {
     const lookup = (resourceType: ResourceType, requiredPermissions: PermissionBits) =>
       deps.findAccessibleResources({
         userId: req.user.id,
@@ -357,7 +363,15 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
         resourceType,
         requiredPermissions,
       });
-    if (!execution) return lookup(ResourceType.AGENT, PermissionBits.EDIT);
+    if (!execution) {
+      if (permission !== PermissionBits.VIEW) return lookup(ResourceType.AGENT, permission);
+      return (
+        await Promise.all([
+          lookup(ResourceType.AGENT, PermissionBits.VIEW),
+          lookup(ResourceType.AGENT, PermissionBits.EDIT),
+        ])
+      ).flat();
+    }
     return (
       await Promise.all([
         lookup(ResourceType.AGENT, PermissionBits.SHARE),
@@ -365,14 +379,19 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
       ])
     ).flat();
   }
-  function scopedAgents(req: IntegrationRequest): Promise<IAgent[]> {
-    const cached = agentCache.get(req);
+  function scopedAgents(
+    req: IntegrationRequest,
+    permission = PermissionBits.EDIT,
+  ): Promise<IAgent[]> {
+    const cache = agentCache.get(req) ?? new Map<PermissionBits, Promise<IAgent[]>>();
+    agentCache.set(req, cache);
+    const cached = cache.get(permission);
     if (cached) return cached;
     const pending = (async () => {
       await feature(req, PermissionTypes.AGENTS);
       const cap = ResourceCapabilityMap[ResourceType.AGENT];
       const manages = cap && (await deps.hasCapability(req.user, cap).catch(() => false));
-      const ids = await accessibleAgentIds(req);
+      const ids = await accessibleAgentIds(req, false, permission);
       const accessible = await runAsSystem(async () =>
         mongoose.models.Agent.find({
           $or: [...(manages ? [{ tenantId: req.user.tenantId }] : []), { _id: { $in: ids } }],
@@ -391,18 +410,30 @@ export function createIntegrationReaders(deps: IntegrationReadDeps): Integration
         );
       return accessible;
     })();
-    agentCache.set(req, pending);
+    cache.set(permission, pending);
     return pending;
   }
   const handlers = {
     identity: integrationHandler(async (req) => ({ ...req.integrationAuth })),
     agents: integrationHandler(async (req) => {
       assertQuery(req);
-      return paginate(
-        req,
-        (await scopedAgents(req)).map((row) => agentView(req, row)),
-        (row) => row.id,
+      const manages = await canManage(req, ResourceType.AGENT);
+      const items = await Promise.all(
+        (await scopedAgents(req, PermissionBits.VIEW)).map(async (row) => {
+          if (
+            (manages && row.tenantId === req.user.tenantId) ||
+            (await allowed(req, ResourceType.AGENT, row._id as Types.ObjectId, PermissionBits.EDIT))
+          )
+            return agentView(req, row);
+          const summary = { id: row.id, name: row.name, description: row.description };
+          const inspection = inspectContentWithTraversal(() => extractAgentContent(summary), {
+            filters: req.config?.filters,
+          });
+          if (inspection.finding || inspection.traversalError) throw forbidden();
+          return { ...summary, provider: row.provider, model: row.model, exportable: false };
+        }),
       );
+      return paginate(req, items, (row) => row.id);
     }),
     agent: integrationHandler(async (req) => agentView(req, await agent(req, req.params.id))),
     projects: integrationHandler(async (req) => {

@@ -7,6 +7,7 @@ const {
   agentManagementListResponseSchema,
   agentManagementErrorSchema,
   skillManagementResponseSchema,
+  validateRequest,
 } = require('@librechat/api');
 
 const root = path.resolve(__dirname, '../..');
@@ -231,14 +232,22 @@ describe('Orqest OpenAPI source review', () => {
     ]);
   });
 
-  it('documents 20 business integrations plus their OpenAPI endpoint without claiming deploy', () => {
+  it('documents integrations, OpenAPI discovery and existing agent execution without claiming deploy', () => {
     expect(proposed['x-orqest-status']).toBe('implemented-source-only');
     expect(proposed['x-orqest-worktree-changes']).toBe(true);
-    expect(operations(proposed)).toHaveLength(21);
+    expect(operations(proposed)).toHaveLength(22);
     for (const { route } of operations(proposed)) {
-      expect(route.startsWith('/api/integrations/v1/')).toBe(true);
+      expect(
+        route.startsWith('/api/integrations/v1/') || route === '/api/agents/v1/chat/completions',
+      ).toBe(true);
       expect(current.paths[route]).toBeDefined();
     }
+    const execution = proposed.paths['/api/agents/v1/chat/completions'].post;
+    expect(execution.security).toEqual([{ TenantExecutionKey: [] }]);
+    const example = execution.requestBody.content['application/json'].example;
+    expect(validateRequest(example).request.model).toBe(example.model);
+    expect(proposed.components.schemas.AgentSummary.properties.exportable.enum).toEqual([false]);
+    expect(proposed.components.schemas.AgentSummary.properties.instructions).toBeUndefined();
     const context = proposed.components.schemas.Context;
     expect(context.required).toEqual(
       expect.arrayContaining(['agent', 'selection', 'complete', 'warnings', 'contextFingerprint']),
