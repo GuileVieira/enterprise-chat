@@ -126,7 +126,7 @@ describe('MetaAdsGetInsights', () => {
     );
     expect(getTenantSecret).toHaveBeenCalledWith('tenant-x', 'meta_graph_access_token');
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
+      expect.stringContaining('https://graph.facebook.com/v27.0/act_123/insights'),
       expect.objectContaining({
         headers: { Authorization: 'Bearer meta-token' },
       }),
@@ -183,14 +183,11 @@ describe('MetaAdsGetInsights', () => {
       )
       .mockResolvedValueOnce(
         createResponse({
-          987: {
-            id: '987',
-            name: ' Boleto pago ',
-            custom_event_type: 'PURCHASE',
-            description: 'Pagamento confirmado',
-            rule: '{"and":[{"event_name":{"eq":"Purchase"}}]}',
-            event_source_id: 'pixel-1',
-          },
+          id: '987',
+          name: ' Boleto pago ',
+          custom_event_type: 'PURCHASE',
+          description: 'Pagamento confirmado',
+          rule: '{"and":[{"event_name":{"eq":"Purchase"}}]}',
         }),
       );
 
@@ -210,19 +207,19 @@ describe('MetaAdsGetInsights', () => {
         custom_event_type: 'PURCHASE',
         description: 'Pagamento confirmado',
         rule: '{"and":[{"event_name":{"eq":"Purchase"}}]}',
-        event_source_id: 'pixel-1',
       },
     });
     const url = new URL(fetch.mock.calls[1][0]);
-    expect(url.searchParams.get('ids')).toBe('987');
+    expect(url.pathname).toBe('/v27.0/987');
+    expect(url.searchParams.has('ids')).toBe(false);
     expect(url.searchParams.get('fields')).toBe(
-      'id,name,custom_event_type,description,rule,event_source_id',
+      'id,name,custom_event_type,description,rule',
     );
   });
 
-  it('keeps successful custom conversion batches when a later batch fails', async () => {
+  it('keeps successful custom conversion lookups when a later lookup fails', async () => {
     const actionTypes = Array.from(
-      { length: 51 },
+      { length: 2 },
       (_, index) => `offsite_conversion.custom.${index + 1}`,
     );
     fetch
@@ -237,14 +234,7 @@ describe('MetaAdsGetInsights', () => {
         }),
       )
       .mockResolvedValueOnce(
-        createResponse(
-          Object.fromEntries(
-            Array.from({ length: 50 }, (_, index) => {
-              const id = String(index + 1);
-              return [id, { id, name: `Payment ${id}`, custom_event_type: 'PURCHASE' }];
-            }),
-          ),
-        ),
+        createResponse({ id: '1', name: 'Payment 1', custom_event_type: 'PURCHASE' }),
       )
       .mockResolvedValueOnce(
         createResponse({ error: { message: 'Permission denied', code: 200 } }, false, 403),
@@ -259,8 +249,8 @@ describe('MetaAdsGetInsights', () => {
       }),
     );
 
-    expect(Object.keys(result.actionDefinitions)).toHaveLength(50);
-    expect(result.unresolvedActionDefinitions).toEqual(['offsite_conversion.custom.51']);
+    expect(Object.keys(result.actionDefinitions)).toHaveLength(1);
+    expect(result.unresolvedActionDefinitions).toEqual(['offsite_conversion.custom.2']);
     expect(result.actionDefinitionsError).toContain('Meta negou acesso a');
   });
 
@@ -281,10 +271,10 @@ describe('MetaAdsGetInsights', () => {
         }),
       )
       .mockResolvedValueOnce(
-        createResponse({
-          1: { id: '1', name: '   ', custom_event_type: 'PURCHASE' },
-          2: { error: { message: 'Conversion unavailable' } },
-        }),
+        createResponse({ id: '1', name: '   ', custom_event_type: 'PURCHASE' }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({ error: { message: 'Conversion unavailable' } }, false, 400),
       );
 
     const result = JSON.parse(
@@ -305,21 +295,20 @@ describe('MetaAdsGetInsights', () => {
     expect(result.actionDefinitionsError).toContain('Invalid custom conversion action type');
     expect(result.actionDefinitionsError).toContain('Custom conversion 1 has no usable name');
     expect(result.actionDefinitionsError).toContain('Conversion unavailable');
-    expect(new URL(fetch.mock.calls[1][0]).searchParams.get('ids')).toBe('1,2');
+    expect(new URL(fetch.mock.calls[1][0]).pathname).toBe('/v27.0/1');
+    expect(new URL(fetch.mock.calls[2][0]).pathname).toBe('/v27.0/2');
   });
 
   it('enriches ad-level insights with the real ad and creative identifiers', async () => {
     fetch
       .mockResolvedValueOnce(
-        createResponse({ data: [{ ad_id: 'ad-1', ad_name: 'Insight name', spend: '10.00' }] }),
+        createResponse({ data: [{ ad_id: '123', ad_name: 'Insight name', spend: '10.00' }] }),
       )
       .mockResolvedValueOnce(
         createResponse({
-          'ad-1': {
-            id: 'ad-1',
-            name: 'Real ad name',
-            creative: { id: 'creative-1', name: 'Real creative' },
-          },
+          id: '123',
+          name: 'Real ad name',
+          creative: { id: 'creative-1', name: 'Real creative' },
         }),
       );
 
@@ -329,7 +318,7 @@ describe('MetaAdsGetInsights', () => {
 
     expect(result.tables.ad).toEqual([
       {
-        ad_id: 'ad-1',
+        ad_id: '123',
         ad_name: 'Real ad name',
         creative_id: 'creative-1',
         creative_name: 'Real creative',
@@ -347,9 +336,37 @@ describe('MetaAdsGetInsights', () => {
       },
     ]);
     const url = new URL(fetch.mock.calls[1][0]);
-    expect(url.pathname).toBe('/v25.0/');
-    expect(url.searchParams.get('ids')).toBe('ad-1');
+    expect(url.pathname).toBe('/v27.0/123');
+    expect(url.searchParams.has('ids')).toBe(false);
     expect(url.searchParams.get('fields')).toBe('id,name,creative{id,name}');
+  });
+
+  it('keeps ad metrics and uses the project version when a creative lookup fails', async () => {
+    findProjectForRequest.mockResolvedValue({
+      projectId: 'project-1',
+      tenantId: 'tenant-x',
+      metaAds: { adAccountId: 'act_123', graphVersion: 'v26.0' },
+    });
+    fetch
+      .mockResolvedValueOnce(
+        createResponse({ data: [{ ad_id: '123', ad_name: 'Insight name', spend: '10.00' }] }),
+      )
+      .mockResolvedValueOnce(
+        createResponse({ error: { message: 'Creative unavailable' } }, false, 400),
+      );
+    const result = JSON.parse(
+      await createTool().call({ since: '2026-11-16', until: '2026-11-18', level: 'ad' }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.graphVersion).toBe('v26.0');
+    expect(new URL(fetch.mock.calls[1][0]).pathname).toBe('/v26.0/123');
+    expect(result.tables.ad).toEqual([
+      expect.objectContaining({ ad_id: '123', ad_name: 'Insight name', spend: 10 }),
+    ]);
+    expect(result.creativeDetailsErrors).toEqual([
+      { adId: '123', message: expect.stringContaining('Creative unavailable') },
+    ]);
   });
 
   it('uses the configured project ad account when ad_account_id is omitted', async () => {
@@ -359,7 +376,7 @@ describe('MetaAdsGetInsights', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
+      expect.stringContaining('https://graph.facebook.com/v27.0/act_123/insights'),
       expect.any(Object),
     );
     expect(JSON.parse(result)).toEqual(expect.objectContaining({ ok: true, accountId: 'act_123' }));
@@ -530,7 +547,7 @@ describe('MetaAdsGetInsights', () => {
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('https://graph.facebook.com/v25.0/act_123/insights'),
+      expect.stringContaining('https://graph.facebook.com/v27.0/act_123/insights'),
       expect.any(Object),
     );
 
@@ -556,7 +573,7 @@ describe('MetaAdsGetInsights', () => {
     });
 
     expect(JSON.parse(invalidVersion).error.message).toBe(
-      'graph_version must match Meta Graph API version format like v25.0.',
+      'graph_version must match Meta Graph API version format like v27.0.',
     );
   });
 

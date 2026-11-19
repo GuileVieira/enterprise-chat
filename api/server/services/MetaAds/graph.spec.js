@@ -111,8 +111,8 @@ describe('Meta Ads Graph client', () => {
 
     await listAdSets({ adAccountId: 'act_123', token: 'token' });
 
-    expect(getMetaGraphVersion()).toBe('v25.0');
-    expect(fetch.mock.calls[0][0]).toContain('/v25.0/act_123/adsets');
+    expect(getMetaGraphVersion()).toBe('v27.0');
+    expect(fetch.mock.calls[0][0]).toContain('/v27.0/act_123/adsets');
   });
 
   it('lists active campaigns with daily budget and objective', async () => {

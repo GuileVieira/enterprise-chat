@@ -441,7 +441,8 @@ export const metaAdsGetInsightsSchema: ExtendedJsonSchema = {
     graph_version: {
       type: 'string',
       pattern: '^v[1-9]\\d?\\.0$',
-      description: 'Optional Meta Graph API version, for example v25.0. Defaults to v25.0.',
+      description:
+        'Optional Meta Graph API version override. Uses the project or server configuration, with v27.0 as fallback.',
     },
     project_id: {
       type: 'string',

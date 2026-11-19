@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { logger } = require('@librechat/data-schemas');
 
 const META_GRAPH_HOST = 'https://graph.facebook.com';
-const DEFAULT_META_GRAPH_VERSION = 'v25.0';
+const DEFAULT_META_GRAPH_VERSION = 'v27.0';
 const MIN_META_GRAPH_VERSION = 24;
 const META_GRAPH_VERSION_PATTERN = /^v\d+\.0$/;
 const DEFAULT_LIMIT = 100;

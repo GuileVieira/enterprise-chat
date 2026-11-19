@@ -1718,20 +1718,24 @@ async function resolveCustomConversionLabels({ rows, token, graphVersion }) {
     ),
   ];
   const labels = {};
-  for (let index = 0; index < ids.length; index += 50) {
-    const batch = ids.slice(index, index + 50);
-    const payload = await metaGet({
-      path: '',
-      token,
-      params: { ids: batch.join(','), fields: 'id,name' },
-      graphVersion,
-      resourceLabel: 'custom conversion labels',
-    });
-    for (const id of batch) {
-      const name = typeof payload?.[id]?.name === 'string' ? payload[id].name.trim() : '';
-      if (name) {
+  for (const id of ids) {
+    try {
+      const conversion = await metaGet({
+        path: id,
+        token,
+        params: { fields: 'id,name' },
+        graphVersion,
+        resourceLabel: 'custom conversion labels',
+      });
+      const name = typeof conversion?.name === 'string' ? conversion.name.trim() : '';
+      if (conversion?.id === id && name) {
         labels[`${META_CUSTOM_CONVERSION_PREFIX}${id}`] = name;
       }
+    } catch (error) {
+      logger.warn('[MetaAdsBudget] custom conversion label unavailable', {
+        conversionId: id,
+        message: error.message,
+      });
     }
   }
   return labels;

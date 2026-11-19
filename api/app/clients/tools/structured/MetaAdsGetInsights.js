@@ -33,7 +33,6 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 500;
 const MAX_INTERNAL_PAGES = 1000;
 const MAX_DATE_RANGE_DAYS = 120;
-const META_AD_IDS_BATCH_SIZE = 50;
 const META_CUSTOM_CONVERSION_PREFIX = 'offsite_conversion.custom.';
 const DEFAULT_DETAIL_LIMIT = 25;
 const MAX_DETAIL_LIMIT = 100;
@@ -173,11 +172,8 @@ function normalizeAdAccountId(adAccountId) {
 }
 
 function parseGraphVersion(value) {
-  if (value === undefined || value === null || value === '') {
-    return getMetaGraphVersion();
-  }
   if (typeof value !== 'string' || !META_GRAPH_VERSION_PATTERN.test(value)) {
-    throw new Error('graph_version must match Meta Graph API version format like v25.0.');
+    throw new Error('graph_version must match Meta Graph API version format like v27.0.');
   }
   return getMetaGraphVersion(value);
 }
@@ -340,7 +336,11 @@ class MetaAdsGetInsights extends Tool {
       metaAds,
       getSecret: this.getTenantSecret,
     });
-    return { accessToken: credentials.accessToken, adAccountId: resolvedAdAccountId };
+    return {
+      accessToken: credentials.accessToken,
+      adAccountId: resolvedAdAccountId,
+      graphVersion: metaAds.graphVersion,
+    };
   }
 
   async fetchPage({
@@ -381,29 +381,6 @@ class MetaAdsGetInsights extends Tool {
     };
   }
 
-  async getCreativeDetails({ accessToken, graphVersion, adIds }) {
-    const details = new Map();
-    for (let index = 0; index < adIds.length; index += META_AD_IDS_BATCH_SIZE) {
-      const ids = adIds.slice(index, index + META_AD_IDS_BATCH_SIZE);
-      const payload = await metaGet({
-        path: '',
-        token: accessToken,
-        params: {
-          ids: ids.join(','),
-          fields: 'id,name,creative{id,name}',
-        },
-        graphVersion,
-        resourceLabel: 'ad creative details',
-      });
-      for (const ad of Object.values(payload ?? {})) {
-        if (ad && typeof ad.id === 'string') {
-          details.set(ad.id, ad);
-        }
-      }
-    }
-    return details;
-  }
-
   async getCustomConversionDetails({ accessToken, graphVersion, actionTypes }) {
     const details = {};
     const unresolvedActionTypes = [];
@@ -421,35 +398,24 @@ class MetaAdsGetInsights extends Tool {
       }
       actionTypeById.set(id, actionType);
     }
-    const ids = [...actionTypeById.keys()];
-    for (let index = 0; index < ids.length; index += META_AD_IDS_BATCH_SIZE) {
-      const batch = ids.slice(index, index + META_AD_IDS_BATCH_SIZE);
+    for (const [id, actionType] of actionTypeById) {
       try {
-        const payload = await metaGet({
-          path: '',
+        const conversion = await metaGet({
+          path: id,
           token: accessToken,
-          params: {
-            ids: batch.join(','),
-            fields: 'id,name,custom_event_type,description,rule,event_source_id',
-          },
+          params: { fields: 'id,name,custom_event_type,description,rule' },
           graphVersion,
           resourceLabel: 'custom conversion details',
         });
-        for (const id of batch) {
-          const actionType = actionTypeById.get(id);
-          const conversion = payload?.[id];
-          const name = typeof conversion?.name === 'string' ? conversion.name.trim() : '';
-          if (!conversion || String(conversion.id ?? '') !== id || !name) {
-            unresolvedActionTypes.push(actionType);
-            const reason =
-              conversion?.error?.message || `Custom conversion ${id} has no usable name.`;
-            errors.push(reason);
-            continue;
-          }
-          details[actionType] = { ...conversion, name };
+        const name = typeof conversion?.name === 'string' ? conversion.name.trim() : '';
+        if (String(conversion?.id ?? '') !== id || !name) {
+          unresolvedActionTypes.push(actionType);
+          errors.push(conversion?.error?.message || `Custom conversion ${id} has no usable name.`);
+          continue;
         }
+        details[actionType] = { ...conversion, name };
       } catch (error) {
-        unresolvedActionTypes.push(...batch.map((id) => actionTypeById.get(id)));
+        unresolvedActionTypes.push(actionType);
         errors.push(error instanceof Error ? error.message : 'Custom conversion lookup failed.');
       }
     }
@@ -494,11 +460,15 @@ class MetaAdsGetInsights extends Tool {
       );
       const filtering = buildFiltering(args);
       const fields = buildFields(level, metrics, breakdown);
-      const graphVersion = parseGraphVersion(args.graph_version);
+      const requestedGraphVersion =
+        args.graph_version == null || args.graph_version === ''
+          ? undefined
+          : parseGraphVersion(args.graph_version);
       let nextAfter;
       const projectId =
         typeof args.project_id === 'string' && args.project_id ? args.project_id : this.projectId;
       const metaAccess = await this.getAccessToken(projectId, adAccountId);
+      const graphVersion = requestedGraphVersion ?? getMetaGraphVersion(metaAccess.graphVersion);
       const summary = createInsightsSummary({
         level,
         metrics,
@@ -569,19 +539,34 @@ class MetaAdsGetInsights extends Tool {
         actionDefinitionsError =
           error instanceof Error ? error.message : 'Custom conversion lookup failed.';
       }
+      const creativeDetailsErrors = [];
       if (level === 'ad') {
-        const adIds = result.tables.ad.map((row) => row.ad_id).filter(Boolean);
-        if (adIds.length > 0) {
-          const creativeDetails = await this.getCreativeDetails({
-            accessToken: metaAccess.accessToken,
-            graphVersion,
-            adIds,
-          });
-          for (const row of result.tables.ad) {
-            const ad = creativeDetails.get(row?.ad_id);
-            if (!ad) {
-              continue;
+        const creativeDetails = new Map();
+        for (const row of result.tables.ad) {
+          const id = row.ad_id;
+          if (!/^\d+$/.test(id)) {
+            continue;
+          }
+          if (!creativeDetails.has(id)) {
+            try {
+              const ad = await metaGet({
+                path: id,
+                token: metaAccess.accessToken,
+                params: { fields: 'id,name,creative{id,name}' },
+                graphVersion,
+                resourceLabel: 'ad creative details',
+              });
+              creativeDetails.set(id, ad?.id === id ? ad : null);
+            } catch (error) {
+              creativeDetails.set(id, null);
+              creativeDetailsErrors.push({
+                adId: id,
+                message: error instanceof Error ? error.message : 'Creative lookup failed.',
+              });
             }
+          }
+          const ad = creativeDetails.get(id);
+          if (ad) {
             row.ad_name = ad.name || row.ad_name;
             if (ad.creative?.id) {
               row.creative_id = ad.creative.id;
@@ -617,6 +602,7 @@ class MetaAdsGetInsights extends Tool {
         actionDefinitions,
         ...(unresolvedActionDefinitions.length > 0 ? { unresolvedActionDefinitions } : {}),
         ...(actionDefinitionsError ? { actionDefinitionsError } : {}),
+        ...(creativeDetailsErrors.length > 0 ? { creativeDetailsErrors } : {}),
         tables: result.tables,
         details: {
           available: result.available,

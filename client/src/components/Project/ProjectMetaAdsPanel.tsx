@@ -470,7 +470,7 @@ export default function ProjectMetaAdsPanel({
           configured: tokenCredentials?.effectiveSource !== 'missing' && Boolean(tokenCredentials),
           tenantConfigured: Boolean(statusQuery.data?.credentials?.tenantConfigured),
           statusLabel: localize(tokenStatusKey),
-          effectiveGraphVersion: statusQuery.data?.graphVersion?.effective ?? 'v25.0',
+          effectiveGraphVersion: statusQuery.data?.graphVersion?.effective ?? 'v27.0',
           graphVersionOptions,
           canManageTenantToken,
           canUseMetaAdsActions,
